@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/auth_service.dart';   // ← KEEP
-// import '../auth_providers.dart';          // ← REMOVE (file was deleted)
 import '../domain/auth_failure.dart';
 
 /// Simple authentication screen with a Google sign-in button.
