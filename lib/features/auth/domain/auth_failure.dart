@@ -1,3 +1,5 @@
+// lib/features/auth/domain/auth_failure.dart
+
 class AuthFailure implements Exception {
   final String message;
   const AuthFailure._(this.message);
@@ -11,3 +13,4 @@ class AuthFailure implements Exception {
   @override
   String toString() => message;
 }
+
