@@ -11,16 +11,44 @@ import 'package:asora/features/auth/domain/auth_failure.dart';
 class FakeSecureStorage implements FlutterSecureStorage {
   final Map<String, String?> _data = {};
 
+  // ───────────────────────────────────────
+  // Abstract getters in v4.x:
+  @override
+  AndroidOptions get aOptions => const AndroidOptions();
+
+  @override
+  IOSOptions get iOptions => const IOSOptions();
+
+  @override
+  LinuxOptions get lOptions => const LinuxOptions();
+
+  @override
+  MacOsOptions get mOptions => const MacOsOptions();
+
+  @override
+  WebOptions get webOptions => const WebOptions();
+
+  @override
+  WindowsOptions get wOptions => const WindowsOptions();
+
+  // Cupertino protected-data stream & flag:
+  @override
+  Stream<bool>? get onCupertinoProtectedDataAvailabilityChanged => null;
+
+  @override
+  Future<bool> isCupertinoProtectedDataAvailable() async => true;
+  // ───────────────────────────────────────
+
   @override
   Future<void> write({
     required String key,
-    String? value,
-    IOSOptions? iOptions,
+    required String? value,
     AndroidOptions? aOptions,
+    IOSOptions? iOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? macOsOptions,
+    MacOsOptions? mOptions,
     WebOptions? webOptions,
-    WindowsOptions? windowsOptions,
+    WindowsOptions? wOptions,
   }) async {
     _data[key] = value;
   }
@@ -28,40 +56,94 @@ class FakeSecureStorage implements FlutterSecureStorage {
   @override
   Future<String?> read({
     required String key,
-    IOSOptions? iOptions,
     AndroidOptions? aOptions,
+    IOSOptions? iOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? macOsOptions,
+    MacOsOptions? mOptions,
     WebOptions? webOptions,
-    WindowsOptions? windowsOptions,
-  }) async {
-    return _data[key];
-  }
+    WindowsOptions? wOptions,
+  }) async => _data[key];
 
   @override
   Future<void> delete({
     required String key,
-    IOSOptions? iOptions,
     AndroidOptions? aOptions,
+    IOSOptions? iOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? macOsOptions,
+    MacOsOptions? mOptions,
     WebOptions? webOptions,
-    WindowsOptions? windowsOptions,
+    WindowsOptions? wOptions,
   }) async {
     _data.remove(key);
   }
 
   @override
   Future<void> deleteAll({
-    IOSOptions? iOptions,
     AndroidOptions? aOptions,
+    IOSOptions? iOptions,
     LinuxOptions? lOptions,
-    MacOsOptions? macOsOptions,
+    MacOsOptions? mOptions,
     WebOptions? webOptions,
-    WindowsOptions? windowsOptions,
+    WindowsOptions? wOptions,
   }) async {
     _data.clear();
   }
+
+  @override
+  Future<Map<String, String>> readAll({
+    AndroidOptions? aOptions,
+    IOSOptions? iOptions,
+    LinuxOptions? lOptions,
+    MacOsOptions? mOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    final result = <String, String>{};
+    _data.forEach((k, v) {
+      if (v != null) result[k] = v;
+    });
+    return result;
+  }
+
+  @override
+  Future<bool> containsKey({
+    required String key,
+    AndroidOptions? aOptions,
+    IOSOptions? iOptions,
+    LinuxOptions? lOptions,
+    MacOsOptions? mOptions,
+    WebOptions? webOptions,
+    WindowsOptions? wOptions,
+  }) async => _data.containsKey(key);
+
+  // ───────────────────────────────────────
+  // Listener API:
+  @override
+  void registerListener({
+    required String key,
+    required void Function(String?) listener,
+  }) {
+    // no-op
+  }
+
+  @override
+  void unregisterListener({
+    required String key,
+    required void Function(String?) listener,
+  }) {
+    // no-op
+  }
+
+  @override
+  void unregisterAllListenersForKey({required String key}) {
+    // no-op
+  }
+
+  @override
+  void unregisterAllListeners() {
+    // no-op
+  }
+  // ───────────────────────────────────────
 }
 
 void main() {
@@ -78,13 +160,12 @@ void main() {
     );
 
     final token = await service.verifyTokenWithBackend('id123');
-
     expect(token, equals('abc'));
     expect(await storage.read(key: 'sessionToken'), equals('abc'));
   });
 
   test('verifyTokenWithBackend throws AuthFailure on error', () async {
-    final client = MockClient((request) async {
+    final client = MockClient((_) async {
       return http.Response('error', 500);
     });
     final service = AuthService(
@@ -99,4 +180,3 @@ void main() {
     );
   });
 }
-

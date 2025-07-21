@@ -12,7 +12,7 @@ on:
 jobs:
   tf:
     runs-on: ubuntu-latest
-    environment: dev                     # must match OIDC subject
+    
     steps:
       - uses: actions/checkout@v4
 
