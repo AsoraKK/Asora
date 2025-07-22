@@ -177,4 +177,3 @@ output "cosmos_endpoint" {
   value = azurerm_cosmosdb_account.cosmos.endpoint
 }
 
-resource "null_resource" "ping" {}
