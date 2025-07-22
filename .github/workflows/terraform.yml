@@ -38,6 +38,7 @@ jobs:
             -backend-config="key=infra.dev.tfstate"
 
       - name: Plan
+        working-directory: infra
         run: terraform plan -out plan.out
 
       - name: Apply
