@@ -29,6 +29,7 @@ jobs:
           terraform_version: 1.9.5
 
       - name: Init
+        working-directory: infra
         run: |
           terraform init -reconfigure \
             -backend-config="resource_group_name=tfstate-rg" \
@@ -37,6 +38,7 @@ jobs:
             -backend-config="key=infra.dev.tfstate"
 
       - name: Plan
+        working-directory: infra
         run: terraform plan -out plan.out
 
       - name: Apply

@@ -8,8 +8,31 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 
+/// Lightweight fake for unit tests; **never** use in production.
 class FakeSecureStorage implements FlutterSecureStorage {
   final Map<String, String?> _data = {};
+
+  // ─────────────────────────────────────────────
+  // Platform option getters required by v9 API.
+  @override
+  AndroidOptions get aOptions => const AndroidOptions();
+  @override
+  IOSOptions get iOptions => const IOSOptions();
+  @override
+  LinuxOptions get lOptions => const LinuxOptions();
+  @override
+  MacOsOptions get mOptions => const MacOsOptions();
+  @override
+  WebOptions get webOptions => const WebOptions();
+  @override
+  WindowsOptions get wOptions => const WindowsOptions();
+
+  // iOS-only protected-data helpers (not needed in tests).
+  @override
+  Stream<bool>? get onCupertinoProtectedDataAvailabilityChanged => null;
+  @override
+  Future<bool> isCupertinoProtectedDataAvailable() async => true;
+  // ─────────────────────────────────────────────
 
   @override
   Future<void> write({
@@ -34,9 +57,8 @@ class FakeSecureStorage implements FlutterSecureStorage {
     MacOsOptions? macOsOptions,
     WebOptions? webOptions,
     WindowsOptions? windowsOptions,
-  }) async {
-    return _data[key];
-  }
+  }) async =>
+      _data[key];
 
   @override
   Future<void> delete({
@@ -47,9 +69,8 @@ class FakeSecureStorage implements FlutterSecureStorage {
     MacOsOptions? macOsOptions,
     WebOptions? webOptions,
     WindowsOptions? windowsOptions,
-  }) async {
-    _data.remove(key);
-  }
+  }) async =>
+      _data.remove(key);
 
   @override
   Future<void> deleteAll({
@@ -59,9 +80,48 @@ class FakeSecureStorage implements FlutterSecureStorage {
     MacOsOptions? macOsOptions,
     WebOptions? webOptions,
     WindowsOptions? windowsOptions,
-  }) async {
-    _data.clear();
-  }
+  }) async =>
+      _data.clear();
+
+  // Optional helpers below — only implement if your code needs them.
+  @override
+  Future<Map<String, String>> readAll({
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    MacOsOptions? macOsOptions,
+    WebOptions? webOptions,
+    WindowsOptions? windowsOptions,
+  }) async =>
+      _data.map((k, v) => MapEntry(k, v ?? ''));
+
+  @override
+  Future<bool> containsKey({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    MacOsOptions? macOsOptions,
+    WebOptions? webOptions,
+    WindowsOptions? windowsOptions,
+  }) async =>
+      _data.containsKey(key);
+
+  // Listener API (no-op in tests)
+  @override
+  void registerListener({
+    required String key,
+    required void Function(String?) listener,
+  }) {}
+  @override
+  void unregisterListener({
+    required String key,
+    required void Function(String?) listener,
+  }) {}
+  @override
+  void unregisterAllListenersForKey({required String key}) {}
+  @override
+  void unregisterAllListeners() {}
 }
 
 void main() {
@@ -70,6 +130,7 @@ void main() {
       expect(jsonDecode(request.body)['token'], equals('id123'));
       return http.Response(jsonEncode({'sessionToken': 'abc'}), 200);
     });
+
     final storage = FakeSecureStorage();
     final service = AuthService(
       secureStorage: storage,
@@ -84,9 +145,8 @@ void main() {
   });
 
   test('verifyTokenWithBackend throws AuthFailure on error', () async {
-    final client = MockClient((request) async {
-      return http.Response('error', 500);
-    });
+    final client = MockClient((_) async => http.Response('error', 500));
+
     final service = AuthService(
       secureStorage: FakeSecureStorage(),
       httpClient: client,
@@ -99,4 +159,3 @@ void main() {
     );
   });
 }
-

@@ -12,28 +12,43 @@ import 'package:http/http.dart' as http;
 import '../domain/auth_failure.dart';
 
 GoogleSignIn _buildGoogleSignIn() {
+  // Provide fallback values for client IDs to avoid null issues
+  const webClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue: 'web-client-id-not-set',
+  );
+  const androidClientId = String.fromEnvironment(
+    'GOOGLE_ANDROID_CLIENT_ID',
+    defaultValue: 'android-client-id-not-set',
+  );
+  const desktopClientId = String.fromEnvironment(
+    'GOOGLE_DESKTOP_CLIENT_ID',
+    defaultValue: 'desktop-client-id-not-set',
+  );
+
   if (kIsWeb) {
     return GoogleSignIn(
-      clientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+      clientId: webClientId,
       scopes: ['email', 'profile', 'openid'],
     );
   }
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       return GoogleSignIn(
-        clientId: const String.fromEnvironment('GOOGLE_ANDROID_CLIENT_ID'),
-        serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+        clientId: androidClientId,
+        serverClientId: webClientId,
         scopes: ['email', 'profile', 'openid'],
       );
     case TargetPlatform.macOS:
     case TargetPlatform.linux:
     case TargetPlatform.windows:
       return GoogleSignIn(
-        clientId: const String.fromEnvironment('GOOGLE_DESKTOP_CLIENT_ID'),
-        serverClientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+        clientId: desktopClientId,
+        serverClientId: webClientId,
         scopes: ['email', 'profile', 'openid'],
       );
     default:
+      dev.log('Unsupported platform: $defaultTargetPlatform', name: 'auth');
       throw UnsupportedError('Unsupported platform');
   }
 }
@@ -45,6 +60,7 @@ class AuthService {
     LocalAuthentication? localAuth,
     http.Client? httpClient,
     String authUrl = _defaultAuthUrl,
+
   })  : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
         _secureStorage = secureStorage ?? const FlutterSecureStorage(),
         _localAuth = localAuth ?? LocalAuthentication(),
@@ -71,7 +87,13 @@ class AuthService {
       dev.log('Google sign-in succeeded', name: 'auth');
       return sessionToken;
     } catch (e, st) {
-      dev.log('Google sign-in failed: $e', name: 'auth', error: e, stackTrace: st, level: 1000);
+      dev.log(
+        'Google sign-in failed: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
       throw AuthFailure.serverError(e.toString());
     }
   }
