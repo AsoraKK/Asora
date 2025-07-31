@@ -1,0 +1,41 @@
+{
+  "name": "asora-backend-functions",
+  "version": "1.0.0",
+  "description": "Asora platform backend Azure Functions with AI-powered moderation",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "func start --port 7072",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0",
+    "@azure/functions": "^4.0.0", 
+    "jsonwebtoken": "^9.0.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "rimraf": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  },
+  "keywords": [
+    "azure-functions",
+    "typescript",
+    "cosmos-db",
+    "jwt",
+    "ai-moderation",
+    "hive-ai",
+    "asora"
+  ],
+  "author": "Asora Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
