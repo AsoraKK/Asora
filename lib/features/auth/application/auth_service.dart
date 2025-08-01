@@ -60,12 +60,11 @@ class AuthService {
     LocalAuthentication? localAuth,
     http.Client? httpClient,
     String authUrl = _defaultAuthUrl,
-
-  })  : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _localAuth = localAuth ?? LocalAuthentication(),
-        _httpClient = httpClient ?? http.Client(),
-        _authUrl = authUrl;
+  }) : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
+       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+       _localAuth = localAuth ?? LocalAuthentication(),
+       _httpClient = httpClient ?? http.Client(),
+       _authUrl = authUrl;
 
   final GoogleSignIn _googleSignIn;
   final FlutterSecureStorage _secureStorage;
@@ -107,7 +106,9 @@ class AuthService {
       );
 
       if (response.statusCode != 200) {
-        final error = response.body.isNotEmpty ? jsonDecode(response.body)['error'] ?? 'Server error' : 'Server error';
+        final error = response.body.isNotEmpty
+            ? jsonDecode(response.body)['error'] ?? 'Server error'
+            : 'Server error';
         throw AuthFailure.serverError(error.toString());
       }
 

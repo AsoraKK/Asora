@@ -14,11 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() {
   testWidgets('Auth screen shows sign in button', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: AuthScreen(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: AuthScreen())),
     );
 
     expect(find.text('Sign in with Google'), findsOneWidget);
