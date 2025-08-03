@@ -5,20 +5,20 @@
 ### 🔧 **Fixes Applied**
 1. **✅ OIDC Permissions**: Added `id-token: write` to workflow
 2. **✅ Authentication Type**: Added `auth-type: oidc` to Azure login
-3. **✅ Azure Login Version**: Updated to `azure/login@v1.4.0` (verified OIDC support)
+3. **✅ Azure Login Version**: Upgraded to `azure/login@v2` (native OIDC support)
 4. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
 5. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
 
 ### 🎯 **Current Pipeline Status**
 - **Trigger**: Push to `main` branch just completed
-- **Commit**: `61194a1` - "Fix azure/login version: Use v1.4.0 (verified OIDC support)"
-- **Latest Fix**: Corrected to use existing azure/login version with OIDC support
+- **Commit**: `8414487` - "🎯 FINAL FIX: Remove auth-type parameter - OIDC is automatic in azure/login@v2"
+- **Latest Fix**: Removed auth-type parameter - OIDC is automatically detected in v2
 - **Expected Flow**: 
   1. Format Check ✅
   2. Build & Test (Ubuntu) ✅
   3. Build & Test (macOS) ✅  
   4. Build & Test (Windows) ✅
-  5. **Azure Deployment** → Should now use correct action version and authenticate
+  5. **Azure Deployment** → Should now authenticate automatically with OIDC
 
 ### 🔐 **Required GitHub Secrets**
 Ensure these are configured in your repository at `Settings → Secrets and variables → Actions`:
