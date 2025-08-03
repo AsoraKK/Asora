@@ -6,19 +6,23 @@
 1. **✅ OIDC Permissions**: Added `id-token: write` to workflow
 2. **✅ Authentication Type**: Added `auth-type: oidc` to Azure login
 3. **✅ Azure Login Version**: Upgraded to `azure/login@v2` (native OIDC support)
-4. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
-5. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
+4. **✅ Service Principal Role**: Added Contributor role at subscription level
+5. **✅ Federated Credentials**: Verified correct configuration for main branch
+6. **✅ Diagnostic Steps**: Added comprehensive authentication debugging
+7. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
+8. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
 
 ### 🎯 **Current Pipeline Status**
 - **Trigger**: Push to `main` branch just completed
-- **Commit**: `8414487` - "🎯 FINAL FIX: Remove auth-type parameter - OIDC is automatic in azure/login@v2"
-- **Latest Fix**: Removed auth-type parameter - OIDC is automatically detected in v2
+- **Commit**: `7757e21` - "🔧 Fix environment: Only use environment for manual dispatch, not push events"
+- **Latest Fix**: Fixed environment scope - push events use main branch credential, not dev environment
+- **Subject Claim**: Should now be `repo:AsoraKK/Asora:ref:refs/heads/main` for push events
 - **Expected Flow**: 
   1. Format Check ✅
   2. Build & Test (Ubuntu) ✅
   3. Build & Test (macOS) ✅  
   4. Build & Test (Windows) ✅
-  5. **Azure Deployment** → Should now authenticate automatically with OIDC
+  5. **Azure Deployment** → Should now use correct federated credential for main branch
 
 ### 🔐 **Required GitHub Secrets**
 Ensure these are configured in your repository at `Settings → Secrets and variables → Actions`:
