@@ -10,6 +10,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
 import '../domain/auth_failure.dart';
+import '../domain/user.dart';
 
 GoogleSignIn _buildGoogleSignIn() {
   // Provide fallback values for client IDs to avoid null issues
@@ -73,8 +74,208 @@ class AuthService {
   final String _authUrl;
 
   static const _sessionKey = 'sessionToken';
+  static const _jwtKey = 'jwt';
+  static const _userKey = 'userData';
   static const _defaultAuthUrl = String.fromEnvironment('AUTH_URL');
 
+  /// Email login with comprehensive error handling
+  Future<User> loginWithEmail(String email, String password) async {
+    if (email.trim().isEmpty) {
+      throw AuthFailure.invalidCredentials('Email cannot be empty');
+    }
+    if (password.trim().isEmpty) {
+      throw AuthFailure.invalidCredentials('Password cannot be empty');
+    }
+
+    try {
+      dev.log(
+        'Attempting email login for: ${email.replaceAll(RegExp(r'(?<=.).(?=.*@)'), '*')}',
+        name: 'auth',
+      );
+
+      final response = await _httpClient.post(
+        Uri.parse('$_authUrl/authEmail'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim(), 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        // Extract JWT token
+        final token = data['token'] as String?;
+        if (token == null) {
+          throw AuthFailure.serverError('Invalid response: missing token');
+        }
+
+        // Extract user data
+        final userData = data['user'] as Map<String, dynamic>?;
+        if (userData == null) {
+          throw AuthFailure.serverError('Invalid response: missing user data');
+        }
+
+        // Create User object
+        final user = User.fromJson(userData);
+
+        // Store authentication data securely
+        await Future.wait([
+          _secureStorage.write(key: _jwtKey, value: token),
+          _secureStorage.write(key: _userKey, value: jsonEncode(userData)),
+        ]);
+
+        dev.log('Email login successful for user: ${user.id}', name: 'auth');
+        return user;
+      } else if (response.statusCode == 401) {
+        final errorData = response.body.isNotEmpty
+            ? jsonDecode(response.body) as Map<String, dynamic>
+            : <String, dynamic>{};
+        final errorMessage =
+            errorData['error'] as String? ?? 'Invalid credentials';
+        throw AuthFailure.invalidCredentials(errorMessage);
+      } else if (response.statusCode >= 500) {
+        throw AuthFailure.serverError('Server error: ${response.statusCode}');
+      } else {
+        final errorData = response.body.isNotEmpty
+            ? jsonDecode(response.body) as Map<String, dynamic>
+            : <String, dynamic>{};
+        final errorMessage = errorData['error'] as String? ?? 'Login failed';
+        throw AuthFailure.serverError(errorMessage);
+      }
+    } on AuthFailure {
+      rethrow;
+    } catch (e, st) {
+      dev.log(
+        'Email login failed: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      throw AuthFailure.serverError('Network error: ${e.toString()}');
+    }
+  }
+
+  /// Get current authenticated user
+  Future<User?> getCurrentUser() async {
+    try {
+      // Check if we have stored user data
+      final userDataJson = await _secureStorage.read(key: _userKey);
+      final token = await _secureStorage.read(key: _jwtKey);
+
+      if (userDataJson == null || token == null) {
+        dev.log('No stored user data found', name: 'auth');
+        return null;
+      }
+
+      // Parse stored user data
+      final userData = jsonDecode(userDataJson) as Map<String, dynamic>;
+      final user = User.fromJson(userData);
+
+      // Verify token is still valid by making a request to the backend
+      try {
+        final response = await _httpClient.get(
+          Uri.parse('$_authUrl/getMe'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          // Update stored user data with fresh data from server
+          final freshData = jsonDecode(response.body) as Map<String, dynamic>;
+          final freshUser = User.fromJson(
+            freshData['user'] as Map<String, dynamic>,
+          );
+
+          await _secureStorage.write(
+            key: _userKey,
+            value: jsonEncode(freshUser.toJson()),
+          );
+
+          dev.log('Retrieved current user: ${freshUser.id}', name: 'auth');
+          return freshUser;
+        } else if (response.statusCode == 401) {
+          // Token is invalid, clear stored data
+          await logout();
+          dev.log('Token expired, user logged out', name: 'auth');
+          return null;
+        } else {
+          // Server error, return cached user data
+          dev.log(
+            'Server error getting current user, using cached data',
+            name: 'auth',
+          );
+          return user;
+        }
+      } catch (e) {
+        // Network error, return cached user data
+        dev.log(
+          'Network error getting current user, using cached data: $e',
+          name: 'auth',
+        );
+        return user;
+      }
+    } catch (e, st) {
+      dev.log(
+        'Error getting current user: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      return null;
+    }
+  }
+
+  /// Logout user and clear all stored data
+  Future<void> logout() async {
+    try {
+      dev.log('Logging out user', name: 'auth');
+
+      // Clear all stored authentication data
+      await Future.wait([
+        _secureStorage.delete(key: _jwtKey),
+        _secureStorage.delete(key: _userKey),
+        _secureStorage.delete(key: _sessionKey),
+        _googleSignIn.signOut(),
+      ]);
+
+      dev.log('User logged out successfully', name: 'auth');
+    } catch (e, st) {
+      dev.log(
+        'Error during logout: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      // Don't throw error on logout, just log it
+    }
+  }
+
+  /// Check if user is currently authenticated
+  Future<bool> isAuthenticated() async {
+    try {
+      final token = await _secureStorage.read(key: _jwtKey);
+      return token != null;
+    } catch (e) {
+      dev.log('Error checking authentication status: $e', name: 'auth');
+      return false;
+    }
+  }
+
+  /// Get stored JWT token
+  Future<String?> getJwtToken() async {
+    try {
+      return await _secureStorage.read(key: _jwtKey);
+    } catch (e) {
+      dev.log('Error getting JWT token: $e', name: 'auth');
+      return null;
+    }
+  }
+
+  // Existing methods...
   Future<String> signInWithGoogle() async {
     try {
       final account = await _googleSignIn.signIn();
@@ -137,9 +338,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await clearSessionToken();
-    dev.log('User signed out', name: 'auth');
+    await logout(); // Use the comprehensive logout method
   }
 }
 

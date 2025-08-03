@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../services/moderation_service.dart';
+import '../features/moderation/application/moderation_providers.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///

@@ -1,4 +1,31 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
+const { createHash } = require('crypto');
+
+// DEPLOYMENT TEST: Testing GitHub Actions automated deployment pipeline - Aug 3, 2025
+// SECURITY: Privacy utilities for PII protection
+function hashEmail(email) {
+    if (!email || typeof email !== 'string') {
+        return 'unknown-user';
+    }
+    const salt = process.env.EMAIL_HASH_SALT || 'asora-default-salt-change-in-production';
+    return createHash('sha256')
+        .update(email + salt)
+        .digest('hex')
+        .substring(0, 16);
+}
+
+function privacyLog(message, userEmail, additionalData) {
+    const safeUserId = userEmail ? `user_${hashEmail(userEmail)}` : 'unknown';
+    const redactedEmail = userEmail ? `[redacted]@${userEmail.split('@')[1]}` : 'unknown';
+    
+    return {
+        message,
+        userId: safeUserId,
+        userDisplay: redactedEmail,
+        ...additionalData,
+        timestamp: new Date().toISOString()
+    };
+}
 const { Client } = require("pg");
 
 module.exports = async function (context, req) {
@@ -32,7 +59,9 @@ module.exports = async function (context, req) {
 
         try {
             decoded = jwt.verify(token, jwtSecret);
-            context.log(`Token verified for user: ${decoded.email}`);
+            // SECURITY: Use privacy-safe logging
+            const logData = privacyLog('Token verified for user', decoded.email);
+            context.log(logData);
         } catch (jwtError) {
             context.log.error('JWT verification failed:', jwtError.message);
             context.res = { 
@@ -60,7 +89,9 @@ module.exports = async function (context, req) {
 
         try {
             await client.connect();
-            context.log(`Connected to database for user lookup: ${decoded.email}`);
+            // SECURITY: Use privacy-safe logging 
+            const logData = privacyLog('Connected to database for user lookup', decoded.email);
+            context.log(logData);
 
             // Fetch full user profile from database
             const userQuery = await client.query(
@@ -69,7 +100,9 @@ module.exports = async function (context, req) {
             );
 
             if (userQuery.rows.length === 0) {
-                context.log.warn(`User not found in database: ${decoded.email}`);
+                // SECURITY: Use privacy-safe logging
+                const logData = privacyLog('User not found in database', decoded.email);
+                context.log.warn(logData);
                 
                 // Check if this is a temporary token
                 if (decoded.temp) {

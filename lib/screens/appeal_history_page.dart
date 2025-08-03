@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/moderation_service.dart' hide VotingProgress;
-import '../models/appeal.dart' show Appeal, VotingStatus, VotingProgress;
+import '../features/moderation/domain/appeal.dart';
+import '../features/moderation/application/moderation_providers.dart';
 
 /// ASORA APPEAL HISTORY PAGE
 ///
@@ -661,18 +661,12 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
         throw Exception('Please log in to view your appeals');
       }
 
-      final result = await client.getMyAppeals(token: token);
+      final appeals = await client.getMyAppeals(token: token);
 
-      if (result['success'] == true && result['appeals'] != null) {
-        setState(() {
-          _appeals = (result['appeals'] as List)
-              .map((data) => Appeal.fromJson(data))
-              .toList();
-          _isLoading = false;
-        });
-      } else {
-        throw Exception(result['message'] ?? 'Failed to load appeals');
-      }
+      setState(() {
+        _appeals = appeals;
+        _isLoading = false;
+      });
     } catch (error) {
       setState(() {
         _isLoading = false;

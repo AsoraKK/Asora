@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/observability/asora_tracer.dart';
 
 /// ASORA MODERATION CLIENT
 ///
@@ -21,18 +22,31 @@ class ModerationClient {
     String? additionalDetails,
     required String token,
   }) async {
-    final response = await _dio.post(
-      '/api/flag',
-      data: {
-        'contentId': contentId,
-        'contentType': contentType,
-        'reason': reason,
-        if (additionalDetails != null) 'details': additionalDetails,
-      },
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
-    );
+    return AsoraTracer.traceOperation(
+      'ModerationService.flagContent',
+      () async {
+        final response = await _dio.post(
+          '/api/flag',
+          data: {
+            'contentId': contentId,
+            'contentType': contentType,
+            'reason': reason,
+            if (additionalDetails != null) 'details': additionalDetails,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
 
-    return response.data;
+        return response.data;
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/flag')
+            ..addAll({
+              'request.content_id': contentId,
+              'request.content_type': contentType,
+              'request.reason': reason,
+              'request.has_additional_details': additionalDetails != null,
+            }),
+    );
   }
 
   // Appeal flagged content
@@ -44,19 +58,35 @@ class ModerationClient {
     required String userStatement,
     required String token,
   }) async {
-    final response = await _dio.post(
-      '/api/appealContent',
-      data: {
-        'contentId': contentId,
-        'contentType': contentType,
-        'appealType': appealType,
-        'appealReason': appealReason,
-        'userStatement': userStatement,
-      },
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
-    );
+    return AsoraTracer.traceOperation(
+      'ModerationService.appealContent',
+      () async {
+        final response = await _dio.post(
+          '/api/appealContent',
+          data: {
+            'contentId': contentId,
+            'contentType': contentType,
+            'appealType': appealType,
+            'appealReason': appealReason,
+            'userStatement': userStatement,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
 
-    return response.data;
+        return response.data;
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'POST',
+            url: '/api/appealContent',
+          )..addAll({
+            'request.content_id': contentId,
+            'request.content_type': contentType,
+            'request.appeal_type': appealType,
+            'request.appeal_reason': appealReason,
+            'request.user_statement_length': userStatement.length,
+          }),
+    );
   }
 
   // Get user's own appeals
@@ -68,21 +98,37 @@ class ModerationClient {
     String? contentType,
     String? reviewQueue,
   }) async {
-    final queryParams = <String, dynamic>{
-      'page': page,
-      'pageSize': pageSize,
-      if (status != null) 'status': status,
-      if (contentType != null) 'contentType': contentType,
-      if (reviewQueue != null) 'reviewQueue': reviewQueue,
-    };
+    return AsoraTracer.traceOperation(
+      'ModerationService.getMyAppeals',
+      () async {
+        final queryParams = <String, dynamic>{
+          'page': page,
+          'pageSize': pageSize,
+          if (status != null) 'status': status,
+          if (contentType != null) 'contentType': contentType,
+          if (reviewQueue != null) 'reviewQueue': reviewQueue,
+        };
 
-    final response = await _dio.get(
-      '/api/getMyAppeals',
-      queryParameters: queryParams,
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+        final response = await _dio.get(
+          '/api/getMyAppeals',
+          queryParameters: queryParams,
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
+
+        return response.data;
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'GET',
+            url: '/api/getMyAppeals',
+          )..addAll({
+            'request.page': page,
+            'request.page_size': pageSize,
+            if (status != null) 'request.status_filter': status,
+            if (contentType != null) 'request.content_type_filter': contentType,
+            if (reviewQueue != null) 'request.review_queue_filter': reviewQueue,
+          }),
     );
-
-    return response.data;
   }
 
   // Get community appeals to vote on
@@ -93,18 +139,33 @@ class ModerationClient {
     String? contentType,
     String sortBy = 'urgency',
   }) async {
-    final response = await _dio.get(
-      '/api/reviewAppealedContent',
-      queryParameters: {
-        'page': page,
-        'pageSize': pageSize,
-        if (contentType != null) 'contentType': contentType,
-        'sortBy': sortBy,
-      },
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
-    );
+    return AsoraTracer.traceOperation(
+      'ModerationService.getAppealedContent',
+      () async {
+        final response = await _dio.get(
+          '/api/reviewAppealedContent',
+          queryParameters: {
+            'page': page,
+            'pageSize': pageSize,
+            if (contentType != null) 'contentType': contentType,
+            'sortBy': sortBy,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
 
-    return response.data;
+        return response.data;
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'GET',
+            url: '/api/reviewAppealedContent',
+          )..addAll({
+            'request.page': page,
+            'request.page_size': pageSize,
+            'request.sort_by': sortBy,
+            if (contentType != null) 'request.content_type_filter': contentType,
+          }),
+    );
   }
 
   // Vote on community appeal
@@ -114,17 +175,32 @@ class ModerationClient {
     String? comment,
     required String token,
   }) async {
-    final response = await _dio.post(
-      '/api/voteOnAppeal',
-      data: {
-        'appealId': appealId,
-        'vote': vote,
-        if (comment != null) 'comment': comment,
-      },
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
-    );
+    return AsoraTracer.traceOperation(
+      'ModerationService.voteOnAppeal',
+      () async {
+        final response = await _dio.post(
+          '/api/voteOnAppeal',
+          data: {
+            'appealId': appealId,
+            'vote': vote,
+            if (comment != null) 'comment': comment,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        );
 
-    return response.data;
+        return response.data;
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'POST',
+            url: '/api/voteOnAppeal',
+          )..addAll({
+            'request.appeal_id': appealId,
+            'request.vote': vote,
+            'request.has_comment': comment != null,
+            if (comment != null) 'request.comment_length': comment.length,
+          }),
+    );
   }
 
   // Helper method to get appeals for voting with proper typing
@@ -184,8 +260,11 @@ class ModerationClient {
 final moderationClientProvider = Provider<ModerationClient>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl:
-          'https://your-azure-function-url.azurewebsites.net', // Replace with your actual URL
+      baseUrl: const String.fromEnvironment(
+        'AZURE_FUNCTION_URL',
+        defaultValue:
+            'https://your-secure-azure-function-app.azurewebsites.net',
+      ), // SECURITY: Use environment variable for production URL
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),

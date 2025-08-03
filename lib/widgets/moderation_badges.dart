@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/moderation_service.dart';
+import '../features/moderation/domain/appeal.dart';
 
 /// ASORA MODERATION BADGES
 ///

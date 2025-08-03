@@ -1,0 +1,13 @@
+# SECURITY WARNING: This file contains hardcoded secrets
+# Replace this file with environment variable configuration
+
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "POSTGRES_PASSWORD": "USE_AZURE_KEY_VAULT_OR_ENV_VAR",
+    "COSMOS_KEY": "USE_AZURE_KEY_VAULT_OR_ENV_VAR", 
+    "JWT_SECRET": "USE_AZURE_KEY_VAULT_OR_ENV_VAR"
+  }
+}

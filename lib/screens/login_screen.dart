@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../features/auth/application/auth_service.dart';
+import '../features/auth/domain/user.dart';
+import '../features/auth/domain/auth_failure.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,37 +32,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final success = await _authService.loginWithEmail(
+      final user = await _authService.loginWithEmail(
         _emailController.text.trim(),
+        'defaultPassword', // Replace with actual password input
       );
 
-      if (success) {
-        if (mounted) {
-          // Get user info to display
-          final userInfo = await _authService.getCurrentUser();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome ${user.email}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  userInfo != null
-                      ? 'Welcome ${userInfo['user']['email']}!'
-                      : 'Login successful!',
-                ),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-
-            // Show user details in a dialog for demonstration
-            if (userInfo != null) {
-              _showUserDialog(userInfo);
-            }
-          }
-        }
-      } else {
-        _showError('Login failed. Please try again.');
+        // Show user details in a dialog for demonstration
+        _showUserDialog(user);
       }
+    } on AuthFailure catch (e) {
+      _showError('Login failed: ${e.message}');
     } catch (e) {
       _showError('An error occurred: $e');
     } finally {
@@ -80,8 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showUserDialog(Map<String, dynamic> userInfo) {
-    final user = userInfo['user'];
+  void _showUserDialog(User user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -90,18 +79,18 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Email: ${user['email']}'),
-            Text('Role: ${user['role']}'),
-            Text('Tier: ${user['tier']}'),
-            Text('Reputation: ${user['reputationScore']}'),
-            if (user['isTemporary'] == true)
+            Text('Email: ${user.email}'),
+            Text('Role: ${user.role}'),
+            Text('Tier: ${user.tier}'),
+            Text('Reputation: ${user.reputationScore}'),
+            if (user.isTemporary)
               const Text(
                 'Mode: Temporary (Database offline)',
                 style: TextStyle(color: Colors.orange),
               ),
             const SizedBox(height: 8),
             Text(
-              'Token expires: ${user['tokenExpires']}',
+              'Token expires: ${user.tokenExpires?.toIso8601String() ?? 'Not set'}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],

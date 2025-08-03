@@ -1,0 +1,156 @@
+name: Deploy Azure Function App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'functions/**'
+      - 'authEmail/**'
+      - 'getMe/**'
+      - 'getUserAuth/**'
+      - 'host.json'
+      - 'local.settings.json.example'
+      - '.github/workflows/deploy-functionapp.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - production
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'asora-function-dev'
+  AZURE_RESOURCE_GROUP: 'asora-psql-flex'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  NODE_VERSION: '18.x'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: 'Setup Node.js'
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: 'Setup Python'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 'Install Azure Functions Core Tools'
+      run: |
+        npm install -g azure-functions-core-tools@4 --unsafe-perm true
+
+    - name: 'Install Node.js dependencies'
+      run: |
+        npm ci --only=production
+
+    - name: 'Install Python dependencies (if any)'
+      run: |
+        if [ -f requirements.txt ]; then
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        fi
+
+    - name: 'Azure CLI Login via OIDC'
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: 'Verify Azure Function App exists'
+      run: |
+        az functionapp show \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "name" -o tsv
+
+    - name: 'Create deployment package'
+      run: |
+        # Create a clean deployment directory
+        mkdir -p deployment
+        
+        # Copy function directories
+        if [ -d "authEmail" ]; then cp -r authEmail deployment/; fi
+        if [ -d "getMe" ]; then cp -r getMe deployment/; fi
+        if [ -d "getUserAuth" ]; then cp -r getUserAuth deployment/; fi
+        if [ -d "functions" ]; then cp -r functions/* deployment/; fi
+        
+        # Copy configuration files
+        cp host.json deployment/
+        cp package*.json deployment/
+        
+        # Copy Python requirements if they exist
+        if [ -f requirements.txt ]; then cp requirements.txt deployment/; fi
+        
+        # Install production dependencies in deployment directory
+        cd deployment
+        if [ -f package.json ]; then
+          npm ci --only=production
+        fi
+
+    - name: 'Deploy to Azure Function App'
+      run: |
+        cd deployment
+        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --build remote \
+          --publish-local-settings false \
+          --overwrite-settings false
+
+    - name: 'Verify deployment health'
+      run: |
+        # Wait for deployment to complete
+        sleep 30
+        
+        # Get Function App URL
+        FUNCTION_URL=$(az functionapp show \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "defaultHostName" -o tsv)
+        
+        echo "Function App URL: https://$FUNCTION_URL"
+        
+        # Test health endpoint if it exists
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FUNCTION_URL/api/health" || echo "000")
+        if [ "$HTTP_CODE" = "200" ]; then
+          echo "✅ Health check passed"
+        else
+          echo "⚠️ Health check returned: $HTTP_CODE (this may be expected if no health endpoint exists)"
+        fi
+
+    - name: 'Post-deployment configuration'
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "📍 Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
+        echo "📍 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+        echo "📍 Environment: ${{ github.event.inputs.environment || 'dev' }}"
+        
+        # List deployed functions
+        echo "📋 Deployed functions:"
+        az functionapp function list \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "[].{Name:name, Trigger:config.bindings[0].type}" -o table
+
+    - name: 'Cleanup'
+      if: always()
+      run: |
+        # Clean up deployment directory
+        rm -rf deployment
+        
+        # Logout from Azure CLI
+        az logout

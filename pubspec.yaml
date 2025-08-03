@@ -41,6 +41,9 @@ dependencies:
   local_auth: ^2.2.0
   http: ^1.2.0
   dio: ^5.4.0
+  
+  # OpenTelemetry for observability and tracing
+  opentelemetry: ^0.18.10
 
 dev_dependencies:
   flutter_test:

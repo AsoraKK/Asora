@@ -4,12 +4,35 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "excludedTypes": "Request"
-      }
+        "maxTelemetryItemsPerSecond": 20,
+        "excludedTypes": "Request;Dependency;Trace;Exception"
+      },
+      "enableLiveMetrics": true,
+      "enableDependencyTracking": true,
+      "enablePerformanceCountersCollection": true
+    },
+    "logLevel": {
+      "default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
     }
   },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
+  },
+  "functionTimeout": "00:05:00",
+  "http": {
+    "routePrefix": "api",
+    "maxConcurrentRequests": 100,
+    "maxOutstandingRequests": 200
+  },
+  "watchDirectories": ["Shared"],
+  "healthMonitor": {
+    "enabled": true,
+    "healthCheckInterval": "00:00:10",
+    "healthCheckWindow": "00:02:00",
+    "healthCheckThreshold": 6,
+    "counterThreshold": 0.80
   }
 }
