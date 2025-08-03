@@ -269,7 +269,11 @@ void main() {
     group('Copy With Method', () {
       test('should create copy with updated fields', () {
         // Act
-        final updatedPost = testPost.copyWith(isLiked: false, commentCount: 5);
+        final updatedPost = testPost.copyWith(
+          isLiked: false,
+          commentCount: 5,
+          likeCount: 20, // Actually pass the likeCount parameter
+        );
 
         // Assert
         expect(updatedPost.postId, testPost.postId); // Unchanged
