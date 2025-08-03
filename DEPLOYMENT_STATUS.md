@@ -1,4 +1,27 @@
-# 🚀 GitHub Actions Deployment Pipeline - LIVE STATUS
+# 🚀### 🐛 **Recent Issue Re### 🔧 **Fixes Applied**
+1. **✅ OIDC Permissions**: Added `id-token: write` to workflow
+2. **✅ Authentication Type**: Added `auth-type: oidc` to Azure login
+3. **✅ Azure Login Version**: Upgraded to `azure/login@v2` (native OIDC support)
+4. **✅ Service Principal Role**: Added Contributor role at subscription level
+5. **✅ Federated Credentials**: Verified correct configuration for main branch
+6. **✅ Diagnostic Steps**: Added comprehensive authentication debugging
+7. **✅ JavaScript Runtime**: Added `--javascript` flag to deployment command
+8. **✅ Runtime Override**: Added `--force` flag to update Function App from Python to Node.js
+9. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
+10. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`ntime Mismatch**
+**Problem**: Azure Function App runtime mismatch between cloud and local
+```
+Your Azure Function App has 'FUNCTIONS_WORKER_RUNTIME' set to 'Python' while your local project is set to 'Node'.
+You can pass --force to update your Azure app with 'Node' as a 'FUNCTIONS_WORKER_RUNTIME'
+```
+
+**Root Cause**: The Azure Function App was originally provisioned with Python runtime, but the actual code is Node.js/JavaScript.
+
+**Solution**: Added `--force` flag to override the runtime configuration and update it from Python to Node.js.
+
+---
+
+### 🐛 **Previous Issue Resolved: Runtime Detection**GitHub Actions Deployment Pipeline - LIVE STATUS
 
 ## ✅ **All Issues Resolved - Pipeline Ready**
 
