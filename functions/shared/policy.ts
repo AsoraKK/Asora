@@ -107,9 +107,4 @@ export function getContentVisibility(aiScore: number): 'public' | 'warned' | 'bl
   return 'public';
 }
 
-/**
- * Helper function to check if content should trigger AI analysis
- */
-export function shouldRunAIDetection(contentLength: number): boolean {
-  return contentLength >= CHARACTER_LIMITS.aiDetectionThreshold;
-}
+

@@ -192,11 +192,13 @@ export async function detectAIGenerated(content: string): Promise<{
     };
   }
 
-  // TODO: Implement AI-generated content detection
-  console.log('AI detection not yet implemented');
+  // AI detection implementation placeholder
+  // When implemented, this would analyze image/video content for AI generation
+  // For now, return conservative defaults for safety
+  console.log('📸 AI detection evaluation requested but not yet implemented');
   
   return {
-    isAIGenerated: false,
-    confidence: 0.0
+    isAIGenerated: false,  // Default to human-created content
+    confidence: 0.0        // No confidence in detection
   };
 }

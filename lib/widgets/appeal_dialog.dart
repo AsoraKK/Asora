@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../services/moderation_service.dart';
+import '../features/moderation/application/moderation_providers.dart';
+import '../features/moderation/domain/appeal.dart';
 
 /// ASORA APPEAL DIALOG
 ///
@@ -385,7 +386,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
         throw Exception('Please log in to submit an appeal');
       }
 
-      final result = await client.appealContent(
+      final result = await client.submitAppeal(
         contentId: widget.contentId,
         contentType: widget.contentType,
         appealType: _appealType,
@@ -404,7 +405,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    result['message'] ?? 'Appeal submitted successfully',
+                    'Appeal submitted successfully - ID: ${result.appealId}',
                   ),
                 ),
               ],

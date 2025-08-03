@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/moderation_service.dart' hide VotingProgress;
-import '../models/appeal.dart' show Appeal, VotingStatus;
+import '../features/moderation/application/moderation_providers.dart';
+import '../features/moderation/domain/appeal.dart' show Appeal, VotingStatus;
 import '../widgets/appeal_voting_card.dart';
 
 /// ASORA VOTE FEED PAGE
@@ -330,25 +330,18 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
     });
 
     try {
-      final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
+      const params = VotingFeedParams(
+        page: 1,
+        pageSize: 50, // Load more appeals for better UX
+        filters: null, // Can be extended later
+      );
 
-      if (token == null) {
-        throw Exception('Please log in to participate in community voting');
-      }
+      final appealResponse = await ref.read(votingFeedProvider(params).future);
 
-      final result = await client.getAppealsForVoting(token: token);
-
-      if (result['success'] == true && result['appeals'] != null) {
-        setState(() {
-          _appeals = (result['appeals'] as List)
-              .map((data) => Appeal.fromJson(data))
-              .toList();
-          _isLoading = false;
-        });
-      } else {
-        throw Exception(result['message'] ?? 'Failed to load appeals');
-      }
+      setState(() {
+        _appeals = appealResponse.appeals;
+        _isLoading = false;
+      });
     } catch (error) {
       setState(() {
         _isLoading = false;

@@ -10,6 +10,13 @@ class AuthFailure implements Exception {
   factory AuthFailure.serverError([String message = 'Server error']) =>
       AuthFailure._(message);
 
+  factory AuthFailure.invalidCredentials([
+    String message = 'Invalid credentials',
+  ]) => AuthFailure._(message);
+
+  factory AuthFailure.networkError([String message = 'Network error']) =>
+      AuthFailure._(message);
+
   @override
   String toString() => message;
 }

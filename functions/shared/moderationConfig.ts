@@ -135,11 +135,4 @@ export async function getCategoryThreshold(category: string): Promise<number | n
   return config.categoryThresholds?.[category] || null;
 }
 
-/**
- * Clear cache (useful for testing or manual refresh)
- */
-export function clearModerationCache(): void {
-  cachedConfig = null;
-  lastFetchTime = 0;
-  console.log('🔄 Moderation config cache cleared');
-}
+

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../services/moderation_service.dart';
-import '../models/appeal.dart';
+import '../features/moderation/application/moderation_providers.dart';
+import '../features/moderation/domain/appeal.dart';
 
 /// ASORA APPEAL VOTING CARD
 ///
@@ -709,7 +709,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
         token: token,
       );
 
-      if (result['success'] == true) {
+      if (result.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -719,7 +719,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      result['message'] ?? 'Vote submitted successfully',
+                      result.message ?? 'Vote submitted successfully',
                     ),
                   ),
                 ],
@@ -732,7 +732,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
           widget.onVoteSubmitted?.call();
         }
       } else {
-        throw Exception(result['message'] ?? 'Failed to submit vote');
+        throw Exception(result.message ?? 'Failed to submit vote');
       }
     } catch (error) {
       if (mounted) {

@@ -10,9 +10,10 @@ terraform {
 }
 
 variable "subscription_id" {
-  description = "Azure Subscription ID"
+  description = "Azure Subscription ID - Set via TF_VAR_subscription_id environment variable"
   type        = string
-  default     = "99df7ef7-776a-4235-84a4-c77899b2bb04"
+  # Remove hardcoded default - must be provided via environment variable
+  # Set via: export TF_VAR_subscription_id="your-subscription-id"
 }
 
 provider "azurerm" {
@@ -23,6 +24,17 @@ provider "azurerm" {
 ############################################
 # VARIABLES
 ############################################
+
+variable "environment" {
+  description = "Environment name (development, staging, production)"
+  type        = string
+  default     = "development"
+  
+  validation {
+    condition     = contains(["development", "staging", "production"], var.environment)
+    error_message = "Environment must be development, staging, or production."
+  }
+}
 
 variable "location" {
   description = "Azure region"
@@ -47,8 +59,41 @@ variable "postgresql_password" {
 }
 
 variable "client_ip" {
-  type    = string
-  default = "102.182.204.209"
+  type        = string
+  description = "Client IP address for firewall rules - Set via TF_VAR_client_ip environment variable"
+  # Remove hardcoded default - must be provided via environment variable
+  # Set via: export TF_VAR_client_ip="your-client-ip"
+}
+
+# Secrets for Key Vault
+variable "jwt_secret" {
+  type        = string
+  sensitive   = true
+  description = "JWT secret for token signing"
+}
+
+variable "email_hash_salt" {
+  type        = string
+  sensitive   = true
+  description = "Salt for email hashing"
+}
+
+variable "hive_text_key" {
+  type        = string
+  sensitive   = true
+  description = "Hive AI Text Classification API key"
+}
+
+variable "hive_image_key" {
+  type        = string
+  sensitive   = true
+  description = "Hive AI Image Classification API key"
+}
+
+variable "hive_deepfake_key" {
+  type        = string
+  sensitive   = true
+  description = "Hive AI Deepfake Detection API key"
 }
 
 ############################################

@@ -7,7 +7,20 @@ class AuthService {
   final _storage = const FlutterSecureStorage();
 
   // Your Azure Functions local development URL (Android emulator compatible)
-  static const String _baseUrl = 'http://10.0.2.2:7072/api';
+  // SECURITY: Environment-based URL configuration
+  static const String _devUrl = 'http://10.0.2.2:7072/api'; // Local dev only
+  static const String _prodUrl =
+      'https://your-secure-function-app.azurewebsites.net/api'; // Production HTTPS
+
+  static String get _baseUrl {
+    // Use environment variable to determine if we're in development
+    const bool isDevelopment = bool.fromEnvironment(
+      'FLUTTER_DEV',
+      defaultValue: false,
+    );
+    return isDevelopment ? _devUrl : _prodUrl;
+  }
+
   AuthService() {
     // Configure Dio with default options
     _dio.options.baseUrl = _baseUrl;
@@ -26,7 +39,8 @@ class AuthService {
         if (token != null) {
           // Store JWT token securely
           await _storage.write(key: 'jwt_token', value: token);
-          debugPrint('✅ Login successful for: $email');
+          // SECURITY: Use privacy-safe logging - avoid logging email directly
+          debugPrint('✅ Login successful for user');
           return true;
         }
       }
