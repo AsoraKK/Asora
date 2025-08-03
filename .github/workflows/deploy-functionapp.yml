@@ -77,6 +77,19 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+    - name: 'Diagnostic - Verify Authentication'
+      run: |
+        echo "🔍 Diagnostic Information:"
+        echo "Expected subject claim: repo:AsoraKK/Asora:ref:refs/heads/main"
+        echo "Checking current account..."
+        az account show --output table || echo "❌ No account available"
+        echo "Checking subscription access..."
+        az account list --output table || echo "❌ No subscriptions available"
+        echo "Checking service principal..."
+        az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query "displayName" -o tsv || echo "❌ Service principal not accessible"
+        echo "Checking resource group access..."
+        az group show --name "${{ env.AZURE_RESOURCE_GROUP }}" --query "name" -o tsv || echo "❌ Resource group not accessible"
+
     - name: 'Verify Azure Function App exists'
       run: |
         az functionapp show \
