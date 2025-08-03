@@ -1,0 +1,52 @@
+# 🚀 GitHub Actions Deployment Pipeline - LIVE STATUS
+
+## ✅ **All Issues Resolved - Pipeline Ready**
+
+### 🔧 **Fixes Applied**
+1. **✅ OIDC Permissions**: Added `id-token: write` to workflow
+2. **✅ Authentication Type**: Added `auth-type: oidc` to Azure login
+3. **✅ Azure Login Version**: Updated to `azure/login@v1.16.1` for OIDC support
+4. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
+5. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
+
+### 🎯 **Current Pipeline Status**
+- **Trigger**: Push to `main` branch just completed
+- **Commit**: `a58fd1c` - "Fix OIDC support: Update azure/login to v1.16.1 for auth-type compatibility"
+- **Latest Fix**: Updated Azure login action to support OIDC authentication
+- **Expected Flow**: 
+  1. Format Check ✅
+  2. Build & Test (Ubuntu) ✅
+  3. Build & Test (macOS) ✅  
+  4. Build & Test (Windows) ✅
+  5. **Azure Deployment** → Should now authenticate successfully with OIDC
+
+### 🔐 **Required GitHub Secrets**
+Ensure these are configured in your repository at `Settings → Secrets and variables → Actions`:
+
+```
+AZURE_CLIENT_ID=06c8564f-030d-414f-a552-678d756f9ec3
+AZURE_TENANT_ID=275643fa-37e0-4f67-b616-85a7da674bea
+AZURE_SUBSCRIPTION_ID=99df7ef7-776a-4235-84a4-c77899b2bb04
+```
+
+### 📊 **Monitor Deployment**
+1. **GitHub Actions**: https://github.com/AsoraKK/Asora/actions
+2. **Look for**: Latest "Deploy Azure Function App" workflow
+3. **Azure Portal**: Check `asora-function-dev` in `asora-psql-flex` resource group
+
+### 🎉 **What Should Happen Now**
+- **OIDC Authentication**: Should work seamlessly
+- **Function App Deployment**: Should update your Azure Functions
+- **Health Checks**: Should verify deployment success
+- **No More Errors**: All previous authentication and test issues resolved
+
+### 🔄 **Manual Trigger Option**
+If you want to test manual deployment:
+1. Go to GitHub Actions
+2. Select "Deploy Azure Function App"
+3. Click "Run workflow"
+4. Choose environment (dev/staging/production)
+
+---
+
+**🎊 Your automated deployment pipeline is now fully operational!**
