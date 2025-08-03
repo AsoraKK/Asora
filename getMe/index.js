@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { createHash } = require('crypto');
 
-// DEPLOYMENT TEST: Full end-to-end pipeline test - All issues resolved - Aug 3, 2025
+// DEPLOYMENT TEST: Azure Function deployment with OIDC v1.16.1 - Aug 3, 2025
 // SECURITY: Privacy utilities for PII protection
 function hashEmail(email) {
     if (!email || typeof email !== 'string') {
