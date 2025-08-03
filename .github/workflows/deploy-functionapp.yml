@@ -23,6 +23,11 @@ on:
         - staging
         - production
 
+# Required for OIDC authentication with Azure
+permissions:
+  contents: read
+  id-token: write
+
 env:
   AZURE_FUNCTIONAPP_NAME: 'asora-function-dev'
   AZURE_RESOURCE_GROUP: 'asora-psql-flex'
