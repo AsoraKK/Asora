@@ -2,15 +2,27 @@
 
 ## ✅ **All Issues Resolved - Pipeline Ready**
 
-### 🔧 **Fixes Applied**
+### � **Recent Issue Resolved: Runtime Detection**
+**Problem**: Azure Functions Core Tools couldn't determine project language
+```
+Can't determine project language from files. Please use one of [--dotnet-isolated, --dotnet, --javascript, --typescript, --java, --python, --powershell, --custom]
+Worker runtime cannot be 'None'. Please set a valid runtime.
+```
+
+**Solution**: Added explicit `--javascript` flag to the `func azure functionapp publish` command since this is a Node.js/JavaScript Azure Functions project.
+
+---
+
+### �🔧 **Fixes Applied**
 1. **✅ OIDC Permissions**: Added `id-token: write` to workflow
 2. **✅ Authentication Type**: Added `auth-type: oidc` to Azure login
 3. **✅ Azure Login Version**: Upgraded to `azure/login@v2` (native OIDC support)
 4. **✅ Service Principal Role**: Added Contributor role at subscription level
 5. **✅ Federated Credentials**: Verified correct configuration for main branch
 6. **✅ Diagnostic Steps**: Added comprehensive authentication debugging
-7. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
-8. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
+7. **✅ JavaScript Runtime**: Added `--javascript` flag to deployment command
+8. **✅ Dart Formatting**: Fixed `lib/models/appeal.dart` formatting
+9. **✅ Test Failures**: Fixed `copyWith` test in `post_test.dart`
 
 ### 🎯 **Current Pipeline Status**
 - **Trigger**: Push to `main` branch just completed

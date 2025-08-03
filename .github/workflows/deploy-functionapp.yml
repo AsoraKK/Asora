@@ -125,6 +125,7 @@ jobs:
       run: |
         cd deployment
         func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --javascript \
           --build remote \
           --publish-local-settings false \
           --overwrite-settings false
