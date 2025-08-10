@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../features/auth/application/auth_providers.dart';
 import '../features/auth/application/auth_state.dart';
 import '../features/feed/domain/models.dart' as domain;
+import '../widgets/security_widgets.dart';
+import 'privacy_settings_screen.dart';
 
 /// ---------------------------------------------------------------------------
 ///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
@@ -95,14 +97,18 @@ class FeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.person_outline),
-          onPressed: () {},
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
         title: Text(
           'Asora',
@@ -113,7 +119,13 @@ class FeedScreen extends ConsumerWidget {
           IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
         ],
       ),
-      body: Stack(children: [const _BackgroundPattern(), _FeedList()]),
+      drawer: _AsoraDrawer(authState: authState),
+      body: const Column(
+        children: [
+          DeviceSecurityBanner(),
+          Expanded(child: Stack(children: [_BackgroundPattern(), _FeedList()])),
+        ],
+      ),
       bottomNavigationBar: const _AsoraNavBar(),
     );
   }
@@ -405,6 +417,216 @@ class _AsoraNavBar extends StatelessWidget {
       ],
       backgroundColor: isDark ? Colors.black : Colors.white,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+    );
+  }
+}
+
+// ---- Navigation Drawer ----------------------------------------------------
+class _AsoraDrawer extends ConsumerWidget {
+  final AuthState authState;
+
+  const _AsoraDrawer({required this.authState});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isSignedIn = authState.status == AuthStatus.authed;
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.secondary,
+                ],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  child: Icon(
+                    isSignedIn ? Icons.person : Icons.person_outline,
+                    size: 32,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  isSignedIn ? 'Welcome back!' : 'Welcome to Asora',
+                  style: GoogleFonts.sora(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (isSignedIn && authState.userId != null)
+                  Text(
+                    'User ID: ${authState.userId}',
+                    style: GoogleFonts.sora(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Navigation items
+          if (isSignedIn) ...[
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: Text('Profile', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to profile screen
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_outlined),
+              title: Text('Notifications', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to notifications
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: Text('Privacy Settings', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacySettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: Text('Settings', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to general settings
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: Text('Help & Support', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to help
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.logout, color: theme.colorScheme.error),
+              title: Text(
+                'Sign Out',
+                style: GoogleFonts.sora(color: theme.colorScheme.error),
+              ),
+              onTap: () => _handleSignOut(context, ref),
+            ),
+          ] else ...[
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: Text('Sign In', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to sign in
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: Text('Sign Up', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Navigate to sign up
+              },
+            ),
+          ],
+
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text('About Asora', style: GoogleFonts.sora()),
+            onTap: () {
+              Navigator.pop(context);
+              _showAboutDialog(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleSignOut(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Sign Out', style: GoogleFonts.sora()),
+        content: Text(
+          'Are you sure you want to sign out?',
+          style: GoogleFonts.sora(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: GoogleFonts.sora()),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Close drawer
+              // Simple state change - the actual auth provider should handle sign out
+              ref.read(authStateProvider.notifier).state =
+                  const AuthState.guest();
+            },
+            child: Text('Sign Out', style: GoogleFonts.sora()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Asora',
+      applicationVersion: '1.0.0',
+      applicationIcon: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+            ],
+          ),
+        ),
+        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Text(
+            'A social platform for authentic human-authored content with AI-powered verification.',
+            style: GoogleFonts.sora(fontSize: 14),
+          ),
+        ),
+      ],
     );
   }
 }

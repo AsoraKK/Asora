@@ -45,6 +45,7 @@ import { getUserContext } from '../shared/auth';
 import { getContainer } from '../shared/cosmosClient';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
+import { withTelemetry, AsoraKPIs, PerformanceTimer } from '../shared/telemetry';
 
 interface AppealRequest {
     contentId: string;
@@ -74,7 +75,9 @@ interface AppealResult {
     };
 }
 
-export async function appealFlag(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function appealFlagInternal(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+    const timer = new PerformanceTimer('appeal_flag', context);
+    
     try {
         // 1. Validate JWT authentication
         const userContext = getUserContext(request);
@@ -310,6 +313,20 @@ export async function appealFlag(request: HttpRequest, context: InvocationContex
 
         context.log(`✅ Appeal submitted by ${userContext.email}: ${appealId} for ${appealRequest.contentType}:${appealRequest.contentId} (${appealRequest.appealType} appeal)`);
 
+        // Track appeal metrics
+        const duration = timer.stopAndTrack({
+            appeal_type: appealRecord.appealType,
+            content_type: appealRecord.contentType,
+            action: appealRecord.requestedAction || 'unknown'
+        });
+        
+        AsoraKPIs.trackUserEvent('appeal_submitted', userContext.userId, {
+            appeal_type: appealRecord.appealType,
+            content_type: appealRecord.contentType,
+            action: appealRecord.requestedAction || 'unknown',
+            appeals_today: todayAppeals.length + 1
+        }, context);
+
         // 13. Return success response
         const result: AppealResult = {
             success: true,
@@ -336,7 +353,14 @@ export async function appealFlag(request: HttpRequest, context: InvocationContex
         };
 
     } catch (error: any) {
+        const duration = timer.stop();
         context.error('Appeal submission error:', error);
+        
+        AsoraKPIs.trackBusinessMetric('appeal_errors', 1, {
+            error_type: 'appeal_submission_error',
+            duration_ms: duration.toString()
+        }, context);
+
         return {
             status: 500,
             jsonBody: {
@@ -346,6 +370,9 @@ export async function appealFlag(request: HttpRequest, context: InvocationContex
         };
     }
 }
+
+// Telemetry-wrapped version
+export const appealFlag = withTelemetry('appeal_flag', appealFlagInternal);
 
 app.http('appealFlag', {
     methods: ['POST'],

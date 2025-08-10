@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
-/// ASORA APPEAL MODEL TESTS
-///
-/// 🎯 Purpose: Test domain model serialization and validation
-/// ✅ Coverage: JSON parsing, edge cases, validation, enum handling
-/// 📊 Target: 100% coverage for domain models
+// ASORA APPEAL MODEL TESTS
+//
+// 🎯 Purpose: Test domain model serialization and validation
+// ✅ Coverage: JSON parsing, edge cases, validation, enum handling
+// 📊 Target: 100% coverage for domain models
 
 void main() {
   group('Appeal Model Tests', () {

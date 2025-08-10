@@ -8,13 +8,22 @@
 import { CosmosClient, Container } from '@azure/cosmos';
 
 // Cosmos DB configuration
-const endpoint = process.env.COSMOS_ENDPOINT!;
-const key = process.env.COSMOS_KEY!;
 const databaseId = 'asora-db';
 
-// Initialize Cosmos client
-const client = new CosmosClient({ endpoint, key });
-const database = client.database(databaseId);
+// Lazy-initialized Cosmos client to avoid side effects during test imports
+let client: CosmosClient | null = null;
+
+function getClient(): CosmosClient {
+  if (!client) {
+    const endpoint = process.env.COSMOS_ENDPOINT;
+    const key = process.env.COSMOS_KEY;
+    if (!endpoint || !key) {
+      throw new Error('COSMOS_ENDPOINT and COSMOS_KEY must be set');
+    }
+    client = new CosmosClient({ endpoint, key });
+  }
+  return client;
+}
 
 /**
  * Get a specific container from the Asora database
@@ -22,6 +31,7 @@ const database = client.database(databaseId);
  * @returns Cosmos Container instance
  */
 export function getContainer(containerId: string): Container {
+  const database = getClient().database(databaseId);
   return database.container(containerId);
 }
 

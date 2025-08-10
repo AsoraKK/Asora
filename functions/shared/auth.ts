@@ -86,3 +86,17 @@ export function getUserContext(req: HttpRequest): { userId: string; email: strin
     tier: result.tier!
   };
 }
+
+/**
+ * Require authentication or throw an error with status 401
+ * Returns a normalized user object with `sub` matching JWT claim naming
+ */
+export function requireAuth(req: HttpRequest): { sub: string; email: string; role: string; tier: string } {
+  const user = getUserContext(req);
+  if (!user) {
+    const err: any = new Error('Unauthorized');
+    err.status = 401;
+    throw err;
+  }
+  return { sub: user.userId, email: user.email, role: user.role, tier: user.tier };
+}
