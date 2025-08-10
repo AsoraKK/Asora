@@ -7,14 +7,16 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "func start --port 7072",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
     "@azure/functions": "^4.0.0", 
     "jsonwebtoken": "^9.0.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "uuid": "^9.0.1",
+    "joi": "^17.12.1"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.0",
