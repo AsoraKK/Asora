@@ -7,13 +7,15 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "func start --port 7072",
-    "test": "jest --passWithNoTests",
+    "test": "jest --config jest.config.ts --passWithNoTests",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
     "@azure/functions": "^4.0.0",
+    "applicationinsights": "^2.9.2",
     "axios": "^1.6.0",
+    "ioredis": "^5.3.0",
     "joi": "^17.12.1",
     "jsonwebtoken": "^9.0.0",
     "redis": "^4.6.0",
@@ -27,6 +29,7 @@
     "jest": "^29.0.0",
     "rimraf": "^5.0.0",
     "ts-jest": "^29.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
   },
   "keywords": [

@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart';
 
-/// ASORA APPEAL SCREEN INTEGRATION TESTS
-///
-/// 🎯 Purpose: Test complete screen behavior with different states
-/// ✅ Coverage: Loading, error, data states, user interactions
-/// 🧪 Test Types: Integration tests for screen-level behavior
-/// 📱 Platform: Flutter with widget integration testing
+// ASORA APPEAL SCREEN INTEGRATION TESTS
+//
+// 🎯 Purpose: Test complete screen behavior with different states
+// ✅ Coverage: Loading, error, data states, user interactions
+// 🧪 Test Types: Integration tests for screen-level behavior
+// 📱 Platform: Flutter with widget integration testing
 
 // Mock service class for integration testing
 class MockAppealService {

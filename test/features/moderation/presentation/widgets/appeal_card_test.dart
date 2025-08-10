@@ -4,12 +4,12 @@ import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart'
 import 'package:asora/features/moderation/presentation/widgets/voting_progress_indicator.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
-/// ASORA APPEAL CARD WIDGET TESTS
-///
-/// 🎯 Purpose: Test AppealCard widget rendering and behavior
-/// ✅ Coverage: showProgress parameter, content display, interaction
-/// 🧪 Test Types: Widget rendering, conditional display, user interaction
-/// 📱 Platform: Flutter widget testing framework
+// ASORA APPEAL CARD WIDGET TESTS
+//
+// 🎯 Purpose: Test AppealCard widget rendering and behavior
+// ✅ Coverage: showProgress parameter, content display, interaction
+// 🧪 Test Types: Widget rendering, conditional display, user interaction
+// 📱 Platform: Flutter widget testing framework
 
 void main() {
   group('AppealCard Widget Tests', () {

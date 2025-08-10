@@ -42,6 +42,14 @@ dependencies:
   http: ^1.2.0
   dio: ^5.4.0
   google_fonts: ^6.0.0
+  crypto: ^3.0.3  # For certificate pinning SPKI hashing
+  
+  # Security packages
+  flutter_jailbreak_detection: ^1.10.0  # Root/jailbreak detection
+  
+  # File handling and sharing
+  path_provider: ^2.1.1         # File system access
+  share_plus: ^7.2.1            # File sharing functionality
   
   # OpenTelemetry for observability and tracing
   opentelemetry: ^0.18.10

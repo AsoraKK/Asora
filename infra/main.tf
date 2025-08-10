@@ -90,10 +90,32 @@ variable "hive_image_key" {
   description = "Hive AI Image Classification API key"
 }
 
-variable "hive_deepfake_key" {
+variable "enable_redis_cache" {
+  description = "Enable Redis cache for feed caching (use only if FEED_CACHE_BACKEND=redis)"
+  type        = bool
+  default     = false
+  
+  validation {
+    condition     = can(var.enable_redis_cache)
+    error_message = "enable_redis_cache must be a boolean value."
+  }
+}
+
+variable "feed_cache_backend" {
+  description = "Feed caching backend to use (edge, redis, or none)"
+  type        = string
+  default     = "edge"
+  
+  validation {
+    condition = contains(["edge", "redis", "none"], var.feed_cache_backend)
+    error_message = "feed_cache_backend must be one of: edge, redis, none."
+  }
+}
+
+variable "edge_telemetry_secret" {
+  description = "Shared secret for edge telemetry authentication"
   type        = string
   sensitive   = true
-  description = "Hive AI Deepfake Detection API key"
 }
 
 ############################################
@@ -211,6 +233,43 @@ resource "azurerm_cosmosdb_sql_container" "posts" {
 }
 
 ############################################
+# REDIS CACHE (Optional - only when enable_redis_cache=true)
+############################################
+
+# Redis Cache for feed caching fallback (when FEED_CACHE_BACKEND=redis)
+resource "azurerm_redis_cache" "asora_redis" {
+  count = var.enable_redis_cache ? 1 : 0
+  
+  name                = "asora-redis-${var.environment}"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  capacity            = 0  # Basic C0 SKU
+  family              = "C"
+  sku_name           = "Basic"
+  
+  # Enable TLS for secure connections
+  minimum_tls_version = "1.2"
+  
+  # Enable non-SSL port for local development (disable in production)
+  enable_non_ssl_port = var.environment == "development" ? true : false
+  
+  # Disable public network access in production
+  public_network_access_enabled = var.environment == "development" ? true : false
+  
+  # Redis configuration
+  redis_configuration {
+    # maxmemory_policy = "volatile-lru"  # Would enable this for Standard+ SKUs
+  }
+  
+  tags = {
+    Environment = var.environment
+    Project     = "asora"
+    Purpose     = "feed-caching-fallback"
+    azd-env-name = var.environment
+  }
+}
+
+############################################
 # OUTPUTS
 ############################################
 
@@ -220,4 +279,20 @@ output "postgresql_fqdn" {
 
 output "cosmos_endpoint" {
   value = azurerm_cosmosdb_account.cosmos.endpoint
+}
+
+output "redis_cache_name" {
+  description = "Name of the Redis cache instance"
+  value       = var.enable_redis_cache ? azurerm_redis_cache.asora_redis[0].name : ""
+}
+
+output "redis_cache_hostname" {
+  description = "Hostname of the Redis cache"
+  value       = var.enable_redis_cache ? azurerm_redis_cache.asora_redis[0].hostname : ""
+}
+
+output "redis_primary_connection_string" {
+  description = "Primary connection string for Redis cache"
+  value       = var.enable_redis_cache ? azurerm_redis_cache.asora_redis[0].primary_connection_string : ""
+  sensitive   = true
 }

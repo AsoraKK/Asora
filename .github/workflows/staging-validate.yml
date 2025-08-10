@@ -1,0 +1,22 @@
+name: Staging Edge Cache Validate
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Staging Deploy"]
+    types: [completed]
+
+jobs:
+  validate:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run validation
+        env:
+          DOMAIN: ${{ secrets.STAGING_DOMAIN }}         # e.g. staging.asora.app
+          PATH_FEED: /api/feed/get
+          QS1: page=1&size=20&type=trending&filter=safe
+          QS2: page=1&size=21&type=trending&filter=safe
+          # token can be a dummy accepted by staging
+          AUTH_HDR: "Authorization: Bearer ${{ secrets.STAGING_SMOKE_TOKEN }}"
+        run: ./scripts/validate_edge_cache.sh

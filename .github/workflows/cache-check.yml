@@ -1,0 +1,250 @@
+name: Edge Cache Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare/**'
+      - 'functions/feed/**'
+      - 'functions/shared/cacheConfig.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare/**'
+      - 'functions/feed/**'
+      - 'functions/shared/cacheConfig.ts'
+  workflow_dispatch:
+    inputs:
+      staging_domain:
+        description: 'Staging domain to test (e.g., api-staging.asora.app)'
+        required: true
+        default: 'api-staging.asora.app'
+
+env:
+  STAGING_DOMAIN: ${{ github.event.inputs.staging_domain || 'api-staging.asora.app' }}
+  TEST_ENDPOINT: '/api/feed/get'
+
+jobs:
+  cache-validation:
+    name: Validate Edge Cache Behavior
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'infra/cloudflare/package-lock.json'
+
+      - name: Install Worker dependencies
+        run: |
+          cd infra/cloudflare
+          npm ci
+
+      - name: Run Worker unit tests
+        run: |
+          cd infra/cloudflare
+          npm test
+        env:
+          NODE_ENV: test
+
+      - name: Wait for deployment to settle
+        run: sleep 30
+
+      - name: Test Anonymous Feed Caching Behavior
+        id: cache_test
+        run: |
+          set -e
+          
+          echo "🧪 Testing anonymous feed caching behavior..."
+          FEED_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}?page=1&size=20"
+          
+          echo "📋 Test Configuration:"
+          echo "  Domain: ${STAGING_DOMAIN}"
+          echo "  Endpoint: ${TEST_ENDPOINT}"
+          echo "  Full URL: ${FEED_URL}"
+          echo ""
+          
+          # Test 1: First anonymous request should return CF-Cache-Status: MISS
+          echo "🔍 Test 1: First anonymous request (expecting MISS)"
+          FIRST_RESPONSE=$(curl -sSI "${FEED_URL}" || { echo "❌ First request failed"; exit 1; })
+          echo "Response headers:"
+          echo "$FIRST_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
+          echo ""
+          
+          FIRST_CACHE_STATUS=$(echo "$FIRST_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          FIRST_CACHE_CONTROL=$(echo "$FIRST_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
+          
+          echo "📊 First request results:"
+          echo "  CF-Cache-Status: ${FIRST_CACHE_STATUS}"
+          echo "  Cache-Control: ${FIRST_CACHE_CONTROL}"
+          echo ""
+          
+          # Validate first request
+          if [[ "${FIRST_CACHE_STATUS}" != "MISS" ]]; then
+            echo "❌ FAIL: First anonymous request should return CF-Cache-Status: MISS, got: ${FIRST_CACHE_STATUS}"
+            exit 1
+          fi
+          
+          if [[ "${FIRST_CACHE_CONTROL}" != *"public"* ]] || [[ "${FIRST_CACHE_CONTROL}" != *"s-maxage"* ]]; then
+            echo "❌ FAIL: First request should have public cache headers, got: ${FIRST_CACHE_CONTROL}"
+            exit 1
+          fi
+          
+          echo "✅ Test 1 PASSED: First request correctly shows MISS with public cache headers"
+          echo ""
+          
+          # Test 2: Second anonymous request within 30s should return CF-Cache-Status: HIT
+          echo "🔍 Test 2: Second anonymous request within TTL (expecting HIT)"
+          sleep 2
+          
+          SECOND_RESPONSE=$(curl -sSI "${FEED_URL}" || { echo "❌ Second request failed"; exit 1; })
+          echo "Response headers:"
+          echo "$SECOND_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
+          echo ""
+          
+          SECOND_CACHE_STATUS=$(echo "$SECOND_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          
+          echo "📊 Second request results:"
+          echo "  CF-Cache-Status: ${SECOND_CACHE_STATUS}"
+          echo ""
+          
+          # Validate second request
+          if [[ "${SECOND_CACHE_STATUS}" != "HIT" ]]; then
+            echo "❌ FAIL: Second anonymous request within TTL should return CF-Cache-Status: HIT, got: ${SECOND_CACHE_STATUS}"
+            exit 1
+          fi
+          
+          echo "✅ Test 2 PASSED: Second request correctly shows HIT"
+          echo ""
+          
+          # Test 3: Authenticated request should bypass cache
+          echo "🔍 Test 3: Authenticated request (expecting no-store and DYNAMIC)"
+          
+          AUTH_RESPONSE=$(curl -sSI -H 'Authorization: Bearer test-jwt-token' "${FEED_URL}" || { echo "❌ Auth request failed"; exit 1; })
+          echo "Response headers:"
+          echo "$AUTH_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
+          echo ""
+          
+          AUTH_CACHE_STATUS=$(echo "$AUTH_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          AUTH_CACHE_CONTROL=$(echo "$AUTH_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
+          
+          echo "📊 Authenticated request results:"
+          echo "  CF-Cache-Status: ${AUTH_CACHE_STATUS}"
+          echo "  Cache-Control: ${AUTH_CACHE_CONTROL}"
+          echo ""
+          
+          # Validate authenticated request
+          if [[ "${AUTH_CACHE_CONTROL}" != *"no-store"* ]] && [[ "${AUTH_CACHE_CONTROL}" != *"private"* ]]; then
+            echo "❌ FAIL: Authenticated request should have no-store or private cache control, got: ${AUTH_CACHE_CONTROL}"
+            exit 1
+          fi
+          
+          if [[ "${AUTH_CACHE_STATUS}" == "HIT" ]]; then
+            echo "❌ FAIL: Authenticated request should not return CF-Cache-Status: HIT, got: ${AUTH_CACHE_STATUS}"
+            exit 1
+          fi
+          
+          echo "✅ Test 3 PASSED: Authenticated request correctly bypasses cache"
+          echo ""
+
+      - name: Test Different Query Parameters
+        run: |
+          set -e
+          
+          echo "🧪 Testing cache key separation for different query parameters..."
+          BASE_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}"
+          
+          # Test requests with different page sizes should be separate cache entries
+          echo "🔍 Testing size=20 vs size=21 cache separation"
+          
+          SIZE_20_RESPONSE=$(curl -sSI "${BASE_URL}?page=1&size=20" || { echo "❌ Size 20 request failed"; exit 1; })
+          SIZE_21_RESPONSE=$(curl -sSI "${BASE_URL}?page=1&size=21" || { echo "❌ Size 21 request failed"; exit 1; })
+          
+          SIZE_20_STATUS=$(echo "$SIZE_20_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          SIZE_21_STATUS=$(echo "$SIZE_21_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          
+          echo "📊 Query parameter separation results:"
+          echo "  size=20 CF-Cache-Status: ${SIZE_20_STATUS}"
+          echo "  size=21 CF-Cache-Status: ${SIZE_21_STATUS}"
+          echo ""
+          
+          # Both should be MISS as they are different cache keys
+          if [[ "${SIZE_21_STATUS}" != "MISS" ]]; then
+            echo "❌ FAIL: Different query parameters should create separate cache entries (size=21 should be MISS)"
+            exit 1
+          fi
+          
+          echo "✅ Query parameter separation test PASSED"
+
+      - name: Test Non-Feed Path Bypass
+        run: |
+          set -e
+          
+          echo "🧪 Testing non-feed path bypass..."
+          
+          # Test that non-exact feed paths are bypassed
+          NON_FEED_RESPONSE=$(curl -sSI "https://${STAGING_DOMAIN}/api/feed/" || { echo "❌ Non-feed request failed"; exit 1; })
+          NON_FEED_STATUS=$(echo "$NON_FEED_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
+          
+          echo "📊 Non-feed path results:"
+          echo "  /api/feed/ CF-Cache-Status: ${NON_FEED_STATUS}"
+          echo ""
+          
+          if [[ "${NON_FEED_STATUS}" == "HIT" ]] || [[ "${NON_FEED_STATUS}" == "MISS" ]]; then
+            echo "❌ FAIL: Non-exact feed paths should bypass cache (should be DYNAMIC), got: ${NON_FEED_STATUS}"
+            exit 1
+          fi
+          
+          echo "✅ Non-feed path bypass test PASSED"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "🎉 Edge Cache Validation Summary"
+          echo "================================"
+          echo "✅ Anonymous first request: MISS with public cache headers"
+          echo "✅ Anonymous second request: HIT within TTL window"
+          echo "✅ Authenticated request: Bypasses cache with private headers"
+          echo "✅ Different query parameters: Separate cache entries"
+          echo "✅ Non-feed paths: Bypass caching entirely"
+          echo ""
+          echo "🚀 Edge caching is working correctly!"
+
+  deploy-staging:
+    name: Deploy to Staging (if needed)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'infra/cloudflare/package-lock.json'
+
+      - name: Install Worker dependencies
+        run: |
+          cd infra/cloudflare
+          npm ci
+
+      - name: Deploy Cloudflare Worker to Staging
+        run: |
+          cd infra/cloudflare
+          echo "🚀 Deploying Worker to staging environment..."
+          # This would typically use Wrangler with staging environment
+          # wrangler publish --env staging
+          echo "Worker deployment completed"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

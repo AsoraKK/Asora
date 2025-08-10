@@ -13,27 +13,31 @@ import '../../features/moderation/domain/moderation_repository.dart';
 import '../../features/moderation/application/moderation_service.dart';
 import '../../features/feed/domain/feed_repository.dart';
 import '../../features/feed/application/feed_service.dart';
+import '../security/cert_pinning.dart';
 
 /// **Core HTTP Client Provider**
 ///
-/// Centralized Dio instance with Azure Functions configuration
+/// Centralized Dio instance with Azure Functions configuration and certificate pinning
 /// Used by all repository implementations for consistency
 final httpClientProvider = Provider<Dio>((ref) {
-  return Dio(
-    BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'AZURE_FUNCTION_URL',
-        defaultValue:
-            'https://your-secure-azure-function-app.azurewebsites.net',
-      ),
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
+  const baseUrl = String.fromEnvironment(
+    'AZURE_FUNCTION_URL',
+    defaultValue:
+        'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api',
   );
+
+  // Create Dio with certificate pinning enabled
+  final dio = createPinnedDio(baseUrl: baseUrl);
+
+  // Configure timeouts and headers
+  dio.options.connectTimeout = const Duration(seconds: 10);
+  dio.options.receiveTimeout = const Duration(seconds: 10);
+  dio.options.headers.addAll({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  });
+
+  return dio;
 });
 
 /// **Moderation Repository Provider**

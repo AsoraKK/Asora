@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 
-/// ASORA FEED POST MODEL TESTS
-///
-/// 🎯 Purpose: Test feed post domain models and serialization
-/// ✅ Coverage: Post model validation, JSON serialization, edge cases
-/// 🧪 Test Types: Unit tests for domain models
-/// 📱 Platform: Flutter domain layer testing
+// ASORA FEED POST MODEL TESTS
+//
+// 🎯 Purpose: Test feed post domain models and serialization
+// ✅ Coverage: Post model validation, JSON serialization, edge cases
+// 🧪 Test Types: Unit tests for domain models
+// 📱 Platform: Flutter domain layer testing
 
 // Simple Post model for feed testing
 class Post {
