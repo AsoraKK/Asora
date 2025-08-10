@@ -81,10 +81,11 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getUserContext } from '../shared/auth';
 import { getContainer } from '../shared/cosmosClient';
-import { CHARACTER_LIMITS, getDailyPostLimit } from '../shared/policy';
+import { CHARACTER_LIMITS } from '../shared/policy';
 import { getModerationConfig, getDynamicContentVisibility } from '../shared/moderationConfig';
 import { moderateText } from '../shared/hiveClient';
 import { hashEmail, createPrivacySafeUserId, privacyLog } from '../shared/privacyUtils';
+import { validateAttachmentCount, getDailyPostLimit, UserTier } from '../shared/tierLimits';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
 
@@ -105,7 +106,14 @@ export async function postCreate(request: HttpRequest, context: InvocationContex
         // 3. Validate input using Joi with dynamic policy limits
         const schema = Joi.object({
             text: Joi.string().max(moderationConfig.charLimits.post).required(),
-            mediaUrl: Joi.string().uri().optional()
+            mediaUrl: Joi.string().uri().optional(),
+            attachments: Joi.array().items(
+                Joi.object({
+                    url: Joi.string().uri().required(),
+                    type: Joi.string().valid('image', 'video', 'document').required(),
+                    size: Joi.number().positive().optional()
+                })
+            ).optional()
         });
 
         const { error, value } = schema.validate(await request.json());
@@ -116,9 +124,26 @@ export async function postCreate(request: HttpRequest, context: InvocationContex
             };
         }
 
-        // 4. Check tier-based posting limits
+        // 4. Validate tier-based attachment limits
+        const userTier = (userContext.tier || 'Free') as UserTier;
+        const attachments = value.attachments || [];
+        const attachmentValidation = validateAttachmentCount(userTier, attachments.length);
+        
+        if (!attachmentValidation.valid) {
+            return {
+                status: 403,
+                jsonBody: {
+                    error: 'Tier media limit exceeded',
+                    code: 'TIER_MEDIA_LIMIT',
+                    allowed: attachmentValidation.allowed,
+                    attempted: attachments.length,
+                    tier: userTier
+                }
+            };
+        }
+
+        // 5. Check tier-based posting limits
         // Check user's daily post count against tier limits
-        const userTier = (userContext.tier || 'Free') as 'Free' | 'Premium' | 'Enterprise';
         const dailyLimit = getDailyPostLimit(userTier);
         
         if (dailyLimit !== Infinity) {
@@ -189,6 +214,7 @@ export async function postCreate(request: HttpRequest, context: InvocationContex
             id: postId,
             text: value.text,
             mediaUrl: value.mediaUrl || null,
+            attachments: attachments,
             userId: userContext.userId,
             userHashedId: hashEmail(userContext.email), // SECURITY: Hash email for privacy
             createdAt,
