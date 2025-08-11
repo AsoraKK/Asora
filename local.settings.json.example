@@ -1,11 +1,14 @@
 # SECURITY WARNING: This file contains hardcoded secrets
 # Replace this file with environment variable configuration
+# RUNTIME: This is a Node.js Azure Functions application
 
 {
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "node",
+    "WEBSITE_NODE_DEFAULT_VERSION": "~20",
+    "FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR": "true",
     "POSTGRES_PASSWORD": "USE_AZURE_KEY_VAULT_OR_ENV_VAR",
     "COSMOS_KEY": "USE_AZURE_KEY_VAULT_OR_ENV_VAR", 
     "JWT_SECRET": "USE_AZURE_KEY_VAULT_OR_ENV_VAR",

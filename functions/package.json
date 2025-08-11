@@ -8,7 +8,11 @@
     "watch": "tsc --watch",
     "start": "func start --port 7072",
     "test": "jest --config jest.config.ts --passWithNoTests",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "lint": "echo 'No linting configured yet'",
+    "prepack": "npm run clean && npm run build",
+    "pack": "func pack --javascript --output dist.zip",
+    "deploy": "az functionapp deployment source config-zip -g \"$AZURE_RESOURCE_GROUP\" -n \"$AZURE_FUNCTIONAPP_NAME\" --src dist.zip"
   },
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
@@ -26,6 +30,8 @@
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^20.0.0",
     "@types/redis": "^4.0.0",
+    "@types/uuid": "^10.0.0",
+    "azure-functions-core-tools": "4.0.5455",
     "jest": "^29.0.0",
     "rimraf": "^5.0.0",
     "ts-jest": "^29.4.1",
@@ -44,6 +50,6 @@
   "author": "Asora Team",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "20.x"
   }
 }
