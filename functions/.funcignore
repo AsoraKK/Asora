@@ -1,0 +1,62 @@
+# Source files - exclude TypeScript, include compiled JavaScript
+src/**/*.ts
+**/*.ts
+!dist/**/*.js
+
+# Compiled output that should be excluded
+*.js.map
+
+# Dependencies
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+__tests__/
+coverage/
+
+# Build files
+.build/
+.temp/
+.tmp/
+*.tgz
+*.tar.gz
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.nyc_output/
+
+# TypeScript configuration
+tsconfig.json
+tsconfig.*.json
+
+# Development files
+*.dev.*
+*.development.*
+local.settings.json
+
+# Documentation
+*.md
+docs/
+
+# Git
+.git/
+.gitignore
+
+# Azure specific
+azure.yaml
+.azure/
