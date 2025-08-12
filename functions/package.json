@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Asora platform backend Azure Functions with AI-powered moderation",
   "main": "index.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
@@ -48,8 +51,5 @@
     "asora"
   ],
   "author": "Asora Team",
-  "license": "MIT",
-  "engines": {
-    "node": "20.x"
-  }
+  "license": "MIT"
 }
