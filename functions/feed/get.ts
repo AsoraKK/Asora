@@ -6,6 +6,7 @@ import { rankPosts, paginateRankedPosts, generateRankingTelemetry, PostForRankin
 import { getCache, setCache, generateFeedCacheKey, getCacheMetrics } from '../shared/redisClient';
 import { getCacheConfig, isRedisCacheEnabled, isEdgeCacheEnabled, shouldCollectTelemetry } from '../shared/cacheConfig';
 import { withTelemetry, AsoraKPIs, PerformanceTimer } from '../shared/telemetry';
+import { mapPostForRanking } from './postMapper';
 
 interface FeedQuery {
   page?: number;
@@ -75,11 +76,13 @@ async function queryPostsFromCosmos(userId: string, query: FeedQuery, context: I
     // Build base query - get recent posts (last 7 days for trending)
     const querySpec = {
       query: `
-        SELECT c.id, c.text, c.authorId, c.createdAt, 
-               c.stats.likesCount, c.stats.commentsCount, c.stats.sharesCount,
+        SELECT c.id, c.text, c.authorId, c.createdAt,
+               c.stats.likesCount AS likesCount,
+               c.stats.commentsCount AS commentsCount,
+               c.stats.sharesCount AS sharesCount,
                c.aiScore, c.author
-        FROM c 
-        WHERE c._ts > @minTimestamp 
+        FROM c
+        WHERE c._ts > @minTimestamp
           AND (c.aiScore.overall = @safetyFilter OR @safetyFilter = 'all')
         ORDER BY c._ts DESC
       `,
@@ -92,13 +95,7 @@ async function queryPostsFromCosmos(userId: string, query: FeedQuery, context: I
     const { resources: posts } = await postsContainer.items.query(querySpec).fetchAll();
     
     // Convert to PostForRanking format
-    const postsForRanking: PostForRanking[] = posts.map(post => ({
-      id: post.id,
-      authorId: post.authorId,
-      createdAt: post.createdAt.toISOString(), // Convert Date to string
-      engagementScore: (post.likesCount || 0) + (post.commentsCount || 0) * 2 + (post.sharesCount || 0) * 3, // Calculate engagement
-      authorReputation: post.author?.reputationScore || 50 // Default reputation
-    }));
+    const postsForRanking: PostForRanking[] = posts.map(mapPostForRanking);
     
     const duration = Date.now() - startTime;
     context.log(`Cosmos query completed: ${postsForRanking.length} posts in ${duration}ms`);
