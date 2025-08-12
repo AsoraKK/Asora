@@ -176,9 +176,14 @@ describe('Telemetry System', () => {
     it('should stop and track metrics', () => {
       const timer = new PerformanceTimer('tracked-operation', mockContext);
       const properties = { operation_type: 'test' };
-      
+
+      const start = Date.now();
+      while (Date.now() - start < 5) {
+        // wait to ensure measurable duration
+      }
+
       const duration = timer.stopAndTrack(properties);
-      
+
       expect(duration).toBeGreaterThan(0);
       expect(mockContext.debug).toHaveBeenCalledWith(
         expect.stringContaining('Timer stopped: tracked-operation')

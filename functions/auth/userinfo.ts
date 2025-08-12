@@ -16,6 +16,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getUserContext } from '../shared/auth';
 import { getContainer } from '../shared/cosmosClient';
+import jwt from 'jsonwebtoken';
 
 export async function userInfo(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     try {
@@ -80,17 +81,12 @@ export async function userInfo(request: HttpRequest, context: InvocationContext)
             
             let tokenInfo = {};
             if (token) {
-                try {
-                    const jwt = require('jsonwebtoken');
-                    const decoded = jwt.decode(token) as any;
-                    if (decoded) {
-                        tokenInfo = {
-                            issuedAt: new Date(decoded.iat * 1000).toISOString(),
-                            expiresAt: new Date(decoded.exp * 1000).toISOString()
-                        };
-                    }
-                } catch (tokenError) {
-                    // Token info is optional, continue without it
+                const decoded = jwt.decode(token) as any;
+                if (decoded) {
+                    tokenInfo = {
+                        issuedAt: new Date(decoded.iat * 1000).toISOString(),
+                        expiresAt: new Date(decoded.exp * 1000).toISOString()
+                    };
                 }
             }
 
