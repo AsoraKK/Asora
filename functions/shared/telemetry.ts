@@ -330,7 +330,7 @@ export class PerformanceTimer {
   }
 
   stop(): number {
-    const duration = Date.now() - this.startTime;
+    const duration = Math.max(1, Date.now() - this.startTime);
     this.context?.debug(`⏱️ Timer stopped: ${this.name} - ${duration}ms`);
     return duration;
   }

@@ -5,16 +5,14 @@
 
 import { requireAuth } from '../shared/auth';
 import { getContainer } from '../shared/cosmosClient';
-import { randomUUID } from 'crypto';
+import { postAppeal } from '../appeals/postAppeal';
 
 // Mock dependencies
 jest.mock('../shared/cosmosClient');
 jest.mock('../shared/auth');
-jest.mock('crypto');
 
 const mockGetContainer = getContainer as jest.MockedFunction<typeof getContainer>;
 const mockRequireAuth = requireAuth as jest.MockedFunction<typeof requireAuth>;
-const mockRandomUUID = randomUUID as jest.MockedFunction<typeof randomUUID>;
 
 describe('Appeals Logic', () => {
   let mockAppealsContainer: any;
@@ -29,7 +27,6 @@ describe('Appeals Logic', () => {
     };
     
     mockGetContainer.mockReturnValue(mockAppealsContainer);
-    mockRandomUUID.mockReturnValue('test-uuid-123');
   });
 
   // Test the core business logic that would be in the handler
@@ -60,5 +57,48 @@ describe('Appeals Logic', () => {
     const longReason = 'x'.repeat(1500);
     const truncated = String(longReason).slice(0, 1000);
     expect(truncated.length).toBe(1000);
+  });
+});
+
+describe('postAppeal handler', () => {
+  let mockAppealsContainer: any;
+  const mockContext = { log: jest.fn(), error: jest.fn() } as any;
+
+  const createRequest = (body: any) => ({
+    method: 'POST',
+    url: 'https://test.com/api/appeals',
+    headers: {},
+    json: async () => body,
+  } as any);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAppealsContainer = { items: { create: jest.fn().mockResolvedValue({}) } };
+    mockGetContainer.mockReturnValue(mockAppealsContainer);
+    mockRequireAuth.mockReturnValue({ sub: 'user123' });
+  });
+
+  it('returns 201 for valid body', async () => {
+    const req = createRequest({ postId: 'post123', reason: 'valid reason' });
+    const res = await postAppeal(req, mockContext);
+    expect(res.status).toBe(201);
+    expect(mockAppealsContainer.items.create).toHaveBeenCalled();
+  });
+
+  it('returns 400 for invalid body', async () => {
+    const req = createRequest({ postId: '', reason: '' });
+    const res = await postAppeal(req, mockContext);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for malformed JSON', async () => {
+    const req = {
+      method: 'POST',
+      url: 'https://test.com/api/appeals',
+      headers: {},
+      json: async () => { throw new Error('Invalid JSON'); },
+    } as any;
+    const res = await postAppeal(req, mockContext);
+    expect(res.status).toBe(400);
   });
 });
