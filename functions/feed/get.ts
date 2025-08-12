@@ -267,9 +267,11 @@ export async function getFeedInternal(request: HttpRequest, context: InvocationC
   try {
     // Parse query parameters
     const url = new URL(request.url);
+    const parsedPage = parseInt(url.searchParams.get('page') || '1');
+    const parsedLimit = parseInt(url.searchParams.get('limit') || '20');
     const query: FeedQuery = {
-      page: parseInt(url.searchParams.get('page') || '1'),
-      limit: parseInt(url.searchParams.get('limit') || '20'),
+      page: Number.isNaN(parsedPage) ? 1 : parsedPage,
+      limit: Number.isNaN(parsedLimit) ? 20 : parsedLimit,
       type: (url.searchParams.get('type') as FeedQuery['type']) || 'trending',
       filter: (url.searchParams.get('filter') as FeedQuery['filter']) || 'safe'
     };

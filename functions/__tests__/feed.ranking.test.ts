@@ -294,17 +294,19 @@ describe('Feed Ranking System', () => {
         { page: '0', limit: '20', expectedPage: 1, expectedLimit: undefined },
         { page: '1', limit: '0', expectedPage: undefined, expectedLimit: 20 },
         { page: '1', limit: '200', expectedPage: undefined, expectedLimit: 20 }, // Max limit enforcement
-        { page: 'invalid', limit: '20', expectedPage: 1, expectedLimit: undefined }
+        { page: 'abc', limit: '20', expectedPage: 1, expectedLimit: undefined },
+        { page: '1', limit: 'abc', expectedPage: undefined, expectedLimit: 20 },
+        { page: 'abc', limit: 'xyz', expectedPage: 1, expectedLimit: 20 }
       ];
 
       testCases.forEach(({ page, limit, expectedPage, expectedLimit }) => {
         const url = new URL(`https://api.asora.com/feed/get?page=${page}&limit=${limit}`);
         const parsedPage = parseInt(url.searchParams.get('page') || '1');
         const parsedLimit = parseInt(url.searchParams.get('limit') || '20');
-        
-        const finalPage = isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
-        const finalLimit = isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100 ? 20 : parsedLimit;
-        
+
+        const finalPage = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+        const finalLimit = Number.isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100 ? 20 : parsedLimit;
+
         if (expectedPage !== undefined) expect(finalPage).toBe(expectedPage);
         if (expectedLimit !== undefined) expect(finalLimit).toBe(expectedLimit);
       });
