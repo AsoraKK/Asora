@@ -7,13 +7,15 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean && npm run compile && npm run generate-function-configs",
+    "compile": "tsc",
+    "generate-function-configs": "node scripts/generate-function-configs.js",
     "watch": "tsc --watch",
     "start": "func start --port 7072",
     "test": "jest --config jest.config.ts --passWithNoTests",
     "clean": "rimraf dist",
     "lint": "echo 'No linting configured yet'",
-    "prepack": "npm run clean && npm run build",
+    "prepack": "npm run build",
     "pack": "func pack --javascript --output dist.zip",
     "deploy": "az functionapp deployment source config-zip -g \"$AZURE_RESOURCE_GROUP\" -n \"$AZURE_FUNCTIONAPP_NAME\" --src dist.zip"
   },
