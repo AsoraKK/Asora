@@ -66,17 +66,25 @@ jobs:
         run: |
           echo "📊 Extracting coverage for P1 modules (lib/p1_modules/)..."
           
-          # Extract coverage for P1 modules only
-          lcov --extract coverage/lcov.info 'lib/p1_modules/*' --output-file coverage/p1_coverage.info
+          # Extract coverage for P1 modules only - handle both Unix and Windows paths
+          lcov --extract coverage/lcov.info 'lib/p1_modules/*' --output-file coverage/p1_coverage_unix.info 2>/dev/null || true
+          lcov --extract coverage/lcov.info 'lib\p1_modules\*' --output-file coverage/p1_coverage_win.info 2>/dev/null || true
+          
+          # Combine both extracts (one will be empty)
+          cat coverage/p1_coverage_unix.info coverage/p1_coverage_win.info > coverage/p1_coverage.info 2>/dev/null || true
           
           # Generate coverage summary
-          lcov --summary coverage/p1_coverage.info > coverage/p1_summary.txt
-          
-          # Extract coverage percentage
           if [ -f coverage/p1_coverage.info ] && [ -s coverage/p1_coverage.info ]; then
+            lcov --summary coverage/p1_coverage.info > coverage/p1_summary.txt
+            
+            # Extract coverage percentage
             COVERAGE=$(lcov --summary coverage/p1_coverage.info | grep lines | awk '{print $2}' | sed 's/%//')
             echo "P1_COVERAGE=$COVERAGE" >> $GITHUB_ENV
             echo "📊 P1 modules coverage: $COVERAGE%"
+            
+            # Debug: Show what files were found
+            echo "🔍 P1 module files in coverage:"
+            grep "^SF:" coverage/p1_coverage.info | head -5
           else
             echo "⚠️ No P1 modules found or no coverage data"
             COVERAGE=0
@@ -94,13 +102,28 @@ jobs:
           echo "🎯 Checking P1 modules coverage threshold..."
           echo "Current P1 coverage: $P1_COVERAGE%"
           echo "Required threshold: 80%"
+          echo "Total project coverage: $TOTAL_COVERAGE%"
+          
+          # Validate P1_COVERAGE is a valid number
+          if ! [[ "$P1_COVERAGE" =~ ^[0-9]+\.?[0-9]*$ ]]; then
+            echo "❌ Invalid P1 coverage value: $P1_COVERAGE"
+            echo "::error::Failed to calculate P1 modules coverage. Check if P1 modules exist and have tests."
+            exit 1
+          fi
           
           # Check if P1 coverage meets 80% threshold
           if (( $(echo "$P1_COVERAGE >= 80" | bc -l) )); then
             echo "✅ P1 modules coverage ($P1_COVERAGE%) meets 80% threshold"
+            echo "::notice::Coverage gate passed for P1 modules"
           else
             echo "❌ P1 modules coverage ($P1_COVERAGE%) is below 80% threshold"
-            echo "::error::Coverage gate failed - P1 modules need 80% test coverage to deploy"
+            echo "::error::Coverage gate failed - P1 modules require 80% test coverage"
+            echo "::error::Missing coverage: $(echo "80 - $P1_COVERAGE" | bc)%"
+            echo ""
+            echo "💡 To fix this:"
+            echo "1. Add more tests for P1 modules in test/p1_modules/"
+            echo "2. Ensure all critical functions are tested"
+            echo "3. Run 'flutter test --coverage' locally to verify"
             exit 1
           fi
 
@@ -195,6 +218,14 @@ jobs:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ✅ Verify Azure Authentication
+        run: |
+          echo "🔍 Verifying Azure OIDC authentication..."
+          az account show --output table
+          echo "✅ Successfully authenticated with Azure using OIDC (no client secrets used)"
+          echo "📋 Current subscription: $(az account show --query name -o tsv)"
+          echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
 
       - name: 🛠️ Setup Azure Developer CLI
         uses: Azure/setup-azd@v1.0.0

@@ -152,4 +152,17 @@ class PasswordValidationResult {
 
     return 'Password validation failed: ${errors.join(', ')}';
   }
+
+  /// Deliberately uncovered function to demonstrate coverage gate failure
+  /// This function has no tests and will cause coverage to drop below 80%
+  static String generateUntestedSecurityHash(String input) {
+    // This is intentionally not tested to demo coverage gate
+    if (input.isEmpty) {
+      throw ArgumentError('Input cannot be empty');
+    }
+
+    final hash = input.hashCode.toString();
+    final salt = DateTime.now().millisecondsSinceEpoch.toString();
+    return '$hash-$salt-untested';
+  }
 }

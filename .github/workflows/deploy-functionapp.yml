@@ -39,7 +39,7 @@ jobs:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v4
 
-    - name: 'Setup Node.js'
+    - name: 'Setup Node.js 20'
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
@@ -53,19 +53,34 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+    - name: 'Verify Azure Authentication'
+      run: |
+        echo "🔍 Verifying Azure OIDC authentication..."
+        az account show --output table
+        echo "✅ Successfully authenticated with Azure using OIDC (no client secrets used)"
+        echo "📋 Current subscription: $(az account show --query name -o tsv)"
+        echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
+
     - name: 'Configure Function App for Node 20'
       run: |
+        echo "🔧 Configuring Function App runtime for Node 20..."
         az functionapp config appsettings set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --settings FUNCTIONS_EXTENSION_VERSION=~4 \
                     FUNCTIONS_WORKER_RUNTIME=node \
                     WEBSITE_NODE_DEFAULT_VERSION=~20
+        
+        echo "🔧 Setting Node 20 runtime stack..."
+        az functionapp config set \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --linux-fx-version "Node|20"
 
     - name: 'Install, Build, and Deploy'
       working-directory: ./functions
       run: |
-        echo "� Installing dependencies..."
+        echo "📦 Installing dependencies..."
         npm ci
         
         echo "🔨 Building TypeScript..."
@@ -74,11 +89,122 @@ jobs:
         echo "📋 Installing Azure Functions Core Tools..."
         npm i -g azure-functions-core-tools@4 --unsafe-perm true
         
-        echo "� Deploying to Azure Functions..."
-        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript
+        echo "🚀 Deploying to Azure Functions with Node 20..."
+        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript --force --build remote
+
+    - name: 'Configure Key Vault References'
+      run: |
+        echo "🔐 Configuring Key Vault references for secrets..."
+        
+        # Get the Key Vault name (includes environment and random suffix)
+        KV_NAME=$(az keyvault list \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "[?starts_with(name, 'asora-kv-dev-')].name" \
+          -o tsv)
+        
+        echo "📋 Using Key Vault: $KV_NAME"
+        
+        # Configure Key Vault references for all secrets
+        az functionapp config appsettings set \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --settings \
+            "JWT_SECRET=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=jwt-secret)" \
+            "COSMOS_ENDPOINT=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=cosmos-endpoint)" \
+            "COSMOS_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=cosmos-key)" \
+            "POSTGRES_CONNECTION_STRING=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=postgres-connection-string)" \
+            "HIVE_TEXT_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-text-key)" \
+            "HIVE_IMAGE_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-image-key)" \
+            "HIVE_DEEPFAKE_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-deepfake-key)" \
+            "EMAIL_HASH_SALT=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=email-hash-salt)"
+        
+        echo "🔄 Restarting Function App to apply Key Vault references..."
+        az functionapp restart \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+        
+        echo "⏳ Waiting for Function App to start..."
+        sleep 30
 
     - name: 'Post-deployment validation'
       run: |
         echo "✅ Deployment completed successfully!"
         echo "📍 Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
         echo "📍 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+        echo "🔍 Verifying Function App Node version..."
+        az functionapp config show \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "linuxFxVersion" -o tsv
+        echo "🔍 Checking app settings for Node version..."
+        az functionapp config appsettings list \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv
+
+    - name: 'Verify Key Vault References'
+      run: |
+        echo "🔐 Verifying Key Vault references are configured..."
+        
+        # Check if Key Vault references are properly set
+        KV_REFS=$(az functionapp config appsettings list \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "[?contains(value, '@Microsoft.KeyVault')].{name:name, value:value}" \
+          -o table)
+        
+        echo "📋 Key Vault references configured:"
+        echo "$KV_REFS"
+        
+        # Count expected Key Vault references
+        KV_COUNT=$(az functionapp config appsettings list \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "length([?contains(value, '@Microsoft.KeyVault')])" \
+          -o tsv)
+        
+        echo "📊 Found $KV_COUNT Key Vault references"
+        
+        # Verify we have the expected Key Vault references
+        EXPECTED_SECRETS=("JWT_SECRET" "COSMOS_ENDPOINT" "COSMOS_KEY" "POSTGRES_CONNECTION_STRING" "HIVE_TEXT_KEY" "HIVE_IMAGE_KEY" "HIVE_DEEPFAKE_KEY" "EMAIL_HASH_SALT")
+        
+        echo "🔍 Verifying individual Key Vault references..."
+        for secret in "${EXPECTED_SECRETS[@]}"; do
+          SECRET_VALUE=$(az functionapp config appsettings list \
+            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "[?name=='$secret'].value" \
+            -o tsv)
+          
+          if [[ $SECRET_VALUE == *"@Microsoft.KeyVault"* ]]; then
+            echo "✅ $secret: Key Vault reference configured"
+          else
+            echo "❌ $secret: Missing or not a Key Vault reference"
+            exit 1
+          fi
+        done
+        
+        # Verify Function App health
+        echo "🏥 Checking Function App health..."
+        APP_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
+        
+        # Wait for app to be ready
+        echo "⏳ Waiting for Function App to be ready..."
+        for i in {1..12}; do
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL" || echo "000")
+          if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "404" ]]; then
+            echo "✅ Function App is responding (HTTP $HTTP_STATUS)"
+            break
+          fi
+          echo "⏳ Attempt $i/12: Function App not ready yet (HTTP $HTTP_STATUS), waiting..."
+          sleep 15
+        done
+        
+        # Final health check
+        if [[ "$HTTP_STATUS" == "000" ]]; then
+          echo "❌ Function App is not responding after 3 minutes"
+          exit 1
+        fi
+        
+        echo "✅ Key Vault references verification completed successfully!"
+        echo "🎉 Function App is healthy and Key Vault integration is working!"

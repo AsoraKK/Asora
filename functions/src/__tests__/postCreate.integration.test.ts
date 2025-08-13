@@ -14,7 +14,8 @@ jest.mock('../shared/privacyUtils');
 
 const mockGetUserContext = require('../shared/auth').getUserContext as jest.MockedFunction<any>;
 const mockGetContainer = require('../shared/cosmosClient').getContainer as jest.MockedFunction<any>;
-const mockGetModerationConfig = require('../shared/moderationConfig').getModerationConfig as jest.MockedFunction<any>;
+const mockGetModerationConfig = require('../shared/moderationConfig')
+  .getModerationConfig as jest.MockedFunction<any>;
 const mockModerateText = require('../shared/hiveClient').moderateText as jest.MockedFunction<any>;
 const mockHashEmail = require('../shared/privacyUtils').hashEmail as jest.MockedFunction<any>;
 const mockPrivacyLog = require('../shared/privacyUtils').privacyLog as jest.MockedFunction<any>;
@@ -23,61 +24,60 @@ describe('Post Creation - Tier Media Limits', () => {
   const mockContext = {
     log: jest.fn(),
     error: jest.fn(),
-    warn: jest.fn()
+    warn: jest.fn(),
   };
 
   const mockCosmosContainer = {
     items: {
-      create: jest.fn()
-    }
+      create: jest.fn(),
+    },
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup default mocks
     mockGetContainer.mockReturnValue(mockCosmosContainer);
     mockGetModerationConfig.mockResolvedValue({
       charLimits: { post: 2000 },
-      thresholds: { safe: 0.3, warned: 0.7 }
+      thresholds: { safe: 0.3, warned: 0.7 },
     });
     mockModerateText.mockResolvedValue({
       score: 0.1,
       decision: 'approve',
       categories: {},
       triggeredRules: [],
-      raw: {}
+      raw: {},
     });
     mockHashEmail.mockReturnValue('hashedEmail');
     mockPrivacyLog.mockReturnValue('logData');
     mockCosmosContainer.items.create.mockResolvedValue({});
   });
 
-  const createMockRequest = (body: any): HttpRequest => ({
-    method: 'POST',
-    url: 'https://test.com/api/post/create',
-    headers: {},
-    body: {
-      string: JSON.stringify(body)
-    },
-    json: async () => body
-  } as any);
+  const createMockRequest = (body: any): HttpRequest =>
+    ({
+      method: 'POST',
+      url: 'https://test.com/api/post/create',
+      headers: {},
+      body: {
+        string: JSON.stringify(body),
+      },
+      json: async () => body,
+    }) as any;
 
   describe('Free Tier Media Limits', () => {
     beforeEach(() => {
       mockGetUserContext.mockReturnValue({
         userId: 'user123',
         email: 'test@example.com',
-        tier: 'Free'
+        tier: 'Free',
       });
     });
 
     it('should allow Free tier user to create post with 1 attachment', async () => {
       const requestBody = {
         text: 'Test post with one image',
-        attachments: [
-          { url: 'https://example.com/image1.jpg', type: 'image' }
-        ]
+        attachments: [{ url: 'https://example.com/image1.jpg', type: 'image' }],
       };
 
       const request = createMockRequest(requestBody);
@@ -92,8 +92,8 @@ describe('Post Creation - Tier Media Limits', () => {
         text: 'Test post with two images',
         attachments: [
           { url: 'https://example.com/image1.jpg', type: 'image' },
-          { url: 'https://example.com/image2.jpg', type: 'image' }
-        ]
+          { url: 'https://example.com/image2.jpg', type: 'image' },
+        ],
       };
 
       const request = createMockRequest(requestBody);
@@ -105,7 +105,7 @@ describe('Post Creation - Tier Media Limits', () => {
         code: 'TIER_MEDIA_LIMIT',
         allowed: 1,
         attempted: 2,
-        tier: 'Free'
+        tier: 'Free',
       });
       expect(mockCosmosContainer.items.create).not.toHaveBeenCalled();
     });
@@ -116,7 +116,7 @@ describe('Post Creation - Tier Media Limits', () => {
       mockGetUserContext.mockReturnValue({
         userId: 'user456',
         email: 'black@example.com',
-        tier: 'Black'
+        tier: 'Black',
       });
     });
 
@@ -126,8 +126,8 @@ describe('Post Creation - Tier Media Limits', () => {
         attachments: [
           { url: 'https://example.com/image1.jpg', type: 'image' },
           { url: 'https://example.com/image2.jpg', type: 'image' },
-          { url: 'https://example.com/image3.jpg', type: 'image' }
-        ]
+          { url: 'https://example.com/image3.jpg', type: 'image' },
+        ],
       };
 
       const request = createMockRequest(requestBody);
@@ -144,8 +144,8 @@ describe('Post Creation - Tier Media Limits', () => {
           { url: 'https://example.com/image1.jpg', type: 'image' },
           { url: 'https://example.com/image2.jpg', type: 'image' },
           { url: 'https://example.com/image3.jpg', type: 'image' },
-          { url: 'https://example.com/image4.jpg', type: 'image' }
-        ]
+          { url: 'https://example.com/image4.jpg', type: 'image' },
+        ],
       };
 
       const request = createMockRequest(requestBody);
@@ -157,7 +157,7 @@ describe('Post Creation - Tier Media Limits', () => {
         code: 'TIER_MEDIA_LIMIT',
         allowed: 3,
         attempted: 4,
-        tier: 'Black'
+        tier: 'Black',
       });
       expect(mockCosmosContainer.items.create).not.toHaveBeenCalled();
     });
@@ -167,7 +167,7 @@ describe('Post Creation - Tier Media Limits', () => {
     it('should handle missing tier gracefully (default to Free)', async () => {
       mockGetUserContext.mockReturnValue({
         userId: 'user789',
-        email: 'noTier@example.com'
+        email: 'noTier@example.com',
         // tier is undefined
       });
 
@@ -175,8 +175,8 @@ describe('Post Creation - Tier Media Limits', () => {
         text: 'Test post without tier',
         attachments: [
           { url: 'https://example.com/image1.jpg', type: 'image' },
-          { url: 'https://example.com/image2.jpg', type: 'image' }
-        ]
+          { url: 'https://example.com/image2.jpg', type: 'image' },
+        ],
       };
 
       const request = createMockRequest(requestBody);
@@ -190,11 +190,11 @@ describe('Post Creation - Tier Media Limits', () => {
       mockGetUserContext.mockReturnValue({
         userId: 'user000',
         email: 'text@example.com',
-        tier: 'Free'
+        tier: 'Free',
       });
 
       const requestBody = {
-        text: 'Text-only post with no attachments'
+        text: 'Text-only post with no attachments',
       };
 
       const request = createMockRequest(requestBody);

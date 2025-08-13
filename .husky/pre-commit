@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit formatting checks..."
+
+# Check Dart formatting (Flutter app)
+echo "📱 Checking Dart formatting..."
+dart format --output=none --set-exit-if-changed .
+if [ $? -ne 0 ]; then
+  echo "❌ Dart formatting check failed. Please run: dart format ."
+  exit 1
+fi
+echo "✅ Dart formatting check passed"
+
+# Check TypeScript formatting and linting (Azure Functions)
+echo "⚡ Checking Functions formatting and linting..."
+cd functions
+
+# Check if dependencies are installed
+if [ ! -d "node_modules" ]; then
+  echo "📦 Installing Functions dependencies..."
+  npm install
+fi
+
+# Check Prettier formatting
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ Functions formatting check failed. Please run: npm run format"
+  cd ..
+  exit 1
+fi
+echo "✅ Functions formatting check passed"
+
+# Check ESLint
+npm run lint:check
+if [ $? -ne 0 ]; then
+  echo "❌ Functions linting check failed. Please run: npm run lint"
+  cd ..
+  exit 1
+fi
+echo "✅ Functions linting check passed"
+
+cd ..
+echo "🎉 All formatting checks passed! Commit proceeding..."

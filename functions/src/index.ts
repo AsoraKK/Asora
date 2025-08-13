@@ -5,7 +5,7 @@
 
 // Feed functions
 import './src/feed/get';
-import './src/feed/local'; 
+import './src/feed/local';
 import './src/feed/trending';
 import './src/feed/newCreators';
 

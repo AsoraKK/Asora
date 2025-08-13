@@ -1,0 +1,109 @@
+name: Deploy Azure Function App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - production
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default: false
+        type: boolean
+
+# Required for OIDC authentication with Azure
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'asora-function-dev'
+  AZURE_RESOURCE_GROUP: 'asora-psql-flex'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  NODE_VERSION: '20'
+  FUNCTIONS_WORKER_RUNTIME: 'node'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || null }}
+    
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: 'Setup Node.js 20'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: functions/package-lock.json
+
+    - name: 'Login to Azure'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: 'Verify Azure Authentication'
+      run: |
+        echo "🔍 Verifying Azure OIDC authentication..."
+        az account show --output table
+        echo "✅ Successfully authenticated with Azure using OIDC (no client secrets used)"
+        echo "📋 Current subscription: $(az account show --query name -o tsv)"
+        echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
+
+    - name: 'Configure Function App for Node 20'
+      run: |
+        echo "🔧 Configuring Function App runtime for Node 20..."
+        az functionapp config appsettings set \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --settings FUNCTIONS_EXTENSION_VERSION=~4 \
+                    FUNCTIONS_WORKER_RUNTIME=node \
+                    WEBSITE_NODE_DEFAULT_VERSION=~20
+        
+        echo "🔧 Setting Node 20 runtime stack..."
+        az functionapp config set \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --linux-fx-version "Node|20"
+
+    - name: 'Install, Build, and Deploy'
+      working-directory: ./functions
+      run: |
+        echo "📦 Installing dependencies..."
+        npm ci
+        
+        echo "🔨 Building TypeScript..."
+        npm run build
+        
+        echo "📋 Installing Azure Functions Core Tools..."
+        npm i -g azure-functions-core-tools@4 --unsafe-perm true
+        
+        echo "🚀 Deploying to Azure Functions with Node 20..."
+        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript --force --build remote
+
+    - name: 'Post-deployment validation'
+      run: |
+        echo "✅ Deployment completed successfully!"
+        echo "📍 Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
+        echo "📍 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+        echo "🔍 Verifying Function App Node version..."
+        az functionapp config show \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "linuxFxVersion" -o tsv
+        echo "🔍 Checking app settings for Node version..."
+        az functionapp config appsettings list \
+          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv

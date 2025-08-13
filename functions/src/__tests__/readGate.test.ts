@@ -8,19 +8,19 @@ describe('Read Gate Enforcement', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockContainer = {
       item: jest.fn().mockReturnThis(),
-      read: jest.fn()
+      read: jest.fn(),
     };
   });
 
   it('should allow access for users without accountLocked', async () => {
     // Arrange
     mockContainer.read.mockResolvedValue({
-      resource: { id: 'user123', accountLocked: false }
+      resource: { id: 'user123', accountLocked: false },
     });
-    
+
     const user = { sub: 'user123' };
 
     // Act & Assert
@@ -30,19 +30,21 @@ describe('Read Gate Enforcement', () => {
   it('should block access for users with accountLocked=true', async () => {
     // Arrange
     mockContainer.read.mockResolvedValue({
-      resource: { id: 'user123', accountLocked: true }
+      resource: { id: 'user123', accountLocked: true },
     });
-    
+
     const user = { sub: 'user123' };
 
     // Act & Assert
-    await expect(enforceReadGate(user, mockContainer)).rejects.toThrow('First post required to unlock reading');
+    await expect(enforceReadGate(user, mockContainer)).rejects.toThrow(
+      'First post required to unlock reading'
+    );
   });
 
   it('should allow access when user not found', async () => {
     // Arrange
     mockContainer.read.mockResolvedValue({ resource: null });
-    
+
     const user = { sub: 'user123' };
 
     // Act & Assert

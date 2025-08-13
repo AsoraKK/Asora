@@ -2,12 +2,12 @@
  * Tests for tier-based limits functionality
  */
 
-import { 
-  getAttachmentLimit, 
-  getDailyPostLimit, 
-  getTierLimits, 
+import {
+  getAttachmentLimit,
+  getDailyPostLimit,
+  getTierLimits,
   validateAttachmentCount,
-  UserTier 
+  UserTier,
 } from '../shared/tierLimits';
 
 describe('Tier Limits', () => {
@@ -48,19 +48,19 @@ describe('Tier Limits', () => {
       expect(validateAttachmentCount('Free', 0)).toEqual({
         valid: true,
         allowed: 1,
-        exceeded: 0
+        exceeded: 0,
       });
 
       expect(validateAttachmentCount('Free', 1)).toEqual({
         valid: true,
         allowed: 1,
-        exceeded: 0
+        exceeded: 0,
       });
 
       expect(validateAttachmentCount('Free', 2)).toEqual({
         valid: false,
         allowed: 1,
-        exceeded: 1
+        exceeded: 1,
       });
     });
 
@@ -68,13 +68,13 @@ describe('Tier Limits', () => {
       expect(validateAttachmentCount('Black', 3)).toEqual({
         valid: true,
         allowed: 3,
-        exceeded: 0
+        exceeded: 0,
       });
 
       expect(validateAttachmentCount('Black', 4)).toEqual({
         valid: false,
         allowed: 3,
-        exceeded: 1
+        exceeded: 1,
       });
     });
 
@@ -82,13 +82,13 @@ describe('Tier Limits', () => {
       expect(validateAttachmentCount('Enterprise', 10)).toEqual({
         valid: true,
         allowed: 10,
-        exceeded: 0
+        exceeded: 0,
       });
 
       expect(validateAttachmentCount('Enterprise', 15)).toEqual({
         valid: false,
         allowed: 10,
-        exceeded: 5
+        exceeded: 5,
       });
     });
   });
@@ -100,7 +100,7 @@ describe('Tier Limits', () => {
         dailyPostLimit: 10,
         attachmentLimit: 1,
         hourlyRateLimit: 50,
-        maxTextLength: 500
+        maxTextLength: 500,
       });
 
       const blackLimits = getTierLimits('Black');
@@ -108,7 +108,7 @@ describe('Tier Limits', () => {
         dailyPostLimit: 50,
         attachmentLimit: 3,
         hourlyRateLimit: 200,
-        maxTextLength: 1000
+        maxTextLength: 1000,
       });
     });
   });

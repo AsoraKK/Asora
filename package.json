@@ -1,0 +1,32 @@
+{
+  "name": "asora-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Asora platform - Flutter mobile app with Azure Functions backend",
+  "scripts": {
+    "prepare": "husky install",
+    "format-dart": "dart format --output=none --set-exit-if-changed .",
+    "format-functions": "cd functions && npm run format",
+    "lint-functions": "cd functions && npm run lint",
+    "format-check": "npm run format-dart && npm run format-functions",
+    "lint-check": "npm run lint-functions",
+    "install-functions": "cd functions && npm install",
+    "build-functions": "cd functions && npm run build",
+    "test-functions": "cd functions && npm run test"
+  },
+  "devDependencies": {
+    "husky": "^8.0.3"
+  },
+  "workspaces": [
+    "functions"
+  ],
+  "keywords": [
+    "flutter",
+    "dart",
+    "azure-functions",
+    "typescript",
+    "monorepo"
+  ],
+  "author": "Asora Team",
+  "license": "MIT"
+}
