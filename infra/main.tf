@@ -118,6 +118,12 @@ variable "edge_telemetry_secret" {
   sensitive   = true
 }
 
+variable "alert_email_address" {
+  description = "Email address for receiving alerts from Application Insights"
+  type        = string
+  default     = null
+}
+
 ############################################
 # RESOURCE GROUP
 ############################################
