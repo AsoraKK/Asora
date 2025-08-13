@@ -1,6 +1,6 @@
 /**
  * Shared Authentication Helper for Asora Azure Functions
- * 
+ *
  * This module provides JWT token validation and user ID extraction
  * for securing all Asora API endpoints.
  */
@@ -25,7 +25,7 @@ export interface AuthResult {
  */
 export function authenticateRequest(req: HttpRequest): AuthResult {
   const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { success: false, error: 'Missing or invalid Authorization header' };
   }
@@ -40,12 +40,12 @@ export function authenticateRequest(req: HttpRequest): AuthResult {
   try {
     // Match the token structure from your authEmail endpoint
     const decoded = verify(token, jwtSecret) as {
-      sub: string;      // User ID
-      email: string;    // User email
-      role: string;     // User role
-      tier: string;     // User tier
-      iat: number;      // Issued at
-      exp: number;      // Expires at
+      sub: string; // User ID
+      email: string; // User email
+      role: string; // User role
+      tier: string; // User tier
+      iat: number; // Issued at
+      exp: number; // Expires at
     };
 
     return {
@@ -53,7 +53,7 @@ export function authenticateRequest(req: HttpRequest): AuthResult {
       userId: decoded.sub,
       email: decoded.email,
       role: decoded.role,
-      tier: decoded.tier
+      tier: decoded.tier,
     };
   } catch (err) {
     return { success: false, error: 'Invalid or expired token' };
@@ -75,15 +75,17 @@ export function getUserIdFromRequest(req: HttpRequest): string | null {
  * @param req - Azure Functions HTTP request object
  * @returns User context object or null
  */
-export function getUserContext(req: HttpRequest): { userId: string; email: string; role: string; tier: string } | null {
+export function getUserContext(
+  req: HttpRequest
+): { userId: string; email: string; role: string; tier: string } | null {
   const result = authenticateRequest(req);
   if (!result.success) return null;
-  
+
   return {
     userId: result.userId!,
     email: result.email!,
     role: result.role!,
-    tier: result.tier!
+    tier: result.tier!,
   };
 }
 
@@ -91,7 +93,12 @@ export function getUserContext(req: HttpRequest): { userId: string; email: strin
  * Require authentication or throw an error with status 401
  * Returns a normalized user object with `sub` matching JWT claim naming
  */
-export function requireAuth(req: HttpRequest): { sub: string; email: string; role: string; tier: string } {
+export function requireAuth(req: HttpRequest): {
+  sub: string;
+  email: string;
+  role: string;
+  tier: string;
+} {
   const user = getUserContext(req);
   if (!user) {
     const err: any = new Error('Unauthorized');

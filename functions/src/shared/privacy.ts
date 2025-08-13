@@ -1,6 +1,6 @@
 /**
  * ASORA PRIVACY UTILITIES
- * 
+ *
  * 🎯 Purpose: Shared utilities for GDPR/POPIA compliance
  * 🔐 Security: PII redaction, user data aggregation, content marking
  * 📊 Data: Cross-container queries with proper partitioning
@@ -34,27 +34,22 @@ export interface ContentUpdateStats {
 /**
  * Get all user data across all containers for export
  */
-export async function getAllUserData(userId: string, context: InvocationContext): Promise<UserDataBundle> {
+export async function getAllUserData(
+  userId: string,
+  context: InvocationContext
+): Promise<UserDataBundle> {
   context.info(`Fetching user data for export: ${userId}`);
 
   try {
     // Fetch data from all containers in parallel
-    const [
-      user,
-      posts,
-      comments,
-      likes,
-      appeals,
-      votes,
-      flags
-    ] = await Promise.all([
+    const [user, posts, comments, likes, appeals, votes, flags] = await Promise.all([
       _fetchUserProfile(userId),
       _fetchUserPosts(userId),
       _fetchUserComments(userId),
       _fetchUserLikes(userId),
       _fetchUserAppeals(userId),
       _fetchUserVotes(userId),
-      _fetchUserFlags(userId)
+      _fetchUserFlags(userId),
     ]);
 
     return {
@@ -64,7 +59,7 @@ export async function getAllUserData(userId: string, context: InvocationContext)
       likes,
       appeals,
       votes,
-      flags
+      flags,
     };
   } catch (error) {
     context.error('Failed to fetch user data:', error);
@@ -79,65 +74,73 @@ export function scrubUserPII(user: any): any {
   if (!user) return user;
 
   const scrubbed = { ...user };
-  
+
   // Scrub PII fields
   scrubbed.email = null;
   scrubbed.displayName = '[deleted]';
   scrubbed.bio = null;
   scrubbed.phone = null;
   scrubbed.profileImageUrl = null;
-  
+
   // Keep id and timestamps for referential integrity and audit trail
   // Keep role and tier for system functionality
-  
+
   return scrubbed;
 }
 
 /**
  * Mark user's authored content as deleted (preserves thread structure)
  */
-export async function markUserContentAsDeleted(userId: string, context: InvocationContext): Promise<ContentUpdateStats> {
+export async function markUserContentAsDeleted(
+  userId: string,
+  context: InvocationContext
+): Promise<ContentUpdateStats> {
   const stats: ContentUpdateStats = {
     postsUpdated: 0,
-    commentsUpdated: 0
+    commentsUpdated: 0,
   };
 
   try {
     // Update posts authored by user
     const postsContainer = getContainer('posts');
-    const { resources: userPosts } = await postsContainer.items.query({
-      query: 'SELECT * FROM c WHERE c.authorId = @userId',
-      parameters: [{ name: '@userId', value: userId }]
-    }).fetchAll();
+    const { resources: userPosts } = await postsContainer.items
+      .query({
+        query: 'SELECT * FROM c WHERE c.authorId = @userId',
+        parameters: [{ name: '@userId', value: userId }],
+      })
+      .fetchAll();
 
     for (const post of userPosts) {
       post.authorDisplayName = '[deleted]';
       post.text = '[Content removed - user deleted]';
       post.deletedAt = new Date().toISOString();
-      
+
       await postsContainer.item(post.id, post.id).replace(post);
       stats.postsUpdated++;
     }
 
     // Update comments authored by user
     const commentsContainer = getContainer('comments');
-    const { resources: userComments } = await commentsContainer.items.query({
-      query: 'SELECT * FROM c WHERE c.authorId = @userId',
-      parameters: [{ name: '@userId', value: userId }]
-    }).fetchAll();
+    const { resources: userComments } = await commentsContainer.items
+      .query({
+        query: 'SELECT * FROM c WHERE c.authorId = @userId',
+        parameters: [{ name: '@userId', value: userId }],
+      })
+      .fetchAll();
 
     for (const comment of userComments) {
       comment.authorDisplayName = '[deleted]';
       comment.text = '[Content removed - user deleted]';
       comment.deletedAt = new Date().toISOString();
-      
+
       await commentsContainer.item(comment.id, comment.postId).replace(comment);
       stats.commentsUpdated++;
     }
 
-    context.info(`Content marked as deleted - Posts: ${stats.postsUpdated}, Comments: ${stats.commentsUpdated}`);
+    context.info(
+      `Content marked as deleted - Posts: ${stats.postsUpdated}, Comments: ${stats.commentsUpdated}`
+    );
     return stats;
-    
   } catch (error) {
     context.error('Failed to mark content as deleted:', error);
     throw error;
@@ -151,16 +154,16 @@ export function redactNestedPII(item: any): any {
   if (!item) return item;
 
   const redacted = { ...item };
-  
+
   // Redact common nested PII fields
   if (redacted.authorEmail) {
     redacted.authorEmail = _redactEmail(redacted.authorEmail);
   }
-  
+
   if (redacted.mentions) {
     redacted.mentions = redacted.mentions.map((mention: any) => ({
       ...mention,
-      email: mention.email ? _redactEmail(mention.email) : undefined
+      email: mention.email ? _redactEmail(mention.email) : undefined,
     }));
   }
 
@@ -183,7 +186,7 @@ export function redactUserForLogs(user: any): any {
     displayName: user.displayName ? _maskString(user.displayName) : undefined,
     role: user.role,
     tier: user.tier,
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
     // Exclude email, phone, bio, and other PII
   };
 }
@@ -200,66 +203,79 @@ async function _fetchUserProfile(userId: string): Promise<any> {
 
 async function _fetchUserPosts(userId: string): Promise<any[]> {
   const container = getContainer('posts');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 async function _fetchUserComments(userId: string): Promise<any[]> {
   const container = getContainer('comments');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 async function _fetchUserLikes(userId: string): Promise<any[]> {
   const container = getContainer('likes');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 async function _fetchUserAppeals(userId: string): Promise<any[]> {
   const container = getContainer('appeals');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 async function _fetchUserVotes(userId: string): Promise<any[]> {
   const container = getContainer('votes');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 async function _fetchUserFlags(userId: string): Promise<any[]> {
   const container = getContainer('flags');
-  const { resources } = await container.items.query({
-    query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
-    parameters: [{ name: '@userId', value: userId }]
-  }).fetchAll();
+  const { resources } = await container.items
+    .query({
+      query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
+      parameters: [{ name: '@userId', value: userId }],
+    })
+    .fetchAll();
   return resources;
 }
 
 function _redactEmail(email: string): string {
   if (!email || !email.includes('@')) return '[redacted]';
-  
+
   const [local, domain] = email.split('@');
-  const maskedLocal = local.length > 2 
-    ? local[0] + '*'.repeat(local.length - 2) + local[local.length - 1]
-    : '*'.repeat(local.length);
-    
+  const maskedLocal =
+    local.length > 2
+      ? local[0] + '*'.repeat(local.length - 2) + local[local.length - 1]
+      : '*'.repeat(local.length);
+
   return `${maskedLocal}@${domain}`;
 }
 

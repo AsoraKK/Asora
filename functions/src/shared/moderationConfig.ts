@@ -20,7 +20,13 @@
  * - policy.ts fallback constants
  */
 
-import { CHARACTER_LIMITS, AI_SCORE_THRESHOLDS, MODERATION_SCORE_THRESHOLDS, MODERATION_VISIBILITY, DEFAULT_MODERATION_CATEGORIES } from './policy';
+import {
+  CHARACTER_LIMITS,
+  AI_SCORE_THRESHOLDS,
+  MODERATION_SCORE_THRESHOLDS,
+  MODERATION_VISIBILITY,
+  DEFAULT_MODERATION_CATEGORIES,
+} from './policy';
 import { getContainer } from './cosmosClient';
 
 let cachedConfig: any = null;
@@ -63,7 +69,7 @@ export interface ModerationConfig {
  */
 export async function getModerationConfig(): Promise<ModerationConfig> {
   const now = Date.now();
-  
+
   // Return cached config if within 5-minute window
   if (cachedConfig && now - lastFetchTime < 5 * 60 * 1000) {
     return cachedConfig;
@@ -72,7 +78,7 @@ export async function getModerationConfig(): Promise<ModerationConfig> {
   try {
     const container = getContainer('config');
     const { resource } = await container.item('moderation', 'moderation').read();
-    
+
     if (resource) {
       // Validate and merge with defaults
       const config: ModerationConfig = {
@@ -81,9 +87,9 @@ export async function getModerationConfig(): Promise<ModerationConfig> {
         appeal: resource.appeal || MODERATION_SCORE_THRESHOLDS,
         charLimits: resource.charLimits || CHARACTER_LIMITS,
         categories: resource.categories || DEFAULT_MODERATION_CATEGORIES,
-        categoryThresholds: resource.categoryThresholds || {}
+        categoryThresholds: resource.categoryThresholds || {},
       };
-      
+
       cachedConfig = config;
       lastFetchTime = now;
       console.log('✅ Moderation config loaded from Cosmos DB');
@@ -99,7 +105,7 @@ export async function getModerationConfig(): Promise<ModerationConfig> {
     visibility: MODERATION_VISIBILITY,
     appeal: MODERATION_SCORE_THRESHOLDS,
     charLimits: CHARACTER_LIMITS,
-    categories: DEFAULT_MODERATION_CATEGORIES
+    categories: DEFAULT_MODERATION_CATEGORIES,
   };
 
   cachedConfig = fallbackConfig;
@@ -111,9 +117,11 @@ export async function getModerationConfig(): Promise<ModerationConfig> {
 /**
  * Get content visibility based on dynamic thresholds
  */
-export async function getDynamicContentVisibility(aiScore: number): Promise<'public' | 'warned' | 'blocked'> {
+export async function getDynamicContentVisibility(
+  aiScore: number
+): Promise<'public' | 'warned' | 'blocked'> {
   const config = await getModerationConfig();
-  
+
   if (aiScore >= config.thresholds.blocked) return 'blocked';
   if (aiScore >= config.thresholds.safe) return 'warned';
   return 'public';
@@ -134,5 +142,3 @@ export async function getCategoryThreshold(category: string): Promise<number | n
   const config = await getModerationConfig();
   return config.categoryThresholds?.[category] || null;
 }
-
-

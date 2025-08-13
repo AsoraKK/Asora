@@ -1,6 +1,6 @@
 /**
  * Shared Cosmos DB Client Helper for Asora Azure Functions
- * 
+ *
  * This module provides a centralized Cosmos DB client and container access
  * for all Asora backend functions.
  */
@@ -40,12 +40,12 @@ export function getContainer(containerId: string): Container {
  */
 export const CONTAINERS = {
   USERS: 'users',
-  POSTS: 'posts', 
+  POSTS: 'posts',
   COMMENTS: 'comments',
   LIKES: 'likes',
   FEEDS: 'feeds',
   FLAGS: 'flags',
-  REPUTATION: 'reputation'
+  REPUTATION: 'reputation',
 } as const;
 
 /**
@@ -59,7 +59,7 @@ export function createDocument(data: any) {
     id: generateId(),
     createdAt: now,
     updatedAt: now,
-    ...data
+    ...data,
   };
 }
 

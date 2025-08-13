@@ -12,7 +12,7 @@ test('calculates engagement score correctly', () => {
     likesCount: 5,
     commentsCount: 2,
     sharesCount: 1,
-    author: { reputationScore: 80 }
+    author: { reputationScore: 80 },
   };
 
   const result = mapPostForRanking(post);
@@ -29,7 +29,7 @@ test('handles string timestamps safely', () => {
     likesCount: 0,
     commentsCount: 0,
     sharesCount: 0,
-    author: { reputationScore: 10 }
+    author: { reputationScore: 10 },
   };
 
   const result = mapPostForRanking(post);

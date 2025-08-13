@@ -47,14 +47,14 @@ export async function moderateText(options: HiveTextOptions): Promise<HiveResult
       'https://api.thehive.ai/api/v2/task/text/classification',
       {
         text: options.content,
-        language: 'en'
+        language: 'en',
       },
       {
         headers: {
-          'Authorization': `Token ${apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Token ${apiKey}`,
+          'Content-Type': 'application/json',
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000, // 10 second timeout
       }
     );
 
@@ -74,7 +74,7 @@ export async function moderateText(options: HiveTextOptions): Promise<HiveResult
         if (output.classes) {
           for (const cls of output.classes) {
             categories[cls.class] = cls.score;
-            
+
             // Check category-specific thresholds
             const categoryThreshold = await getCategoryThreshold(cls.class);
             if (categoryThreshold && cls.score > categoryThreshold) {
@@ -87,33 +87,34 @@ export async function moderateText(options: HiveTextOptions): Promise<HiveResult
 
     // Determine final decision based on thresholds
     let decision: 'approve' | 'warn' | 'block' = 'approve';
-    
+
     if (overallScore >= config.thresholds.blocked || triggeredRules.length > 0) {
       decision = 'block';
     } else if (overallScore >= config.thresholds.safe) {
       decision = 'warn';
     }
 
-    console.log(`Hive AI moderation: score=${overallScore}, decision=${decision}, categories=${Object.keys(categories).length}`);
+    console.log(
+      `Hive AI moderation: score=${overallScore}, decision=${decision}, categories=${Object.keys(categories).length}`
+    );
 
     return {
       score: overallScore,
       categories,
       decision,
       triggeredRules,
-      raw: response.data
+      raw: response.data,
     };
-
   } catch (error: any) {
     console.error('Hive AI moderation failed:', error.message);
-    
+
     // Graceful degradation - return safe defaults
     return {
       score: 0.0,
       categories: {},
       decision: 'approve',
       triggeredRules: ['API_ERROR: Graceful fallback applied'],
-      raw: { error: error.message }
+      raw: { error: error.message },
     };
   }
 }
@@ -123,7 +124,7 @@ export async function moderateText(options: HiveTextOptions): Promise<HiveResult
  */
 export async function moderateImage(base64Image: string, userId?: string): Promise<HiveResult> {
   const apiKey = process.env.HIVE_IMAGE_KEY;
-  
+
   if (!apiKey) {
     console.warn('HIVE_IMAGE_KEY not configured, skipping image moderation');
     return {
@@ -131,7 +132,7 @@ export async function moderateImage(base64Image: string, userId?: string): Promi
       categories: {},
       decision: 'approve',
       triggeredRules: ['IMAGE_MODERATION_DISABLED'],
-      raw: {}
+      raw: {},
     };
   }
 
@@ -139,37 +140,36 @@ export async function moderateImage(base64Image: string, userId?: string): Promi
     const response = await axios.post(
       'https://api.thehive.ai/api/v2/task/image/classification',
       {
-        image: base64Image
+        image: base64Image,
       },
       {
         headers: {
-          'Authorization': `Token ${apiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Token ${apiKey}`,
+          'Content-Type': 'application/json',
         },
-        timeout: 15000 // 15 second timeout for images
+        timeout: 15000, // 15 second timeout for images
       }
     );
 
     // TODO: Process image moderation response similar to text
     console.log('Image moderation result:', response.data);
-    
+
     return {
       score: 0.0,
       categories: {},
       decision: 'approve',
       triggeredRules: [],
-      raw: response.data
+      raw: response.data,
     };
-
   } catch (error: any) {
     console.error('Hive AI image moderation failed:', error.message);
-    
+
     return {
       score: 0.0,
       categories: {},
       decision: 'approve',
       triggeredRules: ['IMAGE_API_ERROR'],
-      raw: { error: error.message }
+      raw: { error: error.message },
     };
   }
 }
@@ -183,12 +183,12 @@ export async function detectAIGenerated(content: string): Promise<{
   model?: string;
 }> {
   const apiKey = process.env.HIVE_DEEPFAKE_KEY;
-  
+
   if (!apiKey) {
     console.warn('HIVE_DEEPFAKE_KEY not configured, skipping AI detection');
     return {
       isAIGenerated: false,
-      confidence: 0.0
+      confidence: 0.0,
     };
   }
 
@@ -196,9 +196,9 @@ export async function detectAIGenerated(content: string): Promise<{
   // When implemented, this would analyze image/video content for AI generation
   // For now, return conservative defaults for safety
   console.log('📸 AI detection evaluation requested but not yet implemented');
-  
+
   return {
-    isAIGenerated: false,  // Default to human-created content
-    confidence: 0.0        // No confidence in detection
+    isAIGenerated: false, // Default to human-created content
+    confidence: 0.0, // No confidence in detection
   };
 }

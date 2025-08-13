@@ -1,9 +1,9 @@
 /**
  * Centralized tier-based limits for Asora platform
- * 
+ *
  * This module centralizes all tier-based policy limits to allow
  * future admin control via configuration dashboard.
- * 
+ *
  * IMPORTANT: This module now integrates with configService.ts for
  * dynamic configuration. Future admin dashboard will control these
  * limits via database configuration.
@@ -27,37 +27,39 @@ const DEFAULT_TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyPostLimit: 10,
     attachmentLimit: 1, // max 1 image
     hourlyRateLimit: 50,
-    maxTextLength: 500
+    maxTextLength: 500,
   },
   Black: {
     dailyPostLimit: 50,
     attachmentLimit: 3, // max 3 images
     hourlyRateLimit: 200,
-    maxTextLength: 1000
+    maxTextLength: 1000,
   },
   Premium: {
     dailyPostLimit: 100,
     attachmentLimit: 5,
     hourlyRateLimit: 500,
-    maxTextLength: 2000
+    maxTextLength: 2000,
   },
   Enterprise: {
     dailyPostLimit: Infinity,
     attachmentLimit: 10,
     hourlyRateLimit: 1000,
-    maxTextLength: 5000
-  }
+    maxTextLength: 5000,
+  },
 };
 
 /**
  * Get the maximum number of attachments allowed for a user tier
- * 
+ *
  * This now uses configurable limits from the database when available.
  * Falls back to static defaults for backward compatibility.
  */
 export function getAttachmentLimit(tier: UserTier | string): number {
   const normalizedTier = (tier || 'Free') as UserTier;
-  return DEFAULT_TIER_LIMITS[normalizedTier]?.attachmentLimit || DEFAULT_TIER_LIMITS.Free.attachmentLimit;
+  return (
+    DEFAULT_TIER_LIMITS[normalizedTier]?.attachmentLimit || DEFAULT_TIER_LIMITS.Free.attachmentLimit
+  );
 }
 
 /**
@@ -70,13 +72,15 @@ export async function getAttachmentLimitAsync(tier: UserTier | string): Promise<
 
 /**
  * Get the daily post limit for a user tier
- * 
+ *
  * This still uses static defaults for backward compatibility.
  * Use getDailyPostLimitAsync() for configurable limits.
  */
 export function getDailyPostLimit(tier: UserTier | string): number {
   const normalizedTier = (tier || 'Free') as UserTier;
-  return DEFAULT_TIER_LIMITS[normalizedTier]?.dailyPostLimit || DEFAULT_TIER_LIMITS.Free.dailyPostLimit;
+  return (
+    DEFAULT_TIER_LIMITS[normalizedTier]?.dailyPostLimit || DEFAULT_TIER_LIMITS.Free.dailyPostLimit
+  );
 }
 
 /**
@@ -98,7 +102,10 @@ export function getTierLimits(tier: UserTier | string): TierLimits {
 /**
  * Validate if attachment count is within tier limits
  */
-export function validateAttachmentCount(tier: UserTier | string, attachmentCount: number): {
+export function validateAttachmentCount(
+  tier: UserTier | string,
+  attachmentCount: number
+): {
   valid: boolean;
   allowed: number;
   exceeded: number;
@@ -106,7 +113,7 @@ export function validateAttachmentCount(tier: UserTier | string, attachmentCount
   const allowed = getAttachmentLimit(tier);
   const valid = attachmentCount <= allowed;
   const exceeded = Math.max(0, attachmentCount - allowed);
-  
+
   return { valid, allowed, exceeded };
 }
 
@@ -114,7 +121,10 @@ export function validateAttachmentCount(tier: UserTier | string, attachmentCount
  * Async version for future use with configurable limits
  * TODO: Use this in post/create.ts once admin dashboard is implemented
  */
-export async function validateAttachmentCountAsync(tier: UserTier | string, attachmentCount: number): Promise<{
+export async function validateAttachmentCountAsync(
+  tier: UserTier | string,
+  attachmentCount: number
+): Promise<{
   valid: boolean;
   allowed: number;
   exceeded: number;
@@ -122,6 +132,6 @@ export async function validateAttachmentCountAsync(tier: UserTier | string, atta
   const allowed = await getAttachmentLimitAsync(tier);
   const valid = attachmentCount <= allowed;
   const exceeded = Math.max(0, attachmentCount - allowed);
-  
+
   return { valid, allowed, exceeded };
 }

@@ -21,13 +21,13 @@ describe('Appeals Logic', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockAppealsContainer = {
       items: {
-        create: jest.fn().mockResolvedValue({})
-      }
+        create: jest.fn().mockResolvedValue({}),
+      },
     };
-    
+
     mockGetContainer.mockReturnValue(mockAppealsContainer);
     mockRandomUUID.mockReturnValue('test-uuid-123');
   });
@@ -41,7 +41,7 @@ describe('Appeals Logic', () => {
   it('should create appeal data structure correctly', () => {
     const user = { sub: 'user123', email: 'test@example.com', role: 'user', tier: 'free' };
     const body = { postId: 'post123', reason: 'This was wrongly flagged' };
-    
+
     const appeal = {
       id: 'test-uuid-123',
       postId: body.postId,

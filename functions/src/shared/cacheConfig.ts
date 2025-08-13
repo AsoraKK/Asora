@@ -15,12 +15,12 @@ export interface CacheConfig {
  */
 export function getCacheConfig(): CacheConfig {
   const backend = (process.env.FEED_CACHE_BACKEND || 'edge') as FeedCacheBackend;
-  
+
   // Validate backend option
   if (!['edge', 'redis', 'none'].includes(backend)) {
     throw new Error(`Invalid FEED_CACHE_BACKEND: ${backend}. Must be one of: edge, redis, none`);
   }
-  
+
   // Set TTL based on backend - edge is faster with shorter TTL
   let ttlSeconds: number;
   switch (backend) {
@@ -35,11 +35,11 @@ export function getCacheConfig(): CacheConfig {
       ttlSeconds = 0; // No caching
       break;
   }
-  
+
   return {
     backend,
     ttlSeconds,
-    enableTelemetry: true
+    enableTelemetry: true,
   };
 }
 
@@ -86,9 +86,10 @@ export function shouldCollectTelemetry(request: any): boolean {
 
   // Check for x-debug-telemetry header. Accept either Request.headers.get or plain object headers
   const headersObj: any = request?.headers || {};
-  const headerVal = typeof headersObj.get === 'function'
-    ? headersObj.get('x-debug-telemetry')
-    : headersObj['x-debug-telemetry'] || headersObj['X-Debug-Telemetry'];
+  const headerVal =
+    typeof headersObj.get === 'function'
+      ? headersObj.get('x-debug-telemetry')
+      : headersObj['x-debug-telemetry'] || headersObj['X-Debug-Telemetry'];
 
   if (headerVal) {
     const secret = process.env.EDGE_TELEMETRY_SECRET;

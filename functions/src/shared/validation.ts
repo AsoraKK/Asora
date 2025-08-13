@@ -1,6 +1,6 @@
 /**
  * Shared Validation Helper for Asora Azure Functions
- * 
+ *
  * This module provides input validation utilities for API endpoints.
  */
 
@@ -8,8 +8,6 @@ export interface ValidationResult {
   isValid: boolean;
   errors: string[];
 }
-
-
 
 /**
  * Validate comment content
@@ -34,7 +32,7 @@ export function validateComment(text?: string, postId?: string): ValidationResul
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
