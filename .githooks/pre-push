@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Pre-push hook - Runs full CI parity check before push
+# This prevents pushing code that will fail in GitHub Actions
+
+set -euo pipefail
+
+echo "🔒 Pre-push hook: Running CI parity checks"
+echo "=========================================="
+
+# Check if we're in the right directory
+if [[ ! -f "ci-local.sh" ]]; then
+    echo "❌ ci-local.sh not found. Run this from repository root."
+    exit 1
+fi
+
+# Run the full CI verification
+if ! bash ./ci-local.sh; then
+    echo ""
+    echo "❌ Pre-push hook FAILED"
+    echo "======================="
+    echo "Your push has been blocked because it would fail CI."
+    echo ""
+    echo "Common fixes:"
+    echo "• Formatting: run 'dart format .' and commit"
+    echo "• TS errors: fix code under functions/src/** and re-run"
+    echo "• Node version: use 'nvm use 20' before function steps"
+    echo "• Port in use: change to --port 7073 in ci-local.sh"
+    echo ""
+    echo "After fixing, run './ci-local.sh' manually to verify."
+    exit 1
+fi
+
+echo ""
+echo "✅ Pre-push hook PASSED"
+echo "======================"
+echo "All CI parity checks successful - push will likely succeed!"

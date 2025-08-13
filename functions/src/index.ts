@@ -1,17 +1,18 @@
-/**
- * Azure Functions v4 Entry Point
- * This file registers all HTTP and timer triggers
- */
+// This file is no longer needed for Node.js Functions
+// Node.js Functions use folder structure with function.json files
 
 // Feed functions
-import './src/feed/get';
-import './src/feed/local';
-import './src/feed/trending';
-import './src/feed/newCreators';
+import './feed/get';
+import './feed/local';
+import './feed/trending';
+import './feed/newCreators';
 
 // Timer functions
-import './src/timers/privacyCleanupTimer';
-import './src/timers/calculateKPIsTimer';
-import './src/timers/firstPostEnforcer';
+import './timers/privacyCleanupTimer';
+import './timers/calculateKPIsTimer';
+import './timers/firstPostEnforcer';
+
+// Health and monitoring
+import './shared/health';
 
 // Export nothing - functions register themselves with the runtime
