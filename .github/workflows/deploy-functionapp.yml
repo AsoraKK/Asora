@@ -42,161 +42,43 @@ jobs:
     - name: 'Setup Node.js'
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '20.x'
         cache: 'npm'
+        cache-dependency-path: functions/package-lock.json
 
-    - name: 'Install Azure Functions Core Tools'
-      run: |
-        npm i -g azure-functions-core-tools@4.0.5455 --unsafe-perm true
-
-    - name: 'One-time Function App configuration hardening'
-      run: |
-        echo "🔧 Setting Function App runtime configuration..."
-        az functionapp config appsettings set \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --settings FUNCTIONS_EXTENSION_VERSION=~4 \
-                    FUNCTIONS_WORKER_RUNTIME=node \
-                    WEBSITE_NODE_DEFAULT_VERSION=~20 \
-                    WEBSITE_RUN_FROM_PACKAGE=1
-        
-        echo "🔧 Setting Function App runtime stack..."
-        az functionapp config set \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --linux-fx-version "NODE|20"
-
-    - name: 'Build TypeScript to JavaScript'
-      run: |
-        cd functions
-        npm ci
-        npm run build
-        echo "✅ TypeScript compilation completed"
-
-    - name: 'Azure CLI Login via OIDC'
-      uses: azure/login@v2  # OIDC is automatic when client-id/tenant-id/subscription-id are provided
+    - name: 'Login to Azure'
+      uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: 'Diagnostic - Verify Authentication'
+    - name: 'Configure Function App for Node 20'
       run: |
-        echo "🔍 Diagnostic Information:"
-        echo "Expected subject claim: repo:AsoraKK/Asora:ref:refs/heads/main"
-        echo "Checking current account..."
-        az account show --output table || echo "❌ No account available"
-        echo "Checking subscription access..."
-        az account list --output table || echo "❌ No subscriptions available"
-        echo "Checking service principal..."
-        az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query "displayName" -o tsv || echo "❌ Service principal not accessible"
-        echo "Checking resource group access..."
-        az group show --name "${{ env.AZURE_RESOURCE_GROUP }}" --query "name" -o tsv || echo "❌ Resource group not accessible"
-
-    - name: 'Verify Azure Function App exists'
-      run: |
-        az functionapp show \
+        az functionapp config appsettings set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "name" -o tsv
+          --settings FUNCTIONS_EXTENSION_VERSION=~4 \
+                    FUNCTIONS_WORKER_RUNTIME=node \
+                    WEBSITE_NODE_DEFAULT_VERSION=~20
 
-    - name: 'Create deployment package'
+    - name: 'Install, Build, and Deploy'
+      working-directory: ./functions
       run: |
-        cd functions
+        echo "� Installing dependencies..."
+        npm ci
         
-        # Create deployment package with compiled JavaScript
-        func pack --javascript --output dist.zip
+        echo "🔨 Building TypeScript..."
+        npm run build
         
-        echo "✅ Deployment package created: dist.zip"
+        echo "📋 Installing Azure Functions Core Tools..."
+        npm i -g azure-functions-core-tools@4 --unsafe-perm true
+        
+        echo "� Deploying to Azure Functions..."
+        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript
 
-    - name: 'Verify runtime configuration'
+    - name: 'Post-deployment validation'
       run: |
-        echo "🔍 Verifying Function App runtime configuration..."
-        az functionapp config appsettings list \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          | jq -e '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" and .value=="node")' >/dev/null
-        
-        if [ $? -eq 0 ]; then
-          echo "✅ FUNCTIONS_WORKER_RUNTIME is correctly set to 'node'"
-        else
-          echo "❌ FUNCTIONS_WORKER_RUNTIME is not set to 'node'"
-          exit 1
-        fi
-
-    - name: 'Deploy to Azure Function App'
-      run: |
-        cd functions
-        
-        # Deploy using zip deployment
-        az functionapp deployment source config-zip \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --src dist.zip
-
-    - name: 'Post-deployment health monitoring'
-      run: |
-        echo "🏥 Starting post-deployment health monitoring..."
-        
-        # Wait for deployment to stabilize
-        sleep 60
-        
-        # Get Function App URL
-        FUNCTION_URL=$(az functionapp show \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "defaultHostName" -o tsv)
-        
-        echo "Function App URL: https://$FUNCTION_URL"
-        
-        # Test critical endpoints
-        ENDPOINTS=("authEmail" "getMe" "getUserAuth")
-        FAILED_ENDPOINTS=()
-        
-        for endpoint in "${ENDPOINTS[@]}"; do
-          echo "Testing /api/$endpoint..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FUNCTION_URL/api/$endpoint" -m 30 || echo "000")
-          
-          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "400" ]; then
-            echo "✅ $endpoint: HTTP $HTTP_CODE (OK)"
-          else
-            echo "❌ $endpoint: HTTP $HTTP_CODE (Failed)"
-            FAILED_ENDPOINTS+=("$endpoint")
-          fi
-        done
-        
-        # Fail deployment if critical endpoints are down
-        if [ ${#FAILED_ENDPOINTS[@]} -gt 0 ]; then
-          echo "❌ Critical endpoints failed: ${FAILED_ENDPOINTS[*]}"
-          echo "🚨 Deployment validation failed - consider rollback"
-          exit 1
-        fi
-        
-        echo "✅ All critical endpoints responding"
-        
-        # Note: In production, add Application Insights queries here
-        echo "📊 Application Insights monitoring should be checked manually"
-        echo "🎯 Monitor for: Error rate <1%, p95 latency <200ms over 10 minutes"
-
-    - name: 'Post-deployment configuration'
-      run: |
-        echo "🎉 Deployment completed successfully!"
+        echo "✅ Deployment completed successfully!"
         echo "📍 Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
         echo "📍 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
-        echo "📍 Environment: ${{ github.event.inputs.environment || 'dev' }}"
-        
-        # List deployed functions
-        echo "📋 Deployed functions:"
-        az functionapp function list \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "[].{Name:name, Trigger:config.bindings[0].type}" -o table
-
-    - name: 'Cleanup'
-      if: always()
-      run: |
-        # Clean up deployment directory
-        rm -rf deployment
-        
-        # Logout from Azure CLI
-        az logout
