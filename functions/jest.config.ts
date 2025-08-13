@@ -3,10 +3,10 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>'],
+  roots: ['<rootDir>/src'],
   testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/*.test.ts',
+    '**/src/__tests__/**/*.test.ts',
+    '**/src/**/*.test.ts',
   ],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {

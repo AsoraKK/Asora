@@ -4,22 +4,28 @@ node_modules/
 # Source maps
 *.map
 
-# Test files
-tests/
-coverage/
-*.test.ts
-*.test.js
-*.spec.ts
-*.spec.js
-__tests__/
-
-# TypeScript sources (using local build)
-src/**/*.ts
+# TypeScript sources (build produces dist/)
+src/
 **/*.ts
 tsconfig*.json
 
+# Tests
+src/__tests__/
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts  
+**/*.spec.js
+coverage/
+
 # Keep compiled JavaScript from dist/
 !dist/**
+
+# Development files
+*.dev.*
+*.development.*
+local.settings.json
+.env
+.env.*
 
 # Build artifacts
 .build/
@@ -35,11 +41,6 @@ logs/
 # Cache
 .cache/
 .nyc_output/
-
-# Development files
-*.dev.*
-*.development.*
-local.settings.json
 
 # Documentation
 *.md
