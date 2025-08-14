@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load nvm if available
+if [ -d "$HOME/.nvm" ]; then
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+  
+  # Use Node.js 20 if available
+  if nvm ls 20 >/dev/null 2>&1; then
+    nvm use 20 >/dev/null || true
+  fi
+fi
+
 echo "🚀 Pre-commit verification script - CI parity checks"
 echo "=================================================="
 

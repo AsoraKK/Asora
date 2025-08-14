@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/core/security/device_integrity.dart';
 
 void main() {
+  // Ensure Flutter binding is initialized for services & platform channels
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('DeviceIntegrityService', () {
     late DeviceIntegrityService service;
 

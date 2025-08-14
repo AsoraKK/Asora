@@ -6,19 +6,17 @@
     "sourceType": "module"
   },
   "plugins": ["@typescript-eslint"],
-  "extends": [
-    "eslint:recommended"
-  ],
+  "extends": ["eslint:recommended"],
+  "ignorePatterns": ["dist/**", "node_modules/**"],
   "rules": {
+    "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
     "@typescript-eslint/no-explicit-any": "warn",
     "no-console": "off",
     "prefer-const": "error",
     "no-var": "error",
     "object-shorthand": "error"
-  },
-  "env": {
-    "node": true,
+    "extends": ["eslint:recommended"],
     "es2020": true,
     "jest": true
   }

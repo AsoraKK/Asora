@@ -312,6 +312,105 @@ void main() {
     });
   });
 
+  group('generateUntestedSecurityHash', () {
+    test('should generate hash for valid input', () {
+      // Arrange
+      const input = 'test_input';
+
+      // Act
+      final hash = PasswordValidationResult.generateUntestedSecurityHash(input);
+
+      // Assert
+      expect(hash, isNotEmpty);
+      expect(hash, contains('-'));
+      expect(hash, endsWith('-untested'));
+
+      // Should contain input hashcode and timestamp
+      final parts = hash.split('-');
+      expect(parts, hasLength(3));
+      expect(parts[2], equals('untested'));
+    });
+
+    test('should throw ArgumentError for empty input', () {
+      // Act & Assert
+      expect(
+        () => PasswordValidationResult.generateUntestedSecurityHash(''),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('should generate different hashes for different inputs', () {
+      // Arrange
+      const input1 = 'test_input_1';
+      const input2 = 'test_input_2';
+
+      // Act
+      final hash1 = PasswordValidationResult.generateUntestedSecurityHash(
+        input1,
+      );
+      final hash2 = PasswordValidationResult.generateUntestedSecurityHash(
+        input2,
+      );
+
+      // Assert
+      expect(hash1, isNot(equals(hash2)));
+      expect(hash1, endsWith('-untested'));
+      expect(hash2, endsWith('-untested'));
+    });
+
+    test('should generate unique hashes with timestamp', () {
+      // Arrange
+      const input = 'same_input';
+
+      // Act - Generate hashes with small delay to ensure different timestamps
+      final hash1 = PasswordValidationResult.generateUntestedSecurityHash(
+        input,
+      );
+      // Small delay to ensure different timestamps
+      Future.delayed(Duration(milliseconds: 1));
+      final hash2 = PasswordValidationResult.generateUntestedSecurityHash(
+        input,
+      );
+
+      // Assert
+      expect(hash1, isNot(equals(hash2))); // Different due to timestamp
+
+      // Both should have the same base format
+      final parts1 = hash1.split('-');
+      final parts2 = hash2.split('-');
+      expect(parts1[0], equals(parts2[0])); // Same input hashcode
+      expect(parts1[2], equals(parts2[2])); // Same suffix
+    });
+
+    test('should handle special characters in input', () {
+      // Arrange
+      const specialInput = 'test@#\$%^&*()input';
+
+      // Act
+      final hash = PasswordValidationResult.generateUntestedSecurityHash(
+        specialInput,
+      );
+
+      // Assert
+      expect(hash, isNotEmpty);
+      expect(hash, endsWith('-untested'));
+    });
+
+    test('should handle very long input', () {
+      // Arrange
+      final longInput = 'a' * 1000;
+
+      // Act
+      final hash = PasswordValidationResult.generateUntestedSecurityHash(
+        longInput,
+      );
+
+      // Assert
+      expect(hash, isNotEmpty);
+      expect(hash, endsWith('-untested'));
+    });
+  });
+
   group('PasswordValidationResult', () {
     test('should provide correct summary for valid password', () {
       final result = PasswordValidationResult()..isValid = true;
