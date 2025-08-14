@@ -24,6 +24,11 @@ Asora Backend Functions
 
 ## 🔧 Quick Start
 
+> NOTE: Azure Functions Core Tools are not installed via local devDependencies to avoid CI failures (exit code 127). Install them globally if you need the `func` CLI locally:
+> ```bash
+> npm i -g azure-functions-core-tools@4 --unsafe-perm true
+> ```
+
 ### 1. Install Dependencies
 ```bash
 cd functions
@@ -181,6 +186,11 @@ az functionapp config appsettings set \
   --resource-group <resource-group> \
   --settings JWT_SECRET=<value> COSMOS_ENDPOINT=<value>
 ```
+
+### CI/CD Considerations
+- The `azure-functions-core-tools` package was removed from `devDependencies` to prevent `npm ci` failures in Linux runners.
+- Deployment workflows install the core tools globally just-in-time.
+- Local developers should install core tools globally (see Quick Start note) rather than adding it back to `package.json`.
 
 ## 📈 Monitoring & Analytics
 
