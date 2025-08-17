@@ -358,7 +358,7 @@ void main() {
       expect(hash2, endsWith('-untested'));
     });
 
-    test('should generate unique hashes with timestamp', () {
+    test('should generate unique hashes with timestamp', () async {
       // Arrange
       const input = 'same_input';
 
@@ -367,7 +367,7 @@ void main() {
         input,
       );
       // Small delay to ensure different timestamps
-      Future.delayed(Duration(milliseconds: 1));
+      await Future.delayed(const Duration(milliseconds: 1));
       final hash2 = PasswordValidationResult.generateUntestedSecurityHash(
         input,
       );
