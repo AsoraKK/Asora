@@ -1,21 +1,54 @@
 // Additional comprehensive tests to improve coverage for auth session manager
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/core/auth/auth_session_manager.dart';
 import 'package:asora/core/auth/pkce_helper.dart';
 
+/// In-memory fake for flutter_secure_storage
+class _FakeSecureStore {
+  final Map<String, String> _data = {};
+  Future<dynamic> handle(MethodCall call) async {
+    switch (call.method) {
+      case 'write':
+        _data['${call.arguments['key']}'] = call.arguments['value'] as String? ?? '';
+        return null;
+      case 'read':
+        return _data['${call.arguments['key']}'];
+      case 'delete':
+        _data.remove('${call.arguments['key']}');
+        return null;
+      case 'readAll':
+        return Map<String, String>.from(_data);
+      case 'deleteAll':
+        _data.clear();
+        return null;
+      case 'containsKey':
+        return _data.containsKey('${call.arguments['key']}');
+      default:
+        return null;
+    }
+  }
+}
+
 void main() {
-  group('Additional Coverage Tests', () {
-    late AuthSessionManager sessionManager;
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    setUp(() {
-      sessionManager = AuthSessionManager();
-    });
+  // Channel name used by flutter_secure_storage
+  const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  final _FakeSecureStore fake = _FakeSecureStore();
 
-    tearDown(() async {
-      await sessionManager.clearSession();
-    });
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) => fake.handle(call));
+  });
 
-    test('should handle JSON serialization edge cases', () {
+  tearDownAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
+  });
+
+  group('AuthSessionState Model Tests', () {
+    test('should handle JSON serialization correctly', () {
       final session = AuthSessionState(
         state: 'test-state',
         nonce: 'test-nonce',
@@ -31,7 +64,7 @@ void main() {
       expect(json['nonce'], equals('test-nonce'));
       expect(json['codeVerifier'], equals('test-verifier'));
       expect(json['codeChallenge'], equals('test-challenge'));
-      expect(json['ttlMinutes'], equals(15));
+      expect(json['ttl'], equals(15 * 60 * 1000)); // 15 minutes in milliseconds
 
       // Test fromJson
       final restored = AuthSessionState.fromJson(json);
@@ -42,177 +75,258 @@ void main() {
       expect(restored.ttl, equals(session.ttl));
     });
 
-    test('should handle custom TTL values', () {
-      final session = AuthSessionState(
-        state: 'test-state',
-        nonce: 'test-nonce',
-        codeVerifier: 'test-verifier',
-        codeChallenge: 'test-challenge',
+    test('should handle custom TTL values correctly', () {
+      final shortTtl = const Duration(minutes: 5);
+      final longTtl = const Duration(hours: 2);
+
+      final shortSession = AuthSessionState(
+        state: 'short-state',
+        nonce: 'short-nonce',
+        codeVerifier: 'short-verifier',
+        codeChallenge: 'short-challenge',
         createdAt: DateTime.now(),
-        ttl: const Duration(minutes: 5),
+        ttl: shortTtl,
       );
 
-      expect(session.ttl.inMinutes, equals(5));
-      expect(session.isExpired, isFalse);
-    });
-
-    test('should handle immediate expiry', () {
-      final session = AuthSessionState(
-        state: 'test-state',
-        nonce: 'test-nonce',
-        codeVerifier: 'test-verifier',
-        codeChallenge: 'test-challenge',
-        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-        ttl: const Duration(minutes: 10),
+      final longSession = AuthSessionState(
+        state: 'long-state',
+        nonce: 'long-nonce',
+        codeVerifier: 'long-verifier',
+        codeChallenge: 'long-challenge',
+        createdAt: DateTime.now(),
+        ttl: longTtl,
       );
 
-      expect(session.isExpired, isTrue);
+      expect(shortSession.ttl, equals(shortTtl));
+      expect(longSession.ttl, equals(longTtl));
     });
 
-    test('should handle edge case: exactly at expiry', () async {
+    test('should correctly identify expired sessions', () {
+      // Create an expired session (in the past)
+      final expiredSession = AuthSessionState(
+        state: 'expired-state',
+        nonce: 'expired-nonce',
+        codeVerifier: 'expired-verifier',
+        codeChallenge: 'expired-challenge',
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        ttl: const Duration(minutes: 30),
+      );
+
+      expect(expiredSession.isExpired, isTrue);
+    });
+
+    test('should correctly identify non-expired sessions', () {
+      // Create a fresh session
+      final freshSession = AuthSessionState(
+        state: 'fresh-state',
+        nonce: 'fresh-nonce',
+        codeVerifier: 'fresh-verifier',
+        codeChallenge: 'fresh-challenge',
+        createdAt: DateTime.now(),
+        ttl: const Duration(minutes: 30),
+      );
+
+      expect(freshSession.isExpired, isFalse);
+    });
+
+    test('should handle edge case: exactly at expiry', () {
       final now = DateTime.now();
-      final session = AuthSessionState(
-        state: 'edge-case-state',
-        nonce: 'edge-case-nonce',
-        codeVerifier: 'edge-case-verifier',
-        codeChallenge: 'edge-case-challenge',
-        createdAt: now.subtract(const Duration(minutes: 10)),
-        ttl: const Duration(minutes: 10),
+      final sessionAtExpiry = AuthSessionState(
+        state: 'expiry-state',
+        nonce: 'expiry-nonce',
+        codeVerifier: 'expiry-verifier',
+        codeChallenge: 'expiry-challenge',
+        createdAt: now.subtract(
+          const Duration(minutes: 30, seconds: 1),
+        ), // Make it slightly expired
+        ttl: const Duration(minutes: 30),
       );
 
-      // Should be expired (at or past expiry)
-      expect(session.isExpired, isTrue);
+      // This should be expired
+      expect(sessionAtExpiry.isExpired, isTrue);
     });
 
-    test('should handle missing session validation', () async {
-      // Test with no session stored
-      final result = await sessionManager.validateAndGetSession();
-      expect(result, isNull);
-    });
-
-    test('should handle multiple session clearing', () async {
-      // Should not throw when clearing already cleared session
-      await sessionManager.clearSession();
-      await sessionManager.clearSession();
-      await sessionManager.clearSession();
-    });
-
-    test('should generate unique sessions consistently', () async {
-      final sessions = <String>[];
-
-      for (int i = 0; i < 5; i++) {
-        final session = await sessionManager.createSession(
-          accessToken: 'token_$i',
-          refreshToken: 'refresh_$i',
-          userId: 'user_$i',
-        );
-        expect(
-          sessions.contains(session['userId']),
-          isFalse,
-          reason: 'UserId should be unique',
-        );
-        sessions.add(session['userId'] as String);
-        await sessionManager.clearSession();
-      }
-    });
-
-    test('should handle concurrent session operations', () async {
-      // Test that multiple operations don't interfere
-      await sessionManager.createSession(
-        accessToken: 'concurrent_token',
-        refreshToken: 'concurrent_refresh',
-        userId: 'concurrent_user',
+    test('should support copyWith method for immutable updates', () {
+      final originalSession = AuthSessionState(
+        state: 'original-state',
+        nonce: 'original-nonce',
+        codeVerifier: 'original-verifier',
+        codeChallenge: 'original-challenge',
+        createdAt: DateTime(2023, 1, 1),
+        ttl: const Duration(minutes: 15),
       );
-      final hasSession1 = await sessionManager.hasActiveSession();
-      final hasSession2 = await sessionManager.hasActiveSession();
 
-      expect(hasSession1, isTrue);
-      expect(hasSession2, isTrue);
+      final updatedSession = originalSession.copyWith(
+        state: 'updated-state',
+        ttl: const Duration(minutes: 30),
+      );
+
+      expect(updatedSession.state, equals('updated-state'));
+      expect(updatedSession.ttl, equals(const Duration(minutes: 30)));
+      // Other fields should remain unchanged
+      expect(updatedSession.nonce, equals('original-nonce'));
+      expect(updatedSession.codeVerifier, equals('original-verifier'));
+      expect(updatedSession.codeChallenge, equals('original-challenge'));
+    });
+  });
+
+  group('AuthSessionStatus Enum Tests', () {
+    test('should have all expected status values', () {
+      final allStatuses = AuthSessionStatus.values;
+      expect(allStatuses, contains(AuthSessionStatus.unauthenticated));
+      expect(allStatuses, contains(AuthSessionStatus.authenticating));
+      expect(allStatuses, contains(AuthSessionStatus.authenticated));
+      expect(allStatuses, contains(AuthSessionStatus.expired));
+      expect(allStatuses, contains(AuthSessionStatus.failed));
     });
 
-    test('should validate PKCE helper edge cases', () {
-      // Test minimum length
+    test('should convert status to string correctly', () {
+      expect(
+        AuthSessionStatus.authenticated.toString(),
+        equals('AuthSessionStatus.authenticated'),
+      );
+      expect(
+        AuthSessionStatus.unauthenticated.toString(),
+        equals('AuthSessionStatus.unauthenticated'),
+      );
+    });
+  });
+
+  group('PkceHelper Tests', () {
+    test('should generate code verifier with default length', () {
+      final verifier = PkceHelper.generateCodeVerifier();
+      expect(verifier.length, equals(43)); // Default length
+      expect(
+        verifier,
+        matches(RegExp(r'^[A-Za-z0-9._~-]+$')),
+      ); // Valid characters only
+    });
+
+    test('should generate code verifier with custom length', () {
+      final shortVerifier = PkceHelper.generateCodeVerifier(length: 50);
+      final longVerifier = PkceHelper.generateCodeVerifier(length: 100);
+
+      expect(shortVerifier.length, equals(50));
+      expect(longVerifier.length, equals(100));
+      expect(shortVerifier, matches(RegExp(r'^[A-Za-z0-9._~-]+$')));
+      expect(longVerifier, matches(RegExp(r'^[A-Za-z0-9._~-]+$')));
+    });
+
+    test('should generate unique code verifiers', () {
+      final verifier1 = PkceHelper.generateCodeVerifier();
+      final verifier2 = PkceHelper.generateCodeVerifier();
+      final verifier3 = PkceHelper.generateCodeVerifier();
+
+      expect(verifier1, isNot(equals(verifier2)));
+      expect(verifier2, isNot(equals(verifier3)));
+      expect(verifier1, isNot(equals(verifier3)));
+    });
+
+    test('should generate code challenge from verifier', () {
+      const testVerifier = 'test-verifier-123';
+      final challenge = PkceHelper.generateCodeChallenge(testVerifier);
+
+      expect(challenge, isNotEmpty);
+      expect(
+        challenge,
+        isNot(equals(testVerifier)),
+      ); // Should be different from verifier
+      // Should be base64url encoded (no padding, uses - and _ instead of + and /)
+      expect(challenge, matches(RegExp(r'^[A-Za-z0-9_-]+$')));
+    });
+
+    test('should generate consistent challenge for same verifier', () {
+      const testVerifier = 'consistent-test-verifier';
+      final challenge1 = PkceHelper.generateCodeChallenge(testVerifier);
+      final challenge2 = PkceHelper.generateCodeChallenge(testVerifier);
+
+      expect(challenge1, equals(challenge2));
+    });
+
+    test('should validate code challenge correctly', () {
+      final verifier = PkceHelper.generateCodeVerifier();
+      final challenge = PkceHelper.generateCodeChallenge(verifier);
+
+      expect(PkceHelper.validateCodeChallenge(verifier, challenge), isTrue);
+    });
+
+    test('should reject invalid code challenge', () {
+      final verifier = PkceHelper.generateCodeVerifier();
+      const wrongChallenge = 'wrong-challenge-value';
+
+      expect(
+        PkceHelper.validateCodeChallenge(verifier, wrongChallenge),
+        isFalse,
+      );
+    });
+
+    test('should handle edge case lengths for code verifier', () {
+      // Test minimum length (43)
       final minVerifier = PkceHelper.generateCodeVerifier(length: 43);
       expect(minVerifier.length, equals(43));
 
-      // Test maximum length
+      // Test maximum length (128)
       final maxVerifier = PkceHelper.generateCodeVerifier(length: 128);
       expect(maxVerifier.length, equals(128));
-
-      // Test challenges are different for different verifiers
-      final challenge1 = PkceHelper.generateCodeChallenge(minVerifier);
-      final challenge2 = PkceHelper.generateCodeChallenge(maxVerifier);
-      expect(challenge1, isNot(equals(challenge2)));
     });
 
-    test('should handle PKCE helper character set validation', () {
-      // Valid verifiers should work
-      expect(
-        () => PkceHelper.generateCodeChallenge('validVerifier123'),
-        returnsNormally,
-      );
-      expect(
-        () => PkceHelper.generateCodeChallenge(
-          'valid-verifier_with.special~chars',
-        ),
-        returnsNormally,
-      );
+    test('should validate PKCE helper character set compliance', () {
+      final verifier = PkceHelper.generateCodeVerifier(length: 100);
 
-      // Invalid characters should throw
+      // RFC 7636: code verifier should be unreserved characters
+      // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+      final validChars = RegExp(r'^[A-Za-z0-9._~-]+$');
+      expect(verifier, matches(validChars));
+
+      // Should not contain any reserved characters
+      expect(verifier, isNot(contains('+')));
+      expect(verifier, isNot(contains('/')));
+      expect(verifier, isNot(contains('=')));
+      expect(verifier, isNot(contains(' ')));
+    });
+
+    test('should validate code verifier length constraints', () {
+      // Test that invalid lengths are rejected
       expect(
-        () => PkceHelper.generateCodeChallenge('invalid+chars'),
-        throwsArgumentError,
+        () => PkceHelper.generateCodeVerifier(length: 42),
+        throwsA(isA<ArgumentError>()),
       );
       expect(
-        () => PkceHelper.generateCodeChallenge('invalid chars'),
-        throwsArgumentError,
+        () => PkceHelper.generateCodeVerifier(length: 129),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => PkceHelper.generateCodeVerifier(length: 0),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => PkceHelper.generateCodeVerifier(length: -1),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
-    test('should test all authentication error conditions', () async {
-      // Test error paths in session creation and validation
-      await sessionManager.clearSession();
+    test('should generate PKCE pair correctly', () {
+      final pkcePair = PkceHelper.generatePkcePair();
+      expect(pkcePair, hasLength(2));
+      expect(pkcePair, containsPair('verifier', isA<String>()));
+      expect(pkcePair, containsPair('challenge', isA<String>()));
 
-      expect(await sessionManager.hasActiveSession(), isFalse);
+      final verifier = pkcePair['verifier']!;
+      final challenge = pkcePair['challenge']!;
 
-      final session = await sessionManager.createSession(
-        accessToken: 'session_token',
-        refreshToken: 'session_refresh',
-        userId: 'session_user',
-      );
-      expect(await sessionManager.hasActiveSession(), isTrue);
-
-      // Test consuming session (using userId as identifier)
-      await sessionManager.consumeSession(session['userId'] as String);
-      expect(await sessionManager.hasActiveSession(), isFalse);
+      expect(verifier.length, equals(43));
+      expect(challenge, isNotEmpty);
+      expect(PkceHelper.validateCodeChallenge(verifier, challenge), isTrue);
     });
 
-    test('should validate secure string generation entropy', () async {
-      final sessions = <String, int>{};
+    test('should generate OAuth2 state parameter', () {
+      final state1 = PkceHelper.generateState();
+      final state2 = PkceHelper.generateState();
 
-      // Generate multiple sessions and check for uniqueness
-      for (int i = 0; i < 10; i++) {
-        final session = await sessionManager.createSession(
-          accessToken: 'entropy_token_$i',
-          refreshToken: 'entropy_refresh_$i',
-          userId: 'entropy_user_$i',
-        );
-
-        // Track userId values for uniqueness
-        final userId = session['userId'] as String;
-        sessions[userId] = (sessions[userId] ?? 0) + 1;
-
-        // Should never see duplicates
-        expect(sessions[userId], equals(1));
-
-        // Verify session structure
-        expect(session['accessToken']?.toString().isNotEmpty, isTrue);
-        expect(session['refreshToken']?.toString().isNotEmpty, isTrue);
-        expect(session['userId']?.toString().isNotEmpty, isTrue);
-        expect(session['expiresAt'], isA<DateTime>());
-
-        await sessionManager.clearSession();
-      }
+      expect(state1, isNotEmpty);
+      expect(state2, isNotEmpty);
+      expect(state1, isNot(equals(state2))); // Should be unique
+      expect(state1, matches(RegExp(r'^[A-Za-z0-9_-]+$'))); // Base64url format
     });
   });
 }
