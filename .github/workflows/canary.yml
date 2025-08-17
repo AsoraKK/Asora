@@ -1,0 +1,53 @@
+name: Canary Build
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  canary:
+    name: Create canary tag & release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create canary tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +"%Y%m%dT%H%M%SZ")
+          TAG="canary-${DATE}-${SHORT_SHA}"
+          git tag -a "$TAG" -m "Canary build for ${GITHUB_SHA}"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release for canary
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on PRs (if any)
+        if: github.event_name == 'push' && github.event.head_commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = process.env.TAG || '${{ steps.tag.outputs.tag }}'
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `Canary build created: ${tag}`
+            });
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
