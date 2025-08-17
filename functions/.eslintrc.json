@@ -7,6 +7,11 @@
   },
   "plugins": ["@typescript-eslint"],
   "extends": ["eslint:recommended"],
+  "env": {
+    "es2020": true,
+    "node": true,
+    "jest": true
+  },
   "ignorePatterns": ["dist/**", "node_modules/**"],
   "rules": {
     "no-unused-vars": "off",
@@ -16,8 +21,5 @@
     "prefer-const": "error",
     "no-var": "error",
     "object-shorthand": "error"
-    "extends": ["eslint:recommended"],
-    "es2020": true,
-    "jest": true
   }
 }
