@@ -10,7 +10,8 @@ class _FakeSecureStore {
   Future<dynamic> handle(MethodCall call) async {
     switch (call.method) {
       case 'write':
-        _data['${call.arguments['key']}'] = call.arguments['value'] as String? ?? '';
+        _data['${call.arguments['key']}'] =
+            call.arguments['value'] as String? ?? '';
         return null;
       case 'read':
         return _data['${call.arguments['key']}'];
@@ -34,7 +35,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   // Channel name used by flutter_secure_storage
-  const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel channel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
   final _FakeSecureStore fake = _FakeSecureStore();
 
   setUpAll(() {
