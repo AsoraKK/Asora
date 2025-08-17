@@ -1,0 +1,46 @@
+# Git attributes for consistent line endings and binary files
+
+# Text files should use LF line endings
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Coverage reports (generated files that can have mixed line endings)
+coverage/** -text
+functions/coverage/** -text
+*.html -text
+*.css -text
+*.js.html -text
+
+# Lock files should maintain their line endings
+package-lock.json -text
+yarn.lock -text
+pubspec.lock -text
+
+# Shell scripts should use LF
+*.sh text eol=lf
+
+# Windows batch files should use CRLF  
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Configuration files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+
+# Source code
+*.dart text eol=lf
+*.js text eol=lf  
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
