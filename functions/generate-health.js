@@ -10,14 +10,14 @@ const config = {
       direction: 'in',
       name: 'req',
       methods: ['get'],
-      route: 'health'
+      route: 'health',
     },
     {
       type: 'http',
       direction: 'out',
-      name: 'res'
-    }
-  ]
+      name: 'res',
+    },
+  ],
 };
 
 const jsFilePath = path.join('dist', config.file);
@@ -29,19 +29,22 @@ if (fs.existsSync(jsFilePath)) {
   if (!fs.existsSync(functionDir)) {
     fs.mkdirSync(functionDir, { recursive: true });
   }
-  
+
   const functionConfig = {
-    bindings: config.bindings
+    bindings: config.bindings,
   };
-  
-  fs.writeFileSync(path.join(functionDir, 'function.json'), JSON.stringify(functionConfig, null, 2));
-  
+
+  fs.writeFileSync(
+    path.join(functionDir, 'function.json'),
+    JSON.stringify(functionConfig, null, 2)
+  );
+
   // Create index.js that imports the actual compiled file
   const indexJsContent = `const { health } = require('../shared/health');
 module.exports = { health };`;
-  
+
   fs.writeFileSync(path.join(functionDir, 'index.js'), indexJsContent);
-  
+
   console.log('Generated health function.json and index.js');
 } else {
   console.log('File not found!');

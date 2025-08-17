@@ -1,7 +1,6 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/usr/bin/env bash
 
-echo "🔍 Running pre-commit formatting checks..."
+echo "🔍 Running pre-commit formatting checks (modern Husky, shim removed)..."
 
 # Check Dart formatting (Flutter app)
 echo "📱 Checking Dart formatting..."
@@ -12,33 +11,30 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Dart formatting check passed"
 
-# Check TypeScript formatting and linting (Azure Functions)
+# Check Functions (JavaScript) formatting and linting with auto-fix
 echo "⚡ Checking Functions formatting and linting..."
-cd functions
+pushd functions > /dev/null
 
-# Check if dependencies are installed
 if [ ! -d "node_modules" ]; then
-  echo "📦 Installing Functions dependencies..."
-  npm install
+  echo "📦 Installing Functions dependencies (first run)..."
+  npm install --no-audit --no-fund
 fi
 
-# Check Prettier formatting
-npm run format:check
-if [ $? -ne 0 ]; then
-  echo "❌ Functions formatting check failed. Please run: npm run format"
-  cd ..
-  exit 1
-fi
-echo "✅ Functions formatting check passed"
+echo "🛠  Running Prettier auto-fix..."
+npm run format >/dev/null 2>&1 || true
 
-# Check ESLint
-npm run lint:check
-if [ $? -ne 0 ]; then
-  echo "❌ Functions linting check failed. Please run: npm run lint"
-  cd ..
-  exit 1
-fi
-echo "✅ Functions linting check passed"
+echo "🔎 Verifying formatting..."
+if ! npm run format:check >/dev/null 2>&1; then
+  echo "❌ Remaining format issues (unexpected)"; exit 1; fi
+echo "✅ Functions formatting OK"
 
-cd ..
+echo "🧹 Running ESLint (auto-fix)..."
+npm run lint >/dev/null 2>&1 || true
+
+echo "🔎 Verifying lint..."
+if ! npm run lint:check >/dev/null 2>&1; then
+  echo "❌ Lint issues remain"; exit 1; fi
+echo "✅ Functions lint OK"
+
+popd > /dev/null
 echo "🎉 All formatting checks passed! Commit proceeding..."
