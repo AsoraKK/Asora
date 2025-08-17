@@ -1,15 +1,44 @@
 // Tests for device integrity detection
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:asora/core/security/device_integrity.dart';
 
 void main() {
   // Ensure Flutter binding is initialized for services & platform channels
   TestWidgetsFlutterBinding.ensureInitialized();
+
   group('DeviceIntegrityService', () {
     late DeviceIntegrityService service;
 
     setUp(() {
+      // Mock the jailbreak detection plugin to prevent MissingPluginException warnings
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('flutter_jailbreak_detection'),
+            (MethodCall methodCall) async {
+              switch (methodCall.method) {
+                case 'jailbroken':
+                  return false; // Mock as not jailbroken
+                case 'developerMode':
+                  return false; // Mock as not in developer mode
+                case 'onExternalStorage':
+                  return false; // Mock as not on external storage
+                default:
+                  return null;
+              }
+            },
+          );
+
       service = DeviceIntegrityService();
+    });
+
+    tearDown(() {
+      // Clean up the mock
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('flutter_jailbreak_detection'),
+            null,
+          );
     });
 
     test('should return secure status for clean device', () async {
