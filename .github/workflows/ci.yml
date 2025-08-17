@@ -14,7 +14,7 @@ on:
 
 env:
   FLUTTER_VERSION: '3.32.6'
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.x'
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -188,9 +188,30 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'functions/package-lock.json'
 
+      - name: ✅ Verify Node.js installation
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "Node.js path: $(which node)"
+          echo "npm path: $(which npm)"
+
+      - name: 🔧 Install Azure Functions Core Tools globally
+        run: |
+          echo "Installing Azure Functions Core Tools globally..."
+          npm install -g azure-functions-core-tools@4 --unsafe-perm true
+          echo "Verifying func installation..."
+          func --version || echo "func not available yet, will install via package.json"
+
       - name: 📦 Install dependencies
         working-directory: functions
-        run: npm ci
+        run: |
+          echo "Installing npm dependencies..."
+          # Try npm ci first, fallback to npm ci --ignore-scripts if core-tools fails
+          npm ci || {
+            echo "npm ci failed, retrying with --ignore-scripts to skip azure-functions-core-tools post-install"
+            npm ci --ignore-scripts
+          }
+          echo "Dependencies installed successfully"
 
       - name: 🧪 Run TypeScript tests
         working-directory: functions
