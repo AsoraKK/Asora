@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 
 import '../domain/auth_failure.dart';
 import '../domain/user.dart';
+import 'oauth2_service.dart';
 
 GoogleSignIn _buildGoogleSignIn() {
   // Provide fallback values for client IDs to avoid null issues
@@ -60,17 +61,20 @@ class AuthService {
     FlutterSecureStorage? secureStorage,
     LocalAuthentication? localAuth,
     http.Client? httpClient,
+    OAuth2Service? oauth2Service,
     String authUrl = _defaultAuthUrl,
   }) : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _localAuth = localAuth ?? LocalAuthentication(),
        _httpClient = httpClient ?? http.Client(),
+       _oauth2Service = oauth2Service ?? OAuth2Service(),
        _authUrl = authUrl;
 
   final GoogleSignIn _googleSignIn;
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuth;
   final http.Client _httpClient;
+  final OAuth2Service _oauth2Service;
   final String _authUrl;
 
   static const _sessionKey = 'sessionToken';
@@ -339,6 +343,117 @@ class AuthService {
 
   Future<void> signOut() async {
     await logout(); // Use the comprehensive logout method
+  }
+
+  // OAuth2 Authentication Methods
+
+  /// Sign in using OAuth2 PKCE flow
+  Future<User> signInWithOAuth2() async {
+    try {
+      dev.log('Starting OAuth2 sign-in', name: 'auth');
+
+      final user = await _oauth2Service.signInWithOAuth2();
+
+      // Get fresh token from OAuth2Service secure storage
+      final token = await _oauth2Service.getAccessToken();
+      if (token != null) {
+        await _secureStorage.write(key: _jwtKey, value: token);
+      }
+
+      // Store user data
+      await _secureStorage.write(
+        key: _userKey,
+        value: jsonEncode(user.toJson()),
+      );
+
+      dev.log('OAuth2 sign-in successful: ${user.id}', name: 'auth');
+      return user;
+    } catch (e, st) {
+      dev.log(
+        'OAuth2 sign-in failed: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError('OAuth2 sign-in failed: ${e.toString()}');
+    }
+  }
+
+  /// Refresh OAuth2 access token
+  Future<void> refreshOAuth2Token() async {
+    try {
+      dev.log('Refreshing OAuth2 token', name: 'auth');
+
+      final user = await _oauth2Service.refreshToken();
+      if (user == null) {
+        throw AuthFailure.invalidCredentials('Token refresh failed');
+      }
+
+      // Get fresh token from OAuth2Service
+      final token = await _oauth2Service.getAccessToken();
+      if (token != null) {
+        await _secureStorage.write(key: _jwtKey, value: token);
+      }
+
+      // Update stored user data
+      await _secureStorage.write(
+        key: _userKey,
+        value: jsonEncode(user.toJson()),
+      );
+
+      dev.log('OAuth2 token refreshed successfully', name: 'auth');
+    } catch (e, st) {
+      dev.log(
+        'OAuth2 token refresh failed: $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+
+      // If refresh fails, sign out user
+      await logout();
+
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError('Token refresh failed: ${e.toString()}');
+    }
+  }
+
+  /// Check if current OAuth2 token is valid and refresh if needed
+  Future<bool> validateAndRefreshToken() async {
+    try {
+      final token = await _secureStorage.read(key: _jwtKey);
+      if (token == null) return false;
+
+      // Check if token is valid by making a request
+      final response = await _httpClient.get(
+        Uri.parse('$_authUrl/userinfo'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return true; // Token is still valid
+      } else if (response.statusCode == 401) {
+        // Token expired, try to refresh
+        try {
+          await refreshOAuth2Token();
+          return true;
+        } catch (e) {
+          dev.log('Token refresh failed: $e', name: 'auth');
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } catch (e) {
+      dev.log('Token validation failed: $e', name: 'auth');
+      return false;
+    }
   }
 }
 
