@@ -150,7 +150,16 @@ export async function exportUser(
     }
 
     // 3. Initialize Cosmos DB
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+    const cosmosConnectionString = process.env.COSMOS_CONNECTION_STRING;
+    if (!cosmosConnectionString) {
+      context.error('COSMOS_CONNECTION_STRING environment variable is missing or empty.');
+      return json(500, {
+        code: 'configuration_error',
+        message: 'Server misconfiguration: database connection string is missing.',
+        exportId
+      });
+    }
+    const cosmosClient = new CosmosClient(cosmosConnectionString);
     const database = cosmosClient.database('asora');
     const usersContainer = database.container('users');
     const postsContainer = database.container('posts');
