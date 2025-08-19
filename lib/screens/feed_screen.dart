@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../features/auth/application/auth_providers.dart';
-import '../features/auth/application/auth_state.dart';
+import '../features/auth/domain/user.dart';
 import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
 import 'privacy_settings_screen.dart';
@@ -193,6 +193,7 @@ class _FeedListState extends ConsumerState<_FeedList> {
       return domain.Post(
         id: 'p$i',
         authorId: 'u${i % 5}',
+        authorUsername: 'user${i % 5}',
         text: 'A demo post body showcasing compact list cards. Item #$i',
         createdAt: DateTime.now().subtract(Duration(minutes: i * 7)),
         likeCount: (i * 3) % 50,
@@ -214,6 +215,7 @@ class _FeedListState extends ConsumerState<_FeedList> {
             return domain.Post(
               id: 'p$i',
               authorId: 'u${i % 5}',
+              authorUsername: 'user${i % 5}',
               text: 'Lazy‑loaded post #$i',
               createdAt: DateTime.now().subtract(Duration(minutes: i * 7)),
               likeCount: (i * 3) % 50,
@@ -233,7 +235,7 @@ class _FeedListState extends ConsumerState<_FeedList> {
 
   @override
   Widget build(BuildContext context) {
-    final isGuest = ref.watch(authStateProvider).status == AuthStatus.guest;
+    final isGuest = ref.watch(authStateProvider).value == null;
     return Padding(
       padding: const EdgeInsets.only(top: kToolbarHeight + 12, bottom: 130),
       child: ListView.separated(
@@ -423,14 +425,14 @@ class _AsoraNavBar extends StatelessWidget {
 
 // ---- Navigation Drawer ----------------------------------------------------
 class _AsoraDrawer extends ConsumerWidget {
-  final AuthState authState;
+  final AsyncValue<User?> authState;
 
   const _AsoraDrawer({required this.authState});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isSignedIn = authState.status == AuthStatus.authed;
+    final isSignedIn = authState.value != null;
 
     return Drawer(
       child: ListView(
@@ -469,9 +471,9 @@ class _AsoraDrawer extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (isSignedIn && authState.userId != null)
+                if (isSignedIn && authState.value?.id != null)
                   Text(
-                    'User ID: ${authState.userId}',
+                    'User ID: ${authState.value!.id}',
                     style: GoogleFonts.sora(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 12,
@@ -588,9 +590,8 @@ class _AsoraDrawer extends ConsumerWidget {
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Close drawer
-              // Simple state change - the actual auth provider should handle sign out
-              ref.read(authStateProvider.notifier).state =
-                  const AuthState.guest();
+              // Sign out using the auth state notifier
+              ref.read(authStateProvider.notifier).signOut();
             },
             child: Text('Sign Out', style: GoogleFonts.sora()),
           ),
