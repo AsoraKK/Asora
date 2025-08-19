@@ -381,7 +381,27 @@ class OAuth2Service {
     // This is a simplified version
     if (kIsWeb) {
       // Web callback handling would go here
-      // You might use js package to interact with the browser
+    // Web implementation: parse the current URL for OAuth2 parameters
+    if (kIsWeb) {
+      // Import dart:html only on web
+      // ignore: avoid_web_libraries_in_flutter
+      import 'dart:html' as html;
+      final uri = Uri.parse(html.window.location.href);
+      final code = uri.queryParameters['code'];
+      final state = uri.queryParameters['state'];
+      final error = uri.queryParameters['error'];
+
+      if (error != null) {
+        final errorDescription =
+            uri.queryParameters['error_description'] ?? error;
+        _authCompleter?.completeError(
+          AuthFailure.serverError(errorDescription),
+        );
+      } else if (code != null && state != null) {
+        _authCompleter?.complete(code);
+      } else {
+        // No relevant parameters found; do nothing or log
+      }
     }
   }
 
