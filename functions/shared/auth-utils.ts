@@ -47,6 +47,9 @@ export interface JWTPayload {
 export async function verifyJWT(token: string): Promise<JWTPayload> {
   // For development - decode without verification
   // In production, verify against Azure AD B2C public keys
+  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+    throw new Error('Insecure JWT decoding is not allowed in production. Use a verified JWT validation method.');
+  }
   const decoded = jwt.decode(token, { complete: true });
   
   if (!decoded || typeof decoded === 'string') {
