@@ -81,7 +81,8 @@ void main() {
 
     test('should handle custom TTL values correctly', () {
       const shortTtl = Duration(minutes: 5);
-      const longTtl = Duration(hours: 2);
+      final shortTtl = Duration(minutes: 5);
+      final longTtl = Duration(hours: 2);
 
       final shortSession = AuthSessionState(
         id: 'short-session-id',
