@@ -2,13 +2,15 @@
   "name": "asora-backend-functions",
   "version": "1.0.0",
   "description": "Asora platform backend Azure Functions with AI-powered moderation",
-  "main": "index.js",
+  "main": "src/index.js",
   "engines": {
     "node": "20.x"
   },
   "scripts": {
-    "build": "npm run clean && npm run copy-functions",
+    "build": "npm run clean && npm run compile",
+    "compile": "tsc",
     "copy-functions": "copyfiles -u 0 \"*/index.js\" \"*/function.json\" dist/",
+    "build-v3": "npm run clean && npm run compile && npm run copy-functions",
     "watch": "echo 'No compilation needed for JavaScript functions'",
     "start": "func start --port 7072",
     "test": "jest --config jest.config.ts --passWithNoTests",

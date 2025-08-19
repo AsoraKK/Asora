@@ -53,6 +53,7 @@ void main() {
   group('AuthSessionState Model Tests', () {
     test('should handle JSON serialization correctly', () {
       final session = AuthSessionState(
+        id: 'test-session-id',
         state: 'test-state',
         nonce: 'test-nonce',
         codeVerifier: 'test-verifier',
@@ -79,10 +80,11 @@ void main() {
     });
 
     test('should handle custom TTL values correctly', () {
-      final shortTtl = const Duration(minutes: 5);
-      final longTtl = const Duration(hours: 2);
+      const shortTtl = Duration(minutes: 5);
+      const longTtl = Duration(hours: 2);
 
       final shortSession = AuthSessionState(
+        id: 'short-session-id',
         state: 'short-state',
         nonce: 'short-nonce',
         codeVerifier: 'short-verifier',
@@ -92,6 +94,7 @@ void main() {
       );
 
       final longSession = AuthSessionState(
+        id: 'long-session-id',
         state: 'long-state',
         nonce: 'long-nonce',
         codeVerifier: 'long-verifier',
@@ -107,6 +110,7 @@ void main() {
     test('should correctly identify expired sessions', () {
       // Create an expired session (in the past)
       final expiredSession = AuthSessionState(
+        id: 'expired-session-id',
         state: 'expired-state',
         nonce: 'expired-nonce',
         codeVerifier: 'expired-verifier',
@@ -121,6 +125,7 @@ void main() {
     test('should correctly identify non-expired sessions', () {
       // Create a fresh session
       final freshSession = AuthSessionState(
+        id: 'fresh-session-id',
         state: 'fresh-state',
         nonce: 'fresh-nonce',
         codeVerifier: 'fresh-verifier',
@@ -135,6 +140,7 @@ void main() {
     test('should handle edge case: exactly at expiry', () {
       final now = DateTime.now();
       final sessionAtExpiry = AuthSessionState(
+        id: 'expiry-session-id',
         state: 'expiry-state',
         nonce: 'expiry-nonce',
         codeVerifier: 'expiry-verifier',
@@ -151,6 +157,7 @@ void main() {
 
     test('should support copyWith method for immutable updates', () {
       final originalSession = AuthSessionState(
+        id: 'original-session-id',
         state: 'original-state',
         nonce: 'original-nonce',
         codeVerifier: 'original-verifier',
@@ -175,7 +182,7 @@ void main() {
 
   group('AuthSessionStatus Enum Tests', () {
     test('should have all expected status values', () {
-      final allStatuses = AuthSessionStatus.values;
+      const allStatuses = AuthSessionStatus.values;
       expect(allStatuses, contains(AuthSessionStatus.unauthenticated));
       expect(allStatuses, contains(AuthSessionStatus.authenticating));
       expect(allStatuses, contains(AuthSessionStatus.authenticated));

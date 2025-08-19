@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/auth_providers.dart';
-import '../application/auth_state.dart';
 
 class AuthChoiceScreen extends ConsumerWidget {
   const AuthChoiceScreen({super.key});
@@ -38,17 +37,17 @@ class AuthChoiceScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   FilledButton(
                     onPressed: () {
-                      ref.read(authStateProvider.notifier).state =
-                          const AuthState.guest();
+                      ref.read(authStateProvider.notifier).signOut();
                     },
                     child: const Text('Continue as guest'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () {
-                      // Stub sign-in: set authed with a fake user id for now
-                      ref.read(authStateProvider.notifier).state =
-                          const AuthState.authed('demo-user');
+                    onPressed: () async {
+                      // OAuth2 sign-in with PKCE
+                      await ref
+                          .read(authStateProvider.notifier)
+                          .signInWithOAuth2();
                     },
                     icon: const Icon(Icons.login),
                     label: const Text('Sign in'),

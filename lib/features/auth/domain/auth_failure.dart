@@ -17,6 +17,9 @@ class AuthFailure implements Exception {
   factory AuthFailure.networkError([String message = 'Network error']) =>
       AuthFailure._(message);
 
+  factory AuthFailure.platformError([String message = 'Platform error']) =>
+      AuthFailure._(message);
+
   @override
   String toString() => message;
 }
