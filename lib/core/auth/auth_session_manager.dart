@@ -130,7 +130,7 @@ class AuthSessionManager {
     Duration? ttl,
   }) async {
     // Store session data securely
-    final sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
+    final sessionId = 'session_${_generateSecureRandomString(32)}';
 
     final sessionState = AuthSessionState(
       id: sessionId,
