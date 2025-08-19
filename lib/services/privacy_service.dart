@@ -11,7 +11,6 @@ import '../core/network/dio_client.dart';
 import '../core/network/api_endpoints.dart';
 import '../core/logging/app_logger.dart';
 import '../features/auth/application/auth_providers.dart';
-import '../features/auth/application/auth_state.dart';
 
 /// Privacy operation results
 enum PrivacyOperationResult {
@@ -120,7 +119,7 @@ class PrivacyService {
     if (result.result == PrivacyOperationResult.success) {
       try {
         // Clear authentication state
-        ref.read(authStateProvider.notifier).state = const AuthState.guest();
+        await ref.read(authStateProvider.notifier).signOut();
         _logger.info('User signed out after account deletion');
       } catch (e) {
         _logger.warning('Failed to clear auth state after deletion: $e');

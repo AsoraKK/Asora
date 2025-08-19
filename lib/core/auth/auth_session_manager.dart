@@ -6,6 +6,7 @@
 /// 🏗️ Architecture: Core authentication component
 library;
 
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 
@@ -29,6 +30,7 @@ enum AuthSessionStatus {
 
 /// Comprehensive authentication session state with OAuth2/OIDC parameters
 class AuthSessionState {
+  final String id;
   final String state;
   final String nonce;
   final String codeVerifier;
@@ -37,6 +39,7 @@ class AuthSessionState {
   final Duration ttl;
 
   const AuthSessionState({
+    required this.id,
     required this.state,
     required this.nonce,
     required this.codeVerifier,
@@ -54,6 +57,7 @@ class AuthSessionState {
   /// Convert session state to JSON for serialization
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'state': state,
       'nonce': nonce,
       'codeVerifier': codeVerifier,
@@ -66,6 +70,7 @@ class AuthSessionState {
   /// Create session state from JSON
   factory AuthSessionState.fromJson(Map<String, dynamic> json) {
     return AuthSessionState(
+      id: json['id'] as String,
       state: json['state'] as String,
       nonce: json['nonce'] as String,
       codeVerifier: json['codeVerifier'] as String,
@@ -77,6 +82,7 @@ class AuthSessionState {
 
   /// Create a copy with updated fields
   AuthSessionState copyWith({
+    String? id,
     String? state,
     String? nonce,
     String? codeVerifier,
@@ -85,6 +91,7 @@ class AuthSessionState {
     Duration? ttl,
   }) {
     return AuthSessionState(
+      id: id ?? this.id,
       state: state ?? this.state,
       nonce: nonce ?? this.nonce,
       codeVerifier: codeVerifier ?? this.codeVerifier,
@@ -116,7 +123,46 @@ class AuthSessionManager {
 
   /// Create a new authentication session
   /// Returns session data with tokens and expiry
-  Future<Map<String, dynamic>> createSession({
+  Future<AuthSessionState> createSession({
+    required String state,
+    required String nonce,
+    required String codeChallenge,
+    Duration? ttl,
+  }) async {
+    // Store session data securely
+    final sessionId = 'session_${_generateSecureRandomString(32)}';
+
+    final sessionState = AuthSessionState(
+      id: sessionId,
+      state: state,
+      nonce: nonce,
+      codeVerifier: '', // Will be set separately for security
+      codeChallenge: codeChallenge,
+      createdAt: DateTime.now(),
+      ttl: ttl ?? const Duration(minutes: 10),
+    );
+
+    await _storage.write(
+      key: 'oauth_session_$sessionId',
+      value: jsonEncode(sessionState.toJson()),
+    );
+
+    return sessionState.copyWith();
+  }
+
+  /// Complete OAuth session after successful authentication
+  Future<void> completeSession(String sessionId) async {
+    await _storage.delete(key: 'oauth_session_$sessionId');
+  }
+
+  /// Clear all stored sessions
+  Future<void> clearAllSessions() async {
+    await _storage.deleteAll();
+  }
+
+  /// Create a token session (original method)
+  /// Returns session data with tokens and expiry
+  Future<Map<String, dynamic>> createTokenSession({
     required String accessToken,
     required String refreshToken,
     required String userId,

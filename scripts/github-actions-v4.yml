@@ -1,0 +1,39 @@
+# GitHub Actions step for Azure Functions v4 deployment
+# Add this to your existing workflow after OIDC login
+
+- name: Package Azure Functions v4
+  shell: bash
+  run: |
+    chmod +x scripts/package-v4.sh
+    ./scripts/package-v4.sh
+
+- name: Deploy to Azure Functions
+  run: |
+    az functionapp deployment source config-zip \
+      -g asora-psql-flex \
+      -n asora-function-dev \
+      --src dist-v4-final.zip \
+      --timeout 600
+
+- name: Verify Deployment
+  run: |
+    # Wait for deployment to stabilize
+    sleep 30
+    
+    # List functions
+    az functionapp function list \
+      -g asora-psql-flex \
+      -n asora-function-dev \
+      --query "[].name" \
+      --output tsv
+    
+    # Health check
+    curl -f https://asora-function-dev.azurewebsites.net/api/health || exit 1
+
+- name: Upload deployment artifact
+  if: failure()
+  uses: actions/upload-artifact@v4
+  with:
+    name: deployment-package-v4
+    path: dist-v4-final.zip
+    retention-days: 7

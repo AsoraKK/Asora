@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_providers.dart';
-import '../../auth/application/auth_state.dart';
 import '../../../screens/feed_screen.dart';
 import 'auth_choice_screen.dart';
 
@@ -12,16 +11,15 @@ class AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
 
-    // Show simple choice screen while loading/unauthenticated
-    if (authState.status == AuthStatus.loading) {
-      return const AuthChoiceScreen();
-    }
-
-    if (authState.status == AuthStatus.guest ||
-        authState.status == AuthStatus.authed) {
-      return const FeedScreen();
-    }
-
-    return const SizedBox.shrink();
+    return authState.when(
+      data: (user) {
+        // If we have a user, show the feed screen
+        // If user is null, show the auth choice screen
+        return user != null ? const FeedScreen() : const AuthChoiceScreen();
+      },
+      loading: () => const AuthChoiceScreen(), // Show auth screen while loading
+      error: (error, stack) =>
+          const AuthChoiceScreen(), // Show auth screen on error
+    );
   }
 }
