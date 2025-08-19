@@ -117,7 +117,7 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
 
     return feedService.getFeed(
       params: arg,
-      token: null, // TODO: Implement token from auth when ready
+      token: ref.read(authTokenProvider), // Use token from auth provider
     );
   }
 
