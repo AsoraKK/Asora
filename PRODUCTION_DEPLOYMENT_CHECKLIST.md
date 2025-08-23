@@ -89,7 +89,7 @@
 
 - [ ] **Key Vault Access Verification**
   ```bash
-  az keyvault secret list --vault-name kv-asora-flex-dev
+  az keyvault secret list --vault-name kv-asora-dev
   # Should show: JWT-SECRET, HIVE-AI-KEY, HIVE-TEXT-KEY, HIVE-VISUAL-KEY, COSMOS-KEY, POSTGRES-PASSWORD
   ```
 
@@ -97,7 +97,7 @@
   ```bash
   az functionapp identity show --name asora-functions-production --resource-group asora-prod
   # Verify: "type": "SystemAssigned" and principalId exists
-  # Ensure this identity has "Key Vault Secrets User" role on kv-asora-flex-dev
+  # Ensure this identity has "Key Vault Secrets User" role on kv-asora-dev
   ```
 
 ---
@@ -106,23 +106,23 @@
 
 ### 6. **Key Vault Secret Management**
 - [ ] **Verify Secret References in Function App**
-  Using Key Vault URI: `https://kv-asora-flex-dev.vault.azure.net/`
+  Using Key Vault URI: `https://kv-asora-dev.vault.azure.net/`
   
   **Required Secret Bindings:**
   ```env
   # In Function App → Configuration → Application Settings
-  JWT_SECRET=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/JWT-SECRET/)
-  HIVE_AI_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/HIVE-AI-KEY/)
-  HIVE_TEXT_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/HIVE-TEXT-KEY/)
-  HIVE_VISUAL_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/HIVE-VISUAL-KEY/)
-  COSMOS_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/COSMOS-KEY/)
-  POSTGRES_PASSWORD=@Microsoft.KeyVault(SecretUri=https://kv-asora-flex-dev.vault.azure.net/secrets/POSTGRES-PASSWORD/)
+  JWT_SECRET=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/JWT-SECRET/)
+  HIVE_AI_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/HIVE-AI-KEY/)
+  HIVE_TEXT_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/HIVE-TEXT-KEY/)
+  HIVE_VISUAL_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/HIVE-VISUAL-KEY/)
+  COSMOS_KEY=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/COSMOS-KEY/)
+  POSTGRES_PASSWORD=@Microsoft.KeyVault(SecretUri=https://kv-asora-dev.vault.azure.net/secrets/POSTGRES-PASSWORD/)
   ```
 
 - [ ] **Test Key Vault Access**
   ```bash
   # Function App should have Key Vault Secrets User role
-  az keyvault secret show --vault-name kv-asora-flex-dev --name JWT-SECRET --query "value" -o tsv
+  az keyvault secret show --vault-name kv-asora-dev --name JWT-SECRET --query "value" -o tsv
   # Should return the secret value (test with proper authentication)
   ```
 
@@ -275,8 +275,8 @@
 
 - [ ] **Key Vault Security Practices**
   ```bash
-  # Verify RBAC assignments on kv-asora-flex-dev
-  az role assignment list --scope "/subscriptions/$TF_VAR_subscription_id/resourceGroups/asora-psql-flex/providers/Microsoft.KeyVault/vaults/kv-asora-flex-dev"
+  # Verify RBAC assignments on kv-asora-dev
+  az role assignment list --scope "/subscriptions/$TF_VAR_subscription_id/resourceGroups/asora-psql-flex/providers/Microsoft.KeyVault/vaults/kv-asora-dev"
   
   # Check for proper role assignments:
   # - Function App managed identity: "Key Vault Secrets User"
@@ -291,7 +291,7 @@
 
 - [ ] **Database Security**
   - PostgreSQL: SSL required, firewall rules active
-  - Cosmos DB: Serverless mode, key-based access via Key Vault (`kv-asora-flex-dev`)
+  - Cosmos DB: Serverless mode, key-based access via Key Vault (`kv-asora-dev`)
   - Key Vault: Proper RBAC with "Key Vault Secrets User" role assignments
 
 ---
@@ -439,7 +439,8 @@ Initiate rollback if any of the following occur within 30 minutes:
 ### Production URLs:
 - **Function App**: `https://asora-functions-production.azurewebsites.net`
 - **Application Insights**: Azure Portal → Resource Group → asora-appinsights-production
-- **Key Vault**: `https://kv-asora-flex-dev.vault.azure.net/` (Primary secrets vault)
+- **Key Vault**: `https://kv-asora-dev.vault.azure.net/` (Primary secrets vault)
+  - Note: kv-asora-flex-dev is empty and unused
 - **PostgreSQL**: asora-pg-dev-ne.postgres.database.azure.com
 - **Cosmos DB**: asora-cosmos-dev.documents.azure.com
 

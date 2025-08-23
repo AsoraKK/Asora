@@ -90,6 +90,12 @@ variable "hive_image_key" {
   description = "Hive AI Image Classification API key"
 }
 
+variable "hive_deepfake_key" {
+  type        = string
+  sensitive   = true
+  description = "Hive AI AI-Generated & Deepfake Detection API key"
+}
+
 variable "enable_redis_cache" {
   description = "Enable Redis cache for feed caching (use only if FEED_CACHE_BACKEND=redis)"
   type        = bool
@@ -255,9 +261,6 @@ resource "azurerm_redis_cache" "asora_redis" {
   
   # Enable TLS for secure connections
   minimum_tls_version = "1.2"
-  
-  # Enable non-SSL port for local development (disable in production)
-  enable_non_ssl_port = var.environment == "development" ? true : false
   
   # Disable public network access in production
   public_network_access_enabled = var.environment == "development" ? true : false
