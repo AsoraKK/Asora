@@ -1,0 +1,9 @@
+coverage/
+**/build/
+functions/deploy/src/
+android/
+ios/
+linux/
+macos/
+windows/
+functions/**/*.js

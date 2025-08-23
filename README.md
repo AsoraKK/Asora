@@ -1,5 +1,7 @@
 # Asora
 
+[Architecture TL;DR](docs/ADR_001_TLDR.md) • [Full ADR](docs/adr_001_overall_architecture_roadmap.md)
+
 Social media platform for human-authored content with AI-powered moderation.
 
 ## 🚀 Quick Start

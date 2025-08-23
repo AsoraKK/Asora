@@ -45,7 +45,10 @@ dependencies:
   crypto: ^3.0.3  # For certificate pinning SPKI hashing
   
   # Security packages
-  flutter_jailbreak_detection: ^1.10.0  # Root/jailbreak detection
+  
+  # OAuth2 and deep linking packages
+  url_launcher: ^6.2.2          # Launch URLs and handle OAuth callbacks
+  app_links: ^6.3.2             # Deep link handling for OAuth callbacks (replaces discontinued uni_links)
   
   # File handling and sharing
   path_provider: ^2.1.1         # File system access
@@ -64,6 +67,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+  
+  # Testing dependencies
+  mockito: ^5.4.4                 # Mocking framework for unit tests
+  build_runner: ^2.4.7            # Code generation for mockito
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

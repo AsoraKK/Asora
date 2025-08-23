@@ -11,6 +11,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
+
+// Conditional import for dart:html (web only)
+// ignore: uri_does_not_exist
+import 'web_html_stub.dart' if (dart.library.html) 'web_html_real.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -380,13 +384,10 @@ class OAuth2Service {
     // via JavaScript and postMessage or by monitoring the URL
     // This is a simplified version
     if (kIsWeb) {
-      // Web callback handling would go here
-    // Web implementation: parse the current URL for OAuth2 parameters
-    if (kIsWeb) {
-      // Import dart:html only on web
-      // ignore: avoid_web_libraries_in_flutter
-      import 'dart:html' as html;
-      final uri = Uri.parse(html.window.location.href);
+      // Web implementation: parse the current URL for OAuth2 parameters
+      final href = getWebHref();
+      if (href == null) return;
+      final uri = Uri.parse(href);
       final code = uri.queryParameters['code'];
       final state = uri.queryParameters['state'];
       final error = uri.queryParameters['error'];
@@ -404,6 +405,10 @@ class OAuth2Service {
       }
     }
   }
+
+  // Helper for conditional web href access
+  // Platform abstraction for web href
+  String? getWebHref() => getWebHref();
 
   void _handleCallback(Uri uri) {
     if (uri.scheme == 'asora' ||

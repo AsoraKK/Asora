@@ -1,14 +1,27 @@
+library;
+
 /// ASORA AUTH SESSION MANAGER
 ///
 /// 🎯 Purpose: Manages user authentication sessions and state
 /// 🔐 Security: Handles secure storage of auth tokens and session data
 /// 📱 Platform: Flutter with secure storage integration
 /// 🏗️ Architecture: Core authentication component
-library;
 
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+
+/// Generate a secure random string of the given length
+String _generateSecureRandomString(int length) {
+  const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final rand = List.generate(
+    length,
+    (index) =>
+        chars[(DateTime.now().microsecondsSinceEpoch + index) % chars.length],
+  );
+  return rand.join();
+}
 
 /// Enumeration of basic authentication session states
 enum AuthSessionStatus {

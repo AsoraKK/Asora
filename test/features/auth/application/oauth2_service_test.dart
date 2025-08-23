@@ -35,7 +35,7 @@ void main() {
     test('should generate valid code challenge', () {
       const codeVerifier =
           'test-code-verifier-123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678';
-      final codeChallenge = PkceHelper.generateCodeChallenge(testCodeVerifier);
+      final codeChallenge = PkceHelper.generateCodeChallenge(codeVerifier);
 
       expect(codeChallenge.isNotEmpty, isTrue);
 

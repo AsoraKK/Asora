@@ -9,6 +9,7 @@ import '../domain/social_feed_repository.dart';
 import '../domain/models.dart';
 import '../application/social_feed_service.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../features/auth/application/auth_providers.dart';
 
 /// Provider for the social feed service implementation
 final socialFeedServiceProvider = Provider<SocialFeedRepository>((ref) {
@@ -54,6 +55,12 @@ final commentsProvider =
       List<Comment>,
       CommentsParams
     >(() => CommentsNotifier());
+
+/// Provider for the current user's access token
+final authTokenProvider = FutureProvider<String?>((ref) async {
+  final oauth2Service = ref.read(oauth2ServiceProvider);
+  return await oauth2Service.getAccessToken();
+});
 
 /// Parameters for local feed
 class LocalFeedParams {

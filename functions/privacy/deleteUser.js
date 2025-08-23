@@ -13,7 +13,7 @@ let __assign =
     __assign =
       Object.assign ||
       function (t) {
-  for (let s, i = 1, n = arguments.length; i < n; i++) {
+        for (let s, i = 1, n = arguments.length; i < n; i++) {
           s = arguments[i];
           for (const p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
         }
@@ -110,19 +110,19 @@ const __generator =
               break;
             /* falls through */
             case 4:
-            /* falls through */
+              /* falls through */
               _.label++;
               return { value: op[1], done: false };
             /* falls through */
             case 5:
-            /* falls through */
+              /* falls through */
               _.label++;
               y = op[1];
               op = [0];
               continue;
             /* falls through */
             case 7:
-            /* falls through */
+              /* falls through */
               op = _.ops.pop();
               _.trys.pop();
               continue;
@@ -263,9 +263,9 @@ function deleteUser(request, context) {
             .concat(Math.random().toString(36).substr(2, 9));
           context.log('Account deletion request received - Deletion ID: '.concat(deletionId));
           _f.label = 1;
-  /* falls through */
-  case 1:
-  /* falls through */
+        /* falls through */
+        case 1:
+          /* falls through */
           _f.trys.push([1, 66, 67]);
           authHeader = request.headers.get('authorization');
           if (!authHeader) {
@@ -279,9 +279,9 @@ function deleteUser(request, context) {
           }
           token = authHeader.replace('Bearer ', '');
           return [4 /*yield*/, (0, auth_utils_1.verifyJWT)(token)];
-  /* falls through */
-  case 2:
-  /* falls through */
+        /* falls through */
+        case 2:
+          /* falls through */
           jwtPayload = _f.sent();
           userId = jwtPayload.sub;
           confirmHeader = request.headers.get('X-Confirm-Delete');
@@ -299,9 +299,9 @@ function deleteUser(request, context) {
             ];
           }
           return [4 /*yield*/, deleteRateLimiter.checkRateLimit(request)];
-  /* falls through */
-  case 3:
-  /* falls through */
+        /* falls through */
+        case 3:
+          /* falls through */
           rateLimitResult = _f.sent();
           if (rateLimitResult.blocked) {
             context.log('Deletion rate limited for user: '.concat(userId));
@@ -343,20 +343,20 @@ function deleteUser(request, context) {
           };
           userExists = false;
           _f.label = 4;
-          /* falls through */
-  /* falls through */
-  case 4:
+        /* falls through */
+        /* falls through */
+        case 4:
           _f.trys.push([4, 6, 7]);
           return [4 /*yield*/, usersContainer.item(userId, userId).read()];
-  /* falls through */
-  case 5:
-  /* falls through */
+        /* falls through */
+        case 5:
+          /* falls through */
           existingUser = _f.sent().resource;
           userExists = !!existingUser;
           return [3 /*break*/, 7];
-  /* falls through */
-  case 6:
-  /* falls through */
+        /* falls through */
+        case 6:
+          /* falls through */
           error_1 = _f.sent();
           if (error_1.code === 404) {
             context.log('User '.concat(userId, ' already deleted or never existed'));
@@ -378,9 +378,9 @@ function deleteUser(request, context) {
           context.log('Error checking user existence: '.concat(error_1.message));
           warnings.push('Could not verify user existence: '.concat(error_1.message));
           return [3 /*break*/, 7];
-  /* falls through */
-  case 7:
-  /* falls through */
+        /* falls through */
+        case 7:
+          /* falls through */
           _f.trys.push([7, 15, 16]);
           postsQuery = {
             query:
@@ -393,15 +393,15 @@ function deleteUser(request, context) {
           userPosts = _f.sent().resources;
           ((_i = 0), (userPosts_1 = userPosts));
           _f.label = 9;
-          /* falls through */
-  /* falls through */
-  case 9:
+        /* falls through */
+        /* falls through */
+        case 9:
           if (!(_i < userPosts_1.length)) return [3 /*break*/, 14];
           post = userPosts_1[_i];
           _f.label = 10;
-          /* falls through */
-  /* falls through */
-  case 10:
+        /* falls through */
+        /* falls through */
+        case 10:
           _f.trys.push([10, 12, 13]);
           updatedPost = __assign(__assign({}, post), {
             authorName: '[Deleted User]',
@@ -413,38 +413,38 @@ function deleteUser(request, context) {
             lastModified: new Date().toISOString(),
           });
           return [4 /*yield*/, postsContainer.item(post.id, post.id).replace(updatedPost)];
-  /* falls through */
-  case 11:
-  /* falls through */
+        /* falls through */
+        case 11:
+          /* falls through */
           _f.sent();
           contentMarking.postsAnonymized++;
           return [3 /*break*/, 13];
-  /* falls through */
-  case 12:
-  /* falls through */
+        /* falls through */
+        case 12:
+          /* falls through */
           error_2 = _f.sent();
           warnings.push('Failed to anonymize post '.concat(post.id, ': ').concat(error_2.message));
           return [3 /*break*/, 13];
-  /* falls through */
-  case 13:
-  /* falls through */
+        /* falls through */
+        case 13:
+          /* falls through */
           _i++;
           return [3 /*break*/, 9];
-  /* falls through */
-  case 14:
-  /* falls through */
+        /* falls through */
+        case 14:
+          /* falls through */
           itemsProcessed.posts = userPosts.length;
           context.log('Processed '.concat(userPosts.length, ' posts for anonymization'));
           return [3 /*break*/, 16];
-  /* falls through */
-  case 15:
-  /* falls through */
+        /* falls through */
+        case 15:
+          /* falls through */
           error_3 = _f.sent();
           warnings.push('Error processing posts: '.concat(error_3.message));
           return [3 /*break*/, 16];
-  /* falls through */
-  case 16:
-  /* falls through */
+        /* falls through */
+        case 16:
+          /* falls through */
           _f.trys.push([16, 24, 25]);
           commentsQuery = {
             query:
@@ -452,21 +452,21 @@ function deleteUser(request, context) {
             parameters: [{ name: '@userId', value: userId }],
           };
           return [4 /*yield*/, commentsContainer.items.query(commentsQuery).fetchAll()];
-  /* falls through */
-  case 17:
-  /* falls through */
+        /* falls through */
+        case 17:
+          /* falls through */
           userComments = _f.sent().resources;
           ((_a = 0), (userComments_1 = userComments));
           _f.label = 18;
-  /* falls through */
-  case 18:
-  /* falls through */
+        /* falls through */
+        case 18:
+          /* falls through */
           if (!(_a < userComments_1.length)) return [3 /*break*/, 23];
           comment = userComments_1[_a];
           _f.label = 19;
-  /* falls through */
-  case 19:
-  /* falls through */
+        /* falls through */
+        case 19:
+          /* falls through */
           _f.trys.push([19, 21, 22]);
           updatedComment = __assign(__assign({}, comment), {
             authorName: '[Deleted User]',
@@ -481,126 +481,126 @@ function deleteUser(request, context) {
             4 /*yield*/,
             commentsContainer.item(comment.id, comment.id).replace(updatedComment),
           ];
-  /* falls through */
-  case 20:
-  /* falls through */
+        /* falls through */
+        case 20:
+          /* falls through */
           _f.sent();
           contentMarking.commentsAnonymized++;
           return [3 /*break*/, 22];
-  /* falls through */
-  case 21:
-  /* falls through */
+        /* falls through */
+        case 21:
+          /* falls through */
           error_4 = _f.sent();
           warnings.push(
             'Failed to anonymize comment '.concat(comment.id, ': ').concat(error_4.message)
           );
           return [3 /*break*/, 22];
-  /* falls through */
-  case 22:
-  /* falls through */
+        /* falls through */
+        case 22:
+          /* falls through */
           _a++;
           return [3 /*break*/, 18];
-  /* falls through */
-  case 23:
-  /* falls through */
+        /* falls through */
+        case 23:
+          /* falls through */
           itemsProcessed.comments = userComments.length;
           context.log('Processed '.concat(userComments.length, ' comments for anonymization'));
           return [3 /*break*/, 25];
-  /* falls through */
-  case 24:
-  /* falls through */
+        /* falls through */
+        case 24:
+          /* falls through */
           error_5 = _f.sent();
           warnings.push('Error processing comments: '.concat(error_5.message));
           return [3 /*break*/, 25];
-  /* falls through */
-  case 25:
-  /* falls through */
+        /* falls through */
+        case 25:
+          /* falls through */
           _f.trys.push([25, 33, 34]);
           likesQuery = {
             query: 'SELECT * FROM c WHERE c.userId = @userId',
             parameters: [{ name: '@userId', value: userId }],
           };
           return [4 /*yield*/, likesContainer.items.query(likesQuery).fetchAll()];
-  /* falls through */
-  case 26:
-  /* falls through */
+        /* falls through */
+        case 26:
+          /* falls through */
           userLikes = _f.sent().resources;
           ((_b = 0), (userLikes_1 = userLikes));
           _f.label = 27;
-  /* falls through */
-  case 27:
-  /* falls through */
+        /* falls through */
+        case 27:
+          /* falls through */
           if (!(_b < userLikes_1.length)) return [3 /*break*/, 32];
           like = userLikes_1[_b];
           _f.label = 28;
-  /* falls through */
-  case 28:
-  /* falls through */
+        /* falls through */
+        case 28:
+          /* falls through */
           _f.trys.push([28, 30, 31]);
           return [4 /*yield*/, likesContainer.item(like.id, like.userId).delete()];
-  /* falls through */
-  case 29:
-  /* falls through */
+        /* falls through */
+        case 29:
+          /* falls through */
           _f.sent();
           itemsProcessed.likes++;
           return [3 /*break*/, 31];
-  /* falls through */
-  case 30:
-  /* falls through */
+        /* falls through */
+        case 30:
+          /* falls through */
           error_6 = _f.sent();
           warnings.push('Failed to delete like '.concat(like.id, ': ').concat(error_6.message));
           return [3 /*break*/, 31];
-  /* falls through */
-  case 31:
-  /* falls through */
+        /* falls through */
+        case 31:
+          /* falls through */
           _b++;
           return [3 /*break*/, 27];
-  /* falls through */
-  case 32:
-  /* falls through */
+        /* falls through */
+        case 32:
+          /* falls through */
           context.log('Deleted '.concat(itemsProcessed.likes, ' likes'));
           return [3 /*break*/, 34];
-  /* falls through */
-  case 33:
-  /* falls through */
+        /* falls through */
+        case 33:
+          /* falls through */
           error_7 = _f.sent();
           warnings.push('Error deleting likes: '.concat(error_7.message));
           return [3 /*break*/, 34];
-  /* falls through */
-  case 34:
-  /* falls through */
+        /* falls through */
+        case 34:
+          /* falls through */
           _f.trys.push([34, 42, 43]);
           flagsQuery = {
             query: 'SELECT * FROM c WHERE c.flaggerId = @userId',
             parameters: [{ name: '@userId', value: userId }],
           };
           return [4 /*yield*/, flagsContainer.items.query(flagsQuery).fetchAll()];
-  /* falls through */
-  case 35:
-  /* falls through */
+        /* falls through */
+        case 35:
+          /* falls through */
           userFlags = _f.sent().resources;
           ((_c = 0), (userFlags_1 = userFlags));
           _f.label = 36;
-  /* falls through */
-  case 36:
-  /* falls through */
+        /* falls through */
+        case 36:
+          /* falls through */
           if (!(_c < userFlags_1.length)) return [3 /*break*/, 41];
           flag = userFlags_1[_c];
           _f.label = 37;
-  /* falls through */
-  case 37:
-  /* falls through */
+        /* falls through */
+        case 37:
+          /* falls through */
           _f.trys.push([37, 39, 40]);
           return [4 /*yield*/, flagsContainer.item(flag.id, flag.id).delete()];
-  /* falls through */
-  case 38:
-  /* falls through */
+        /* falls through */
+        case 38:
+          /* falls through */
           _f.sent();
           itemsProcessed.flags++;
           return [3 /*break*/, 40];
-  /* falls through */
-  case 39:
-  /* falls through */
+        /* falls through */
+        case 39:
+          /* falls through */
           error_8 = _f.sent();
           warnings.push('Failed to delete flag '.concat(flag.id, ': ').concat(error_8.message));
           return [3 /*break*/, 40];
