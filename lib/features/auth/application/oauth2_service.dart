@@ -14,7 +14,7 @@ import 'package:flutter/foundation.dart'
 
 // Conditional import for dart:html (web only)
 // ignore: uri_does_not_exist
-import 'web_html_stub.dart' if (dart.library.html) 'web_html_real.dart';
+// import 'web_html_stub.dart' if (dart.library.html) 'web_html_real.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
