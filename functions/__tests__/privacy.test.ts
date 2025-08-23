@@ -69,6 +69,26 @@ function createMockContext(): InvocationContext {
 }
 
 describe('Privacy Service - Data Export', () => {
+  beforeAll(() => {
+    process.env.COSMOS_CONNECTION_STRING = 'AccountEndpoint=https://localhost:8081/;AccountKey=key;';
+  });
+  // mockContext declared once at the top of the describe block
+  afterEach(() => {
+    // If exportUser logs an error, surface it in test output for diagnosis
+    if (mockContext && mockContext.log && (mockContext.log as jest.Mock).mock && (mockContext.log as jest.Mock).mock.calls.length) {
+      // Check for error logs
+      const errorCall = (mockContext.log as jest.Mock).mock.calls.find(call => call[0]?.toString().includes('exportUser error'));
+      if (errorCall) {
+        // eslint-disable-next-line no-console
+        console.log('exportUser error:', JSON.stringify(errorCall[1], null, 2));
+      }
+    }
+    if (mockContext && mockContext.error && (mockContext.error as jest.Mock).mock && (mockContext.error as jest.Mock).mock.calls.length) {
+      // Fallback: log any error calls
+      // eslint-disable-next-line no-console
+      console.log('context.error:', JSON.stringify((mockContext.error as jest.Mock).mock.calls[0], null, 2));
+    }
+  });
   let mockContext: InvocationContext;
   const jwt = require('jsonwebtoken');
 
