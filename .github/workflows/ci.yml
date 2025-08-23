@@ -325,10 +325,23 @@ jobs:
           echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
 
       - name: 🛠️ Setup Azure Developer CLI
-        uses: Azure/setup-azd@v2
+        shell: bash
+        run: |
+          if ! command -v azd &> /dev/null; then
+            echo "Installing Azure Developer CLI..."
+            # Try setup-azd action first
+            curl -fsSL https://aka.ms/install-azd.sh | bash
+            echo "$HOME/.azd/bin" >> $GITHUB_PATH
+          else
+            echo "Azure Developer CLI already installed"
+          fi
+        env:
+          AZURE_DEV_COLLECT_TELEMETRY: 'no'
 
       - name: 🔎 Check azd version
-        run: azd version
+        run: |
+          export PATH="$HOME/.azd/bin:$PATH"
+          azd version
 
       - name: 📦 Download coverage artifacts
         uses: actions/download-artifact@v4
