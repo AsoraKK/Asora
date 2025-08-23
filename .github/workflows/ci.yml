@@ -323,6 +323,9 @@ jobs:
         with:
           version: latest
 
+      - name: azd auth login (OIDC)
+        run: azd auth login --client-id "${{ secrets.AZURE_CLIENT_ID }}" --tenant-id "${{ secrets.AZURE_TENANT_ID }}" --federated-credential
+
       - name: 🔎 Init/select azd environment
         run: |
           azd env list --output none || true
