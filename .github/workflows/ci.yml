@@ -308,40 +308,35 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 🔐 Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: ✅ Verify Azure Authentication
-        run: |
-          echo "🔍 Verifying Azure OIDC authentication..."
-          az account show --output table
-          echo "✅ Successfully authenticated with Azure using OIDC (no client secrets used)"
-          echo "📋 Current subscription: $(az account show --query name -o tsv)"
-          echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
+      - name: 🛠️ Install Azure Developer CLI
+        uses: Azure/setup-azd@v2
+        with:
+          version: latest
 
-      - name: 🛠️ Setup Azure Developer CLI
-        shell: bash
+      - name: 🔎 Init/select azd environment
         run: |
-          if ! command -v azd &> /dev/null; then
-            echo "Installing Azure Developer CLI..."
-            # Try setup-azd action first
-            curl -fsSL https://aka.ms/install-azd.sh | bash
-            echo "$HOME/.azd/bin" >> $GITHUB_PATH
-          else
-            echo "Azure Developer CLI already installed"
-          fi
-        env:
-          AZURE_DEV_COLLECT_TELEMETRY: 'no'
+          azd env list --output none || true
+          azd env new asora-ci --subscription $AZURE_SUBSCRIPTION_ID --location westeurope --no-prompt \
+            || azd env select asora-ci
 
-      - name: 🔎 Check azd version
+      - name: � Deploy with AZD
+        id: deploy
         run: |
-          export PATH="$HOME/.azd/bin:$PATH"
-          azd version
+          echo "🚀 Deploying Asora to Azure..."
+          azd up --no-prompt
+          APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty')
+          echo "app-url=${APP_URL:-https://asora-function-prod.azurewebsites.net}" >> "$GITHUB_OUTPUT"
+          echo "🌐 Deployed to: ${APP_URL:-https://asora-function-prod.azurewebsites.net}"
 
       - name: 📦 Download coverage artifacts
         uses: actions/download-artifact@v4
