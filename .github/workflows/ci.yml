@@ -329,7 +329,7 @@ jobs:
           azd env new asora-ci --subscription $AZURE_SUBSCRIPTION_ID --location westeurope --no-prompt \
             || azd env select asora-ci
 
-      - name: � Deploy with AZD
+      - name: 🚀 Deploy with AZD
         id: deploy
         run: |
           echo "🚀 Deploying Asora to Azure..."
@@ -352,32 +352,7 @@ jobs:
           echo "✅ P1 coverage >= 80%"
           echo "🚀 Ready for deployment!"
 
-      - name: 🚀 Deploy with AZD
-        id: deploy
-        working-directory: .
-        run: |
-          echo "🚀 Deploying Asora to Azure..."
-          
-          # Initialize azd environment if not exists
-          if [ ! -d ".azure" ]; then
-            echo "🔧 Initializing azd environment..."
-            azd env new production --location eastus
-          fi
-          
-          # Set AZD environment variables
-          azd env set AZURE_SUBSCRIPTION_ID ${{ env.AZURE_SUBSCRIPTION_ID }}
-          azd env set AZURE_CLIENT_ID ${{ env.AZURE_CLIENT_ID }}
-          azd env set AZURE_TENANT_ID ${{ env.AZURE_TENANT_ID }}
-          
-          # Deploy infrastructure and application
-          azd up --no-prompt
-          
-          # Get the deployed app URL
-          APP_URL=$(azd show --output json | jq -r '.services[0].endpoint // "https://asora-function-prod.azurewebsites.net"')
-          echo "app-url=$APP_URL" >> $GITHUB_OUTPUT
-          echo "🌐 Deployed to: $APP_URL"
-
-      - name: 🔍 Post-deployment health check
+      - name:  Post-deployment health check
         run: |
           echo "🏥 Running post-deployment health checks..."
           
