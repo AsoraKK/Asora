@@ -444,18 +444,22 @@ export async function exportUser(
       }
     };
 
-  } catch (error) {
-    // Handle structured HTTP errors (like 401 from auth)
-    if (isHttpError(error)) {
-      return json(error.status, error.body);
+  } catch (err) {
+    // make failures diagnosable in Jest
+    if (isHttpError(err)) {
+      return json(err.status, err.body);
     }
-    
-    // Handle unexpected errors
-    context.error('Error during user data export:', error);
-    return json(500, { 
-      code: 'server_error',
-      message: 'Internal server error',
-      exportId
+    // TypeScript fix: context.log('error', ...) and type err as any for property access
+    context.log && context.log('error', 'exportUser error', {
+      name: (err as any)?.name,
+      code: (err as any)?.code,
+      message: (err as any)?.message,
+      stack: (err as any)?.stack,
     });
+    return {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: (err as any)?.message, exportId }),
+    };
   }
 }
