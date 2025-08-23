@@ -326,19 +326,10 @@ jobs:
       - name: 🔎 Init/select azd environment
         run: |
           azd env list --output none || true
-          azd env new asora-ci --subscription $AZURE_SUBSCRIPTION_ID --location westeurope --no-prompt \
+          azd env new asora-ci --subscription ${{ env.AZURE_SUBSCRIPTION_ID }} --location westeurope --no-prompt \
             || azd env select asora-ci
 
-      - name: 🚀 Deploy with AZD
-        id: deploy
-        run: |
-          echo "🚀 Deploying Asora to Azure..."
-          azd up --no-prompt
-          APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty')
-          echo "app-url=${APP_URL:-https://asora-function-prod.azurewebsites.net}" >> "$GITHUB_OUTPUT"
-          echo "🌐 Deployed to: ${APP_URL:-https://asora-function-prod.azurewebsites.net}"
-
-      - name: 📦 Download coverage artifacts
+      - name: � Download coverage artifacts
         uses: actions/download-artifact@v4
         with:
           name: flutter-coverage
@@ -350,9 +341,18 @@ jobs:
           echo "✅ Flutter tests passed"
           echo "✅ Functions tests passed" 
           echo "✅ P1 coverage >= 80%"
-          echo "🚀 Ready for deployment!"
+          echo "�🚀 Ready for deployment!"
 
-      - name:  Post-deployment health check
+      - name: 🚀 Deploy with AZD
+        id: deploy
+        run: |
+          echo "🚀 Deploying Asora to Azure..."
+          azd up --no-prompt
+          APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty')
+          echo "app-url=${APP_URL:-https://asora-function-prod.azurewebsites.net}" >> "$GITHUB_OUTPUT"
+          echo "🌐 Deployed to: ${APP_URL:-https://asora-function-prod.azurewebsites.net}"
+
+      - name: 🔍 Post-deployment health check
         run: |
           echo "🏥 Running post-deployment health checks..."
           
