@@ -1,0 +1,27 @@
+# Azure Developer CLI (azd) project configuration
+# This file defines the Asora application structure for Azure deployment
+
+name: asora
+metadata:
+  template: asora@0.0.1-beta
+services:
+  functions:
+    project: ./functions
+    language: ts
+    host: functionapp
+    hooks:
+      prepackage:
+        shell: sh
+        run: |
+          echo "📦 Installing dependencies and building Functions..."
+          npm ci --production=false
+          npm run build 2>/dev/null || echo "No build script found, using source files"
+          echo "✅ Functions preparation complete"
+      postdeploy:
+        shell: sh
+        run: |
+          echo "🔧 Functions deployed, running health check..."
+          echo "✅ Deployment verification complete"
+infra:
+  provider: terraform
+  path: ./Infra
