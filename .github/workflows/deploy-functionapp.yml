@@ -53,6 +53,16 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+    - name: 'Install Azure Developer CLI'
+      uses: Azure/setup-azd@v2
+      with:
+        version: latest
+
+    - name: 'Install Terraform CLI'
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.9.8
+
     - name: 'Verify Azure Authentication'
       run: |
         echo "🔍 Verifying Azure OIDC authentication..."
@@ -61,23 +71,7 @@ jobs:
         echo "📋 Current subscription: $(az account show --query name -o tsv)"
         echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
 
-    - name: 'Configure Function App for Node 20'
-      run: |
-        echo "🔧 Configuring Function App runtime for Node 20..."
-        az functionapp config appsettings set \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --settings FUNCTIONS_EXTENSION_VERSION=~4 \
-                    FUNCTIONS_WORKER_RUNTIME=node \
-                    WEBSITE_NODE_DEFAULT_VERSION=~20
-        
-        echo "🔧 Setting Node 20 runtime stack..."
-        az functionapp config set \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --linux-fx-version "Node|20"
-
-    - name: 'Install, Build, and Provision (azd - preview)'
+    - name: 'Build Functions'
       working-directory: .
       env:
         HUSKY: "0"
@@ -90,14 +84,6 @@ jobs:
         npm run build || echo "No build script"
         popd
 
-
-        echo "🚀 Preparing azd environment and running provision preview..."
-        # Export subscription and tenant into the GitHub environment for later steps
-        SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        TENANT_ID=$(az account show --query tenantId -o tsv)
-        echo "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
-        echo "AZURE_TENANT_ID=$TENANT_ID" >> $GITHUB_ENV
-
     - name: Show azure.yaml used by CI
       run: |
         pwd
@@ -105,82 +91,31 @@ jobs:
         sed -n '1,120p' azure.yaml
 
     - name: Confirm azd reads Terraform provider
-      run: azd show --output json | jq '.infra'
+      run: |
+        echo "🔍 Checking azd infrastructure configuration..."
+        azd show --output json | jq '.infra' || azd show
 
     - name: Create/select azd environment
       run: |
-        azd env new dev --subscription "$AZURE_SUBSCRIPTION_ID" --location northeurope --no-prompt || azd env select dev
+        azd env new asora-dev --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --location northeurope --no-prompt || azd env select asora-dev
 
-    - name: Provision (preview) with azd
+    - name: 🚀 Deploy with AZD
+      env:
+        HUSKY: "0"
+        NPM_CONFIG_AUDIT: "false"
+        NPM_CONFIG_FUND: "false"
       run: |
-        azd provision --preview
-        echo "✅ azd provision --preview finished. To apply changes run azd up interactively."
+        echo "🚀 Deploying Asora to Azure..."
+        azd up --no-prompt
+        APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty' 2>/dev/null || echo "")
+        echo "app-url=${APP_URL:-https://asora-function-prod.azurewebsites.net}" >> "$GITHUB_OUTPUT"
+        echo "🌐 Deployed to: ${APP_URL:-https://asora-function-prod.azurewebsites.net}"
 
-    - name: 'Configure Key Vault References'
+    - name: 'Verify deployment'
       run: |
-        echo "🔐 Configuring Key Vault references for secrets..."
-        
-        # Get the Key Vault name (includes environment and random suffix)
-        KV_NAME=$(az keyvault list \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "[?starts_with(name, 'asora-kv-dev-')].name" \
-          -o tsv)
-        
-        echo "📋 Using Key Vault: $KV_NAME"
-        
-        # Configure Key Vault references for all secrets
-        az functionapp config appsettings set \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --settings \
-            "JWT_SECRET=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=jwt-secret)" \
-            "COSMOS_ENDPOINT=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=cosmos-endpoint)" \
-            "COSMOS_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=cosmos-key)" \
-            "POSTGRES_CONNECTION_STRING=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=postgres-connection-string)" \
-            "HIVE_TEXT_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-text-key)" \
-            "HIVE_IMAGE_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-image-key)" \
-            "HIVE_DEEPFAKE_KEY=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=hive-deepfake-key)" \
-            "EMAIL_HASH_SALT=@Microsoft.KeyVault(VaultName=${KV_NAME};SecretName=email-hash-salt)"
-        
-        echo "🔄 Restarting Function App to apply Key Vault references..."
-        az functionapp restart \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
-        
-        echo "⏳ Waiting for Function App to start..."
-        sleep 30
-
-    - name: 'Post-deployment validation'
-      run: |
-        echo "✅ Deployment completed successfully!"
-        echo "📍 Function App: ${{ env.AZURE_FUNCTIONAPP_NAME }}"
-        echo "📍 Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
-        echo "🔍 Verifying Function App Node version..."
-        az functionapp config show \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "linuxFxVersion" -o tsv
-        echo "🔍 Checking app settings for Node version..."
-        az functionapp config appsettings list \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv
-
-    - name: 'Verify Key Vault References'
-      run: |
-        echo "🔐 Verifying Key Vault references are configured..."
-        
-        # Check if Key Vault references are properly set
-        KV_REFS=$(az functionapp config appsettings list \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --query "[?contains(value, '@Microsoft.KeyVault')].{name:name, value:value}" \
-          -o table)
-        
-        echo "📋 Key Vault references configured:"
-        echo "$KV_REFS"
-        
-        # Count expected Key Vault references
+        echo "✅ Deployment completed successfully with azd!"
+        echo "🔍 Checking deployed resources..."
+        azd show --output json | jq '.services' 2>/dev/null || azd show
         KV_COUNT=$(az functionapp config appsettings list \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
