@@ -59,9 +59,15 @@ jobs:
         version: latest
 
     - name: 'Install Terraform CLI'
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.9.8
+      run: |
+        echo "🛠️ Installing Terraform CLI..."
+        sudo apt-get update && sudo apt-get install -y wget unzip
+        wget -O terraform.zip https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+        rm terraform.zip
+        terraform -version
+        echo "✅ Terraform CLI installed successfully"
 
     - name: 'Verify Azure Authentication'
       run: |
