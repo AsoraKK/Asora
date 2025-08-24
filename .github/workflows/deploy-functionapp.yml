@@ -113,16 +113,35 @@ jobs:
       run: |
         azd env new asora-dev --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --location northeurope --no-prompt || azd env select asora-dev
 
+    - name: Terraform automation flags
+      run: echo "TF_IN_AUTOMATION=true" >> "$GITHUB_ENV"
+
     - name: Set TF vars for azd
       run: |
         azd env set TF_VAR_subscription_id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         azd env set TF_VAR_postgresql_password "${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
-        azd env set TF_VAR_client_ip "${{ secrets.CLIENT_IP || '0.0.0.0' }}"
+        CLIENT_IP="${{ secrets.CLIENT_IP }}"
+        azd env set TF_VAR_client_ip "${CLIENT_IP:-0.0.0.0}"
 
     - name: Pre-deploy sanity
       run: |
         command -v terraform || (echo "terraform not visible pre-deploy" && exit 1)
         azd config list
+
+    - name: Debug PATH and tool availability
+      run: |
+        echo "🔍 PATH Debug Information:"
+        echo "PATH=$PATH"
+        echo "🔧 Tool availability check:"
+        command -v terraform || echo "❌ terraform not found in PATH"
+        command -v azd || echo "❌ azd not found in PATH"
+        command -v jq || echo "❌ jq not found in PATH"
+        echo "📋 Terraform version:"
+        terraform -version || echo "❌ terraform -version failed"
+        echo "📋 AZD version:"
+        azd --version || echo "❌ azd --version failed"
+        echo "📋 Tool list from azd:"
+        azd tool list || echo "❌ azd tool list failed"
 
     - name: 🚀 Deploy with AZD
       env:
@@ -130,7 +149,9 @@ jobs:
         NPM_CONFIG_AUDIT: "false"
         NPM_CONFIG_FUND: "false"
       run: |
+        # Final Terraform verification before deploy
         command -v terraform || (echo "terraform vanished at deploy" && exit 1)
+        terraform -version
         echo "🚀 Deploying Asora to Azure..."
         azd up --no-prompt
         APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty' 2>/dev/null || echo "")
@@ -139,12 +160,26 @@ jobs:
 
     - name: 'Verify deployment'
       run: |
+        set -e
         echo "✅ Deployment completed successfully with azd!"
         echo "🔍 Checking deployed resources..."
-        azd show --output json | jq '.services' 2>/dev/null || azd show
+        
+        J=$(azd show --output json)
+        APP_NAME=$(printf '%s' "$J" | jq -r '.services.functions.properties.name // empty')
+        RG=$(printf '%s' "$J" | jq -r '.services.functions.properties.resourceGroup // empty')
+        APP_URL=$(printf '%s' "$J" | jq -r '.services.functions.properties.endpoint // empty')
+        
+        echo "🏗️  Resolved app: $APP_NAME in RG: $RG"
+        echo "🌐 App URL: $APP_URL"
+        
+        if [[ -z "$APP_NAME" || -z "$RG" ]]; then
+          echo "❌ Failed to resolve app name or resource group from azd show"
+          exit 1
+        fi
+        
         KV_COUNT=$(az functionapp config appsettings list \
-          --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name "$APP_NAME" \
+          --resource-group "$RG" \
           --query "length([?contains(value, '@Microsoft.KeyVault')])" \
           -o tsv)
         
@@ -156,8 +191,8 @@ jobs:
         echo "🔍 Verifying individual Key Vault references..."
         for secret in "${EXPECTED_SECRETS[@]}"; do
           SECRET_VALUE=$(az functionapp config appsettings list \
-            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name "$APP_NAME" \
+            --resource-group "$RG" \
             --query "[?name=='$secret'].value" \
             -o tsv)
           
@@ -171,7 +206,6 @@ jobs:
         
         # Verify Function App health
         echo "🏥 Checking Function App health..."
-        APP_URL="https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
         
         # Wait for app to be ready
         echo "⏳ Waiting for Function App to be ready..."
