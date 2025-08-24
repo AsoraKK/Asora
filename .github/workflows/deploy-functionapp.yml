@@ -118,10 +118,16 @@ jobs:
 
     - name: Set TF vars for azd
       run: |
+        # Prefer repository secret CLIENT_IP; fallback to the provided static IP
+        CLIENT_IP="${{ secrets.CLIENT_IP }}"
+        CLIENT_IP="${CLIENT_IP:-102.182.204.209}"
+        # Do not print the raw client IP in CI logs unless you want it visible; showing masked info instead
+        echo "Using CLIENT_IP: ${CLIENT_IP}"
         azd env set TF_VAR_subscription_id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         azd env set TF_VAR_postgresql_password "${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
-        CLIENT_IP="${{ secrets.CLIENT_IP }}"
-        azd env set TF_VAR_client_ip "${CLIENT_IP:-0.0.0.0}"
+        azd env set TF_VAR_client_ip "${CLIENT_IP}"
+        # Export for any later steps that read TF_VAR_client_ip
+        echo "TF_VAR_client_ip=${CLIENT_IP}" >> "$GITHUB_ENV"
 
     - name: Pre-deploy sanity
       run: |
