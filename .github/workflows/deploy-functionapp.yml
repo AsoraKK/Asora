@@ -58,11 +58,21 @@ jobs:
       with:
         version: latest
 
-    - name: Setup Terraform (reliable)
+    - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.9.8
         terraform_wrapper: false
+
+    - name: Restore azd tools and verify
+      run: |
+        azd tool restore
+        echo "PATH=$PATH"
+        which terraform || true
+        terraform -version
+        azd --version
+        echo "infra provider from azure.yaml:" 
+        azd show --output json | jq -r '.infra.provider // "unknown"'
 
     - name: 'Verify Azure Authentication'
       run: |
@@ -105,13 +115,6 @@ jobs:
         azd env set TF_VAR_subscription_id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         azd env set TF_VAR_postgresql_password "${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
         azd env set TF_VAR_client_ip "${{ secrets.CLIENT_IP }}"
-
-    - name: Restore azd-managed tools & verify
-      run: |
-        azd tool restore
-        which terraform && terraform -version
-        azd --version
-        echo "infra provider:" && azd show --output json | jq -r '.infra.provider // "unknown"'
 
     - name: 🚀 Deploy with AZD
       env:
