@@ -90,21 +90,29 @@ jobs:
         npm run build || echo "No build script"
         popd
 
+
         echo "🚀 Preparing azd environment and running provision preview..."
-        azd init --template . --no-prompt || true
         # Export subscription and tenant into the GitHub environment for later steps
         SUBSCRIPTION_ID=$(az account show --query id -o tsv)
         TENANT_ID=$(az account show --query tenantId -o tsv)
         echo "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
         echo "AZURE_TENANT_ID=$TENANT_ID" >> $GITHUB_ENV
 
-        # Ensure azd knows which subscription/tenant to use
-        azd env set AZURE_SUBSCRIPTION_ID "$SUBSCRIPTION_ID" || true
-        azd env set AZURE_TENANT_ID "$TENANT_ID" || true
-        azd env set AZURE_ENV_NAME "dev" || true
+    - name: Show azure.yaml used by CI
+      run: |
+        pwd
+        ls -la
+        sed -n '1,120p' azure.yaml
 
-        # Create/select environment and run a non-destructive provision preview
-        azd env new dev --subscription "$SUBSCRIPTION_ID" --location eastus2 --no-prompt || azd env select dev
+    - name: Confirm azd reads Terraform provider
+      run: azd show --output json | jq '.infra'
+
+    - name: Create/select azd environment
+      run: |
+        azd env new dev --subscription "$AZURE_SUBSCRIPTION_ID" --location northeurope --no-prompt || azd env select dev
+
+    - name: Provision (preview) with azd
+      run: |
         azd provision --preview
         echo "✅ azd provision --preview finished. To apply changes run azd up interactively."
 
