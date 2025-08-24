@@ -67,15 +67,6 @@ jobs:
     - name: Install jq (if missing)
       run: sudo apt-get update && sudo apt-get install -y jq
 
-    - name: Restore azd tools and verify
-      run: |
-        azd tool restore
-        echo "PATH=$PATH"
-        command -v terraform || (echo "no terraform on PATH" && exit 1)
-        terraform -version
-        azd --version || true
-        sed -n '1,80p' azure.yaml
-        azd show --output json | jq -r '.infra.provider // "unknown"' || azd show
 
     - name: 'Verify Azure Authentication'
       run: |
@@ -128,6 +119,16 @@ jobs:
         azd env set TF_VAR_client_ip "${CLIENT_IP}"
         # Export for any later steps that read TF_VAR_client_ip
         echo "TF_VAR_client_ip=${CLIENT_IP}" >> "$GITHUB_ENV"
+
+    - name: Restore azd tools and verify
+      run: |
+        azd tool restore
+        echo "PATH=$PATH"
+        command -v terraform || (echo "no terraform on PATH" && exit 1)
+        terraform -version
+        azd --version || true
+        sed -n '1,80p' azure.yaml
+        azd show --output json | jq -r '.infra.provider // "unknown"' || azd show
 
     - name: Pre-deploy sanity
       run: |
