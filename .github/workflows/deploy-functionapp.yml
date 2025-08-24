@@ -107,6 +107,23 @@ jobs:
           npm ci
           npm run build || echo "No build script"
 
+      - name: Verify Function App exists (pre-publish)
+        run: |
+          echo "Checking Azure subscription and target Function App"
+          az account show --query "{name:name, user:user.name, id:id}" -o table || true
+          echo "Looking for Function App: $AZURE_FUNCTIONAPP_NAME in RG: $AZURE_RESOURCE_GROUP"
+          if az functionapp show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" -o none 2>/dev/null; then
+            echo "Found Function App: $AZURE_FUNCTIONAPP_NAME"
+          else
+            echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in resource group '$AZURE_RESOURCE_GROUP'"
+            echo "Listing Function Apps in $AZURE_RESOURCE_GROUP for debugging:"
+            az functionapp list --resource-group "$AZURE_RESOURCE_GROUP" --query "[].{name:name, state:state, defaultHostName:defaultHostName}" -o table || true
+            echo "Listing all Function Apps in subscription for extra context:"
+            az functionapp list --query "[].{rg:resourceGroup, name:name, defaultHostName:defaultHostName}" -o table || true
+            echo "Please verify the AZURE_FUNCTIONAPP_NAME, AZURE_RESOURCE_GROUP, and AZURE_SUBSCRIPTION_ID are correct and that the app exists."
+            exit 1
+          fi
+
       - name: Publish to Function App
         working-directory: ${{ env.WORKING_DIR }}
         run: |
