@@ -22,4 +22,4 @@ services:
           echo "✅ Deployment verification complete"
 infra:
   provider: terraform
-  path: ./Infra
+  path: ./infra
