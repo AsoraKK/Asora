@@ -64,15 +64,18 @@ jobs:
         terraform_version: 1.9.8
         terraform_wrapper: false
 
+    - name: Install jq (if missing)
+      run: sudo apt-get update && sudo apt-get install -y jq
+
     - name: Restore azd tools and verify
       run: |
         azd tool restore
         echo "PATH=$PATH"
-        which terraform || true
+        command -v terraform || (echo "no terraform on PATH" && exit 1)
         terraform -version
-        azd --version
-        echo "infra provider from azure.yaml:" 
-        azd show --output json | jq -r '.infra.provider // "unknown"'
+        azd --version || true
+        sed -n '1,80p' azure.yaml
+        azd show --output json | jq -r '.infra.provider // "unknown"' || azd show
 
     - name: 'Verify Azure Authentication'
       run: |
@@ -114,7 +117,12 @@ jobs:
       run: |
         azd env set TF_VAR_subscription_id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         azd env set TF_VAR_postgresql_password "${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
-        azd env set TF_VAR_client_ip "${{ secrets.CLIENT_IP }}"
+        azd env set TF_VAR_client_ip "${{ secrets.CLIENT_IP || '0.0.0.0' }}"
+
+    - name: Pre-deploy sanity
+      run: |
+        command -v terraform || (echo "terraform not visible pre-deploy" && exit 1)
+        azd config list
 
     - name: 🚀 Deploy with AZD
       env:
@@ -122,6 +130,7 @@ jobs:
         NPM_CONFIG_AUDIT: "false"
         NPM_CONFIG_FUND: "false"
       run: |
+        command -v terraform || (echo "terraform vanished at deploy" && exit 1)
         echo "🚀 Deploying Asora to Azure..."
         azd up --no-prompt
         APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty' 2>/dev/null || echo "")
