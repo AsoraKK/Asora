@@ -77,20 +77,23 @@ jobs:
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --linux-fx-version "Node|20"
 
-    - name: 'Install, Build, and Deploy'
-      working-directory: ./functions
+    - name: 'Install, Build, and Deploy (azd)'
+      working-directory: .
+      env:
+        HUSKY: "0"
+        NPM_CONFIG_AUDIT: "false"
+        NPM_CONFIG_FUND: "false"
       run: |
-        echo "📦 Installing dependencies..."
+        echo "📦 Installing dependencies for functions..."
+        pushd functions || exit 1
         npm ci
-        
-        echo "🔨 Building TypeScript..."
-        npm run build
-        
-        echo "📋 Installing Azure Functions Core Tools..."
-        npm i -g azure-functions-core-tools@4 --unsafe-perm true
-        
-        echo "🚀 Deploying to Azure Functions with Node 20..."
-        func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript --force --build remote
+        npm run build || echo "No build script"
+        popd
+
+        echo "� Deploying Asora to Azure using azd..."
+        azd init --template . --no-prompt || true
+        azd env new asora-dev --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --location eastus2 --no-prompt || azd env select asora-dev
+        azd up --no-prompt
 
     - name: 'Configure Key Vault References'
       run: |
