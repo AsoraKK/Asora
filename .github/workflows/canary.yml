@@ -8,6 +8,8 @@ jobs:
   canary:
     name: Create canary tag & release
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,8 +35,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on PRs (if any)
         if: github.event_name == 'push' && github.event.head_commit
@@ -50,4 +50,3 @@ jobs:
             });
         env:
           TAG: ${{ steps.tag.outputs.tag }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

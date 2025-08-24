@@ -13,10 +13,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run validation
         env:
-          DOMAIN: ${{ secrets.STAGING_DOMAIN }}         # e.g. staging.asora.app
+          DOMAIN: ${{ secrets.STAGING_DOMAIN }}
           PATH_FEED: /api/feed/get
           QS1: page=1&size=20&type=trending&filter=safe
           QS2: page=1&size=21&type=trending&filter=safe
-          # token can be a dummy accepted by staging
-          AUTH_HDR: "Authorization: Bearer ${{ secrets.STAGING_SMOKE_TOKEN }}"
-        run: ./scripts/validate_edge_cache.sh
+          STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+        run: |
+          export AUTH_HDR="Authorization: Bearer $STAGING_SMOKE_TOKEN"
+          ./scripts/validate_edge_cache.sh
