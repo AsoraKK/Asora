@@ -354,6 +354,10 @@ jobs:
 
       - name: 🚀 Deploy with AZD
         id: deploy
+        env:
+          HUSKY: "0"
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
         run: |
           echo "🚀 Deploying Asora to Azure..."
           azd up --no-prompt
