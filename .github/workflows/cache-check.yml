@@ -221,7 +221,9 @@ jobs:
     name: Deploy to Staging (if needed)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -241,10 +243,7 @@ jobs:
       - name: Deploy Cloudflare Worker to Staging
         run: |
           cd infra/cloudflare
-          echo "🚀 Deploying Worker to staging environment..."
-          # This would typically use Wrangler with staging environment
-          # wrangler publish --env staging
+          echo " Deploying Worker to staging environment..."
+          # Example: use wrangler with env using CLOUDFLARE_API_TOKEN
+          # wrangler publish --env staging --api-token "$CLOUDFLARE_API_TOKEN"
           echo "Worker deployment completed"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

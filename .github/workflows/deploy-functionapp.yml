@@ -4,16 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: 'Target environment'
         required: true
         default: 'dev'
         type: choice
-        options:
-        - dev
-        - staging
-        - production
+        options: [dev, staging, production]
       force_deploy:
-        description: 'Force deployment even if no changes detected'
+        description: 'Ignore change detection'
         required: false
         default: false
         type: boolean
@@ -23,214 +20,133 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: functionapp-${{ inputs.environment }}
+  cancel-in-progress: true
+
 env:
-  AZURE_FUNCTIONAPP_NAME: 'asora-function-dev'
-  AZURE_RESOURCE_GROUP: 'asora-psql-flex'
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   NODE_VERSION: '20'
   FUNCTIONS_WORKER_RUNTIME: 'node'
+  WORKING_DIR: 'functions'
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Build and deploy
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || null }}
-    
+    environment: ${{ inputs.environment }}
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
     steps:
-    - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: 'Setup Node.js 20'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: functions/package-lock.json
+      - name: Resolve environment config
+        run: |
+          case "${{ inputs.environment }}" in
+            dev)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+              ;;
+            staging)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+              ;;
+            production)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-functions-production" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-prod" >> $GITHUB_ENV
+              ;;
+          esac
 
-    - name: 'Login to Azure'
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-    - name: 'Install Azure Developer CLI'
-      uses: Azure/setup-azd@v2
-      with:
-        version: latest
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.9.8
-        terraform_wrapper: false
-
-    - name: Install jq (if missing)
-      run: sudo apt-get update && sudo apt-get install -y jq
-
-
-    - name: 'Verify Azure Authentication'
-      run: |
-        echo "🔍 Verifying Azure OIDC authentication..."
-        az account show --output table
-        echo "✅ Successfully authenticated with Azure using OIDC (no client secrets used)"
-        echo "📋 Current subscription: $(az account show --query name -o tsv)"
-        echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
-
-    - name: 'Build Functions'
-      working-directory: .
-      env:
-        HUSKY: "0"
-        NPM_CONFIG_AUDIT: "false"
-        NPM_CONFIG_FUND: "false"
-      run: |
-        echo "📦 Installing dependencies for functions..."
-        pushd functions || exit 1
-        npm ci
-        npm run build || echo "No build script"
-        popd
-
-    - name: Show azure.yaml used by CI
-      run: |
-        pwd
-        ls -la
-        sed -n '1,120p' azure.yaml
-
-    - name: Confirm azd reads Terraform provider
-      run: |
-        echo "🔍 Checking azd infrastructure configuration..."
-        azd show --output json | jq '.infra' || azd show
-
-    - name: Create/select azd environment
-      run: |
-        azd env new asora-dev --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --location northeurope --no-prompt || azd env select asora-dev
-
-    - name: Terraform automation flags
-      run: echo "TF_IN_AUTOMATION=true" >> "$GITHUB_ENV"
-
-    - name: Set TF vars for azd
-      run: |
-        # Prefer repository secret CLIENT_IP; fallback to the provided static IP
-        CLIENT_IP="${{ secrets.CLIENT_IP }}"
-        CLIENT_IP="${CLIENT_IP:-102.182.204.209}"
-        # Do not print the raw client IP in CI logs unless you want it visible; showing masked info instead
-        echo "Using CLIENT_IP: ${CLIENT_IP}"
-        azd env set TF_VAR_subscription_id "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-        azd env set TF_VAR_postgresql_password "${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
-        azd env set TF_VAR_client_ip "${CLIENT_IP}"
-        # Export for any later steps that read TF_VAR_client_ip
-        echo "TF_VAR_client_ip=${CLIENT_IP}" >> "$GITHUB_ENV"
-
-    - name: Restore azd tools and verify
-      run: |
-        azd tool restore
-        echo "PATH=$PATH"
-        command -v terraform || (echo "no terraform on PATH" && exit 1)
-        terraform -version
-        azd --version || true
-        sed -n '1,80p' azure.yaml
-        azd show --output json | jq -r '.infra.provider // "unknown"' || azd show
-
-    - name: Pre-deploy sanity
-      run: |
-        command -v terraform || (echo "terraform not visible pre-deploy" && exit 1)
-        azd config list
-
-    - name: Debug PATH and tool availability
-      run: |
-        echo "🔍 PATH Debug Information:"
-        echo "PATH=$PATH"
-        echo "🔧 Tool availability check:"
-        command -v terraform || echo "❌ terraform not found in PATH"
-        command -v azd || echo "❌ azd not found in PATH"
-        command -v jq || echo "❌ jq not found in PATH"
-        echo "📋 Terraform version:"
-        terraform -version || echo "❌ terraform -version failed"
-        echo "📋 AZD version:"
-        azd --version || echo "❌ azd --version failed"
-        echo "📋 Tool list from azd:"
-        azd tool list || echo "❌ azd tool list failed"
-
-    - name: 🚀 Deploy with AZD
-      env:
-        HUSKY: "0"
-        NPM_CONFIG_AUDIT: "false"
-        NPM_CONFIG_FUND: "false"
-      run: |
-        # Final Terraform verification before deploy
-        command -v terraform || (echo "terraform vanished at deploy" && exit 1)
-        terraform -version
-        echo "🚀 Deploying Asora to Azure..."
-        azd up --no-prompt
-        APP_URL=$(azd show --output json | jq -r '.services.functions.properties.endpoint // empty' 2>/dev/null || echo "")
-        echo "app-url=${APP_URL:-https://asora-function-prod.azurewebsites.net}" >> "$GITHUB_OUTPUT"
-        echo "🌐 Deployed to: ${APP_URL:-https://asora-function-prod.azurewebsites.net}"
-
-    - name: 'Verify deployment'
-      run: |
-        set -e
-        echo "✅ Deployment completed successfully with azd!"
-        echo "🔍 Checking deployed resources..."
-        
-        J=$(azd show --output json)
-        APP_NAME=$(printf '%s' "$J" | jq -r '.services.functions.properties.name // empty')
-        RG=$(printf '%s' "$J" | jq -r '.services.functions.properties.resourceGroup // empty')
-        APP_URL=$(printf '%s' "$J" | jq -r '.services.functions.properties.endpoint // empty')
-        
-        echo "🏗️  Resolved app: $APP_NAME in RG: $RG"
-        echo "🌐 App URL: $APP_URL"
-        
-        if [[ -z "$APP_NAME" || -z "$RG" ]]; then
-          echo "❌ Failed to resolve app name or resource group from azd show"
+      - name: Enforce branch for production
+        if: ${{ inputs.environment == 'production' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Production deploys must run from main. Current ref: ${{ github.ref }}."
           exit 1
-        fi
-        
-        KV_COUNT=$(az functionapp config appsettings list \
-          --name "$APP_NAME" \
-          --resource-group "$RG" \
-          --query "length([?contains(value, '@Microsoft.KeyVault')])" \
-          -o tsv)
-        
-        echo "📊 Found $KV_COUNT Key Vault references"
-        
-        # Verify we have the expected Key Vault references
-        EXPECTED_SECRETS=("JWT_SECRET" "COSMOS_ENDPOINT" "COSMOS_KEY" "POSTGRES_CONNECTION_STRING" "HIVE_TEXT_KEY" "HIVE_IMAGE_KEY" "HIVE_DEEPFAKE_KEY" "EMAIL_HASH_SALT")
-        
-        echo "🔍 Verifying individual Key Vault references..."
-        for secret in "${EXPECTED_SECRETS[@]}"; do
-          SECRET_VALUE=$(az functionapp config appsettings list \
-            --name "$APP_NAME" \
-            --resource-group "$RG" \
-            --query "[?name=='$secret'].value" \
-            -o tsv)
-          
-          if [[ $SECRET_VALUE == *"@Microsoft.KeyVault"* ]]; then
-            echo "✅ $secret: Key Vault reference configured"
-          else
-            echo "❌ $secret: Missing or not a Key Vault reference"
-            exit 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install Azure Functions Core Tools v4
+        run: npm i -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Show Azure context
+        run: az account show -o table
+
+      - name: Configure Function App for Node 20
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "Node|20"
+
+      - name: Build functions
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          HUSKY: "0"
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
+        run: |
+          npm ci
+          npm run build || echo "No build script"
+
+      - name: Publish to Function App
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+
+      - name: Resolve app URL
+        id: url
+        run: |
+          HOST=$(az functionapp show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "defaultHostName" -o tsv)
+          echo "app_url=https://$HOST" >> $GITHUB_OUTPUT
+          echo "Deployed URL: https://$HOST"
+
+      - name: Smoke check
+        run: |
+          URL="${{ steps.url.outputs.app_url }}"
+          echo "Probing $URL ..."
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          echo "HTTP $code"
+          if [ "$code" = "000" ]; then
+            echo "App not responding yet" && exit 1
           fi
-        done
-        
-        # Verify Function App health
-        echo "🏥 Checking Function App health..."
-        
-        # Wait for app to be ready
-        echo "⏳ Waiting for Function App to be ready..."
-        for i in {1..12}; do
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL" || echo "000")
-          if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "404" ]]; then
-            echo "✅ Function App is responding (HTTP $HTTP_STATUS)"
-            break
-          fi
-          echo "⏳ Attempt $i/12: Function App not ready yet (HTTP $HTTP_STATUS), waiting..."
-          sleep 15
-        done
-        
-        # Final health check
-        if [[ "$HTTP_STATUS" == "000" ]]; then
-          echo "❌ Function App is not responding after 3 minutes"
-          exit 1
-        fi
-        
-        echo "✅ Key Vault references verification completed successfully!"
-        echo "🎉 Function App is healthy and Key Vault integration is working!"
+
+      - name: Post-deployment validation
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Function App: $AZURE_FUNCTIONAPP_NAME"
+          echo "Resource Group: $AZURE_RESOURCE_GROUP"
+          echo "Checking linuxFxVersion and WEBSITE_NODE_DEFAULT_VERSION..."
+          az functionapp config show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "linuxFxVersion" -o tsv || true
+          az functionapp config appsettings list --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv || true
+
+      - name: Key Vault references present
+        run: |
+          APP="$AZURE_FUNCTIONAPP_NAME"
+          RG="$AZURE_RESOURCE_GROUP"
+          req=("JWT_SECRET" "HIVE_AI_KEY" "HIVE_TEXT_KEY" "HIVE_VISUAL_KEY" "COSMOS_KEY" "POSTGRES_PASSWORD")
+          for k in "${req[@]}"; do
+            v=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='$k'].value" -o tsv || true)
+            if [[ "$v" != *"@Microsoft.KeyVault"* ]]; then
+              echo "Missing Key Vault ref for $k"; exit 1
+            fi
+          done
+          echo "Key Vault references OK"
