@@ -173,6 +173,9 @@ resource "azurerm_postgresql_flexible_server" "pg" {
     costcenter      = "CC-12345"
     project         = "Asora-Launch"
   }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Allow client IP firewall rule
@@ -227,6 +230,9 @@ resource "azurerm_cosmosdb_account" "cosmos" {
     department      = "Platform"
     costcenter      = "CC-12345"
     project         = "Asora-Launch"
+  }
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
