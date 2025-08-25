@@ -229,8 +229,8 @@ jobs:
 
       - name: Resolve prod app and RG
         run: |
-          echo "AZURE_FUNCTIONAPP_NAME=asora-functions-production" >> $GITHUB_ENV
-          echo "AZURE_RESOURCE_GROUP=asora-prod" >> $GITHUB_ENV
+          echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Build functions
         working-directory: functions
