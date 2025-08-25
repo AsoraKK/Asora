@@ -236,10 +236,17 @@ jobs:
           echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Configure Function App for Node 20
-        uses: ./.github/actions/configure-node20-functionapp
-        with:
-          functionapp-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          resource-group: ${{ env.AZURE_RESOURCE_GROUP }}
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "NODE|20-lts"
+
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 ORYX_BUILD_NODE_VERSION=20 ORYX_NODEJS_VERSION=20
 
       - name: Build functions
         working-directory: functions
@@ -284,9 +291,9 @@ jobs:
 
       - name: Application Insights telemetry check
         uses: ./.github/actions/appinsights-telemetry-check
-        with:
-          app_insights_app_id: ${{ secrets.APP_INSIGHTS_APP_ID }}
-          app_insights_api_key: ${{ secrets.APP_INSIGHTS_API_KEY }}
+        env:
+          APP_INSIGHTS_APP_ID: ${{ secrets.APP_INSIGHTS_APP_ID }}
+          APP_INSIGHTS_API_KEY: ${{ secrets.APP_INSIGHTS_API_KEY }}
 
       - name: Emit deployment summary
         run: |
@@ -347,19 +354,42 @@ jobs:
         run: |
           echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
           echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
-          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+          # staging lives in asora-staging resource group, not asora-psql-flex
+          echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
 
-      - name: Configure Function App for Node 20
+      - name: Configure Function App for Node 20 (resilient)
         run: |
-          echo "Configuring Function App runtime and app settings for Node 20..."
-          az functionapp config appsettings set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          echo "Configuring Function App runtime and app settings for Node 20 and pinning Oryx build versions..."
+
+          # quick validation: does the app exist in the expected RG?
+          if az functionapp show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" -o none 2>/dev/null; then
+            echo "Found $AZURE_FUNCTIONAPP_NAME in $AZURE_RESOURCE_GROUP"
+          else
+            echo "Warning: $AZURE_FUNCTIONAPP_NAME not found in $AZURE_RESOURCE_GROUP. Searching subscription for the app..."
+            FOUND_RG=$(az functionapp list --query "[?name=='$AZURE_FUNCTIONAPP_NAME'].resourceGroup | [0]" -o tsv || true)
+            if [ -n "$FOUND_RG" ]; then
+              echo "Auto-detected resource group: $FOUND_RG for $AZURE_FUNCTIONAPP_NAME"
+              echo "AZURE_RESOURCE_GROUP=$FOUND_RG" >> $GITHUB_ENV
+              export AZURE_RESOURCE_GROUP="$FOUND_RG"
+            else
+              echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in subscription. Listing available Function Apps for debugging:"
+              echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in subscription."
+              # Listing all Function Apps is disabled to avoid exposing sensitive information in logs.
+              echo "Please verify the AZURE_FUNCTIONAPP_NAME, AZURE_RESOURCE_GROUP, and AZURE_SUBSCRIPTION_ID are correct and that the app exists."
+              exit 1
+            fi
+          fi
+
+          # Now pin runtime and Oryx build versions
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "Node|20"
+            --linux-fx-version "NODE|20-lts"
+
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 ORYX_BUILD_NODE_VERSION=20 ORYX_NODEJS_VERSION=20
 
       - name: Build functions
         working-directory: functions

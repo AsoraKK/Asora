@@ -123,15 +123,18 @@ jobs:
 
       - name: Configure Function App for Node 20
         run: |
-          echo "Configuring Function App runtime and app settings for Node 20..."
-          az functionapp config appsettings set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          echo "Configuring Function App runtime and app settings for Node 20 and pinning Oryx build versions..."
+          # Set linux runtime to Node 20 LTS (Oryx and the runtime will align)
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "Node|20"
+            --linux-fx-version "NODE|20-lts"
+
+          # Set app settings: runtime version hints and Oryx build Node version pins
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 ORYX_BUILD_NODE_VERSION=20 ORYX_NODEJS_VERSION=20
 
       - name: Build functions
         working-directory: ${{ env.WORKING_DIR }}
