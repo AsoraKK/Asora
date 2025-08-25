@@ -1,0 +1,19 @@
+name: Deploy Production on Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Production Deploy
+    uses: ./.github/workflows/deploy-functionapp.yml
+    with:
+      environment: production
+    secrets: inherit
+    environment: production
