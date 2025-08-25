@@ -181,12 +181,15 @@ jobs:
         working-directory: functions
         run: npx tsc --noEmit
 
-  deploy:
-    name: Deploy to Azure
+  deploy-dev:
+    name: Deploy to Azure (dev)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [ flutter-test, functions-test ]
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/feature/'))
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: true
     permissions:
       id-token: write
       contents: read
@@ -230,26 +233,195 @@ jobs:
 
       - name: Set deployment target
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
-            echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
-            echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
-            echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
-            echo "DEPLOY_ENV=production" >> $GITHUB_ENV
-            echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF" == refs/heads/develop ]]; then
-            echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
-            echo "DEPLOY_ENV=development" >> $GITHUB_ENV
-            echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
-            echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
-            echo "DEPLOY_ENV=development" >> $GITHUB_ENV
-            echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
-          else
-            echo "Skipping deployment: branch not allowed for deployment to dev environment."
-            exit 0
+          echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+          echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+
+      - name: Build functions
+        working-directory: functions
+        env:
+          HUSKY: "0"
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
+        run: |
+          npm ci
+          npm run build || echo "No build step"
+
+      - name: Publish
+        working-directory: functions
+        run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+
+      - name: Resolve app URL
+        id: url
+        run: |
+          HOST=$(az functionapp show -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" --query defaultHostName -o tsv)
+          echo "app_url=https://$HOST" >> "$GITHUB_OUTPUT"
+          echo "Deployed URL: https://$HOST"
+
+      - name: Health check
+        run: |
+          URL="${{ steps.url.outputs.app_url }}/api/health"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          echo "Health HTTP: $code"
+          if [ "$code" = "000" ]; then
+            echo "::warning::App not yet responding"
           fi
+
+      - name: Emit deployment summary
+        run: |
+          echo "Environment: $DEPLOY_ENV"
+          echo "Commit: ${{ github.sha }}"
+          echo "P1 coverage: ${{ needs.flutter-test.outputs.p1_coverage }}%"
+          echo "URL: ${{ steps.url.outputs.app_url }}"
+
+  deploy-staging:
+    name: Deploy to Azure (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [ flutter-test, functions-test ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify coverage gate from tests
+        run: |
+          echo "P1 from tests: ${{ needs.flutter-test.outputs.p1_coverage }}%"
+          if [ "$(echo "${{ needs.flutter-test.outputs.p1_coverage }} >= 80" | bc -l)" -ne 1 ]; then
+            echo "::error::P1 coverage gate failed; aborting deploy"
+            exit 1
+          fi
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install Functions Core Tools
+        run: npm i -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Set deployment target
+        run: |
+          echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+          echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+          echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+
+      - name: Build functions
+        working-directory: functions
+        env:
+          HUSKY: "0"
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
+        run: |
+          npm ci
+          npm run build || echo "No build step"
+
+      - name: Publish
+        working-directory: functions
+        run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+
+      - name: Resolve app URL
+        id: url
+        run: |
+          HOST=$(az functionapp show -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" --query defaultHostName -o tsv)
+          echo "app_url=https://$HOST" >> "$GITHUB_OUTPUT"
+          echo "Deployed URL: https://$HOST"
+
+      - name: Health check
+        run: |
+          URL="${{ steps.url.outputs.app_url }}/api/health"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          echo "Health HTTP: $code"
+          if [ "$code" = "000" ]; then
+            echo "::warning::App not yet responding"
+          fi
+
+      - name: Emit deployment summary
+        run: |
+          echo "Environment: $DEPLOY_ENV"
+          echo "Commit: ${{ github.sha }}"
+          echo "P1 coverage: ${{ needs.flutter-test.outputs.p1_coverage }}%"
+          echo "URL: ${{ steps.url.outputs.app_url }}"
+
+  deploy-production:
+    name: Deploy to Azure (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [ flutter-test, functions-test ]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: true
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify coverage gate from tests
+        run: |
+          echo "P1 from tests: ${{ needs.flutter-test.outputs.p1_coverage }}%"
+          if [ "$(echo "${{ needs.flutter-test.outputs.p1_coverage }} >= 80" | bc -l)" -ne 1 ]; then
+            echo "::error::P1 coverage gate failed; aborting deploy"
+            exit 1
+          fi
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install Functions Core Tools
+        run: npm i -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Set deployment target
+        run: |
+          echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
+          echo "DEPLOY_ENV=production" >> $GITHUB_ENV
+          echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
 
       - name: Build functions
         working-directory: functions
@@ -292,7 +464,7 @@ jobs:
     name: Cleanup artifacts
     runs-on: ubuntu-latest
     if: always()
-    needs: [ flutter-test, functions-test, deploy ]
+    needs: [ flutter-test, functions-test, deploy-dev, deploy-staging, deploy-production ]
     steps:
       - name: Cleanup
         run: echo "Cleanup complete"
