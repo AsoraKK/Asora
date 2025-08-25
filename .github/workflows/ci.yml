@@ -237,6 +237,18 @@ jobs:
           echo "DEPLOY_ENV=development" >> $GITHUB_ENV
           echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
+      - name: Configure Function App for Node 20
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "Node|20"
+
       - name: Build functions
         working-directory: functions
         env:
@@ -330,6 +342,18 @@ jobs:
           echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
           echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
 
+      - name: Configure Function App for Node 20
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "Node|20"
+
       - name: Build functions
         working-directory: functions
         env:
@@ -422,6 +446,18 @@ jobs:
           echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
           echo "DEPLOY_ENV=production" >> $GITHUB_ENV
           echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
+
+      - name: Configure Function App for Node 20
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "Node|20"
 
       - name: Build functions
         working-directory: functions
