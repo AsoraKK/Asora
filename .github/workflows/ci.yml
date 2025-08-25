@@ -9,6 +9,7 @@ name: Asora CI/CD Pipeline
 on:
   push:
     branches: [ main, develop, 'feature/**' ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, develop ]
 
@@ -181,11 +182,11 @@ jobs:
         run: npx tsc --noEmit
 
   deploy:
-    name: Deploy to Azure (main only)
+    name: Deploy to Azure
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [ flutter-test, functions-test ]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
       id-token: write
       contents: read
@@ -227,9 +228,18 @@ jobs:
       - name: Install Functions Core Tools
         run: npm i -g azure-functions-core-tools@4 --unsafe-perm true
 
-      - name: Resolve prod app and RG
+      - name: Set deployment target
         run: |
-          echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
+            echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "AZURE_FUNCTIONAPP_NAME=asora-function-prod" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=production" >> $GITHUB_ENV
+          else
+            echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+          fi
           echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Build functions
@@ -264,7 +274,7 @@ jobs:
 
       - name: Emit deployment summary
         run: |
-          echo "Environment: production"
+          echo "Environment: $DEPLOY_ENV"
           echo "Commit: ${{ github.sha }}"
           echo "P1 coverage: ${{ needs.flutter-test.outputs.p1_coverage }}%"
           echo "URL: ${{ steps.url.outputs.app_url }}"
@@ -283,6 +293,6 @@ jobs:
 # 1. ✅ Run Flutter tests with coverage analysis
 # 2. 🎯 Enforce 80% coverage on lib/p1_modules/
 # 3. ✅ Run Azure Functions TypeScript tests
-# 4. 🚀 Deploy to Azure (main branch only)
+# 4. 🚀 Deploy to Azure (dev, staging, or production based on ref)
 # 5. 🏥 Post-deployment health checks
 # 6. 📊 Emit deployment telemetry
