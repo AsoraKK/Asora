@@ -472,7 +472,7 @@ jobs:
   deploy-production:
     name: Deploy to Azure (production)
     runs-on: ubuntu-latest
-    # environment: production
+    environment: production
     timeout-minutes: 25
     needs: [ flutter-test, functions-test ]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
