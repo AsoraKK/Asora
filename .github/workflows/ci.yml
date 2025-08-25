@@ -291,10 +291,9 @@ jobs:
 
       - name: Application Insights telemetry check
         uses: ./.github/actions/appinsights-telemetry-check
-        with:
-          env:
-            APP_INSIGHTS_APP_ID: ${{ secrets.APP_INSIGHTS_APP_ID }}
-            APP_INSIGHTS_API_KEY: ${{ secrets.APP_INSIGHTS_API_KEY }}
+        env:
+          APP_INSIGHTS_APP_ID: ${{ secrets.APP_INSIGHTS_APP_ID }}
+          APP_INSIGHTS_API_KEY: ${{ secrets.APP_INSIGHTS_API_KEY }}
 
       - name: Emit deployment summary
         run: |
