@@ -174,7 +174,7 @@ jobs:
         run: |
           APP="$AZURE_FUNCTIONAPP_NAME"
           RG="$AZURE_RESOURCE_GROUP"
-          req=("JWT_SECRET" "HIVE_AI_KEY" "HIVE_TEXT_KEY" "HIVE_VISUAL_KEY" "COSMOS_KEY" "POSTGRES_PASSWORD")
+          req=("JWT_SECRET" "HIVE_TEXT_KEY" "HIVE_IMAGE_KEY" "HIVE_DEEPFAKE_KEY" "COSMOS_KEY" "POSTGRES_CONNECTION_STRING")
           for k in "${req[@]}"; do
             v=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='$k'].value" -o tsv || true)
             if [[ "$v" != *"@Microsoft.KeyVault"* ]]; then
