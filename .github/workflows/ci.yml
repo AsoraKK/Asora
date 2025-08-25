@@ -334,7 +334,7 @@ jobs:
         run: |
           echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
           echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
-          echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Configure Function App for Node 20
         run: |
