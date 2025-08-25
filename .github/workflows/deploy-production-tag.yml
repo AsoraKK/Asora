@@ -12,8 +12,3 @@ permissions:
 jobs:
   deploy:
     name: Production Deploy
-    uses: ./.github/workflows/deploy-functionapp.yml
-    with:
-      environment: production
-    secrets: inherit
-    environment: production
