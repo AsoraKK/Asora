@@ -233,20 +233,23 @@ jobs:
           if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
             echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
             echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "AZURE_FUNCTIONAPP_NAME=asora-function-prod" >> $GITHUB_ENV
+            echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
             echo "DEPLOY_ENV=production" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
           elif [[ "$GITHUB_REF" == refs/heads/develop ]]; then
             echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
             echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
           elif [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
             echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
             echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
           else
             echo "Skipping deployment: branch not allowed for deployment to dev environment."
             exit 0
           fi
-          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Build functions
         working-directory: functions
