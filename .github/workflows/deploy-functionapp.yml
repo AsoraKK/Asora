@@ -166,7 +166,6 @@ jobs:
       - name: Publish to Function App (local build)
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          npm ci
           npm run build
           npm i -g azure-functions-core-tools@4 --unsafe-perm true
           npx azure-functions-core-tools@4 azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build local --force
