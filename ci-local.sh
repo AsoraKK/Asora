@@ -117,11 +117,21 @@ if [[ "$NODE_VERSION" =~ ^v20\. ]]; then
   if kill -0 $FUNC_PID 2>/dev/null; then
     echo "✅ Function host started successfully"
     echo "Testing health endpoint..."
-    if curl -f -s http://localhost:7072/api/health > /dev/null; then
-      echo "✅ Health endpoint responding"
-    else
-      echo "⚠️  Health endpoint not responding (check local settings)"
-    fi
+    MAX_RETRIES=5
+    for attempt in $(seq 1 $MAX_RETRIES); do
+      HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:7072/api/health || echo "000")
+      if [ "$HTTP_STATUS" = "200" ]; then
+        echo "✅ Health endpoint responding"
+        break
+      elif [ "$attempt" -eq "$MAX_RETRIES" ]; then
+        echo "❌ Health endpoint returned HTTP $HTTP_STATUS after $MAX_RETRIES attempts"
+        kill $FUNC_PID 2>/dev/null || true
+        exit 1
+      else
+        echo "Attempt $attempt: HTTP $HTTP_STATUS - waiting..."
+        sleep 2
+      fi
+    done
     kill $FUNC_PID 2>/dev/null || true
   else
     echo "❌ Function host failed to start"
