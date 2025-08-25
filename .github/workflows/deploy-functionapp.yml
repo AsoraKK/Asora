@@ -169,7 +169,7 @@ jobs:
           npm ci
           npm run build
           npm i -g azure-functions-core-tools@4 --unsafe-perm true
-          func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build local --force
+          npx azure-functions-core-tools@4 azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build local --force
 
       - name: Resolve app URL
         id: url
