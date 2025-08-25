@@ -14,6 +14,14 @@ on:
         required: false
         default: false
         type: boolean
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      force_deploy:
+        required: false
+        type: boolean
 
 # Required for OIDC authentication with Azure
 permissions:
