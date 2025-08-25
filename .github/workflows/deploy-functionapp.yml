@@ -130,11 +130,11 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --linux-fx-version "NODE|20-lts"
 
-          # Set app settings: runtime version hints and Oryx build Node version pins
+          # Set app settings: runtime version hints. Avoid ORYX_* and SCM_DO_BUILD_DURING_DEPLOYMENT to prevent remote builds.
           az functionapp config appsettings set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 ORYX_BUILD_NODE_VERSION=20 ORYX_NODEJS_VERSION=20
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
 
       - name: Build functions
         working-directory: ${{ env.WORKING_DIR }}
@@ -163,10 +163,12 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to Function App
+      - name: Publish to Function App (local build)
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+          npm run build
+          npm i -g azure-functions-core-tools@4 --unsafe-perm true
+          npx azure-functions-core-tools@4 azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --build local --force
 
       - name: Resolve app URL
         id: url
