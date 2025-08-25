@@ -9,6 +9,10 @@ on:
         default: 'dev'
         type: choice
         options: [dev, staging, production]
+      function_app_name:
+        description: 'Optional override for Function App name (if you need to target a different app)'
+        required: false
+        default: ''
       force_deploy:
         description: 'Ignore change detection'
         required: false
@@ -59,20 +63,37 @@ jobs:
 
       - name: Resolve environment config
         run: |
-          case "${{ inputs.environment }}" in
-            dev)
-              echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
-              echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
-              ;;
-            staging)
-              echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
-              echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
-              ;;
-            production)
-              echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
-              echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
-              ;;
-          esac
+          if [ -n "${{ inputs.function_app_name }}" ] && [ "${{ inputs.function_app_name }}" != "" ]; then
+            echo "Using override AZURE_FUNCTIONAPP_NAME=${{ inputs.function_app_name }}"
+            echo "AZURE_FUNCTIONAPP_NAME=${{ inputs.function_app_name }}" >> $GITHUB_ENV
+            # keep existing RG mapping for environment
+            case "${{ inputs.environment }}" in
+              dev)
+                echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+                ;;
+              staging)
+                echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+                ;;
+              production)
+                echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
+                ;;
+            esac
+          else
+            case "${{ inputs.environment }}" in
+              dev)
+                echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+                echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+                ;;
+              staging)
+                echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+                echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+                ;;
+              production)
+                echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
+                echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
+                ;;
+            esac
+          fi
 
       - name: Enforce branch for production
         if: ${{ inputs.environment == 'production' && github.ref != 'refs/heads/main' }}
