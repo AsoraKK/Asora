@@ -236,9 +236,15 @@ jobs:
           elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "AZURE_FUNCTIONAPP_NAME=asora-function-prod" >> $GITHUB_ENV
             echo "DEPLOY_ENV=production" >> $GITHUB_ENV
-          else
+          elif [[ "$GITHUB_REF" == refs/heads/develop ]]; then
             echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
             echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+          elif [[ "$GITHUB_REF" == refs/heads/feature/* ]]; then
+            echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=development" >> $GITHUB_ENV
+          else
+            echo "Skipping deployment: branch not allowed for deployment to dev environment."
+            exit 0
           fi
           echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
