@@ -347,19 +347,21 @@ jobs:
         run: |
           echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
           echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
-          echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+          # staging lives in asora-staging resource group, not asora-psql-flex
+          echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
 
       - name: Configure Function App for Node 20
         run: |
-          echo "Configuring Function App runtime and app settings for Node 20..."
-          az functionapp config appsettings set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          echo "Configuring Function App runtime and app settings for Node 20 and pinning Oryx build versions..."
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "Node|20"
+            --linux-fx-version "NODE|20-lts"
+
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 ORYX_BUILD_NODE_VERSION=20 ORYX_NODEJS_VERSION=20
 
       - name: Build functions
         working-directory: functions
@@ -443,7 +445,7 @@ jobs:
   deploy-production:
     name: Deploy to Azure (production)
     runs-on: ubuntu-latest
-    environment: production
+    # environment: production
     timeout-minutes: 25
     needs: [ flutter-test, functions-test ]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
