@@ -255,6 +255,28 @@ jobs:
         working-directory: functions
         run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
 
+      - name: Verify Key Vault app settings
+        run: |
+          set -e
+          echo "Checking Function App settings for required Key Vault references..."
+          settings=$(az functionapp config appsettings list --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP")
+          required=(JWT_SECRET HIVE_TEXT_KEY HIVE_IMAGE_KEY HIVE_DEEPFAKE_KEY COSMOS_KEY POSTGRES_CONNECTION_STRING)
+          fail=0
+          for key in "${required[@]}"; do
+            value=$(echo "$settings" | jq -r ".[] | select(.name==\"$key\") | .value")
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "::error::Missing app setting: $key"
+              fail=1
+            elif [[ "$value" != *"@Microsoft.KeyVault"* ]]; then
+              echo "::error::$key is not a Key Vault reference"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::App settings validation failed"
+            exit 1
+          fi
+
       - name: Resolve app URL
         id: url
         run: |
@@ -363,6 +385,27 @@ jobs:
       - name: Publish
         working-directory: functions
         run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+      - name: Verify Key Vault app settings
+        run: |
+          set -e
+          echo "Checking Function App settings for required Key Vault references..."
+          settings=$(az functionapp config appsettings list --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP")
+          required=(JWT_SECRET HIVE_TEXT_KEY HIVE_IMAGE_KEY HIVE_DEEPFAKE_KEY COSMOS_KEY POSTGRES_CONNECTION_STRING)
+          fail=0
+          for key in "${required[@]}"; do
+            value=$(echo "$settings" | jq -r ".[] | select(.name==\"$key\") | .value")
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "::error::Missing app setting: $key"
+              fail=1
+            elif [[ "$value" != *"@Microsoft.KeyVault"* ]]; then
+              echo "::error::$key is not a Key Vault reference"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::App settings validation failed"
+            exit 1
+          fi
 
       - name: Resolve app URL
         id: url
@@ -472,6 +515,27 @@ jobs:
       - name: Publish
         working-directory: functions
         run: func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+      - name: Verify Key Vault app settings
+        run: |
+          set -e
+          echo "Checking Function App settings for required Key Vault references..."
+          settings=$(az functionapp config appsettings list --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP")
+          required=(JWT_SECRET HIVE_TEXT_KEY HIVE_IMAGE_KEY HIVE_DEEPFAKE_KEY COSMOS_KEY POSTGRES_CONNECTION_STRING)
+          fail=0
+          for key in "${required[@]}"; do
+            value=$(echo "$settings" | jq -r ".[] | select(.name==\"$key\") | .value")
+            if [ -z "$value" ] || [ "$value" = "null" ]; then
+              echo "::error::Missing app setting: $key"
+              fail=1
+            elif [[ "$value" != *"@Microsoft.KeyVault"* ]]; then
+              echo "::error::$key is not a Key Vault reference"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::App settings validation failed"
+            exit 1
+          fi
 
       - name: Resolve app URL
         id: url
