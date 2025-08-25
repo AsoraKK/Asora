@@ -265,11 +265,17 @@ jobs:
       - name: Health check
         run: |
           URL="${{ steps.url.outputs.app_url }}/api/health"
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-          echo "Health HTTP: $code"
-          if [ "$code" = "000" ]; then
-            echo "::warning::App not yet responding"
-          fi
+          for i in {1..10}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Health check succeeded"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed"
+          exit 1
 
       - name: Emit deployment summary
         run: |
@@ -368,11 +374,17 @@ jobs:
       - name: Health check
         run: |
           URL="${{ steps.url.outputs.app_url }}/api/health"
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-          echo "Health HTTP: $code"
-          if [ "$code" = "000" ]; then
-            echo "::warning::App not yet responding"
-          fi
+          for i in {1..10}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Health check succeeded"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed"
+          exit 1
 
       - name: Emit deployment summary
         run: |
@@ -471,11 +483,17 @@ jobs:
       - name: Health check
         run: |
           URL="${{ steps.url.outputs.app_url }}/api/health"
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
-          echo "Health HTTP: $code"
-          if [ "$code" = "000" ]; then
-            echo "::warning::App not yet responding"
-          fi
+          for i in {1..10}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Health check succeeded"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed"
+          exit 1
 
       - name: Emit deployment summary
         run: |
