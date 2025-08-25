@@ -218,8 +218,6 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -317,8 +315,6 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -422,8 +418,6 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Setup Node
         uses: actions/setup-node@v4
