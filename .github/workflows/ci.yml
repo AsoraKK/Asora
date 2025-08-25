@@ -373,7 +373,8 @@ jobs:
               export AZURE_RESOURCE_GROUP="$FOUND_RG"
             else
               echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in subscription. Listing available Function Apps for debugging:"
-              az functionapp list --query "[].{name:name,resourceGroup:resourceGroup,defaultHostName:defaultHostName}" -o table || true
+              echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in subscription."
+              # Listing all Function Apps is disabled to avoid exposing sensitive information in logs.
               echo "Please verify the AZURE_FUNCTIONAPP_NAME, AZURE_RESOURCE_GROUP, and AZURE_SUBSCRIPTION_ID are correct and that the app exists."
               exit 1
             fi
