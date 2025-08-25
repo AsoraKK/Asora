@@ -283,19 +283,10 @@ jobs:
           exit 1
 
       - name: Application Insights telemetry check
-        env:
-          APP_INSIGHTS_APP_ID: ${{ secrets.APP_INSIGHTS_APP_ID }}
-          APP_INSIGHTS_API_KEY: ${{ secrets.APP_INSIGHTS_API_KEY }}
-        run: |
-          set -e
-          echo "Querying Application Insights telemetry..."
-          az monitor app-insights query \
-            --app "$APP_INSIGHTS_APP_ID" \
-            --analytics-query "availabilityResults | take 1" \
-            --api-key "$APP_INSIGHTS_API_KEY" \
-            --output none
-          echo "Telemetry query succeeded."
-          echo "Dashboard: https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/microsoft.insights%2Fcomponents"
+        uses: ./.github/actions/appinsights-telemetry-check
+        with:
+          app_insights_app_id: ${{ secrets.APP_INSIGHTS_APP_ID }}
+          app_insights_api_key: ${{ secrets.APP_INSIGHTS_API_KEY }}
 
       - name: Emit deployment summary
         run: |
