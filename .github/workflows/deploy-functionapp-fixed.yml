@@ -31,8 +31,15 @@ env:
   FUNCTIONS_WORKER_RUNTIME: 'node'
 
 jobs:
+  infra:
+    uses: ./.github/workflows/infra.yml
+    with:
+      environment: ${{ github.event.inputs.environment }}
+    secrets: inherit
+
   build-and-deploy:
     runs-on: ubuntu-latest
+    needs: infra
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || null }}
     
     steps:

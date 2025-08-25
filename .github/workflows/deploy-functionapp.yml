@@ -30,9 +30,16 @@ env:
   WORKING_DIR: 'functions'
 
 jobs:
+  infra:
+    uses: ./.github/workflows/infra.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
   deploy:
     name: Build and deploy
     runs-on: ubuntu-latest
+    needs: infra
     environment: ${{ inputs.environment }}
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
