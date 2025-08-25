@@ -238,16 +238,10 @@ jobs:
           echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
 
       - name: Configure Function App for Node 20
-        run: |
-          echo "Configuring Function App runtime and app settings for Node 20..."
-          az functionapp config appsettings set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
-          az functionapp config set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "Node|20"
+        uses: ./.github/actions/configure-node20-functionapp
+        with:
+          functionapp-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          resource-group: ${{ env.AZURE_RESOURCE_GROUP }}
 
       - name: Build functions
         working-directory: functions
