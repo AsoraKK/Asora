@@ -162,7 +162,7 @@ jobs:
           fi
 
           # Try common name patterns: asora-<env>-function and asora-function-<env>
-          CANDIDATES=("asora-${ENV_NAME}-function" "asora-function-${ENV_NAME}" "asora-${ENV_NAME}" "${ENV_NAME}-function")
+          read -ra CANDIDATES <<< "$(get_candidates "$ENV_NAME")"
           for cand in "${CANDIDATES[@]}"; do
             echo "Trying candidate name: $cand"
             RG=$(az functionapp list --query "[?name=='$cand'].resourceGroup | [0]" -o tsv || true)
