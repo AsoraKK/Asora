@@ -85,7 +85,8 @@ jobs:
                 echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
                 ;;
               staging)
-                echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+                # Prefer the Terraform-created naming pattern (asora-staging-function). Keep legacy asora-function-staging as an accepted override.
+                echo "AZURE_FUNCTIONAPP_NAME=asora-staging-function" >> $GITHUB_ENV
                 echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
                 ;;
               production)
@@ -121,16 +122,135 @@ jobs:
       - name: Show Azure context
         run: az account show -o table
 
+      - name: Auto-detect Function App name and Resource Group
+        run: |
+          echo "Attempting to auto-detect Function App and resource group (if necessary)..."
+          # inputs.environment is available at runtime; use it to try common name patterns
+          ENV_NAME="${{ inputs.environment }}"
+
+          # If AZURE_FUNCTIONAPP_NAME or AZURE_RESOURCE_GROUP are not yet set (should be set by Resolve step), ensure variables are defined
+          AZURE_FUNCTIONAPP_NAME="${AZURE_FUNCTIONAPP_NAME:-}"
+          AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
+
+          try_show() {
+            local name="$1" rg="$2"
+            if [ -z "$name" ]; then
+              return 1
+            fi
+            if [ -n "$rg" ]; then
+              az functionapp show --name "$name" --resource-group "$rg" -o none 2>/dev/null && return 0 || return 1
+            else
+              az functionapp show --name "$name" -o none 2>/dev/null && return 0 || return 1
+            fi
+          }
+
+          # First quick check: current values
+          if try_show "$AZURE_FUNCTIONAPP_NAME" "$AZURE_RESOURCE_GROUP"; then
+            echo "Found Function App '$AZURE_FUNCTIONAPP_NAME' in RG '$AZURE_RESOURCE_GROUP'"
+            exit 0
+          fi
+
+          # Search subscription for the exact name (maybe RG was wrong)
+          if [ -n "$AZURE_FUNCTIONAPP_NAME" ]; then
+            FOUND_RG=$(az functionapp list --query "[?name=='$AZURE_FUNCTIONAPP_NAME'].resourceGroup | [0]" -o tsv || true)
+            if [ -n "$FOUND_RG" ]; then
+              echo "Auto-detected resource group: $FOUND_RG for $AZURE_FUNCTIONAPP_NAME"
+              echo "AZURE_RESOURCE_GROUP=$FOUND_RG" >> $GITHUB_ENV
+              export AZURE_RESOURCE_GROUP="$FOUND_RG"
+              exit 0
+            fi
+          fi
+
+          # Try common name patterns: asora-<env>-function and asora-function-<env>
+          read -ra CANDIDATES <<< "$(get_candidates "$ENV_NAME")"
+          for cand in "${CANDIDATES[@]}"; do
+            echo "Trying candidate name: $cand"
+            RG=$(az functionapp list --query "[?name=='$cand'].resourceGroup | [0]" -o tsv || true)
+            if [ -n "$RG" ]; then
+              echo "Found Function App '$cand' in resource group '$RG'"
+              echo "AZURE_FUNCTIONAPP_NAME=$cand" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=$RG" >> $GITHUB_ENV
+              export AZURE_FUNCTIONAPP_NAME="$cand"
+              export AZURE_RESOURCE_GROUP="$RG"
+              exit 0
+            fi
+          done
+
+          # Last resort: try to find any function app with the env name as a distinct segment (safer than contains)
+          MATCHED_APPS=$(az functionapp list --query "[].{name:name,rg:resourceGroup}" -o tsv 2>/dev/null | \
+            awk -v env="$ENV_NAME" '
+              BEGIN { FS="\t" }
+              $1 ~ ("(^|[-_])"env"($|[-_])") { print $0 }
+            ')
+          MATCH_COUNT=$(echo "$MATCHED_APPS" | grep -c . || true)
+          if [ "$MATCH_COUNT" -eq 1 ]; then
+            NAME_FOUND=$(echo "$MATCHED_APPS" | awk '{print $1}')
+            RG_FOUND=$(echo "$MATCHED_APPS" | awk '{print $2}')
+            if [ -n "$NAME_FOUND" ] && [ -n "$RG_FOUND" ]; then
+              echo "Auto-detected Function App '$NAME_FOUND' in resource group '$RG_FOUND'"
+              echo "AZURE_FUNCTIONAPP_NAME=$NAME_FOUND" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=$RG_FOUND" >> $GITHUB_ENV
+              export AZURE_FUNCTIONAPP_NAME="$NAME_FOUND"
+              export AZURE_RESOURCE_GROUP="$RG_FOUND"
+              exit 0
+            fi
+          fi
+
+          echo "ERROR: Could not find Function App '$AZURE_FUNCTIONAPP_NAME' in resource group '$AZURE_RESOURCE_GROUP' or with common name patterns."
+          echo "Please verify the AZURE_FUNCTIONAPP_NAME, AZURE_RESOURCE_GROUP, and AZURE_SUBSCRIPTION_ID are correct."
+          exit 1
+
+
       - name: Configure Function App for Node 20
         run: |
           echo "Configuring Function App runtime and app settings for Node 20 and pinning Oryx build versions..."
-          # Set linux runtime to Node 20 LTS (Oryx and the runtime will align)
+
+          # Helper to test for app existence
+          app_exists() {
+            az functionapp show --name "$1" --resource-group "$2" -o none 2>/dev/null
+          }
+
+          if app_exists "$AZURE_FUNCTIONAPP_NAME" "$AZURE_RESOURCE_GROUP"; then
+            echo "Found $AZURE_FUNCTIONAPP_NAME in $AZURE_RESOURCE_GROUP"
+          else
+            echo "Warning: $AZURE_FUNCTIONAPP_NAME not found in $AZURE_RESOURCE_GROUP. Attempting to auto-detect in subscription..."
+            # Try to auto-detect RG for exact name
+            FOUND_RG=$(az functionapp list --query "[?name=='$AZURE_FUNCTIONAPP_NAME'].resourceGroup | [0]" -o tsv || true)
+            if [ -n "$FOUND_RG" ]; then
+              echo "Auto-detected resource group: $FOUND_RG for $AZURE_FUNCTIONAPP_NAME"
+              echo "AZURE_RESOURCE_GROUP=$FOUND_RG" >> $GITHUB_ENV
+              export AZURE_RESOURCE_GROUP="$FOUND_RG"
+            else
+              # Try common name patterns (reverse variations)
+              ENV_NAME="${{ inputs.environment }}"
+              CANDIDATES=("asora-${ENV_NAME}-function" "asora-function-${ENV_NAME}" "asora-${ENV_NAME}" "${ENV_NAME}-function")
+              MATCHED=0
+              for cand in "${CANDIDATES[@]}"; do
+                RG=$(az functionapp list --query "[?name=='$cand'].resourceGroup | [0]" -o tsv || true)
+                if [ -n "$RG" ]; then
+                  echo "Found candidate Function App '$cand' in RG '$RG'"
+                  echo "AZURE_FUNCTIONAPP_NAME=$cand" >> $GITHUB_ENV
+                  echo "AZURE_RESOURCE_GROUP=$RG" >> $GITHUB_ENV
+                  export AZURE_FUNCTIONAPP_NAME="$cand"
+                  export AZURE_RESOURCE_GROUP="$RG"
+                  MATCHED=1
+                  break
+                fi
+              done
+              if [ "$MATCHED" -eq 0 ]; then
+                echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found and no common candidates matched." >&2
+                echo "Please verify AZURE_FUNCTIONAPP_NAME/AZURE_RESOURCE_GROUP or pass 'function_app_name' override to the workflow." >&2
+                exit 1
+              fi
+            fi
+          fi
+
+          # Now apply runtime and appsettings safely
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --linux-fx-version "NODE|20-lts"
 
-          # Set app settings: runtime version hints. Avoid ORYX_* and SCM_DO_BUILD_DURING_DEPLOYMENT to prevent remote builds.
           az functionapp config appsettings set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
