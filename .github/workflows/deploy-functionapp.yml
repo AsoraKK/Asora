@@ -176,12 +176,16 @@ jobs:
             fi
           done
 
-          # Last resort: try to find any function app containing the env name (returns first match)
-          ANY=$(az functionapp list --query "[?contains(name, '${ENV_NAME}')].{name:name,rg:resourceGroup} | [0]" -o tsv 2>/dev/null || true)
-          if [ -n "$ANY" ]; then
-            # ANY will be "name\trg" when output as tsv; split into two
-            NAME_FOUND=$(echo "$ANY" | awk '{print $1}')
-            RG_FOUND=$(echo "$ANY" | awk '{print $2}')
+          # Last resort: try to find any function app with the env name as a distinct segment (safer than contains)
+          MATCHED_APPS=$(az functionapp list --query "[].{name:name,rg:resourceGroup}" -o tsv 2>/dev/null | \
+            awk -v env="$ENV_NAME" '
+              BEGIN { FS="\t" }
+              $1 ~ ("(^|[-_])"env"($|[-_])") { print $0 }
+            ')
+          MATCH_COUNT=$(echo "$MATCHED_APPS" | grep -c . || true)
+          if [ "$MATCH_COUNT" -eq 1 ]; then
+            NAME_FOUND=$(echo "$MATCHED_APPS" | awk '{print $1}')
+            RG_FOUND=$(echo "$MATCHED_APPS" | awk '{print $2}')
             if [ -n "$NAME_FOUND" ] && [ -n "$RG_FOUND" ]; then
               echo "Auto-detected Function App '$NAME_FOUND' in resource group '$RG_FOUND'"
               echo "AZURE_FUNCTIONAPP_NAME=$NAME_FOUND" >> $GITHUB_ENV
