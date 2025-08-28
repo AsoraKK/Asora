@@ -11,7 +11,7 @@
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
     "build": "npm run clean && npm run compile",
     "compile": "tsc",
-    "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" \"host.json\" \"**/function.json\" dist/",
+    "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"**/function.json\" dist/",
     "build-v3": "npm run clean && npm run compile && npm run copy-functions",
     "watch": "echo 'No compilation needed for JavaScript functions'",
     "start": "func start --port 7072",
