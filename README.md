@@ -80,11 +80,25 @@ npm test
 
 ## 🚀 Deployment
 
-The project includes automated CI/CD pipelines for:
-- Code quality checks (linting, formatting)
-- Test execution with coverage gates
-- Azure Functions deployment
-- Flutter web deployment
+### Automated CI/CD
+The project uses a single GitHub Actions workflow that:
+- Runs Flutter tests with coverage validation
+- Builds and tests Azure Functions
+- Deploys to Azure dev environment (`asora-function-dev` in `asora-psql-flex`)
+
+**Trigger**: Push to `main` or `develop` branches, or manual dispatch
+
+### Manual Deployment
+For manual deployments or troubleshooting:
+```bash
+# Manual Azure Functions deployment
+./deploy-functions-manual.sh
+```
+
+**Target Environment**:
+- Function App: `asora-function-dev`
+- Resource Group: `asora-psql-flex`
+- Runtime: Node.js 20.x, Functions v4
 
 ## 📊 Coverage Requirements
 - **P1 Critical Modules**: >= 80% line coverage required
