@@ -36,6 +36,18 @@ variable "environment" {
   }
 }
 
+variable "name_prefix" {
+  description = "Name prefix for resources"
+  type        = string
+  default     = ""
+}
+
+# Local values for consistent naming
+locals {
+  env         = lower(var.environment)
+  name_prefix = var.name_prefix != "" ? var.name_prefix : "asora-${local.env}"
+}
+
 variable "location" {
   description = "Azure region"
   type        = string
@@ -145,7 +157,7 @@ resource "azurerm_resource_group" "rg" {
 
 resource "azurerm_postgresql_flexible_server" "pg" {
   zone                    = "3"
-  name                   = "asora-pg-dev-ne"
+  name                   = "${local.name_prefix}-pg-${replace(var.location, " ", "")}"
   resource_group_name    = azurerm_resource_group.rg.name
   location               = azurerm_resource_group.rg.location
 
@@ -165,7 +177,7 @@ resource "azurerm_postgresql_flexible_server" "pg" {
 
   tags = {
     application     = "Asora-Mobile"
-    env             = "Development"
+    env             = title(local.env)
     region          = "NorthEU"
     confidentiality = "PII"
     sla             = "99.9%"
@@ -202,7 +214,7 @@ resource "azurerm_postgresql_flexible_server_database" "appdb" {
 ############################################
 
 resource "azurerm_cosmosdb_account" "cosmos" {
-  name                = "asora-cosmos-dev"
+  name                = "${local.name_prefix}-cosmos"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   offer_type          = "Standard"
@@ -223,7 +235,7 @@ resource "azurerm_cosmosdb_account" "cosmos" {
 
   tags = {
     application     = "Asora-Mobile"
-    env             = "Development"
+    env             = title(local.env)
     region          = "NorthEU"
     confidentiality = "PII"
     sla             = "99.9%"
@@ -285,6 +297,88 @@ resource "azurerm_redis_cache" "asora_redis" {
 }
 
 ############################################
+# STORAGE ACCOUNT (for Function App)
+############################################
+
+resource "azurerm_storage_account" "function_storage" {
+  name                     = "${replace(local.name_prefix, "-", "")}funcstorage"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
+  }
+}
+
+############################################
+# APP SERVICE PLAN (for Function App)
+############################################
+
+resource "azurerm_service_plan" "function_plan" {
+  name                = "${local.name_prefix}-function-plan"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  os_type             = "Linux"
+  sku_name            = "Y1"  # Consumption plan
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
+  }
+}
+
+############################################
+# FUNCTION APP
+############################################
+
+resource "azurerm_linux_function_app" "function_app" {
+  name                = "${local.name_prefix}-function"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  service_plan_id     = azurerm_service_plan.function_plan.id
+  storage_account_name = azurerm_storage_account.function_storage.name
+  storage_account_access_key = azurerm_storage_account.function_storage.primary_access_key
+
+  site_config {
+    application_stack {
+      node_version = "20"
+    }
+  }
+
+  app_settings = {
+    FUNCTIONS_EXTENSION_VERSION = "~4"
+    FUNCTIONS_WORKER_RUNTIME    = "node"
+    WEBSITE_NODE_DEFAULT_VERSION = "~20"
+  }
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
+  }
+}
+
+############################################
 # OUTPUTS
 ############################################
 
@@ -304,6 +398,11 @@ output "redis_cache_name" {
 output "redis_cache_hostname" {
   description = "Hostname of the Redis cache"
   value       = var.enable_redis_cache ? azurerm_redis_cache.asora_redis[0].hostname : ""
+}
+
+output "function_app_name" {
+  description = "Name of the Function App"
+  value       = azurerm_linux_function_app.function_app.name
 }
 
 output "redis_primary_connection_string" {

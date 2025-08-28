@@ -20,20 +20,57 @@ jobs:
 
   functions_build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm ci --prefix functions
-      - run: npm test --prefix functions
-      - run: npm run build --prefix functions
-      - name: Archive functions artifact
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Detect lockfile drift (no auto-heal)
         run: |
-          tar -czf functions.tar.gz -C functions .
+          npm install --package-lock-only
+          if ! git diff --quiet -- package-lock.json; then
+            echo "Lockfile drift detected. Run 'npm install' in functions/ and commit the updated package-lock.json."
+            git --no-pager diff -- package-lock.json | cat
+            exit 1
+          fi
+          git checkout -- package-lock.json
+
+      - name: npm ci (strict)
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build (TS -> dist + copy function.json)
+        run: npm run build-v3
+
+      - name: Verify function.json in dist
+        shell: bash
+        run: |
+          shopt -s globstar
+          count=$(ls -1 dist/**/function.json | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No function.json found under dist/"
+            exit 1
+          fi
+          echo "Found $count function.json file(s)"
+
+      - name: Create deployable zip from dist
+        run: |
+          test -d dist || { echo "dist/ missing"; exit 1; }
+          cd dist && zip -r ../functions.zip . && cd ..
+
       - uses: actions/upload-artifact@v4
         with:
           name: functions-artifact
-          path: functions.tar.gz
+          path: functions/functions.zip
 
   deploy_azure:
     name: Deploy to Azure
@@ -51,7 +88,6 @@ jobs:
         with:
           name: functions-artifact
           path: .
-      - run: tar -xzf functions.tar.gz
 
       - name: Az login (OIDC)
         uses: azure/login@v2
@@ -60,17 +96,14 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Azure CLI configure runtime + app settings
+      - name: Ensure Node 20 runtime + core settings
         shell: bash
         env:
           AZURE_FUNCTIONAPP_NAME: asora-function-dev
           AZURE_RESOURCE_GROUP: asora-psql-flex
         run: |
           set -euo pipefail
-          echo "Configuring Function App runtime for Node 20..."
-          if ! az functionapp show -n "$AZURE_FUNCTIONAPP_NAME" -g "$AZURE_RESOURCE_GROUP" -o none 2>/dev/null; then
-            echo "ERROR: $AZURE_FUNCTIONAPP_NAME not found in $AZURE_RESOURCE_GROUP"; exit 1
-          fi
+          az functionapp show -n "$AZURE_FUNCTIONAPP_NAME" -g "$AZURE_RESOURCE_GROUP" -o none
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -80,13 +113,12 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
 
-      - name: Deploy Functions (zip push)
+      - name: Deploy compiled zip
         uses: azure/functions-action@v1
         with:
           app-name: asora-function-dev
-          package: './functions'
+          package: './functions/functions.zip'
 
       - name: Smoke check
-        shell: bash
-        run: |
-          az functionapp show -n asora-function-dev -g asora-psql-flex -o table
+        run: az functionapp show -n asora-function-dev -g asora-psql-flex -o table
+
