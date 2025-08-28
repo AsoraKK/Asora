@@ -46,6 +46,9 @@ Asora is a social media platform for human-authored content with AI-powered mode
 - **Update auth flow**: Modify `lib/features/auth/application/auth_service.dart`
 - **Add test coverage**: Focus on P1 modules first (auth, core security, privacy)
 
+## Tool Usage Instructions
+- **Terminal Output Fallback**: The `run_in_terminal` tool sometimes fails to capture command output. If that happens, use the `get_terminal_last_command` tool to retrieve the last command output from the terminal. If that fails, ask the user to copy-paste the output from the terminal.
+
 ## Key Files to Reference
 - `lib/main.dart` - App entry point with providers
 - `functions/package.json` - Backend dependencies and scripts
