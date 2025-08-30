@@ -197,8 +197,43 @@ jobs:
 
       - name: Smoke check
         shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
         run: |
-          # Show a concise status table for the deployed app
-          az functionapp list -g asora-psql-flex \
-            --query "[?name=='asora-function-dev'].{name:name,state:state,host:defaultHostName}" \
+          set -euo pipefail
+          
+          # Check function app state
+          STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv)
+          if [ "$STATE" != "Running" ]; then
+            echo "❌ Function App not Running. State: $STATE"
+            exit 1
+          fi
+          echo "✅ Function App state: $STATE"
+          
+          # Get hostname and test health endpoint
+          HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv)
+          echo "🌐 Testing health endpoint: https://$HOST/api/health"
+          
+          # Health check with retry logic
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts..."
+            if curl -fsS --max-time 30 "https://$HOST/api/health"; then
+              echo "✅ Health check passed"
+              break
+            elif [ $attempt -eq $max_attempts ]; then
+              echo "❌ Health check failed after $max_attempts attempts"
+              exit 1
+            else
+              echo "⚠️ Health check failed, retrying in 10 seconds..."
+              sleep 10
+              ((attempt++))
+            fi
+          done
+          
+          # Show deployment summary
+          az functionapp show -n "$APP" -g "$RG" \
+            --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
             -o table
