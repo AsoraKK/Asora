@@ -95,23 +95,53 @@ jobs:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Ensure Node 20 runtime + core settings
+      - name: Detect plan and runtime (diagnostic)
+        id: detect
+        continue-on-error: true
         shell: bash
         env:
-          AZURE_FUNCTIONAPP_NAME: asora-function-dev
-          AZURE_RESOURCE_GROUP: asora-psql-flex
+          APP: asora-function-dev
+          RG: asora-psql-flex
         run: |
           set -euo pipefail
-          az functionapp show -n "$AZURE_FUNCTIONAPP_NAME" -g "$AZURE_RESOURCE_GROUP" -o none
-          az functionapp config set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "NODE|20-lts"
-          az functionapp config appsettings set \
-            --name "$AZURE_FUNCTIONAPP_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv)
+          echo "Plan resource: $PLAN_ID"
+          PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)
+          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
+          LFX=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
+          echo "Plan tier: $PLAN_TIER"
+          echo "Kind: $KIND"
+          echo "linuxFxVersion: $LFX"
+          {
+            echo "plan_tier=$PLAN_TIER"
+            echo "kind=$KIND"
+            echo "linuxFxVersion=$LFX"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Node 20 runtime (idempotent, Linux-only)
+        if: ${{ contains(steps.detect.outputs.kind, 'linux') }}
+        shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+          PLAN_TIER: ${{ steps.detect.outputs.plan_tier }}
+        run: |
+          set -euo pipefail
+          TARGET="NODE|20-lts"
+          CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
+          if [ "$CUR" != "$TARGET" ]; then
+            az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET"
+          fi
+          if [ "${PLAN_TIER:-}" = "FlexConsumption" ]; then
+            # Flex Consumption: keep v4 only; remove disallowed settings
+            az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
+            az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+          else
+            # Classic/Premium: set worker runtime and default node version
+            az functionapp config appsettings set \
+              --name "$APP" --resource-group "$RG" \
+              --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          fi
 
       - name: Deploy compiled zip
         uses: azure/functions-action@v1
