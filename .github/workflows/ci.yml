@@ -252,7 +252,7 @@ jobs:
             else
               echo " (failed, retrying in 15 seconds...)"
               sleep 15
-              ((attempt++))
+              attempt=$((attempt + 1))
             fi
           done
           
