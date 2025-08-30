@@ -197,44 +197,69 @@ jobs:
 
       - name: Smoke check
         shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
         run: |
           set -euo pipefail
-
-          az extension list >/dev/null 2>&1 || true
-
-          # Resolve host with retries
-          APP=asora-function-dev
-          RG=asora-psql-flex
-          for i in {1..12}; do
-            HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv 2>/dev/null || true)
-            STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv 2>/dev/null || true)
-            if [ -z "${HOST:-}" ] || [ -z "${STATE:-}" ]; then
-              # Fallback: discover app across subscription and adopt its RG
-              read -r DISC_RG DISC_HOST DISC_STATE <<EOF || true
-$(az functionapp list --query "[?name=='$APP'] | [0].{rg:resourceGroup, host:defaultHostName, state:state}" -o tsv 2>/dev/null || true)
-EOF
-              if [ -n "${DISC_RG:-}" ]; then
-                RG="$DISC_RG"
-                HOST="${HOST:-$DISC_HOST}"
-                STATE="${STATE:-$DISC_STATE}"
-              fi
-            fi
-            echo "Attempt $i: rg='${RG:-}' state='${STATE:-}' host='${HOST:-}'"
-            [ -n "${HOST:-}" ] && [ -n "${STATE:-}" ] && break
-            sleep 10
-          done
-
-          if [ -z "${HOST:-}" ]; then
-            echo "No host resolved for $APP"
-            az functionapp list --query "[].{name:name,rg:resourceGroup,state:state}" -o table || true
+          
+          echo "🔍 Starting deployment smoke test..."
+          
+          # Wait for deployment to stabilize
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 30
+          
+          # Check function app state
+          echo "📊 Checking function app state..."
+          STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv)
+          echo "Function app state: $STATE"
+          
+          if [ "$STATE" != "Running" ]; then
+            echo "❌ Function App not running. Current state: $STATE"
+            echo "📋 Available function apps:"
+            az functionapp list -g "$RG" --query "[].{name:name,state:state,location:location}" -o table || true
             exit 1
           fi
-
-          # Health probe with retries
-          for i in {1..8}; do
-            if curl -fsS "https://${HOST}/api/health" >/dev/null; then
-              echo "Health OK"; exit 0
+          
+          # Get hostname
+          HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv)
+          echo "🌐 Function app host: $HOST"
+          
+          # Test health endpoint with reasonable retries
+          echo "🏥 Testing health endpoint..."
+          max_attempts=5
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts"
+            
+            if curl -fsS --max-time 30 --connect-timeout 10 "https://$HOST/api/health"; then
+              echo ""
+              echo "✅ Health check passed!"
+              break
+            elif [ $attempt -eq $max_attempts ]; then
+              echo ""
+              echo "❌ Health check failed after $max_attempts attempts"
+              echo "🔧 Troubleshooting info:"
+              echo "- Function app URL: https://$HOST"
+              echo "- Health endpoint: https://$HOST/api/health"
+              
+              # Show recent logs if available
+              echo "📝 Recent application logs:"
+              az functionapp logs tail -n "$APP" -g "$RG" --output table 2>/dev/null || echo "No logs available"
+              
+              exit 1
+            else
+              echo " (failed, retrying in 15 seconds...)"
+              sleep 15
+              attempt=$((attempt + 1))
             fi
-            echo "Health retry $i failed"; sleep 15
           done
-          echo "Health check failed"; exit 1
+          
+          # Show deployment summary
+          echo "📋 Deployment Summary:"
+          az functionapp show -n "$APP" -g "$RG" \
+            --query "{Name:name, ResourceGroup:resourceGroup, Location:location, State:state, Host:defaultHostName, Runtime:kind}" \
+            -o table
+          
+          echo "🎉 Smoke test completed successfully!"
