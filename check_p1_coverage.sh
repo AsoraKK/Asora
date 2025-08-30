@@ -1,31 +1,67 @@
-#!/bin/bash
-# Calculate P1 modules coverage manually
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "📊 Calculating P1 modules coverage..."
+# Enforce P1 coverage gate for Flutter code under lib/p1_modules/
+# Works on Linux and Windows-generated lcov files (handles / and \ separators)
 
-# Extract P1 coverage data
-cd /c/Users/kylee/asora
+LCOV_FILE="coverage/lcov.info"
 
-# Get P1 module lines from coverage
-P1_LINES=$(grep -A 50 "SF:lib\\\\p1_modules" coverage/lcov.info | grep "^DA:" | wc -l)
-P1_HIT_LINES=$(grep -A 50 "SF:lib\\\\p1_modules" coverage/lcov.info | grep "^DA:" | grep -v ",0$" | wc -l)
-
-echo "Total instrumented lines in P1 modules: $P1_LINES"
-echo "Hit lines in P1 modules: $P1_HIT_LINES"
-
-if [ $P1_LINES -gt 0 ]; then
-    P1_COVERAGE=$(( $P1_HIT_LINES * 100 / $P1_LINES ))
-    echo "P1 modules coverage: $P1_COVERAGE%"
-    
-    if [ $P1_COVERAGE -ge 80 ]; then
-        echo "✅ Coverage gate PASSED ($P1_COVERAGE% >= 80%)"
-        exit 0
-    else
-        echo "❌ Coverage gate FAILED ($P1_COVERAGE% < 80%)"
-        echo "Need to add $(( 80 - P1_COVERAGE ))% more coverage"
-        exit 1
-    fi
-else
-    echo "❌ No P1 module lines found in coverage"
-    exit 1
+if [ ! -f "$LCOV_FILE" ]; then
+  echo "Error: $LCOV_FILE not found. Run 'flutter test --coverage' first."
+  exit 1
 fi
+
+total_lines=0
+hit_lines=0
+
+# Parse lcov file section-by-section and accumulate DA lines for p1 modules
+# lcov format:
+#   SF:<path>
+#   DA:<line>,<count>
+#   end_of_record
+
+current_is_p1=0
+while IFS= read -r line; do
+  if [[ "$line" == SF:* ]]; then
+    # Start of a new source file record
+    current_is_p1=0
+    path=${line#SF:}
+    # Normalize backslashes to forward slashes for matching
+    norm_path=${path//\\//}
+    if [[ "$norm_path" == *"lib/p1_modules/"* ]]; then
+      current_is_p1=1
+    fi
+  elif [[ $current_is_p1 -eq 1 && "$line" == DA:* ]]; then
+    # DA:<line>,<count>
+    count=${line#DA:*}
+    count=${count#*,}
+    # If count is non-zero, it's a hit
+    total_lines=$((total_lines + 1))
+    if [[ "$count" != "0" ]]; then
+      hit_lines=$((hit_lines + 1))
+    fi
+  fi
+done < "$LCOV_FILE"
+
+echo "Total instrumented lines in P1 modules: $total_lines"
+echo "Hit lines in P1 modules: $hit_lines"
+
+if [ "$total_lines" -eq 0 ]; then
+  echo "Error: No P1 module lines found in coverage (lib/p1_modules/)."
+  exit 1
+fi
+
+# Compute integer percentage (floor)
+coverage=$(( hit_lines * 100 / total_lines ))
+echo "P1 modules coverage: ${coverage}%"
+
+threshold=80
+if [ "$coverage" -lt "$threshold" ]; then
+  echo "Coverage gate FAILED (${coverage}% < ${threshold}%)."
+  echo "Add tests under test/p1_modules/ to increase coverage."
+  exit 1
+fi
+
+echo "Coverage gate PASSED (${coverage}% >= ${threshold}%)."
+exit 0
+

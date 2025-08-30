@@ -1,7 +1,13 @@
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
+    branches: [ main, develop ]
+  pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
 
@@ -15,8 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.32.6' }
+        with:
+          flutter-version: '3.32.0'
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+      - name: Pub get
+        run: flutter pub get
       - run: flutter test --coverage
+      - name: Enforce P1 coverage gate
+        run: bash check_p1_coverage.sh
 
   functions_build:
     runs-on: ubuntu-latest
@@ -76,6 +94,7 @@ jobs:
     name: Deploy to Azure
     needs: [tests, functions_build]
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -104,9 +123,13 @@ jobs:
           RG: asora-psql-flex
         run: |
           set -euo pipefail
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv)
-          echo "Plan resource: $PLAN_ID"
-          PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)
+          echo "Plan resource: ${PLAN_ID:-<none>}"
+          if [ -n "${PLAN_ID:-}" ]; then
+            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)
+          else
+            PLAN_TIER="unknown"
+          fi
           KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
           LFX=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
           echo "Plan tier: $PLAN_TIER"
@@ -127,8 +150,12 @@ jobs:
           set -euo pipefail
           # Determine kind and plan tier on-the-fly so we don't depend on prior outputs
           KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv)
-          PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)
+          if [ -n "${PLAN_ID:-}" ]; then
+            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)
+          else
+            PLAN_TIER="unknown"
+          fi
 
           echo "App kind: $KIND"
           echo "Plan tier: $PLAN_TIER"
@@ -141,6 +168,10 @@ jobs:
             fi
             if [ "$PLAN_TIER" = "FlexConsumption" ]; then
               # Flex Consumption: keep v4 only; remove disallowed settings
+              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
+              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+            elif [ "$PLAN_TIER" = "unknown" ]; then
+              # Unknown plan: choose Flex-safe behavior to avoid failures
               az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
               az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
             else
@@ -164,4 +195,3 @@ jobs:
 
       - name: Smoke check
         run: az functionapp show -n asora-function-dev -g asora-psql-flex -o table
-
