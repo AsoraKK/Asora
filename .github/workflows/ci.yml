@@ -89,6 +89,7 @@ jobs:
         with:
           name: functions-artifact
           path: functions/functions.zip
+          if-no-files-found: error
 
   deploy_azure:
     name: Deploy to Azure
@@ -107,6 +108,23 @@ jobs:
         with:
           name: functions-artifact
           path: .
+
+      - name: Resolve package path
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "./functions/functions.zip" ]; then
+            echo "package=./functions/functions.zip" >> "$GITHUB_OUTPUT"
+          elif [ -f "./functions.zip" ]; then
+            echo "package=./functions.zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "Artifact did not contain functions.zip. Listing tree for diagnostics:";
+            ls -la
+            echo "---";
+            find . -maxdepth 3 -type f -name "*.zip" -print || true
+            exit 1
+          fi
 
       - name: Az login (OIDC)
         uses: azure/login@v2
@@ -191,7 +209,7 @@ jobs:
         uses: azure/functions-action@v1
         with:
           app-name: asora-function-dev
-          package: './functions/functions.zip'
+          package: ${{ steps.pkg.outputs.package }}
 
       - name: Smoke check
         run: az functionapp show -n asora-function-dev -g asora-psql-flex -o table
