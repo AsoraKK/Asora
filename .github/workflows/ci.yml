@@ -195,8 +195,8 @@ jobs:
           app-name: asora-function-dev
           package: ./functions/functions.zip
 
-      - name: Smoke check
-        continue-on-error: true
+      - name: Legacy smoke check (skipped)
+        if: ${{ false }}
         shell: bash
         env:
           APP: asora-function-dev
@@ -239,43 +239,29 @@ jobs:
             --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
             -o table
 
-      - name: Smoke check (robust)
+      - name: Smoke check
         shell: bash
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
         run: |
           set -euo pipefail
 
-          STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv || true)
-          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv || true)
-          echo "App: $APP | RG: $RG | Kind: ${KIND:-unknown} | State: ${STATE:-unknown}"
+          az extension list >/dev/null 2>&1 || true
 
-          HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv || true)
-          if [ -z "${HOST:-}" ]; then
-            echo "No defaultHostName found. Listing apps in RG for diagnostics:";
-            az functionapp list -g "$RG" --query "[].{name:name, kind:kind, state:state}" -o table || true
-            exit 1
-          fi
-          echo "Health endpoint: https://$HOST/api/health"
-
-          max_attempts=8
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Health check attempt $attempt/$max_attempts..."
-            if curl -fsS --max-time 30 "https://$HOST/api/health" > /dev/null; then
-              echo "Health check passed"
-              break
-            elif [ $attempt -eq $max_attempts ]; then
-              echo "Health check failed after $max_attempts attempts"
-              exit 1
-            else
-              echo "Health check failed, retrying in 10 seconds..."
-              sleep 10
-              attempt=$((attempt+1))
-            fi
+          # Resolve host with retries
+          for i in {1..8}; do
+            HOST=$(az functionapp show -n asora-function-dev -g asora-psql-flex --query defaultHostName -o tsv || true)
+            STATE=$(az functionapp show -n asora-function-dev -g asora-psql-flex --query state -o tsv || true)
+            echo "Attempt $i: state='${STATE:-}' host='${HOST:-}'"
+            [[ -n "${HOST:-}" && -n "${STATE:-}" ]] && break
+            sleep 10
           done
 
-          az functionapp show -n "$APP" -g "$RG" \
-            --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
-            -o table || true
+          [[ -n "${HOST:-}" ]] || { echo "No host resolved"; exit 1; }
+
+          # Health probe with retries
+          for i in {1..8}; do
+            if curl -fsS "https://${HOST}/api/health" >/dev/null; then
+              echo "Health OK"; exit 0
+            fi
+            echo "Health retry $i failed"; sleep 10
+          done
+          echo "Health check failed"; exit 1
