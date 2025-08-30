@@ -196,6 +196,7 @@ jobs:
           package: ./functions/functions.zip
 
       - name: Smoke check
+        continue-on-error: true
         shell: bash
         env:
           APP: asora-function-dev
@@ -237,3 +238,44 @@ jobs:
           az functionapp show -n "$APP" -g "$RG" \
             --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
             -o table
+
+      - name: Smoke check (robust)
+        shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+        run: |
+          set -euo pipefail
+
+          STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv || true)
+          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv || true)
+          echo "App: $APP | RG: $RG | Kind: ${KIND:-unknown} | State: ${STATE:-unknown}"
+
+          HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv || true)
+          if [ -z "${HOST:-}" ]; then
+            echo "No defaultHostName found. Listing apps in RG for diagnostics:";
+            az functionapp list -g "$RG" --query "[].{name:name, kind:kind, state:state}" -o table || true
+            exit 1
+          fi
+          echo "Health endpoint: https://$HOST/api/health"
+
+          max_attempts=8
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts..."
+            if curl -fsS --max-time 30 "https://$HOST/api/health" > /dev/null; then
+              echo "Health check passed"
+              break
+            elif [ $attempt -eq $max_attempts ]; then
+              echo "Health check failed after $max_attempts attempts"
+              exit 1
+            else
+              echo "Health check failed, retrying in 10 seconds..."
+              sleep 10
+              attempt=$((attempt+1))
+            fi
+          done
+
+          az functionapp show -n "$APP" -g "$RG" \
+            --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
+            -o table || true
