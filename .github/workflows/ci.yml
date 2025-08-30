@@ -118,26 +118,39 @@ jobs:
             echo "linuxFxVersion=$LFX"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Ensure Node 20 runtime (idempotent, Linux-only)
-        if: ${{ contains(steps.detect.outputs.kind, 'linux') }}
+      - name: Ensure Node 20 runtime (idempotent, multi-platform)
         shell: bash
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
-          PLAN_TIER: ${{ steps.detect.outputs.plan_tier }}
         run: |
           set -euo pipefail
-          TARGET="NODE|20-lts"
-          CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
-          if [ "$CUR" != "$TARGET" ]; then
-            az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET"
-          fi
-          if [ "${PLAN_TIER:-}" = "FlexConsumption" ]; then
-            # Flex Consumption: keep v4 only; remove disallowed settings
-            az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
-            az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+          # Determine kind and plan tier on-the-fly so we don't depend on prior outputs
+          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv)
+          PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)
+
+          echo "App kind: $KIND"
+          echo "Plan tier: $PLAN_TIER"
+
+          if [[ "$KIND" == *linux* ]]; then
+            TARGET="NODE|20-lts"
+            CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
+            if [ "$CUR" != "$TARGET" ]; then
+              az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET"
+            fi
+            if [ "$PLAN_TIER" = "FlexConsumption" ]; then
+              # Flex Consumption: keep v4 only; remove disallowed settings
+              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
+              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+            else
+              # Linux Classic/Premium: set worker runtime and default node version
+              az functionapp config appsettings set \
+                --name "$APP" --resource-group "$RG" \
+                --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+            fi
           else
-            # Classic/Premium: set worker runtime and default node version
+            # Windows plans don't use linuxFxVersion; set runtime via app settings
             az functionapp config appsettings set \
               --name "$APP" --resource-group "$RG" \
               --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
