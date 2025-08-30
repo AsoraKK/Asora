@@ -208,7 +208,7 @@ jobs:
           for i in {1..12}; do
             HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv 2>/dev/null || true)
             STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv 2>/dev/null || true)
-            if [ -z "${HOST:-}" ] || [ -z "${STATE:-}" ]; then
+            if [ -z "${HOST:-}" ]; then
               # Fallback: discover app across subscription and adopt its RG
               read -r DISC_RG DISC_HOST DISC_STATE <<EOF || true
 $(az functionapp list --query "[?name=='$APP'] | [0].{rg:resourceGroup, host:defaultHostName, state:state}" -o tsv 2>/dev/null || true)
@@ -220,7 +220,7 @@ EOF
               fi
             fi
             echo "Attempt $i: rg='${RG:-}' state='${STATE:-}' host='${HOST:-}'"
-            [ -n "${HOST:-}" ] && [ -n "${STATE:-}" ] && break
+            [ -n "${HOST:-}" ] && break
             sleep 10
           done
 
