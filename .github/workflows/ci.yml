@@ -195,7 +195,8 @@ jobs:
           app-name: asora-function-dev
           package: ./functions/functions.zip
 
-      - name: Smoke check
+      - name: Legacy smoke check (skipped)
+        if: ${{ false }}
         shell: bash
         env:
           APP: asora-function-dev
@@ -237,3 +238,30 @@ jobs:
           az functionapp show -n "$APP" -g "$RG" \
             --query "{name:name, resourceGroup:resourceGroup, location:location, state:state, host:defaultHostName}" \
             -o table
+
+      - name: Smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az extension list >/dev/null 2>&1 || true
+
+          # Resolve host with retries
+          for i in {1..8}; do
+            HOST=$(az functionapp show -n asora-function-dev -g asora-psql-flex --query defaultHostName -o tsv || true)
+            STATE=$(az functionapp show -n asora-function-dev -g asora-psql-flex --query state -o tsv || true)
+            echo "Attempt $i: state='${STATE:-}' host='${HOST:-}'"
+            [[ -n "${HOST:-}" && -n "${STATE:-}" ]] && break
+            sleep 10
+          done
+
+          [[ -n "${HOST:-}" ]] || { echo "No host resolved"; exit 1; }
+
+          # Health probe with retries
+          for i in {1..8}; do
+            if curl -fsS "https://${HOST}/api/health" >/dev/null; then
+              echo "Health OK"; exit 0
+            fi
+            echo "Health retry $i failed"; sleep 10
+          done
+          echo "Health check failed"; exit 1
