@@ -196,4 +196,9 @@ jobs:
           package: ./functions/functions.zip
 
       - name: Smoke check
-        run: az functionapp show -n asora-function-dev -g asora-psql-flex -o table
+        shell: bash
+        run: |
+          # Show a concise status table for the deployed app
+          az functionapp list -g asora-psql-flex \
+            --query "[?name=='asora-function-dev'].{name:name,state:state,host:defaultHostName}" \
+            -o table
