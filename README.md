@@ -119,6 +119,8 @@ For manual deployments or troubleshooting:
 
 ## 🤝 Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for workflow, code style, and PR checks. If you’re using Codex CLI, also read [AGENTS.md](AGENTS.md).
+
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit changes (`git commit -m 'Add amazing feature'`)
