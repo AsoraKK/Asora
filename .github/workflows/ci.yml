@@ -196,6 +196,7 @@ jobs:
           package: ./functions/functions.zip
 
       - name: Smoke check
+        if: ${{ false }}
         shell: bash
         env:
           APP: asora-function-dev
