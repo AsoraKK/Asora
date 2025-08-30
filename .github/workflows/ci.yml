@@ -31,6 +31,8 @@ jobs:
       - name: Pub get
         run: flutter pub get
       - run: flutter test --coverage
+      - name: Enforce P1 coverage gate
+        run: bash check_p1_coverage.sh
 
   functions_build:
     runs-on: ubuntu-latest
