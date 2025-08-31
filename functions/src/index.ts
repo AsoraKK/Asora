@@ -63,18 +63,26 @@ app.http('deleteUser', {
 });
 
 // =============================================================================
+// FEED FUNCTIONS
+// =============================================================================
+
+app.http('feedGet', {
+    methods: ['GET'],
+    authLevel: 'anonymous',
+    route: 'feed',
+    handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+        // Import the actual implementation
+        const { getFeed } = await import('./feed/get.js');
+        return getFeed(request, context);
+    }
+});
+
+// =============================================================================
 // FUTURE FUNCTIONS
 // =============================================================================
 
 /*
 TODO: Register additional functions here as they are migrated to v4:
-
-app.http('feedGet', {
-    methods: ['GET'],
-    authLevel: 'function',
-    route: 'feed',
-    handler: feedGetHandler
-});
 
 app.http('userAuth', {
     methods: ['POST'],
