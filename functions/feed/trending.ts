@@ -57,15 +57,15 @@ const httpTrigger = async function (
     
     logger.info('Executing trending query', {
       requestId: context.invocationId,
-      query: query,
-      parameters: parameters,
+      query,
+      parameters,
       timeWindow: params.timeWindow
     });
 
     // Execute query with pagination
     const querySpec = {
-      query: query,
-      parameters: parameters
+      query,
+      parameters
     };
 
     const { resources: posts, requestCharge, activityId } = await postsContainer
@@ -77,8 +77,8 @@ const httpTrigger = async function (
 
     logger.info('Trending query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
+      activityId,
+      requestCharge,
       resultCount: posts.length,
       timeWindow: params.timeWindow
     });
@@ -103,8 +103,8 @@ const httpTrigger = async function (
     // Build response
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
+      totalCount,
+      hasMore,
       page: params.page,
       pageSize: params.pageSize,
       trendingWindow: params.timeWindow,
@@ -115,10 +115,10 @@ const httpTrigger = async function (
     
     logger.info('Trending feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
-      hasMore: hasMore,
-      totalCount: totalCount,
+      hasMore,
+      totalCount,
       timeWindow: params.timeWindow
     });
 
@@ -139,7 +139,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -222,7 +222,7 @@ function getTimeThreshold(timeWindow: string): string {
   return threshold.toISOString();
 }
 
-function transformPostForResponse(post: any, authHeader?: string): any {
+function transformPostForResponse(post: any, _authHeader?: string): any {
   // Calculate trending score for display
   const hoursAgo = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
   const engagementScore = post.likeCount - post.dislikeCount * 0.5 + post.commentCount * 2;
@@ -243,7 +243,7 @@ function transformPostForResponse(post: any, authHeader?: string): any {
     moderation: post.moderation,
     metadata: {
       ...post.metadata,
-      trendingScore: trendingScore,
+      trendingScore,
       hoursAgo: Math.round(hoursAgo * 10) / 10 // Round to 1 decimal
     },
     userLiked: false, // TODO: Calculate from user interactions

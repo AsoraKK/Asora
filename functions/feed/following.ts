@@ -72,7 +72,7 @@ const httpTrigger = async function (
       // User isn't following anyone - return empty feed or recommended content
       logger.info('User not following anyone', {
         requestId: context.invocationId,
-        userId: userId
+        userId
       });
 
       if (params.includeRecommended) {
@@ -94,14 +94,14 @@ const httpTrigger = async function (
     
     logger.info('Executing following feed query', {
       requestId: context.invocationId,
-      userId: userId,
+      userId,
       followingCount: followingUsers.length
     });
 
     // Execute query
     const querySpec = {
-      query: query,
-      parameters: parameters
+      query,
+      parameters
     };
 
     const { resources: posts, requestCharge, activityId } = await postsContainer
@@ -113,8 +113,8 @@ const httpTrigger = async function (
 
     logger.info('Following feed query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
+      activityId,
+      requestCharge,
       resultCount: posts.length
     });
 
@@ -134,8 +134,8 @@ const httpTrigger = async function (
     // Build response
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
+      totalCount,
+      hasMore,
       page: params.page,
       pageSize: params.pageSize,
       followingCount: followingUsers.length
@@ -145,7 +145,7 @@ const httpTrigger = async function (
     
     logger.info('Following feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
       followingCount: followingUsers.length
     });
@@ -164,7 +164,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -179,7 +179,7 @@ function parseFollowingFeedParams(query: any, userId: string): FollowingFeedPara
   return {
     page: parseInt(query.page || '1', 10),
     pageSize: Math.min(parseInt(query.pageSize || '20', 10), 50),
-    userId: userId,
+    userId,
     includeRecommended: query.includeRecommended === 'true'
   };
 }
@@ -255,7 +255,7 @@ async function getRecommendedFeed(params: FollowingFeedParams, context: Invocati
 
   const { resources: posts } = await postsContainer
     .items
-    .query({ query: query, parameters: [] })
+    .query({ query, parameters: [] })
     .fetchAll();
 
   const transformedPosts = posts.map(post => ({
@@ -300,7 +300,7 @@ function extractUserIdFromToken(authHeader: string): string | null {
   }
 }
 
-function transformPostForResponse(post: any, userId: string): any {
+function transformPostForResponse(post: any, _userId: string): any {
   // TODO: Query user's interaction history for this post
   // For now, return default values
   return {

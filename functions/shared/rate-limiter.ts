@@ -32,7 +32,6 @@ export function createRateLimiter(config: RateLimiterConfig) {
     async checkRateLimit(req: HttpRequest): Promise<RateLimitResult> {
       const key = config.keyGenerator(req);
       const now = Date.now();
-      const windowStart = now - config.windowMs;
 
       // Clean up expired entries
       const entries = Array.from(rateLimitStore.entries());
