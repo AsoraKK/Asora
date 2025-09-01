@@ -1,4 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import './feed';
 
 /**
  * ASORA AZURE FUNCTIONS v4 ENTRY POINT
@@ -63,19 +64,8 @@ app.http('deleteUser', {
 });
 
 // =============================================================================
-// FEED FUNCTIONS
+// FEED FUNCTIONS are registered in src/feed/index.ts (v4 style)
 // =============================================================================
-
-app.http('feedGet', {
-    methods: ['GET'],
-    authLevel: 'anonymous',
-    route: 'feed',
-    handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-        // Import the actual implementation
-        const { getFeed } = await import('./feed/get.js');
-        return getFeed(request, context);
-    }
-});
 
 // =============================================================================
 // FUTURE FUNCTIONS

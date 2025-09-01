@@ -10,7 +10,7 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter } from '../shared/rate-limiter';
+import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
 
 interface UserDataExport {
   metadata: {
@@ -113,16 +113,7 @@ interface UserDataExport {
 const exportRateLimiter = createRateLimiter({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   maxRequests: 1,
-  keyGenerator: (req: HttpRequest) => {
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      return `privacy_export:${decoded.sub}`;
-    } catch {
-      return 'privacy_export:unknown';
-    }
-  }
+  keyGenerator: endpointKeyGenerator('privacy_export')
 });
 
 export async function exportUser(

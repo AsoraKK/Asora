@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Asora platform backend Azure Functions with AI-powered moderation",
   "type": "commonjs",
+  "main": "src/index.js",
   "engines": {
     "node": "20.x"
   },
@@ -16,8 +17,8 @@
     "watch": "echo 'No compilation needed for JavaScript functions'",
     "start": "func start --port 7072",
     "clean": "rimraf dist",
-    "lint": "eslint \"**/*.js\" --fix",
-    "lint:check": "eslint \"**/*.js\"",
+    "lint": "eslint \"**/*.{ts,js}\" --fix",
+    "lint:check": "eslint \"**/*.{ts,js}\"",
     "format": "prettier --write \"**/*.js\"",
     "format:check": "prettier --check \"**/*.js\"",
     "prepack": "npm run build",
