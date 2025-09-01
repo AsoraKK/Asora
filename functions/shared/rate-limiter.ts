@@ -86,7 +86,9 @@ export function userKeyGenerator(req: HttpRequest): string {
   const token = authHeader.replace('Bearer ', '');
   
   try {
-    const decoded = JSON.parse(atob(token.split('.')[1]));
+    const payloadPart = token.split('.')[1] || '';
+    const json = Buffer.from(payloadPart, 'base64').toString('utf8');
+    const decoded = JSON.parse(json);
     return `user:${decoded.sub}`;
   } catch {
     return defaultKeyGenerator(req);

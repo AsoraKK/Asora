@@ -1,0 +1,12 @@
+name = "feed-cache"
+main = "src/index.js"
+compatibility_date = "2024-06-01"
+
+[vars]
+# Set in Cloudflare UI for production/dev. Example:
+# ORIGIN_BASE = "https://asora-function-dev-<hash>.northeurope-01.azurewebsites.net"
+
+[env.dev]
+# Optional: local/dev route example. Prefer configuring via Cloudflare UI.
+# routes = ["dev.asora.co.za/api/feed*"]
+

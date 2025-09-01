@@ -66,29 +66,43 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build (TS -> dist + copy function.json)
-        run: npm run build-v3
+      - name: Build (TS -> dist)
+        run: npm run build
 
-      - name: Verify function.json in dist
+      - name: Package Azure Functions v4 zip
         shell: bash
         run: |
-          shopt -s globstar
-          count=$(ls -1 dist/**/function.json | wc -l)
-          if [ "$count" -eq 0 ]; then
-            echo "No function.json found under dist/"
-            exit 1
-          fi
-          echo "Found $count function.json file(s)"
-
-      - name: Create deployable zip from dist
-        run: |
-          test -d dist || { echo "dist/ missing"; exit 1; }
-          cd dist && zip -r ../functions.zip . && cd ..
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          echo "Root: $ROOT"
+          echo "Packing v4 artifact..."
+          rm -rf "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
+          mkdir -p "$ROOT/deploy"
+          # host.json lives at repo root, include it at zip root
+          cp "$ROOT/host.json" "$ROOT/deploy/"
+          # include functions package.json
+          cp "$ROOT/functions/package.json" "$ROOT/deploy/"
+          # compiled output (copy entire dist to preserve relative imports)
+          test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
+          cp -R "$ROOT/functions/dist/"* "$ROOT/deploy/"
+          # create thin root entrypoint for v4 runtime
+          cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
+          # production node_modules
+          # re-install prod deps in functions and copy
+          pushd "$ROOT/functions" >/dev/null
+          npm ci --omit=dev
+          popd >/dev/null
+          cp -R "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
+          # create zip
+          pushd "$ROOT/deploy" >/dev/null
+          zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db"
+          popd >/dev/null
+          echo "Created $ROOT/dist-v4-final.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: functions-artifact
-          path: functions/functions.zip
+          name: functions-v4-artifact
+          path: dist-v4-final.zip
           if-no-files-found: error
 
   deploy_azure:
@@ -106,9 +120,8 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: functions-artifact
-          # Place the downloaded artifact under ./functions to ensure a stable path
-          path: functions
+          name: functions-v4-artifact
+          path: .
 
       - name: Az login (OIDC)
         uses: azure/login@v2
@@ -163,10 +176,16 @@ jobs:
           echo "Plan tier: $PLAN_TIER"
 
           if [[ "$KIND" == *linux* ]]; then
-            TARGET="NODE|20-lts"
-            CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
-            if [ "$CUR" != "$TARGET" ]; then
-              az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET"
+            TARGET_PRIMARY="NODE|20-lts"
+            TARGET_FALLBACK="NODE|20"
+            CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)
+
+            if [ "$CUR" != "$TARGET_PRIMARY" ] && [ "$CUR" != "$TARGET_FALLBACK" ]; then
+              echo "Setting linuxFxVersion to $TARGET_PRIMARY (with fallback to $TARGET_FALLBACK)"
+              if ! az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_PRIMARY"; then
+                echo "Primary ($TARGET_PRIMARY) failed; falling back to $TARGET_FALLBACK"
+                az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_FALLBACK"
+              fi
             fi
             if [ "$PLAN_TIER" = "FlexConsumption" ]; then
               # Flex Consumption: keep v4 only; remove disallowed settings
@@ -189,14 +208,19 @@ jobs:
               --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
           fi
 
-      - name: Deploy compiled zip
-        uses: azure/functions-action@v1
-        with:
-          app-name: asora-function-dev
-          package: ./functions/functions.zip
+      - name: Deploy Functions v4 zip (config-zip)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
+          az functionapp deployment source config-zip \
+            -g asora-psql-flex \
+            -n asora-function-dev \
+            --src dist-v4-final.zip \
+            --timeout 600
 
       - name: Smoke check
-        if: ${{ false }}
+        if: false  # Disabled - use manual testing for now
         shell: bash
         env:
           APP: asora-function-dev
@@ -204,30 +228,30 @@ jobs:
         run: |
           set -euo pipefail
           
-          echo "🔍 Starting deployment smoke test..."
+          echo "Starting deployment smoke test..."
           
           # Wait for deployment to stabilize
-          echo "⏳ Waiting for deployment to stabilize..."
+          echo "Waiting for deployment to stabilize..."
           sleep 30
           
           # Check function app state
-          echo "📊 Checking function app state..."
+          echo "Checking function app state..."
           STATE=$(az functionapp show -n "$APP" -g "$RG" --query state -o tsv)
           echo "Function app state: $STATE"
           
           if [ "$STATE" != "Running" ]; then
-            echo "❌ Function App not running. Current state: $STATE"
-            echo "📋 Available function apps:"
+            echo "Function App not running. Current state: $STATE"
+            echo "Available function apps:"
             az functionapp list -g "$RG" --query "[].{name:name,state:state,location:location}" -o table || true
             exit 1
           fi
           
           # Get hostname
           HOST=$(az functionapp show -n "$APP" -g "$RG" --query defaultHostName -o tsv)
-          echo "🌐 Function app host: $HOST"
+          echo "Function app host: $HOST"
           
           # Test health endpoint with reasonable retries
-          echo "🏥 Testing health endpoint..."
+          echo "Testing health endpoint..."
           max_attempts=5
           attempt=1
           
@@ -236,17 +260,17 @@ jobs:
             
             if curl -fsS --max-time 30 --connect-timeout 10 "https://$HOST/api/health"; then
               echo ""
-              echo "✅ Health check passed!"
+              echo "Health check passed!"
               break
             elif [ $attempt -eq $max_attempts ]; then
               echo ""
-              echo "❌ Health check failed after $max_attempts attempts"
-              echo "🔧 Troubleshooting info:"
+              echo "Health check failed after $max_attempts attempts"
+              echo "Troubleshooting info:"
               echo "- Function app URL: https://$HOST"
               echo "- Health endpoint: https://$HOST/api/health"
               
               # Show recent logs if available
-              echo "📝 Recent application logs:"
+              echo "Recent application logs:"
               az functionapp logs tail -n "$APP" -g "$RG" --output table 2>/dev/null || echo "No logs available"
               
               exit 1
@@ -258,9 +282,9 @@ jobs:
           done
           
           # Show deployment summary
-          echo "📋 Deployment Summary:"
+          echo "Deployment Summary:"
           az functionapp show -n "$APP" -g "$RG" \
             --query "{Name:name, ResourceGroup:resourceGroup, Location:location, State:state, Host:defaultHostName, Runtime:kind}" \
             -o table
           
-          echo "🎉 Smoke test completed successfully!"
+          echo "Smoke test completed successfully!"
