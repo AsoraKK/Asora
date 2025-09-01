@@ -198,8 +198,6 @@ export async function voteOnAppeal(
     await votesContainer.items.create(voteDocument);
 
     // 11. Update appeal vote counts
-    const weightedVote = vote === 'approve' ? voterWeight : -voterWeight;
-    
     if (vote === 'approve') {
       appealDoc.votesFor = (appealDoc.votesFor || 0) + voterWeight;
     } else {

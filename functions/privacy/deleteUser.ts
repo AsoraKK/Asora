@@ -10,42 +10,13 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter } from '../shared/rate-limiter';
-
-interface DeletionResult {
-  userId: string;
-  deletionId: string;
-  deletedAt: string;
-  itemsProcessed: {
-    userProfile: boolean;
-    posts: number;
-    comments: number;
-    likes: number;
-    flags: number;
-    appeals: number;
-    votes: number;
-  };
-  contentMarking: {
-    postsAnonymized: number;
-    commentsAnonymized: number;
-  };
-  warnings: string[];
-}
+import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 1,
-  keyGenerator: (req: HttpRequest) => {
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      return `privacy_delete:${decoded.sub}`;
-    } catch {
-      return 'privacy_delete:unknown';
-    }
-  }
+  keyGenerator: endpointKeyGenerator('privacy_delete')
 });
 
 export async function deleteUser(
@@ -308,17 +279,7 @@ export async function deleteUser(
       }
     }
 
-    // 13. Prepare deletion result
-    const deletionResult: DeletionResult = {
-      userId,
-      deletionId,
-      deletedAt: new Date().toISOString(),
-      itemsProcessed,
-      contentMarking,
-      warnings
-    };
-
-    // 14. Log comprehensive deletion audit
+    // 13. Log comprehensive deletion audit
     context.log(`Account deletion completed successfully for user ${userId}:`, {
       deletionId,
       totalItemsDeleted: Object.values(itemsProcessed).reduce((sum: number, val) => {
@@ -336,9 +297,9 @@ export async function deleteUser(
     return json(200, {
       code: 'account_deleted',
       message: 'Account deletion completed successfully',
-      userId: userId,
+      userId,
       deletedAt: new Date().toISOString(),
-      deletionId: deletionId
+      deletionId
     });
 
   } catch (error) {

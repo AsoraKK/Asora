@@ -174,7 +174,7 @@ export async function submitAppeal(
       aiScore: contentDoc.moderation?.hiveResponse?.confidence || null,
       aiAnalysis: contentDoc.moderation?.hiveResponse?.details || null,
       flagCategories: contentDoc.moderation?.hiveResponse?.flaggedCategories || [],
-      flagCount: flagCount,
+      flagCount,
       
       // Voting status
       status: 'pending',

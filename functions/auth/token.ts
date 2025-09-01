@@ -118,7 +118,7 @@ const httpTrigger = async function (
 
     logger.info('Token exchange completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       grantType: body.grant_type,
       clientId: body.client_id
     });
@@ -137,7 +137,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     logAuthAttempt(
@@ -166,7 +166,7 @@ async function handleAuthorizationCodeGrant(
   }
 
   logger.info('Processing authorization code grant', {
-    requestId: requestId,
+    requestId,
     clientId: body.client_id,
     redirectUri: body.redirect_uri
   });
@@ -297,7 +297,7 @@ async function handleRefreshTokenGrant(
   }
 
   logger.info('Processing refresh token grant', {
-    requestId: requestId,
+    requestId,
     clientId: body.client_id
   });
 

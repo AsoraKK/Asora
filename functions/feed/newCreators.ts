@@ -69,8 +69,8 @@ const httpTrigger = async function (
 
     // Execute query
     const querySpec = {
-      query: query,
-      parameters: parameters
+      query,
+      parameters
     };
 
     const { resources: posts, requestCharge, activityId } = await postsContainer
@@ -82,8 +82,8 @@ const httpTrigger = async function (
 
     logger.info('New creators query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
+      activityId,
+      requestCharge,
       resultCount: posts.length
     });
 
@@ -106,8 +106,8 @@ const httpTrigger = async function (
     // Build response with discovery metadata
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
+      totalCount,
+      hasMore,
       page: params.page,
       pageSize: params.pageSize,
       discoverySettings: {
@@ -121,7 +121,7 @@ const httpTrigger = async function (
     
     logger.info('New creators feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
       discoveryPosts: transformedPosts.filter(p => p.isNewCreator).length
     });
@@ -140,7 +140,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -206,7 +206,7 @@ function buildNewCreatorsCountQuery(params: NewCreatorsParams): { query: string;
   return { query, parameters };
 }
 
-async function transformPostWithCreatorInfo(post: any, authHeader?: string): Promise<any> {
+async function transformPostWithCreatorInfo(post: any, _authHeader?: string): Promise<any> {
   // In a production implementation, you would:
   // 1. Query user/creator metrics from users container
   // 2. Determine if creator meets "new creator" criteria
@@ -232,7 +232,7 @@ async function transformPostWithCreatorInfo(post: any, authHeader?: string): Pro
     metadata: post.metadata,
     userLiked: false, // TODO: Calculate from user interactions
     userDisliked: false, // TODO: Calculate from user interactions
-    isNewCreator: isNewCreator,
+    isNewCreator,
     creatorInfo: creatorMetrics ? {
       followerCount: creatorMetrics.followerCount,
       accountAge: creatorMetrics.accountAge,
@@ -264,10 +264,10 @@ async function getCreatorMetrics(authorId: string): Promise<CreatorMetrics | nul
     const accountAge = Math.floor((Date.now() - accountCreated.getTime()) / (1000 * 60 * 60 * 24));
 
     return {
-      authorId: authorId,
+      authorId,
       followerCount: user.followerCount || 0,
       totalPosts: user.totalPosts || 0,
-      accountAge: accountAge,
+      accountAge,
       avgEngagement: user.avgEngagement || 0
     };
   } catch (error) {

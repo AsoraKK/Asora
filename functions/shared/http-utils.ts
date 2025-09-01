@@ -5,15 +5,6 @@
 /// 🔐 Security: CORS headers, security headers, error sanitization
 /// 📡 Network: Standard HTTP status codes and response formats
 
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-  timestamp: string;
-  requestId?: string;
-}
-
 interface ErrorResponse {
   success: false;
   message: string;

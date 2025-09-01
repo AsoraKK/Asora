@@ -62,13 +62,13 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       location: params.location,
       radius: params.radius,
-      query: query
+      query
     });
 
     // Execute query
     const querySpec = {
-      query: query,
-      parameters: parameters
+      query,
+      parameters
     };
 
     const { resources: posts, requestCharge, activityId } = await postsContainer
@@ -80,8 +80,8 @@ const httpTrigger = async function (
 
     logger.info('Local feed query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
+      activityId,
+      requestCharge,
       resultCount: posts.length
     });
 
@@ -102,8 +102,8 @@ const httpTrigger = async function (
     // Build response with location metadata
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
+      totalCount,
+      hasMore,
       page: params.page,
       pageSize: params.pageSize,
       location: params.location,
@@ -114,7 +114,7 @@ const httpTrigger = async function (
     
     logger.info('Local feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
       location: params.location
     });
@@ -134,7 +134,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -201,7 +201,7 @@ function buildLocalCountQuery(params: LocalFeedParams): { query: string; paramet
   return { query, parameters };
 }
 
-function transformPostForResponse(post: any, authHeader?: string): any {
+function transformPostForResponse(post: any, _authHeader?: string): any {
   // Transform post similar to main feed, adding user interaction status
   return {
     id: post.id,
