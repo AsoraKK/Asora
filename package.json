@@ -12,10 +12,12 @@
     "lint-check": "npm run lint-functions",
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
-    "test-functions": "cd functions && npm run test"
+    "test-functions": "cd functions && npm run test",
+    "lint:api": "spectral lint docs/openapi.yaml -r .spectral.yaml"
   },
   "devDependencies": {
-    "husky": "^8.0.3"
+    "husky": "^8.0.3",
+    "@stoplight/spectral-cli": "^6.11.0"
   },
   "workspaces": [
     "functions"

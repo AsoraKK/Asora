@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ASORA USER ACCOUNT DELETION ENDPOINT
  * 
  * ðŸŽ¯ Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data

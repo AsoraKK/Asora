@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 env:
   AZURE_FUNCTIONAPP_NAME: asora-function-flex
   AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-flex-canary
@@ -165,9 +169,22 @@ jobs:
             const sha = context.sha;
             const outcome = core.getInput('job-status') || '${{ job.status }}';
             const body = `Canary deploy check: ${outcome}. Failure rate (last sample): ${rate}%`;
-            await github.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: sha,
-              body
-            });
+            try {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: sha,
+                body
+              });
+            } catch (e) {
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body
+                });
+              } else {
+                throw e;
+              }
+            }
