@@ -43,6 +43,7 @@ dependencies:
   dio: ^5.4.0
   google_fonts: ^6.0.0
   crypto: ^3.0.3  # For certificate pinning SPKI hashing
+  flutter_jailbreak_detection: ^1.10.0  # Device integrity checks (iOS/Android)
   
   # Security packages
   

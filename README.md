@@ -100,6 +100,36 @@ For manual deployments or troubleshooting:
 - Resource Group: `asora-psql-flex`
 - Runtime: Node.js 20.x, Functions v4
 
+## 🛠️ Quick Commands
+
+**Prerequisites**: Ensure you're authenticated with Azure CLI (`az login`) or using GitHub Actions OIDC for automated deployments.
+
+### Cosmos DB Operations
+```bash
+# Verify posts indexing policy
+az cosmosdb sql container show -g asora-psql-flex -a asora-cosmos-dev -d asora -n posts --query "resource.indexingPolicy"
+
+# Apply posts indexing policy (off-peak recommended)
+az cosmosdb sql container update -g asora-psql-flex -a asora-cosmos-dev -d asora -n posts --idx @database/cosmos-posts-indexing-policy.json
+```
+
+### Performance Monitoring
+```bash
+# Feed metrics (requires PowerShell - install PowerShell Core or use Windows PowerShell)
+powershell.exe -File .\scripts\feed-metrics.ps1 -BaseUrl 'https://asora-function-flex.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
+
+# Alternative with PowerShell Core (if installed):
+# pwsh ./scripts/feed-metrics.ps1 -BaseUrl 'https://asora-function-flex.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
+```
+
+### Deployment Validation
+```bash
+# Cloudflare cache validation
+CF_URL='https://api.your-domain.com' bash scripts/cf-validate.sh
+```
+
+**Note**: The canary monitoring system is embedded in `.github/workflows/deploy-functions-flex.yml` and automatically handles traffic shifting, monitoring, and rollback during deployments.
+
 ## 📊 Coverage Requirements
 - **P1 Critical Modules**: >= 80% line coverage required
 - **Overall Project**: Monitored and reported

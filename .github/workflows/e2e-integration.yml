@@ -1,0 +1,42 @@
+name: E2E Integration Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get Function key
+        id: funcKey
+        run: |
+          key=$(az functionapp keys list -g asora-psql-flex -n asora-function-flex --query "masterKey" -o tsv)
+          echo "FUNCTION_KEY=$key" >> $GITHUB_ENV
+      - name: Install Functions deps
+        working-directory: functions
+        run: npm ci --omit=dev
+      - name: Run E2E script
+        working-directory: functions
+        env:
+          FUNCTION_BASE_URL: https://asora-function-flex.azurewebsites.net
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: asora
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
+        run: |
+          node scripts/e2e-itest.js
+      - name: Upload E2E report
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: functions/e2e-report.json

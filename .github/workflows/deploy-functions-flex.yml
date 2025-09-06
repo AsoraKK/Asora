@@ -1,0 +1,173 @@
+name: Deploy Functions (Flex)
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AZURE_FUNCTIONAPP_NAME: asora-function-flex
+  AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-flex-canary
+  AZURE_RESOURCE_GROUP: asora-psql-flex
+  AZURE_APPINSIGHTS_NAME: asora-ai-flex
+  AZURE_FD_PROFILE: asora-frontdoor
+  AZURE_FD_ENDPOINT: asora-frontdoor-endpoint
+  AZURE_FD_ORIGIN_GROUP: asora-origin-group
+  NODE_VERSION: '20'   # or '22'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install prod deps in functions/
+        working-directory: functions
+        run: |
+          rm -rf node_modules
+          npm ci --omit=dev
+          npm run build
+          test -f dist/src/index.js
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Optional but recommended: ensure Flex-safe settings before deploy
+      - name: Set Flex app settings
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az functionapp config appsettings delete \
+              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
+              --setting-names FUNCTIONS_WORKER_RUNTIME || true
+
+            az functionapp config appsettings set \
+              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
+              --settings FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true
+
+            # Ensure cloud_RoleName is explicit in AI
+            az functionapp config appsettings set \
+              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
+              --settings APPLICATIONINSIGHTS_ROLE_NAME=$AZURE_FUNCTIONAPP_NAME -o none
+
+            az functionapp config appsettings set \
+              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_CANARY_NAME \
+              --settings APPLICATIONINSIGHTS_ROLE_NAME=$AZURE_FUNCTIONAPP_CANARY_NAME -o none
+
+      - name: Publish to Azure Functions (OneDeploy on Flex)
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: functions
+          respect-funcignore: true  # ships only what Functions needs
+
+      - name: Verify discovery
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az functionapp function list -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME -o table
+
+      - name: Install smoke test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run smoke tests (health, feed)
+        env:
+          FUNCTION_BASE_URL: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
+        run: |
+          chmod +x scripts/smoke-test.sh
+          scripts/smoke-test.sh
+
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: smoke/
+
+      - name: Publish CANARY to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_CANARY_NAME }}
+          package: functions
+          respect-funcignore: true
+
+      - name: Shift 10% traffic to CANARY (Front Door weights)
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            # Set prod weight 90, canary 10
+            az afd origin update \
+              --profile-name $AZURE_FD_PROFILE \
+              --origin-group-name $AZURE_FD_ORIGIN_GROUP \
+              --host-name ${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net \
+              --origin-name ${AZURE_FUNCTIONAPP_NAME} \
+              -g $AZURE_RESOURCE_GROUP \
+              --weight 90
+
+            az afd origin update \
+              --profile-name $AZURE_FD_PROFILE \
+              --origin-group-name $AZURE_FD_ORIGIN_GROUP \
+              --host-name ${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net \
+              --origin-name ${AZURE_FUNCTIONAPP_CANARY_NAME} \
+              -g $AZURE_RESOURCE_GROUP \
+              --weight 10
+
+      - name: Monitor App Insights failure rate for CANARY (10 min)
+        id: monitor
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            echo "Monitoring failure rate for cloud_RoleName=${AZURE_FUNCTIONAPP_CANARY_NAME}" | tee canary_report.txt
+            FAIL=0
+            LAST_RATE=0
+            for i in {1..10}; do
+              result=$(az monitor app-insights query \
+                -g $AZURE_RESOURCE_GROUP \
+                --apps $AZURE_APPINSIGHTS_NAME \
+                --analytics-query @observability/appinsights-canary-failure.kql \
+                --query "tables[0].rows[0]" -o tsv 2>/dev/null || echo "0\t0\t0")
+              total=$(echo "$result" | awk '{print $1}')
+              failed=$(echo "$result" | awk '{print $2}')
+              rate=$(echo "$result" | awk '{print $3}')
+              echo "minute=$i total=$total failed=$failed rate=${rate}%" | tee -a canary_report.txt
+              LAST_RATE=$rate
+              # If rate > 1%, mark fail and break
+              awk -v r="$rate" 'BEGIN{exit (r>1.0)?0:1}' && { FAIL=1; break; } || true
+              sleep 60
+            done
+            echo "rate=$LAST_RATE" >> $GITHUB_OUTPUT
+            if [ "$FAIL" -eq 1 ]; then
+              echo "Canary failure rate exceeds threshold; rolling back weights" | tee -a canary_report.txt
+              az afd origin update --profile-name $AZURE_FD_PROFILE --origin-group-name $AZURE_FD_ORIGIN_GROUP --host-name ${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net   --origin-name ${AZURE_FUNCTIONAPP_NAME}   -g $AZURE_RESOURCE_GROUP --weight 100
+              az afd origin update --profile-name $AZURE_FD_PROFILE --origin-group-name $AZURE_FD_ORIGIN_GROUP --host-name ${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net --origin-name ${AZURE_FUNCTIONAPP_CANARY_NAME} -g $AZURE_RESOURCE_GROUP --weight 0
+              exit 1
+            fi
+
+      - name: Upload canary report
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-report
+          path: canary_report.txt
+
+      - name: Comment result on commit
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const rate = `${{ steps.monitor.outputs.rate }}` || 'n/a';
+            const sha = context.sha;
+            const outcome = core.getInput('job-status') || '${{ job.status }}';
+            const body = `Canary deploy check: ${outcome}. Failure rate (last sample): ${rate}%`;
+            await github.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+              body
+            });

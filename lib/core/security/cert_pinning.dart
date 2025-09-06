@@ -21,15 +21,21 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 ///
 /// Format: 'domain': ['sha256/BASE64_ENCODED_SPKI_HASH']
 /// Real pins extracted from: openssl s_client -connect domain:443 -showcerts
+// IMPORTANT:
+// - Replace placeholders with real SPKI SHA-256 pins for leaf certificates.
+// - Maintain two pins per host (current + rollover) during rotation window.
+// - Document pin extraction in docs/SECURITY_MOBILE_SOP.md
 const Map<String, List<String>> kPinnedDomains = {
-  'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
-    'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=', // Primary cert
-    'sha256/DigiCertGlobalRootG2', // Backup for cert rotation (placeholder)
+  // Flex app host (prod/dev)
+  'asora-function-flex.azurewebsites.net': [
+    'sha256/REPLACE_WITH_SPKI_PIN',       // Primary (leaf SPKI)
+    'sha256/REPLACE_WITH_ROLLOVER_PIN',   // Rollover (leaf SPKI)
   ],
-  // Add production domain when available
-  // 'asora-functions-production.azurewebsites.net': [
-  //   'sha256/PRODUCTION_SPKI_PIN_HERE'
-  // ],
+  // Example legacy dev host (keep if still used)
+  'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
+    'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
+    'sha256/REPLACE_WITH_ROLLOVER_PIN',
+  ],
 };
 
 /// Certificate pinning HTTP client adapter
@@ -127,10 +133,27 @@ class _CertPinningInterceptor extends Interceptor {
       final host = Uri.parse(err.requestOptions.uri.toString()).host;
       if (kPinnedDomains.containsKey(host)) {
         _logCertPinViolation(host, 'connection_failed');
+        // Map to a user-friendly message when we suspect pin mismatch / TLS error
+        err = DioException(
+          requestOptions: err.requestOptions,
+          response: err.response,
+          type: err.type,
+          error: err.error,
+          message: 'Secure connection could not be established. Please try again on a trusted network or update the app.',
+        );
       }
     }
     handler.next(err);
   }
+}
+
+/// Utility to check if an error likely stems from pin validation failure.
+bool isPinValidationError(DioException err) {
+  if (err.type == DioExceptionType.connectionError || err.type == DioExceptionType.unknown) {
+    final host = Uri.parse(err.requestOptions.uri.toString()).host;
+    return kPinnedDomains.containsKey(host);
+  }
+  return false;
 }
 
 /// Log certificate pinning violation for telemetry
