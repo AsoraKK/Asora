@@ -85,7 +85,6 @@ export async function reviewAppealedContent(
 
     const token = authHeader.replace('Bearer ', '');
     const jwtPayload = await verifyJWT(token);
-    const userId = jwtPayload.sub;
 
     // Check moderator role
     const isModerator = hasRole(jwtPayload, 'moderator') || hasRole(jwtPayload, 'admin');
@@ -175,7 +174,7 @@ export async function reviewAppealedContent(
 
     // 5. Get total count for pagination
     let countQuery = 'SELECT VALUE COUNT(1) FROM c WHERE c.status = @status';
-    let countParams = [{ name: '@status', value: 'pending' }];
+    const countParams = [{ name: '@status', value: 'pending' }];
 
     if (urgency !== 'all') {
       countQuery += ' AND c.urgency = @urgency';
@@ -206,7 +205,7 @@ export async function reviewAppealedContent(
 
         // Get submitter info
         let submitterName = 'Unknown User';
-        let userHistory = {
+        const userHistory = {
           totalPosts: 0,
           moderatedPosts: 0,
           appealSuccess: 0,

@@ -32,7 +32,6 @@ export function createRateLimiter(config: RateLimiterConfig) {
     async checkRateLimit(req: HttpRequest): Promise<RateLimitResult> {
       const key = config.keyGenerator(req);
       const now = Date.now();
-      const windowStart = now - config.windowMs;
 
       // Clean up expired entries
       const entries = Array.from(rateLimitStore.entries());
@@ -86,7 +85,9 @@ export function userKeyGenerator(req: HttpRequest): string {
   const token = authHeader.replace('Bearer ', '');
   
   try {
-    const decoded = JSON.parse(atob(token.split('.')[1]));
+    const payloadPart = token.split('.')[1] || '';
+    const json = Buffer.from(payloadPart, 'base64').toString('utf8');
+    const decoded = JSON.parse(json);
     return `user:${decoded.sub}`;
   } catch {
     return defaultKeyGenerator(req);

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-staging.example.com}"
-PATH_FEED="${PATH_FEED:-/api/feed/get}"
+PATH_FEED="${PATH_FEED:-/api/feed}"
 QS1="${QS1:-page=1&size=20&type=trending&filter=safe}"
 QS2="${QS2:-page=1&size=21&type=trending&filter=safe}"   # different size → different cache object
 AUTH_HDR="${AUTH_HDR:-Authorization: Bearer test-token}"
@@ -17,7 +17,7 @@ URL2="https://${DOMAIN}${PATH_FEED}?${QS2}"
 echo "Check 1: first anon request should MISS"
 H1="$(curl -sSI "$URL1" | tr -d '\r')"
 echo "$H1" | grep -qi '^CF-Cache-Status: MISS\|EXPIRED\|DYNAMIC' || fail "Expected MISS/EXPIRED/DYNAMIC\n$H1"
-echo "$H1" | grep -qi '^Cache-Control: .*s-maxage=30' || fail "Missing s-maxage=30"
+echo "$H1" | grep -qi '^Cache-Control: .*max-age=60' || fail "Missing max-age=60"
 echo "$H1" | grep -qi '^Vary: .*Authorization' || fail "Missing Vary Authorization"
 
 echo "Check 2: second anon request within 30s should HIT"

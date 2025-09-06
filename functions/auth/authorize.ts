@@ -8,7 +8,7 @@
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
+import { createErrorResponse } from "../shared/http-utils";
 import { validateText } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
 import * as crypto from 'crypto';
@@ -104,8 +104,8 @@ const httpTrigger = async function (
       codeChallengeMethod: authRequest.code_challenge_method,
       redirectUri: authRequest.redirect_uri,
       clientId: authRequest.client_id,
-      userId: userId,
-      authorizationCode: authorizationCode,
+      userId,
+      authorizationCode,
       scope: authRequest.scope || 'read write',
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -117,7 +117,7 @@ const httpTrigger = async function (
     logger.info('Authorization code generated', {
       requestId: context.invocationId,
       sessionId: session.id,
-      userId: userId,
+      userId,
       clientId: authRequest.client_id,
       expiresAt: expiresAt.toISOString()
     });
@@ -131,7 +131,7 @@ const httpTrigger = async function (
 
     logger.info('Authorization request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       redirectTo: authRequest.redirect_uri
     });
 
@@ -154,7 +154,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     // Try to return error to redirect URI if possible

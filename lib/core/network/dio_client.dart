@@ -70,7 +70,14 @@ class _DeviceIntegrityInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Check device integrity for write operations
+    // Always attach integrity header
+    final integrityInfo = await _ref
+        .read(deviceIntegrityServiceProvider)
+        .checkIntegrity();
+
+    options.headers['X-Device-Integrity'] = integrityInfo.status.name;
+
+    // Block write operations if device is compromised
     final isWriteOperation = [
       'POST',
       'PUT',
@@ -78,23 +85,14 @@ class _DeviceIntegrityInterceptor extends Interceptor {
       'DELETE',
     ].contains(options.method.toUpperCase());
 
-    if (isWriteOperation) {
-      final integrityInfo = await _ref
-          .read(deviceIntegrityServiceProvider)
-          .checkIntegrity();
-
-      if (!integrityInfo.allowPosting) {
-        final error = DioException(
-          requestOptions: options,
-          type: DioExceptionType.unknown,
-          message: 'Device integrity violation: ${integrityInfo.reason}',
-        );
-        handler.reject(error);
-        return;
-      }
-
-      // Add integrity header for server validation
-      options.headers['X-Device-Integrity'] = integrityInfo.status.name;
+    if (isWriteOperation && !integrityInfo.allowPosting) {
+      final error = DioException(
+        requestOptions: options,
+        type: DioExceptionType.unknown,
+        message: 'Device integrity violation: ${integrityInfo.reason}',
+      );
+      handler.reject(error);
+      return;
     }
 
     handler.next(options);

@@ -12,7 +12,9 @@ import { z } from 'zod';
 import { CosmosClient } from '@azure/cosmos';
 import { createHiveClient, HiveAIClient } from '../shared/hive-client';
 import { verifyJWT, extractUserIdFromJWT } from '../shared/auth-utils';
-import { createRateLimiter } from '../shared/rate-limiter';
+import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
+import { TIER_LIMITS, DEFAULT_TIER } from '../shared/tier-config';
+import { adjustReputation } from '../shared/reputation';
 
 // Request validation schema
 const CreatePostSchema = z.object({
@@ -68,7 +70,7 @@ export async function createPost(
       };
     }
 
-    // 2. Rate limiting
+    // 2. Rate limiting (baseline)
     const rateLimitResult = await rateLimiter.checkRateLimit(request);
     if (rateLimitResult.blocked) {
       return {
@@ -102,6 +104,47 @@ export async function createPost(
     }
 
     const { content, title, contentType, mediaUrls, tags, visibility } = validationResult.data;
+
+    // 3b. Tier-based limits
+    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+    const database = cosmosClient.database('asora');
+    const usersContainer = database.container('users');
+    const { resource: user } = await usersContainer.item(userId, userId).read();
+    const userTier: keyof typeof TIER_LIMITS = (user?.tier || DEFAULT_TIER) as any;
+    const limits = TIER_LIMITS[userTier] || TIER_LIMITS[DEFAULT_TIER];
+
+    if (content.length > limits.maxChars) {
+      return {
+        status: 400,
+        jsonBody: { error: 'tier_limit_exceeded', field: 'content', max: limits.maxChars }
+      };
+    }
+    const mediaCount = (mediaUrls || []).length;
+    if (mediaCount > limits.maxMedia) {
+      return {
+        status: 400,
+        jsonBody: { error: 'tier_limit_exceeded', field: 'mediaUrls', max: limits.maxMedia }
+      };
+    }
+
+    // Additional per-tier rate limit
+    const tierLimiter = createRateLimiter({
+      windowMs: 60 * 60 * 1000,
+      maxRequests: limits.postsPerHour,
+      keyGenerator: endpointKeyGenerator('posts_per_hour')
+    });
+    const tierRL = await tierLimiter.checkRateLimit(request);
+    if (tierRL.blocked) {
+      return {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': tierRL.limit.toString(),
+          'X-RateLimit-Remaining': tierRL.remaining.toString(),
+          'X-RateLimit-Reset': new Date(tierRL.resetTime).toISOString()
+        },
+        jsonBody: { error: 'tier_rate_limited', limit: tierRL.limit, remaining: tierRL.remaining, resetTime: tierRL.resetTime }
+      };
+    }
 
     // 4. Content moderation with Hive AI
     const hiveClient = createHiveClient();
@@ -156,8 +199,6 @@ export async function createPost(
     }
 
     // 6. Save to Cosmos DB
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-    const database = cosmosClient.database('asora');
     const postsContainer = database.container('posts');
 
     const postId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -190,6 +231,11 @@ export async function createPost(
     };
 
     await postsContainer.items.create(postDocument);
+
+    // Reputation: add points on publish
+    if (postStatus === 'published' && limits.reputationOnPublish > 0) {
+      await adjustReputation(userId, limits.reputationOnPublish, 'post_published', postId);
+    }
 
     // 7. If content is rejected, create a flag record
     if (postStatus === 'rejected' || postStatus === 'under_review') {

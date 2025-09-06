@@ -1,63 +1,16 @@
-# Dependencies
-node_modules/
+# Minimal allowlist for Flex (OneDeploy): include only runtime assets
 
-# Source maps
-*.map
+# Ignore everything by default
+*
 
-# TypeScript sources (build produces dist/)
-src/
-**/*.ts
-tsconfig*.json
-
-# Tests
-src/__tests__/
-**/*.test.ts
-**/*.test.js
-**/*.spec.ts  
-**/*.spec.js
-coverage/
-
-# Keep compiled JavaScript from dist/
+# Allow required runtime files
+!host.json
+!package.json
 !dist/**
+!node_modules/**
+!index.js
 
-# Development files
-*.dev.*
-*.development.*
+# Always exclude local-only settings
 local.settings.json
 .env
 .env.*
-
-# Build artifacts
-.build/
-.temp/
-.tmp/
-*.tgz
-*.tar.gz
-
-# Logs
-*.log
-logs/
-
-# Cache
-.cache/
-.nyc_output/
-
-# Documentation
-*.md
-docs/
-
-# Git
-.git/
-.gitignore
-
-# Azure specific
-azure.yaml
-.azure/
-
-# IDE files
-.vscode/
-.idea/
-
-# OS generated files
-.DS_Store
-Thumbs.db

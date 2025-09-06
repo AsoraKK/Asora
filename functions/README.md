@@ -1,9 +1,9 @@
-# 🚀 Asora Backend Functions
+# Asora Backend Functions
 
 ## Overview
 Complete TypeScript-based Azure Functions backend for the Asora platform, featuring AI-powered content moderation, JWT authentication, and tier-based user management.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Asora Backend Functions
@@ -22,7 +22,7 @@ Asora Backend Functions
     └── flag.ts      # AI-assisted content reporting
 ```
 
-## 🔧 Quick Start
+## Quick Start
 
 > NOTE: Azure Functions Core Tools are not installed via local devDependencies to avoid CI failures (exit code 127). Install them globally if you need the `func` CLI locally:
 > ```bash
@@ -96,7 +96,7 @@ Open `/post/create.ts` and start typing after the docstring. Copilot will auto-g
 - Human moderator workflow
 - Appeal process support
 
-## 🎯 Tier-Based Features
+## Tier-Based Features
 
 | Feature | Free | Premium | Enterprise |
 |---------|------|---------|------------|
@@ -127,7 +127,7 @@ Open `/post/create.ts` and start typing after the docstring. Copilot will auto-g
 - `DELETE /post/delete` - Delete posts with authorization
 
 ### Content Discovery
-- `GET /feed/get` - Personalized content feeds
+- `GET /feed` - Personalized content feeds
 
 ### Community Safety
 - `POST /moderation/flag` - Report inappropriate content
@@ -174,6 +174,8 @@ final userInfo = await authService.getCurrentUser();
 - `jest` - Testing framework
 
 ## 🚀 Deployment
+
+**Prerequisites**: Ensure you're authenticated with Azure CLI (`az login`) or using GitHub Actions OIDC for automated deployments.
 
 ### Azure Functions Deployment
 ```bash

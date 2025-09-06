@@ -31,12 +31,16 @@ export async function getFeed(request: HttpRequest, context: InvocationContext):
             }
         };
 
+        // Cache behavior: unauthenticated requests cache for 60s at the edge,
+        // authenticated requests must not be cached.
+        const hasAuth = request.headers?.has('authorization') || false;
+        const cacheControl = hasAuth ? 'private, no-store' : 'public, max-age=60';
+
         return {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // Allow caching at the edge level
-                'Cache-Control': 'public, max-age=60',
+                'Cache-Control': cacheControl,
                 'Vary': 'Authorization'
             },
             jsonBody: feedResponse
