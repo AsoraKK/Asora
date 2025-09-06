@@ -175,6 +175,8 @@ final userInfo = await authService.getCurrentUser();
 
 ## 🚀 Deployment
 
+**Prerequisites**: Ensure you're authenticated with Azure CLI (`az login`) or using GitHub Actions OIDC for automated deployments.
+
 ### Azure Functions Deployment
 ```bash
 # Deploy to Azure

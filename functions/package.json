@@ -1,9 +1,8 @@
-{
+﻿{
   "name": "asora-backend-functions",
   "version": "1.0.0",
   "description": "Asora platform backend Azure Functions with AI-powered moderation",
-  "type": "commonjs",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "engines": {
     "node": "20.x"
   },
@@ -12,7 +11,7 @@
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
     "build": "npm run clean && npm run compile",
     "compile": "tsc",
-    "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"**/function.json\" dist/",
+    "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"package.json\" dist/",
     "build-v3": "npm run clean && npm run compile && npm run copy-functions",
     "watch": "echo 'No compilation needed for JavaScript functions'",
     "start": "func start --port 7072",
@@ -27,7 +26,7 @@
   },
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
-    "@azure/functions": "^4.0.0",
+    "@azure/functions": "^4.7.2",
     "applicationinsights": "^2.9.2",
     "axios": "^1.6.0",
     "ioredis": "^5.3.0",
@@ -68,3 +67,4 @@
   "author": "Asora Team",
   "license": "MIT"
 }
+

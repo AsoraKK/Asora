@@ -1,0 +1,227 @@
+openapi: 3.1.0
+info:
+  title: Asora API (P1)
+  version: 1.0.0
+  description: Minimal specification for P1 endpoints exposed by the Functions app.
+servers:
+  - url: https://asora-function-flex.azurewebsites.net
+    description: Flex Consumption (prod)
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Health:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+        timestamp: { type: string, format: date-time }
+        service: { type: string, example: asora-functions }
+    UserInfo:
+      type: object
+      properties:
+        sub: { type: string }
+        email: { type: string, format: email }
+        name: { type: string }
+        picture: { type: string }
+        profile: { type: string }
+        locale: { type: string }
+    FeedItem:
+      type: object
+      properties:
+        id: { type: string }
+        authorId: { type: string }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+    FeedResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items: { $ref: '#/components/schemas/FeedItem' }
+        totalCount: { type: integer }
+        hasMore: { type: boolean }
+        page: { type: integer }
+        pageSize: { type: integer }
+    PostCreateRequest:
+      type: object
+      required: [ text ]
+      properties:
+        text: { type: string, maxLength: 500 }
+        mediaUrls: { type: array, items: { type: string } }
+    PostResponse:
+      allOf:
+        - $ref: '#/components/schemas/FeedItem'
+    FlagRequest:
+      type: object
+      required: [ contentId, contentType, reason ]
+      properties:
+        contentId: { type: string }
+        contentType: { type: string, enum: [ post, comment, user, message ] }
+        reason: { type: string, enum: [ spam, harassment, hate_speech, violence, adult_content, misinformation, copyright, privacy, other ] }
+        additionalDetails: { type: string }
+    AppealRequest:
+      type: object
+      required: [ contentId, reason ]
+      properties:
+        contentId: { type: string }
+        reason: { type: string }
+        details: { type: string }
+    VoteRequest:
+      type: object
+      required: [ vote ]
+      properties:
+        vote: { type: string, enum: [ approve, reject ] }
+    ExportResponse:
+      type: object
+      properties:
+        metadata:
+          type: object
+          properties:
+            exportId: { type: string }
+            exportedAt: { type: string, format: date-time }
+        userProfile: { type: object }
+        content: { type: object }
+        interactions: { type: object }
+        moderation: { type: object }
+        privacy: { type: object }
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /api/auth/userinfo:
+    get:
+      operationId: getUserInfo
+      summary: OIDC user info
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserInfo' }
+        '401': { description: Unauthorized }
+  /api/feed:
+    get:
+      operationId: getFeed
+      summary: Get feed
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedResponse' }
+  /api/posts:
+    post:
+      operationId: createPost
+      summary: Create a post
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostCreateRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostResponse' }
+        '400': { description: Bad request }
+        '401': { description: Unauthorized }
+  /api/posts/{postId}:
+    delete:
+      operationId: deletePost
+      summary: Delete a post
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+        '404': { description: Not found }
+  /api/moderation/flag:
+    post:
+      operationId: flagContent
+      summary: Flag content for review
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FlagRequest' }
+      responses:
+        '200': { description: Accepted }
+        '409': { description: Already flagged }
+  /api/moderation/appeals:
+    post:
+      operationId: submitAppeal
+      summary: Submit an appeal
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppealRequest' }
+      responses:
+        '201': { description: Created }
+  /api/moderation/appeals/{appealId}/vote:
+    post:
+      operationId: voteOnAppeal
+      summary: Vote on an appeal
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: appealId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoteRequest' }
+      responses:
+        '200': { description: OK }
+  /api/user/export:
+    get:
+      operationId: exportUser
+      summary: Export user data
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: JSON export
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportResponse' }
+        '401': { description: Unauthorized }
+  /api/user/delete:
+    delete:
+      operationId: deleteUser
+      summary: Delete user account
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200': { description: Deleted }
+        '401': { description: Unauthorized }
+

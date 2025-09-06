@@ -8,6 +8,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from "@azure/cosmos";
 import { createSuccessResponse, createErrorResponse, handleCorsAndMethod } from "../shared/http-utils";
+import { encodeCt, decodeCt } from "../shared/paging";
 import { validatePagination } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
 
@@ -62,36 +63,26 @@ const httpTrigger = async function (
       timeWindow: params.timeWindow
     });
 
-    // Execute query with pagination
-    const querySpec = {
-      query,
-      parameters
-    };
+    const querySpec = { query, parameters };
+    const ctParam = req.query.get('ct') || undefined;
+    const state = ctParam ? (decodeCt(ctParam) as any) : undefined;
+    const prevToken: string | undefined = state?.c;
 
-    const { resources: posts, requestCharge, activityId } = await postsContainer
-      .items
-      .query(querySpec, {
-        maxItemCount: params.pageSize
-      })
-      .fetchAll();
+    const qStart = Date.now();
+    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
+    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const queryDurationMs = Date.now() - qStart;
 
     logger.info('Trending query completed', {
       requestId: context.invocationId,
       activityId,
       requestCharge,
       resultCount: posts.length,
+      queryDurationMs,
       timeWindow: params.timeWindow
     });
 
-    // Get total count for trending posts in the time window
-    const countQuery = buildTrendingCountQuery(params);
-    const { resources: countResult } = await postsContainer
-      .items
-      .query(countQuery)
-      .fetchAll();
-    
-    const totalCount = countResult[0]?.count || 0;
-    const hasMore = (params.page * params.pageSize) < totalCount;
+    const hasMore = !!continuationToken;
 
     // Transform posts for response
     const authHeader = req.headers.get('authorization');
@@ -103,12 +94,11 @@ const httpTrigger = async function (
     // Build response
     const response = {
       posts: transformedPosts,
-      totalCount,
       hasMore,
-      page: params.page,
       pageSize: params.pageSize,
       trendingWindow: params.timeWindow,
-      stats: trendingStats
+      stats: trendingStats,
+      nextCt: continuationToken ? encodeCt({ v: 1, q: 'trending', c: continuationToken }) : undefined
     };
 
     const duration = Date.now() - startTime;
@@ -118,16 +108,17 @@ const httpTrigger = async function (
       duration,
       postsReturned: transformedPosts.length,
       hasMore,
-      totalCount,
       timeWindow: params.timeWindow
     });
 
     return createSuccessResponse(response, {
-      'X-Total-Count': totalCount.toString(),
       'X-Page': params.page.toString(),
       'X-Page-Size': params.pageSize.toString(),
       'X-Has-More': hasMore.toString(),
       'X-Trending-Window': params.timeWindow || '24h',
+      'X-Cosmos-RU': requestCharge?.toString() || '0',
+      'X-Query-Duration-ms': queryDurationMs.toString(),
+      'X-Next-Page': (!!continuationToken).toString(),
       'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
     });
 

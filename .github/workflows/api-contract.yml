@@ -1,0 +1,40 @@
+name: API Contract
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  lint-and-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Spectral & Redocly
+        run: |
+          npm i -g @stoplight/spectral-cli @redocly/cli
+
+      - name: Lint OpenAPI (Spectral)
+        run: spectral lint docs/openapi.yaml
+
+      - name: Generate Redoc HTML
+        run: redocly build-docs docs/openapi.yaml -o docs/openapi.html
+
+      - name: Upload OpenAPI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-artifacts
+          path: |
+            docs/openapi.yaml
+            docs/openapi.html
+
+      - name: Contract tests (scaffold)
+        run: |
+          node scripts/contract-validate.js
+

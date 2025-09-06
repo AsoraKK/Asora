@@ -425,6 +425,26 @@ export async function exportUser(
       resetTime: rateLimitResult.resetTime
     });
 
+    try {
+      // Write to privacy audit container
+      const privacyAudit = database.container('privacy_audit');
+      await privacyAudit.items.create({
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        action: 'export',
+        result: 'success',
+        operator: 'self',
+        timestamp: new Date().toISOString()
+      });
+      // Append consent entry (policy version)
+      const policyVersion = process.env.GDPR_POLICY_VERSION || '1.0';
+      try {
+        await usersContainer.item(userId, userId).patch([
+          { op: 'add', path: '/consents/-', value: { policy: 'GDPR', version: policyVersion, timestamp: new Date().toISOString() } }
+        ]);
+      } catch {}
+    } catch {}
+
     return {
       status: 200,
       body: JSON.stringify(exportData),
@@ -447,10 +467,17 @@ export async function exportUser(
       message: (err as any)?.message,
       stack: (err as any)?.stack,
     });
-    return {
+    const failure = {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: (err as any)?.message, exportId }),
     };
+    try {
+      const user = requireUser(context, request);
+      const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+      const audit = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora').container('privacy_audit');
+      await audit.items.create({ id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, userId: user.sub, action: 'export', result: 'failure', operator: 'self', timestamp: new Date().toISOString() });
+    } catch {}
+    return failure;
   }
 }
