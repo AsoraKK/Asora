@@ -64,6 +64,11 @@ interface UserDocument {
   isActive: boolean;
 }
 
+class InviteRequiredError extends Error {
+  code = 'invite_required' as const;
+  constructor(message = 'Awaiting invite') { super(message); }
+}
+
 const httpTrigger = async function (
   req: HttpRequest,
   context: InvocationContext
@@ -118,7 +123,7 @@ const httpTrigger = async function (
 
     logger.info('Token exchange completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       grantType: body.grant_type,
       clientId: body.client_id
     });
@@ -132,12 +137,28 @@ const httpTrigger = async function (
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
+    if (error instanceof InviteRequiredError) {
+      // OAuth2-compliant error payload for token endpoint
+      return {
+        status: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify({
+          error: error.code,
+          error_description: error.message
+        })
+      };
+    }
+
     logger.error('Token exchange failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     logAuthAttempt(
@@ -166,7 +187,7 @@ async function handleAuthorizationCodeGrant(
   }
 
   logger.info('Processing authorization code grant', {
-    requestId: requestId,
+    requestId,
     clientId: body.client_id,
     redirectUri: body.redirect_uri
   });
@@ -230,6 +251,10 @@ async function handleAuthorizationCodeGrant(
   }
 
   const user: UserDocument = userDoc.resource;
+
+  if (!user.isActive) {
+    throw new InviteRequiredError('Awaiting invite');
+  }
 
   // Update last login time
   await usersContainer
@@ -297,7 +322,7 @@ async function handleRefreshTokenGrant(
   }
 
   logger.info('Processing refresh token grant', {
-    requestId: requestId,
+    requestId,
     clientId: body.client_id
   });
 

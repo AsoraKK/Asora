@@ -9,6 +9,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from "@azure/cosmos";
 import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
+import { encodeCt, decodeCt } from "../shared/paging";
 import { validatePagination, validateLocation } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
 
@@ -57,43 +58,35 @@ const httpTrigger = async function (
 
     // Build location-based query
     const { query, parameters } = buildLocalQuery(params);
-    
+
+    const ctParam = req.query.get('ct') || undefined;
+    const state = ctParam ? (decodeCt(ctParam) as any) : undefined;
+    const prevToken: string | undefined = state?.c;
+
     logger.info('Executing local feed query', {
       requestId: context.invocationId,
       location: params.location,
       radius: params.radius,
-      query: query
+      query
     });
 
-    // Execute query
-    const querySpec = {
-      query: query,
-      parameters: parameters
-    };
-
-    const { resources: posts, requestCharge, activityId } = await postsContainer
-      .items
-      .query(querySpec, {
-        maxItemCount: params.pageSize
-      })
-      .fetchAll();
+    // Execute with continuation tokens
+    const querySpec = { query, parameters };
+    const qStart = Date.now();
+    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
+    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const queryDurationMs = Date.now() - qStart;
 
     logger.info('Local feed query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
-      resultCount: posts.length
+      activityId,
+      requestCharge,
+      resultCount: posts.length,
+      queryDurationMs,
+      isCrossPartition: true
     });
 
-    // Get total count for pagination
-    const countQuery = buildLocalCountQuery(params);
-    const { resources: countResult } = await postsContainer
-      .items
-      .query(countQuery)
-      .fetchAll();
-    
-    const totalCount = countResult[0]?.count || 0;
-    const hasMore = (params.page * params.pageSize) < totalCount;
+    const hasMore = !!continuationToken;
 
     // Transform posts for response
     const authHeader = req.headers.get('authorization');
@@ -102,27 +95,28 @@ const httpTrigger = async function (
     // Build response with location metadata
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
-      page: params.page,
+      hasMore,
       pageSize: params.pageSize,
       location: params.location,
-      radius: params.radius
+      radius: params.radius,
+      nextCt: continuationToken ? encodeCt({ v: 1, q: 'local', c: continuationToken }) : undefined
     };
 
     const duration = Date.now() - startTime;
     
     logger.info('Local feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
       location: params.location
     });
 
     return createSuccessResponse(response, {
-      'X-Total-Count': totalCount.toString(),
       'X-Location': params.location,
-      'X-Radius': params.radius?.toString() || '0'
+      'X-Radius': params.radius?.toString() || '0',
+      'X-Cosmos-RU': requestCharge?.toString() || '0',
+      'X-Query-Duration-ms': queryDurationMs.toString(),
+      'X-Next-Page': (!!continuationToken).toString()
     });
 
   } catch (error) {
@@ -134,7 +128,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -201,7 +195,7 @@ function buildLocalCountQuery(params: LocalFeedParams): { query: string; paramet
   return { query, parameters };
 }
 
-function transformPostForResponse(post: any, authHeader?: string): any {
+function transformPostForResponse(post: any, _authHeader?: string): any {
   // Transform post similar to main feed, adding user interaction status
   return {
     id: post.id,

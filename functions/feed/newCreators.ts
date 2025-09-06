@@ -9,6 +9,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from "@azure/cosmos";
 import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
+import { encodeCt, decodeCt } from "../shared/paging";
 import { validatePagination } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
 
@@ -67,35 +68,25 @@ const httpTrigger = async function (
       timeWindow: params.timeWindow
     });
 
-    // Execute query
-    const querySpec = {
-      query: query,
-      parameters: parameters
-    };
+    const querySpec = { query, parameters };
+    const ctParam = req.query.get('ct') || undefined;
+    const state = ctParam ? (decodeCt(ctParam) as any) : undefined;
+    const prevToken: string | undefined = state?.c;
 
-    const { resources: posts, requestCharge, activityId } = await postsContainer
-      .items
-      .query(querySpec, {
-        maxItemCount: params.pageSize
-      })
-      .fetchAll();
+    const qStart = Date.now();
+    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
+    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const queryDurationMs = Date.now() - qStart;
 
     logger.info('New creators query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
-      resultCount: posts.length
+      activityId,
+      requestCharge,
+      resultCount: posts.length,
+      queryDurationMs
     });
 
-    // Get total count for pagination
-    const countQuery = buildNewCreatorsCountQuery(params);
-    const { resources: countResult } = await postsContainer
-      .items
-      .query(countQuery)
-      .fetchAll();
-    
-    const totalCount = countResult[0]?.count || 0;
-    const hasMore = (params.page * params.pageSize) < totalCount;
+    const hasMore = !!continuationToken;
 
     // Transform posts and add creator discovery metadata
     const authHeader = req.headers.get('authorization');
@@ -106,29 +97,30 @@ const httpTrigger = async function (
     // Build response with discovery metadata
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
-      page: params.page,
+      hasMore,
       pageSize: params.pageSize,
       discoverySettings: {
         maxFollowers: params.maxFollowers,
         minEngagement: params.minEngagement,
         timeWindow: params.timeWindow
-      }
+      },
+      nextCt: continuationToken ? encodeCt({ v: 1, q: 'newCreators', c: continuationToken }) : undefined
     };
 
     const duration = Date.now() - startTime;
     
     logger.info('New creators feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
       discoveryPosts: transformedPosts.filter(p => p.isNewCreator).length
     });
 
     return createSuccessResponse(response, {
-      'X-Total-Count': totalCount.toString(),
-      'X-New-Creators': transformedPosts.filter(p => p.isNewCreator).length.toString()
+      'X-New-Creators': transformedPosts.filter(p => p.isNewCreator).length.toString(),
+      'X-Cosmos-RU': requestCharge?.toString() || '0',
+      'X-Query-Duration-ms': queryDurationMs.toString(),
+      'X-Next-Page': (!!continuationToken).toString()
     });
 
   } catch (error) {
@@ -140,7 +132,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -206,7 +198,7 @@ function buildNewCreatorsCountQuery(params: NewCreatorsParams): { query: string;
   return { query, parameters };
 }
 
-async function transformPostWithCreatorInfo(post: any, authHeader?: string): Promise<any> {
+async function transformPostWithCreatorInfo(post: any, _authHeader?: string): Promise<any> {
   // In a production implementation, you would:
   // 1. Query user/creator metrics from users container
   // 2. Determine if creator meets "new creator" criteria
@@ -232,7 +224,7 @@ async function transformPostWithCreatorInfo(post: any, authHeader?: string): Pro
     metadata: post.metadata,
     userLiked: false, // TODO: Calculate from user interactions
     userDisliked: false, // TODO: Calculate from user interactions
-    isNewCreator: isNewCreator,
+    isNewCreator,
     creatorInfo: creatorMetrics ? {
       followerCount: creatorMetrics.followerCount,
       accountAge: creatorMetrics.accountAge,
@@ -264,10 +256,10 @@ async function getCreatorMetrics(authorId: string): Promise<CreatorMetrics | nul
     const accountAge = Math.floor((Date.now() - accountCreated.getTime()) / (1000 * 60 * 60 * 24));
 
     return {
-      authorId: authorId,
+      authorId,
       followerCount: user.followerCount || 0,
       totalPosts: user.totalPosts || 0,
-      accountAge: accountAge,
+      accountAge,
       avgEngagement: user.avgEngagement || 0
     };
   } catch (error) {

@@ -1,51 +1,22 @@
-/**
+﻿/**
  * ASORA USER ACCOUNT DELETION ENDPOINT
  * 
- * 🎯 Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
- * 🔐 Security: JWT auth + confirmation header + idempotent operations
- * ⚠️ Features: Complete data scrubbing, content anonymization, audit logging
- * 🗃️ Architecture: Multi-container cleanup with rollback safety
+ * ðŸŽ¯ Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
+ * ðŸ” Security: JWT auth + confirmation header + idempotent operations
+ * âš ï¸ Features: Complete data scrubbing, content anonymization, audit logging
+ * ðŸ—ƒï¸ Architecture: Multi-container cleanup with rollback safety
  */
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter } from '../shared/rate-limiter';
-
-interface DeletionResult {
-  userId: string;
-  deletionId: string;
-  deletedAt: string;
-  itemsProcessed: {
-    userProfile: boolean;
-    posts: number;
-    comments: number;
-    likes: number;
-    flags: number;
-    appeals: number;
-    votes: number;
-  };
-  contentMarking: {
-    postsAnonymized: number;
-    commentsAnonymized: number;
-  };
-  warnings: string[];
-}
+import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 1,
-  keyGenerator: (req: HttpRequest) => {
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      return `privacy_delete:${decoded.sub}`;
-    } catch {
-      return 'privacy_delete:unknown';
-    }
-  }
+  keyGenerator: endpointKeyGenerator('privacy_delete')
 });
 
 export async function deleteUser(
@@ -308,17 +279,7 @@ export async function deleteUser(
       }
     }
 
-    // 13. Prepare deletion result
-    const deletionResult: DeletionResult = {
-      userId,
-      deletionId,
-      deletedAt: new Date().toISOString(),
-      itemsProcessed,
-      contentMarking,
-      warnings
-    };
-
-    // 14. Log comprehensive deletion audit
+    // 13. Log comprehensive deletion audit
     context.log(`Account deletion completed successfully for user ${userId}:`, {
       deletionId,
       totalItemsDeleted: Object.values(itemsProcessed).reduce((sum: number, val) => {
@@ -333,12 +294,23 @@ export async function deleteUser(
       }
     });
 
+    try {
+      const privacyAudit = database.container('privacy_audit');
+      await privacyAudit.items.create({
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        action: 'delete',
+        result: 'success',
+        operator: 'self',
+        timestamp: new Date().toISOString()
+      });
+    } catch {}
     return json(200, {
       code: 'account_deleted',
       message: 'Account deletion completed successfully',
-      userId: userId,
+      userId,
       deletedAt: new Date().toISOString(),
-      deletionId: deletionId
+      deletionId
     });
 
   } catch (error) {
@@ -349,6 +321,19 @@ export async function deleteUser(
     
     // Handle unexpected errors
     context.error('Critical error during account deletion:', error);
+    try {
+      const user = requireUser(context, request);
+      const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+      const audit = cosmosClient.database('asora').container('privacy_audit');
+      await audit.items.create({
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: user.sub,
+        action: 'delete',
+        result: 'failure',
+        operator: 'self',
+        timestamp: new Date().toISOString()
+      });
+    } catch {}
     return json(500, { 
       code: 'server_error',
       message: 'Internal server error during deletion',
@@ -357,3 +342,5 @@ export async function deleteUser(
     });
   }
 }
+
+

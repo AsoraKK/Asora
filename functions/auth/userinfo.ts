@@ -193,7 +193,7 @@ const httpTrigger = async function (
 
     logger.info('UserInfo request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       userId: user.id,
       claimsReturned: Object.keys(userInfo).length
     });
@@ -221,7 +221,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(

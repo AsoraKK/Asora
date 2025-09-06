@@ -8,6 +8,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from "@azure/cosmos";
 import { createSuccessResponse, createErrorResponse, handleCorsAndMethod } from "../shared/http-utils";
+import { encodeCt, decodeCt } from "../shared/paging";
 import { validatePagination } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
 
@@ -57,41 +58,31 @@ const httpTrigger = async function (
     
     logger.info('Executing trending query', {
       requestId: context.invocationId,
-      query: query,
-      parameters: parameters,
+      query,
+      parameters,
       timeWindow: params.timeWindow
     });
 
-    // Execute query with pagination
-    const querySpec = {
-      query: query,
-      parameters: parameters
-    };
+    const querySpec = { query, parameters };
+    const ctParam = req.query.get('ct') || undefined;
+    const state = ctParam ? (decodeCt(ctParam) as any) : undefined;
+    const prevToken: string | undefined = state?.c;
 
-    const { resources: posts, requestCharge, activityId } = await postsContainer
-      .items
-      .query(querySpec, {
-        maxItemCount: params.pageSize
-      })
-      .fetchAll();
+    const qStart = Date.now();
+    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
+    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const queryDurationMs = Date.now() - qStart;
 
     logger.info('Trending query completed', {
       requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
+      activityId,
+      requestCharge,
       resultCount: posts.length,
+      queryDurationMs,
       timeWindow: params.timeWindow
     });
 
-    // Get total count for trending posts in the time window
-    const countQuery = buildTrendingCountQuery(params);
-    const { resources: countResult } = await postsContainer
-      .items
-      .query(countQuery)
-      .fetchAll();
-    
-    const totalCount = countResult[0]?.count || 0;
-    const hasMore = (params.page * params.pageSize) < totalCount;
+    const hasMore = !!continuationToken;
 
     // Transform posts for response
     const authHeader = req.headers.get('authorization');
@@ -103,31 +94,31 @@ const httpTrigger = async function (
     // Build response
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
-      page: params.page,
+      hasMore,
       pageSize: params.pageSize,
       trendingWindow: params.timeWindow,
-      stats: trendingStats
+      stats: trendingStats,
+      nextCt: continuationToken ? encodeCt({ v: 1, q: 'trending', c: continuationToken }) : undefined
     };
 
     const duration = Date.now() - startTime;
     
     logger.info('Trending feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
-      hasMore: hasMore,
-      totalCount: totalCount,
+      hasMore,
       timeWindow: params.timeWindow
     });
 
     return createSuccessResponse(response, {
-      'X-Total-Count': totalCount.toString(),
       'X-Page': params.page.toString(),
       'X-Page-Size': params.pageSize.toString(),
       'X-Has-More': hasMore.toString(),
       'X-Trending-Window': params.timeWindow || '24h',
+      'X-Cosmos-RU': requestCharge?.toString() || '0',
+      'X-Query-Duration-ms': queryDurationMs.toString(),
+      'X-Next-Page': (!!continuationToken).toString(),
       'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
     });
 
@@ -139,7 +130,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -222,7 +213,7 @@ function getTimeThreshold(timeWindow: string): string {
   return threshold.toISOString();
 }
 
-function transformPostForResponse(post: any, authHeader?: string): any {
+function transformPostForResponse(post: any, _authHeader?: string): any {
   // Calculate trending score for display
   const hoursAgo = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
   const engagementScore = post.likeCount - post.dislikeCount * 0.5 + post.commentCount * 2;
@@ -243,7 +234,7 @@ function transformPostForResponse(post: any, authHeader?: string): any {
     moderation: post.moderation,
     metadata: {
       ...post.metadata,
-      trendingScore: trendingScore,
+      trendingScore,
       hoursAgo: Math.round(hoursAgo * 10) / 10 // Round to 1 decimal
     },
     userLiked: false, // TODO: Calculate from user interactions

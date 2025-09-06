@@ -11,6 +11,7 @@ import { CosmosClient } from "@azure/cosmos";
 import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
 import { validatePagination } from "../shared/validation-utils";
 import { getAzureLogger } from "../shared/azure-logger";
+import { decodeCt, encodeCt, kWayMergeByCreatedAt } from "../shared/paging";
 
 const logger = getAzureLogger('feed/following');
 
@@ -72,7 +73,7 @@ const httpTrigger = async function (
       // User isn't following anyone - return empty feed or recommended content
       logger.info('User not following anyone', {
         requestId: context.invocationId,
-        userId: userId
+        userId
       });
 
       if (params.includeRecommended) {
@@ -89,70 +90,82 @@ const httpTrigger = async function (
       }
     }
 
-    // Build following feed query
-    const { query, parameters } = buildFollowingQuery(params, followingUsers);
-    
-    logger.info('Executing following feed query', {
-      requestId: context.invocationId,
-      userId: userId,
-      followingCount: followingUsers.length
-    });
+    // Fan-out & merge to avoid cross-partition scans
+    const MAX_PARTITIONS = 25;
+    const ctParam = req.query.get('ct') || undefined;
+    const state = ctParam ? (decodeCt(ctParam) as any) : undefined;
+    const authorOffset: number = state?.authorOffset ?? 0;
+    const authorsSlice = followingUsers.slice(authorOffset, authorOffset + MAX_PARTITIONS);
+    const perAuthorPage = Math.max(1, Math.ceil(params.pageSize / Math.max(1, authorsSlice.length)));
 
-    // Execute query
-    const querySpec = {
-      query: query,
-      parameters: parameters
-    };
+    let totalRU = 0;
+    const shards: Array<{ items: any[]; authorId: string; nextToken?: string }> = [];
+    const qStart = Date.now();
 
-    const { resources: posts, requestCharge, activityId } = await postsContainer
-      .items
-      .query(querySpec, {
-        maxItemCount: params.pageSize
-      })
-      .fetchAll();
+    if (authorsSlice.length === 1) {
+      const aid = authorsSlice[0];
+      const prevToken: string | undefined = state?.cursors?.[aid]?.token;
+      const iterator = postsContainer.items.query({
+        query: `SELECT TOP ${perAuthorPage} * FROM c WHERE c.authorId = @aid ORDER BY c.createdAt DESC`,
+        parameters: [{ name: '@aid', value: aid }]
+      }, { partitionKey: aid as any, maxItemCount: perAuthorPage, continuationToken: prevToken });
+      const { resources, requestCharge, continuationToken } = await iterator.fetchNext();
+      totalRU += (requestCharge as number) || 0;
+      shards.push({ items: resources || [], authorId: aid, nextToken: continuationToken });
+    } else {
+      for (const aid of authorsSlice) {
+        const prevToken: string | undefined = state?.cursors?.[aid]?.token;
+        const iterator = postsContainer.items.query({
+          query: `SELECT TOP ${perAuthorPage} * FROM c WHERE c.authorId = @aid ORDER BY c.createdAt DESC`,
+          parameters: [{ name: '@aid', value: aid }]
+        }, { partitionKey: aid as any, maxItemCount: perAuthorPage, continuationToken: prevToken });
+        const { resources, requestCharge, continuationToken } = await iterator.fetchNext();
+        totalRU += (requestCharge as number) || 0;
+        shards.push({ items: resources || [], authorId: aid, nextToken: continuationToken });
+      }
+    }
 
-    logger.info('Following feed query completed', {
-      requestId: context.invocationId,
-      activityId: activityId,
-      requestCharge: requestCharge,
-      resultCount: posts.length
-    });
+    const merged = kWayMergeByCreatedAt(shards.map(s => s.items), params.pageSize);
+    const transformedPosts = merged.map(post => transformPostForResponse(post, userId));
 
-    // Get total count for pagination
-    const countQuery = buildFollowingCountQuery(followingUsers);
-    const { resources: countResult } = await postsContainer
-      .items
-      .query(countQuery)
-      .fetchAll();
-    
-    const totalCount = countResult[0]?.count || 0;
-    const hasMore = (params.page * params.pageSize) < totalCount;
+    // Build next continuation token
+    const cursors: Record<string, { token: string }> = {};
+    let anyShardHasMore = false;
+    for (const s of shards) {
+      if (s.nextToken) {
+        cursors[s.authorId] = { token: s.nextToken };
+        anyShardHasMore = true;
+      }
+    }
+    const moreAuthorsRemain = (authorOffset + MAX_PARTITIONS) < followingUsers.length;
+    const nextState = (anyShardHasMore || moreAuthorsRemain)
+      ? { authorOffset: anyShardHasMore ? authorOffset : authorOffset + MAX_PARTITIONS, cursors }
+      : undefined;
+    const nextCt = nextState ? encodeCt(nextState) : undefined;
 
-    // Transform posts for response with user interaction data
-    const transformedPosts = posts.map(post => transformPostForResponse(post, userId));
-
-    // Build response
     const response = {
       posts: transformedPosts,
-      totalCount: totalCount,
-      hasMore: hasMore,
-      page: params.page,
+      nextCt,
       pageSize: params.pageSize,
       followingCount: followingUsers.length
     };
 
     const duration = Date.now() - startTime;
-    
+
+    const queryDurationMs = Date.now() - qStart;
     logger.info('Following feed request completed successfully', {
       requestId: context.invocationId,
-      duration: duration,
+      duration,
       postsReturned: transformedPosts.length,
-      followingCount: followingUsers.length
+      followingCount: followingUsers.length,
+      ru: totalRU,
+      queryDurationMs,
+      next: !!nextCt
     });
 
     return createSuccessResponse(response, {
-      'X-Total-Count': totalCount.toString(),
-      'X-Following-Count': followingUsers.length.toString()
+      'X-Following-Count': followingUsers.length.toString(),
+      'X-Cosmos-RU': totalRU.toFixed(2)
     });
 
   } catch (error) {
@@ -164,7 +177,7 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration: duration
+      duration
     });
 
     return createErrorResponse(
@@ -179,7 +192,7 @@ function parseFollowingFeedParams(query: any, userId: string): FollowingFeedPara
   return {
     page: parseInt(query.page || '1', 10),
     pageSize: Math.min(parseInt(query.pageSize || '20', 10), 50),
-    userId: userId,
+    userId,
     includeRecommended: query.includeRecommended === 'true'
   };
 }
@@ -255,7 +268,7 @@ async function getRecommendedFeed(params: FollowingFeedParams, context: Invocati
 
   const { resources: posts } = await postsContainer
     .items
-    .query({ query: query, parameters: [] })
+    .query({ query, parameters: [] })
     .fetchAll();
 
   const transformedPosts = posts.map(post => ({
@@ -300,7 +313,7 @@ function extractUserIdFromToken(authHeader: string): string | null {
   }
 }
 
-function transformPostForResponse(post: any, userId: string): any {
+function transformPostForResponse(post: any, _userId: string): any {
   // TODO: Query user's interaction history for this post
   // For now, return default values
   return {
