@@ -1,4 +1,4 @@
-﻿Canary Rollout Plan (Front Door, Flex Consumption)
+Canary Rollout Plan (Front Door, Flex Consumption)
 
 Scope
 - Apps: asora-function-flex (prod), asora-function-flex-canary (canary)

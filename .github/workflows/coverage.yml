@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Guard against UTF-8 BOMs
+        run: bash ../scripts/check-bom.sh
       - name: Install deps
         run: npm ci
       - name: Run tests with coverage (Functions)
@@ -29,6 +31,8 @@ jobs:
 
   test-flutter:
     runs-on: ubuntu-latest
+    env:
+      ASORA_REQUIRE_REAL_PINS: "false"  # TODO: flip to "true" once real pins land
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -79,4 +83,3 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body
             });
-

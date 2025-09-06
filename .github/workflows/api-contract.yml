@@ -18,10 +18,10 @@ jobs:
 
       - name: Install Spectral & Redocly
         run: |
-          npm i -g @stoplight/spectral-cli @redocly/cli
+          npm i -g @redocly/cli
 
       - name: Lint OpenAPI (Spectral)
-        run: spectral lint docs/openapi.yaml
+        run: npx @stoplight/spectral-cli lint docs/openapi.yaml -r .spectral.yaml
 
       - name: Generate Redoc HTML
         run: redocly build-docs docs/openapi.yaml -o docs/openapi.html
@@ -37,4 +37,3 @@ jobs:
       - name: Contract tests (scaffold)
         run: |
           node scripts/contract-validate.js
-
