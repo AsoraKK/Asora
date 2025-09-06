@@ -1,4 +1,4 @@
-﻿import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError } from '../shared/auth-utils';
 import { withAccessGuard } from '../shared/access-guard';

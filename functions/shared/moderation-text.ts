@@ -1,4 +1,4 @@
-﻿import { getModerationConfig } from './moderationConfig';
+import { getModerationConfig } from './moderationConfig';
 import { createHiveClient } from './hive-client';
 import { moderateTextWithACS } from './acs-client';
 import { getAzureLogger, logPerformanceMetric } from './azure-logger';

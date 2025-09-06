@@ -93,7 +93,7 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
       return const Scaffold(body: Center(child: Text('Insufficient permissions.')));
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Queue'), actions: [
+      appBar: AppBar(title: const Text('Moderation Queue', key: Key('moderation-title')), actions: [
         DropdownButton<String>(
           value: _status,
           underline: const SizedBox.shrink(),
@@ -159,4 +159,3 @@ class _DetailDialog extends StatelessWidget {
     );
   }
 }
-

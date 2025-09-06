@@ -10,7 +10,6 @@ void main() {
 
   testWidgets('renders title', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: ReviewQueueScreen(baseUrl: 'https://example.com', accessToken: 't', userClaims: {'role': 'moderator'})));
-    expect(find.text('Review Queue'), findsOneWidget);
+    expect(find.byKey(const Key('moderation-title')), findsOneWidget);
   });
 }
-
