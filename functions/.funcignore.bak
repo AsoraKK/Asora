@@ -1,4 +1,4 @@
-﻿# Publish settings for Flex (OneDeploy) â€” include node_modules and dist
+# Publish settings for Flex (OneDeploy) â€” include node_modules and dist
 
 # Do NOT ignore node_modules; it must be deployed for runtime deps
 # node_modules/
