@@ -40,14 +40,9 @@ interface PostCreationResult {
 const rateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 10,
-  keyGenerator: (() => {
-    // Safe fallback for test compatibility
-    try {
-      return endpointKeyGenerator('post-create');
-    } catch {
-      return (req: HttpRequest) => extractUserIdFromJWT(req.headers.get('authorization') || '');
-    }
-  })()
+  keyGenerator: typeof endpointKeyGenerator === 'function'
+    ? endpointKeyGenerator('post-create')
+    : (req: HttpRequest) => extractUserIdFromJWT(req.headers.get('authorization') || '')
 });
 
 export async function createPost(
