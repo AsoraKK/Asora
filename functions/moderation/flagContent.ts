@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { CosmosClient } from '@azure/cosmos';
 import { createHiveClient, HiveAIClient } from '../shared/hive-client';
 import { verifyJWT, extractUserIdFromJWT } from '../shared/auth-utils';
-import { createRateLimiter } from '../shared/rate-limiter';
+import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
 
 // Request validation schema
 const FlagContentSchema = z.object({
@@ -37,7 +37,14 @@ const FlagContentSchema = z.object({
 const flagRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 5,
-  keyGenerator: (req: HttpRequest) => `flag:${extractUserIdFromJWT(req.headers.get('authorization') || '')}`
+  keyGenerator: (() => {
+    // Safe fallback for test compatibility
+    try {
+      return endpointKeyGenerator('flag-content');
+    } catch {
+      return (req: HttpRequest) => `flag:${extractUserIdFromJWT(req.headers.get('authorization') || '')}`;
+    }
+  })()
 });
 
 export async function flagContent(

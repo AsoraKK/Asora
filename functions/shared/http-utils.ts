@@ -192,4 +192,4 @@ export function cleanupRateLimitStore() {
 }
 
 // Clean up rate limit store every 5 minutes
-setInterval(cleanupRateLimitStore, 5 * 60 * 1000);
+setInterval(cleanupRateLimitStore, 5 * 60 * 1000).unref();

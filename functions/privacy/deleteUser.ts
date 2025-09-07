@@ -10,13 +10,22 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
+import { createRateLimiter, endpointKeyGenerator, userKeyGenerator, defaultKeyGenerator } from '../shared/rate-limiter';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 1,
-  keyGenerator: endpointKeyGenerator('privacy_delete')
+  // Be resilient to test mocks that don't export endpointKeyGenerator
+  keyGenerator: ((): ((req: HttpRequest) => string) => {
+    if (typeof endpointKeyGenerator === 'function') {
+      return endpointKeyGenerator('privacy_delete');
+    }
+    return (req: HttpRequest) => {
+      const userKey = typeof userKeyGenerator === 'function' ? userKeyGenerator(req) : defaultKeyGenerator(req);
+      return `privacy_delete:${userKey}`;
+    };
+  })()
 });
 
 export async function deleteUser(

@@ -9,7 +9,14 @@ void main() {
   });
 
   testWidgets('renders title', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ReviewQueueScreen(baseUrl: 'https://example.com', accessToken: 't', userClaims: {'role': 'moderator'})));
+    await tester.pumpWidget(const MaterialApp(
+      home: ReviewQueueScreen(
+        baseUrl: 'https://example.com',
+        accessToken: 't',
+        userClaims: {'role': 'moderator'},
+        autoLoad: false, // avoid network in widget test
+      ),
+    ));
     expect(find.byKey(const Key('moderation-title')), findsOneWidget);
   });
 }
