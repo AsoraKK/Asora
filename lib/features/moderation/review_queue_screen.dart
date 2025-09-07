@@ -7,8 +7,17 @@ class ReviewQueueScreen extends StatefulWidget {
   final String baseUrl;
   final String accessToken;
   final Map<String, dynamic> userClaims; // should include 'role'
+  final bool autoLoad; // allow tests to disable initial network fetch
+  final ModerationService? service; // injectable for tests
 
-  const ReviewQueueScreen({super.key, required this.baseUrl, required this.accessToken, required this.userClaims});
+  const ReviewQueueScreen({
+    super.key,
+    required this.baseUrl,
+    required this.accessToken,
+    required this.userClaims,
+    this.autoLoad = true,
+    this.service,
+  });
 
   @override
   State<ReviewQueueScreen> createState() => _ReviewQueueScreenState();
@@ -31,13 +40,15 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
   @override
   void initState() {
     super.initState();
-    _svc = ModerationService(widget.baseUrl, httpClient: http.Client());
+    _svc = widget.service ?? ModerationService(widget.baseUrl, httpClient: http.Client());
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 200 && !_loading && _hasMore) {
         _loadMore();
       }
     });
-    _refresh();
+    if (widget.autoLoad) {
+      _refresh();
+    }
   }
 
   Future<void> _refresh() async {

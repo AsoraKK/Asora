@@ -88,13 +88,14 @@ export async function upsertProfile(req: HttpRequest, context: InvocationContext
   }
 }
 
-app.http('users-profile-upsert', {
-  methods: ['POST', 'PUT', 'OPTIONS'],
-  authLevel: 'anonymous',
-  route: 'users/profile',
-  handler: withAccessGuard(upsertProfile, { role: undefined })
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.http('users-profile-upsert', {
+    methods: ['POST', 'PUT', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'users/profile',
+    handler: withAccessGuard(upsertProfile, { role: undefined })
+  });
+}
 
 export default upsertProfile;
-
 

@@ -19,7 +19,7 @@ jest.mock('@azure/cosmos', () => ({
                       clientId: 'asora-mobile-app',
                       userId: 'user-1',
                       expiresAt: new Date(Date.now() + 10 * 60000).toISOString(),
-                      codeChallenge: '4X6T1gZC8P5f1QmHif4Tq3G3Q0vS5yJ8tQ0b3u1z9iA',
+                      codeChallenge: 'iMnq5o6zALKXGivsnlom_0F5_WYda32GHkxlV7mq7hQ',
                       codeChallengeMethod: 'S256',
                       nonce: 'nonce'
                     }
