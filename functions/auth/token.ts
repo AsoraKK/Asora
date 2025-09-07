@@ -222,13 +222,14 @@ async function handleAuthorizationCodeGrant(
     throw new Error('Redirect URI mismatch');
   }
 
-  // Validate PKCE code verifier
-  const computedChallenge = crypto
-    .createHash('sha256')
-    .update(body.code_verifier!)
-    .digest('base64url');
-
-  if (computedChallenge !== session.codeChallenge) {
+  // Validate PKCE code verifier (accept base64 or base64url, ignore padding)
+  const sha = crypto.createHash('sha256').update(body.code_verifier!).digest();
+  const b64url = sha.toString('base64url');
+  const b64 = sha.toString('base64');
+  const normalize = (s: string) => s.replace(/=+$/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  const challengeNorm = normalize(session.codeChallenge || '');
+  const match = normalize(b64url) === challengeNorm || normalize(b64) === challengeNorm;
+  if (!match) {
     throw new Error('Invalid PKCE code verifier');
   }
 
@@ -383,11 +384,13 @@ async function handleRefreshTokenGrant(
 }
 
 // Register the function with Azure Functions runtime
-app.http('auth-token', {
-  methods: ['POST', 'OPTIONS'],
-  authLevel: 'anonymous',
-  route: 'auth/token',
-  handler: httpTrigger
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.http('auth-token', {
+    methods: ['POST', 'OPTIONS'],
+    authLevel: 'anonymous',
+    route: 'auth/token',
+    handler: httpTrigger
+  });
+}
 
 export default httpTrigger;
