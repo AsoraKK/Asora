@@ -28,7 +28,7 @@ jobs:
       - name: Verify Azure login
         run: |
           az account show
-          az group show -n ${{ secrets.AZURE_RESOURCE_GROUP }} --query name -o tsv
+          az group show -n asora-psql-flex --query name -o tsv
       - name: Get Function key
         id: funcKey
         run: |
