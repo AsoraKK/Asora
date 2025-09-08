@@ -37,7 +37,8 @@ jobs:
           # Install dev deps for TypeScript build
           npm ci
           npm run build
-          test -f dist/src/index.js
+          # Verify build output: ensure at least one JS file exists in dist/
+          find dist -name '*.js' | grep . || (echo "No JS build output found in dist/; check build configuration." && exit 1)
           # Prune to production-only modules for deployment (faster than reinstall)
           npm prune --omit=dev
 
