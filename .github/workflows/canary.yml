@@ -44,17 +44,25 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
 
-      - name: Comment on PRs (if any)
-        if: github.event_name == 'push' && github.event.head_commit
+      - name: Comment on commit (canary build)
+        if: github.event_name == 'push'
         uses: actions/github-script@v7
         with:
           script: |
-            const tag = process.env.TAG || '${{ steps.tag.outputs.tag }}'
-            github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: `Canary build created: ${tag}`
-            });
+            const tag = process.env.TAG || '${{ steps.tag.outputs.tag }}';
+            try {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: `Canary build created: ${tag}`
+              });
+            } catch (error) {
+              if (error.status === 403) {
+                console.log("skipped due to permissions");
+              } else {
+                throw error;
+              }
+            }
         env:
           TAG: ${{ steps.tag.outputs.tag }}
