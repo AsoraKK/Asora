@@ -45,7 +45,7 @@ jobs:
           COSMOS_DATABASE_NAME: asora
           FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
         run: |
-          node scripts/e2e-itest.js
+          node ../scripts/e2e-itest.js
       - name: Upload E2E report
         uses: actions/upload-artifact@v4
         with:
