@@ -6,7 +6,8 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  pull-requests: write
 
 env:
   AZURE_FUNCTIONAPP_NAME: asora-function-flex
@@ -76,6 +77,42 @@ jobs:
               -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_CANARY_NAME \
               --settings APPLICATIONINSIGHTS_ROLE_NAME=$AZURE_FUNCTIONAPP_CANARY_NAME -o none
 
+      - name: Check CANARY app exists
+        id: check_canary
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            set -e
+            echo "Checking if CANARY app exists: ${AZURE_FUNCTIONAPP_CANARY_NAME} in ${AZURE_RESOURCE_GROUP}"
+            NAME=$(az functionapp show -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_CANARY_NAME" --query name -o tsv 2>/dev/null || echo "")
+            if [ -n "$NAME" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "CANARY app found: $NAME"
+            else
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "CANARY app NOT found; downstream CANARY steps will be skipped."
+            fi
+
+      - name: Prepare V4 runtime entry point
+        working-directory: functions
+        run: |
+          # Create thin entry point that works with either layout
+          cat > index.js <<'EOF'
+          // Azure Functions Node v4 isolated entrypoint
+          // Prefer ./src when the package is flattened, otherwise use ./dist/src
+          try {
+            module.exports = require('./src/index.js');
+          } catch (e) {
+            try {
+              module.exports = require('./dist/src/index.js');
+            } catch (e2) {
+              console.error('Azure Functions entrypoint not found. Tried ./src/index.js and ./dist/src/index.js');
+              throw e2;
+            }
+          }
+          EOF
+          echo "Prepared functions/index.js"
+
       - name: Publish to Azure Functions (OneDeploy on Flex)
         uses: Azure/functions-action@v1
         with:
@@ -108,13 +145,19 @@ jobs:
           path: smoke/
 
       - name: Publish CANARY to Azure Functions
+        if: steps.check_canary.outputs.exists == 'true'
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_CANARY_NAME }}
           package: functions
           respect-funcignore: true
 
+      - name: Skip CANARY publish (app not found)
+        if: steps.check_canary.outputs.exists != 'true'
+        run: echo "Skipping CANARY publish because app '${{ env.AZURE_FUNCTIONAPP_CANARY_NAME }}' does not exist in '${{ env.AZURE_RESOURCE_GROUP }}'"
+
       - name: Shift 10% traffic to CANARY (Front Door weights)
+        if: steps.check_canary.outputs.exists == 'true'
         uses: azure/CLI@v2
         with:
           inlineScript: |
@@ -136,6 +179,7 @@ jobs:
               --weight 10
 
       - name: Monitor App Insights failure rate for CANARY (10 min)
+        if: steps.check_canary.outputs.exists == 'true'
         id: monitor
         uses: azure/CLI@v2
         with:
@@ -167,12 +211,13 @@ jobs:
             fi
 
       - name: Upload canary report
+        if: steps.check_canary.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: canary-report
           path: canary_report.txt
 
-      - name: Comment result on commit
+      - name: Comment result on commit/PR
         if: always()
         uses: actions/github-script@v7
         with:
@@ -181,22 +226,43 @@ jobs:
             const sha = context.sha;
             const outcome = core.getInput('job-status') || '${{ job.status }}';
             const body = `Canary deploy check: ${outcome}. Failure rate (last sample): ${rate}%`;
-            try {
-              await github.rest.repos.createCommitComment({
+            
+            async function commentOnCommit() {
+              return github.rest.repos.createCommitComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 commit_sha: sha,
                 body
               });
-            } catch (e) {
-              if (context.payload.pull_request) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.payload.pull_request.number,
-                  body
-                });
+            }
+            
+            async function commentOnPR(prNumber) {
+              return github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body
+              });
+            }
+            
+            try {
+              if (context.eventName === 'pull_request' && context.payload.pull_request) {
+                await commentOnPR(context.payload.pull_request.number);
+                core.info(`Commented on PR #${context.payload.pull_request.number}`);
               } else {
-                throw e;
+                await commentOnCommit();
+                core.info(`Commented on commit ${sha}`);
+              }
+            } catch (e) {
+              const status = e?.status || e?.response?.status;
+              core.warning(`Failed to post GitHub comment (status: ${status}). Proceeding without failing the job.`);
+              try {
+                if (context.payload.pull_request) {
+                  await commentOnPR(context.payload.pull_request.number);
+                  core.info(`Fallback: commented on PR #${context.payload.pull_request.number}`);
+                }
+              } catch (e2) {
+                const status2 = e2?.status || e2?.response?.status;
+                core.warning(`Fallback comment also failed (status: ${status2}).`);
               }
             }

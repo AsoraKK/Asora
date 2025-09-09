@@ -1,5 +1,9 @@
 name: Coverage Gate
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   pull_request:
   push:
@@ -77,9 +81,17 @@ jobs:
             const path = require('path');
             const summaryPath = path.join(process.env.GITHUB_WORKSPACE, 'code-coverage-results.md');
             const body = fs.existsSync(summaryPath) ? fs.readFileSync(summaryPath, 'utf8') : 'Coverage summary unavailable';
-            await github.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body
-            });
+            try {
+              await github.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body
+              });
+            } catch (error) {
+              if (error.status === 403) {
+                console.log("skipped due to permissions");
+              } else {
+                throw error;
+              }
+            }
