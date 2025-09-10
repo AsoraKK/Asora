@@ -59,23 +59,92 @@ jobs:
       - name: Set Flex app settings
         uses: azure/CLI@v2
         with:
+          azcliversion: 2.61.0
           inlineScript: |
-            az functionapp config appsettings delete \
-              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
+            set -Eeuo pipefail
+
+            RG="${AZURE_RESOURCE_GROUP}"
+            APP="${AZURE_FUNCTIONAPP_NAME}"
+            CANARY_APP="${AZURE_FUNCTIONAPP_CANARY_NAME:-}"
+
+            # ---- helpers ----
+            retry() {
+              local n=0; local max=5; local delay=2
+              until "$@"; do
+                code=$?
+                if [[ $code -eq 429 || $code -ge 500 ]]; then
+                  ((n++)); [[ $n -ge $max ]] && return $code
+                  sleep $((delay**n))
+                else
+                  return $code
+                fi
+              done
+            }
+            exists_app() { az functionapp show -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
+            has_canary_slot() { az webapp deployment slot list -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
+            plan_kind() { az functionapp show -g "$1" -n "$2" --query "kind" -o tsv; }
+            set_node20() {
+              local rg="$1" app="$2" slot_opt="${3:-}"
+              if [[ "$(plan_kind "$rg" "$app")" == *linux* ]]; then
+                retry az functionapp config set -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none
+              else
+                retry az functionapp config appsettings set -g "$rg" -n "$app" $slot_opt --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+              fi
+            }
+
+            # ---- preflight: main app must exist ----
+            if ! exists_app "$RG" "$APP"; then
+              echo "::error::Function App '$APP' not found in RG '$RG'."; exit 2
+            fi
+
+            # ---- main app settings ----
+            retry az functionapp config appsettings delete -g "$RG" -n "$APP" \
               --setting-names FUNCTIONS_WORKER_RUNTIME || true
 
-            az functionapp config appsettings set \
-              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
-              --settings FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true
+            retry az functionapp config appsettings set -g "$RG" -n "$APP" \
+              --settings FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true -o none
 
-            # Ensure cloud_RoleName is explicit in AI
-            az functionapp config appsettings set \
-              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_NAME \
-              --settings APPLICATIONINSIGHTS_ROLE_NAME=$AZURE_FUNCTIONAPP_NAME -o none
+            retry az functionapp config appsettings set -g "$RG" -n "$APP" \
+              --settings APPLICATIONINSIGHTS_ROLE_NAME="$APP" -o none
 
-            az functionapp config appsettings set \
-              -g $AZURE_RESOURCE_GROUP -n $AZURE_FUNCTIONAPP_CANARY_NAME \
-              --settings APPLICATIONINSIGHTS_ROLE_NAME=$AZURE_FUNCTIONAPP_CANARY_NAME -o none
+            set_node20 "$RG" "$APP"
+
+            # ---- canary target (slot preferred, else separate app, else skip) ----
+            CANARY_MODE="none"
+            if has_canary_slot "$RG" "$APP"; then
+              set_node20 "$RG" "$APP" "--slot canary"
+              retry az functionapp config appsettings set -g "$RG" -n "$APP" --slot canary \
+                --settings APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary" -o none
+              CANARY_MODE="slot"
+            elif [[ -n "$CANARY_APP" ]] && exists_app "$RG" "$CANARY_APP"; then
+              set_node20 "$RG" "$CANARY_APP"
+              retry az functionapp config appsettings set -g "$RG" -n "$CANARY_APP" \
+                --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
+              CANARY_MODE="separate-app"
+            else
+              CANARY_MODE="absent"
+            fi
+
+            # ---- post-checks (main app) ----
+            ROLE_VAL=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv)
+            if [[ "$ROLE_VAL" != "$APP" ]]; then
+              echo "::error::AI role not set on $APP"; exit 3
+            fi
+
+            KIND=$(az functionapp show -g "$RG" -n "$APP" --query kind -o tsv)
+            if [[ "$KIND" == *linux* ]]; then
+              FX=$(az functionapp config show -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)
+              if [[ "$FX" != "node|20" ]]; then
+                echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4
+              fi
+            else
+              DEF_VER=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)
+              if [[ "$DEF_VER" != "~20" ]]; then
+                echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5
+              fi
+            fi
+
+            echo "::notice::Configured '$APP' (Node 20). Canary mode: ${CANARY_MODE}."
 
       - name: Check CANARY app exists
         id: check_canary
