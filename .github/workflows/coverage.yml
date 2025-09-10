@@ -63,12 +63,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: coverage-artifacts
+      - name: Setup .NET 8 for ReportGenerator
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install ReportGenerator tool
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+      - name: Convert LCOV to Cobertura
+        run: |
+          ~/.dotnet/tools/reportgenerator \
+            -reports:coverage-artifacts/coverage-functions/lcov.info \
+            -targetdir:coverage-artifacts/coverage-functions \
+            -reporttypes:Cobertura
+          ~/.dotnet/tools/reportgenerator \
+            -reports:coverage-artifacts/coverage-flutter/lcov.info \
+            -targetdir:coverage-artifacts/coverage-flutter \
+            -reporttypes:Cobertura
       - name: Coverage Summary (min 80%)
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          filename: |
-            coverage-artifacts/coverage-functions/lcov.info
-            coverage-artifacts/coverage-flutter/lcov.info
+          filename: "coverage-artifacts/**/Cobertura.xml"
           badge: true
           format: 'markdown'
           output: 'both'
