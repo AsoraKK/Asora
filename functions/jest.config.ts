@@ -8,6 +8,19 @@ const config: Config = {
     '**/__tests__/**/*.test.ts',
     '**/*.test.ts',
   ],
+  collectCoverageFrom: [
+    '<rootDir>/shared/validation-utils.ts',
+    '<rootDir>/shared/http-utils.ts',
+    '<rootDir>/shared/azure-logger.ts',
+    '<rootDir>/auth/token.ts',
+    '<rootDir>/users/**/*.ts',
+    '<rootDir>/health/**/*.ts',
+    '<rootDir>/src/feed/**/*.ts',
+    '!<rootDir>/**/__tests__/**',
+    '!<rootDir>/**/index.d.ts',
+    '!<rootDir>/src/**/index.ts',
+    '!<rootDir>/health/index.ts',
+  ],
   testPathIgnorePatterns: [
     // Ignore WIP/placeholder test files until implementation
     'voteOnAppeal.*\\.test\\.ts',
@@ -19,7 +32,16 @@ const config: Config = {
       tsconfig: '<rootDir>/tsconfig.tests.json'
     }],
   },
-  verbose: false
+  setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
+  verbose: false,
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 85,
+      lines: 90,
+      statements: 90
+    }
+  }
 };
 
 export default config;
