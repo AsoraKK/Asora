@@ -4,8 +4,9 @@
  * Global Jest configuration and type definitions
  */
 
-// Ensure Jest globals are available
-import '@types/jest';
-
 // Global test timeout
 jest.setTimeout(10000);
+
+// Stabilize logger/env behavior for tests
+process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'debug';
+process.env.AI_TELEMETRY = process.env.AI_TELEMETRY || 'off';
