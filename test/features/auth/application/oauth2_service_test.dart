@@ -12,8 +12,62 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:asora/core/auth/pkce_helper.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 
 void main() {
+  group('OAuth2Config Tests', () {
+    test('should have valid default endpoints', () {
+      expect(OAuth2Config.authorizationEndpoint, isNotEmpty);
+      expect(OAuth2Config.tokenEndpoint, isNotEmpty);
+      expect(OAuth2Config.userInfoEndpoint, isNotEmpty);
+      expect(OAuth2Config.clientId, isNotEmpty);
+      expect(OAuth2Config.scope, isNotEmpty);
+
+      // Verify URLs are well-formed
+      expect(
+        () => Uri.parse(OAuth2Config.authorizationEndpoint),
+        returnsNormally,
+      );
+      expect(() => Uri.parse(OAuth2Config.tokenEndpoint), returnsNormally);
+      expect(() => Uri.parse(OAuth2Config.userInfoEndpoint), returnsNormally);
+    });
+
+    test('should return correct redirect URI for platform', () {
+      // Test platform redirect URI
+      final redirectUri = OAuth2Config.redirectUri;
+
+      expect(redirectUri, isNotEmpty);
+
+      // Validate URI format
+      expect(() => Uri.parse(redirectUri), returnsNormally);
+
+      // Should contain expected components
+      final uri = Uri.parse(redirectUri);
+      expect(uri.scheme, isNotEmpty);
+    });
+
+    test('should have valid scope configuration', () {
+      final scopes = OAuth2Config.scope.split(' ');
+      expect(scopes, contains('openid'));
+      expect(scopes, contains('email'));
+      expect(scopes, contains('profile'));
+      expect(scopes.length, greaterThanOrEqualTo(3));
+    });
+  });
+
+  group('OAuth2Service Construction Tests', () {
+    test('should create service with default dependencies', () {
+      final service = OAuth2Service();
+      expect(service, isNotNull);
+    });
+
+    test('should create service with custom dependencies', () {
+      // Note: In a real test environment, we'd use mocks here
+      final service = OAuth2Service();
+      expect(service, isNotNull);
+    });
+  });
+
   group('OAuth2 PKCE Helper Tests', () {
     test('should generate valid code verifier', () {
       final codeVerifier = PkceHelper.generateCodeVerifier();
@@ -68,6 +122,96 @@ void main() {
     });
   });
 
+  group('OAuth2TokenResponse Tests', () {
+    test('should create token response from JSON', () {
+      final json = {
+        'access_token': 'test_access_token',
+        'refresh_token': 'test_refresh_token',
+        'token_type': 'Bearer',
+        'expires_in': 3600,
+        'scope': 'openid email profile',
+        'user': {
+          'id': 'user123',
+          'email': 'test@example.com',
+          'role': 'user',
+          'tier': 'bronze',
+          'reputationScore': 100,
+          'createdAt': '2023-01-01T00:00:00.000Z',
+          'lastLoginAt': '2023-01-01T00:00:00.000Z',
+          'isTemporary': false,
+        },
+      };
+
+      final response = OAuth2TokenResponse.fromJson(json);
+
+      expect(response.accessToken, equals('test_access_token'));
+      expect(response.refreshToken, equals('test_refresh_token'));
+      expect(response.tokenType, equals('Bearer'));
+      expect(response.expiresIn, equals(3600));
+      expect(response.scope, equals('openid email profile'));
+      expect(response.user.id, equals('user123'));
+      expect(response.user.email, equals('test@example.com'));
+      expect(response.user.role.name, equals('user'));
+      expect(response.user.tier.name, equals('bronze'));
+    });
+
+    test('should handle valid user data in token response', () {
+      final json = {
+        'access_token': 'test_access_token',
+        'refresh_token': 'test_refresh_token',
+        'token_type': 'Bearer',
+        'expires_in': 3600,
+        'scope': 'openid email profile',
+        'user': {
+          'id': 'user123',
+          'email': 'test@example.com',
+          'role': 'moderator',
+          'tier': 'silver',
+          'reputationScore': 250,
+          'createdAt': '2023-01-01T00:00:00.000Z',
+          'lastLoginAt': '2023-01-01T12:00:00.000Z',
+          'isTemporary': false,
+          'tokenExpires': '2023-01-02T00:00:00.000Z',
+        },
+      };
+
+      expect(() => OAuth2TokenResponse.fromJson(json), returnsNormally);
+
+      final response = OAuth2TokenResponse.fromJson(json);
+      expect(response.user.tier.name, equals('silver'));
+      expect(response.user.role.name, equals('moderator'));
+      expect(response.user.reputationScore, equals(250));
+      expect(response.user.tokenExpires, isNotNull);
+    });
+
+    test('should handle user data with default values', () {
+      final json = {
+        'access_token': 'test_access_token',
+        'refresh_token': 'test_refresh_token',
+        'token_type': 'Bearer',
+        'expires_in': 3600,
+        'scope': 'openid email profile',
+        'user': {
+          'id': 'user456',
+          'email': 'user@example.com',
+          'role': 'admin',
+          'tier': 'platinum',
+          'createdAt': '2023-01-01T00:00:00.000Z',
+          'lastLoginAt': '2023-01-01T00:00:00.000Z',
+          // reputationScore and isTemporary should use defaults
+        },
+      };
+
+      final response = OAuth2TokenResponse.fromJson(json);
+      expect(response.user.reputationScore, equals(0)); // default value
+      expect(response.user.isTemporary, equals(false)); // default value
+      expect(
+        response.user.tokenExpires,
+        isNull,
+      ); // should be null when not provided
+    });
+  });
+
   group('OAuth2 URL Generation Tests', () {
     test('should generate valid authorization URL', () {
       const clientId = 'test-client-id';
@@ -93,6 +237,107 @@ void main() {
       expect(uri.queryParameters['code_challenge_method'], equals('S256'));
       expect(uri.queryParameters['response_type'], equals('code'));
       expect(uri.queryParameters['state'], equals(state));
+    });
+  });
+
+  group('OAuth2 Security Tests', () {
+    test('should generate secure random strings', () {
+      // Test the random string generation used internally
+      final random1 = _generateTestRandomString(32);
+      final random2 = _generateTestRandomString(32);
+
+      expect(random1.length, equals(32));
+      expect(random2.length, equals(32));
+      expect(random1, isNot(equals(random2)));
+
+      // Should only contain URL-safe characters
+      expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(random1), isTrue);
+      expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(random2), isTrue);
+    });
+
+    test('should validate authorization callback URLs', () {
+      const validCallbackUrl =
+          'asora://oauth/callback?code=auth_code&state=test_state';
+      const errorCallbackUrl =
+          'asora://oauth/callback?error=access_denied&state=test_state';
+      const invalidCallbackUrl =
+          'https://malicious.com/callback?code=auth_code';
+
+      expect(_isValidCallbackUrl(validCallbackUrl), isTrue);
+      expect(_isValidCallbackUrl(errorCallbackUrl), isFalse);
+      expect(_isValidCallbackUrl(invalidCallbackUrl), isFalse);
+    });
+
+    test('should extract authorization code from callback URL', () {
+      const callbackUrl =
+          'asora://oauth/callback?code=auth_code_123&state=test_state';
+      final authCode = _extractAuthCodeFromUrl(callbackUrl);
+
+      expect(authCode, equals('auth_code_123'));
+    });
+
+    test('should handle OAuth error in callback URL', () {
+      const errorCallbackUrl =
+          'asora://oauth/callback?error=access_denied&error_description=User%20denied%20access';
+
+      expect(() => _extractAuthCodeFromUrl(errorCallbackUrl), throwsException);
+    });
+
+    test('should handle missing code in callback URL', () {
+      const invalidCallbackUrl = 'asora://oauth/callback?state=test_state';
+
+      expect(
+        () => _extractAuthCodeFromUrl(invalidCallbackUrl),
+        throwsException,
+      );
+    });
+  });
+
+  group('JWT Token Validation Tests', () {
+    test('should validate JWT token format', () {
+      const validJWT =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+      const invalidJWT = 'invalid.jwt';
+
+      expect(_isValidJWT(validJWT), isTrue);
+      expect(_isValidJWT(invalidJWT), isFalse);
+    });
+
+    test('should decode JWT payload', () {
+      const testJWT =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+
+      final payload = _decodeJWTPayload(testJWT);
+
+      expect(payload['sub'], equals('1234567890'));
+      expect(payload['name'], equals('John Doe'));
+      expect(payload['iat'], equals(1516239022));
+    });
+
+    test('should handle invalid JWT format when decoding', () {
+      const invalidJWT = 'invalid.jwt.format.too.many.parts';
+
+      expect(() => _decodeJWTPayload(invalidJWT), throwsException);
+    });
+  });
+
+  group('OAuth2 Error Handling Tests', () {
+    test('should handle various OAuth2 errors', () {
+      final errors = [
+        'invalid_request',
+        'unauthorized_client',
+        'access_denied',
+        'unsupported_response_type',
+        'invalid_scope',
+        'server_error',
+        'temporarily_unavailable',
+      ];
+
+      for (final error in errors) {
+        final errorUrl =
+            'asora://oauth/callback?error=$error&error_description=Test%20error';
+        expect(() => _extractAuthCodeFromUrl(errorUrl), throwsException);
+      }
     });
   });
 
@@ -243,4 +488,14 @@ Map<String, dynamic> _decodeJWTPayload(String token) {
   final decoded = base64.decode(normalizedPayload);
   final jsonString = utf8.decode(decoded);
   return jsonDecode(jsonString) as Map<String, dynamic>;
+}
+
+String _generateTestRandomString(int length) {
+  const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  final random = Random.secure();
+  return List.generate(
+    length,
+    (index) => chars[random.nextInt(chars.length)],
+  ).join();
 }

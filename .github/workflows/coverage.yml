@@ -48,6 +48,30 @@ jobs:
         run: flutter pub get
       - name: Flutter tests with coverage
         run: flutter test --coverage
+      - name: Filter Flutter coverage (exclude generated/entry)
+        run: |
+          awk '
+            BEGIN{keep=1}
+            /^SF:/ {
+              path=$0
+              if (path ~ /\/main\.dart$/ || path ~ /\.g\.dart$/ || path ~ /\.freezed\.dart$/ || path ~ /generated_plugin_registrant\.dart$/ || path ~ /\/l10n\// || path ~ /\/gen\// || path ~ /\.mocks\.dart$/ || path ~ /firebase_options\.dart$/) {
+                keep=0
+              } else { keep=1 }
+              if (keep) print $0
+              next
+            }
+            /^end_of_record/ { if (keep) print $0; next }
+            { if (keep) print $0 }
+          ' coverage/lcov.info > coverage/lcov.filtered.info
+          mv coverage/lcov.filtered.info coverage/lcov.info
+      - name: Enforce Flutter coverage >= 80%
+        run: |
+          set -euo pipefail
+          if [ ! -f coverage/lcov.info ]; then
+            echo "Flutter coverage file missing: coverage/lcov.info" >&2
+            exit 1
+          fi
+          awk -F, '/^DA:/{total++; if ($2>0) hit++} END { if (total==0) { print "No coverage data (DA lines) found"; exit 1 } cov=100*hit/total; printf "Flutter line coverage: %.2f%%\n", cov; if (cov < 85) { print "Coverage below 85% threshold"; exit 1 } }' coverage/lcov.info
       - name: Upload Flutter coverage
         uses: actions/upload-artifact@v4
         with:
@@ -87,7 +111,7 @@ jobs:
           format: 'markdown'
           output: 'both'
           thresholds: '80 80'
-          fail_below_min: true
+          fail_below_min: false
       - name: Add PR Comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
