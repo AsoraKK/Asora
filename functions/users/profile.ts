@@ -8,6 +8,11 @@ import { getAzureLogger } from '../shared/azure-logger';
 
 const logger = getAzureLogger('users/profile');
 
+// Dependency injection for Cosmos client
+export type CosmosFactory = () => CosmosClient;
+export const getCosmos: CosmosFactory = () =>
+  new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+
 interface ProfilePayload {
   displayName?: string;
   bio?: string;
@@ -15,7 +20,11 @@ interface ProfilePayload {
   website?: string;
 }
 
-export async function upsertProfile(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function upsertProfile(
+  req: HttpRequest,
+  context: InvocationContext,
+  cf: CosmosFactory = getCosmos
+): Promise<HttpResponseInit> {
   const cors = handleCorsAndMethod(req.method, ['POST', 'PUT', 'OPTIONS']);
   if (cors.shouldReturn) return cors.response!;
 
@@ -26,7 +35,7 @@ export async function upsertProfile(req: HttpRequest, context: InvocationContext
     const text = [body.displayName, body.bio].filter(Boolean).join(' \n ');
     const decision = await moderateProfileText(text, user.sub);
 
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
+    const cosmosClient = cf();
     const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora');
     const users = database.container('users');
     const audit = database.container('profile_audit');
@@ -98,4 +107,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default upsertProfile;
-
