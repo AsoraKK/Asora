@@ -157,6 +157,93 @@ void main() {
         // Act & Assert
         expect(() => Appeal.fromJson(invalidJson), throwsA(isA<TypeError>()));
       });
+
+      test('should parse and serialize complex nested structures', () {
+        final json = {
+          'appealId': 'appeal_complex',
+          'contentId': 'content_complex',
+          'contentType': 'post',
+          'contentTitle': 'Complex Title',
+          'contentPreview': 'Preview',
+          'appealType': 'false_positive',
+          'appealReason': 'reason',
+          'userStatement': 'statement',
+          'submitterId': 'user_complex',
+          'submitterName': 'Complex User',
+          'submittedAt': '2025-08-01T10:30:00.000Z',
+          'expiresAt': '2025-08-08T10:30:00.000Z',
+          'flagReason': 'spam',
+          'flagCategories': ['spam', 'hate'],
+          'flagCount': 2,
+          'votingStatus': 'quorumReached',
+          'votingProgress': {
+            'totalVotes': 100,
+            'approveVotes': 60,
+            'rejectVotes': 40,
+            'approvalRate': 60.0,
+            'quorumMet': true,
+            'timeRemaining': '1h',
+            'estimatedResolution': 'Tomorrow',
+            'voteBreakdown': [
+              {
+                'category': 'admins',
+                'approveCount': 30,
+                'rejectCount': 20,
+                'percentage': 50.0
+              },
+              {
+                'category': 'users',
+                'approveCount': 30,
+                'rejectCount': 20,
+                'percentage': 50.0
+              }
+            ]
+          },
+          'urgencyScore': 90,
+          'estimatedResolution': 'Tomorrow',
+          'hasUserVoted': true,
+          'userVote': 'approve',
+          'canUserVote': true,
+        };
+
+        final appeal = Appeal.fromJson(json);
+        expect(appeal.votingProgress?.voteBreakdown.length, 2);
+        final serialized = appeal.toJson();
+        expect(serialized['votingProgress']['voteBreakdown'][0]['category'],
+            'admins');
+        expect(serialized['votingProgress']['voteBreakdown'][1]['category'],
+            'users');
+      });
+
+      test('should default to active voting status and empty flag categories',
+          () {
+        final json = {
+          'appealId': 'appeal_default',
+          'contentId': 'content_default',
+          'contentType': 'post',
+          'appealType': 'false_positive',
+          'appealReason': 'reason',
+          'userStatement': 'statement',
+          'submitterId': 'user_default',
+          'submitterName': 'Default User',
+          'submittedAt': '2025-08-01T10:30:00.000Z',
+          'expiresAt': '2025-08-08T10:30:00.000Z',
+          'flagReason': 'spam',
+          'votingStatus': 'unknown_status',
+          'hasUserVoted': false,
+          'canUserVote': false,
+        };
+
+        final appeal = Appeal.fromJson(json);
+        expect(appeal.flagCategories, isEmpty);
+        expect(appeal.flagCount, 0);
+        expect(appeal.votingStatus, VotingStatus.active);
+        expect(appeal.urgencyScore, 0);
+        expect(appeal.estimatedResolution, 'Unknown');
+        final serialized = appeal.toJson();
+        expect(serialized['flagCategories'], isEmpty);
+        expect(serialized['votingStatus'], 'active');
+      });
     });
 
     group('Validation', () {
@@ -240,6 +327,44 @@ void main() {
       // Assert
       expect(progress.approvalRate, 0.0);
       expect(progress.quorumMet, false);
+    });
+
+    test('should parse and serialize vote breakdown', () {
+      final json = {
+        'totalVotes': 5,
+        'approveVotes': 3,
+        'rejectVotes': 2,
+        'approvalRate': 60.0,
+        'quorumMet': false,
+        'voteBreakdown': [
+          {
+            'category': 'admins',
+            'approveCount': 2,
+            'rejectCount': 1,
+            'percentage': 60.0
+          }
+        ],
+      };
+
+      final progress = VotingProgress.fromJson(json);
+      expect(progress.voteBreakdown.first.category, 'admins');
+      final serialized = progress.toJson();
+      expect(serialized['voteBreakdown'][0]['approveCount'], 2);
+    });
+  });
+
+  group('VoteBreakdown Model Tests', () {
+    test('should parse and serialize correctly', () {
+      final json = {
+        'category': 'mods',
+        'approveCount': 4,
+        'rejectCount': 1,
+        'percentage': 80.0,
+      };
+
+      final breakdown = VoteBreakdown.fromJson(json);
+      expect(breakdown.category, 'mods');
+      expect(breakdown.toJson(), equals(json));
     });
   });
 }
