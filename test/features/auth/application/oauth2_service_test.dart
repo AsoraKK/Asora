@@ -493,11 +493,10 @@ Map<String, dynamic> _decodeJWTPayload(String token) {
 String _generateTestRandomString(int length) {
   const chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-  // Use a fixed seed for deterministic output in tests only.
-  // Do NOT copy this pattern to production code.
-  final random = Random(42);
+  // Use cryptographically secure randomness to mimic production behavior.
+  final random = Random.secure();
   return List.generate(
     length,
-    (index) => chars[random.nextInt(chars.length)],
+    (_) => chars[random.nextInt(chars.length)],
   ).join();
 }
