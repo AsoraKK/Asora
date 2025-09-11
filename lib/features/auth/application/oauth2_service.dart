@@ -10,7 +10,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show kIsWeb, defaultTargetPlatform, TargetPlatform, visibleForTesting;
 
 // Conditional import for dart:html (web only)
 // ignore: uri_does_not_exist
@@ -524,4 +524,12 @@ class OAuth2Service {
     _linkSubscription?.cancel();
     _httpClient.close();
   }
+
+  /// Expose callback handling for tests
+  @visibleForTesting
+  void handleCallback(Uri uri) => _handleCallback(uri);
+
+  /// Allow tests to inject a custom completer
+  @visibleForTesting
+  set authCompleter(Completer<String> completer) => _authCompleter = completer;
 }
