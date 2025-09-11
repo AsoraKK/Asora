@@ -27,13 +27,16 @@ void main() {
     }
 
     testWidgets('shows success snackbar on successful login', (tester) async {
-      when(mockService.signInWithGoogle()).thenAnswer((_) async => 'token');
+      when(mockService.signInWithGoogle()).thenAnswer((_) async {
+        await Future.delayed(const Duration(milliseconds: 10));
+        return 'token';
+      });
 
       await pumpScreen(tester);
       await tester.tap(find.text('Sign in with Google'));
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Logged in successfully'), findsOneWidget);
@@ -41,14 +44,16 @@ void main() {
     });
 
     testWidgets('shows error snackbar on AuthFailure', (tester) async {
-      when(mockService.signInWithGoogle())
-          .thenAnswer((_) async => throw AuthFailure.serverError('failure'));
+      when(mockService.signInWithGoogle()).thenAnswer((_) async {
+        await Future.delayed(const Duration(milliseconds: 10));
+        throw AuthFailure.serverError('failure');
+      });
 
       await pumpScreen(tester);
       await tester.tap(find.text('Sign in with Google'));
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('failure'), findsOneWidget);

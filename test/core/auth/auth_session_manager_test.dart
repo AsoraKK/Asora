@@ -3,6 +3,32 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:asora/core/auth/auth_session_manager.dart';
 import 'package:flutter/services.dart';
 
+/// In-memory fake for flutter_secure_storage
+class _FakeSecureStore {
+  final Map<String, String> data = {};
+  Future<dynamic> handle(MethodCall call) async {
+    switch (call.method) {
+      case 'write':
+        data['${call.arguments['key']}'] = call.arguments['value'] as String? ?? '';
+        return null;
+      case 'read':
+        return data['${call.arguments['key']}'];
+      case 'delete':
+        data.remove('${call.arguments['key']}');
+        return null;
+      case 'readAll':
+        return Map<String, String>.from(data);
+      case 'deleteAll':
+        data.clear();
+        return null;
+      case 'containsKey':
+        return data.containsKey('${call.arguments['key']}');
+      default:
+        return null;
+    }
+  }
+}
+
 // Mock for FlutterSecureStorage
 class MockFlutterSecureStorage extends FlutterSecureStorage {
   final Map<String, String> _storage = {};

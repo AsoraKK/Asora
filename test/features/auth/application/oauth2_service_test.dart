@@ -47,17 +47,21 @@ class TestOAuth2Service extends OAuth2Service {
     // No-op in tests to avoid platform channels
   }
 
+  Completer<String>? _testCompleter;
+
   @override
   Future<String> _waitForAuthorizationCode() {
-    _authCompleter = Completer<String>();
+    final completer = Completer<String>();
+    _testCompleter = completer;
+    authCompleter = completer;
     Timer(timeout, () {
-      if (!_authCompleter!.isCompleted) {
-        _authCompleter!.completeError(
+      if (!completer.isCompleted) {
+        completer.completeError(
           AuthFailure.platformError('Authorization timeout'),
         );
       }
     });
-    return _authCompleter!.future;
+    return completer.future;
   }
 }
 
@@ -460,23 +464,23 @@ void main() {
       sessionManager = MockAuthSessionManager();
       store = {};
 
-      when(storage.write(key: anyNamed('key'), value: anyNamed('value')))
+      when(storage.write(key: anyNamed<String>('key'), value: anyNamed<String>('value')))
           .thenAnswer((invocation) async {
         store[invocation.namedArguments[#key] as String] =
             invocation.namedArguments[#value] as String;
       });
-      when(storage.read(key: anyNamed('key')))
+      when(storage.read(key: anyNamed<String>('key')))
           .thenAnswer((invocation) async =>
               store[invocation.namedArguments[#key] as String]);
-      when(storage.delete(key: anyNamed('key')))
+      when(storage.delete(key: anyNamed<String>('key')))
           .thenAnswer((invocation) async =>
               store.remove(invocation.namedArguments[#key] as String));
       when(storage.deleteAll()).thenAnswer((_) async => store.clear());
 
       when(sessionManager.createSession(
-        state: anyNamed('state'),
-        nonce: anyNamed('nonce'),
-        codeChallenge: anyNamed('codeChallenge'),
+        state: anyNamed<String>('state'),
+        nonce: anyNamed<String>('nonce'),
+        codeChallenge: anyNamed<String>('codeChallenge'),
       )).thenAnswer((invocation) async {
         final state = invocation.namedArguments[#state] as String;
         final nonce = invocation.namedArguments[#nonce] as String;
@@ -492,7 +496,7 @@ void main() {
           ttl: const Duration(minutes: 10),
         );
       });
-      when(sessionManager.completeSession(any))
+      when(sessionManager.completeSession(any<AuthSessionState>()))
           .thenAnswer((_) async {});
     });
 
@@ -519,8 +523,8 @@ void main() {
           },
         };
 
-        when(client.post(any,
-                headers: anyNamed('headers'), body: anyNamed('body')))
+        when(client.post(any<Uri>(),
+                headers: anyNamed<Map<String, String>>('headers'), body: anyNamed<Object>('body')))
             .thenAnswer(
           (_) async => http.Response(jsonEncode(tokenJson), 200),
         );
@@ -534,7 +538,7 @@ void main() {
 
         final future = service.signInWithOAuth2();
         await Future.delayed(const Duration(milliseconds: 10));
-        service._handleCallback(
+        service.handleCallback(
           Uri.parse('asora://oauth/callback?code=abc&state=xyz'),
         );
         final user = await future;
@@ -545,8 +549,8 @@ void main() {
         const MethodChannel('plugins.flutter.io/url_launcher')
             .setMockMethodCallHandler((_) async => true);
 
-        when(client.post(any,
-                headers: anyNamed('headers'), body: anyNamed('body')))
+        when(client.post(any<Uri>(),
+                headers: anyNamed<Map<String, String>>('headers'), body: anyNamed<Object>('body')))
             .thenAnswer(
           (_) async => http.Response('error', 400),
         );
@@ -560,7 +564,7 @@ void main() {
 
         final future = service.signInWithOAuth2();
         await Future.delayed(const Duration(milliseconds: 10));
-        service._handleCallback(
+        service.handleCallback(
           Uri.parse('asora://oauth/callback?code=abc&state=xyz'),
         );
 
@@ -607,12 +611,12 @@ void main() {
           },
         };
 
-        when(client.post(any,
-                headers: anyNamed('headers'), body: anyNamed('body')))
+        when(client.post(any<Uri>(),
+                headers: anyNamed<Map<String, String>>('headers'), body: anyNamed<Object>('body')))
             .thenAnswer(
           (_) async => http.Response(jsonEncode(tokenJson), 200),
         );
-        when(client.get(any, headers: anyNamed('headers'))).thenAnswer(
+        when(client.get(any<Uri>(), headers: anyNamed<Map<String, String>>('headers'))).thenAnswer(
           (_) async => http.Response(jsonEncode(tokenJson['user']), 200),
         );
 
@@ -640,8 +644,8 @@ void main() {
       test('returns null on invalid response', () async {
         store['oauth2_refresh_token'] = 'refresh123';
 
-        when(client.post(any,
-                headers: anyNamed('headers'), body: anyNamed('body')))
+        when(client.post(any<Uri>(),
+                headers: anyNamed<Map<String, String>>('headers'), body: anyNamed<Object>('body')))
             .thenAnswer(
           (_) async => http.Response('error', 400),
         );
@@ -672,7 +676,7 @@ void main() {
           'isTemporary': false,
         };
 
-        when(client.get(any, headers: anyNamed('headers'))).thenAnswer(
+        when(client.get(any<Uri>(), headers: anyNamed<Map<String, String>>('headers'))).thenAnswer(
           (_) async => http.Response(jsonEncode(userJson), 200),
         );
 
@@ -700,7 +704,7 @@ void main() {
 
       test('returns null on invalid response', () async {
         store['oauth2_access_token'] = 'access123';
-        when(client.get(any, headers: anyNamed('headers'))).thenAnswer(
+        when(client.get(any<Uri>(), headers: anyNamed<Map<String, String>>('headers'))).thenAnswer(
           (_) async => http.Response('error', 401),
         );
 
