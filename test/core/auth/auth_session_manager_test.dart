@@ -83,36 +83,6 @@ class MockFlutterSecureStorage extends FlutterSecureStorage {
   Map<String, String> get mockStorage => Map.from(_storage);
 }
 
-class _FakeSecureStore {
-  final Map<String, String> _data = {};
-
-  Future<dynamic> handle(MethodCall call) async {
-    switch (call.method) {
-      case 'write':
-        _data['${call.arguments['key']}'] =
-            call.arguments['value'] as String? ?? '';
-        return null;
-      case 'read':
-        return _data['${call.arguments['key']}'];
-      case 'delete':
-        _data.remove('${call.arguments['key']}');
-        return null;
-      case 'readAll':
-        return Map<String, String>.from(_data);
-      case 'deleteAll':
-        _data.clear();
-        return null;
-      case 'containsKey':
-        return _data.containsKey('${call.arguments['key']}');
-      default:
-        return null;
-    }
-  }
-
-  void clear() => _data.clear();
-  Map<String, String> get data => _data;
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
