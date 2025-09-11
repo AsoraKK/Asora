@@ -479,8 +479,8 @@ void main() {
 
         expect(consumeMessage, contains('✅'));
         expect(consumeMessage, contains('Session consumed'));
-      expect(consumeMessage, contains(sessionState));
-    });
+        expect(consumeMessage, contains(sessionState));
+      });
   });
   group('AuthSessionManager method tests', () {
     const MethodChannel channel =
