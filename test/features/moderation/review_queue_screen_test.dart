@@ -53,13 +53,14 @@ void main() {
       ),
     ));
 
-    final state = tester.state(find.byType(ReviewQueueScreen)) as dynamic;
-    await state._loadMore();
-    await tester.pump();
+    // Simulate initial load
+    await tester.pumpAndSettle();
     expect(find.byType(ListTile), findsNWidgets(2));
 
-    await state._loadMore();
-    await tester.pump();
+    // Simulate scroll to bottom to trigger pagination
+    final listFinder = find.byType(Scrollable);
+    await tester.drag(listFinder, const Offset(0, -500));
+    await tester.pumpAndSettle();
     expect(find.byType(ListTile), findsNWidgets(4));
     verify(svc.fetchReviewQueue(
       accessToken: anyNamed('accessToken'),
