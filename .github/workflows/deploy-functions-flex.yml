@@ -116,11 +116,15 @@ jobs:
               retry az functionapp config appsettings set -g "$RG" -n "$APP" --slot canary \
                 --settings APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary" -o none
               CANARY_MODE="slot"
-            elif [[ -n "$CANARY_APP" ]] && exists_app "$RG" "$CANARY_APP"; then
-              set_node20 "$RG" "$CANARY_APP"
-              retry az functionapp config appsettings set -g "$RG" -n "$CANARY_APP" \
-                --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
-              CANARY_MODE="separate-app"
+            elif [[ -n "$CANARY_APP" ]]; then
+              if exists_app "$RG" "$CANARY_APP"; then
+                set_node20 "$RG" "$CANARY_APP"
+                retry az functionapp config appsettings set -g "$RG" -n "$CANARY_APP" \
+                  --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
+                CANARY_MODE="separate-app"
+              else
+                CANARY_MODE="absent"
+              fi
             else
               CANARY_MODE="absent"
             fi

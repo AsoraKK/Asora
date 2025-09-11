@@ -64,14 +64,8 @@ jobs:
             { if (keep) print $0 }
           ' coverage/lcov.info > coverage/lcov.filtered.info
           mv coverage/lcov.filtered.info coverage/lcov.info
-      - name: Enforce Flutter coverage >= 80%
-        run: |
-          set -euo pipefail
-          if [ ! -f coverage/lcov.info ]; then
-            echo "Flutter coverage file missing: coverage/lcov.info" >&2
-            exit 1
-          fi
-          awk -F, '/^DA:/{total++; if ($2>0) hit++} END { if (total==0) { print "No coverage data (DA lines) found"; exit 1 } cov=100*hit/total; printf "Flutter line coverage: %.2f%%\n", cov; if (cov < 85) { print "Coverage below 85% threshold"; exit 1 } }' coverage/lcov.info
+      - name: Enforce Flutter coverage >= 85%
+        run: bash scripts/check_flutter_coverage.sh 85
       - name: Upload Flutter coverage
         uses: actions/upload-artifact@v4
         with:
