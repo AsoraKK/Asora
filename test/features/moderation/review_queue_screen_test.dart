@@ -21,10 +21,10 @@ void main() {
   testWidgets('_loadMore appends paginated items', (tester) async {
     final svc = MockModerationService();
     when(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
+      accessToken: anyNamed('accessToken'),
       page: 1,
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).thenAnswer((_) async => {
           'items': [
             {'id': '1', 'title': 'A'},
@@ -32,10 +32,10 @@ void main() {
           ]
         });
     when(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
+      accessToken: anyNamed('accessToken'),
       page: 2,
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).thenAnswer((_) async => {
           'items': [
             {'id': '3', 'title': 'C'},
@@ -63,26 +63,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ListTile), findsNWidgets(4));
     verify(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
+      accessToken: anyNamed('accessToken'),
       page: 1,
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).called(1);
     verify(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
+      accessToken: anyNamed('accessToken'),
       page: 2,
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).called(1);
   });
 
   testWidgets('action buttons call service methods', (tester) async {
     final svc = MockModerationService();
     when(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
-      page: anyNamed<int>('page'),
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      accessToken: anyNamed('accessToken'),
+      page: anyNamed('page'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).thenAnswer((_) async => {
           'items': [
             {'id': '1', 'title': 'A'},
@@ -125,10 +125,10 @@ void main() {
   testWidgets('autoLoad=false waits until refresh', (tester) async {
     final svc = MockModerationService();
     when(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
-      page: anyNamed<int>('page'),
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      accessToken: anyNamed('accessToken'),
+      page: anyNamed('page'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).thenAnswer((_) async => {'items': []});
 
     await tester.pumpWidget(MaterialApp(
@@ -142,10 +142,10 @@ void main() {
     ));
 
     verifyNever(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
-      page: anyNamed<int>('page'),
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      accessToken: anyNamed('accessToken'),
+      page: anyNamed('page'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     ));
 
     // Instead of accessing the private _refresh method, trigger refresh via a public API.
@@ -161,10 +161,10 @@ void main() {
     await tester.pump();
 
     verify(svc.fetchReviewQueue(
-      accessToken: anyNamed<String>('accessToken'),
+      accessToken: anyNamed('accessToken'),
       page: 1,
-      pageSize: anyNamed<int>('pageSize'),
-      status: anyNamed<String>('status'),
+      pageSize: anyNamed('pageSize'),
+      status: anyNamed('status'),
     )).called(1);
   });
 }

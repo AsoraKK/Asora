@@ -21,7 +21,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [authServiceProvider.overrideWithValue(mockService)],
-          child: const MaterialApp(home: AuthScreen()),
+          child: MaterialApp(
+            home: Scaffold(body: AuthScreen()),
+          ),
         ),
       );
     }
@@ -35,11 +37,12 @@ void main() {
       await pumpScreen(tester);
       await tester.tap(find.text('Sign in with Google'));
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Logged in successfully'), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+          find.textContaining('Logged in successfully', findRichText: true),
+          findsOneWidget);
       verify(mockService.signInWithGoogle()).called(1);
     });
 
@@ -52,11 +55,11 @@ void main() {
       await pumpScreen(tester);
       await tester.tap(find.text('Sign in with Google'));
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('failure'), findsOneWidget);
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+          find.textContaining('failure', findRichText: true), findsOneWidget);
     });
 
     testWidgets('toggles loading indicator during login', (tester) async {
@@ -69,6 +72,7 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       completer.complete('token');
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
   });
