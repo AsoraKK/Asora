@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 
 import '../domain/auth_failure.dart';
 import '../domain/user.dart';
@@ -54,6 +55,9 @@ GoogleSignIn _buildGoogleSignIn() {
       throw UnsupportedError('Unsupported platform');
   }
 }
+
+@visibleForTesting
+GoogleSignIn buildGoogleSignInForTest() => _buildGoogleSignIn();
 
 class AuthService {
   AuthService({
