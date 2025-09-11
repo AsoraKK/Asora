@@ -22,7 +22,7 @@ void main() {
         ProviderScope(
           overrides: [authServiceProvider.overrideWithValue(mockService)],
           child: MaterialApp(
-            home: Scaffold(body: AuthScreen()),
+            home: Scaffold(body: const AuthScreen()),
           ),
         ),
       );
