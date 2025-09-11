@@ -115,7 +115,9 @@ class DeviceIntegrityService {
 
       return result;
     } catch (e) {
-      debugPrint('🚨 Device integrity check failed: $e');
+      try {
+        debugPrint('🚨 Device integrity check failed: $e');
+      } catch (_) {}
 
       final errorResult = DeviceIntegrityInfo(
         status: DeviceIntegrityStatus.error,

@@ -47,7 +47,8 @@ void main() {
     });
 
     test('toJson handles null tokenExpires', () {
-      final user = User.fromJson(baseJson).copyWith(tokenExpires: null);
+      final jsonMap = Map<String, dynamic>.from(baseJson)..remove('tokenExpires');
+      final user = User.fromJson(jsonMap);
       final json = user.toJson();
       expect(json['tokenExpires'], isNull);
     });
