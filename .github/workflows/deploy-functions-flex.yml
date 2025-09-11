@@ -10,8 +10,8 @@ permissions:
   pull-requests: write
 
 env:
-  AZURE_FUNCTIONAPP_NAME: asora-function-flex
-  AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-flex-canary
+  AZURE_FUNCTIONAPP_NAME: asora-function-dev
+  AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
   AZURE_RESOURCE_GROUP: asora-psql-flex
   AZURE_APPINSIGHTS_NAME: asora-ai-flex
   AZURE_FD_PROFILE: asora-frontdoor
@@ -86,7 +86,17 @@ jobs:
             set_node20() {
               local rg="$1" app="$2" slot_opt="${3:-}"
               if [[ "$(plan_kind "$rg" "$app")" == *linux* ]]; then
-                retry az functionapp config set -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none
+                # Only tolerate readonly linuxFxVersion errors, fail otherwise
+                {
+                  err_output=$(retry az functionapp config set -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none 2>&1)
+                } || {
+                  if [[ "$err_output" == *"The property 'linuxFxVersion' is read-only"* ]]; then
+                    echo "Warning: linuxFxVersion is readonly, skipping set."
+                  else
+                    echo "::error::Failed to set linuxFxVersion: $err_output"
+                    exit 1
+                  fi
+                }
               else
                 retry az functionapp config appsettings set -g "$rg" -n "$app" $slot_opt --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
               fi

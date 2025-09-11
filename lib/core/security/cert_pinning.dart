@@ -27,7 +27,7 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 // - Document pin extraction in docs/SECURITY_MOBILE_SOP.md
 const Map<String, List<String>> kPinnedDomains = {
   // Flex app host (prod/dev)
-  'asora-function-flex.azurewebsites.net': [
+  'asora-function-dev.azurewebsites.net': [
     'sha256/REPLACE_WITH_SPKI_PIN',       // Primary (leaf SPKI)
     'sha256/REPLACE_WITH_ROLLOVER_PIN',   // Rollover (leaf SPKI)
   ],

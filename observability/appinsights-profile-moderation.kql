@@ -1,7 +1,7 @@
 // Profile moderation latency and decisions
 union traces, requests
 | where timestamp > ago(24h)
-| where cloud_RoleName endswith '-flex' or cloud_RoleName =~ 'asora-function-flex'
+| where cloud_RoleName endswith '-flex' or cloud_RoleName =~ 'asora-function-dev'
 | where message has 'Text moderation' or tostring(customDimensions['component']) == 'moderation/text'
 | extend decision = tostring(customDimensions['decision'])
 | extend score = todouble(customDimensions['score'])
