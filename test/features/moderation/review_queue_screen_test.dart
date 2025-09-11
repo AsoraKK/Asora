@@ -104,8 +104,9 @@ void main() {
       ),
     ));
 
-    final state = tester.state(find.byType(ReviewQueueScreen)) as dynamic;
-    await state._loadMore();
+    // Instead of calling the private _loadMore method, simulate a user action that triggers loading more.
+    // For example, scroll to the bottom of the list to trigger loading more items.
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pump();
 
     await tester.tap(find.byIcon(Icons.check).first);
