@@ -27,6 +27,10 @@ class _FakeSecureStore {
         return null;
     }
   }
+
+  void clear() {
+    data.clear();
+  }
 }
 
 // Mock for FlutterSecureStorage
