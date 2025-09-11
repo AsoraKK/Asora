@@ -1,7 +1,7 @@
 // Feed p95 latency and RU by endpoint
 union traces, requests
 | where timestamp > ago(7d)
-| where cloud_RoleName == "asora-function-flex"
+| where cloud_RoleName == "asora-function-dev"
 | extend endpoint = iff(isnotempty(name), name, tostring(customDimensions["endpoint"]))
 | extend ru = toreal(customDimensions["requestCharge"])
 | extend qdur = toint(customDimensions["queryDurationMs"])

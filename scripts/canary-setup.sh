@@ -5,8 +5,8 @@ set -euo pipefail
 
 RG=${RG:-asora-psql-flex}
 REGION=${REGION:-northeurope}
-APP=${APP:-asora-function-flex}
-CANARY=${CANARY:-asora-function-flex-canary}
+APP=${APP:-asora-function-dev}
+CANARY=${CANARY:-asora-function-dev-canary}
 AI=${AI:-asora-ai-flex}
 FD_PROFILE=${FD_PROFILE:-asora-frontdoor}
 FD_ENDPOINT=${FD_ENDPOINT:-asora-frontdoor-endpoint}

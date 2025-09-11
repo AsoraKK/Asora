@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $PSBoundParameters.ContainsKey('BaseUrl') -or [string]::IsNullOrEmpty($BaseUrl)) {
-  $BaseUrl = 'https://asora-function-flex.azurewebsites.net'
+  $BaseUrl = 'https://asora-function-dev.azurewebsites.net'
 }
 if (-not $PSBoundParameters.ContainsKey('Count') -or $Count -le 0) {
   $Count = 20
