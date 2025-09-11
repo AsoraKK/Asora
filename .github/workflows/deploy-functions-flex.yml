@@ -11,7 +11,7 @@ permissions:
 
 env:
   AZURE_FUNCTIONAPP_NAME: asora-function-dev
-  AZURE_FUNCTIONAPP_CANARY_NAME: ""
+  AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
   AZURE_RESOURCE_GROUP: asora-psql-flex
   AZURE_APPINSIGHTS_NAME: asora-ai-flex
   AZURE_FD_PROFILE: asora-frontdoor
