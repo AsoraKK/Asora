@@ -19,147 +19,37 @@ void main() {
     group('formatRelative Tests', () {
       test('should return "Just now" for recent times', () {
         final recentTime = now.subtract(const Duration(seconds: 30));
-
-        // Mock DateTime.now() by overriding the calculation
-        final difference = now.difference(recentTime);
-        String result;
-
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(recentTime, now: now);
         expect(result, equals('Just now'));
       });
 
       test('should format minutes correctly', () {
         final minutesAgo = now.subtract(const Duration(minutes: 5));
-        final difference = now.difference(minutesAgo);
-
-        String result;
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(minutesAgo, now: now);
         expect(result, equals('5m ago'));
       });
 
       test('should format hours correctly', () {
         final hoursAgo = now.subtract(const Duration(hours: 3));
-        final difference = now.difference(hoursAgo);
-
-        String result;
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(hoursAgo, now: now);
         expect(result, equals('3h ago'));
       });
 
       test('should format days correctly', () {
         final daysAgo = now.subtract(const Duration(days: 5));
-        final difference = now.difference(daysAgo);
-
-        String result;
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(daysAgo, now: now);
         expect(result, equals('5d ago'));
       });
 
       test('should format months correctly', () {
         final monthsAgo = now.subtract(const Duration(days: 60));
-        final difference = now.difference(monthsAgo);
-
-        String result;
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(monthsAgo, now: now);
         expect(result, equals('2mo ago'));
       });
 
       test('should format years correctly', () {
         final yearsAgo = now.subtract(const Duration(days: 400));
-        final difference = now.difference(yearsAgo);
-
-        String result;
-        if (difference.inDays > 365) {
-          final years = (difference.inDays / 365).floor();
-          result = '${years}y ago';
-        } else if (difference.inDays > 30) {
-          final months = (difference.inDays / 30).floor();
-          result = '${months}mo ago';
-        } else if (difference.inDays > 0) {
-          result = '${difference.inDays}d ago';
-        } else if (difference.inHours > 0) {
-          result = '${difference.inHours}h ago';
-        } else if (difference.inMinutes > 0) {
-          result = '${difference.inMinutes}m ago';
-        } else {
-          result = 'Just now';
-        }
-
+        final result = DateFormatter.formatRelative(yearsAgo, now: now);
         expect(result, equals('1y ago'));
       });
 
