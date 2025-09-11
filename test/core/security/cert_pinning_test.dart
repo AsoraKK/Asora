@@ -7,14 +7,14 @@ void main() {
   group('Certificate Pinning Configuration Tests', () {
     test('Pinned domains contain flex host', () {
       expect(
-        kPinnedDomains.containsKey('asora-function-flex.azurewebsites.net'),
+        kPinnedDomains.containsKey('asora-function-dev.azurewebsites.net'),
         true,
       );
     });
 
     test('No placeholder pins in flex host set', () {
       final pins =
-          kPinnedDomains['asora-function-flex.azurewebsites.net'] ?? [];
+          kPinnedDomains['asora-function-dev.azurewebsites.net'] ?? [];
       final requireRealPins =
           Platform.environment['ASORA_REQUIRE_REAL_PINS'] == 'true';
       if (requireRealPins) {
@@ -124,7 +124,7 @@ void main() {
       'isPinValidationError detects connection errors for pinned domains',
       () {
         final requestOptions = RequestOptions(
-          path: 'https://asora-function-flex.azurewebsites.net/api/test',
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
         );
 
         final connectionError = DioException(

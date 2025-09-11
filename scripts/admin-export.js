@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const baseUrl = process.env.FUNCTION_BASE_URL || 'https://asora-function-flex.azurewebsites.net';
+  const baseUrl = process.env.FUNCTION_BASE_URL || 'https://asora-function-dev.azurewebsites.net';
   const userId = process.argv[2];
   const outDir = process.argv[3] || '.';
   if (!userId) {
