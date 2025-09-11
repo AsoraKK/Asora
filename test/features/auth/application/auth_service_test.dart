@@ -292,6 +292,41 @@ void main() {
         },
       );
 
+      test(
+        'should throw AuthFailure.serverError for missing user in response',
+        () async {
+          // Arrange
+          final responseBody = {
+            'token': testToken,
+            // Missing user key
+          };
+
+          mockHttpClient.setResponse('$testAuthUrl/authEmail', responseBody);
+
+          // Act & Assert
+          expect(
+            () => authService.loginWithEmail(testEmail, testPassword),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
+      test(
+        'should throw AuthFailure.serverError for non-200 status code',
+        () async {
+          // Arrange
+          mockHttpClient.setResponse('$testAuthUrl/authEmail', {
+            'error': 'Not found',
+          }, statusCode: 404);
+
+          // Act & Assert
+          expect(
+            () => authService.loginWithEmail(testEmail, testPassword),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
       test('should throw AuthFailure.serverError for network error', () async {
         // Arrange
         mockHttpClient.setException(
