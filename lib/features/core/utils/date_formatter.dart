@@ -8,9 +8,12 @@ library;
 
 class DateFormatter {
   /// Format a DateTime as relative time (e.g., "2 hours ago", "Just now")
-  static String formatRelative(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  static String formatRelative(
+    DateTime dateTime, {
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    final difference = current.difference(dateTime);
 
     if (difference.inDays > 365) {
       final years = (difference.inDays / 365).floor();
