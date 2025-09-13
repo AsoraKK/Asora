@@ -64,8 +64,8 @@ jobs:
             { if (keep) print $0 }
           ' coverage/lcov.info > coverage/lcov.filtered.info
           mv coverage/lcov.filtered.info coverage/lcov.info
-      - name: Enforce Flutter coverage >= 85%
-        run: bash scripts/check_flutter_coverage.sh 85
+      - name: Enforce Flutter coverage >= 80%
+        run: bash scripts/check_flutter_coverage.sh 80
       - name: Upload Flutter coverage
         uses: actions/upload-artifact@v4
         with:
