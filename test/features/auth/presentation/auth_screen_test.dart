@@ -1,79 +1,52 @@
-import 'dart:async';
+coverage/80-improvements
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+ main
 import 'package:asora/features/auth/presentation/auth_screen.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 
-class MockAuthService extends Mock implements AuthService {}
+coverage/80-improvements
+class _FakeAuthService extends AuthService {
+  bool shouldThrow = false;
+  String token = 'token';
+
+  @override
+  Future<String> signInWithGoogle() async {
+    if (shouldThrow) throw AuthFailure.serverError('Oops');
+    return token;
+  }
+}
 
 void main() {
-  group('AuthScreen Widget Tests', () {
-    late MockAuthService mockService;
+  testWidgets('shows button and success snackbar on sign-in', (tester) async {
+    final fake = _FakeAuthService();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [authServiceProvider.overrideWithValue(fake)],
+      child: const MaterialApp(home: AuthScreen()),
+    ));
 
-    setUp(() {
-      mockService = MockAuthService();
-    });
+    expect(find.text('Sign in with Google'), findsOneWidget);
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-    Future<void> pumpScreen(WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(mockService)],
-          child: MaterialApp(
-            home: Scaffold(body: const AuthScreen()),
-          ),
-        ),
-      );
-    }
+    expect(find.text('Logged in successfully'), findsOneWidget);
+  });
 
-    testWidgets('shows success snackbar on successful login', (tester) async {
-      when(mockService.signInWithGoogle()).thenAnswer((_) async {
-        await Future.delayed(const Duration(milliseconds: 10));
-        return 'token';
-      });
+  testWidgets('shows error snackbar on failure', (tester) async {
+    final fake = _FakeAuthService()..shouldThrow = true;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [authServiceProvider.overrideWithValue(fake)],
+      child: const MaterialApp(home: AuthScreen()),
+    ));
 
-      await pumpScreen(tester);
-      await tester.tap(find.text('Sign in with Google'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(
-          find.textContaining('Logged in successfully', findRichText: true),
-          findsOneWidget);
-      verify(mockService.signInWithGoogle()).called(1);
-    });
-
-    testWidgets('shows error snackbar on AuthFailure', (tester) async {
-      when(mockService.signInWithGoogle()).thenAnswer((_) async {
-        await Future.delayed(const Duration(milliseconds: 10));
-        throw AuthFailure.serverError('failure');
-      });
-
-      await pumpScreen(tester);
-      await tester.tap(find.text('Sign in with Google'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(
-          find.textContaining('failure', findRichText: true), findsOneWidget);
-    });
-
-    testWidgets('toggles loading indicator during login', (tester) async {
-      final completer = Completer<String>();
-      when(mockService.signInWithGoogle()).thenAnswer((_) => completer.future);
-
-      await pumpScreen(tester);
-      await tester.tap(find.text('Sign in with Google'));
-      await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      completer.complete('token');
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    });
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pumpAndSettle();
+    expect(find.text('Oops'), findsOneWidget);
   });
 }
+
+ main

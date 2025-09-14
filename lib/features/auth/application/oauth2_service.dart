@@ -107,13 +107,19 @@ class OAuth2Service {
     FlutterSecureStorage? secureStorage,
     http.Client? httpClient,
     AuthSessionManager? sessionManager,
+    bool debugForceWeb = false,
+    Future<bool> Function(Uri, {LaunchMode mode})? launcher,
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _httpClient = httpClient ?? http.Client(),
-       _sessionManager = sessionManager ?? AuthSessionManager();
+       _sessionManager = sessionManager ?? AuthSessionManager(),
+       _debugForceWeb = debugForceWeb,
+       _launcher = launcher ?? ((uri, {mode = LaunchMode.platformDefault}) => launchUrl(uri, mode: mode));
 
   final FlutterSecureStorage _secureStorage;
   final http.Client _httpClient;
   final AuthSessionManager _sessionManager;
+  final bool _debugForceWeb;
+  final Future<bool> Function(Uri, {LaunchMode mode}) _launcher;
 
   // Storage keys
   static const String _accessTokenKey = 'oauth2_access_token';
@@ -162,7 +168,7 @@ class OAuth2Service {
       _setupCallbackListener();
 
       // Launch browser for authorization
-      if (!await launchUrl(
+      if (!await _launcher(
         Uri.parse(authUrl),
         mode: LaunchMode.externalApplication,
       )) {
@@ -360,7 +366,7 @@ class OAuth2Service {
   void _setupCallbackListener() {
     _linkSubscription?.cancel();
 
-    if (kIsWeb) {
+    if (kIsWeb || _debugForceWeb) {
       // Web platform: handle via JavaScript
       _handleWebCallback();
     } else {
@@ -383,7 +389,7 @@ class OAuth2Service {
     // In a real web implementation, you would handle the callback
     // via JavaScript and postMessage or by monitoring the URL
     // This is a simplified version
-    if (kIsWeb) {
+    if (kIsWeb || _debugForceWeb) {
       // Web implementation: parse the current URL for OAuth2 parameters
       final href = getWebHref();
       if (href == null) return;
@@ -517,7 +523,10 @@ class OAuth2Service {
   }
 
   String _generateSecureRandomString(int length) {
-    return PkceHelper.generateCodeVerifier(length: length);
+    final clamped = length < 43
+        ? 43
+        : (length > 128 ? 128 : length);
+    return PkceHelper.generateCodeVerifier(length: clamped);
   }
 
   void dispose() {
@@ -525,11 +534,31 @@ class OAuth2Service {
     _httpClient.close();
   }
 
-  /// Expose callback handling for tests
+coverage/80-improvements
+  // Test-only helpers to increase coverage without affecting prod API
   @visibleForTesting
-  void handleCallback(Uri uri) => _handleCallback(uri);
+  String debugBuildAuthorizationUrl({
+    required String codeChallenge,
+    required String state,
+    required String nonce,
+  }) => _buildAuthorizationUrl(codeChallenge: codeChallenge, state: state, nonce: nonce);
 
-  /// Allow tests to inject a custom completer
   @visibleForTesting
-  set authCompleter(Completer<String> completer) => _authCompleter = completer;
+  Future<String> debugStartAndWaitForCode() => _waitForAuthorizationCode();
+
+  @visibleForTesting
+  void debugHandleCallback(Uri uri) => _handleCallback(uri);
+
+  @visibleForTesting
+  void debugSetupCallbackListener() => _setupCallbackListener();
+
+  @visibleForTesting
+  Future<OAuth2TokenResponse> debugExchangeCode(
+    String code,
+    String verifier,
+  ) => _exchangeCodeForTokens(authorizationCode: code, codeVerifier: verifier);
+
+  @visibleForTesting
+  Future<void> debugStoreTokens(OAuth2TokenResponse resp) => _storeTokens(resp);
+ main
 }
