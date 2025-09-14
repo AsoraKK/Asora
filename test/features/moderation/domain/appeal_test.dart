@@ -8,6 +8,71 @@ import 'package:asora/features/moderation/domain/appeal.dart';
 // 📊 Target: 100% coverage for domain models
 
 void main() {
+  group('Appeal models', () {
+    test('Appeal fromJson/toJson', () {
+      final json = {
+        'appealId': 'a1',
+        'contentId': 'c1',
+        'contentType': 'post',
+        'contentTitle': 'Hello',
+        'contentPreview': 'preview',
+        'appealType': 'visibility',
+        'appealReason': 'false_positive',
+        'userStatement': 'I disagree',
+        'submitterId': 'u1',
+        'submitterName': 'Alice',
+        'submittedAt': '2024-01-01T00:00:00.000Z',
+        'expiresAt': '2024-01-02T00:00:00.000Z',
+        'flagReason': 'toxicity',
+        'aiScore': 0.12,
+        'aiAnalysis': {'model': 'hive-v2'},
+        'flagCategories': ['toxicity', 'harassment'],
+        'flagCount': 3,
+        'votingStatus': 'active',
+        'votingProgress': {
+          'totalVotes': 10,
+          'approveVotes': 7,
+          'rejectVotes': 3,
+          'approvalRate': 0.7,
+          'quorumMet': true,
+          'timeRemaining': '1h',
+          'estimatedResolution': '2h',
+          'voteBreakdown': [
+            {
+              'category': 'experts',
+              'approveCount': 5,
+              'rejectCount': 1,
+              'percentage': 0.83,
+            },
+          ],
+        },
+        'urgencyScore': 5,
+        'estimatedResolution': '2h',
+        'hasUserVoted': false,
+        'userVote': null,
+        'canUserVote': true,
+        'voteIneligibilityReason': null,
+      };
+
+      final appeal = Appeal.fromJson(json);
+      expect(appeal.appealId, 'a1');
+      expect(appeal.flagCategories.length, 2);
+      expect(appeal.votingStatus, VotingStatus.active);
+      expect(appeal.votingProgress, isNotNull);
+      expect(appeal.votingProgress!.quorumMet, isTrue);
+
+      final back = appeal.toJson();
+      expect(back['appealId'], 'a1');
+      expect(back['votingStatus'], 'active');
+    });
+
+    test('VotingProgress fromJson defaults', () {
+      final vp = VotingProgress.fromJson({});
+      expect(vp.totalVotes, 0);
+      expect(vp.approvalRate, 0.0);
+      expect(vp.voteBreakdown, isEmpty);
+    });
+  });
   group('Appeal Model Tests', () {
     group('Serialization', () {
       test('should serialize to JSON correctly', () {
