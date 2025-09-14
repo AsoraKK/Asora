@@ -116,10 +116,10 @@ az cosmosdb sql container update -g asora-psql-flex -a asora-cosmos-dev -d asora
 ### Performance Monitoring
 ```bash
 # Feed metrics (requires PowerShell - install PowerShell Core or use Windows PowerShell)
-powershell.exe -File .\scripts\feed-metrics.ps1 -BaseUrl 'https://asora-function-flex.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
+powershell.exe -File .\scripts\feed-metrics.ps1 -BaseUrl 'https://asora-function-dev.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
 
 # Alternative with PowerShell Core (if installed):
-# pwsh ./scripts/feed-metrics.ps1 -BaseUrl 'https://asora-function-flex.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
+# pwsh ./scripts/feed-metrics.ps1 -BaseUrl 'https://asora-function-dev.azurewebsites.net' -Count 20 -AuthToken '<jwt>'
 ```
 
 ### Deployment Validation

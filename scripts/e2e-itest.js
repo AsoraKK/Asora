@@ -13,6 +13,7 @@ const path = require("path");
 
 const BASE_URL = process.env.FUNCTION_BASE_URL;
 const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
+const VERBOSE = process.argv.includes("--verbose");
 
 if (!BASE_URL) {
   console.error("FUNCTION_BASE_URL is required");
@@ -53,10 +54,16 @@ async function main() {
     const res = await getJson(url);
     const durationMs = Date.now() - t0;
     const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
-    if (!pass) failures++;
+    if (!pass) {
+      failures++;
+      console.error(`health check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
+    } else if (VERBOSE) {
+      console.log(`health check ok: status=${res.status}, body=${JSON.stringify(res.json)}`);
+    }
     results.push({ name: "health", url, status: res.status, durationMs, pass, body: res.json });
   } catch (err) {
     failures++;
+    console.error("health check error:", err);
     results.push({ name: "health", error: String(err) });
   }
 
@@ -67,10 +74,16 @@ async function main() {
     const res = await getJson(url);
     const durationMs = Date.now() - t0;
     const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
-    if (!pass) failures++;
+    if (!pass) {
+      failures++;
+      console.error(`feed check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
+    } else if (VERBOSE) {
+      console.log(`feed check ok: status=${res.status}, body=${JSON.stringify(res.json)}`);
+    }
     results.push({ name: "feed", url, status: res.status, durationMs, pass, body: res.json });
   } catch (err) {
     failures++;
+    console.error("feed check error:", err);
     results.push({ name: "feed", error: String(err) });
   }
 

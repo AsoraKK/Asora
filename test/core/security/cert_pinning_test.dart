@@ -1,20 +1,24 @@
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'package:asora/core/security/cert_pinning.dart';
 
 void main() {
   group('Certificate Pinning Configuration Tests', () {
     test('Pinned domains contain flex host', () {
       expect(
-        kPinnedDomains.containsKey('asora-function-flex.azurewebsites.net'),
+        kPinnedDomains.containsKey('asora-function-dev.azurewebsites.net'),
         true,
       );
     });
 
     test('No placeholder pins in flex host set', () {
       final pins =
-          kPinnedDomains['asora-function-flex.azurewebsites.net'] ?? [];
+          kPinnedDomains['asora-function-dev.azurewebsites.net'] ?? [];
       final requireRealPins =
           Platform.environment['ASORA_REQUIRE_REAL_PINS'] == 'true';
       if (requireRealPins) {
@@ -119,12 +123,86 @@ void main() {
     });
   });
 
+  group('PinnedCertHttpClientAdapter fetch tests', () {
+    test('successful fetch on pinned host does not log violation', () async {
+      final logs = <String?>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      final adapter = _FakeAdapter();
+      final pinned = PinnedCertHttpClientAdapter(adapter);
+      final options = RequestOptions(
+        path: 'https://asora-function-dev.azurewebsites.net/',
+      );
+
+      await pinned.fetch(options, null, null);
+
+      expect(
+        logs.any((m) => m?.contains('cert_pin_violation') ?? false),
+        isFalse,
+      );
+    });
+
+    test('logs violation on pinned host failure', () async {
+      final logs = <String?>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      final adapter = _FakeAdapter(shouldThrow: true);
+      final pinned = PinnedCertHttpClientAdapter(adapter);
+      final options = RequestOptions(
+        path: 'https://asora-function-dev.azurewebsites.net/',
+      );
+
+      await expectLater(
+        pinned.fetch(options, null, null),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(
+        logs.any((m) => m?.contains('cert_pin_violation') ?? false),
+        isTrue,
+      );
+    });
+
+    test('unpinned host failure bypasses pin checks', () async {
+      final logs = <String?>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      final adapter = _FakeAdapter(shouldThrow: true);
+      final pinned = PinnedCertHttpClientAdapter(adapter);
+      final options = RequestOptions(
+        path: 'https://unpinned-domain.com/',
+      );
+
+      await expectLater(
+        pinned.fetch(options, null, null),
+        throwsA(isA<DioException>()),
+      );
+
+      expect(
+        logs.any((m) => m?.contains('cert_pin_violation') ?? false),
+        isFalse,
+      );
+    });
+  });
+
   group('Certificate Pinning Error Detection Tests', () {
     test(
       'isPinValidationError detects connection errors for pinned domains',
       () {
         final requestOptions = RequestOptions(
-          path: 'https://asora-function-flex.azurewebsites.net/api/test',
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
         );
 
         final connectionError = DioException(
@@ -204,4 +282,28 @@ void main() {
       }
     });
   });
+}
+
+class _FakeAdapter implements HttpClientAdapter {
+  final bool shouldThrow;
+  _FakeAdapter({this.shouldThrow = false});
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (shouldThrow) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+        error: 'Connection failed',
+      );
+    }
+    return ResponseBody.fromString('ok', 200, headers: {});
+  }
 }
