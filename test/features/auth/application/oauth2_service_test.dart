@@ -158,7 +158,7 @@ void main() {
         secureStorage: storage,
         httpClient: httpClient,
         sessionManager: sessionManager,
-        launcher: (uri, {mode = LaunchMode.platformDefault}) async => true, // avoid real url_launcher
+        launcher: (uri, {mode = LaunchMode.platformDefault}) async => true, // Mock launcher to avoid actual URL navigation during tests
       );
     });
 
