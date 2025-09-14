@@ -32,6 +32,38 @@ fix/deploy-workflows
       expect(back['tier'], 'silver');
     });
 
+    test('fromJson with defaults', () {
+      final minimalJson = {
+        'id': 'u2',
+        'email': 'u2@example.com',
+        'role': 'user',
+        'tier': 'bronze',
+        'createdAt': '2024-01-01T00:00:00.000Z',
+        'lastLoginAt': '2024-01-02T00:00:00.000Z',
+      };
+
+      final user = User.fromJson(minimalJson);
+      expect(user.reputationScore, 0); // Default value
+      expect(user.isTemporary, false); // Default value
+      expect(user.tokenExpires, isNull); // Default value
+    });
+
+    test('toJson with null tokenExpires', () {
+      final user = User(
+        id: 'u3',
+        email: 'u3@example.com',
+        role: UserRole.admin,
+        tier: UserTier.platinum,
+        reputationScore: 100,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-02T00:00:00.000Z'),
+        tokenExpires: null,
+      );
+
+      final json = user.toJson();
+      expect(json['tokenExpires'], isNull);
+    });
+
     test('copyWith and equality', () {
       final base = User(
         id: 'id',
@@ -52,12 +84,143 @@ fix/deploy-workflows
       expect(changed == base, isFalse);
     });
 
+    test('copyWith all fields', () {
+      final base = User(
+        id: 'id1',
+        email: 'old@example.com',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 10,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        isTemporary: false,
+        tokenExpires: null,
+      );
+
+      final updated = base.copyWith(
+        id: 'id2',
+        email: 'new@example.com',
+        role: UserRole.admin,
+        tier: UserTier.platinum,
+        reputationScore: 200,
+        createdAt: DateTime.parse('2024-02-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-02-02T00:00:00.000Z'),
+        isTemporary: true,
+        tokenExpires: DateTime.parse('2024-02-03T00:00:00.000Z'),
+      );
+
+      expect(updated.id, 'id2');
+      expect(updated.email, 'new@example.com');
+      expect(updated.role, UserRole.admin);
+      expect(updated.tier, UserTier.platinum);
+      expect(updated.reputationScore, 200);
+      expect(updated.isTemporary, true);
+      expect(updated.tokenExpires, isNotNull);
+    });
+
+    test('equality operator', () {
+      final user1 = User(
+        id: 'u1',
+        email: 'test@example.com',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+      );
+
+      final user2 = User(
+        id: 'u1',
+        email: 'test@example.com',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+      );
+
+      final user3 = User(
+        id: 'u2',
+        email: 'different@example.com',
+        role: UserRole.admin,
+        tier: UserTier.gold,
+        reputationScore: 100,
+        createdAt: DateTime.parse('2024-01-02T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-02T00:00:00.000Z'),
+      );
+
+      // Test identical objects
+      expect(user1 == user1, isTrue);
+      
+      // Test equal objects
+      expect(user1 == user2, isTrue);
+      expect(user1.hashCode == user2.hashCode, isTrue);
+      
+      // Test different objects
+      expect(user1 == user3, isFalse);
+      
+      // Test with different type
+      expect(user1 == 'not a user', isFalse);
+    });
+
+    test('toString', () {
+      final user = User(
+        id: 'u1',
+        email: 'test@example.com',
+        role: UserRole.moderator,
+        tier: UserTier.silver,
+        reputationScore: 50,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+      );
+
+      final stringRep = user.toString();
+      expect(stringRep, contains('User('));
+      expect(stringRep, contains('id: u1'));
+      expect(stringRep, contains('email: test@example.com'));
+      expect(stringRep, contains('role: UserRole.moderator'));
+      expect(stringRep, contains('tier: UserTier.silver'));
+      expect(stringRep, contains('reputation: 50'));
+    });
+
     test('role/tier fromString defaults', () {
       expect(UserRole.fromString('ADMIN'), UserRole.admin);
       expect(UserRole.fromString('unknown'), UserRole.user);
       expect(UserTier.fromString('GOLD'), UserTier.gold);
       expect(UserTier.fromString('n/a'), UserTier.bronze);
  main
+    });
+
+    test('UserRole enum', () {
+      expect(UserRole.user.name, 'user');
+      expect(UserRole.moderator.name, 'moderator');
+      expect(UserRole.admin.name, 'admin');
+      
+      // Test fromString with exact matches
+      expect(UserRole.fromString('user'), UserRole.user);
+      expect(UserRole.fromString('moderator'), UserRole.moderator);
+      expect(UserRole.fromString('admin'), UserRole.admin);
+      
+      // Test case insensitive
+      expect(UserRole.fromString('USER'), UserRole.user);
+      expect(UserRole.fromString('MODERATOR'), UserRole.moderator);
+    });
+
+    test('UserTier enum', () {
+      expect(UserTier.bronze.name, 'bronze');
+      expect(UserTier.silver.name, 'silver');
+      expect(UserTier.gold.name, 'gold');
+      expect(UserTier.platinum.name, 'platinum');
+      
+      // Test fromString with exact matches
+      expect(UserTier.fromString('bronze'), UserTier.bronze);
+      expect(UserTier.fromString('silver'), UserTier.silver);
+      expect(UserTier.fromString('gold'), UserTier.gold);
+      expect(UserTier.fromString('platinum'), UserTier.platinum);
+      
+      // Test case insensitive
+      expect(UserTier.fromString('SILVER'), UserTier.silver);
+      expect(UserTier.fromString('PLATINUM'), UserTier.platinum);
     });
   });
 }
