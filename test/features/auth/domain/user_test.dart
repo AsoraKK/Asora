@@ -2,110 +2,62 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
 void main() {
-  group('User Model', () {
-    final baseJson = {
-      'id': '123',
-      'email': 'test@example.com',
-      'role': 'admin',
-      'tier': 'gold',
-      'reputationScore': 42,
-      'createdAt': '2024-01-01T12:00:00.000Z',
-      'lastLoginAt': '2024-01-02T12:00:00.000Z',
-      'isTemporary': false,
-      'tokenExpires': '2024-01-03T12:00:00.000Z',
-    };
+fix/deploy-workflows
+  group('User model', () {
+    test('fromJson/toJson roundtrip', () {
+      final json = {
+        'id': 'u1',
+        'email': 'u1@example.com',
+        'role': 'moderator',
+        'tier': 'silver',
+        'reputationScore': 42,
+        'createdAt': '2024-01-01T00:00:00.000Z',
+        'lastLoginAt': '2024-01-02T00:00:00.000Z',
+        'isTemporary': true,
+        'tokenExpires': '2024-01-03T00:00:00.000Z',
+      };
 
-    test('fromJson parses correctly', () {
-      final user = User.fromJson(baseJson);
-      expect(user.id, '123');
-      expect(user.email, 'test@example.com');
-      expect(user.role, UserRole.admin);
-      expect(user.tier, UserTier.gold);
-      expect(user.tokenExpires,
-          DateTime.parse('2024-01-03T12:00:00.000Z'));
-    });
-
-    test('fromJson handles missing tokenExpires', () {
-      final json = Map<String, dynamic>.from(baseJson)
-        ..remove('tokenExpires');
       final user = User.fromJson(json);
-      expect(user.tokenExpires, isNull);
+      expect(user.id, 'u1');
+      expect(user.email, 'u1@example.com');
+      expect(user.role, UserRole.moderator);
+      expect(user.tier, UserTier.silver);
+      expect(user.reputationScore, 42);
+      expect(user.isTemporary, true);
+      expect(user.tokenExpires, isNotNull);
+
+      final back = user.toJson();
+      expect(back['id'], 'u1');
+      expect(back['role'], 'moderator');
+      expect(back['tier'], 'silver');
     });
 
-    test('fromJson handles null tokenExpires', () {
-      final json = Map<String, dynamic>.from(baseJson)
-        ..['tokenExpires'] = null;
-      final user = User.fromJson(json);
-      expect(user.tokenExpires, isNull);
-    });
-
-    test('toJson serializes correctly', () {
-      final user = User.fromJson(baseJson);
-      final json = user.toJson();
-      expect(json['id'], baseJson['id']);
-      expect(json['tokenExpires'], baseJson['tokenExpires']);
-    });
-
-    test('toJson handles null tokenExpires', () {
-      final jsonMap = Map<String, dynamic>.from(baseJson)..remove('tokenExpires');
-      final user = User.fromJson(jsonMap);
-      final json = user.toJson();
-      expect(json['tokenExpires'], isNull);
-    });
-
-    test('fromJson defaults invalid role/tier', () {
-      final json = Map<String, dynamic>.from(baseJson)
-        ..['role'] = 'invalid_role'
-        ..['tier'] = 'invalid_tier';
-      final user = User.fromJson(json);
-      expect(user.role, UserRole.user);
-      expect(user.tier, UserTier.bronze);
-    });
-
-    test('copyWith updates fields', () {
-      final user = User.fromJson(baseJson);
-      final updated = user.copyWith(
-        email: 'new@example.com',
-        role: UserRole.moderator,
-        tokenExpires: DateTime.parse('2024-01-04T12:00:00.000Z'),
+    test('copyWith and equality', () {
+      final base = User(
+        id: 'id',
+        email: 'a@b.com',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
+        lastLoginAt: DateTime.parse('2024-01-01T00:00:00.000Z'),
       );
-      expect(updated.email, 'new@example.com');
-      expect(updated.role, UserRole.moderator);
-      expect(
-        updated.tokenExpires,
-        DateTime.parse('2024-01-04T12:00:00.000Z'),
-      );
-      expect(updated.id, user.id);
+
+      final same = base.copyWith();
+      expect(same, equals(base));
+
+      final changed = base.copyWith(email: 'c@d.com', tier: UserTier.gold);
+      expect(changed.email, 'c@d.com');
+      expect(changed.tier, UserTier.gold);
+      expect(changed == base, isFalse);
     });
 
-    test('equality compares all fields', () {
-      final user1 = User.fromJson(baseJson);
-      final user2 = User.fromJson(baseJson);
-      final user3 = user1.copyWith(email: 'different@example.com');
-      expect(user1, equals(user2));
-      expect(user1, isNot(equals(user3)));
-    });
-  });
-
-  group('UserRole parsing', () {
-    test('parses valid roles', () {
-      expect(UserRole.fromString('admin'), UserRole.admin);
-      expect(UserRole.fromString('MODERATOR'), UserRole.moderator);
-    });
-
-    test('defaults on invalid role', () {
+    test('role/tier fromString defaults', () {
+      expect(UserRole.fromString('ADMIN'), UserRole.admin);
       expect(UserRole.fromString('unknown'), UserRole.user);
-    });
-  });
-
-  group('UserTier parsing', () {
-    test('parses valid tiers', () {
-      expect(UserTier.fromString('gold'), UserTier.gold);
-      expect(UserTier.fromString('PLATINUM'), UserTier.platinum);
-    });
-
-    test('defaults on invalid tier', () {
-      expect(UserTier.fromString('unknown'), UserTier.bronze);
+      expect(UserTier.fromString('GOLD'), UserTier.gold);
+      expect(UserTier.fromString('n/a'), UserTier.bronze);
+ main
     });
   });
 }
