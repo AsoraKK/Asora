@@ -29,6 +29,10 @@ class _FakeSecureStore {
         return null;
     }
   }
+
+  void clear() {
+    _data.clear();
+  }
 }
 
 void main() {

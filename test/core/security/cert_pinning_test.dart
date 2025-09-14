@@ -1,10 +1,13 @@
+coverage/80-improvements
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+ main
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:asora/core/security/cert_pinning.dart';
 
+coverage/80-improvements
 class _FakeAdapter implements HttpClientAdapter {
   ResponseBody? response;
   Object? errorToThrow;
@@ -23,6 +26,7 @@ class _FakeAdapter implements HttpClientAdapter {
           requestOptions: options,
           type: DioExceptionType.connectionError,
           error: errorToThrow,
+main
         );
       } else {
         // Fallback if options not provided
@@ -49,9 +53,11 @@ void main() {
     expect(dio.interceptors.any((i) => i.runtimeType.toString().contains('CertPinning')), isTrue);
   });
 
+coverage/80-improvements
   test('PinnedCertHttpClientAdapter delegates on success', () async {
     final fake = _FakeAdapter();
     fake.response = ResponseBody.fromString('ok', 200);
+ main
 
     final pinned = PinnedCertHttpClientAdapter(fake);
     final opts = RequestOptions(
@@ -117,4 +123,28 @@ void main() {
       expect(e.message, contains('Secure connection could not be established'));
     }
   });
+}
+
+class _FakeAdapter implements HttpClientAdapter {
+  final bool shouldThrow;
+  _FakeAdapter({this.shouldThrow = false});
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (shouldThrow) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+        error: 'Connection failed',
+      );
+    }
+    return ResponseBody.fromString('ok', 200, headers: {});
+  }
 }
