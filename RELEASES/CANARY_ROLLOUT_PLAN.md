@@ -1,7 +1,7 @@
 Canary Rollout Plan (Front Door, Flex Consumption)
 
 Scope
-- Apps: asora-function-flex (prod), asora-function-flex-canary (canary)
+- Apps: asora-function-dev (prod), asora-function-dev-canary (canary)
 - Traffic split via Azure Front Door origin weights (90/10)
 - Monitor App Insights requests failure rate for canary for 10 minutes
 - Rollback if failureRate > 1%
@@ -12,7 +12,7 @@ Prereqs
 
 Steps
 1) Deploy to CANARY:
-   - Publish `functions/` to `asora-function-flex-canary` via Functions Action (OneDeploy)
+   - Publish `functions/` to `asora-function-dev-canary` via Functions Action (OneDeploy)
 2) Shift traffic:
    - Set Front Door origin weights: prod=90, canary=10
 3) Monitor (10 min):

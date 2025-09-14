@@ -1,11 +1,14 @@
+coverage/80-improvements
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+ main
 import 'package:asora/features/auth/presentation/auth_screen.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 
+coverage/80-improvements
 class _FakeAuthService extends AuthService {
   bool shouldThrow = false;
   String token = 'token';
@@ -46,3 +49,4 @@ void main() {
   });
 }
 
+ main

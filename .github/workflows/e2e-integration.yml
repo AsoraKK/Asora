@@ -32,7 +32,7 @@ jobs:
       - name: Get Function key
         id: funcKey
         run: |
-          key=$(az functionapp keys list -g asora-psql-flex -n asora-function-flex --query "masterKey" -o tsv)
+          key=$(az functionapp keys list -g asora-psql-flex -n asora-function-dev --query "masterKey" -o tsv)
           echo "FUNCTION_KEY=$key" >> $GITHUB_ENV
       - name: Install Functions deps
         working-directory: functions
@@ -40,7 +40,7 @@ jobs:
       - name: Run E2E script
         working-directory: functions
         env:
-          FUNCTION_BASE_URL: https://asora-function-flex.azurewebsites.net
+          FUNCTION_BASE_URL: https://asora-function-dev.azurewebsites.net
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           COSMOS_DATABASE_NAME: asora
           FUNCTION_KEY: ${{ env.FUNCTION_KEY }}

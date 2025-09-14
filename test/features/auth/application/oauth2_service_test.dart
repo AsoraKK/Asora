@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+coverage/80-improvements
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+ main
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/core/auth/auth_session_manager.dart';
@@ -30,6 +32,7 @@ class _FakeSecureStorage extends FlutterSecureStorage {
     }
   }
 
+coverage/80-improvements
   @override
   Future<String?> read({
     required String key,
@@ -53,6 +56,7 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }) async {
     _data.remove(key);
   }
+main
 
   @override
   Future<void> deleteAll({
@@ -291,4 +295,275 @@ void main() {
       expect(sessionManager.clearedAll, isTrue);
     });
   });
+
+  group('OAuth2Service Flow Tests', () {
+    late MockFlutterSecureStorage storage;
+    late MockHttpClient client;
+    late MockAuthSessionManager sessionManager;
+    late Map<String, String> store;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      storage = MockFlutterSecureStorage();
+      client = MockHttpClient();
+      sessionManager = MockAuthSessionManager();
+      store = {};
+
+      when(storage.write(key: anyNamed('key'), value: anyNamed('value')))
+          .thenAnswer((invocation) async {
+        store[invocation.namedArguments[#key] as String] =
+            invocation.namedArguments[#value] as String;
+      });
+      when(storage.read(key: anyNamed('key')))
+          .thenAnswer((invocation) async =>
+              store[invocation.namedArguments[#key] as String]);
+      when(storage.delete(key: anyNamed('key')))
+          .thenAnswer((invocation) async =>
+              store.remove(invocation.namedArguments[#key] as String));
+      when(storage.deleteAll()).thenAnswer((_) async => store.clear());
+
+      when(sessionManager.createSession(
+        state: anyNamed('state'),
+        nonce: anyNamed('nonce'),
+        codeChallenge: anyNamed('codeChallenge'),
+      )).thenAnswer((invocation) async {
+        final state = invocation.namedArguments[#state] as String;
+        final nonce = invocation.namedArguments[#nonce] as String;
+        final codeChallenge =
+            invocation.namedArguments[#codeChallenge] as String;
+        return AuthSessionState(
+          id: 'session123',
+          state: state,
+          nonce: nonce,
+          codeVerifier: '',
+          codeChallenge: codeChallenge,
+          createdAt: DateTime.now(),
+          ttl: const Duration(minutes: 10),
+        );
+      });
+      when(sessionManager.completeSession(any<AuthSessionState>()))
+          .thenAnswer((_) async {});
+    });
+
+    group('signInWithOAuth2', () {
+      test('returns user on success', () async {
+        const MethodChannel('plugins.flutter.io/url_launcher')
+            .setMockMethodCallHandler((_) async => true);
+
+        final tokenJson = {
+          'access_token': 'access123',
+          'refresh_token': 'refresh123',
+          'token_type': 'Bearer',
+          'expires_in': 3600,
+          'scope': 'openid email profile',
+          'user': {
+            'id': 'user1',
+            'email': 'test@example.com',
+            'role': 'user',
+            'tier': 'bronze',
+            'reputationScore': 0,
+            'createdAt': '2023-01-01T00:00:00.000Z',
+            'lastLoginAt': '2023-01-01T00:00:00.000Z',
+            'isTemporary': false,
+          },
+        };
+
+        when(client.post(any<Uri>(),
+                headers: anyNamed('headers'), body: anyNamed('body')))
+            .thenAnswer(
+          (_) async => http.Response(jsonEncode(tokenJson), 200),
+        );
+
+        final service = TestOAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+          timeout: const Duration(seconds: 1),
+        );
+
+        final future = service.signInWithOAuth2();
+        await Future.delayed(const Duration(milliseconds: 10));
+        service.handleCallback(
+          Uri.parse('asora://oauth/callback?code=abc&state=xyz'),
+        );
+        final user = await future;
+        expect(user.email, equals('test@example.com'));
+      });
+
+      test('throws AuthFailure on invalid token response', () async {
+        const MethodChannel('plugins.flutter.io/url_launcher')
+            .setMockMethodCallHandler((_) async => true);
+
+        when(client.post(any<Uri>(),
+                headers: anyNamed('headers'), body: anyNamed('body')))
+            .thenAnswer(
+          (_) async => http.Response('error', 400),
+        );
+
+        final service = TestOAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+          timeout: const Duration(seconds: 1),
+        );
+
+        final future = service.signInWithOAuth2();
+        await Future.delayed(const Duration(milliseconds: 10));
+        service.handleCallback(
+          Uri.parse('asora://oauth/callback?code=abc&state=xyz'),
+        );
+
+        await expectLater(future, throwsA(isA<AuthFailure>()));
+      });
+
+      test('throws AuthFailure on authorization timeout', () async {
+        const MethodChannel('plugins.flutter.io/url_launcher')
+            .setMockMethodCallHandler((_) async => true);
+
+        final service = TestOAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+          timeout: const Duration(milliseconds: 10),
+        );
+
+        await expectLater(
+          service.signInWithOAuth2(),
+          throwsA(isA<AuthFailure>()),
+        );
+      });
+    });
+
+    group('refreshToken', () {
+      test('returns user when refresh succeeds', () async {
+        store['oauth2_refresh_token'] = 'refresh123';
+
+        final tokenJson = {
+          'access_token': 'access123',
+          'refresh_token': 'refresh123',
+          'token_type': 'Bearer',
+          'expires_in': 3600,
+          'scope': 'openid email profile',
+          'user': {
+            'id': 'user1',
+            'email': 'test@example.com',
+            'role': 'user',
+            'tier': 'bronze',
+            'reputationScore': 0,
+            'createdAt': '2023-01-01T00:00:00.000Z',
+            'lastLoginAt': '2023-01-01T00:00:00.000Z',
+            'isTemporary': false,
+          },
+        };
+
+        when(client.post(any<Uri>(),
+                headers: anyNamed('headers'), body: anyNamed('body')))
+            .thenAnswer(
+          (_) async => http.Response(jsonEncode(tokenJson), 200),
+        );
+        when(client.get(any<Uri>(), headers: anyNamed('headers'))).thenAnswer(
+          (_) async => http.Response(jsonEncode(tokenJson['user']), 200),
+        );
+
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.refreshToken();
+        expect(user?.email, equals('test@example.com'));
+      });
+
+      test('returns null when refresh token missing', () async {
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.refreshToken();
+        expect(user, isNull);
+      });
+
+      test('returns null on invalid response', () async {
+        store['oauth2_refresh_token'] = 'refresh123';
+
+        when(client.post(any<Uri>(),
+                headers: anyNamed('headers'), body: anyNamed('body')))
+            .thenAnswer(
+          (_) async => http.Response('error', 400),
+        );
+
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.refreshToken();
+        expect(user, isNull);
+        expect(store.isEmpty, isTrue);
+      });
+    });
+
+    group('getUserInfo', () {
+      test('returns user when access token exists', () async {
+        store['oauth2_access_token'] = 'access123';
+        final userJson = {
+          'id': 'user1',
+          'email': 'test@example.com',
+          'role': 'user',
+          'tier': 'bronze',
+          'reputationScore': 0,
+          'createdAt': '2023-01-01T00:00:00.000Z',
+          'lastLoginAt': '2023-01-01T00:00:00.000Z',
+          'isTemporary': false,
+        };
+
+        when(client.get(any<Uri>(), headers: anyNamed('headers'))).thenAnswer(
+          (_) async => http.Response(jsonEncode(userJson), 200),
+        );
+
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.getUserInfo();
+        expect(user?.email, equals('test@example.com'));
+        expect(store['oauth2_user_data'], isNotNull);
+      });
+
+      test('returns null when access token missing', () async {
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.getUserInfo();
+        expect(user, isNull);
+      });
+
+      test('returns null on invalid response', () async {
+        store['oauth2_access_token'] = 'access123';
+        when(client.get(any<Uri>(), headers: anyNamed('headers'))).thenAnswer(
+          (_) async => http.Response('error', 401),
+        );
+
+        final service = OAuth2Service(
+          secureStorage: storage,
+          httpClient: client,
+          sessionManager: sessionManager,
+        );
+
+        final user = await service.getUserInfo();
+        expect(user, isNull);
+      });
+    });
+  });
 }
+ coverage/80-improvements
+ main

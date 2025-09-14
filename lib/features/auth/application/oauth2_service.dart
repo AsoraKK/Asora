@@ -534,6 +534,7 @@ class OAuth2Service {
     _httpClient.close();
   }
 
+coverage/80-improvements
   // Test-only helpers to increase coverage without affecting prod API
   @visibleForTesting
   String debugBuildAuthorizationUrl({
@@ -559,4 +560,5 @@ class OAuth2Service {
 
   @visibleForTesting
   Future<void> debugStoreTokens(OAuth2TokenResponse resp) => _storeTokens(resp);
+ main
 }
