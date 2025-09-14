@@ -395,7 +395,7 @@ void main() {
 
       test('should test OAuth session key format', () {
         const sessionId = 'test_session_123';
-        final oauthSessionKey = 'oauth_session_$sessionId';
+        const oauthSessionKey = 'oauth_session_$sessionId';
 
         expect(oauthSessionKey, equals('oauth_session_test_session_123'));
         expect(oauthSessionKey, startsWith('oauth_session_'));
@@ -440,8 +440,8 @@ void main() {
         expect(length, equals(32));
 
         // Test that we can generate strings of different lengths
-        final shortLength = 8;
-        final longLength = 64;
+        const shortLength = 8;
+        const longLength = 64;
 
         expect(shortLength, lessThan(length));
         expect(longLength, greaterThan(length));
@@ -450,7 +450,7 @@ void main() {
       test('should test session ID prefix format', () {
         const prefix = 'session_';
         const randomPart = 'abcd1234efgh5678ijkl9012mnop3456';
-        final sessionId = '$prefix$randomPart';
+        const sessionId = '$prefix$randomPart';
 
         expect(sessionId, startsWith(prefix));
         expect(sessionId.length, equals(prefix.length + randomPart.length));
@@ -477,6 +477,105 @@ void main() {
         expect(consumeMessage, contains('✅'));
         expect(consumeMessage, contains('Session consumed'));
         expect(consumeMessage, contains(sessionState));
+      });
+    });
+
+    group('Additional Coverage Tests', () {
+      test('should handle AuthSessionState edge cases', () {
+        // Test with exact boundary times
+        final exactNow = DateTime.now();
+        final sessionAtBoundary = AuthSessionState(
+          id: 'boundary_test',
+          state: 'boundary_state',
+          nonce: 'boundary_nonce',
+          codeVerifier: 'boundary_verifier',
+          codeChallenge: 'boundary_challenge',
+          createdAt: exactNow,
+          ttl: Duration.zero, // Expires immediately
+        );
+
+        expect(sessionAtBoundary.isExpired, isTrue);
+      });
+
+      test('should handle very large JSON values', () {
+        final largeString = 'x' * 1000; // 1000 character string
+        final json = {
+          'id': largeString,
+          'state': largeString,
+          'nonce': largeString,
+          'codeVerifier': largeString,
+          'codeChallenge': largeString,
+          'createdAt': '2023-12-15T14:30:00.000Z',
+          'ttl': 600000,
+        };
+
+        final sessionState = AuthSessionState.fromJson(json);
+        expect(sessionState.id.length, equals(1000));
+        expect(sessionState.state.length, equals(1000));
+      });
+
+      test('should verify JSON roundtrip with millisecond precision', () {
+        final preciseTime = DateTime.parse('2023-12-15T14:30:45.123Z');
+        final sessionState = AuthSessionState(
+          id: 'precision_test',
+          state: 'precision_state',
+          nonce: 'precision_nonce',
+          codeVerifier: 'precision_verifier',
+          codeChallenge: 'precision_challenge',
+          createdAt: preciseTime,
+          ttl: const Duration(milliseconds: 12345),
+        );
+
+        final json = sessionState.toJson();
+        final reconstructed = AuthSessionState.fromJson(json);
+
+        expect(reconstructed.createdAt, equals(preciseTime));
+        expect(reconstructed.ttl.inMilliseconds, equals(12345));
+      });
+
+      test('should test AuthSessionManager constants coverage', () {
+        final manager = AuthSessionManager();
+        expect(manager, isA<AuthSessionManager>());
+        
+        // Test that we can instantiate the manager
+        expect(() => AuthSessionManager(), returnsNormally);
+      });
+
+      test('should cover additional copyWith scenarios', () {
+        final base = AuthSessionState(
+          id: 'base',
+          state: 'base',
+          nonce: 'base',
+          codeVerifier: 'base',
+          codeChallenge: 'base',
+          createdAt: DateTime(2023, 1, 1),
+          ttl: const Duration(minutes: 1),
+        );
+
+        // Test partial updates
+        final updatedId = base.copyWith(id: 'updated');
+        expect(updatedId.id, equals('updated'));
+        expect(updatedId.state, equals('base')); // unchanged
+
+        final updatedTtl = base.copyWith(ttl: const Duration(hours: 1));
+        expect(updatedTtl.ttl, equals(const Duration(hours: 1)));
+        expect(updatedTtl.id, equals('base')); // unchanged
+      });
+
+      test('should test complex expiry scenarios', () {
+        final farFuture = DateTime.now().add(const Duration(days: 1000));
+        final sessionState = AuthSessionState(
+          id: 'future_test',
+          state: 'future_state',
+          nonce: 'future_nonce',
+          codeVerifier: 'future_verifier',
+          codeChallenge: 'future_challenge',
+          createdAt: farFuture,
+          ttl: const Duration(minutes: 1),
+        );
+
+        // Session created in far future should not be expired now
+        expect(sessionState.isExpired, isFalse);
       });
     });
   });
