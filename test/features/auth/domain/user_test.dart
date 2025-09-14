@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
 void main() {
+fix/deploy-workflows
   group('User model', () {
     test('fromJson/toJson roundtrip', () {
       final json = {
@@ -56,6 +57,7 @@ void main() {
       expect(UserRole.fromString('unknown'), UserRole.user);
       expect(UserTier.fromString('GOLD'), UserTier.gold);
       expect(UserTier.fromString('n/a'), UserTier.bronze);
+ main
     });
   });
 }

@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Minimal specification for P1 endpoints exposed by the Functions app.
 servers:
-  - url: https://asora-function-flex.azurewebsites.net
+  - url: https://asora-function-dev.azurewebsites.net
     description: Flex Consumption (prod)
 security:
   - bearerAuth: []

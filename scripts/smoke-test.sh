@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${FUNCTION_BASE_URL:-https://asora-function-flex.azurewebsites.net}"
+BASE_URL="${FUNCTION_BASE_URL:-https://asora-function-dev.azurewebsites.net}"
 OUT_DIR="smoke"
 THRESHOLD_SEC="0.5"
 

@@ -1,6 +1,37 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:asora/core/auth/auth_session_manager.dart';
+import 'package:flutter/services.dart';
+
+/// In-memory fake for flutter_secure_storage
+class _FakeSecureStore {
+  final Map<String, String> data = {};
+  Future<dynamic> handle(MethodCall call) async {
+    switch (call.method) {
+      case 'write':
+        data['${call.arguments['key']}'] = call.arguments['value'] as String? ?? '';
+        return null;
+      case 'read':
+        return data['${call.arguments['key']}'];
+      case 'delete':
+        data.remove('${call.arguments['key']}');
+        return null;
+      case 'readAll':
+        return Map<String, String>.from(data);
+      case 'deleteAll':
+        data.clear();
+        return null;
+      case 'containsKey':
+        return data.containsKey('${call.arguments['key']}');
+      default:
+        return null;
+    }
+  }
+
+  void clear() {
+    data.clear();
+  }
+}
 
 // Mock for FlutterSecureStorage
 class MockFlutterSecureStorage extends FlutterSecureStorage {
@@ -83,6 +114,8 @@ class MockFlutterSecureStorage extends FlutterSecureStorage {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AuthSessionState', () {
     late DateTime testDate;
 
@@ -478,6 +511,153 @@ void main() {
         expect(consumeMessage, contains('Session consumed'));
         expect(consumeMessage, contains(sessionState));
       });
+  });
+  group('AuthSessionManager method tests', () {
+    const MethodChannel channel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    final _FakeSecureStore fakeStore = _FakeSecureStore();
+    final AuthSessionManager manager = AuthSessionManager();
+
+    setUpAll(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) => fakeStore.handle(call));
+    });
+
+    tearDown(() {
+      fakeStore.clear();
+    });
+
+    tearDownAll(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('createTokenSession persists tokens and expiry', () async {
+      final expiry = DateTime.now().add(const Duration(hours: 1));
+
+      final result = await manager.createTokenSession(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        userId: 'user',
+        expiresAt: expiry,
+      );
+
+      expect(result['accessToken'], equals('access'));
+      expect(fakeStore.data['session_token'], equals('access'));
+      expect(fakeStore.data['refresh_token'], equals('refresh'));
+      expect(fakeStore.data['user_id'], equals('user'));
+      expect(
+        fakeStore.data['session_expiry'],
+        equals(expiry.toIso8601String()),
+      );
+    });
+
+    test('hasActiveSession reflects token presence and expiry', () async {
+      final expiry = DateTime.now().add(const Duration(minutes: 30));
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+        expiresAt: expiry,
+      );
+
+      expect(await manager.hasActiveSession(), isTrue);
+
+      fakeStore.data.remove('session_token');
+      expect(await manager.hasActiveSession(), isFalse);
+    });
+
+    test('hasActiveSession returns false when session expired', () async {
+      final pastExpiry = DateTime.now().subtract(const Duration(minutes: 1));
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+        expiresAt: pastExpiry,
+      );
+
+      expect(await manager.hasActiveSession(), isFalse);
+    });
+
+    test('getSessionState returns authenticated and expired states', () async {
+      final expiry = DateTime.now().add(const Duration(minutes: 30));
+      await manager.createTokenSession(
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        userId: 'user',
+        expiresAt: expiry,
+      );
+
+      expect(
+        await manager.getSessionState(),
+        equals(AuthSessionStatus.authenticated),
+      );
+
+      await manager.clearSession();
+
+      final pastExpiry = DateTime.now().subtract(const Duration(minutes: 1));
+      await manager.createTokenSession(
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        userId: 'user',
+        expiresAt: pastExpiry,
+      );
+
+      expect(
+        await manager.getSessionState(),
+        equals(AuthSessionStatus.expired),
+      );
+    });
+
+    test('refreshSession updates token and expiry', () async {
+      final expiry = DateTime.now().add(const Duration(minutes: 30));
+      await manager.createTokenSession(
+        accessToken: 'old',
+        refreshToken: 'ref',
+        userId: 'user',
+        expiresAt: expiry,
+      );
+
+      final newExpiry = DateTime.now().add(const Duration(hours: 1));
+      final refreshed = await manager.refreshSession('new', newExpiry);
+
+      expect(refreshed, isTrue);
+      expect(fakeStore.data['session_token'], equals('new'));
+      expect(
+        fakeStore.data['session_expiry'],
+        equals(newExpiry.toIso8601String()),
+      );
+    });
+
+    test('clearSession removes all persisted keys', () async {
+      final expiry = DateTime.now().add(const Duration(minutes: 30));
+      await manager.createTokenSession(
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        userId: 'user',
+        expiresAt: expiry,
+      );
+
+      await manager.clearSession();
+
+      expect(fakeStore.data.containsKey('session_token'), isFalse);
+      expect(fakeStore.data.containsKey('refresh_token'), isFalse);
+      expect(fakeStore.data.containsKey('user_id'), isFalse);
+      expect(fakeStore.data.containsKey('session_expiry'), isFalse);
+    });
+
+    test('validateSession fails when state inconsistent', () async {
+      final expiry = DateTime.now().add(const Duration(minutes: 30));
+      await manager.createTokenSession(
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        userId: 'user',
+        expiresAt: expiry,
+      );
+
+      fakeStore.data.remove('user_id');
+      expect(await manager.validateSession(), isFalse);
     });
   });
+});
 }
