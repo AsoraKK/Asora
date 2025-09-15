@@ -1,13 +1,10 @@
-coverage/80-improvements
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
- main
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:asora/core/security/cert_pinning.dart';
 
-coverage/80-improvements
 class _FakeAdapter implements HttpClientAdapter {
   ResponseBody? response;
   Object? errorToThrow;
@@ -26,7 +23,6 @@ class _FakeAdapter implements HttpClientAdapter {
           requestOptions: options,
           type: DioExceptionType.connectionError,
           error: errorToThrow,
-main
         );
       } else {
         // Fallback if options not provided
@@ -50,20 +46,20 @@ void main() {
     expect(dio.options.baseUrl, 'https://example.com');
     expect(dio.httpClientAdapter, isA<PinnedCertHttpClientAdapter>());
     // Interceptor type name should be present
-    expect(dio.interceptors.any((i) => i.runtimeType.toString().contains('CertPinning')), isTrue);
+    expect(
+      dio.interceptors.any(
+        (i) => i.runtimeType.toString().contains('CertPinning'),
+      ),
+      isTrue,
+    );
   });
 
-coverage/80-improvements
   test('PinnedCertHttpClientAdapter delegates on success', () async {
     final fake = _FakeAdapter();
     fake.response = ResponseBody.fromString('ok', 200);
- main
 
     final pinned = PinnedCertHttpClientAdapter(fake);
-    final opts = RequestOptions(
-      path: '/test',
-      method: 'GET',
-    );
+    final opts = RequestOptions(path: '/test', method: 'GET');
     // Base URL influences host parsing
     opts.baseUrl = 'https://asora-function-flex.azurewebsites.net';
 
@@ -84,7 +80,7 @@ coverage/80-improvements
 
   test('isPinValidationError detects for pinned host connection errors', () {
     final ro = RequestOptions(path: '/x', method: 'GET');
-    ro.baseUrl = 'https://asora-function-flex.azurewebsites.net';
+    ro.baseUrl = 'https://asora-function-dev.azurewebsites.net';
     final err = DioException(
       requestOptions: ro,
       type: DioExceptionType.connectionError,
@@ -105,11 +101,13 @@ coverage/80-improvements
   test('getCertPinningInfo contains pinned domains', () {
     final info = getCertPinningInfo();
     expect(info.enabled, kEnableCertPinning);
-    expect(info.pins.keys, contains('asora-function-flex.azurewebsites.net'));
+    expect(info.pins.keys, contains('asora-function-dev.azurewebsites.net'));
   });
 
   test('interceptor maps connectionError for pinned host', () async {
-    final dio = createPinnedDio(baseUrl: 'https://asora-function-flex.azurewebsites.net');
+    final dio = createPinnedDio(
+      baseUrl: 'https://asora-function-dev.azurewebsites.net',
+    );
     final fake = _FakeAdapter();
     dio.httpClientAdapter = PinnedCertHttpClientAdapter(fake);
     // adapter will throw a DioException connectionError using incoming request options
@@ -123,28 +121,4 @@ coverage/80-improvements
       expect(e.message, contains('Secure connection could not be established'));
     }
   });
-}
-
-class _FakeAdapter implements HttpClientAdapter {
-  final bool shouldThrow;
-  _FakeAdapter({this.shouldThrow = false});
-
-  @override
-  void close({bool force = false}) {}
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    if (shouldThrow) {
-      throw DioException(
-        requestOptions: options,
-        type: DioExceptionType.connectionError,
-        error: 'Connection failed',
-      );
-    }
-    return ResponseBody.fromString('ok', 200, headers: {});
-  }
 }

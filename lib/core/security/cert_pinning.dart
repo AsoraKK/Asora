@@ -7,7 +7,6 @@
 library;
 
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -28,8 +27,8 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 const Map<String, List<String>> kPinnedDomains = {
   // Flex app host (prod/dev)
   'asora-function-dev.azurewebsites.net': [
-    'sha256/REPLACE_WITH_SPKI_PIN',       // Primary (leaf SPKI)
-    'sha256/REPLACE_WITH_ROLLOVER_PIN',   // Rollover (leaf SPKI)
+    'sha256/REPLACE_WITH_SPKI_PIN', // Primary (leaf SPKI)
+    'sha256/REPLACE_WITH_ROLLOVER_PIN', // Rollover (leaf SPKI)
   ],
   // Example legacy dev host (keep if still used)
   'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
@@ -139,7 +138,8 @@ class _CertPinningInterceptor extends Interceptor {
           response: err.response,
           type: err.type,
           error: err.error,
-          message: 'Secure connection could not be established. Please try again on a trusted network or update the app.',
+          message:
+              'Secure connection could not be established. Please try again on a trusted network or update the app.',
         );
       }
     }
@@ -149,7 +149,8 @@ class _CertPinningInterceptor extends Interceptor {
 
 /// Utility to check if an error likely stems from pin validation failure.
 bool isPinValidationError(DioException err) {
-  if (err.type == DioExceptionType.connectionError || err.type == DioExceptionType.unknown) {
+  if (err.type == DioExceptionType.connectionError ||
+      err.type == DioExceptionType.unknown) {
     final host = Uri.parse(err.requestOptions.uri.toString()).host;
     return kPinnedDomains.containsKey(host);
   }

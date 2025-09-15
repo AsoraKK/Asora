@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
 void main() {
-fix/deploy-workflows
   group('User model', () {
     test('fromJson/toJson roundtrip', () {
       final json = {
@@ -151,14 +150,14 @@ fix/deploy-workflows
 
       // Test identical objects
       expect(user1 == user1, isTrue);
-      
+
       // Test equal objects
       expect(user1 == user2, isTrue);
       expect(user1.hashCode == user2.hashCode, isTrue);
-      
+
       // Test different objects
       expect(user1 == user3, isFalse);
-      
+
       // Test with different type
       expect(user1 == 'not a user', isFalse);
     });
@@ -188,19 +187,18 @@ fix/deploy-workflows
       expect(UserRole.fromString('unknown'), UserRole.user);
       expect(UserTier.fromString('GOLD'), UserTier.gold);
       expect(UserTier.fromString('n/a'), UserTier.bronze);
- main
     });
 
     test('UserRole enum', () {
       expect(UserRole.user.name, 'user');
       expect(UserRole.moderator.name, 'moderator');
       expect(UserRole.admin.name, 'admin');
-      
+
       // Test fromString with exact matches
       expect(UserRole.fromString('user'), UserRole.user);
       expect(UserRole.fromString('moderator'), UserRole.moderator);
       expect(UserRole.fromString('admin'), UserRole.admin);
-      
+
       // Test case insensitive
       expect(UserRole.fromString('USER'), UserRole.user);
       expect(UserRole.fromString('MODERATOR'), UserRole.moderator);
@@ -211,13 +209,13 @@ fix/deploy-workflows
       expect(UserTier.silver.name, 'silver');
       expect(UserTier.gold.name, 'gold');
       expect(UserTier.platinum.name, 'platinum');
-      
+
       // Test fromString with exact matches
       expect(UserTier.fromString('bronze'), UserTier.bronze);
       expect(UserTier.fromString('silver'), UserTier.silver);
       expect(UserTier.fromString('gold'), UserTier.gold);
       expect(UserTier.fromString('platinum'), UserTier.platinum);
-      
+
       // Test case insensitive
       expect(UserTier.fromString('SILVER'), UserTier.silver);
       expect(UserTier.fromString('PLATINUM'), UserTier.platinum);
