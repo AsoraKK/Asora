@@ -294,6 +294,12 @@ class AuthSessionManager {
 
       final expiry = newExpiry ?? DateTime.now().add(const Duration(hours: 24));
 
+      // If the new expiry is in the past, clear the session instead
+      if (expiry.isBefore(DateTime.now())) {
+        await clearSession();
+        return false;
+      }
+
       await _storage.write(key: _sessionTokenKey, value: newAccessToken);
       await _storage.write(
         key: _sessionExpiryKey,

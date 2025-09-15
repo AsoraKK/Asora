@@ -29,22 +29,26 @@ jobs:
         run: |
           az account show
           az group show -n asora-psql-flex --query name -o tsv
-      - name: Get Function key
-        id: funcKey
+      - name: Get Function key and URL
+        id: funcInfo
         run: |
           key=$(az functionapp keys list -g asora-psql-flex -n asora-function-dev --query "masterKey" -o tsv)
+          hostname=$(az functionapp show -g asora-psql-flex -n asora-function-dev --query "defaultHostName" -o tsv)
           echo "FUNCTION_KEY=$key" >> $GITHUB_ENV
+          echo "FUNCTION_BASE_URL=https://$hostname" >> $GITHUB_ENV
+          echo "Using Function App URL: https://$hostname"
       - name: Install Functions deps
         working-directory: functions
         run: npm ci --omit=dev
       - name: Run E2E script
         working-directory: functions
         env:
-          FUNCTION_BASE_URL: https://asora-function-dev.azurewebsites.net
+          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           COSMOS_DATABASE_NAME: asora
           FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
         run: |
+          echo "Testing Function App at: $FUNCTION_BASE_URL"
           node ../scripts/e2e-itest.js
       - name: Upload E2E report
         uses: actions/upload-artifact@v4

@@ -658,7 +658,7 @@ void main() {
 
   group('AppealFilters Model Tests', () {
     test('should serialize to JSON correctly', () {
-      final filters = AppealFilters(
+      const filters = AppealFilters(
         contentType: 'post',
         urgency: 'high',
         category: 'false_positive',
@@ -703,7 +703,7 @@ void main() {
     });
 
     test('should omit null fields in toJson', () {
-      final filters = AppealFilters(sortBy: 'urgency', sortOrder: 'desc');
+      const filters = AppealFilters(sortBy: 'urgency', sortOrder: 'desc');
 
       final json = filters.toJson();
       expect(json.containsKey('contentType'), false);
