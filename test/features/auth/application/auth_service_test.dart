@@ -685,7 +685,7 @@ void main() {
           );
           mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
 
-          mockHttpClient.setResponse('$testAuthUrl', {
+          mockHttpClient.setResponse(testAuthUrl, {
             'sessionToken': testToken,
           }, statusCode: 200);
 
@@ -725,7 +725,7 @@ void main() {
           );
           mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
 
-          mockHttpClient.setResponse('$testAuthUrl', {
+          mockHttpClient.setResponse(testAuthUrl, {
             'error': 'Invalid token',
           }, statusCode: 400);
 
@@ -750,10 +750,7 @@ void main() {
           );
           mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
 
-          mockHttpClient.setException(
-            '$testAuthUrl',
-            Exception('Network error'),
-          );
+          mockHttpClient.setException(testAuthUrl, Exception('Network error'));
 
           // Act & Assert
           expect(
@@ -767,7 +764,7 @@ void main() {
     group('verifyTokenWithBackend', () {
       test('should return session token when verification succeeds', () async {
         // Arrange
-        mockHttpClient.setResponse('$testAuthUrl', {
+        mockHttpClient.setResponse(testAuthUrl, {
           'sessionToken': testToken,
         }, statusCode: 200);
 
@@ -785,7 +782,7 @@ void main() {
         'should throw AuthFailure.serverError for non-200 response',
         () async {
           // Arrange
-          mockHttpClient.setResponse('$testAuthUrl', {
+          mockHttpClient.setResponse(testAuthUrl, {
             'error': 'Invalid token',
           }, statusCode: 400);
 
@@ -802,7 +799,7 @@ void main() {
         () async {
           // Arrange
           mockHttpClient.setResponse(
-            '$testAuthUrl',
+            testAuthUrl,
             {'success': true}, // Missing sessionToken
             statusCode: 200,
           );
@@ -817,7 +814,7 @@ void main() {
 
       test('should throw AuthFailure.serverError for network error', () async {
         // Arrange
-        mockHttpClient.setException('$testAuthUrl', Exception('Network error'));
+        mockHttpClient.setException(testAuthUrl, Exception('Network error'));
 
         // Act & Assert
         expect(
