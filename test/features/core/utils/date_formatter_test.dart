@@ -134,70 +134,70 @@ void main() {
 
     group('formatDuration Tests', () {
       test('should format days correctly', () {
-        final duration = const Duration(days: 3);
+        const duration = Duration(days: 3);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('3 days'));
       });
 
       test('should format single day correctly', () {
-        final duration = const Duration(days: 1);
+        const duration = Duration(days: 1);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('1 day'));
       });
 
       test('should format hours correctly', () {
-        final duration = const Duration(hours: 5);
+        const duration = Duration(hours: 5);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('5 hours'));
       });
 
       test('should format single hour correctly', () {
-        final duration = const Duration(hours: 1);
+        const duration = Duration(hours: 1);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('1 hour'));
       });
 
       test('should format minutes correctly', () {
-        final duration = const Duration(minutes: 30);
+        const duration = Duration(minutes: 30);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('30 minutes'));
       });
 
       test('should format single minute correctly', () {
-        final duration = const Duration(minutes: 1);
+        const duration = Duration(minutes: 1);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('1 minute'));
       });
 
       test('should handle less than a minute', () {
-        final duration = const Duration(seconds: 30);
+        const duration = Duration(seconds: 30);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('Less than a minute'));
       });
 
       test('should handle zero duration', () {
-        final duration = Duration.zero;
+        const duration = Duration.zero;
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('Less than a minute'));
       });
 
       test('should prioritize days over hours', () {
-        final duration = const Duration(days: 2, hours: 5);
+        const duration = Duration(days: 2, hours: 5);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('2 days'));
       });
 
       test('should prioritize hours over minutes', () {
-        final duration = const Duration(hours: 3, minutes: 30);
+        const duration = Duration(hours: 3, minutes: 30);
         final result = DateFormatter.formatDuration(duration);
 
         expect(result, equals('3 hours'));

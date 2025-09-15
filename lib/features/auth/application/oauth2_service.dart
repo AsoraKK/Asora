@@ -113,7 +113,10 @@ class OAuth2Service {
        _httpClient = httpClient ?? http.Client(),
        _sessionManager = sessionManager ?? AuthSessionManager(),
        _debugForceWeb = debugForceWeb,
-       _launcher = launcher ?? ((uri, {mode = LaunchMode.platformDefault}) => launchUrl(uri, mode: mode));
+       _launcher =
+           launcher ??
+           ((uri, {mode = LaunchMode.platformDefault}) =>
+               launchUrl(uri, mode: mode));
 
   final FlutterSecureStorage _secureStorage;
   final http.Client _httpClient;
@@ -523,9 +526,7 @@ class OAuth2Service {
   }
 
   String _generateSecureRandomString(int length) {
-    final clamped = length < 43
-        ? 43
-        : (length > 128 ? 128 : length);
+    final clamped = length < 43 ? 43 : (length > 128 ? 128 : length);
     return PkceHelper.generateCodeVerifier(length: clamped);
   }
 
@@ -534,14 +535,17 @@ class OAuth2Service {
     _httpClient.close();
   }
 
-coverage/80-improvements
   // Test-only helpers to increase coverage without affecting prod API
   @visibleForTesting
   String debugBuildAuthorizationUrl({
     required String codeChallenge,
     required String state,
     required String nonce,
-  }) => _buildAuthorizationUrl(codeChallenge: codeChallenge, state: state, nonce: nonce);
+  }) => _buildAuthorizationUrl(
+    codeChallenge: codeChallenge,
+    state: state,
+    nonce: nonce,
+  );
 
   @visibleForTesting
   Future<String> debugStartAndWaitForCode() => _waitForAuthorizationCode();
@@ -553,12 +557,9 @@ coverage/80-improvements
   void debugSetupCallbackListener() => _setupCallbackListener();
 
   @visibleForTesting
-  Future<OAuth2TokenResponse> debugExchangeCode(
-    String code,
-    String verifier,
-  ) => _exchangeCodeForTokens(authorizationCode: code, codeVerifier: verifier);
+  Future<OAuth2TokenResponse> debugExchangeCode(String code, String verifier) =>
+      _exchangeCodeForTokens(authorizationCode: code, codeVerifier: verifier);
 
   @visibleForTesting
   Future<void> debugStoreTokens(OAuth2TokenResponse resp) => _storeTokens(resp);
- main
 }

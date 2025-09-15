@@ -225,9 +225,6 @@ class AuthSessionManager {
   /// Get the current session status
   Future<AuthSessionStatus> getSessionState() async {
     try {
-      final hasSession = await hasActiveSession();
-      if (!hasSession) return AuthSessionStatus.unauthenticated;
-
       final token = await _storage.read(key: _sessionTokenKey);
       final expiryStr = await _storage.read(key: _sessionExpiryKey);
 
