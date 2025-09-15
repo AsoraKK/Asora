@@ -11,7 +11,7 @@ void main() {
 
       // Test close without force
       expect(() => pinnedAdapter.close(), returnsNormally);
-      
+
       // Test close with force parameter
       expect(() => pinnedAdapter.close(force: true), returnsNormally);
       expect(() => pinnedAdapter.close(force: false), returnsNormally);
@@ -20,7 +20,9 @@ void main() {
     test('CertPinningInfo constructor and serialization', () {
       const testInfo = CertPinningInfo(
         enabled: true,
-        pins: {'test.com': ['sha256/testpin']},
+        pins: {
+          'test.com': ['sha256/testpin'],
+        },
         buildMode: 'test',
       );
 
@@ -37,9 +39,11 @@ void main() {
     });
 
     test('isPinValidationError handles all DioException types', () {
-      final pinnedOptions = RequestOptions(path: 'https://asora-function-flex.azurewebsites.net/api');
+      final pinnedOptions = RequestOptions(
+        path: 'https://asora-function-dev.azurewebsites.net/api',
+      );
       final unpinnedOptions = RequestOptions(path: 'https://example.com/api');
-      
+
       // Test all DioException types
       final errorTypes = [
         DioExceptionType.connectionError,
@@ -52,16 +56,23 @@ void main() {
       ];
 
       for (final errorType in errorTypes) {
-        final pinnedError = DioException(requestOptions: pinnedOptions, type: errorType);
-        final unpinnedError = DioException(requestOptions: unpinnedOptions, type: errorType);
+        final pinnedError = DioException(
+          requestOptions: pinnedOptions,
+          type: errorType,
+        );
+        final unpinnedError = DioException(
+          requestOptions: unpinnedOptions,
+          type: errorType,
+        );
 
         // Only connection and unknown errors should return true for pinned domains
-        if (errorType == DioExceptionType.connectionError || errorType == DioExceptionType.unknown) {
+        if (errorType == DioExceptionType.connectionError ||
+            errorType == DioExceptionType.unknown) {
           expect(isPinValidationError(pinnedError), isTrue);
         } else {
           expect(isPinValidationError(pinnedError), isFalse);
         }
-        
+
         // Unpinned domains should never return true
         expect(isPinValidationError(unpinnedError), isFalse);
       }
@@ -76,8 +87,11 @@ void main() {
 
       // Test that toJson produces expected structure
       final json = info.toJson();
-      expect(json.keys, containsAll(['enabled', 'pins', 'buildMode', 'pinnedDomains']));
-      
+      expect(
+        json.keys,
+        containsAll(['enabled', 'pins', 'buildMode', 'pinnedDomains']),
+      );
+
       final pinnedDomains = json['pinnedDomains'] as List<String>;
       expect(pinnedDomains.toSet(), equals(kPinnedDomains.keys.toSet()));
     });
@@ -100,14 +114,17 @@ void main() {
 
       // Verify adapter configuration when pinning is enabled
       if (kEnableCertPinning) {
-        expect(dioWithUrl.httpClientAdapter, isA<PinnedCertHttpClientAdapter>());
+        expect(
+          dioWithUrl.httpClientAdapter,
+          isA<PinnedCertHttpClientAdapter>(),
+        );
         expect(dioWithUrl.interceptors.isNotEmpty, isTrue);
       }
     });
 
     test('kPinnedDomains validation and structure', () {
       expect(kPinnedDomains, isNotEmpty);
-      
+
       for (final entry in kPinnedDomains.entries) {
         final domain = entry.key;
         final pins = entry.value;
@@ -141,9 +158,11 @@ void main() {
     test('Configuration constants are valid', () {
       expect(kEnableCertPinning, isA<bool>());
       expect(kPinnedDomains, isA<Map<String, List<String>>>());
-      
+
       // Verify domains contain expected Azure patterns
-      final azureDomains = kPinnedDomains.keys.where((d) => d.contains('azurewebsites.net'));
+      final azureDomains = kPinnedDomains.keys.where(
+        (d) => d.contains('azurewebsites.net'),
+      );
       expect(azureDomains, isNotEmpty);
     });
 
@@ -157,7 +176,7 @@ void main() {
 
       expect(emptyInfo.enabled, isFalse);
       expect(emptyInfo.pins.isEmpty, isTrue);
-      
+
       final emptyJson = emptyInfo.toJson();
       expect(emptyJson['enabled'], isFalse);
       expect(emptyJson['pins'], isEmpty);
@@ -175,7 +194,10 @@ void main() {
 
       final multiJson = multiInfo.toJson();
       expect((multiJson['pinnedDomains'] as List).length, equals(2));
-      expect((multiJson['pinnedDomains'] as List), containsAll(['domain1.com', 'domain2.com']));
+      expect(
+        (multiJson['pinnedDomains'] as List),
+        containsAll(['domain1.com', 'domain2.com']),
+      );
     });
   });
 }
