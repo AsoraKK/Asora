@@ -7,10 +7,8 @@ void main() {
   group('VotingStatusBadge', () {
     testWidgets('displays active voting status correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: VotingStatusBadge(status: VotingStatus.active),
-          ),
+        const MaterialApp(
+          home: Scaffold(body: VotingStatusBadge(status: VotingStatus.active)),
         ),
       );
 
@@ -20,7 +18,7 @@ void main() {
 
     testWidgets('displays quorum reached status correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: VotingStatusBadge(status: VotingStatus.quorumReached),
           ),
@@ -33,7 +31,7 @@ void main() {
 
     testWidgets('displays time expired status correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: VotingStatusBadge(status: VotingStatus.timeExpired),
           ),
@@ -46,7 +44,7 @@ void main() {
 
     testWidgets('displays resolved status correctly', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: VotingStatusBadge(status: VotingStatus.resolved),
           ),
@@ -59,16 +57,14 @@ void main() {
 
     testWidgets('has correct styling for active status', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: VotingStatusBadge(status: VotingStatus.active),
-          ),
+        const MaterialApp(
+          home: Scaffold(body: VotingStatusBadge(status: VotingStatus.active)),
         ),
       );
 
       final container = tester.widget<Container>(find.byType(Container));
       final decoration = container.decoration as BoxDecoration;
-      
+
       expect(decoration.borderRadius, BorderRadius.circular(16));
       expect(decoration.border, isA<Border>());
     });

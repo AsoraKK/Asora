@@ -6,7 +6,7 @@ import 'package:asora/features/moderation/domain/appeal.dart';
 void main() {
   group('VotingProgressIndicator', () {
     testWidgets('displays header correctly', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
         rejectVotes: 4,
@@ -17,9 +17,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -28,7 +26,7 @@ void main() {
     });
 
     testWidgets('displays progress bar when votes exist', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
         rejectVotes: 4,
@@ -39,9 +37,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -49,7 +45,7 @@ void main() {
     });
 
     testWidgets('displays waiting message when no votes', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 0,
         approveVotes: 0,
         rejectVotes: 0,
@@ -60,9 +56,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -70,7 +64,7 @@ void main() {
     });
 
     testWidgets('displays time remaining when available', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
         rejectVotes: 4,
@@ -81,9 +75,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -91,7 +83,7 @@ void main() {
     });
 
     testWidgets('displays vote breakdown correctly', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
         rejectVotes: 4,
@@ -102,9 +94,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -113,7 +103,7 @@ void main() {
     });
 
     testWidgets('displays quorum progress correctly', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
         rejectVotes: 4,
@@ -124,9 +114,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -135,7 +123,7 @@ void main() {
     });
 
     testWidgets('handles edge case with no time remaining', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 5,
         approveVotes: 3,
         rejectVotes: 2,
@@ -146,9 +134,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
@@ -156,7 +142,7 @@ void main() {
     });
 
     testWidgets('handles quorum met status', (tester) async {
-      final progress = VotingProgress(
+      const progress = VotingProgress(
         totalVotes: 20,
         approveVotes: 15,
         rejectVotes: 5,
@@ -167,9 +153,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: VotingProgressIndicator(progress: progress),
-          ),
+          home: Scaffold(body: VotingProgressIndicator(progress: progress)),
         ),
       );
 
