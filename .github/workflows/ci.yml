@@ -201,16 +201,20 @@ jobs:
                 fi
               fi
             else
-              echo "Flex Consumption plan detected; linuxFxVersion is platform-managed."
+              echo "Flex Consumption plan detected; clearing linuxFxVersion (platform-managed)."
+              az resource update --name "$APP/config/web" \
+                --resource-group "$RG" \
+                --resource-type "Microsoft.Web/sites/config" \
+                --set properties.linuxFxVersion="" -o none || true
             fi
             if [ "$PLAN_TIER" = "FlexConsumption" ]; then
-              # Flex Consumption: keep v4 only; remove disallowed settings
-              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
-              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+              # Flex Consumption: keep v4 only and avoid default node pinning
+              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node
+              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
             elif [ "$PLAN_TIER" = "unknown" ]; then
               # Unknown plan: choose Flex-safe behavior to avoid failures
-              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
-              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node
+              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
             else
               # Linux Classic/Premium: set worker runtime and default node version
               az functionapp config appsettings set \
