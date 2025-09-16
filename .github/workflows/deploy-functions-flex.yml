@@ -98,9 +98,22 @@ jobs:
             exists_app() { az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
             has_canary_slot() { az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
             plan_kind() { az functionapp show $sub_opt -g "$1" -n "$2" --query "kind" -o tsv; }
+            plan_tier() {
+              local plan_id
+              plan_id=$(az functionapp show $sub_opt -g "$1" -n "$2" --query "serverFarmId" -o tsv 2>/dev/null || echo "")
+              [[ -z "$plan_id" ]] && return
+              az resource show $sub_opt --ids "$plan_id" --query "sku.tier" -o tsv 2>/dev/null || true
+            }
             set_node20() {
               local rg="$1" app="$2" slot_opt="${3:-}"
-              if [[ "$(plan_kind "$rg" "$app")" == *linux* ]]; then
+              local kind tier
+              kind=$(plan_kind "$rg" "$app")
+              tier=$(plan_tier "$rg" "$app")
+              if [[ "$kind" == *linux* ]]; then
+                if [[ "$tier" == "FlexConsumption" ]]; then
+                  echo "Flex Consumption plan detected for $app; skipping linuxFxVersion (platform-managed)."
+                  return
+                fi
                 # Only tolerate readonly linuxFxVersion errors, fail otherwise
                 {
                   err_output=$(retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none 2>&1)
