@@ -188,16 +188,20 @@ jobs:
           echo "Plan tier: $PLAN_TIER"
 
           if [[ "$KIND" == *linux* ]]; then
-            TARGET_PRIMARY="NODE|20-lts"
-            TARGET_FALLBACK="NODE|20"
-            CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)
+            if [ "$PLAN_TIER" != "FlexConsumption" ]; then
+              TARGET_PRIMARY="NODE|20-lts"
+              TARGET_FALLBACK="NODE|20"
+              CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)
 
-            if [ "$CUR" != "$TARGET_PRIMARY" ] && [ "$CUR" != "$TARGET_FALLBACK" ]; then
-              echo "Setting linuxFxVersion to $TARGET_PRIMARY (with fallback to $TARGET_FALLBACK)"
-              if ! az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_PRIMARY"; then
-                echo "Primary ($TARGET_PRIMARY) failed; falling back to $TARGET_FALLBACK"
-                az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_FALLBACK"
+              if [ "$CUR" != "$TARGET_PRIMARY" ] && [ "$CUR" != "$TARGET_FALLBACK" ]; then
+                echo "Setting linuxFxVersion to $TARGET_PRIMARY (with fallback to $TARGET_FALLBACK)"
+                if ! az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_PRIMARY"; then
+                  echo "Primary ($TARGET_PRIMARY) failed; falling back to $TARGET_FALLBACK"
+                  az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_FALLBACK"
+                fi
               fi
+            else
+              echo "Flex Consumption plan detected; linuxFxVersion is platform-managed."
             fi
             if [ "$PLAN_TIER" = "FlexConsumption" ]; then
               # Flex Consumption: keep v4 only; remove disallowed settings
