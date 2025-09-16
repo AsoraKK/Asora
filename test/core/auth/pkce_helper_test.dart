@@ -42,15 +42,56 @@ void main() {
       test('handles edge case lengths correctly', () {
         final verifier43 = PkceHelper.generateCodeVerifier(length: 43);
         final verifier128 = PkceHelper.generateCodeVerifier(length: 128);
-        
+
         expect(verifier43.length, equals(43));
         expect(verifier128.length, equals(128));
       });
 
       test('handles length requiring padding', () {
+        // Test a specific length that might require padding logic
         final verifier = PkceHelper.generateCodeVerifier(length: 50);
         expect(verifier.length, equals(50));
         expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(verifier), isTrue);
+      });
+
+      test('handles various length values requiring different logic paths', () {
+        // Test lengths that trigger different branches in the padding logic
+        for (final length in [43, 44, 48, 52, 64, 96, 128]) {
+          final verifier = PkceHelper.generateCodeVerifier(length: length);
+          expect(
+            verifier.length,
+            equals(length),
+            reason: 'Failed for length $length',
+          );
+          expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(verifier), isTrue);
+        }
+      });
+
+      test('ensures generated verifier meets encoding requirements', () {
+        final verifier = PkceHelper.generateCodeVerifier(length: 45);
+        // Should not contain padding characters
+        expect(verifier.contains('='), isFalse);
+        // Should be URL-safe base64
+        expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(verifier), isTrue);
+      });
+
+      test('handles padding logic for short encoded strings', () {
+        // Test lengths that are likely to trigger padding (base64 encoding can vary in length)
+        for (final length in [60, 80, 100, 120]) {
+          final verifier = PkceHelper.generateCodeVerifier(length: length);
+          expect(verifier.length, equals(length));
+          expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(verifier), isTrue);
+          expect(verifier.contains('='), isFalse); // No padding chars
+        }
+      });
+
+      test('handles edge case where encoded length is less than target', () {
+        // Generate multiple verifiers to increase chance of hitting padding logic
+        for (int i = 0; i < 20; i++) {
+          final verifier = PkceHelper.generateCodeVerifier(length: 55);
+          expect(verifier.length, equals(55));
+          expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(verifier), isTrue);
+        }
       });
 
       test('handles minimum length 43', () {
@@ -72,29 +113,31 @@ void main() {
 
     group('generateCodeChallenge', () {
       test('generates challenge from verifier', () {
-        const verifier = 'test-verifier-1234567890123456789012345678901234567890';
+        const verifier =
+            'test-verifier-1234567890123456789012345678901234567890';
         final challenge = PkceHelper.generateCodeChallenge(verifier);
-        
+
         expect(challenge.isNotEmpty, isTrue);
         expect(challenge.length, equals(43)); // Base64URL without padding
         expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(challenge), isTrue);
       });
 
       test('generates consistent challenge for same verifier', () {
-        const verifier = 'consistent-verifier-1234567890123456789012345678901234';
+        const verifier =
+            'consistent-verifier-1234567890123456789012345678901234';
         final challenge1 = PkceHelper.generateCodeChallenge(verifier);
         final challenge2 = PkceHelper.generateCodeChallenge(verifier);
-        
+
         expect(challenge1, equals(challenge2));
       });
 
       test('generates different challenges for different verifiers', () {
         const verifier1 = 'verifier-one-1234567890123456789012345678901234567';
         const verifier2 = 'verifier-two-1234567890123456789012345678901234567';
-        
+
         final challenge1 = PkceHelper.generateCodeChallenge(verifier1);
         final challenge2 = PkceHelper.generateCodeChallenge(verifier2);
-        
+
         expect(challenge1, isNot(equals(challenge2)));
       });
 
@@ -114,15 +157,15 @@ void main() {
     group('generatePkcePair', () {
       test('generates matching verifier and challenge pair', () {
         final pair = PkceHelper.generatePkcePair();
-        
+
         expect(pair.containsKey('verifier'), isTrue);
         expect(pair.containsKey('challenge'), isTrue);
         expect(pair['verifier'], isNotNull);
         expect(pair['challenge'], isNotNull);
-        
+
         final verifier = pair['verifier']!;
         final challenge = pair['challenge']!;
-        
+
         // Verify challenge matches verifier
         final expectedChallenge = PkceHelper.generateCodeChallenge(verifier);
         expect(challenge, equals(expectedChallenge));
@@ -131,7 +174,7 @@ void main() {
       test('generates different pairs on each call', () {
         final pair1 = PkceHelper.generatePkcePair();
         final pair2 = PkceHelper.generatePkcePair();
-        
+
         expect(pair1['verifier'], isNot(equals(pair2['verifier'])));
         expect(pair1['challenge'], isNot(equals(pair2['challenge'])));
       });
@@ -139,24 +182,29 @@ void main() {
 
     group('validateCodeChallenge', () {
       test('validates correct challenge against verifier', () {
-        const verifier = 'test-verifier-1234567890123456789012345678901234567890';
+        const verifier =
+            'test-verifier-1234567890123456789012345678901234567890';
         final challenge = PkceHelper.generateCodeChallenge(verifier);
-        
+
         expect(PkceHelper.validateCodeChallenge(verifier, challenge), isTrue);
       });
 
       test('rejects incorrect challenge', () {
-        const verifier = 'test-verifier-1234567890123456789012345678901234567890';
+        const verifier =
+            'test-verifier-1234567890123456789012345678901234567890';
         const wrongChallenge = 'wrong-challenge-123456789012345678901234567890';
-        
-        expect(PkceHelper.validateCodeChallenge(verifier, wrongChallenge), isFalse);
+
+        expect(
+          PkceHelper.validateCodeChallenge(verifier, wrongChallenge),
+          isFalse,
+        );
       });
 
       test('validates with generated pair', () {
         final pair = PkceHelper.generatePkcePair();
         final verifier = pair['verifier']!;
         final challenge = pair['challenge']!;
-        
+
         expect(PkceHelper.validateCodeChallenge(verifier, challenge), isTrue);
       });
     });
@@ -164,7 +212,7 @@ void main() {
     group('generateState', () {
       test('generates state parameter', () {
         final state = PkceHelper.generateState();
-        
+
         expect(state.isNotEmpty, isTrue);
         expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(state), isTrue);
       });
@@ -172,7 +220,7 @@ void main() {
       test('generates different states on each call', () {
         final state1 = PkceHelper.generateState();
         final state2 = PkceHelper.generateState();
-        
+
         expect(state1, isNot(equals(state2)));
       });
 
