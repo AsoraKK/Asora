@@ -45,13 +45,15 @@ jobs:
             exit 1
           fi
           
-          # Get Function App details
+          # Get Function App details - use properties.defaultHostName for Flex apps
           key=$(az functionapp keys list -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "masterKey" -o tsv)
-          hostname=$(az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "defaultHostName" -o tsv)
+          hostname=$(az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "properties.defaultHostName" -o tsv)
           
           # Validate we got valid values
           if [[ -z "$hostname" ]]; then
             echo "::error::Failed to get defaultHostName for Function App"
+            echo "Available properties:"
+            az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "{defaultHostName:defaultHostName,propsDefaultHostName:properties.defaultHostName,hostNames:hostNames,propsHostNames:properties.hostNames}" -o json || true
             exit 1
           fi
           if [[ -z "$key" ]]; then
