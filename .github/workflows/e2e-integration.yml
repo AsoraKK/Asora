@@ -15,6 +15,9 @@ env:
   AZURE_RESOURCE_GROUP: asora-psql-flex
 
 jobs:
+  # Note: If this workflow should depend on deployment success,
+  # consider triggering via workflow_run from deploy-functions-flex.yml
+  # or adding: needs: deploy and if: needs.deploy.result == 'success'
   e2e:
     runs-on: ubuntu-latest
     environment: dev
@@ -72,13 +75,32 @@ jobs:
       - name: Install Functions deps
         working-directory: functions
         run: npm ci --omit=dev
-      - name: Warm up Function App
+      - name: Wait for host ready
         if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
         run: |
-          echo "Warming up Function App..."
-          # Try to wake up the function app with a simple request, don't fail if it doesn't work yet
-          curl -s -m 10 "${{ env.FUNCTION_BASE_URL }}/api/health" || echo "Warmup request completed (may have failed)"
-          sleep 5
+          set -Eeuo pipefail
+          base="${FUNCTION_BASE_URL%/}"
+          for i in {1..20}; do
+            # x-functions-key works with function/admin keys
+            status=$(curl -sS -H "x-functions-key: $FUNCTION_KEY" "$base/admin/host/status" || true)
+            state=$(echo "$status" | jq -r '.state // empty')
+            echo "Host state: ${state:-unknown} (attempt $i/20)"
+            [[ "$state" == "Running" ]] && exit 0
+            sleep $((i))  # 1,2,3,... seconds
+          done
+          echo "::error::Functions host did not reach Running state"
+          exit 1
+        env:
+          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
+      - name: Optional warm-up ping
+        if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
+        run: |
+          # After status is Running, ping a cheap function once before full tests
+          curl -fsS -H "x-functions-key: $FUNCTION_KEY" "$FUNCTION_BASE_URL/api/health" >/dev/null || true
+        env:
+          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
       - name: Run E2E script
         if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
         working-directory: functions
