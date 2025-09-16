@@ -98,35 +98,51 @@ jobs:
             exists_app() { az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
             has_canary_slot() { az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
             plan_kind() { az functionapp show $sub_opt -g "$1" -n "$2" --query "kind" -o tsv; }
+            # Detect plan tier and flex kind robustly
             plan_tier() {
               local plan_id
               plan_id=$(az functionapp show $sub_opt -g "$1" -n "$2" --query "serverFarmId" -o tsv 2>/dev/null || echo "")
-              [[ -z "$plan_id" ]] && return
-              az resource show $sub_opt --ids "$plan_id" --query "sku.tier" -o tsv 2>/dev/null || true
+              [[ -z "$plan_id" ]] && { echo ""; return; }
+              az resource show $sub_opt --ids "$plan_id" --query "sku.tier" -o tsv 2>/dev/null || echo ""
             }
+            is_flex() {
+              local rg="$1" app="$2"
+              local tier kind
+              tier=$(plan_tier "$rg" "$app")
+              kind=$(az functionapp show $sub_opt -g "$rg" -n "$app" --query "kind" -o tsv 2>/dev/null || echo "")
+              [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]] && return 0 || return 1
+            }
+
             set_node20() {
               local rg="$1" app="$2" slot_opt="${3:-}"
-              local kind tier
-              kind=$(plan_kind "$rg" "$app")
-              tier=$(plan_tier "$rg" "$app")
-              if [[ "$kind" == *linux* ]]; then
-                if [[ "$tier" == "FlexConsumption" ]]; then
-                  echo "Flex Consumption plan detected for $app; skipping linuxFxVersion (platform-managed)."
-                  return
-                fi
-                # Only tolerate readonly linuxFxVersion errors, fail otherwise
+
+              if is_flex "$rg" "$app"; then
+                echo "Flex plan detected for $app; clearing legacy Node pinning and skipping version set."
+                # remove linuxFxVersion if present (no-op if absent)
+                az resource update $sub_opt -g "$rg" -n "$app/config/web" \
+                  --resource-type "Microsoft.Web/sites/config" \
+                  --set properties.linuxFxVersion="" -o none || true
+                # remove WEBSITE_NODE_DEFAULT_VERSION appsetting if present (Flex manages runtime)
+                az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt \
+                  --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
+                return
+              fi
+
+              # Classic Linux or Windows
+              if [[ "$(az functionapp show $sub_opt -g "$rg" -n "$app" --query "kind" -o tsv)" == *linux* ]]; then
                 {
-                  err_output=$(retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none 2>&1)
+                  err_output=$(retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt \
+                    --linux-fx-version "node|20" -o none 2>&1)
                 } || {
-                  if [[ "$err_output" == *"The property 'linuxFxVersion' is read-only"* ]]; then
+                  if [[ "$err_output" == *"read-only"* ]]; then
                     echo "Warning: linuxFxVersion is readonly, skipping set."
                   else
-                    echo "::error::Failed to set linuxFxVersion: $err_output"
-                    exit 1
+                    echo "::error::Failed to set linuxFxVersion: $err_output"; exit 1
                   fi
                 }
               else
-                retry az functionapp config appsettings set $sub_opt -g "$rg" -n "$app" $slot_opt --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+                retry az functionapp config appsettings set $sub_opt -g "$rg" -n "$app" $slot_opt \
+                  --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
               fi
             }
 
@@ -236,15 +252,15 @@ jobs:
             fi
 
             KIND=$(az functionapp show $sub_opt -g "$RG" -n "$APP" --query kind -o tsv)
-            if [[ "$KIND" == *linux* ]]; then
-              FX=$(az functionapp config show $sub_opt -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)
-              if [[ "$FX" != "node|20" ]]; then
-                echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4
-              fi
+            if is_flex "$RG" "$APP"; then
+              echo "Flex plan detected; skipping node version assertions."
             else
-              DEF_VER=$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)
-              if [[ "$DEF_VER" != "~20" ]]; then
-                echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5
+              if [[ "$KIND" == *linux* ]]; then
+                FX=$(az functionapp config show $sub_opt -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)
+                [[ "$FX" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4; }
+              else
+                DEF_VER=$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)
+                [[ "$DEF_VER" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5; }
               fi
             fi
 
