@@ -67,6 +67,13 @@ jobs:
       - name: Install Functions deps
         working-directory: functions
         run: npm ci --omit=dev
+      - name: Warm up Function App
+        if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
+        run: |
+          echo "Warming up Function App..."
+          # Try to wake up the function app with a simple request, don't fail if it doesn't work yet
+          curl -s -m 10 "${{ env.FUNCTION_BASE_URL }}/api/health" || echo "Warmup request completed (may have failed)"
+          sleep 5
       - name: Run E2E script
         if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
         working-directory: functions
