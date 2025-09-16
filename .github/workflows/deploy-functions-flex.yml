@@ -106,24 +106,21 @@ jobs:
               az resource show $sub_opt --ids "$plan_id" --query "sku.tier" -o tsv 2>/dev/null || echo ""
             }
             is_flex() {
-              local rg="$1" app="$2"
-              local tier kind
+              local rg="$1" app="$2" tier kind
               tier=$(plan_tier "$rg" "$app")
               kind=$(az functionapp show $sub_opt -g "$rg" -n "$app" --query "kind" -o tsv 2>/dev/null || echo "")
-              [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]] && return 0 || return 1
+              [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]]
             }
 
             set_node20() {
               local rg="$1" app="$2" slot_opt="${3:-}"
 
               if is_flex "$rg" "$app"; then
-                echo "Flex plan detected for $app; clearing legacy Node pinning and skipping version set."
-                # remove linuxFxVersion if present (no-op if absent)
-                az resource update $sub_opt -g "$rg" -n "$app/config/web" \
+                echo "Flex detected for $app. Clear legacy pinning and skip Node set."
+                retry az resource update $sub_opt -g "$rg" -n "$app/config/web" \
                   --resource-type "Microsoft.Web/sites/config" \
                   --set properties.linuxFxVersion="" -o none || true
-                # remove WEBSITE_NODE_DEFAULT_VERSION appsetting if present (Flex manages runtime)
-                az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt \
+                retry az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt \
                   --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
                 return
               fi
@@ -186,9 +183,6 @@ jobs:
             fi
 
             # ---- main app settings ----
-            retry az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" \
-              --setting-names FUNCTIONS_WORKER_RUNTIME || true
-
             retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" \
               --settings FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true -o none
 
@@ -197,16 +191,25 @@ jobs:
 
             set_node20 "$RG" "$APP"
 
+            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" \
+              --settings FUNCTIONS_WORKER_RUNTIME=node -o none
+
+            retry az functionapp restart $sub_opt -g "$RG" -n "$APP" -o none
+
             # ---- canary target (slot preferred, else separate app, else skip) ----
             CANARY_MODE="none"
             if has_canary_slot "$RG" "$APP"; then
               set_node20 "$RG" "$APP" "--slot canary"
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary \
+                --settings FUNCTIONS_WORKER_RUNTIME=node -o none
               retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary \
                 --settings APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary" -o none
               CANARY_MODE="slot"
             elif [[ -n "$CANARY_APP" ]]; then
               if exists_app "$RG" "$CANARY_APP"; then
                 set_node20 "$RG" "$CANARY_APP"
+                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
+                  --settings FUNCTIONS_WORKER_RUNTIME=node -o none
                 retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
                   --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
                 CANARY_MODE="separate-app"
@@ -233,6 +236,8 @@ jobs:
                     --consumption-plan-location "$LOC" --functions-version 4 \
                     --runtime node --runtime-version 20 --os-type Linux 1>/dev/null
                   set_node20 "$RG" "$CANARY_APP"
+                  retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
+                    --settings FUNCTIONS_WORKER_RUNTIME=node -o none
                   retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
                     --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
                   CANARY_MODE="separate-app"
