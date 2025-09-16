@@ -24,6 +24,33 @@ function withSlash(base, p) {
   return `${base.replace(/\/$/, "")}/${p.replace(/^\//, "")}`;
 }
 
+async function getJsonWithRetry(url, options = {}, maxRetries = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await getJson(url, options);
+      
+      // If we get 503 (Service Unavailable), retry after delay for cold start
+      if (result.status === 503 && attempt < maxRetries) {
+        const delay = Math.min(1000 * attempt, 10000); // Progressive delay, max 10s
+        console.log(`Attempt ${attempt}/${maxRetries}: Got 503, retrying in ${delay}ms (cold start?)...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      return result;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * attempt, 5000);
+        console.log(`Attempt ${attempt}/${maxRetries}: Error ${err.message}, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 async function getJson(url, options = {}) {
   const headers = Object.assign(
     { "Accept": "application/json" },
@@ -51,7 +78,7 @@ async function main() {
   try {
     const url = withSlash(BASE_URL, "/api/health");
     const t0 = Date.now();
-    const res = await getJson(url);
+    const res = await getJsonWithRetry(url);
     const durationMs = Date.now() - t0;
     const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
     if (!pass) {
@@ -71,7 +98,7 @@ async function main() {
   try {
     const url = withSlash(BASE_URL, "/api/feed");
     const t0 = Date.now();
-    const res = await getJson(url);
+    const res = await getJsonWithRetry(url);
     const durationMs = Date.now() - t0;
     const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
     if (!pass) {
