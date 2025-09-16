@@ -78,6 +78,10 @@ jobs:
             SUB="${AZURE_SUBSCRIPTION_ID:-}"
             sub_opt=${SUB:+--subscription "$SUB"}
 
+            # Remove stale MSAL HTTP cache serialized with older NormalizedResponse types
+            CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
+            rm -f "$CACHE_DIR/msal_http_cache.bin" || true
+
             # ---- helpers ----
             retry() {
               local n=0; local max=5; local delay=2
