@@ -18,7 +18,7 @@ env:
   # Optional: specify an existing storage account for Function App creation
   AZURE_STORAGE_ACCOUNT: ""
   # Optional creation flags (set to 'true' to enable)
-  CREATE_APP_IF_MISSING: "false"
+  CREATE_APP_IF_MISSING: "true"
   CREATE_CANARY_IF_MISSING: "false"
   AZURE_APPINSIGHTS_NAME: asora-ai-flex
   AZURE_FD_PROFILE: asora-frontdoor
