@@ -9,6 +9,11 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_FUNCTIONAPP_NAME: asora-function-dev
+  AZURE_RESOURCE_GROUP: asora-psql-flex
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -28,12 +33,32 @@ jobs:
       - name: Verify Azure login
         run: |
           az account show
-          az group show -n asora-psql-flex --query name -o tsv
+          az group show -n ${{ env.AZURE_RESOURCE_GROUP }} --query name -o tsv
       - name: Get Function key and URL
         id: funcInfo
         run: |
-          key=$(az functionapp keys list -g asora-psql-flex -n asora-function-dev --query "masterKey" -o tsv)
-          hostname=$(az functionapp show -g asora-psql-flex -n asora-function-dev --query "defaultHostName" -o tsv)
+          # Verify Function App exists first
+          if ! az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "name" -o tsv >/dev/null 2>&1; then
+            echo "::error::Function App '${{ env.AZURE_FUNCTIONAPP_NAME }}' not found in RG '${{ env.AZURE_RESOURCE_GROUP }}'"
+            echo "Available Function Apps:"
+            az functionapp list --query "[].{name:name,rg:resourceGroup}" -o table || true
+            exit 1
+          fi
+          
+          # Get Function App details
+          key=$(az functionapp keys list -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "masterKey" -o tsv)
+          hostname=$(az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "defaultHostName" -o tsv)
+          
+          # Validate we got valid values
+          if [[ -z "$hostname" ]]; then
+            echo "::error::Failed to get defaultHostName for Function App"
+            exit 1
+          fi
+          if [[ -z "$key" ]]; then
+            echo "::error::Failed to get Function App master key"
+            exit 1
+          fi
+          
           echo "FUNCTION_KEY=$key" >> $GITHUB_ENV
           echo "FUNCTION_BASE_URL=https://$hostname" >> $GITHUB_ENV
           echo "Using Function App URL: https://$hostname"
@@ -41,6 +66,7 @@ jobs:
         working-directory: functions
         run: npm ci --omit=dev
       - name: Run E2E script
+        if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
         working-directory: functions
         env:
           FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
@@ -49,7 +75,18 @@ jobs:
           FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
         run: |
           echo "Testing Function App at: $FUNCTION_BASE_URL"
+          # Validate FUNCTION_BASE_URL has a proper hostname
+          if [[ ! "$FUNCTION_BASE_URL" =~ ^https://[a-zA-Z0-9.-]+\.azurewebsites\.net$ ]]; then
+            echo "::error::Invalid FUNCTION_BASE_URL format: $FUNCTION_BASE_URL"
+            exit 1
+          fi
           node ../scripts/e2e-itest.js
+      - name: Skip E2E (missing config)
+        if: '!(env.FUNCTION_BASE_URL && env.FUNCTION_KEY)'
+        run: |
+          echo "::warning::Skipping E2E test due to missing FUNCTION_BASE_URL or FUNCTION_KEY"
+          echo "FUNCTION_BASE_URL: ${FUNCTION_BASE_URL:-<not set>}"
+          echo "FUNCTION_KEY: ${FUNCTION_KEY:+<set>}"
       - name: Upload E2E report
         uses: actions/upload-artifact@v4
         with:
