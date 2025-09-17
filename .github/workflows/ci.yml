@@ -230,12 +230,93 @@ jobs:
 
       - name: Configure App Settings (dev)
         shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
         run: |
-          az functionapp config appsettings set -g asora-psql-flex -n asora-function-dev -o none --settings \
-            COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
-            COSMOS_DATABASE_NAME='asora' \
-            FUNCTIONS_EXTENSION_VERSION='~4' \
-            FUNCTIONS_WORKER_RUNTIME='node'
+          set -euo pipefail
+
+          APP="${APP:?missing}"; RG="${RG:?missing}"
+
+          # 1) Discover kind and plan info
+          KIND="$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)"
+          PLAN_ID="$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)"
+          PLAN_TIER="unknown"
+          if [ -n "${PLAN_ID:-}" ]; then
+            PLAN_TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || echo unknown)"
+          fi
+
+          # 2) Read current config to help infer Flex if PLAN_TIER is unknown
+          CUR_LFX="$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)"
+          CUR_RUNTIME="$(az functionapp config appsettings list -n "$APP" -g "$RG" --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value | [0]" -o tsv || true)"
+
+          # 3) Decide Flex vs non-Flex
+          IS_FLEX=false
+          if [ "${PLAN_TIER}" = "FlexConsumption" ]; then
+            IS_FLEX=true
+          elif [[ "$KIND" == *linux* ]] && [ -z "${CUR_LFX:-}" ] && [ -z "${CUR_RUNTIME:-}" ]; then
+            # Heuristic: Linux app with empty linuxFxVersion and no FUNCTIONS_WORKER_RUNTIME is almost certainly Flex
+            IS_FLEX=true
+          fi
+
+          echo "App kind: ${KIND}"
+          echo "Plan tier: ${PLAN_TIER}"
+          echo "Inferred Flex: ${IS_FLEX}"
+
+          if [[ "$KIND" == *linux* ]]; then
+            if $IS_FLEX; then
+              echo "Flex detected: clearing forbidden settings and keeping v4 only."
+
+              # Keep platform-managed image selection
+              az resource update --name "$APP/config/web" \
+                --resource-group "$RG" \
+                --resource-type "Microsoft.Web/sites/config" \
+                --set properties.linuxFxVersion="" -o none || true
+
+              # Delete forbidden or irrelevant settings first to avoid hard errors
+              az functionapp config appsettings delete -n "$APP" -g "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
+              az functionapp config appsettings delete -n "$APP" -g "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
+
+              # Flex runs v4 only. Setting this is allowed and harmless.
+              az functionapp config appsettings set -n "$APP" -g "$RG" \
+                --settings FUNCTIONS_EXTENSION_VERSION=~4 -o none
+
+            else
+              echo "Non-Flex Linux: set Node 20 and runtime."
+
+              TARGET_PRIMARY="NODE|20-lts"
+              TARGET_FALLBACK="NODE|20"
+              CUR_LFX="${CUR_LFX:-$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)}"
+
+              if [ "$CUR_LFX" != "$TARGET_PRIMARY" ] && [ "$CUR_LFX" != "$TARGET_FALLBACK" ]; then
+                echo "Setting linuxFxVersion to $TARGET_PRIMARY (fallback $TARGET_FALLBACK)"
+                if ! az functionapp config set -n "$APP" -g "$RG" --linux-fx-version "$TARGET_PRIMARY" -o none; then
+                  echo "Primary failed; using fallback"
+                  az functionapp config set -n "$APP" -g "$RG" --linux-fx-version "$TARGET_FALLBACK" -o none
+                fi
+              fi
+
+              # Explicit runtime and node default version are required for classic/Premium Linux
+              az functionapp config appsettings set -n "$APP" -g "$RG" \
+                --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+            fi
+
+          else
+            echo "Windows plan: no linuxFxVersion; set runtime and node default."
+            az functionapp config appsettings set -n "$APP" -g "$RG" \
+              --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+          fi
+
+          # Add Cosmos settings for both Flex and non-Flex
+          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
+            az functionapp config appsettings set -n "$APP" -g "$RG" -o none --settings \
+              COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
+              COSMOS_DATABASE_NAME='asora'
+          else
+            echo "::warning::COSMOS_CONNECTION_STRING not provided; host may fail if code requires Cosmos."
+          fi
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Deploy Functions v4 zip (config-zip)
         shell: bash
