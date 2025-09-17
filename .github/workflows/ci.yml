@@ -136,8 +136,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Enhanced MSAL cache clearing to avoid AttributeError on NormalizedResponse
           CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$CACHE_DIR/msal_http_cache.bin"
+          rm -f "$CACHE_DIR/msal_http_cache.bin" || true
+          rm -f "$CACHE_DIR/msal_token_cache.json" || true
+          rm -f "$CACHE_DIR/accessTokens.json" || true
+          rm -f "$CACHE_DIR/azureProfile.json" || true
+          echo "Cleared all MSAL cache files"
       - name: Verify Azure login
         shell: bash
         run: az account show --output table
@@ -150,15 +155,16 @@ jobs:
           RG: asora-psql-flex
         run: |
           set -euo pipefail
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)
+          # Use grep-based extraction for reliable serverFarmId parsing
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
           echo "Plan resource: ${PLAN_ID:-<none>}"
-          if [ -n "${PLAN_ID:-}" ]; then
-            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)
+          if [ -n "${PLAN_ID:-}" ] && [[ "$PLAN_ID" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
+            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null | tr -d '\n\r' || true)
           else
             PLAN_TIER="unknown"
           fi
-          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
-          LFX=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv)
+          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || true)
+          LFX=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv 2>/dev/null | tr -d '\n\r' || true)
           echo "Plan tier: $PLAN_TIER"
           echo "Kind: $KIND"
           echo "linuxFxVersion: $LFX"
@@ -175,11 +181,11 @@ jobs:
           RG: asora-psql-flex
         run: |
           set -euo pipefail
-          # Determine kind and plan tier on-the-fly so we don't depend on prior outputs
-          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)
-          if [ -n "${PLAN_ID:-}" ]; then
-            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)
+          # Determine kind and plan tier on-the-fly with grep-based parsing
+          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || true)
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
+          if [ -n "${PLAN_ID:-}" ] && [[ "$PLAN_ID" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
+            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null | tr -d '\n\r' || true)
           else
             PLAN_TIER="unknown"
           fi
