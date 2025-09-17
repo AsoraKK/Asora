@@ -233,6 +233,7 @@ jobs:
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
         run: |
           set -euo pipefail
 
@@ -315,8 +316,6 @@ jobs:
           else
             echo "::warning::COSMOS_CONNECTION_STRING not provided; host may fail if code requires Cosmos."
           fi
-        env:
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Deploy Functions v4 zip (config-zip)
         shell: bash
