@@ -26,6 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Clear MSAL cache
+        shell: bash
+        run: |
+          # Clear MSAL cache to avoid AttributeError issues
+          rm -rf ~/.azure/msal_token_cache.json || true
+          rm -rf ~/.azure/accessTokens.json || true
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
