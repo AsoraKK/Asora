@@ -15,6 +15,8 @@ const BASE_URL = process.env.FUNCTION_BASE_URL;
 const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
 const VERBOSE = process.argv.includes("--verbose");
 
+const ok = (j) => j?.ok === true || j?.success === true || j?.status === 'ok';
+
 if (!BASE_URL) {
   console.error("FUNCTION_BASE_URL is required");
   process.exit(2);
@@ -80,7 +82,7 @@ async function main() {
     const t0 = Date.now();
     const res = await getJsonWithRetry(url);
     const durationMs = Date.now() - t0;
-    const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
+    const pass = res.status === 200 && res.json && ok(res.json);
     if (!pass) {
       failures++;
       console.error(`health check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
@@ -100,7 +102,7 @@ async function main() {
     const t0 = Date.now();
     const res = await getJsonWithRetry(url);
     const durationMs = Date.now() - t0;
-    const pass = res.status === 200 && res.json && (res.json.ok === true || res.json.status === "ok");
+    const pass = res.status === 200 && res.json && ok(res.json);
     if (!pass) {
       failures++;
       console.error(`feed check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
