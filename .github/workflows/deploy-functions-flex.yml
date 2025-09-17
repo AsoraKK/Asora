@@ -73,27 +73,49 @@ jobs:
         run: |
           set -Eeuo pipefail
           az config set extension.use_dynamic_install=yes_without_prompt
+
           APP="${AZURE_FUNCTIONAPP_NAME}"
-          # Try exact-name match in current subscription first
+
+          # exact-name match, but fetch id not subscriptionId
           hit=$(az resource list --resource-type Microsoft.Web/sites \
-                --query "[?name=='${APP}'].[name,resourceGroup,subscriptionId]" -o tsv || true)
+                --query "[?name=='${APP}'].[name,resourceGroup,id]" -o tsv || true)
+
           if [ -z "$hit" ]; then
-            echo "::warning::Function App '${APP}' not found by exact name in current subscription. Listing candidates containing 'asora'..."
+            echo "::warning::Function App '${APP}' not found in current subscription. Candidates:"
             az resource list --resource-type Microsoft.Web/sites \
-              --query "[?contains(name, 'asora')].[name,resourceGroup,subscriptionId,kind]" -o table || true
+              --query "[?contains(name, 'asora')].[name,resourceGroup,id,kind]" -o table || true
             echo "::error::Function App '${APP}' not found. Fix the name or permissions, or create it."
             exit 2
           fi
-          RG=$(echo "$hit" | awk '{print $2}')
-          SUB=$(echo "$hit" | awk '{print $3}')
+
+          RG=$(awk '{print $2}' <<<"$hit")
+          RID=$(awk '{print $3}' <<<"$hit")
+          # /subscriptions/<GUID>/resourceGroups/...
+          SUB_FROM_ID=$(awk -F/ '/^\/subscriptions\//{print $3}' <<<"$RID")
+
+          # Use parsed GUID if valid, else keep existing value from secrets/login
+          if [[ "$SUB_FROM_ID" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
+            SUB="$SUB_FROM_ID"
+          else
+            SUB="${AZURE_SUBSCRIPTION_ID:-}"
+          fi
+
+          # Hard fail if still not a GUID
+          if ! [[ "$SUB" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
+            echo "::error::Cannot resolve a valid subscription id for '${APP}'."
+            exit 2
+          fi
+
           echo "Resolved app '${APP}' in rg='${RG}', subscription='${SUB}'"
-          echo "AZURE_RESOURCE_GROUP=${RG}" >> $GITHUB_ENV
-          echo "AZURE_SUBSCRIPTION_ID=${SUB}" >> $GITHUB_ENV
           az account set --subscription "$SUB"
 
-      - name: Verify resolved RG exists
+          echo "AZURE_RESOURCE_GROUP=${RG}" >> "$GITHUB_ENV"
+          echo "AZURE_SUBSCRIPTION_ID=${SUB}" >> "$GITHUB_ENV"
+
+      - name: Verify Function App accessibility
         run: |
-          az group show --subscription "${AZURE_SUBSCRIPTION_ID}" -n "${AZURE_RESOURCE_GROUP}" --query name -o tsv
+          az functionapp show -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o none \
+            || { echo "::error::Function App not accessible; check RG/name/role assignments"; exit 2; }
 
       - name: Set Flex app settings
         uses: azure/CLI@v2
