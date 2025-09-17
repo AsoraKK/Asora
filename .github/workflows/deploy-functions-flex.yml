@@ -51,6 +51,15 @@ jobs:
           find dist -name '*.js' | grep . || (echo "No JS build output found in dist/; check build configuration." && exit 1)
           npm prune --omit=dev
 
+      - name: Clear MSAL cache and Azure login
+        shell: bash
+        run: |
+          # Clear MSAL cache to avoid NormalizedResponse AttributeError
+          rm -rf ~/.azure/msal_token_cache.json || true
+          rm -rf ~/.azure/accessTokens.json || true
+          rm -rf ~/.azure/azureProfile.json || true
+          echo "Cleared Azure CLI cache files"
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -113,11 +122,50 @@ jobs:
             SUB="${AZURE_SUBSCRIPTION_ID:-}"
             sub_opt=${SUB:+--subscription "$SUB"}
 
-            retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
+            retry(){ 
+              local n=0 max=5 delay=2 cmd_result
+              until "$@"; do 
+                cmd_result=$?
+                # Retry on rate limiting, server errors, or MSAL cache issues
+                if [[ $cmd_result -eq 429 ]] || [[ $cmd_result -ge 500 ]] || [[ $cmd_result -eq 1 ]]; then 
+                  ((n++))
+                  if [[ $n -ge $max ]]; then 
+                    echo "::warning::Command failed after $max retries: $*"
+                    return $cmd_result
+                  fi
+                  echo "::warning::Retry $n/$max for command: $* (exit code: $cmd_result)"
+                  sleep $((delay**n))
+                  # Clear cache on MSAL-related failures
+                  if [[ $cmd_result -eq 1 ]]; then
+                    rm -rf ~/.azure/msal_token_cache.json 2>/dev/null || true
+                  fi
+                else 
+                  return $cmd_result
+                fi
+              done
+            }
             exists_app(){ az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
             has_canary_slot(){ az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
-            plan_tier(){ local id; id=$(az functionapp show $sub_opt -g "$1" -n "$2" --query serverFarmId -o tsv 2>/dev/null || echo ""); [[ -z "$id" ]] && { echo ""; return; }; az resource show $sub_opt --ids "$id" --query "sku.tier" -o tsv 2>/dev/null || echo ""; }
-            is_flex(){ local tier kind; tier=$(plan_tier "$1" "$2"); kind=$(az functionapp show $sub_opt -g "$1" -n "$2" --query kind -o tsv 2>/dev/null || echo ""); [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]]; }
+            plan_tier(){ 
+              local id rg="$1" app="$2"
+              # Use grep-based extraction for reliable serverFarmId parsing
+              id=$(az functionapp show $sub_opt -g "$rg" -n "$app" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || echo "")
+              [[ -z "$id" ]] && { echo ""; return 1; }
+              # Validate the resource ID format
+              if [[ "$id" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
+                az resource show $sub_opt --ids "$id" --query "sku.tier" -o tsv 2>/dev/null | tr -d '\n\r' || echo ""
+              else
+                echo ""
+                return 1
+              fi
+            }
+            is_flex(){ 
+              local tier kind rg="$1" app="$2"
+              tier=$(plan_tier "$rg" "$app")
+              kind=$(az functionapp show $sub_opt -g "$rg" -n "$app" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || echo "")
+              # Check both tier and kind for Flex detection
+              [[ "$tier" == "FlexConsumption" ]] || [[ "$kind" == *flex* ]] || [[ "$kind" == *Flex* ]]
+            }
             set_node20(){
               local rg="$1" app="$2" slot_opt="${3:-}"
               if is_flex "$rg" "$app"; then
@@ -133,20 +181,33 @@ jobs:
               fi
             }
 
-            echo "::group::Azure context"; az account show $sub_opt -o table || true; echo "::endgroup::"
+            echo "::group::Azure context"
+            az account show $sub_opt -o table || true
+            echo "::endgroup::"
 
-            echo "Searching for $APP in $RG ${SUB:+(subscription $SUB)}"
+            echo "::group::Function App validation for $APP in $RG"
+            # Enhanced validation with detailed error reporting
             if ! exists_app "$RG" "$APP"; then
+              echo "::warning::Function App '$APP' not found, investigating..."
               out=$(az functionapp show $sub_opt -g "$RG" -n "$APP" -o json 2>&1 || true)
               if echo "$out" | grep -qiE "AuthorizationFailed|does not have authorization"; then
-                echo "::error::Access denied to '$APP' in '$RG'. Fix role assignments."; exit 2
+                echo "::error::Access denied to '$APP' in '$RG'. Fix role assignments."
+                exit 2
+              elif echo "$out" | grep -qiE "NormalizedResponse|AttributeError"; then
+                echo "::error::MSAL cache corruption detected. This workflow should clear cache and retry."
+                exit 2
+              elif echo "$out" | grep -qiE "ResourceNotFound|could not be found"; then
+                echo "::warning::Function App not found, listing available apps..."
+                az resource list $sub_opt --resource-type Microsoft.Web/sites \
+                  --query "[?contains(name, 'asora')].[name,resourceGroup,location,kind]" -o table || true
+                echo "::error::Function App '$APP' not found in RG '$RG'"
+                exit 2
+              else
+                echo "::error::Unexpected error accessing Function App: $out"
+                exit 2
               fi
-              echo "::group::Debug: Apps in subscription"
-              az resource list $sub_opt --resource-type Microsoft.Web/sites \
-                --query "[?contains(name, 'asora')].[name,resourceGroup,location,kind]" -o table || true
-              echo "::endgroup::"
-              echo "::error::Function App '$APP' not found in RG '$RG'"; exit 2
             fi
+            echo "::endgroup::"
 
             if is_flex "$RG" "$APP"; then
               az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME -o none || true
