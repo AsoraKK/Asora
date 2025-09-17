@@ -96,15 +96,37 @@ jobs:
 
             echo "::group::Azure context"; az account show $sub_opt -o table || true; echo "::endgroup::"
 
-            # preflight: app must exist (no auto-create)
-            exists_app "$RG" "$APP" || { echo "::error::Function App '$APP' not found in RG '$RG'"; exit 2; }
+            # preflight: app must exist (no auto-create) - enhanced diagnostics
+            echo "Searching for $APP in $RG ${SUB:+(subscription $SUB)}"
+            if ! exists_app "$RG" "$APP"; then
+              echo "::group::Debug: Function Apps found in subscription"
+              az resource list $sub_opt --resource-type Microsoft.Web/sites \
+                --query "[?contains(name, 'asora')].[name,resourceGroup,location,kind]" -o table || true
+              echo "::endgroup::"
+              echo "::error::Function App '$APP' not found in RG '$RG'"
+              exit 2
+            fi
 
-            # main app settings (idempotent batch)
-            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
-              FUNCTIONS_WORKER_RUNTIME=node \
-              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-              FUNCTIONS_EXTENSION_VERSION=~4 \
-              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+            # main app settings (Flex-aware, idempotent batch)
+            if is_flex "$RG" "$APP"; then
+              echo "Flex detected: using Flex-safe configuration"
+              # Delete forbidden settings first
+              az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME || true
+              az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
+              
+              # Set allowed settings for Flex
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+                FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+                FUNCTIONS_EXTENSION_VERSION=~4 \
+                APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+            else
+              echo "Non-Flex plan: using standard configuration"
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+                FUNCTIONS_WORKER_RUNTIME=node \
+                FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+                FUNCTIONS_EXTENSION_VERSION=~4 \
+                APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+            fi
 
             set_node20 "$RG" "$APP"
 
@@ -124,17 +146,31 @@ jobs:
             CANARY_MODE="absent"
             if has_canary_slot "$RG" "$APP"; then
               set_node20 "$RG" "$APP" "--slot canary"
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
-                FUNCTIONS_WORKER_RUNTIME=node \
-                APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
+              if is_flex "$RG" "$APP"; then
+                # Flex canary slot: avoid forbidden settings
+                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
+                  APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
+              else
+                # Non-Flex canary slot: standard settings
+                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
+                  FUNCTIONS_WORKER_RUNTIME=node \
+                  APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
+              fi
               [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
                 COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
               CANARY_MODE="slot"
             elif [[ -n "$CANARY_APP" ]] && exists_app "$RG" "$CANARY_APP"; then
               set_node20 "$RG" "$CANARY_APP"
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
-                FUNCTIONS_WORKER_RUNTIME=node \
-                APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
+              if is_flex "$RG" "$CANARY_APP"; then
+                # Flex canary app: avoid forbidden settings
+                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
+                  APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
+              else
+                # Non-Flex canary app: standard settings
+                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
+                  FUNCTIONS_WORKER_RUNTIME=node \
+                  APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
+              fi
               [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
                 COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
               CANARY_MODE="separate-app"
