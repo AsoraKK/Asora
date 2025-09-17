@@ -15,16 +15,11 @@ env:
   AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
   AZURE_RESOURCE_GROUP: asora-psql-flex
   AZURE_LOCATION: westeurope
-  # Optional: specify an existing storage account for Function App creation
-  AZURE_STORAGE_ACCOUNT: ""
-  # Optional creation flags (set to 'true' to enable)
-  CREATE_APP_IF_MISSING: "true"
-  CREATE_CANARY_IF_MISSING: "false"
   AZURE_APPINSIGHTS_NAME: asora-ai-flex
   AZURE_FD_PROFILE: asora-frontdoor
   AZURE_FD_ENDPOINT: asora-frontdoor-endpoint
   AZURE_FD_ORIGIN_GROUP: asora-origin-group
-  NODE_VERSION: '20'   # or '22'
+  NODE_VERSION: '20'
 
 jobs:
   deploy:
@@ -78,198 +73,91 @@ jobs:
             SUB="${AZURE_SUBSCRIPTION_ID:-}"
             sub_opt=${SUB:+--subscription "$SUB"}
 
-            # Remove stale MSAL HTTP cache serialized with older NormalizedResponse types
-            CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-            rm -f "$CACHE_DIR/msal_http_cache.bin" || true
-
-            # ---- helpers ----
-            retry() {
-              local n=0; local max=5; local delay=2
-              until "$@"; do
-                code=$?
-                if [[ $code -eq 429 || $code -ge 500 ]]; then
-                  ((n++)); [[ $n -ge $max ]] && return $code
-                  sleep $((delay**n))
-                else
-                  return $code
-                fi
-              done
-            }
-            exists_app() { az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
-            has_canary_slot() { az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
-            plan_kind() { az functionapp show $sub_opt -g "$1" -n "$2" --query "kind" -o tsv; }
-            # Detect plan tier and flex kind robustly
-            plan_tier() {
-              local plan_id
-              plan_id=$(az functionapp show $sub_opt -g "$1" -n "$2" --query "serverFarmId" -o tsv 2>/dev/null || echo "")
-              [[ -z "$plan_id" ]] && { echo ""; return; }
-              az resource show $sub_opt --ids "$plan_id" --query "sku.tier" -o tsv 2>/dev/null || echo ""
-            }
-            is_flex() {
-              local rg="$1" app="$2" tier kind
-              tier=$(plan_tier "$rg" "$app")
-              kind=$(az functionapp show $sub_opt -g "$rg" -n "$app" --query "kind" -o tsv 2>/dev/null || echo "")
-              [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]]
-            }
-
-            set_node20() {
+            # helpers
+            retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
+            exists_app(){ az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
+            has_canary_slot(){ az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
+            plan_tier(){ local id; id=$(az functionapp show $sub_opt -g "$1" -n "$2" --query serverFarmId -o tsv 2>/dev/null || echo ""); [[ -z "$id" ]] && { echo ""; return; }; az resource show $sub_opt --ids "$id" --query "sku.tier" -o tsv 2>/dev/null || echo ""; }
+            is_flex(){ local tier kind; tier=$(plan_tier "$1" "$2"); kind=$(az functionapp show $sub_opt -g "$1" -n "$2" --query kind -o tsv 2>/dev/null || echo ""); [[ "$tier" == "FlexConsumption" || "$kind" == *flex* ]]; }
+            set_node20(){
               local rg="$1" app="$2" slot_opt="${3:-}"
-
               if is_flex "$rg" "$app"; then
-                echo "Flex detected for $app. Clear legacy pinning and skip Node set."
-                retry az resource update $sub_opt -g "$rg" -n "$app/config/web" \
-                  --resource-type "Microsoft.Web/sites/config" \
-                  --set properties.linuxFxVersion="" -o none || true
-                retry az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt \
-                  --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
+                echo "Flex detected; clearing legacy pins and skipping Node set for $app."
+                az resource update $sub_opt -g "$rg" -n "$app/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none || true
+                az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
                 return
               fi
-
-              # Classic Linux or Windows
-              if [[ "$(az functionapp show $sub_opt -g "$rg" -n "$app" --query "kind" -o tsv)" == *linux* ]]; then
-                {
-                  err_output=$(retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt \
-                    --linux-fx-version "node|20" -o none 2>&1)
-                } || {
-                  if [[ "$err_output" == *"read-only"* ]]; then
-                    echo "Warning: linuxFxVersion is readonly, skipping set."
-                  else
-                    echo "::error::Failed to set linuxFxVersion: $err_output"; exit 1
-                  fi
-                }
+              if [[ "$(az functionapp show $sub_opt -g "$rg" -n "$app" --query kind -o tsv)" == *linux* ]]; then
+                retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none
               else
-                retry az functionapp config appsettings set $sub_opt -g "$rg" -n "$app" $slot_opt \
-                  --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+                retry az functionapp config appsettings set $sub_opt -g "$rg" -n "$app" $slot_opt --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
               fi
             }
 
-            # ---- preflight: main app must exist ----
-            echo "::group::Azure context"
-            az account show $sub_opt -o table || true
-            echo "::endgroup::"
-            if ! exists_app "$RG" "$APP"; then
-              echo "::group::Discovery: function apps visible in subscription"
-              az functionapp list $sub_opt --query "[].{name:name,rg:resourceGroup}" -o table || true
-              echo "::endgroup::"
-              echo "::warning::Function App '$APP' not found in RG '$RG' (subscription='${SUB:-<default>}')."
-              if [[ "${CREATE_APP_IF_MISSING:-false}" == "true" ]]; then
-                echo "::group::Auto-create Function App"
-                LOC="${AZURE_LOCATION:-}"
-                if [[ -z "$LOC" ]]; then
-                  LOC=$(az group show $sub_opt -n "$RG" --query location -o tsv)
-                fi
-                echo "Using location: $LOC"
-                SA="${AZURE_STORAGE_ACCOUNT:-}"
-                if [[ -z "$SA" ]]; then
-                  # storage account name: 3-24 lower case, unique
-                  RAND=$(tr -dc 'a-z0-9' </dev/urandom | head -c 8 || true)
-                  SA="${APP//[^a-z0-9]/}sa${RAND}"
-                  SA=${SA,,}
-                  SA=${SA:0:24}
-                  echo "Creating storage account: $SA"
-                  az storage account create $sub_opt -g "$RG" -n "$SA" -l "$LOC" --sku Standard_LRS --kind StorageV2 --https-only true 1>/dev/null
-                else
-                  echo "Using existing storage account: $SA"
-                fi
-                echo "Creating Linux Consumption Function App: $APP"
-                az functionapp create $sub_opt -g "$RG" -n "$APP" -s "$SA" \
-                  --consumption-plan-location "$LOC" --functions-version 4 \
-                  --runtime node --runtime-version 20 --os-type Linux 1>/dev/null
-                echo "::endgroup::"
-              else
-                echo "::error::Function App '$APP' not found and auto-create disabled (CREATE_APP_IF_MISSING!=true)"
-                exit 2
-              fi
-            fi
+            echo "::group::Azure context"; az account show $sub_opt -o table || true; echo "::endgroup::"
 
-            # ---- main app settings ----
-            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" \
-              --settings FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true -o none
+            # preflight: app must exist (no auto-create)
+            exists_app "$RG" "$APP" || { echo "::error::Function App '$APP' not found in RG '$RG'"; exit 2; }
 
-            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" \
-              --settings APPLICATIONINSIGHTS_ROLE_NAME="$APP" -o none
+            # main app settings (idempotent batch)
+            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+              FUNCTIONS_WORKER_RUNTIME=node \
+              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+              FUNCTIONS_EXTENSION_VERSION=~4 \
+              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
 
             set_node20 "$RG" "$APP"
 
-            retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" \
-              --settings FUNCTIONS_WORKER_RUNTIME=node -o none
+            # optional Cosmos
+            if [[ -n "${COSMOS_CONNECTION_STRING:-}" ]]; then
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
+                COSMOS_DATABASE_NAME="asora"
+            else
+              echo "::warning::COSMOS_CONNECTION_STRING not provided; host may fail if code requires Cosmos."
+            fi
 
+            # restart after all updates
             retry az functionapp restart $sub_opt -g "$RG" -n "$APP" -o none
 
-            # ---- canary target (slot preferred, else separate app, else skip) ----
-            CANARY_MODE="none"
+            # canary: slot preferred, else separate app if it exists
+            CANARY_MODE="absent"
             if has_canary_slot "$RG" "$APP"; then
               set_node20 "$RG" "$APP" "--slot canary"
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary \
-                --settings FUNCTIONS_WORKER_RUNTIME=node -o none
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary \
-                --settings APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary" -o none
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
+                FUNCTIONS_WORKER_RUNTIME=node \
+                APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
+              [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
+                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
               CANARY_MODE="slot"
-            elif [[ -n "$CANARY_APP" ]]; then
-              if exists_app "$RG" "$CANARY_APP"; then
-                set_node20 "$RG" "$CANARY_APP"
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
-                  --settings FUNCTIONS_WORKER_RUNTIME=node -o none
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
-                  --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
-                CANARY_MODE="separate-app"
-              else
-                if [[ "${CREATE_CANARY_IF_MISSING:-false}" == "true" ]]; then
-                  echo "::group::Auto-create CANARY Function App"
-                  LOC="${AZURE_LOCATION:-}"
-                  if [[ -z "$LOC" ]]; then
-                    LOC=$(az group show $sub_opt -n "$RG" --query location -o tsv)
-                  fi
-                  SA2="${AZURE_STORAGE_ACCOUNT:-}"
-                  if [[ -z "$SA2" ]]; then
-                    RAND=$(tr -dc 'a-z0-9' </dev/urandom | head -c 8 || true)
-                    SA2="${CANARY_APP//[^a-z0-9]/}sa${RAND}"
-                    SA2=${SA2,,}
-                    SA2=${SA2:0:24}
-                    echo "Creating storage account for canary: $SA2"
-                    az storage account create $sub_opt -g "$RG" -n "$SA2" -l "$LOC" --sku Standard_LRS --kind StorageV2 --https-only true 1>/dev/null
-                  else
-                    echo "Using existing storage account for canary: $SA2"
-                  fi
-                  echo "Creating Linux Consumption CANARY Function App: $CANARY_APP"
-                  az functionapp create $sub_opt -g "$RG" -n "$CANARY_APP" -s "$SA2" \
-                    --consumption-plan-location "$LOC" --functions-version 4 \
-                    --runtime node --runtime-version 20 --os-type Linux 1>/dev/null
-                  set_node20 "$RG" "$CANARY_APP"
-                  retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
-                    --settings FUNCTIONS_WORKER_RUNTIME=node -o none
-                  retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" \
-                    --settings APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP" -o none
-                  CANARY_MODE="separate-app"
-                  echo "::endgroup::"
-                else
-                  CANARY_MODE="absent"
-                fi
-              fi
-            else
-              CANARY_MODE="absent"
+            elif [[ -n "$CANARY_APP" ]] && exists_app "$RG" "$CANARY_APP"; then
+              set_node20 "$RG" "$CANARY_APP"
+              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
+                FUNCTIONS_WORKER_RUNTIME=node \
+                APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
+              [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
+                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
+              CANARY_MODE="separate-app"
             fi
 
-            # ---- post-checks (main app) ----
+            # post-checks
             ROLE_VAL=$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv)
-            if [[ "$ROLE_VAL" != "$APP" ]]; then
-              echo "::error::AI role not set on $APP"; exit 3
-            fi
+            [[ "$ROLE_VAL" == "$APP" ]] || { echo "::error::AI role not set on $APP"; exit 3; }
 
-            KIND=$(az functionapp show $sub_opt -g "$RG" -n "$APP" --query kind -o tsv)
-            if is_flex "$RG" "$APP"; then
-              echo "Flex plan detected; skipping node version assertions."
-            else
-              if [[ "$KIND" == *linux* ]]; then
-                FX=$(az functionapp config show $sub_opt -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)
-                [[ "$FX" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4; }
+            if ! is_flex "$RG" "$APP"; then
+              if [[ "$(az functionapp show $sub_opt -g "$RG" -n "$APP" --query kind -o tsv)" == *linux* ]]; then
+                [[ "$(az functionapp config show $sub_opt -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4; }
               else
-                DEF_VER=$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)
-                [[ "$DEF_VER" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5; }
+                [[ "$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5; }
               fi
             fi
 
-            echo "::notice::Configured '$APP' (Node 20). Canary mode: ${CANARY_MODE}."
+            echo "::notice::Configured '$APP'. Canary mode: ${CANARY_MODE}."
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: asora-psql-flex
+          AZURE_FUNCTIONAPP_NAME: asora-function-dev
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Check CANARY app exists
         id: check_canary

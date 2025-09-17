@@ -112,7 +112,7 @@ jobs:
     name: Deploy to Azure
     needs: [tests, functions_build]
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main'
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -227,6 +227,15 @@ jobs:
               --name "$APP" --resource-group "$RG" \
               --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
           fi
+
+      - name: Configure App Settings (dev)
+        shell: bash
+        run: |
+          az functionapp config appsettings set -g asora-psql-flex -n asora-function-dev -o none --settings \
+            COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
+            COSMOS_DATABASE_NAME='asora' \
+            FUNCTIONS_EXTENSION_VERSION='~4' \
+            FUNCTIONS_WORKER_RUNTIME='node'
 
       - name: Deploy Functions v4 zip (config-zip)
         shell: bash

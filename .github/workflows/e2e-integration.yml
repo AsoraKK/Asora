@@ -1,9 +1,10 @@
 name: E2E Integration Test
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["Deploy Functions (Flex)"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   id-token: write
@@ -15,132 +16,51 @@ env:
   AZURE_RESOURCE_GROUP: asora-psql-flex
 
 jobs:
-  # Note: If this workflow should depend on deployment success,
-  # consider triggering via workflow_run from deploy-functions-flex.yml
-  # or adding: needs: deploy and if: needs.deploy.result == 'success'
   e2e:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: dev
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Azure login
+
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Clear MSAL HTTP cache (NormalizedResponse bug)
-        run: |
-          set -euo pipefail
-          CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$CACHE_DIR/msal_http_cache.bin"
-      - name: Verify Azure login
-        run: |
-          az account show
-          az group show -n ${{ env.AZURE_RESOURCE_GROUP }} --query name -o tsv
-      - name: Get Function key and URL
-        id: funcInfo
-        run: |
-          # Verify Function App exists first
-          if ! az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "name" -o tsv >/dev/null 2>&1; then
-            echo "::error::Function App '${{ env.AZURE_FUNCTIONAPP_NAME }}' not found in RG '${{ env.AZURE_RESOURCE_GROUP }}'"
-            echo "Available Function Apps:"
-            az functionapp list --query "[].{name:name,rg:resourceGroup}" -o table || true
-            exit 1
-          fi
-          
-          # Get Function App details - use properties.defaultHostName for Flex apps
-          key=$(az functionapp keys list -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "masterKey" -o tsv)
-          host_key=$(az functionapp keys list -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "hostKeys.default" -o tsv)
-          hostname=$(az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "properties.defaultHostName" -o tsv)
-          
-          # Validate we got valid values
-          if [[ -z "$hostname" ]]; then
-            echo "::error::Failed to get defaultHostName for Function App"
-            echo "Available properties:"
-            az functionapp show -g ${{ env.AZURE_RESOURCE_GROUP }} -n ${{ env.AZURE_FUNCTIONAPP_NAME }} --query "{defaultHostName:defaultHostName,propsDefaultHostName:properties.defaultHostName,hostNames:hostNames,propsHostNames:properties.hostNames}" -o json || true
-            exit 1
-          fi
-          if [[ -z "$key" ]]; then
-            echo "::error::Failed to get Function App master key"
-            exit 1
-          fi
-          if [[ -z "$host_key" ]]; then
-            echo "::error::Failed to resolve host default key"
-            exit 1
-          fi
 
-          echo "FUNCTION_KEY=$key" >> $GITHUB_ENV
-          echo "FUNCTION_BASE_URL=https://$hostname" >> $GITHUB_ENV
-          echo "HOST_KEY=$host_key" >> $GITHUB_ENV
-          echo "Using Function App URL: https://$hostname"
-          echo "Resolved host default key"
-      - name: Install jq
+      - name: Discover keys & URL
+        id: info
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-      - name: Install Functions deps
-        working-directory: functions
-        run: npm ci --omit=dev
-      - name: Wait for Functions host
-        if: env.FUNCTION_BASE_URL && env.HOST_KEY
+          set -Eeuo pipefail
+          RG="asora-psql-flex"; APP="asora-function-dev"
+          host=$(az functionapp show -g "$RG" -n "$APP" --query "defaultHostName" -o tsv)
+          key=$(az functionapp keys list -g "$RG" -n "$APP" --query "functionKeys.default" -o tsv)
+          echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
+          echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
+
+      - name: Wait for host Running
+        shell: bash
         env:
-          HOST_KEY: ${{ env.HOST_KEY }}
           FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
         run: |
           set -Eeuo pipefail
           base="${FUNCTION_BASE_URL%/}"
           for i in {1..30}; do
-            json=$(curl -sS -H "x-functions-key: $HOST_KEY" "$base/admin/host/status" || echo '{}')
-            state=$(echo "$json" | jq -r '.state // empty')
-            echo "Host state: ${state:-unknown} (attempt $i/30)"
-            if [[ "$state" == "Running" ]]; then
-              exit 0
-            fi
-            if [[ "$state" == "Error" ]]; then
-              echo "Host startup errors:"
-              echo "$json" | jq -r '.errors // [] | .[]?'
-            fi
-            sleep $(( i < 10 ? i : 10 ))
+            state=$(curl -sS -H "x-functions-key: $FUNCTION_KEY" "$base/admin/host/status" | jq -r '.state // empty')
+            echo "Host state: ${state:-unknown} ($i/30)"
+            [[ "$state" == "Running" ]] && exit 0
+            sleep $((i))
           done
-          echo "::error::Functions host did not reach Running state"
-          exit 1
-      - name: Optional warm-up ping
-        if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
-        run: |
-          # After status is Running, ping a cheap function once before full tests
-          curl -fsS -H "x-functions-key: $FUNCTION_KEY" "$FUNCTION_BASE_URL/api/health" >/dev/null || true
-        env:
-          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
-          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
-      - name: Run E2E script
-        if: env.FUNCTION_BASE_URL && env.FUNCTION_KEY
-        working-directory: functions
-        env:
-          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: asora
-          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
+          echo "::error::Functions host did not reach Running state"; exit 1
+
+      - name: E2E
         run: |
           echo "Testing Function App at: $FUNCTION_BASE_URL"
-          # Validate FUNCTION_BASE_URL has a proper hostname
-          if [[ ! "$FUNCTION_BASE_URL" =~ ^https://[a-zA-Z0-9.-]+\.azurewebsites\.net$ ]]; then
-            echo "::error::Invalid FUNCTION_BASE_URL format: $FUNCTION_BASE_URL"
-            exit 1
-          fi
-          node ../scripts/e2e-itest.js
-      - name: Skip E2E (missing config)
-        if: '!(env.FUNCTION_BASE_URL && env.FUNCTION_KEY)'
-        run: |
-          echo "::warning::Skipping E2E test due to missing FUNCTION_BASE_URL or FUNCTION_KEY"
-          echo "FUNCTION_BASE_URL: ${FUNCTION_BASE_URL:-<not set>}"
-          echo "FUNCTION_KEY: ${FUNCTION_KEY:+<set>}"
-      - name: Upload E2E report
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-report
-          path: functions/e2e-report.json
+          node scripts/e2e-itest.js
