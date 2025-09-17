@@ -13,17 +13,13 @@ concurrency:
   group: deploy-functions-flex-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    shell: bash
-
 env:
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_FUNCTIONAPP_NAME: asora-function-dev
   AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
-  # Initial guess; auto-resolve later if wrong:
+  # Initial guess; will be overridden by resolver:
   AZURE_RESOURCE_GROUP: asora-psql-flex
-  # Optional distinct RGs; if unset they fall back to AZURE_RESOURCE_GROUP inside steps:
+  # Optional distinct RGs; fall back to AZURE_RESOURCE_GROUP if unset:
   AZURE_FD_RESOURCE_GROUP: ${{ vars.AZURE_FD_RESOURCE_GROUP }}
   AZURE_APPINSIGHTS_RESOURCE_GROUP: ${{ vars.AZURE_APPINSIGHTS_RESOURCE_GROUP }}
 
@@ -62,45 +58,36 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Show Azure context (non-fatal)
-        run: |
-          echo "::group::Azure account"
-          az account show -o table || true
-          echo "::endgroup::"
-
       - name: Resolve Function App RG and subscription
         id: resolve
+        shell: bash
         run: |
           set -Eeuo pipefail
           az config set extension.use_dynamic_install=yes_without_prompt
-
           APP="${AZURE_FUNCTIONAPP_NAME}"
 
-          # exact-name match, but fetch id not subscriptionId
+          # Exact-name match and get resource id
           hit=$(az resource list --resource-type Microsoft.Web/sites \
                 --query "[?name=='${APP}'].[name,resourceGroup,id]" -o tsv || true)
-
           if [ -z "$hit" ]; then
-            echo "::warning::Function App '${APP}' not found in current subscription. Candidates:"
+            echo "::group::Candidates in current subscription"
             az resource list --resource-type Microsoft.Web/sites \
               --query "[?contains(name, 'asora')].[name,resourceGroup,id,kind]" -o table || true
-            echo "::error::Function App '${APP}' not found. Fix the name or permissions, or create it."
+            echo "::endgroup::"
+            echo "::error::Function App '${APP}' not found by exact name in this subscription. Check name or permissions."
             exit 2
           fi
 
           RG=$(awk '{print $2}' <<<"$hit")
           RID=$(awk '{print $3}' <<<"$hit")
-          # /subscriptions/<GUID>/resourceGroups/...
           SUB_FROM_ID=$(awk -F/ '/^\/subscriptions\//{print $3}' <<<"$RID")
 
-          # Use parsed GUID if valid, else keep existing value from secrets/login
+          # Validate GUID
           if [[ "$SUB_FROM_ID" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
             SUB="$SUB_FROM_ID"
           else
             SUB="${AZURE_SUBSCRIPTION_ID:-}"
           fi
-
-          # Hard fail if still not a GUID
           if ! [[ "$SUB" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
             echo "::error::Cannot resolve a valid subscription id for '${APP}'."
             exit 2
@@ -108,14 +95,11 @@ jobs:
 
           echo "Resolved app '${APP}' in rg='${RG}', subscription='${SUB}'"
           az account set --subscription "$SUB"
-
           echo "AZURE_RESOURCE_GROUP=${RG}" >> "$GITHUB_ENV"
           echo "AZURE_SUBSCRIPTION_ID=${SUB}" >> "$GITHUB_ENV"
 
-      - name: Verify Function App accessibility
-        run: |
-          az functionapp show -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o none \
-            || { echo "::error::Function App not accessible; check RG/name/role assignments"; exit 2; }
+          # Access check
+          az functionapp show -g "$RG" -n "$APP" -o none || { echo "::error::No access to Function App. Check role assignments."; exit 2; }
 
       - name: Set Flex app settings
         uses: azure/CLI@v2
@@ -123,7 +107,6 @@ jobs:
           azcliversion: 2.61.0
           inlineScript: |
             set -Eeuo pipefail
-
             RG="${AZURE_RESOURCE_GROUP}"
             APP="${AZURE_FUNCTIONAPP_NAME}"
             CANARY_APP="${AZURE_FUNCTIONAPP_CANARY_NAME:-}"
@@ -166,7 +149,6 @@ jobs:
             fi
 
             if is_flex "$RG" "$APP"; then
-              echo "Flex plan detected: set Flex-safe settings"
               az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME -o none || true
               az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
               retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
@@ -174,7 +156,6 @@ jobs:
                 FUNCTIONS_EXTENSION_VERSION=~4 \
                 APPLICATIONINSIGHTS_ROLE_NAME="$APP"
             else
-              echo "Non-Flex plan detected: standard settings"
               retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
                 FUNCTIONS_WORKER_RUNTIME=node \
                 FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
@@ -256,16 +237,14 @@ jobs:
               echo "CANARY app NOT found; downstream CANARY steps will be skipped."
             fi
 
-      - name: Prepare V4 runtime entry point
+      - name: Prepare v4 entry point
         working-directory: functions
         run: |
           cat > index.js <<'EOF'
-          // Azure Functions Node v4 entrypoint proxy
           try { module.exports = require('./src/index.js'); }
           catch (e) { try { module.exports = require('./dist/src/index.js'); }
           catch (e2) { console.error('Entrypoint not found: ./src/index.js or ./dist/src/index.js'); throw e2; } }
           EOF
-          echo "Prepared functions/index.js"
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
         uses: Azure/functions-action@v1
@@ -315,9 +294,8 @@ jobs:
           inlineScript: |
             az config set extension.use_dynamic_install=yes_without_prompt
             az extension add --name front-door || true
-            az version
 
-      - name: Shift 10% traffic to CANARY (Front Door weights)
+      - name: Shift 10% traffic to CANARY
         if: steps.check_canary.outputs.exists == 'true'
         uses: azure/CLI@v2
         with:
@@ -325,20 +303,8 @@ jobs:
             SUB="${AZURE_SUBSCRIPTION_ID:-}"
             sub_opt=${SUB:+--subscription "$SUB"}
             RG_FD="${AZURE_FD_RESOURCE_GROUP:-$AZURE_RESOURCE_GROUP}"
-            az afd origin update $sub_opt \
-              --profile-name "$AZURE_FD_PROFILE" \
-              --origin-group-name "$AZURE_FD_ORIGIN_GROUP" \
-              --host-name "${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net" \
-              --origin-name "${AZURE_FUNCTIONAPP_NAME}" \
-              -g "$RG_FD" \
-              --weight 90
-            az afd origin update $sub_opt \
-              --profile-name "$AZURE_FD_PROFILE" \
-              --origin-group-name "$AZURE_FD_ORIGIN_GROUP" \
-              --host-name "${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net" \
-              --origin-name "${AZURE_FUNCTIONAPP_CANARY_NAME}" \
-              -g "$RG_FD" \
-              --weight 10
+            az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net"   --origin-name "${AZURE_FUNCTIONAPP_NAME}"   -g "$RG_FD" --weight 90
+            az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net" --origin-name "${AZURE_FUNCTIONAPP_CANARY_NAME}" -g "$RG_FD" --weight 10
 
       - name: Monitor App Insights failure rate for CANARY (10 min)
         if: steps.check_canary.outputs.exists == 'true'
@@ -354,12 +320,7 @@ jobs:
             sub_opt=${SUB:+--subscription "$SUB"}
             RG_AI="${AZURE_APPINSIGHTS_RESOURCE_GROUP:-$AZURE_RESOURCE_GROUP}"
             for i in {1..10}; do
-              result=$(az monitor app-insights query \
-                $sub_opt \
-                -g "$RG_AI" \
-                --apps "$AZURE_APPINSIGHTS_NAME" \
-                --analytics-query @observability/appinsights-canary-failure.kql \
-                --query "tables[0].rows[0]" -o tsv 2>/dev/null || echo "0\t0\t0")
+              result=$(az monitor app-insights query $sub_opt -g "$RG_AI" --apps "$AZURE_APPINSIGHTS_NAME" --analytics-query @observability/appinsights-canary-failure.kql --query "tables[0].rows[0]" -o tsv 2>/dev/null || echo "0\t0\t0")
               total=$(echo "$result" | awk '{print $1}')
               failed=$(echo "$result" | awk '{print $2}')
               rate=$(echo "$result" | awk '{print $3}')
@@ -383,24 +344,3 @@ jobs:
         with:
           name: canary-report
           path: canary_report.txt
-
-      - name: Comment result on commit/PR
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const rate = `${{ steps.monitor.outputs.rate }}` || 'n/a';
-            const sha = context.sha;
-            const outcome = '${{ job.status }}';
-            const body = `Canary deploy check: ${outcome}. Failure rate (last sample): ${rate}%`;
-            try {
-              if (context.eventName === 'pull_request' && context.payload.pull_request) {
-                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.payload.pull_request.number, body });
-              } else {
-                await github.rest.repos.createCommitComment({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: sha, body });
-              }
-            } catch (e) {
-              const status = e?.status || e?.response?.status;
-              core.warning(`Failed to post GitHub comment (status: ${status}).`);
-            }
