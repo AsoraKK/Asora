@@ -17,6 +17,7 @@ export async function getFeed(request: HttpRequest, context: InvocationContext):
         // For now, return a simple response
         // TODO: Implement actual feed data retrieval from Cosmos DB
         const feedResponse = {
+            ok: true,                  // <-- add this line
             status: "ok",
             service: "asora-function-dev",
             ts: new Date().toISOString(),
