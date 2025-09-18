@@ -134,23 +134,20 @@ jobs:
           mkdir -p "$RUNNER_TEMP/azcfg"
           echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
 
+      - name: Pre-clear MSAL HTTP cache (NormalizedResponse mitigation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
+          rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
+          echo "Pre-cleared MSAL caches"
+
       - name: Azure login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Clear MSAL HTTP cache (NormalizedResponse bug)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Enhanced MSAL cache clearing to avoid AttributeError on NormalizedResponse
-          CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$CACHE_DIR/msal_http_cache.bin" || true
-          rm -f "$CACHE_DIR/msal_token_cache.json" || true
-          rm -f "$CACHE_DIR/accessTokens.json" || true
-          rm -f "$CACHE_DIR/azureProfile.json" || true
-          echo "Cleared all MSAL cache files"
       - name: Show account
         run: az account show --output table --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
       - name: Detect plan and runtime (diagnostic)
