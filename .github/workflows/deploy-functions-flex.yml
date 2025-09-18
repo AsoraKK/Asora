@@ -16,12 +16,7 @@ concurrency:
 env:
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_FUNCTIONAPP_NAME: asora-function-dev
-  AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
   AZURE_RESOURCE_GROUP: asora-psql-flex
-  AZURE_APPINSIGHTS_NAME: asora-ai-flex
-  AZURE_FD_PROFILE: asora-frontdoor
-  AZURE_FD_ENDPOINT: asora-frontdoor-endpoint
-  AZURE_FD_ORIGIN_GROUP: asora-origin-group
   NODE_VERSION: '20'
 
 jobs:
@@ -39,7 +34,7 @@ jobs:
       - name: Build functions (then prune to prod)
         working-directory: functions
         run: |
-          set -e
+          set -Eeuo pipefail
           rm -rf node_modules
           npm ci
           npm run build
@@ -53,6 +48,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Log tool versions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          az --version
+          node -v
+          npm -v
+
       - name: Preflight — scope + app existence
         shell: bash
         run: |
@@ -62,14 +65,14 @@ jobs:
           app="${AZURE_FUNCTIONAPP_NAME}"
           app_id="/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Web/sites/${app}"
           echo "Using SUB=${sub} RG=${rg} APP=${app}"
-          if ! az resource show --ids "$app_id" -o none 2>/dev/null; then
+          if ! az resource show --ids "$app_id" -o none --only-show-errors; then
             echo "::group::Debug list in RG"
-            az resource list -g "$rg" --resource-type Microsoft.Web/sites -o table || true
+            az resource list -g "$rg" --resource-type Microsoft.Web/sites -o table --only-show-errors || true
             echo "::endgroup::"
             echo "::error::Function App not found: $app_id"
             exit 2
           fi
-          az functionapp show -g "$rg" -n "$app" -o table
+          az functionapp show -g "$rg" -n "$app" --query '{name:name, rg:resourceGroup, location:location, kind:kind, state:state}' -o table
 
       - name: Configure Function App (Flex-aware)
         uses: azure/CLI@v2
@@ -146,6 +149,11 @@ jobs:
           catch (e) { module.exports = require('./dist/src/index.js'); }
           EOF
 
+      - name: Check Cosmos configuration
+        shell: bash
+        run: |
+          [[ -z "${COSMOS_CONNECTION_STRING:-}" ]] && echo "::warning::COSMOS_CONNECTION_STRING unset; functions relying on Cosmos will fail at runtime."
+
       - name: Publish to Azure Functions (OneDeploy on Flex)
         uses: Azure/functions-action@v1
         with:
@@ -158,4 +166,4 @@ jobs:
         with:
           inlineScript: |
             sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
-            az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table
+            az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
