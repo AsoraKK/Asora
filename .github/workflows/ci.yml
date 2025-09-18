@@ -113,6 +113,9 @@ jobs:
     needs: [tests, functions_build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -126,7 +129,12 @@ jobs:
           name: functions-v4-artifact
           path: .
 
-      - name: Az login (OIDC)
+      - name: Isolate Azure CLI cache (per-run)
+        run: |
+          mkdir -p "$RUNNER_TEMP/azcfg"
+          echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
+
+      - name: Azure login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -143,9 +151,8 @@ jobs:
           rm -f "$CACHE_DIR/accessTokens.json" || true
           rm -f "$CACHE_DIR/azureProfile.json" || true
           echo "Cleared all MSAL cache files"
-      - name: Verify Azure login
-        shell: bash
-        run: az account show --output table
+      - name: Show account
+        run: az account show --output table --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
       - name: Detect plan and runtime (diagnostic)
         id: detect
         continue-on-error: true
