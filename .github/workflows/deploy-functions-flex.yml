@@ -82,68 +82,64 @@ jobs:
           az functionapp show -g "$rg" -n "$app" --query '{name:name, rg:resourceGroup, location:location, kind:kind, state:state}' -o table --only-show-errors
 
       - name: Configure Function App (Flex-aware)
-        uses: azure/CLI@v2
-        with:
-          azcliversion: 2.64.0
-          inlineScript: |
-            set -Eeuo pipefail
-            SUB="${AZURE_SUBSCRIPTION_ID}"
-            RG="${AZURE_RESOURCE_GROUP}"
-            APP="${AZURE_FUNCTIONAPP_NAME}"
-            sub_opt="--subscription ${SUB}"
-            APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          az config set extension.use_dynamic_install=yes_without_prompt
+          SUB="${AZURE_SUBSCRIPTION_ID}"
+          RG="${AZURE_RESOURCE_GROUP}"
+          APP="${AZURE_FUNCTIONAPP_NAME}"
+          sub_opt="--subscription ${SUB}"
+          APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
 
-            retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
+          retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
 
-            # Fetch plan + kind without jq
-            PLAN_ID=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "properties.serverFarmId" -o tsv --only-show-errors 2>/dev/null || echo "")
-            KIND=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "kind" -o tsv --only-show-errors 2>/dev/null || echo "")
-            TIER=""
-            [[ -n "$PLAN_ID" ]] && TIER=$(az resource show ${sub_opt} --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors 2>/dev/null || echo "")
-            IS_FLEX=false; [[ "$TIER" == "FlexConsumption" || "$KIND" == *flex* ]] && IS_FLEX=true
-            IS_FLEX=${IS_FLEX:-false}
+          PLAN_ID=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "properties.serverFarmId" -o tsv --only-show-errors 2>/dev/null || echo "")
+          KIND=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "kind" -o tsv --only-show-errors 2>/dev/null || echo "")
+          TIER=""
+          [[ -n "$PLAN_ID" ]] && TIER=$(az resource show ${sub_opt} --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors 2>/dev/null || echo "")
+          IS_FLEX=false; [[ "$TIER" == "FlexConsumption" || "$KIND" == *flex* ]] && IS_FLEX=true
+          IS_FLEX=${IS_FLEX:-false}
 
-            if [ "$IS_FLEX" = true ]; then
-              # Flex: no FUNCTIONS_WORKER_RUNTIME or WEBSITE_NODE_DEFAULT_VERSION
-              az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION -o none --only-show-errors || true
-              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-                FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-                FUNCTIONS_EXTENSION_VERSION=~4 \
-                APPLICATIONINSIGHTS_ROLE_NAME="$APP"
-              # Clear legacy linuxFxVersion if present
-              az resource update ${sub_opt} -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
+          if [ "$IS_FLEX" = true ]; then
+            az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION -o none --only-show-errors || true
+            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+              FUNCTIONS_EXTENSION_VERSION=~4 \
+              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+            az resource update ${sub_opt} -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
+          else
+            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+              FUNCTIONS_WORKER_RUNTIME=node \
+              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+              FUNCTIONS_EXTENSION_VERSION=~4 \
+              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+            if [[ "$KIND" == *linux* ]]; then
+              retry az functionapp config set ${sub_opt} -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
             else
-              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-                FUNCTIONS_WORKER_RUNTIME=node \
-                FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-                FUNCTIONS_EXTENSION_VERSION=~4 \
-                APPLICATIONINSIGHTS_ROLE_NAME="$APP"
-              if [[ "$KIND" == *linux* ]]; then
-                retry az functionapp config set ${sub_opt} -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
-              else
-                retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none --only-show-errors
-              fi
+              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none --only-show-errors
             fi
+          fi
 
-            if [[ -n "${COSMOS_CONNECTION_STRING:-}" ]]; then
-              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
+          if [[ -n "${COSMOS_CONNECTION_STRING:-}" ]]; then
+            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+              COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
+          fi
+
+          retry az functionapp restart ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors
+
+          ROLE_VAL=$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)
+          [[ "$ROLE_VAL" == "$APP" ]] || { echo "::error::AI role not set on $APP"; exit 3; }
+
+          if [ "$IS_FLEX" != true ]; then
+            if [[ "$KIND" == *linux* ]]; then
+              [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
+            else
+              [[ "$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv --only-show-errors)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
             fi
+          fi
 
-            retry az functionapp restart ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors
-
-            ROLE_VAL=$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)
-            [[ "$ROLE_VAL" == "$APP" ]] || { echo "::error::AI role not set on $APP"; exit 3; }
-
-            if [ "$IS_FLEX" != true ]; then
-              if [[ "$KIND" == *linux* ]]; then
-                [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
-              else
-                [[ "$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv --only-show-errors)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
-              fi
-            fi
-
-            echo "::notice::Configured '$APP' in '$RG' (sub ${SUB})."
+          echo "::notice::Configured '$APP' in '$RG' (sub ${SUB})."
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
@@ -169,8 +165,8 @@ jobs:
           respect-funcignore: true
 
       - name: Verify discovery
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
-            az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
+          az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
