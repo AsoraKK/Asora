@@ -17,13 +17,7 @@ env:
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_FUNCTIONAPP_NAME: asora-function-dev
   AZURE_FUNCTIONAPP_CANARY_NAME: asora-function-dev-canary
-  # Initial guess; will be overridden by resolver:
   AZURE_RESOURCE_GROUP: asora-psql-flex
-  # Optional distinct RGs; fall back to AZURE_RESOURCE_GROUP if unset:
-  AZURE_FD_RESOURCE_GROUP: ${{ vars.AZURE_FD_RESOURCE_GROUP }}
-  AZURE_APPINSIGHTS_RESOURCE_GROUP: ${{ vars.AZURE_APPINSIGHTS_RESOURCE_GROUP }}
-
-  AZURE_LOCATION: westeurope
   AZURE_APPINSIGHTS_NAME: asora-ai-flex
   AZURE_FD_PROFILE: asora-frontdoor
   AZURE_FD_ENDPOINT: asora-frontdoor-endpoint
@@ -45,266 +39,111 @@ jobs:
       - name: Build functions (then prune to prod)
         working-directory: functions
         run: |
+          set -e
           rm -rf node_modules
           npm ci
           npm run build
-          find dist -name '*.js' | grep . || (echo "No JS build output found in dist/; check build configuration." && exit 1)
+          find dist -name '*.js' | grep . || (echo "No JS build output in dist/"; exit 1)
           npm prune --omit=dev
-
-      - name: Clear MSAL cache and Azure login
-        shell: bash
-        run: |
-          # Clear MSAL cache to avoid NormalizedResponse AttributeError
-          rm -rf ~/.azure/msal_token_cache.json || true
-          rm -rf ~/.azure/accessTokens.json || true
-          rm -rf ~/.azure/azureProfile.json || true
-          echo "Cleared Azure CLI cache files"
 
       - name: Azure login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Resolve Function App RG and subscription
-        id: resolve
+      - name: Preflight — scope + app existence
         shell: bash
         run: |
           set -Eeuo pipefail
-          az config set extension.use_dynamic_install=yes_without_prompt
-          APP="${AZURE_FUNCTIONAPP_NAME}"
-
-          # Exact-name match and get resource id
-          hit=$(az resource list --resource-type Microsoft.Web/sites \
-                --query "[?name=='${APP}'].[name,resourceGroup,id]" -o tsv || true)
-          if [ -z "$hit" ]; then
-            echo "::group::Candidates in current subscription"
-            az resource list --resource-type Microsoft.Web/sites \
-              --query "[?contains(name, 'asora')].[name,resourceGroup,id,kind]" -o table || true
+          sub="${AZURE_SUBSCRIPTION_ID}"
+          rg="${AZURE_RESOURCE_GROUP}"
+          app="${AZURE_FUNCTIONAPP_NAME}"
+          app_id="/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Web/sites/${app}"
+          echo "Using SUB=${sub} RG=${rg} APP=${app}"
+          if ! az resource show --ids "$app_id" -o none 2>/dev/null; then
+            echo "::group::Debug list in RG"
+            az resource list -g "$rg" --resource-type Microsoft.Web/sites -o table || true
             echo "::endgroup::"
-            echo "::error::Function App '${APP}' not found by exact name in this subscription. Check name or permissions."
+            echo "::error::Function App not found: $app_id"
             exit 2
           fi
+          az functionapp show -g "$rg" -n "$app" -o table
 
-          RG=$(awk '{print $2}' <<<"$hit")
-          RID=$(awk '{print $3}' <<<"$hit")
-          SUB_FROM_ID=$(awk -F/ '/^\/subscriptions\//{print $3}' <<<"$RID")
-
-          # Validate GUID
-          if [[ "$SUB_FROM_ID" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
-            SUB="$SUB_FROM_ID"
-          else
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-          fi
-          if ! [[ "$SUB" =~ ^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$ ]]; then
-            echo "::error::Cannot resolve a valid subscription id for '${APP}'."
-            exit 2
-          fi
-
-          echo "Resolved app '${APP}' in rg='${RG}', subscription='${SUB}'"
-          az account set --subscription "$SUB"
-          echo "AZURE_RESOURCE_GROUP=${RG}" >> "$GITHUB_ENV"
-          echo "AZURE_SUBSCRIPTION_ID=${SUB}" >> "$GITHUB_ENV"
-
-          # Access check
-          az functionapp show -g "$RG" -n "$APP" -o none || { echo "::error::No access to Function App. Check role assignments."; exit 2; }
-
-      - name: Set Flex app settings
+      - name: Configure Function App (Flex-aware)
         uses: azure/CLI@v2
         with:
           azcliversion: 2.61.0
           inlineScript: |
             set -Eeuo pipefail
+            SUB="${AZURE_SUBSCRIPTION_ID}"
             RG="${AZURE_RESOURCE_GROUP}"
             APP="${AZURE_FUNCTIONAPP_NAME}"
-            CANARY_APP="${AZURE_FUNCTIONAPP_CANARY_NAME:-}"
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-            sub_opt=${SUB:+--subscription "$SUB"}
+            sub_opt="--subscription ${SUB}"
+            APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
 
-            retry(){ 
-              local n=0 max=5 delay=2 cmd_result
-              until "$@"; do 
-                cmd_result=$?
-                # Retry on rate limiting, server errors, or MSAL cache issues
-                if [[ $cmd_result -eq 429 ]] || [[ $cmd_result -ge 500 ]] || [[ $cmd_result -eq 1 ]]; then 
-                  ((n++))
-                  if [[ $n -ge $max ]]; then 
-                    echo "::warning::Command failed after $max retries: $*"
-                    return $cmd_result
-                  fi
-                  echo "::warning::Retry $n/$max for command: $* (exit code: $cmd_result)"
-                  sleep $((delay**n))
-                  # Clear cache on MSAL-related failures
-                  if [[ $cmd_result -eq 1 ]]; then
-                    rm -rf ~/.azure/msal_token_cache.json 2>/dev/null || true
-                  fi
-                else 
-                  return $cmd_result
-                fi
-              done
-            }
-            exists_app(){ az functionapp show $sub_opt -g "$1" -n "$2" --only-show-errors >/dev/null 2>&1; }
-            has_canary_slot(){ az webapp deployment slot list $sub_opt -g "$1" -n "$2" --query "[?name=='canary']|length(@)" -o tsv | grep -q "^1$"; }
-            plan_tier(){ 
-              local id rg="$1" app="$2"
-              # Use grep-based extraction for reliable serverFarmId parsing
-              id=$(az functionapp show $sub_opt -g "$rg" -n "$app" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || echo "")
-              [[ -z "$id" ]] && { echo ""; return 1; }
-              # Validate the resource ID format
-              if [[ "$id" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
-                az resource show $sub_opt --ids "$id" --query "sku.tier" -o tsv 2>/dev/null | tr -d '\n\r' || echo ""
-              else
-                echo ""
-                return 1
-              fi
-            }
-            is_flex(){ 
-              local tier kind rg="$1" app="$2"
-              tier=$(plan_tier "$rg" "$app")
-              kind=$(az functionapp show $sub_opt -g "$rg" -n "$app" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || echo "")
-              # Check both tier and kind for Flex detection
-              [[ "$tier" == "FlexConsumption" ]] || [[ "$kind" == *flex* ]] || [[ "$kind" == *Flex* ]]
-            }
-            set_node20(){
-              local rg="$1" app="$2" slot_opt="${3:-}"
-              if is_flex "$rg" "$app"; then
-                echo "Flex detected; clearing legacy pins and skipping Node set for $app."
-                az resource update $sub_opt -g "$rg" -n "$app/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none || true
-                az functionapp config appsettings delete $sub_opt -g "$rg" -n "$app" $slot_opt --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
-                return
-              fi
-              if [[ "$(az functionapp show $sub_opt -g "$rg" -n "$app" --query kind -o tsv)" == *linux* ]]; then
-                retry az functionapp config set $sub_opt -g "$rg" -n "$app" $slot_opt --linux-fx-version "node|20" -o none
-              else
-                retry az functionapp config appsettings set $sub_opt -g "$rg" -n "$app" $slot_opt --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
-              fi
-            }
+            retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
 
-            echo "::group::Azure context"
-            az account show $sub_opt -o table || true
-            echo "::endgroup::"
+            # Fetch plan + kind without jq
+            PLAN_ID=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "properties.serverFarmId" -o tsv 2>/dev/null || echo "")
+            KIND=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "kind" -o tsv 2>/dev/null || echo "")
+            TIER=""
+            [[ -n "$PLAN_ID" ]] && TIER=$(az resource show ${sub_opt} --ids "$PLAN_ID" --query "sku.tier" -o tsv 2>/dev/null || echo "")
+            IS_FLEX=false; [[ "$TIER" == "FlexConsumption" || "$KIND" == *flex* ]] && IS_FLEX=true
+            IS_FLEX=${IS_FLEX:-false}
 
-            echo "::group::Function App validation for $APP in $RG"
-            # Enhanced validation with detailed error reporting
-            if ! exists_app "$RG" "$APP"; then
-              echo "::warning::Function App '$APP' not found, investigating..."
-              out=$(az functionapp show $sub_opt -g "$RG" -n "$APP" -o json 2>&1 || true)
-              if echo "$out" | grep -qiE "AuthorizationFailed|does not have authorization"; then
-                echo "::error::Access denied to '$APP' in '$RG'. Fix role assignments."
-                exit 2
-              elif echo "$out" | grep -qiE "NormalizedResponse|AttributeError"; then
-                echo "::error::MSAL cache corruption detected. This workflow should clear cache and retry."
-                exit 2
-              elif echo "$out" | grep -qiE "ResourceNotFound|could not be found"; then
-                echo "::warning::Function App not found, listing available apps..."
-                az resource list $sub_opt --resource-type Microsoft.Web/sites \
-                  --query "[?contains(name, 'asora')].[name,resourceGroup,location,kind]" -o table || true
-                echo "::error::Function App '$APP' not found in RG '$RG'"
-                exit 2
-              else
-                echo "::error::Unexpected error accessing Function App: $out"
-                exit 2
-              fi
-            fi
-            echo "::endgroup::"
-
-            if is_flex "$RG" "$APP"; then
-              az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME -o none || true
-              az functionapp config appsettings delete $sub_opt -g "$RG" -n "$APP" --setting-names WEBSITE_NODE_DEFAULT_VERSION -o none || true
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+            if [ "$IS_FLEX" = true ]; then
+              # Flex: no FUNCTIONS_WORKER_RUNTIME or WEBSITE_NODE_DEFAULT_VERSION
+              az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION -o none || true
+              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --settings \
                 FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
                 FUNCTIONS_EXTENSION_VERSION=~4 \
                 APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+              # Clear legacy linuxFxVersion if present
+              az resource update ${sub_opt} -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none || true
             else
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
+              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --settings \
                 FUNCTIONS_WORKER_RUNTIME=node \
                 FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
                 FUNCTIONS_EXTENSION_VERSION=~4 \
                 APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+              if [[ "$KIND" == *linux* ]]; then
+                retry az functionapp config set ${sub_opt} -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none
+              else
+                retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
+              fi
             fi
-
-            set_node20 "$RG" "$APP"
 
             if [[ -n "${COSMOS_CONNECTION_STRING:-}" ]]; then
-              retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" -o none --settings \
-                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
-                COSMOS_DATABASE_NAME="asora"
-            else
-              echo "::warning::COSMOS_CONNECTION_STRING not provided; code using Cosmos will fail."
+              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --settings \
+                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
             fi
 
-            retry az functionapp restart $sub_opt -g "$RG" -n "$APP" -o none
+            retry az functionapp restart ${sub_opt} -g "$RG" -n "$APP" -o none
 
-            CANARY_MODE="absent"
-            if has_canary_slot "$RG" "$APP"; then
-              set_node20 "$RG" "$APP" "--slot canary"
-              if is_flex "$RG" "$APP"; then
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
-                  APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
-              else
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
-                  FUNCTIONS_WORKER_RUNTIME=node \
-                  APPLICATIONINSIGHTS_ROLE_NAME="${APP}-canary"
-              fi
-              [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$APP" --slot canary -o none --settings \
-                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
-              CANARY_MODE="slot"
-            elif [[ -n "$CANARY_APP" ]] && exists_app "$RG" "$CANARY_APP"; then
-              set_node20 "$RG" "$CANARY_APP"
-              if is_flex "$RG" "$CANARY_APP"; then
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
-                  APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
-              else
-                retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
-                  FUNCTIONS_WORKER_RUNTIME=node \
-                  APPLICATIONINSIGHTS_ROLE_NAME="$CANARY_APP"
-              fi
-              [[ -n "${COSMOS_CONNECTION_STRING:-}" ]] && retry az functionapp config appsettings set $sub_opt -g "$RG" -n "$CANARY_APP" -o none --settings \
-                COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
-              CANARY_MODE="separate-app"
-            fi
-
-            ROLE_VAL=$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv)
+            ROLE_VAL=$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv)
             [[ "$ROLE_VAL" == "$APP" ]] || { echo "::error::AI role not set on $APP"; exit 3; }
 
-            if ! is_flex "$RG" "$APP"; then
-              if [[ "$(az functionapp show $sub_opt -g "$RG" -n "$APP" --query kind -o tsv)" == *linux* ]]; then
-                [[ "$(az functionapp config show $sub_opt -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20 on $APP"; exit 4; }
+            if [ "$IS_FLEX" != true ]; then
+              if [[ "$KIND" == *linux* ]]; then
+                [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
               else
-                [[ "$(az functionapp config appsettings list $sub_opt -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20 on $APP"; exit 5; }
+                [[ "$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
               fi
             fi
 
-            echo "::notice::Configured '$APP'. Canary mode: ${CANARY_MODE}."
+            echo "::notice::Configured '$APP' in '$RG' (sub ${SUB})."
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-
-      - name: Check CANARY app exists
-        id: check_canary
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            set -Eeuo pipefail
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-            sub_opt=${SUB:+--subscription "$SUB"}
-            echo "Checking CANARY app: ${AZURE_FUNCTIONAPP_CANARY_NAME} in ${AZURE_RESOURCE_GROUP} (sub=${SUB:-default})"
-            NAME=$(az functionapp show $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_CANARY_NAME" --query name -o tsv 2>/dev/null || echo "")
-            if [ -n "$NAME" ]; then
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "CANARY app found: $NAME"
-            else
-              echo "exists=false" >> $GITHUB_OUTPUT
-              echo "CANARY app NOT found; downstream CANARY steps will be skipped."
-            fi
 
       - name: Prepare v4 entry point
         working-directory: functions
         run: |
           cat > index.js <<'EOF'
+          // Azure Functions Node v4 isolated entrypoint
           try { module.exports = require('./src/index.js'); }
-          catch (e) { try { module.exports = require('./dist/src/index.js'); }
-          catch (e2) { console.error('Entrypoint not found: ./src/index.js or ./dist/src/index.js'); throw e2; } }
+          catch (e) { module.exports = require('./dist/src/index.js'); }
           EOF
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
@@ -318,90 +157,5 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-            sub_opt=${SUB:+--subscription "$SUB"}
+            sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
             az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table
-
-      - name: Install smoke test dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Run smoke tests (health, feed)
-        env:
-          FUNCTION_BASE_URL: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
-        run: |
-          chmod +x scripts/smoke-test.sh
-          scripts/smoke-test.sh
-
-      - name: Upload smoke artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-artifacts
-          path: smoke/
-
-      - name: Publish CANARY to Azure Functions
-        if: steps.check_canary.outputs.exists == 'true'
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_CANARY_NAME }}
-          package: functions
-          respect-funcignore: true
-
-      - name: Ensure AFD CLI extension
-        if: steps.check_canary.outputs.exists == 'true'
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az config set extension.use_dynamic_install=yes_without_prompt
-            az extension add --name front-door || true
-
-      - name: Shift 10% traffic to CANARY
-        if: steps.check_canary.outputs.exists == 'true'
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-            sub_opt=${SUB:+--subscription "$SUB"}
-            RG_FD="${AZURE_FD_RESOURCE_GROUP:-$AZURE_RESOURCE_GROUP}"
-            az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net"   --origin-name "${AZURE_FUNCTIONAPP_NAME}"   -g "$RG_FD" --weight 90
-            az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net" --origin-name "${AZURE_FUNCTIONAPP_CANARY_NAME}" -g "$RG_FD" --weight 10
-
-      - name: Monitor App Insights failure rate for CANARY (10 min)
-        if: steps.check_canary.outputs.exists == 'true'
-        id: monitor
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            set -Eeuo pipefail
-            echo "Monitoring failure rate for cloud_RoleName=${AZURE_FUNCTIONAPP_CANARY_NAME}" | tee canary_report.txt
-            FAIL=0
-            LAST_RATE=0
-            SUB="${AZURE_SUBSCRIPTION_ID:-}"
-            sub_opt=${SUB:+--subscription "$SUB"}
-            RG_AI="${AZURE_APPINSIGHTS_RESOURCE_GROUP:-$AZURE_RESOURCE_GROUP}"
-            for i in {1..10}; do
-              result=$(az monitor app-insights query $sub_opt -g "$RG_AI" --apps "$AZURE_APPINSIGHTS_NAME" --analytics-query @observability/appinsights-canary-failure.kql --query "tables[0].rows[0]" -o tsv 2>/dev/null || echo "0\t0\t0")
-              total=$(echo "$result" | awk '{print $1}')
-              failed=$(echo "$result" | awk '{print $2}')
-              rate=$(echo "$result" | awk '{print $3}')
-              echo "minute=$i total=$total failed=$failed rate=${rate}%" | tee -a canary_report.txt
-              LAST_RATE=$rate
-              awk -v r="$rate" 'BEGIN{exit (r>1.0)?0:1}' && { FAIL=1; break; } || true
-              sleep 60
-            done
-            echo "rate=$LAST_RATE" >> $GITHUB_OUTPUT
-            if [ "$FAIL" -eq 1 ]; then
-              echo "Canary failure rate exceeds threshold; rolling back weights" | tee -a canary_report.txt
-              RG_FD="${AZURE_FD_RESOURCE_GROUP:-$AZURE_RESOURCE_GROUP}"
-              az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net"   --origin-name "${AZURE_FUNCTIONAPP_NAME}"   -g "$RG_FD" --weight 100
-              az afd origin update $sub_opt --profile-name "$AZURE_FD_PROFILE" --origin-group-name "$AZURE_FD_ORIGIN_GROUP" --host-name "${AZURE_FUNCTIONAPP_CANARY_NAME}.azurewebsites.net" --origin-name "${AZURE_FUNCTIONAPP_CANARY_NAME}" -g "$RG_FD" --weight 0
-              exit 1
-            fi
-
-      - name: Upload canary report
-        if: steps.check_canary.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: canary-report
-          path: canary_report.txt
