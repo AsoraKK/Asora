@@ -217,22 +217,37 @@ jobs:
                 --resource-type "Microsoft.Web/sites/config" \
                 --set properties.linuxFxVersion="" -o none || true
             fi
+
             if [ "$PLAN_TIER" = "FlexConsumption" ]; then
-              # Flex Consumption: keep v4 only and avoid default node pinning
-              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node
+              # Flex: DO NOT set FUNCTIONS_WORKER_RUNTIME; remove any remnants and keep only v4
+              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
               az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
+              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
+
             elif [ "$PLAN_TIER" = "unknown" ]; then
-              # Unknown plan: choose Flex-safe behavior to avoid failures
-              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node
-              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
+              # Flex-safe default for unknown: avoid setting FUNCTIONS_WORKER_RUNTIME
+              CUR_LFX="$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)"
+              if [ -n "$CUR_LFX" ]; then
+                # Looks like classic/Premium Linux (image pinned) -> set full runtime pins
+                az functionapp config appsettings set \
+                  --name "$APP" --resource-group "$RG" \
+                  --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+              else
+                # Looks like Flex -> keep only v4 and delete invalid pins
+                az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
+                az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
+                az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
+              fi
+
             else
-              # Linux Classic/Premium: set worker runtime and default node version
+              # Linux Classic/Premium
               az functionapp config appsettings set \
                 --name "$APP" --resource-group "$RG" \
                 --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
             fi
+
           else
-            # Windows plans don't use linuxFxVersion; set runtime via app settings
+            # Windows plans
             az functionapp config appsettings set \
               --name "$APP" --resource-group "$RG" \
               --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
