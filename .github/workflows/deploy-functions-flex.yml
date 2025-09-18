@@ -170,3 +170,4 @@ jobs:
           set -Eeuo pipefail
           sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
           az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
+
