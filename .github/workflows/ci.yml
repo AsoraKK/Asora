@@ -393,76 +393,75 @@ jobs:
             --src dist-v4-final.zip \
             --timeout 600
 
-      - name: Azure login for CLI (post-deploy verification)
+      - name: Re-login for CLI (scoped)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: CLI preflight (account & scope)
+      - name: Post-deploy verification (robust for Flex)
         shell: bash
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
 
-          # Scope to the intended subscription FIRST
-          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          # Scope account explicitly and show context once
+          az account set --subscription "$SUBS"
           az account show -o table --only-show-errors
 
-          # Resource group existence (table needs a projection)
-          az group show -n "$RG" \
-            --query "{name:name, location:location}" \
-            -o table --only-show-errors
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
 
-          # Function App existence (table needs a projection)
-          az functionapp show -g "$RG" -n "$APP" \
-            --query "{name:name, rg:resourceGroup, location:location, kind:kind, state:state, host:defaultHostName}" \
-            -o table --only-show-errors
+          # Helper to get state via ARM (more reliable than module on Flex)
+          get_state() {
+            az resource show --ids "$APP_ID" --query "properties.state" -o tsv --only-show-errors 2>/dev/null || echo ""
+          }
 
-          # Double-check: ensure the app query returns non-empty 'name'
-          NAME=$(az functionapp show -g "$RG" -n "$APP" --query name -o tsv --only-show-errors || echo "")
-          if [ -z "$NAME" ]; then
-            echo "::error::Function App '$APP' in RG '$RG' not found or not accessible."
-            exit 1
-          fi
-
-      - name: Post-deployment verification
-        shell: bash
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
-        run: |
-          set -euo pipefail
-          MAX_RETRIES=6
-          RETRY_DELAY=10
-          for attempt in $(seq 1 $MAX_RETRIES); do
-            echo "Verification attempt $attempt/$MAX_RETRIES…"
-            if [ "$attempt" -eq 1 ]; then
-              STATE=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv || echo "")
-            else
-              STATE=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo "")
+          # Helper: list functions with CLI, fallback to ARM REST
+          list_functions_count() {
+            if CNT=$(az functionapp function list -g "$RG" -n "$APP" --query "length(@)" -o tsv --only-show-errors 2>/dev/null); then
+              echo "${CNT:-0}"; return
             fi
-            echo "Function App state: ${STATE:-<unknown>}"
+            # Fallback to REST (ARM)
+            az rest --method GET \
+              --url "https://management.azure.com${APP_ID}/functions?api-version=2023-01-01" \
+              --query "length(value)" -o tsv 2>/dev/null || echo "0"
+          }
 
-            if [ "$STATE" = "Running" ]; then
-              FUNC_COUNT=$(az functionapp function list -g "$RG" -n "$APP" --query 'length(@)' -o tsv 2>/dev/null || echo 0)
-              echo "Discovered functions: $FUNC_COUNT"
-              if [ "$FUNC_COUNT" -gt 0 ]; then
+          # First call: do not suppress errors; if it fails, we’ll see it
+          STATE="$(get_state)"
+          echo "Initial state via ARM: ${STATE:-<empty>}"
+
+          MAX_RETRIES=12
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            STATE="$(get_state)"
+            echo "Attempt $i/${MAX_RETRIES} — state: ${STATE:-<empty>}"
+
+            if [ "${STATE}" = "Running" ]; then
+              CNT="$(list_functions_count)"
+              echo "Discovered functions: ${CNT}"
+              if [ "${CNT}" -gt 0 ]; then
                 az functionapp function list -g "$RG" -n "$APP" -o table --only-show-errors 2>/dev/null || true
+                echo "✓ Verification successful."
                 exit 0
               fi
+              echo "App is Running but functions not listed yet."
             fi
 
-            [ "$attempt" -lt "$MAX_RETRIES" ] && { echo "Waiting ${RETRY_DELAY}s…"; sleep "$RETRY_DELAY"; }
+            # Exponential backoff: 5,10,15,... seconds (cap at 30)
+            SLEEP=$(( 5 * i ))
+            [ $SLEEP -gt 30 ] && SLEEP=30
+            sleep "$SLEEP"
           done
 
-          echo "::error::Verification did not complete successfully after $MAX_RETRIES attempts."
-          az functionapp show -g "$RG" -n "$APP" \
-            --query "{state:state, host:defaultHostName, runtime:siteConfig.linuxFxVersion}" \
-            -o table || true
+          echo "::group::Diagnostics"
+          az resource show --ids "$APP_ID" -o json --only-show-errors | sed 's/"publishingPassword":"[^"]*"/"publishingPassword":"<redacted>"/g' || true
+          az functionapp show -g "$RG" -n "$APP" --query "{name:name, kind:kind, state:state, host:defaultHostName}" -o table --only-show-errors || true
+          echo "::endgroup::"
+          echo "::error::Verification did not complete successfully after ${MAX_RETRIES} attempts."
           exit 1
 
       - name: Smoke check
