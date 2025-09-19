@@ -393,6 +393,26 @@ jobs:
             --src dist-v4-final.zip \
             --timeout 600
 
+      - name: Azure login for CLI (post-deploy verification)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: CLI preflight (account & scope)
+        shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+        run: |
+          set -euo pipefail
+          az account show -o table
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          # Show that RG and app are resolvable; fail here if not
+          az group show -n "$RG" -o table
+          az functionapp show -g "$RG" -n "$APP" -o table
+
       - name: Post-deployment verification
         shell: bash
         env:
