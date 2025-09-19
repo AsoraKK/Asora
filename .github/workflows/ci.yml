@@ -336,10 +336,12 @@ jobs:
           # Add Cosmos settings for both Flex and non-Flex
           if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
             az functionapp config appsettings set -n "$APP" -g "$RG" -o none --settings \
-              COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
-              COSMOS_DATABASE_NAME='asora'
+              COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
+              COSMOS_DATABASE_NAME="asora"
           else
-            echo "::warning::COSMOS_CONNECTION_STRING not provided; host may fail if code requires Cosmos."
+            echo "::group::Cosmos config"
+            echo "::notice::COSMOS_CONNECTION_STRING not set; skipping Cosmos app settings."
+            echo "::endgroup::"
           fi
 
       - name: Install jq for deployment verification
@@ -357,55 +359,54 @@ jobs:
           set -euo pipefail
           test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
 
-          # Use config-zip for all plans (universal compatibility)
-          echo "Deploying with config-zip (universal method)..."
-          az functionapp deployment source config-zip \
-            -g "$RG" \
-            -n "$APP" \
-            --src dist-v4-final.zip \
-            --timeout 600
+          echo "Deploying with config-zip (universal method)…"
+          deploy_zip() {
+            az functionapp deployment source config-zip \
+              -g "$RG" \
+              -n "$APP" \
+              --src dist-v4-final.zip \
+              --timeout 600
+          }
 
-          # Resilient post-deploy verification with retry logic
-          echo "Starting post-deployment verification..."
+          # Run once; don't fail the job if CLI reports partial success
+          set +e
+          deploy_zip
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::config-zip returned $rc (Kudu log polling can be flaky). Proceeding to verification."
+          fi
+
+          echo "Starting post-deployment verification…"
           MAX_RETRIES=6
           RETRY_DELAY=10
-
           for attempt in $(seq 1 $MAX_RETRIES); do
-            echo "Verification attempt $attempt/$MAX_RETRIES..."
-            
-            # Check if Function App is in Running state
-            STATE=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv --only-show-errors 2>/dev/null || echo "")
+            echo "Verification attempt $attempt/$MAX_RETRIES…"
+            STATE="$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo "")"
             echo "Function App state: ${STATE:-<unknown>}"
-            
+
             if [ "$STATE" = "Running" ]; then
-              # Try to list functions
-              FUNC_COUNT=$(az functionapp function list -g "$RG" -n "$APP" --query "length(@)" -o tsv --only-show-errors 2>/dev/null || echo "0")
+              FUNC_COUNT="$(az functionapp function list -g "$RG" -n "$APP" --query 'length(@)' -o tsv 2>/dev/null || echo 0)"
               echo "Discovered functions: $FUNC_COUNT"
-              
               if [ "$FUNC_COUNT" -gt 0 ]; then
-                echo "✓ Deployment verification successful: App is Running with $FUNC_COUNT functions"
+                echo "✓ Deployment verification successful."
                 az functionapp function list -g "$RG" -n "$APP" -o table --only-show-errors 2>/dev/null || true
                 exit 0
-              else
-                echo "⚠ App is Running but no functions discovered yet..."
               fi
+              echo "⚠ App is Running but no functions discovered yet…"
             else
-              echo "⚠ App state is not Running yet..."
+              echo "⚠ App not Running yet…"
             fi
-            
-            if [ $attempt -lt $MAX_RETRIES ]; then
-              echo "Waiting ${RETRY_DELAY}s before retry..."
-              sleep $RETRY_DELAY
-            fi
+
+            [ "$attempt" -lt "$MAX_RETRIES" ] && { echo "Waiting ${RETRY_DELAY}s…"; sleep "$RETRY_DELAY"; }
           done
 
-          # Final attempt with detailed diagnostics
-          echo "::warning::Verification did not complete successfully after $MAX_RETRIES attempts"
-          echo "Final diagnostics:"
-          az functionapp show -g "$RG" -n "$APP" --query "{state:state, host:defaultHostName, runtime:siteConfig.linuxFxVersion}" -o table --only-show-errors || true
-          
-          # Don't fail the entire workflow - deployment may have succeeded even if verification is incomplete
-          echo "Deployment completed but verification inconclusive. Manual verification may be required."
+          echo "::error::Verification did not complete successfully after $MAX_RETRIES attempts."
+          echo "Diagnostics:"
+          az functionapp show -g "$RG" -n "$APP" \
+            --query "{state:state, host:defaultHostName, runtime:siteConfig.linuxFxVersion}" \
+            -o table --only-show-errors || true
+          exit 1
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
