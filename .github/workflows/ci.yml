@@ -344,68 +344,89 @@ jobs:
             echo "::endgroup::"
           fi
 
+      - name: Azure account preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          az account show --output table
+
       - name: Install jq for deployment verification
         shell: bash
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y jq
 
-      - name: Deploy Functions v4 zip (config-zip only)
+      - name: Detect plan tier
+        id: plantier
         shell: bash
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
         run: |
           set -euo pipefail
-          test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
-
-          echo "Deploying with config-zip (universal method)…"
-          deploy_zip() {
-            az functionapp deployment source config-zip \
-              -g "$RG" \
-              -n "$APP" \
-              --src dist-v4-final.zip \
-              --timeout 600
-          }
-
-          # Run once; don't fail the job if CLI reports partial success
-          set +e
-          deploy_zip
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "::warning::config-zip returned $rc (Kudu log polling can be flaky). Proceeding to verification."
+          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
+          if [ -n "${PLAN_ID:-}" ]; then
+            TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null || echo "")
+          else
+            TIER=""
           fi
+          echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
-          echo "Starting post-deployment verification…"
+      - name: Deploy (Flex via OneDeploy)
+        if: steps.plantier.outputs.tier == 'FlexConsumption'
+        uses: Azure/functions-action@v1
+        with:
+          app-name: asora-function-dev
+          package: dist-v4-final.zip
+          respect-funcignore: true
+
+      - name: Deploy (non-Flex via Kudu config-zip)
+        if: steps.plantier.outputs.tier != 'FlexConsumption'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
+          az functionapp deployment source config-zip \
+            -g asora-psql-flex \
+            -n asora-function-dev \
+            --src dist-v4-final.zip \
+            --timeout 600
+
+      - name: Post-deployment verification
+        shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+        run: |
+          set -euo pipefail
           MAX_RETRIES=6
           RETRY_DELAY=10
           for attempt in $(seq 1 $MAX_RETRIES); do
             echo "Verification attempt $attempt/$MAX_RETRIES…"
-            STATE="$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo "")"
+            if [ "$attempt" -eq 1 ]; then
+              STATE=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv || echo "")
+            else
+              STATE=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo "")
+            fi
             echo "Function App state: ${STATE:-<unknown>}"
 
             if [ "$STATE" = "Running" ]; then
-              FUNC_COUNT="$(az functionapp function list -g "$RG" -n "$APP" --query 'length(@)' -o tsv 2>/dev/null || echo 0)"
+              FUNC_COUNT=$(az functionapp function list -g "$RG" -n "$APP" --query 'length(@)' -o tsv 2>/dev/null || echo 0)
               echo "Discovered functions: $FUNC_COUNT"
               if [ "$FUNC_COUNT" -gt 0 ]; then
-                echo "✓ Deployment verification successful."
                 az functionapp function list -g "$RG" -n "$APP" -o table --only-show-errors 2>/dev/null || true
                 exit 0
               fi
-              echo "⚠ App is Running but no functions discovered yet…"
-            else
-              echo "⚠ App not Running yet…"
             fi
 
             [ "$attempt" -lt "$MAX_RETRIES" ] && { echo "Waiting ${RETRY_DELAY}s…"; sleep "$RETRY_DELAY"; }
           done
 
           echo "::error::Verification did not complete successfully after $MAX_RETRIES attempts."
-          echo "Diagnostics:"
           az functionapp show -g "$RG" -n "$APP" \
             --query "{state:state, host:defaultHostName, runtime:siteConfig.linuxFxVersion}" \
-            -o table --only-show-errors || true
+            -o table || true
           exit 1
 
       - name: Smoke check
