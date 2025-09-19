@@ -351,13 +351,13 @@ jobs:
           set -euo pipefail
           test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
 
-          # Verify CLI supports webapp deploy (requires >= 2.60)
+          # Verify CLI supports webapp deploy (>= 2.60)
           if ! az webapp deploy --help >/dev/null 2>&1; then
-            echo "::error::Azure CLI does not support 'az webapp deploy'. Update to >= 2.60 for Flex support."
+            echo "::error::Azure CLI does not support 'az webapp deploy'. Update the CLI version on the runner."
             exit 1
           fi
 
-          # Detect plan tier safely (no jq)
+          # Detect plan tier (no jq)
           PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
           if [ -n "${PLAN_ID:-}" ] && [[ "$PLAN_ID" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
             PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null | tr -d '\n\r' || echo "")
@@ -372,8 +372,7 @@ jobs:
               --resource-group "$RG" \
               --name "$APP" \
               --type zip \
-              --src-path dist-v4-final.zip \
-              --track-deployment true
+              --src-path dist-v4-final.zip
           else
             echo "Using Kudu config-zip for non-Flex..."
             az functionapp deployment source config-zip \
