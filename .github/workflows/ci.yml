@@ -407,11 +407,27 @@ jobs:
           RG: asora-psql-flex
         run: |
           set -euo pipefail
-          az account show -o table
+
+          # Scope to the intended subscription FIRST
           az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
-          # Show that RG and app are resolvable; fail here if not
-          az group show -n "$RG" -o table
-          az functionapp show -g "$RG" -n "$APP" -o table
+          az account show -o table --only-show-errors
+
+          # Resource group existence (table needs a projection)
+          az group show -n "$RG" \
+            --query "{name:name, location:location}" \
+            -o table --only-show-errors
+
+          # Function App existence (table needs a projection)
+          az functionapp show -g "$RG" -n "$APP" \
+            --query "{name:name, rg:resourceGroup, location:location, kind:kind, state:state, host:defaultHostName}" \
+            -o table --only-show-errors
+
+          # Double-check: ensure the app query returns non-empty 'name'
+          NAME=$(az functionapp show -g "$RG" -n "$APP" --query name -o tsv --only-show-errors || echo "")
+          if [ -z "$NAME" ]; then
+            echo "::error::Function App '$APP' in RG '$RG' not found or not accessible."
+            exit 1
+          fi
 
       - name: Post-deployment verification
         shell: bash
