@@ -18,6 +18,7 @@ permissions:
 jobs:
   tests:
     name: Flutter Tests
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))) && secrets.AZURE_CLIENT_ID != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
           bash check_p1_coverage.sh | tee p1_coverage_output.txt
 
       - name: Comment P1 coverage
-        if: github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository
+        if: ${{ github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ github.token }}
@@ -68,7 +69,7 @@ jobs:
             });
 
       - name: Fail if coverage below threshold
-        if: steps.p1_coverage.outcome == 'failure'
+        if: ${{ steps.p1_coverage.outcome == 'failure' }}
         run: |
           echo "Coverage gate enforcement failed earlier; marking job as failed."
           exit 1
@@ -149,28 +150,12 @@ jobs:
     name: Deploy to Azure
     needs: [tests, functions_build]
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))) && secrets.AZURE_CLIENT_ID != '' }}
     permissions:
       id-token: write
       contents: read
-    env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
     environment: dev
     steps:
-      - name: Check Azure credentials
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        run: |
-          if [ -z "${AZURE_CLIENT_ID}" ]; then
-            echo "::warning::Azure credentials not configured, skipping deployment"
-            exit 78  # Skip remaining steps with neutral exit code
-          else
-            echo "Azure credentials available, proceeding with deployment"
-          fi
-
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
@@ -179,7 +164,9 @@ jobs:
           path: .
 
       - name: Isolate Azure CLI cache (per-run)
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/azcfg"
           echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
 
@@ -198,224 +185,19 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Show account
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: az account show --output table --subscription "${AZURE_SUBSCRIPTION_ID}"
-      - name: Detect plan and runtime (diagnostic)
-        id: detect
-        continue-on-error: true
         shell: bash
         env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
-          # Use grep-based extraction for reliable serverFarmId parsing
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
-          echo "Plan resource: ${PLAN_ID:-<none>}"
-          if [ -n "${PLAN_ID:-}" ] && [[ "$PLAN_ID" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
-            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null | tr -d '\n\r' || true)
-          else
-            PLAN_TIER="unknown"
-          fi
-          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || true)
-          LFX=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv 2>/dev/null | tr -d '\n\r' || true)
-          echo "Plan tier: $PLAN_TIER"
-          echo "Kind: $KIND"
-          echo "linuxFxVersion: $LFX"
-          {
-            echo "plan_tier=$PLAN_TIER"
-            echo "kind=$KIND"
-            echo "linuxFxVersion=$LFX"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Ensure Node 20 runtime (idempotent, multi-platform)
-        shell: bash
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
-        run: |
-          set -euo pipefail
-          # Determine kind and plan tier on-the-fly with grep-based parsing
-          KIND=$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv 2>/dev/null | tr -d '\n\r' || true)
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
-          if [ -n "${PLAN_ID:-}" ] && [[ "$PLAN_ID" =~ ^/subscriptions/.*/resourceGroups/.*/providers/Microsoft.Web/serverfarms/.* ]]; then
-            PLAN_TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null | tr -d '\n\r' || true)
-          else
-            PLAN_TIER="unknown"
-          fi
-
-          echo "App kind: $KIND"
-          echo "Plan tier: $PLAN_TIER"
-
-          if [[ "$KIND" == *linux* ]]; then
-            if [ "$PLAN_TIER" != "FlexConsumption" ]; then
-              TARGET_PRIMARY="NODE|20-lts"
-              TARGET_FALLBACK="NODE|20"
-              CUR=$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)
-
-              if [ "$CUR" != "$TARGET_PRIMARY" ] && [ "$CUR" != "$TARGET_FALLBACK" ]; then
-                echo "Setting linuxFxVersion to $TARGET_PRIMARY (with fallback to $TARGET_FALLBACK)"
-                if ! az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_PRIMARY"; then
-                  echo "Primary ($TARGET_PRIMARY) failed; falling back to $TARGET_FALLBACK"
-                  az functionapp config set --name "$APP" --resource-group "$RG" --linux-fx-version "$TARGET_FALLBACK"
-                fi
-              fi
-            else
-              echo "Flex Consumption plan detected; clearing linuxFxVersion (platform-managed)."
-              az resource update --name "$APP/config/web" \
-                --resource-group "$RG" \
-                --resource-type "Microsoft.Web/sites/config" \
-                --set properties.linuxFxVersion="" -o none || true
-            fi
-
-            if [ "$PLAN_TIER" = "FlexConsumption" ]; then
-              # Flex: DO NOT set FUNCTIONS_WORKER_RUNTIME; remove any remnants and keep only v4
-              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
-              az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
-              az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
-
-            elif [ "$PLAN_TIER" = "unknown" ]; then
-              # Flex-safe default for unknown: avoid setting FUNCTIONS_WORKER_RUNTIME
-              CUR_LFX="$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)"
-              if [ -n "$CUR_LFX" ]; then
-                # Looks like classic/Premium Linux (image pinned) -> set full runtime pins
-                az functionapp config appsettings set \
-                  --name "$APP" --resource-group "$RG" \
-                  --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
-              else
-                # Looks like Flex -> keep only v4 and delete invalid pins
-                az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
-                az functionapp config appsettings delete --name "$APP" --resource-group "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
-                az functionapp config appsettings set --name "$APP" --resource-group "$RG" --settings FUNCTIONS_EXTENSION_VERSION=~4
-              fi
-
-            else
-              # Linux Classic/Premium
-              az functionapp config appsettings set \
-                --name "$APP" --resource-group "$RG" \
-                --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
-            fi
-
-          else
-            # Windows plans
-            az functionapp config appsettings set \
-              --name "$APP" --resource-group "$RG" \
-              --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
-          fi
-
-      - name: Configure App Settings (dev)
-        shell: bash
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
-        run: |
-          set -euo pipefail
-
-          APP="${APP:?missing}"; RG="${RG:?missing}"
-
-          # 1) Discover kind and plan info
-          KIND="$(az functionapp show -n "$APP" -g "$RG" --query kind -o tsv)"
-          PLAN_ID="$(az functionapp show -n "$APP" -g "$RG" --query serverFarmId -o tsv || true)"
-          PLAN_TIER="unknown"
-          if [ -n "${PLAN_ID:-}" ]; then
-            PLAN_TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || echo unknown)"
-          fi
-
-          # 2) Read current config to help infer Flex if PLAN_TIER is unknown
-          CUR_LFX="$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)"
-          CUR_RUNTIME="$(az functionapp config appsettings list -n "$APP" -g "$RG" --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value | [0]" -o tsv || true)"
-
-          # 3) Decide Flex vs non-Flex
-          IS_FLEX=false
-          if [ "${PLAN_TIER}" = "FlexConsumption" ]; then
-            IS_FLEX=true
-          elif [[ "$KIND" == *linux* ]] && [ -z "${CUR_LFX:-}" ] && [ -z "${CUR_RUNTIME:-}" ]; then
-            # Heuristic: Linux app with empty linuxFxVersion and no FUNCTIONS_WORKER_RUNTIME is almost certainly Flex
-            IS_FLEX=true
-          fi
-
-          echo "App kind: ${KIND}"
-          echo "Plan tier: ${PLAN_TIER}"
-          echo "Inferred Flex: ${IS_FLEX}"
-
-          if [[ "$KIND" == *linux* ]]; then
-            if $IS_FLEX; then
-              echo "Flex detected: clearing forbidden settings and keeping v4 only."
-
-              # Keep platform-managed image selection
-              az resource update --name "$APP/config/web" \
-                --resource-group "$RG" \
-                --resource-type "Microsoft.Web/sites/config" \
-                --set properties.linuxFxVersion="" -o none || true
-
-              # Delete forbidden or irrelevant settings first to avoid hard errors
-              az functionapp config appsettings delete -n "$APP" -g "$RG" --setting-names FUNCTIONS_WORKER_RUNTIME || true
-              az functionapp config appsettings delete -n "$APP" -g "$RG" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
-
-              # Flex runs v4 only. Setting this is allowed and harmless.
-              az functionapp config appsettings set -n "$APP" -g "$RG" \
-                --settings FUNCTIONS_EXTENSION_VERSION=~4 -o none
-
-            else
-              echo "Non-Flex Linux: set Node 20 and runtime."
-
-              TARGET_PRIMARY="NODE|20-lts"
-              TARGET_FALLBACK="NODE|20"
-              CUR_LFX="${CUR_LFX:-$(az functionapp config show -n "$APP" -g "$RG" --query linuxFxVersion -o tsv || true)}"
-
-              if [ "$CUR_LFX" != "$TARGET_PRIMARY" ] && [ "$CUR_LFX" != "$TARGET_FALLBACK" ]; then
-                echo "Setting linuxFxVersion to $TARGET_PRIMARY (fallback $TARGET_FALLBACK)"
-                if ! az functionapp config set -n "$APP" -g "$RG" --linux-fx-version "$TARGET_PRIMARY" -o none; then
-                  echo "Primary failed; using fallback"
-                  az functionapp config set -n "$APP" -g "$RG" --linux-fx-version "$TARGET_FALLBACK" -o none
-                fi
-              fi
-
-              # Explicit runtime and node default version are required for classic/Premium Linux
-              az functionapp config appsettings set -n "$APP" -g "$RG" \
-                --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
-            fi
-
-          else
-            echo "Windows plan: no linuxFxVersion; set runtime and node default."
-            az functionapp config appsettings set -n "$APP" -g "$RG" \
-              --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20 -o none
-          fi
-
-          # Add Cosmos settings for both Flex and non-Flex
-          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
-            az functionapp config appsettings set -n "$APP" -g "$RG" -o none --settings \
-              COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
-              COSMOS_DATABASE_NAME="asora"
-          else
-            echo "::group::Cosmos config"
-            echo "::notice::COSMOS_CONNECTION_STRING not set; skipping Cosmos app settings."
-            echo "::endgroup::"
-          fi
-
-      - name: Azure account preflight
-        shell: bash
-        run: |
-          set -euo pipefail
-          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          az account set --subscription "$SUBS"
           az account show --output table
-
-      - name: Install jq for deployment verification
-        shell: bash
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y jq
-
       - name: Detect plan tier
         id: plantier
         shell: bash
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
         run: |
           set -euo pipefail
-          PLAN_ID=$(az functionapp show -n "$APP" -g "$RG" 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
+          PLAN_ID=$(az functionapp show -n asora-function-dev -g asora-psql-flex 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
           if [ -n "${PLAN_ID:-}" ]; then
             TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null || echo "")
           else
@@ -427,52 +209,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ ! -f dist-v4-final.zip ]; then
-            echo "::error::dist-v4-final.zip missing in workspace"
-            ls -la
-            exit 1
-          fi
-
-          # Safer listing: filenames only
+          test -f dist-v4-final.zip || { echo "::error::dist-v4-final.zip missing"; ls -la; exit 1; }
           list() { unzip -Z -1 dist-v4-final.zip; }
-
-          # Show first 200 entries for debugging
           list | sed -n '1,200p' || true
-
-          # Required files at zip root
           for f in index.js package.json host.json; do
-            if ! list | grep -Fxq "$f"; then
-              echo "::error::$f missing at zip root"
-              exit 1
-            fi
+            list | grep -Fxq "$f" || { echo "::error::$f missing at zip root"; exit 1; }
           done
-
-          # Accept either layout:
-          #  A) we flatten dist -> zip has src/index.js
-          #  B) we keep dist/ -> zip has dist/src/index.js
-          HAS_SRC="$(list | grep -Fx 'src/index.js' || true)"
-          HAS_DIST_SRC="$(list | grep -Fx 'dist/src/index.js' || true)"
-          if [ -z "$HAS_SRC" ] && [ -z "$HAS_DIST_SRC" ]; then
-            echo "::error::Neither src/index.js nor dist/src/index.js found in zip"
-            exit 1
-          fi
-
-          # Also check index.js actually requires one of those paths
-          ENTRY="$(unzip -p dist-v4-final.zip index.js || true)"
-          if ! printf '%s' "$ENTRY" | grep -q "require('./src/index.js')" && \
-             ! printf '%s' "$ENTRY" | grep -q "require('./dist/src/index.js')"; then
-            echo "::warning::index.js does not require ./src/index.js or ./dist/src/index.js"
-            echo "index.js (first lines):"
-            printf '%s\n' "$ENTRY" | sed -n '1,40p' || true
-          fi
+          (list | grep -Fx 'src/index.js' >/dev/null) || (list | grep -Fx 'dist/src/index.js' >/dev/null) || { echo "::error::src entry missing"; exit 1; }
 
       - name: Configure runtime settings for Node v4 (Flex-safe)
-        shell: bash
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        shell: bash
         run: |
           set -euo pipefail
           az account set --subscription "$SUBS"
@@ -483,39 +234,31 @@ jobs:
           [ -n "$PLAN_ID" ] && PLAN_TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)"
           KIND="$(az functionapp show -g "$RG" -n "$APP" --query kind -o tsv || true)"
 
-          echo "Kind=$KIND Tier=${PLAN_TIER:-unknown}"
-
-          # Always set feature flags for Node v4 discovery + fail-fast on entrypoint
           az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
             AzureWebJobsFeatureFlags=EnableWorkerIndexing \
             FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
             FUNCTIONS_EXTENSION_VERSION=~4
 
           if [ "$PLAN_TIER" = "FlexConsumption" ]; then
-            echo "FlexConsumption detected: remove legacy pins and clear linuxFxVersion"
             az functionapp config appsettings delete -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
-            az resource update -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" \
-              --set properties.linuxFxVersion="" -o none || true
+            az resource update -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none || true
           else
-            echo "Non-Flex: set Node 20 pins where appropriate"
             if [[ "$KIND" == *linux* ]]; then
-              az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "NODE|20" -o none
+              az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none
             fi
-            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
-              FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
           fi
 
-          # Optional: Cosmos (if used)
           if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
             az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
-              COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
-              COSMOS_DATABASE_NAME='asora'
+              COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+              COSMOS_DATABASE_NAME="asora"
           fi
 
           az functionapp restart -g "$RG" -n "$APP" -o none
 
       - name: Deploy (Flex via OneDeploy)
-        if: steps.plantier.outputs.tier == 'FlexConsumption'
+        if: ${{ steps.plantier.outputs.tier == 'FlexConsumption' }}
         uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
@@ -523,87 +266,33 @@ jobs:
           respect-funcignore: true
 
       - name: Deploy (non-Flex via Kudu config-zip)
-        if: steps.plantier.outputs.tier != 'FlexConsumption'
+        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' }}
         shell: bash
         run: |
           set -euo pipefail
-          test -f dist-v4-final.zip || { echo "dist-v4-final.zip missing"; ls -la; exit 1; }
-          az functionapp deployment source config-zip \
-            -g asora-psql-flex \
-            -n asora-function-dev \
-            --src dist-v4-final.zip \
-            --timeout 600
+          az functionapp deployment source config-zip -g asora-psql-flex -n asora-function-dev --src dist-v4-final.zip --timeout 600
 
-      - name: Re-login for CLI (scoped)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Post-deploy verification (robust for Flex)
-        shell: bash
+      - name: Post-deploy verification (ARM + REST)
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        shell: bash
         run: |
           set -euo pipefail
-
-          # Scope account explicitly and show context once
           az account set --subscription "$SUBS"
-          az account show -o table --only-show-errors
-
           APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-
-          # Helper to get state via ARM (more reliable than module on Flex)
-          get_state() {
-            az resource show --ids "$APP_ID" --query "properties.state" -o tsv --only-show-errors 2>/dev/null || echo ""
-          }
-
-          # Helper: list functions with CLI, fallback to ARM REST
-          list_functions_count() {
-            if CNT=$(az functionapp function list -g "$RG" -n "$APP" --query "length(@)" -o tsv --only-show-errors 2>/dev/null); then
-              echo "${CNT:-0}"; return
+          get_state(){ az resource show --ids "$APP_ID" --query "properties.state" -o tsv 2>/dev/null || echo ""; }
+          list_cnt(){ az functionapp function list -g "$RG" -n "$APP" --query "length(@)" -o tsv 2>/dev/null || az rest --method GET --url "https://management.azure.com${APP_ID}/functions?api-version=2023-01-01" --query "length(value)" -o tsv 2>/dev/null || echo 0; }
+          for i in $(seq 1 12); do
+            STATE="$(get_state)"; echo "Attempt $i/12 state: ${STATE:-<empty>}"
+            if [ "$STATE" = "Running" ]; then
+              CNT="$(list_cnt)"; echo "Functions: $CNT"
+              [ "$CNT" -gt 0 ] && { az functionapp function list -g "$RG" -n "$APP" -o table 2>/dev/null || true; exit 0; }
             fi
-            # Fallback to REST (ARM)
-            az rest --method GET \
-              --url "https://management.azure.com${APP_ID}/functions?api-version=2023-01-01" \
-              --query "length(value)" -o tsv 2>/dev/null || echo "0"
-          }
-
-          # First call: do not suppress errors; if it fails, we’ll see it
-          STATE="$(get_state)"
-          echo "Initial state via ARM: ${STATE:-<empty>}"
-
-          MAX_RETRIES=12
-          for ((i=1; i<=MAX_RETRIES; i++)); do
-            STATE="$(get_state)"
-            echo "Attempt $i/${MAX_RETRIES} — state: ${STATE:-<empty>}"
-
-            if [ "${STATE}" = "Running" ]; then
-              CNT="$(list_functions_count)"
-              echo "Discovered functions: ${CNT}"
-              if [ "${CNT}" -gt 0 ]; then
-                az functionapp function list -g "$RG" -n "$APP" -o table --only-show-errors 2>/dev/null || true
-                echo "✓ Verification successful."
-                exit 0
-              fi
-              echo "App is Running but functions not listed yet."
-            fi
-
-            # Exponential backoff: 5,10,15,... seconds (cap at 30)
-            SLEEP=$(( 5 * i ))
-            [ $SLEEP -gt 30 ] && SLEEP=30
-            sleep "$SLEEP"
+            S=$((5*i)); [ $S -gt 30 ] && S=30; sleep "$S"
           done
-
-          echo "::group::Diagnostics"
-          az resource show --ids "$APP_ID" -o json --only-show-errors | sed 's/"publishingPassword":"[^"]*"/"publishingPassword":"<redacted>"/g' || true
-          az functionapp show -g "$RG" -n "$APP" --query "{name:name, kind:kind, state:state, host:defaultHostName}" -o table --only-show-errors || true
-          echo "::endgroup::"
-          echo "::error::Verification did not complete successfully after ${MAX_RETRIES} attempts."
-          exit 1
+          echo "::error::Verification did not complete successfully"; exit 1
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
