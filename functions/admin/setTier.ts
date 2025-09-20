@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { CosmosClient } from '@azure/cosmos';
 import { withAccessGuard } from '../shared/access-guard';
 
-async function setTier(req: HttpRequest, ctx: InvocationContext): Promise<HttpResponseInit> {
+async function setTier(req: HttpRequest, _ctx: InvocationContext): Promise<HttpResponseInit> {
   const body = (await req.json().catch(() => ({}))) as any;
   const userId = String(body.userId || '');
   const tier = String(body.tier || '');
