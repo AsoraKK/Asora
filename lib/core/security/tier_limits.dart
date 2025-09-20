@@ -18,4 +18,3 @@ bool canPostContent(String tier, int contentLength, int mediaCount) {
   final limits = tierLimits(tier);
   return contentLength <= limits.maxChars && mediaCount <= limits.maxMedia;
 }
-

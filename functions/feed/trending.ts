@@ -174,20 +174,6 @@ function buildTrendingQuery(params: TrendingQueryParams): { query: string; param
   return { query, parameters };
 }
 
-function buildTrendingCountQuery(params: TrendingQueryParams): { query: string; parameters: any[] } {
-  const parameters: any[] = [];
-  const timeThreshold = getTimeThreshold(params.timeWindow || '24h');
-  parameters.push({ name: '@timeThreshold', value: timeThreshold });
-
-  const query = `
-    SELECT VALUE COUNT(1) as count 
-    FROM c 
-    WHERE c.createdAt >= @timeThreshold
-  `;
-
-  return { query, parameters };
-}
-
 function getTimeThreshold(timeWindow: string): string {
   const now = new Date();
   let hoursBack: number;

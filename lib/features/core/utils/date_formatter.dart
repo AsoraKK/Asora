@@ -8,10 +8,7 @@ library;
 
 class DateFormatter {
   /// Format a DateTime as relative time (e.g., "2 hours ago", "Just now")
-  static String formatRelative(
-    DateTime dateTime, {
-    DateTime? now,
-  }) {
+  static String formatRelative(DateTime dateTime, {DateTime? now}) {
     final current = now ?? DateTime.now();
     final difference = current.difference(dateTime);
 

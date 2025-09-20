@@ -14,19 +14,33 @@ class UpgradePrompt extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Upgrade to unlock more', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Upgrade to unlock more',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            Text('Your current tier "$currentTier" limits post length and media.'),
+            Text(
+              'Your current tier "$currentTier" limits post length and media.',
+            ),
             const SizedBox(height: 8),
-            Row(children: [
-              ElevatedButton(onPressed: () {/* TODO: navigate to upgrade */}, child: const Text('Upgrade')),
-              const SizedBox(width: 8),
-              TextButton(onPressed: () => Navigator.maybePop(context), child: const Text('Not now')),
-            ])
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    /* TODO: navigate to upgrade */
+                  },
+                  child: const Text('Upgrade'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => Navigator.maybePop(context),
+                  child: const Text('Not now'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 }
-

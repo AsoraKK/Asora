@@ -40,11 +40,12 @@ const Map<String, List<String>> kPinnedSpki = {
 
 /// Guard: never ship with placeholders.
 void _assertNoPlaceholders() {
-  assert(kPinnedSpki.values
-      .expand((e) => e)
-      .every((p) => p.isNotEmpty && !p.contains('REPLACE_WITH_SPKI_PIN')));
+  assert(
+    kPinnedSpki.values
+        .expand((e) => e)
+        .every((p) => p.isNotEmpty && !p.contains('REPLACE_WITH_SPKI_PIN')),
+  );
 }
-
 
 /// Certificate pinning HTTP client adapter
 ///
@@ -162,8 +163,8 @@ class _CertPinningInterceptor extends Interceptor {
 bool isPinValidationError(DioException err) {
   if (err.type == DioExceptionType.connectionError ||
       err.type == DioExceptionType.unknown) {
-  final host = Uri.parse(err.requestOptions.uri.toString()).host;
-  return kPinnedSpki.containsKey(host);
+    final host = Uri.parse(err.requestOptions.uri.toString()).host;
+    return kPinnedSpki.containsKey(host);
   }
   return false;
 }
