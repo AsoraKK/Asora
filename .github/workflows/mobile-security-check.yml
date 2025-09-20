@@ -11,10 +11,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fail if SPKI placeholders remain
+      
+      - name: Check for SPKI pin placeholders in entire codebase
+        shell: bash
         run: |
-          if grep -R "REPLACE_WITH_SPKI_PIN" -n lib/core/security/cert_pinning.dart; then
-            echo "Found placeholder SPKI pins. Replace with real pins before merging." && exit 1
+          set -euo pipefail
+          
+          echo "Scanning entire codebase for SPKI pin placeholders..."
+          
+          # Search all Dart files for placeholder patterns
+          placeholder_files=$(find . -name "*.dart" -type f -exec grep -l "REPLACE_WITH_SPKI_PIN\|YOUR_SPKI_PIN_HERE\|TODO.*SPKI\|FIXME.*SPKI" {} \; 2>/dev/null || true)
+          
+          if [ -n "$placeholder_files" ]; then
+            echo "::error::Found SPKI pin placeholders in the following files:"
+            echo "$placeholder_files"
+            echo ""
+            echo "Detailed matches:"
+            find . -name "*.dart" -type f -exec grep -Hn "REPLACE_WITH_SPKI_PIN\|YOUR_SPKI_PIN_HERE\|TODO.*SPKI\|FIXME.*SPKI" {} \; 2>/dev/null || true
+            echo ""
+            echo "All SPKI pin placeholders must be replaced with real pins before merging."
+            exit 1
+          else
+            echo "✓ No SPKI pin placeholders found in Dart files."
           fi
-      - name: Dart format/lint (optional)
-        run: echo "TODO: add dart analyze if desired"
+          
+          # Additional check for common security placeholder patterns
+          security_placeholders=$(find . -name "*.dart" -type f -exec grep -l "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)
+          
+          if [ -n "$security_placeholders" ]; then
+            echo "::warning::Found security-related placeholders that may need attention:"
+            find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true
+          fi
+      
+      - name: Dart format check (optional)
+        shell: bash
+        run: |
+          # Check if Flutter/Dart is available, skip if not
+          if command -v dart &> /dev/null; then
+            echo "Running Dart format check..."
+            dart format --set-exit-if-changed . || echo "::warning::Code formatting issues found. Run 'dart format .' to fix."
+          else
+            echo "Dart not available, skipping format check."
+          fi
+      
+      - name: Dart analyze (optional)
+        shell: bash
+        run: |
+          # Check if Flutter/Dart is available, skip if not
+          if command -v dart &> /dev/null; then
+            echo "Running Dart analyzer..."
+            dart analyze . || echo "::warning::Dart analyzer found issues. Review and fix before merging."
+          else
+            echo "Dart not available, skipping analysis."
+          fi

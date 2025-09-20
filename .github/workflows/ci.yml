@@ -426,13 +426,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          unzip -l dist-v4-final.zip | sed -n '1,200p' || true
-          # Required files for Node v4 model + our packaging
+
+          # Safer listing: filenames only
+          list() { unzip -Z -1 dist-v4-final.zip; }
+
+          # Show first 200 entries for debugging
+          list | sed -n '1,200p' || true
+
+          # Required files at zip root
           for f in index.js package.json host.json; do
-            unzip -l dist-v4-final.zip | grep -q " $f$" || { echo "::error::$f missing at zip root"; exit 1; }
+            if ! list | grep -Fxq "$f"; then
+              echo "::error::$f missing at zip root"
+              exit 1
+            fi
           done
-          # Our entrypoint should require ./dist/src/index.js — make sure that file exists in the zip
-          unzip -l dist-v4-final.zip | grep -q " dist/src/index.js$" || { echo "::error::dist/src/index.js missing in zip"; exit 1; }
+
+          # Accept either layout:
+          #  A) we flatten dist -> zip has src/index.js
+          #  B) we keep dist/ -> zip has dist/src/index.js
+          HAS_SRC="$(list | grep -Fx 'src/index.js' || true)"
+          HAS_DIST_SRC="$(list | grep -Fx 'dist/src/index.js' || true)"
+          if [ -z "$HAS_SRC" ] && [ -z "$HAS_DIST_SRC" ]; then
+            echo "::error::Neither src/index.js nor dist/src/index.js found in zip"
+            exit 1
+          fi
+
+          # Also check index.js actually requires one of those paths
+          ENTRY="$(unzip -p dist-v4-final.zip index.js || true)"
+          if ! printf '%s' "$ENTRY" | grep -q "require('./src/index.js')" && \
+             ! printf '%s' "$ENTRY" | grep -q "require('./dist/src/index.js')"; then
+            echo "::warning::index.js does not require ./src/index.js or ./dist/src/index.js"
+            echo "index.js (first lines):"
+            printf '%s\n' "$ENTRY" | sed -n '1,40p' || true
+          fi
 
       - name: Configure runtime settings for Node v4 (Flex-safe)
         shell: bash
