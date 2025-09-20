@@ -37,7 +37,9 @@ class _FakeSecureStoreChannel {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel channel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
   final _FakeSecureStoreChannel fake = _FakeSecureStoreChannel();
 
   setUpAll(() {
@@ -69,7 +71,11 @@ void main() {
     });
 
     test('getCurrentSession returns stored values', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       final sess = await manager.getCurrentSession();
       expect(sess, isNotNull);
       expect(sess!['accessToken'], 'a');
@@ -77,7 +83,11 @@ void main() {
     });
 
     test('refreshSession updates expiry and token', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       final ok = await manager.refreshSession('newToken');
       expect(ok, isTrue);
       final sess = await manager.getCurrentSession();
@@ -86,22 +96,37 @@ void main() {
     });
 
     test('getSessionState reflects unauthenticated when expired', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       // Force expiry to past by calling refreshSession with past expiry
-      await manager.refreshSession('a2', DateTime.now().subtract(const Duration(hours: 1)));
+      await manager.refreshSession(
+        'a2',
+        DateTime.now().subtract(const Duration(hours: 1)),
+      );
       final state = await manager.getSessionState();
       expect(state, AuthSessionStatus.unauthenticated);
     });
 
     test('validateSession and validateAndGetSession happy path', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       expect(await manager.validateSession(), isTrue);
       final sess = await manager.validateAndGetSession();
       expect(sess, isNotNull);
     });
 
     test('clearSession removes data and disables session', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       await manager.clearSession();
       expect(await manager.hasActiveSession(), isFalse);
       expect(await manager.getCurrentSession(), isNull);
@@ -111,19 +136,26 @@ void main() {
       await manager.consumeSession('abc123');
     });
 
-    test('createSession stores oauth session and completeSession clears it', () async {
-      final s = await manager.createSession(
-        state: 'st',
-        nonce: 'nn',
-        codeChallenge: 'cc',
-      );
-      expect(s.id, startsWith('session_'));
-      // Completing should not throw with mocked storage
-      await manager.completeSession(s.id);
-    });
+    test(
+      'createSession stores oauth session and completeSession clears it',
+      () async {
+        final s = await manager.createSession(
+          state: 'st',
+          nonce: 'nn',
+          codeChallenge: 'cc',
+        );
+        expect(s.id, startsWith('session_'));
+        // Completing should not throw with mocked storage
+        await manager.completeSession(s.id);
+      },
+    );
 
     test('clearAllSessions calls deleteAll without error', () async {
-      await manager.createTokenSession(accessToken: 'a', refreshToken: 'r', userId: 'u');
+      await manager.createTokenSession(
+        accessToken: 'a',
+        refreshToken: 'r',
+        userId: 'u',
+      );
       await manager.clearAllSessions();
       expect(await manager.getCurrentSession(), isNull);
     });

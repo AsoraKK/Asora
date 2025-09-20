@@ -1,6 +1,16 @@
 /**
  * ASORA USER ACCOUNT DELETION ENDPOINT
  * 
+ * Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
+ * Security: JWT auth + confirmation header + idempotent operations
+ * Features: Complete data scrubbing, content anonymization, audit logging
+ * Architecture: Multi-container cleanup with rollback safety
+ */
+
+import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { CosmosClient } from '@azure/cosmos';
+ */SORA USER ACCOUNT DELETION ENDPOINT
+ * 
  * ðŸŽ¯ Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
  * ðŸ” Security: JWT auth + confirmation header + idempotent operations
  * âš ï¸ Features: Complete data scrubbing, content anonymization, audit logging
@@ -313,7 +323,9 @@ export async function deleteUser(
         operator: 'self',
         timestamp: new Date().toISOString()
       });
-    } catch {}
+    } catch {
+      // TODO: Handle audit log failure gracefully
+    }
     return json(200, {
       code: 'account_deleted',
       message: 'Account deletion completed successfully',
@@ -342,7 +354,9 @@ export async function deleteUser(
         operator: 'self',
         timestamp: new Date().toISOString()
       });
-    } catch {}
+    } catch {
+      // TODO: Handle audit log failure in error case
+    }
     return json(500, { 
       code: 'server_error',
       message: 'Internal server error during deletion',

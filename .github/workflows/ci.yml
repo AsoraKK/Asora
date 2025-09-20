@@ -9,18 +9,16 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
+  pull-requests: write
+  id-token: write
 
 jobs:
   tests:
+    name: Flutter Tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -151,17 +149,7 @@ jobs:
     name: Deploy to Azure
     needs: [tests, functions_build]
     runs-on: ubuntu-latest
-    if: >
-      (
-        (
-          github.event_name == 'push' &&
-          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-        ) ||
-        (
-          github.event_name == 'pull_request' &&
-          (github.base_ref == 'main' || github.base_ref == 'develop')
-        )
-      ) && secrets.AZURE_CLIENT_ID != ''
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop'))
     permissions:
       id-token: write
       contents: read
@@ -169,8 +157,20 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
     environment: dev
     steps:
+      - name: Check Azure credentials
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          if [ -z "${AZURE_CLIENT_ID}" ]; then
+            echo "::warning::Azure credentials not configured, skipping deployment"
+            exit 78  # Skip remaining steps with neutral exit code
+          else
+            echo "Azure credentials available, proceeding with deployment"
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
@@ -198,7 +198,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Show account
-        run: az account show --output table --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: az account show --output table --subscription "${AZURE_SUBSCRIPTION_ID}"
       - name: Detect plan and runtime (diagnostic)
         id: detect
         continue-on-error: true
@@ -307,7 +309,6 @@ jobs:
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
         run: |
           set -euo pipefail
 
@@ -505,9 +506,9 @@ jobs:
           fi
 
           # Optional: Cosmos (if used)
-          if [ -n "${{ secrets.COSMOS_CONNECTION_STRING }}" ]; then
+          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
             az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
-              COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
+              COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" \
               COSMOS_DATABASE_NAME='asora'
           fi
 

@@ -1,6 +1,9 @@
 // Lightweight client-side pre-check for profile text
 class ProfileValidator {
-  static final _badWords = RegExp(r"\b(fuck|shit|bitch|asshole|bastard)\b", caseSensitive: false);
+  static final _badWords = RegExp(
+    r"\b(fuck|shit|bitch|asshole|bastard)\b",
+    caseSensitive: false,
+  );
 
   static String? validateDisplayName(String? value) {
     final v = (value ?? '').trim();
@@ -16,4 +19,3 @@ class ProfileValidator {
     return null;
   }
 }
-

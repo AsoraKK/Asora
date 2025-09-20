@@ -216,41 +216,6 @@ async function getFollowingUsers(userId: string): Promise<string[]> {
   }
 }
 
-function buildFollowingQuery(params: FollowingFeedParams, followingUsers: string[]): { query: string; parameters: any[] } {
-  const offset = (params.page - 1) * params.pageSize;
-  
-  // Create parameter placeholders for the IN clause
-  const placeholders = followingUsers.map((_, index) => `@author${index}`).join(', ');
-  const parameters = followingUsers.map((authorId, index) => ({
-    name: `@author${index}`,
-    value: authorId
-  }));
-
-  const query = `
-    SELECT * FROM c 
-    WHERE c.authorId IN (${placeholders})
-    ORDER BY c.createdAt DESC
-    OFFSET ${offset} LIMIT ${params.pageSize}
-  `;
-
-  return { query, parameters };
-}
-
-function buildFollowingCountQuery(followingUsers: string[]): { query: string; parameters: any[] } {
-  const placeholders = followingUsers.map((_, index) => `@author${index}`).join(', ');
-  const parameters = followingUsers.map((authorId, index) => ({
-    name: `@author${index}`,
-    value: authorId
-  }));
-
-  const query = `
-    SELECT VALUE COUNT(1) as count FROM c 
-    WHERE c.authorId IN (${placeholders})
-  `;
-
-  return { query, parameters };
-}
-
 async function getRecommendedFeed(params: FollowingFeedParams, context: InvocationContext): Promise<HttpResponseInit> {
   // Fallback to trending content when user isn't following anyone
   logger.info('Returning recommended content for following feed', {

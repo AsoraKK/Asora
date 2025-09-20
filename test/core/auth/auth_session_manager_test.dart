@@ -9,7 +9,8 @@ class _FakeSecureStore {
   Future<dynamic> handle(MethodCall call) async {
     switch (call.method) {
       case 'write':
-        data['${call.arguments['key']}'] = call.arguments['value'] as String? ?? '';
+        data['${call.arguments['key']}'] =
+            call.arguments['value'] as String? ?? '';
         return null;
       case 'read':
         return data['${call.arguments['key']}'];
@@ -511,252 +512,261 @@ void main() {
         expect(consumeMessage, contains('Session consumed'));
         expect(consumeMessage, contains(sessionState));
       });
+    });
+    group('AuthSessionManager method tests', () {
+      const MethodChannel channel = MethodChannel(
+        'plugins.it_nomads.com/flutter_secure_storage',
+      );
+      final _FakeSecureStore fakeStore = _FakeSecureStore();
+      final AuthSessionManager manager = AuthSessionManager();
+
+      setUpAll(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              channel,
+              (call) => fakeStore.handle(call),
+            );
+      });
+
+      tearDown(() {
+        fakeStore.clear();
+      });
+
+      tearDownAll(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+      });
+
+      test('createTokenSession persists tokens and expiry', () async {
+        final expiry = DateTime.now().add(const Duration(hours: 1));
+
+        final result = await manager.createTokenSession(
+          accessToken: 'access',
+          refreshToken: 'refresh',
+          userId: 'user',
+          expiresAt: expiry,
+        );
+
+        expect(result['accessToken'], equals('access'));
+        expect(fakeStore.data['session_token'], equals('access'));
+        expect(fakeStore.data['refresh_token'], equals('refresh'));
+        expect(fakeStore.data['user_id'], equals('user'));
+        expect(
+          fakeStore.data['session_expiry'],
+          equals(expiry.toIso8601String()),
+        );
+      });
+
+      test('hasActiveSession reflects token presence and expiry', () async {
+        final expiry = DateTime.now().add(const Duration(minutes: 30));
+        await manager.createTokenSession(
+          accessToken: 'a',
+          refreshToken: 'r',
+          userId: 'u',
+          expiresAt: expiry,
+        );
+
+        expect(await manager.hasActiveSession(), isTrue);
+
+        fakeStore.data.remove('session_token');
+        expect(await manager.hasActiveSession(), isFalse);
+      });
+
+      test('hasActiveSession returns false when session expired', () async {
+        final pastExpiry = DateTime.now().subtract(const Duration(minutes: 1));
+        await manager.createTokenSession(
+          accessToken: 'a',
+          refreshToken: 'r',
+          userId: 'u',
+          expiresAt: pastExpiry,
+        );
+
+        expect(await manager.hasActiveSession(), isFalse);
+      });
+
+      test(
+        'getSessionState returns authenticated and expired states',
+        () async {
+          final expiry = DateTime.now().add(const Duration(minutes: 30));
+          await manager.createTokenSession(
+            accessToken: 'tok',
+            refreshToken: 'ref',
+            userId: 'user',
+            expiresAt: expiry,
+          );
+
+          expect(
+            await manager.getSessionState(),
+            equals(AuthSessionStatus.authenticated),
+          );
+
+          await manager.clearSession();
+
+          final pastExpiry = DateTime.now().subtract(
+            const Duration(minutes: 1),
+          );
+          await manager.createTokenSession(
+            accessToken: 'tok',
+            refreshToken: 'ref',
+            userId: 'user',
+            expiresAt: pastExpiry,
+          );
+
+          expect(
+            await manager.getSessionState(),
+            equals(AuthSessionStatus.expired),
+          );
+        },
+      );
+
+      test('refreshSession updates token and expiry', () async {
+        final expiry = DateTime.now().add(const Duration(minutes: 30));
+        await manager.createTokenSession(
+          accessToken: 'old',
+          refreshToken: 'ref',
+          userId: 'user',
+          expiresAt: expiry,
+        );
+
+        final newExpiry = DateTime.now().add(const Duration(hours: 1));
+        final refreshed = await manager.refreshSession('new', newExpiry);
+
+        expect(refreshed, isTrue);
+        expect(fakeStore.data['session_token'], equals('new'));
+        expect(
+          fakeStore.data['session_expiry'],
+          equals(newExpiry.toIso8601String()),
+        );
+      });
+
+      test('clearSession removes all persisted keys', () async {
+        final expiry = DateTime.now().add(const Duration(minutes: 30));
+        await manager.createTokenSession(
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          userId: 'user',
+          expiresAt: expiry,
+        );
+
+        await manager.clearSession();
+
+        expect(fakeStore.data.containsKey('session_token'), isFalse);
+        expect(fakeStore.data.containsKey('refresh_token'), isFalse);
+        expect(fakeStore.data.containsKey('user_id'), isFalse);
+        expect(fakeStore.data.containsKey('session_expiry'), isFalse);
+      });
+
+      test('validateSession fails when state inconsistent', () async {
+        final expiry = DateTime.now().add(const Duration(minutes: 30));
+        await manager.createTokenSession(
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          userId: 'user',
+          expiresAt: expiry,
+        );
+
+        fakeStore.data.remove('user_id');
+        expect(await manager.validateSession(), isFalse);
+      });
+
+      group('Additional Coverage Tests', () {
+        test('should handle AuthSessionState edge cases', () {
+          // Test with exact boundary times
+          final exactNow = DateTime.now();
+          final sessionAtBoundary = AuthSessionState(
+            id: 'boundary_test',
+            state: 'boundary_state',
+            nonce: 'boundary_nonce',
+            codeVerifier: 'boundary_verifier',
+            codeChallenge: 'boundary_challenge',
+            createdAt: exactNow,
+            ttl: Duration.zero, // Expires immediately
+          );
+
+          expect(sessionAtBoundary.isExpired, isTrue);
+        });
+
+        test('should handle very large JSON values', () {
+          final largeString = 'x' * 1000; // 1000 character string
+          final json = {
+            'id': largeString,
+            'state': largeString,
+            'nonce': largeString,
+            'codeVerifier': largeString,
+            'codeChallenge': largeString,
+            'createdAt': '2023-12-15T14:30:00.000Z',
+            'ttl': 600000,
+          };
+
+          final sessionState = AuthSessionState.fromJson(json);
+          expect(sessionState.id.length, equals(1000));
+          expect(sessionState.state.length, equals(1000));
+        });
+
+        test('should verify JSON roundtrip with millisecond precision', () {
+          final preciseTime = DateTime.parse('2023-12-15T14:30:45.123Z');
+          final sessionState = AuthSessionState(
+            id: 'precision_test',
+            state: 'precision_state',
+            nonce: 'precision_nonce',
+            codeVerifier: 'precision_verifier',
+            codeChallenge: 'precision_challenge',
+            createdAt: preciseTime,
+            ttl: const Duration(milliseconds: 12345),
+          );
+
+          final json = sessionState.toJson();
+          final reconstructed = AuthSessionState.fromJson(json);
+
+          expect(reconstructed.createdAt, equals(preciseTime));
+          expect(reconstructed.ttl.inMilliseconds, equals(12345));
+        });
+
+        test('should test AuthSessionManager constants coverage', () {
+          final manager = AuthSessionManager();
+          expect(manager, isA<AuthSessionManager>());
+
+          // Test that we can instantiate the manager
+          expect(() => AuthSessionManager(), returnsNormally);
+        });
+
+        test('should cover additional copyWith scenarios', () {
+          final base = AuthSessionState(
+            id: 'base',
+            state: 'base',
+            nonce: 'base',
+            codeVerifier: 'base',
+            codeChallenge: 'base',
+            createdAt: DateTime(2023, 1, 1),
+            ttl: const Duration(minutes: 1),
+          );
+
+          // Test partial updates
+          final updatedId = base.copyWith(id: 'updated');
+          expect(updatedId.id, equals('updated'));
+          expect(updatedId.state, equals('base')); // unchanged
+
+          final updatedTtl = base.copyWith(ttl: const Duration(hours: 1));
+          expect(updatedTtl.ttl, equals(const Duration(hours: 1)));
+          expect(updatedTtl.id, equals('base')); // unchanged
+        });
+
+        test('should test complex expiry scenarios', () {
+          final farFuture = DateTime.now().add(const Duration(days: 1000));
+          final sessionState = AuthSessionState(
+            id: 'future_test',
+            state: 'future_state',
+            nonce: 'future_nonce',
+            codeVerifier: 'future_verifier',
+            codeChallenge: 'future_challenge',
+            createdAt: farFuture,
+            ttl: const Duration(minutes: 1),
+          );
+
+          // Session created in far future should not be expired now
+          expect(sessionState.isExpired, isFalse);
+        });
+      });
+    });
   });
-  group('AuthSessionManager method tests', () {
-    const MethodChannel channel =
-        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
-    final _FakeSecureStore fakeStore = _FakeSecureStore();
-    final AuthSessionManager manager = AuthSessionManager();
-
-    setUpAll(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) => fakeStore.handle(call));
-    });
-
-    tearDown(() {
-      fakeStore.clear();
-    });
-
-    tearDownAll(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, null);
-    });
-
-    test('createTokenSession persists tokens and expiry', () async {
-      final expiry = DateTime.now().add(const Duration(hours: 1));
-
-      final result = await manager.createTokenSession(
-        accessToken: 'access',
-        refreshToken: 'refresh',
-        userId: 'user',
-        expiresAt: expiry,
-      );
-
-      expect(result['accessToken'], equals('access'));
-      expect(fakeStore.data['session_token'], equals('access'));
-      expect(fakeStore.data['refresh_token'], equals('refresh'));
-      expect(fakeStore.data['user_id'], equals('user'));
-      expect(
-        fakeStore.data['session_expiry'],
-        equals(expiry.toIso8601String()),
-      );
-    });
-
-    test('hasActiveSession reflects token presence and expiry', () async {
-      final expiry = DateTime.now().add(const Duration(minutes: 30));
-      await manager.createTokenSession(
-        accessToken: 'a',
-        refreshToken: 'r',
-        userId: 'u',
-        expiresAt: expiry,
-      );
-
-      expect(await manager.hasActiveSession(), isTrue);
-
-      fakeStore.data.remove('session_token');
-      expect(await manager.hasActiveSession(), isFalse);
-    });
-
-    test('hasActiveSession returns false when session expired', () async {
-      final pastExpiry = DateTime.now().subtract(const Duration(minutes: 1));
-      await manager.createTokenSession(
-        accessToken: 'a',
-        refreshToken: 'r',
-        userId: 'u',
-        expiresAt: pastExpiry,
-      );
-
-      expect(await manager.hasActiveSession(), isFalse);
-    });
-
-    test('getSessionState returns authenticated and expired states', () async {
-      final expiry = DateTime.now().add(const Duration(minutes: 30));
-      await manager.createTokenSession(
-        accessToken: 'tok',
-        refreshToken: 'ref',
-        userId: 'user',
-        expiresAt: expiry,
-      );
-
-      expect(
-        await manager.getSessionState(),
-        equals(AuthSessionStatus.authenticated),
-      );
-
-      await manager.clearSession();
-
-      final pastExpiry = DateTime.now().subtract(const Duration(minutes: 1));
-      await manager.createTokenSession(
-        accessToken: 'tok',
-        refreshToken: 'ref',
-        userId: 'user',
-        expiresAt: pastExpiry,
-      );
-
-      expect(
-        await manager.getSessionState(),
-        equals(AuthSessionStatus.expired),
-      );
-    });
-
-    test('refreshSession updates token and expiry', () async {
-      final expiry = DateTime.now().add(const Duration(minutes: 30));
-      await manager.createTokenSession(
-        accessToken: 'old',
-        refreshToken: 'ref',
-        userId: 'user',
-        expiresAt: expiry,
-      );
-
-      final newExpiry = DateTime.now().add(const Duration(hours: 1));
-      final refreshed = await manager.refreshSession('new', newExpiry);
-
-      expect(refreshed, isTrue);
-      expect(fakeStore.data['session_token'], equals('new'));
-      expect(
-        fakeStore.data['session_expiry'],
-        equals(newExpiry.toIso8601String()),
-      );
-    });
-
-    test('clearSession removes all persisted keys', () async {
-      final expiry = DateTime.now().add(const Duration(minutes: 30));
-      await manager.createTokenSession(
-        accessToken: 'tok',
-        refreshToken: 'ref',
-        userId: 'user',
-        expiresAt: expiry,
-      );
-
-      await manager.clearSession();
-
-      expect(fakeStore.data.containsKey('session_token'), isFalse);
-      expect(fakeStore.data.containsKey('refresh_token'), isFalse);
-      expect(fakeStore.data.containsKey('user_id'), isFalse);
-      expect(fakeStore.data.containsKey('session_expiry'), isFalse);
-    });
-
-    test('validateSession fails when state inconsistent', () async {
-      final expiry = DateTime.now().add(const Duration(minutes: 30));
-      await manager.createTokenSession(
-        accessToken: 'tok',
-        refreshToken: 'ref',
-        userId: 'user',
-        expiresAt: expiry,
-      );
-
-      fakeStore.data.remove('user_id');
-      expect(await manager.validateSession(), isFalse);
-    });
-
-    group('Additional Coverage Tests', () {
-      test('should handle AuthSessionState edge cases', () {
-        // Test with exact boundary times
-        final exactNow = DateTime.now();
-        final sessionAtBoundary = AuthSessionState(
-          id: 'boundary_test',
-          state: 'boundary_state',
-          nonce: 'boundary_nonce',
-          codeVerifier: 'boundary_verifier',
-          codeChallenge: 'boundary_challenge',
-          createdAt: exactNow,
-          ttl: Duration.zero, // Expires immediately
-        );
-
-        expect(sessionAtBoundary.isExpired, isTrue);
-      });
-
-      test('should handle very large JSON values', () {
-        final largeString = 'x' * 1000; // 1000 character string
-        final json = {
-          'id': largeString,
-          'state': largeString,
-          'nonce': largeString,
-          'codeVerifier': largeString,
-          'codeChallenge': largeString,
-          'createdAt': '2023-12-15T14:30:00.000Z',
-          'ttl': 600000,
-        };
-
-        final sessionState = AuthSessionState.fromJson(json);
-        expect(sessionState.id.length, equals(1000));
-        expect(sessionState.state.length, equals(1000));
-      });
-
-      test('should verify JSON roundtrip with millisecond precision', () {
-        final preciseTime = DateTime.parse('2023-12-15T14:30:45.123Z');
-        final sessionState = AuthSessionState(
-          id: 'precision_test',
-          state: 'precision_state',
-          nonce: 'precision_nonce',
-          codeVerifier: 'precision_verifier',
-          codeChallenge: 'precision_challenge',
-          createdAt: preciseTime,
-          ttl: const Duration(milliseconds: 12345),
-        );
-
-        final json = sessionState.toJson();
-        final reconstructed = AuthSessionState.fromJson(json);
-
-        expect(reconstructed.createdAt, equals(preciseTime));
-        expect(reconstructed.ttl.inMilliseconds, equals(12345));
-      });
-
-      test('should test AuthSessionManager constants coverage', () {
-        final manager = AuthSessionManager();
-        expect(manager, isA<AuthSessionManager>());
-        
-        // Test that we can instantiate the manager
-        expect(() => AuthSessionManager(), returnsNormally);
-      });
-
-      test('should cover additional copyWith scenarios', () {
-        final base = AuthSessionState(
-          id: 'base',
-          state: 'base',
-          nonce: 'base',
-          codeVerifier: 'base',
-          codeChallenge: 'base',
-          createdAt: DateTime(2023, 1, 1),
-          ttl: const Duration(minutes: 1),
-        );
-
-        // Test partial updates
-        final updatedId = base.copyWith(id: 'updated');
-        expect(updatedId.id, equals('updated'));
-        expect(updatedId.state, equals('base')); // unchanged
-
-        final updatedTtl = base.copyWith(ttl: const Duration(hours: 1));
-        expect(updatedTtl.ttl, equals(const Duration(hours: 1)));
-        expect(updatedTtl.id, equals('base')); // unchanged
-      });
-
-      test('should test complex expiry scenarios', () {
-        final farFuture = DateTime.now().add(const Duration(days: 1000));
-        final sessionState = AuthSessionState(
-          id: 'future_test',
-          state: 'future_state',
-          nonce: 'future_nonce',
-          codeVerifier: 'future_verifier',
-          codeChallenge: 'future_challenge',
-          createdAt: farFuture,
-          ttl: const Duration(minutes: 1),
-        );
-
-        // Session created in far future should not be expired now
-        expect(sessionState.isExpired, isFalse);
-      });
-    });
-  });
-});
 }
