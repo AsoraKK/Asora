@@ -8,6 +8,7 @@ on:
 
 jobs:
   check-pins-and-integrity:
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,9 +31,11 @@ jobs:
             find . -name "*.dart" -type f -exec grep -Hn "REPLACE_WITH_SPKI_PIN\|YOUR_SPKI_PIN_HERE\|TODO.*SPKI\|FIXME.*SPKI" {} \; 2>/dev/null || true
             echo ""
             echo "All SPKI pin placeholders must be replaced with real pins before merging."
+            echo "Update the authoritative pins in lib/core/security/cert_pinning.dart."
             exit 1
           else
             echo "✓ No SPKI pin placeholders found in Dart files."
+            echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
           
           # Additional check for common security placeholder patterns
