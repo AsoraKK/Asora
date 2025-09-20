@@ -1,20 +1,10 @@
 /**
  * ASORA USER ACCOUNT DELETION ENDPOINT
- * 
+ *
  * Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
  * Security: JWT auth + confirmation header + idempotent operations
  * Features: Complete data scrubbing, content anonymization, audit logging
  * Architecture: Multi-container cleanup with rollback safety
- */
-
-import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
- */SORA USER ACCOUNT DELETION ENDPOINT
- * 
- * ðŸŽ¯ Purpose: GDPR Article 17 (Right to be Forgotten) compliance - Delete user data
- * ðŸ” Security: JWT auth + confirmation header + idempotent operations
- * âš ï¸ Features: Complete data scrubbing, content anonymization, audit logging
- * ðŸ—ƒï¸ Architecture: Multi-container cleanup with rollback safety
  */
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
@@ -323,8 +313,13 @@ export async function deleteUser(
         operator: 'self',
         timestamp: new Date().toISOString()
       });
-    } catch {
-      // TODO: Handle audit log failure gracefully
+    } catch (auditErr) {
+      // Non-fatal: log audit write failures for later investigation
+      try {
+        context.log('Failed to write privacy audit record:', String(auditErr));
+      } catch (logErr) {
+        // best-effort logging; swallow to avoid masking deletion success
+      }
     }
     return json(200, {
       code: 'account_deleted',
@@ -354,8 +349,12 @@ export async function deleteUser(
         operator: 'self',
         timestamp: new Date().toISOString()
       });
-    } catch {
-      // TODO: Handle audit log failure in error case
+    } catch (auditErr) {
+      try {
+        context.log('Failed to write failure audit record:', String(auditErr));
+      } catch (logErr) {
+        // best-effort logging only
+      }
     }
     return json(500, { 
       code: 'server_error',
