@@ -373,7 +373,64 @@ jobs:
           fi
           echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy (Flex via OneDeploy)
+      - name: Preflight: confirm build artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -l dist-v4-final.zip | sed -n '1,200p' || true
+          # Required files for Node v4 model + our packaging
+          for f in index.js package.json host.json; do
+            unzip -l dist-v4-final.zip | grep -q " $f$" || { echo "::error::$f missing at zip root"; exit 1; }
+          done
+          # Our entrypoint should require ./dist/src/index.js — make sure that file exists in the zip
+          unzip -l dist-v4-final.zip | grep -q " dist/src/index.js$" || { echo "::error::dist/src/index.js missing in zip"; exit 1; }
+
+      - name: Configure runtime settings for Node v4 (Flex-safe)
+        shell: bash
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          az account set --subscription "$SUBS"
+
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+          PLAN_ID="$(az resource show --ids "$APP_ID" --query properties.serverFarmId -o tsv || true)"
+          PLAN_TIER=""
+          [ -n "$PLAN_ID" ] && PLAN_TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)"
+          KIND="$(az functionapp show -g "$RG" -n "$APP" --query kind -o tsv || true)"
+
+          echo "Kind=$KIND Tier=${PLAN_TIER:-unknown}"
+
+          # Always set feature flags for Node v4 discovery + fail-fast on entrypoint
+          az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
+            AzureWebJobsFeatureFlags=EnableWorkerIndexing \
+            FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+            FUNCTIONS_EXTENSION_VERSION=~4
+
+          if [ "$PLAN_TIER" = "FlexConsumption" ]; then
+            echo "FlexConsumption detected: remove legacy pins and clear linuxFxVersion"
+            az functionapp config appsettings delete -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+            az resource update -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" \
+              --set properties.linuxFxVersion="" -o none || true
+          else
+            echo "Non-Flex: set Node 20 pins where appropriate"
+            if [[ "$KIND" == *linux* ]]; then
+              az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "NODE|20" -o none
+            fi
+            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
+              FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          fi
+
+          # Optional: Cosmos (if used)
+          if [ -n "${{ secrets.COSMOS_CONNECTION_STRING }}" ]; then
+            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
+              COSMOS_CONNECTION_STRING='${{ secrets.COSMOS_CONNECTION_STRING }}' \
+              COSMOS_DATABASE_NAME='asora'
+          fi
+
+          az functionapp restart -g "$RG" -n "$APP" -o none
         if: steps.plantier.outputs.tier == 'FlexConsumption'
         uses: Azure/functions-action@v1
         with:
@@ -400,7 +457,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Post-deploy verification (robust for Flex)
+      - name: Verify functions discovered (with ARM fallback)
         shell: bash
         env:
           APP: asora-function-dev
