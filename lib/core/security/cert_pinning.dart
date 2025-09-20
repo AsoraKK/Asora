@@ -16,26 +16,35 @@ const bool kEnableCertPinning = bool.fromEnvironment(
   defaultValue: true,
 );
 
-/// Pinned domains and their SPKI SHA-256 fingerprints
+/// SPKI pins for TLS certificate public keys (base64 SHA-256).
+/// Include current leaf key and a backup (key rotation).
 ///
-/// Format: 'domain': ['sha256/BASE64_ENCODED_SPKI_HASH']
-/// Real pins extracted from: openssl s_client -connect domain:443 -showcerts
-// IMPORTANT:
-// - Replace placeholders with real SPKI SHA-256 pins for leaf certificates.
-// - Maintain two pins per host (current + rollover) during rotation window.
-// - Document pin extraction in docs/SECURITY_MOBILE_SOP.md
-const Map<String, List<String>> kPinnedDomains = {
-  // Flex app host (prod/dev)
+/// To (re)generate pins locally:
+///   HOST=asora-function-dev.azurewebsites.net
+///   openssl s_client -connect $HOST:443 -servername $HOST </dev/null 2>/dev/null \
+///     | openssl x509 -pubkey -noout \
+///     | openssl pkey -pubin -outform der \
+///     | openssl dgst -sha256 -binary | base64
+const Map<String, List<String>> kPinnedSpki = {
+  // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
-    'sha256/REPLACE_WITH_SPKI_PIN', // Primary (leaf SPKI)
-    'sha256/REPLACE_WITH_ROLLOVER_PIN', // Rollover (leaf SPKI)
+    'sha256/x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=', // primary (leaf)
+    'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=', // backup (planned rotation)
   ],
-  // Example legacy dev host (keep if still used)
+  // Legacy/dev hostname (if still called by any client)
   'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
+    'sha256/x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
     'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
-    'sha256/REPLACE_WITH_ROLLOVER_PIN',
   ],
 };
+
+/// Guard: never ship with placeholders.
+void _assertNoPlaceholders() {
+  assert(kPinnedSpki.values
+      .expand((e) => e)
+      .every((p) => p.isNotEmpty && !p.contains('REPLACE_WITH_SPKI_PIN')));
+}
+
 
 /// Certificate pinning HTTP client adapter
 ///
@@ -64,14 +73,14 @@ class PinnedCertHttpClientAdapter implements HttpClientAdapter {
       );
       final host = Uri.parse(options.uri.toString()).host;
 
-      if (kPinnedDomains.containsKey(host)) {
+      if (kPinnedSpki.containsKey(host)) {
         debugPrint('🔒 Certificate validated for pinned host: $host');
       }
 
       return response;
     } catch (e) {
       final host = Uri.parse(options.uri.toString()).host;
-      if (kPinnedDomains.containsKey(host)) {
+      if (kPinnedSpki.containsKey(host)) {
         _logCertPinViolation(host, 'fetch_failed: ${e.toString()}');
       }
       rethrow;
@@ -91,6 +100,8 @@ Dio createPinnedDio({String? baseUrl}) {
   }
 
   if (kEnableCertPinning) {
+    // Guard against accidental placeholders in pins (debug-only via assert)
+    _assertNoPlaceholders();
     // Wrap the default adapter with pinning validation
     dio.httpClientAdapter = PinnedCertHttpClientAdapter(dio.httpClientAdapter);
 
@@ -114,7 +125,7 @@ class _CertPinningInterceptor extends Interceptor {
 
     final host = Uri.parse(options.uri.toString()).host;
 
-    if (kPinnedDomains.containsKey(host)) {
+    if (kPinnedSpki.containsKey(host)) {
       debugPrint('🔍 Certificate pinning check for: $host');
       // Note: In Flutter, we rely on the HttpClientAdapter and platform
       // certificate validation. The actual SPKI validation would need
@@ -130,7 +141,7 @@ class _CertPinningInterceptor extends Interceptor {
     if (err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.unknown) {
       final host = Uri.parse(err.requestOptions.uri.toString()).host;
-      if (kPinnedDomains.containsKey(host)) {
+      if (kPinnedSpki.containsKey(host)) {
         _logCertPinViolation(host, 'connection_failed');
         // Map to a user-friendly message when we suspect pin mismatch / TLS error
         err = DioException(
@@ -151,8 +162,8 @@ class _CertPinningInterceptor extends Interceptor {
 bool isPinValidationError(DioException err) {
   if (err.type == DioExceptionType.connectionError ||
       err.type == DioExceptionType.unknown) {
-    final host = Uri.parse(err.requestOptions.uri.toString()).host;
-    return kPinnedDomains.containsKey(host);
+  final host = Uri.parse(err.requestOptions.uri.toString()).host;
+  return kPinnedSpki.containsKey(host);
   }
   return false;
 }
@@ -197,9 +208,11 @@ class CertPinningInfo {
 
 /// Get current certificate pinning configuration
 CertPinningInfo getCertPinningInfo() {
+  // Guard in any code path that inspects pins (debug-only via assert)
+  _assertNoPlaceholders();
   return const CertPinningInfo(
     enabled: kEnableCertPinning,
-    pins: kPinnedDomains,
+    pins: kPinnedSpki,
     buildMode: kDebugMode ? 'debug' : 'release',
   );
 }
