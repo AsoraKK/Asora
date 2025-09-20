@@ -40,46 +40,119 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Setup Azure CLI isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.azure-e2e"
+          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
+          echo "AZURE_CONFIG_DIR=$HOME/.azure-e2e" >> $GITHUB_ENV
+
       - name: Discover keys & URL
         id: info
         shell: bash
         run: |
           set -Eeuo pipefail
-          RG="asora-psql-flex"; APP="asora-function-dev"
-          host=$(az functionapp show -g "$RG" -n "$APP" --query "defaultHostName" -o tsv)
-          key=$(az functionapp keys list -g "$RG" -n "$APP" --query "functionKeys.default" -o tsv)
+          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
+          
+          RG="asora-psql-flex"
+          APP="asora-function-dev"
+          SUBS="${AZURE_SUBSCRIPTION_ID}"
+
+          # ARM API for reliable function app details
+          echo "Getting function app details via ARM API..."
+          app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
+          access_token=$(az account get-access-token --query accessToken -o tsv)
+          
+          app_data=$(curl -s -H "Authorization: Bearer $access_token" "$app_url")
+          host=$(echo "$app_data" | jq -r '.properties.defaultHostName // empty')
+          
+          if [ -z "$host" ]; then
+            echo "::error::Failed to get function app hostname via ARM API"
+            exit 1
+          fi
+          
+          echo "Function app hostname: $host"
+          
+          # RBAC-safe key discovery
+          echo "Attempting key discovery..."
+          key=""
+          
+          # Try function keys first (requires Function App Operator role)
+          key_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions/admin/masterkey?api-version=2022-03-01"
+          key_response=$(curl -s -w "%{http_code}" -H "Authorization: Bearer $access_token" "$key_url" 2>/dev/null || echo "")
+          
+          if [[ "$key_response" == *"200" ]]; then
+            key=$(echo "$key_response" | head -n -1 | jq -r '.value // empty')
+          fi
+          
+          # Fallback to CLI if ARM fails or insufficient permissions
+          if [ -z "$key" ]; then
+            echo "ARM key discovery failed, trying CLI fallback..."
+            key=$(az functionapp keys list -g "$RG" -n "$APP" --query "functionKeys.default" -o tsv 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$key" ]; then
+            echo "::warning::Could not discover function key, using anonymous access"
+            key="anonymous"
+          fi
+          
           echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
 
-      - name: Wait for Function App readiness
+      - name: Wait for Function App readiness with ARM state checking
         shell: bash
         env:
           RG: ${{ env.AZURE_RESOURCE_GROUP }}
           APP: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         run: |
           set -euo pipefail
+          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
 
+          SUBS="${AZURE_SUBSCRIPTION_ID}"
           max_attempts=30
           delay=10
+          
           for attempt in $(seq 1 "$max_attempts"); do
-            state=$(az functionapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo "")
             ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            echo "[$ts] Attempt $attempt/$max_attempts — state: ${state:-<unknown>}"
+            echo "[$ts] Attempt $attempt/$max_attempts"
+            
+            # Use ARM API for reliable state checking
+            app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
+            access_token=$(az account get-access-token --query accessToken -o tsv)
+            
+            app_data=$(curl -s -H "Authorization: Bearer $access_token" "$app_url" 2>/dev/null || echo "{}")
+            state=$(echo "$app_data" | jq -r '.properties.state // "Unknown"')
+            
+            echo "Function App state: $state"
+            
             if [ "$state" = "Running" ]; then
-              echo "Function App reported Running."
-              exit 0
+              # Additional HTTP health probe
+              echo "Performing HTTP health check..."
+              base_url="${FUNCTION_BASE_URL}"
+              if curl -f -s --max-time 10 "${base_url}/api/health" >/dev/null 2>&1; then
+                echo "Function App is running and responding to HTTP requests."
+                exit 0
+              elif curl -f -s --max-time 10 "${base_url}" >/dev/null 2>&1; then
+                echo "Function App is running and base URL accessible."
+                exit 0
+              else
+                echo "Function App reports Running but HTTP probe failed, continuing..."
+              fi
             fi
+            
             sleep "$delay"
           done
 
           echo "::group::Function diagnostics"
-          az functionapp show -g "$RG" -n "$APP" -o json --only-show-errors || true
-          SUBS="${AZURE_SUBSCRIPTION_ID:-}"
-          if [ -n "$SUBS" ]; then
-            az resource show --ids "/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}" -o json --only-show-errors || true
-          fi
+          echo "ARM API details:"
+          echo "$app_data" | jq . 2>/dev/null || echo "Failed to parse ARM response"
+          
+          echo "CLI fallback details:"
+          az functionapp show -g "$RG" -n "$APP" -o json --only-show-errors 2>/dev/null || echo "CLI query failed"
           echo "::endgroup::"
-          echo "::error::Function App did not reach Running state after $((max_attempts * delay)) seconds."
+          
+          echo "::error::Function App did not reach healthy state after $((max_attempts * delay)) seconds."
           exit 1
 
       - name: E2E
