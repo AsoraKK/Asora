@@ -1,5 +1,7 @@
 dist/
 node_modules/
+**/*.d.ts
+**/*.js
 
 # Documentation and markdown files
 COPILOT_GUIDE.md
@@ -22,6 +24,10 @@ dist.zip.zip
 # Source maps and build output
 clean-v4/
 **/*.map
+
+# Ignore generated TypeScript declaration files and other build artifacts
+dist/**/*.d.ts
+dist/**/*.js
 
 # Backup files
 **/*.bak
