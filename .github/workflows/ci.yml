@@ -422,10 +422,16 @@ jobs:
           fi
           echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
-      - name: Preflight: confirm build artifacts
+      - name: "Preflight: confirm build artifacts"
         shell: bash
         run: |
           set -euo pipefail
+
+          if [ ! -f dist-v4-final.zip ]; then
+            echo "::error::dist-v4-final.zip missing in workspace"
+            ls -la
+            exit 1
+          fi
 
           # Safer listing: filenames only
           list() { unzip -Z -1 dist-v4-final.zip; }
