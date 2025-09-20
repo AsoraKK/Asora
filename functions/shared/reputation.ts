@@ -10,7 +10,9 @@ export async function adjustReputation(userId: string, delta: number, reason: st
   try {
     const existing = await auditContainer.item(auditId, auditId).read();
     if (existing.resource) return; // already applied
-  } catch {}
+  } catch {
+    // TODO: Handle audit record read failure
+  }
 
   try {
     const { resource: user } = await usersContainer.item(userId, userId).read();

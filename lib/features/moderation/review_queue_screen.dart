@@ -40,9 +40,13 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
   @override
   void initState() {
     super.initState();
-    _svc = widget.service ?? ModerationService(widget.baseUrl, httpClient: http.Client());
+    _svc =
+        widget.service ??
+        ModerationService(widget.baseUrl, httpClient: http.Client());
     _scroll.addListener(() {
-      if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 200 && !_loading && _hasMore) {
+      if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 200 &&
+          !_loading &&
+          _hasMore) {
         _loadMore();
       }
     });
@@ -52,15 +56,26 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() { _items.clear(); _page = 1; _hasMore = true; });
+    setState(() {
+      _items.clear();
+      _page = 1;
+      _hasMore = true;
+    });
     await _loadMore();
   }
 
   Future<void> _loadMore() async {
     if (!_authorized) return;
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+    });
     try {
-      final data = await _svc.fetchReviewQueue(accessToken: widget.accessToken, page: _page, pageSize: 20, status: _status);
+      final data = await _svc.fetchReviewQueue(
+        accessToken: widget.accessToken,
+        page: _page,
+        pageSize: 20,
+        status: _status,
+      );
       final list = (data['items'] as List?) ?? (data['appeals'] as List? ?? []);
       setState(() {
         _items.addAll(list);
@@ -68,7 +83,9 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
         _page += 1;
       });
     } finally {
-      setState(() { _loading = false; });
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
@@ -101,21 +118,31 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_authorized) {
-      return const Scaffold(body: Center(child: Text('Insufficient permissions.')));
+      return const Scaffold(
+        body: Center(child: Text('Insufficient permissions.')),
+      );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Moderation Queue', key: Key('moderation-title')), actions: [
-        DropdownButton<String>(
-          value: _status,
-          underline: const SizedBox.shrink(),
-          items: const [
-            DropdownMenuItem(value: 'pending', child: Text('Pending')),
-            DropdownMenuItem(value: 'escalated', child: Text('Escalated')),
-            DropdownMenuItem(value: 'all', child: Text('All')),
-          ],
-          onChanged: (v) { if (v!=null) { setState(() => _status = v); _refresh(); } },
-        )
-      ]),
+      appBar: AppBar(
+        title: const Text('Moderation Queue', key: Key('moderation-title')),
+        actions: [
+          DropdownButton<String>(
+            value: _status,
+            underline: const SizedBox.shrink(),
+            items: const [
+              DropdownMenuItem(value: 'pending', child: Text('Pending')),
+              DropdownMenuItem(value: 'escalated', child: Text('Escalated')),
+              DropdownMenuItem(value: 'all', child: Text('All')),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                setState(() => _status = v);
+                _refresh();
+              }
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _items.isEmpty && !_loading
@@ -125,22 +152,46 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
                 itemCount: _items.length + (_loading ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index >= _items.length) {
-                    return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
                   }
                   final item = _items[index] as Map<String, dynamic>;
                   final id = (item['id'] ?? item['appealId']).toString();
-                  final title = item['title']?.toString() ?? item['contentId']?.toString() ?? id;
-                  final reason = item['reason']?.toString() ?? item['status']?.toString() ?? '';
+                  final title =
+                      item['title']?.toString() ??
+                      item['contentId']?.toString() ??
+                      id;
+                  final reason =
+                      item['reason']?.toString() ??
+                      item['status']?.toString() ??
+                      '';
                   return Card(
                     child: ListTile(
                       title: Text(title),
                       subtitle: Text(reason),
-                      trailing: Wrap(spacing: 6, children: [
-                        IconButton(icon: const Icon(Icons.check), onPressed: () => _action(id, 'approve')),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => _action(id, 'reject')),
-                        IconButton(icon: const Icon(Icons.outbound), onPressed: () => _action(id, 'escalate')),
-                      ]),
-                      onTap: () => showDialog(context: context, builder: (_) => _DetailDialog(item: item)),
+                      trailing: Wrap(
+                        spacing: 6,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.check),
+                            onPressed: () => _action(id, 'approve'),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => _action(id, 'reject'),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.outbound),
+                            onPressed: () => _action(id, 'escalate'),
+                          ),
+                        ],
+                      ),
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (_) => _DetailDialog(item: item),
+                      ),
                     ),
                   );
                 },
@@ -164,9 +215,18 @@ class _DetailDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(item['title']?.toString() ?? (item['id']?.toString() ?? 'Detail')),
-      content: SingleChildScrollView(child: Text(const JsonEncoder.withIndent('  ').convert(item))),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      title: Text(
+        item['title']?.toString() ?? (item['id']?.toString() ?? 'Detail'),
+      ),
+      content: SingleChildScrollView(
+        child: Text(const JsonEncoder.withIndent('  ').convert(item)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
     );
   }
 }

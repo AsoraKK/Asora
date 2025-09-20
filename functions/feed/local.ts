@@ -176,25 +176,6 @@ function buildLocalQuery(params: LocalFeedParams): { query: string; parameters: 
   return { query, parameters };
 }
 
-function buildLocalCountQuery(params: LocalFeedParams): { query: string; parameters: any[] } {
-  let whereClause = 'c.metadata.location = @location';
-  const parameters: any[] = [
-    { name: '@location', value: params.location }
-  ];
-
-  if (params.category) {
-    whereClause += ' AND c.metadata.category = @category';
-    parameters.push({ name: '@category', value: params.category });
-  }
-
-  const query = `
-    SELECT VALUE COUNT(1) as count FROM c 
-    WHERE ${whereClause}
-  `;
-
-  return { query, parameters };
-}
-
 function transformPostForResponse(post: any, _authHeader?: string): any {
   // Transform post similar to main feed, adding user interaction status
   return {

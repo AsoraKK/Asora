@@ -28,7 +28,7 @@ jest.mock('@azure/cosmos', () => ({
 
 jest.mock('../shared/auth-utils', () => ({
   requireUser: jest.fn(() => ({ sub: 'user-1' })),
-  isHttpError: (e: any) => false,
+  isHttpError: (_e: any) => false,
 }));
 
 function req(method: string, body: any): HttpRequest {

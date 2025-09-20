@@ -46,22 +46,6 @@ describe('Moderation System Tests', () => {
 
   describe('Flag Content Endpoint', () => {
     it('should successfully flag content with valid data', async () => {
-      const _mockRequest = {
-        headers: {
-          get: jest.fn((header) => {
-            if (header === 'authorization') return MOCK_USER_TOKEN;
-            return null;
-          })
-        },
-        json: jest.fn().mockResolvedValue({
-          contentId: 'post_123',
-          contentType: 'post',
-          reason: 'spam',
-          description: 'This post contains spam content and promotional links.',
-          severity: 'medium'
-        })
-      } as unknown as HttpRequest;
-
       // Note: This test would require proper mocking of Cosmos DB and JWT verification
       // For actual implementation, you'd mock these dependencies
       

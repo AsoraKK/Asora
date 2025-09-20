@@ -39,8 +39,9 @@ void main() {
       final first = await service.checkIntegrity();
       final second = await service.checkIntegrity();
 
-      final jailbrokenCalls =
-          calls.where((c) => c.method == 'jailbroken').length;
+      final jailbrokenCalls = calls
+          .where((c) => c.method == 'jailbroken')
+          .length;
 
       expect(identical(first, second), isTrue);
       expect(jailbrokenCalls, 1);
@@ -93,4 +94,3 @@ void main() {
     });
   });
 }
-

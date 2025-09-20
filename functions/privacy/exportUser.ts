@@ -451,8 +451,12 @@ export async function exportUser(
         await usersContainer.item(userId, userId).patch([
           { op: 'add', path: '/consents/-', value: { policy: 'GDPR', version: policyVersion, timestamp: new Date().toISOString() } }
         ]);
-      } catch {}
-    } catch {}
+      } catch {
+        // TODO: Handle consent update failure
+      }
+    } catch {
+      // TODO: Handle export metadata update failure
+    }
 
     return {
       status: 200,
@@ -486,7 +490,9 @@ export async function exportUser(
       const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
       const audit = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora').container('privacy_audit');
       await audit.items.create({ id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, userId: user.sub, action: 'export', result: 'failure', operator: 'self', timestamp: new Date().toISOString() });
-    } catch {}
+    } catch {
+      // TODO: Handle audit log creation failure
+    }
     return failure;
   }
 }

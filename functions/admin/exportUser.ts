@@ -45,7 +45,9 @@ async function adminExport(req: HttpRequest, ctx: InvocationContext): Promise<Ht
       operator: 'admin',
       timestamp: new Date().toISOString()
     });
-  } catch {}
+  } catch {
+    // TODO: Handle audit log failure - consider retry or alternative logging
+  }
 
   return result;
 }

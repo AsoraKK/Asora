@@ -29,18 +29,27 @@ void main() {
     final svc = OAuth2Service(launcher: _fakeLauncher);
     final future = svc.debugStartAndWaitForCode();
     // Simulate valid deep link callback
-    svc.debugHandleCallback(Uri.parse('asora://oauth/callback?code=abc&state=st'));
+    svc.debugHandleCallback(
+      Uri.parse('asora://oauth/callback?code=abc&state=st'),
+    );
     final code = await future;
     expect(code, 'abc');
   });
 
-  test('debugStartAndWaitForCode completes with error on callback error', () async {
-    final svc = OAuth2Service(launcher: _fakeLauncher);
-    final future = svc.debugStartAndWaitForCode();
-    // Simulate error callback
-    svc.debugHandleCallback(Uri.parse('asora://oauth/callback?error=access_denied&error_description=nope'));
-    expect(future, throwsA(isA<AuthFailure>()));
-  });
+  test(
+    'debugStartAndWaitForCode completes with error on callback error',
+    () async {
+      final svc = OAuth2Service(launcher: _fakeLauncher);
+      final future = svc.debugStartAndWaitForCode();
+      // Simulate error callback
+      svc.debugHandleCallback(
+        Uri.parse(
+          'asora://oauth/callback?error=access_denied&error_description=nope',
+        ),
+      );
+      expect(future, throwsA(isA<AuthFailure>()));
+    },
+  );
 
   test('web setup listener parses href and completes', () async {
     // Subclass to override getWebHref()
@@ -59,22 +68,27 @@ void main() {
 class _WebTestService extends OAuth2Service {
   _WebTestService() : super(debugForceWeb: true);
   @override
-  String? getWebHref() => 'https://example.com/auth/callback?code=webcode&state=st';
+  String? getWebHref() =>
+      'https://example.com/auth/callback?code=webcode&state=st';
 }
 
-Future<bool> _fakeLauncher(Uri uri, {LaunchMode mode = LaunchMode.platformDefault}) async => true;
+Future<bool> _fakeLauncher(
+  Uri uri, {
+  LaunchMode mode = LaunchMode.platformDefault,
+}) async => true;
 
 class _FullFlowWebService extends OAuth2Service {
   _FullFlowWebService()
-      : super(
-          debugForceWeb: true,
-          launcher: _fakeLauncher,
-          httpClient: _FullFlowHttp(),
-          sessionManager: _FullFlowSessionManager(),
-          secureStorage: _MemSecureStorage(),
-        );
+    : super(
+        debugForceWeb: true,
+        launcher: _fakeLauncher,
+        httpClient: _FullFlowHttp(),
+        sessionManager: _FullFlowSessionManager(),
+        secureStorage: _MemSecureStorage(),
+      );
   @override
-  String? getWebHref() => 'https://example.com/auth/callback?code=code1&state=st';
+  String? getWebHref() =>
+      'https://example.com/auth/callback?code=code1&state=st';
 }
 
 class _FullFlowHttp extends _FullFlowBaseClient {}
@@ -101,7 +115,11 @@ class _FullFlowBaseClient extends http.BaseClient {
           'isTemporary': false,
         },
       });
-      return http.StreamedResponse(Stream.value(utf8.encode(body)), 200, headers: {'content-type': 'application/json'});
+      return http.StreamedResponse(
+        Stream.value(utf8.encode(body)),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
     }
     if (url == OAuth2Config.userInfoEndpoint) {
       final body = jsonEncode({
@@ -114,7 +132,11 @@ class _FullFlowBaseClient extends http.BaseClient {
         'lastLoginAt': '2023-01-01T00:00:00Z',
         'isTemporary': false,
       });
-      return http.StreamedResponse(Stream.value(utf8.encode(body)), 200, headers: {'content-type': 'application/json'});
+      return http.StreamedResponse(
+        Stream.value(utf8.encode(body)),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
     }
     return http.StreamedResponse(Stream<List<int>>.fromIterable([]), 404);
   }
@@ -143,19 +165,57 @@ class _FullFlowSessionManager extends AuthSessionManager {
 class _MemSecureStorage extends FlutterSecureStorage {
   final Map<String, String> _data = {};
   @override
-  Future<void> write({required String key, required String? value, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async {
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     if (value == null) {
       _data.remove(key);
     } else {
       _data[key] = value;
     }
   }
+
   @override
-  Future<String?> read({required String key, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async => _data[key];
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => _data[key];
   @override
-  Future<void> delete({required String key, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async { _data.remove(key); }
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    _data.remove(key);
+  }
+
   @override
-  Future<void> deleteAll({IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async { _data.clear(); }
+  Future<void> deleteAll({
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    _data.clear();
+  }
 }
 
 class _ErrorHttp extends http.BaseClient {
@@ -164,7 +224,11 @@ class _ErrorHttp extends http.BaseClient {
   _ErrorHttp(this.code, this.body);
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    return http.StreamedResponse(Stream.value(utf8.encode(body)), code, headers: {'content-type': 'application/json'});
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(body)),
+      code,
+      headers: {'content-type': 'application/json'},
+    );
   }
 }
 
@@ -172,5 +236,6 @@ class _ThrowingHttp extends http.BaseClient {
   final Exception ex;
   _ThrowingHttp(this.ex);
   @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async => throw ex;
+  Future<http.StreamedResponse> send(http.BaseRequest request) async =>
+      throw ex;
 }

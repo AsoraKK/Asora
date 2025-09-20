@@ -10,7 +10,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Prefer flutter_jailbreak_detection when available; keep a safe fallback.
 // ignore: unused_import
-import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart' as jailbreak;
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart'
+    as jailbreak;
 import 'dart:convert';
 
 /// Device integrity state

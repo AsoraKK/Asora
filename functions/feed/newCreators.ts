@@ -179,25 +179,6 @@ function buildNewCreatorsQuery(params: NewCreatorsParams): { query: string; para
   return { query, parameters };
 }
 
-function buildNewCreatorsCountQuery(params: NewCreatorsParams): { query: string; parameters: any[] } {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - (params.timeWindow || 30));
-  const cutoffDateStr = cutoffDate.toISOString();
-
-  const parameters: any[] = [
-    { name: '@cutoffDate', value: cutoffDateStr },
-    { name: '@minEngagement', value: params.minEngagement || 5 }
-  ];
-
-  const query = `
-    SELECT VALUE COUNT(1) as count FROM c 
-    WHERE c.createdAt >= @cutoffDate 
-      AND (c.likeCount + c.commentCount) >= @minEngagement
-  `;
-
-  return { query, parameters };
-}
-
 async function transformPostWithCreatorInfo(post: any, _authHeader?: string): Promise<any> {
   // In a production implementation, you would:
   // 1. Query user/creator metrics from users container
