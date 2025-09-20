@@ -100,60 +100,26 @@ jobs:
           echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
 
-      - name: Wait for Function App readiness with ARM state checking
+      - name: "Wait for Function App readiness"
         shell: bash
         env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           RG: ${{ env.AZURE_RESOURCE_GROUP }}
           APP: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         run: |
           set -euo pipefail
           export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
 
-          SUBS="${AZURE_SUBSCRIPTION_ID}"
-          max_attempts=30
-          delay=10
-          
-          for attempt in $(seq 1 "$max_attempts"); do
-            ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            echo "[$ts] Attempt $attempt/$max_attempts"
-            
-            # Use ARM API for reliable state checking
-            app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
-            access_token=$(az account get-access-token --query accessToken -o tsv)
-            
-            app_data=$(curl -s -H "Authorization: Bearer $access_token" "$app_url" 2>/dev/null || echo "{}")
-            state=$(echo "$app_data" | jq -r '.properties.state // "Unknown"')
-            
-            echo "Function App state: $state"
-            
-            if [ "$state" = "Running" ]; then
-              # Additional HTTP health probe
-              echo "Performing HTTP health check..."
-              base_url="${FUNCTION_BASE_URL}"
-              if curl -f -s --max-time 10 "${base_url}/api/health" >/dev/null 2>&1; then
-                echo "Function App is running and responding to HTTP requests."
-                exit 0
-              elif curl -f -s --max-time 10 "${base_url}" >/dev/null 2>&1; then
-                echo "Function App is running and base URL accessible."
-                exit 0
-              else
-                echo "Function App reports Running but HTTP probe failed, continuing..."
-              fi
-            fi
-            
-            sleep "$delay"
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+          get_state(){ az resource show --ids "$APP_ID" --query "properties.state" -o tsv 2>/dev/null || echo ""; }
+
+          for i in $(seq 1 30); do
+            STATE="$(get_state)"; echo "Attempt $i/30 state: ${STATE:-<empty>}"
+            [ "$STATE" = "Running" ] && exit 0
+            sleep 10
           done
 
-          echo "::group::Function diagnostics"
-          echo "ARM API details:"
-          echo "$app_data" | jq . 2>/dev/null || echo "Failed to parse ARM response"
-          
-          echo "CLI fallback details:"
-          az functionapp show -g "$RG" -n "$APP" -o json --only-show-errors 2>/dev/null || echo "CLI query failed"
-          echo "::endgroup::"
-          
-          echo "::error::Function App did not reach healthy state after $((max_attempts * delay)) seconds."
-          exit 1
+          echo "::error::App not Running"; exit 1
 
       - name: E2E
         run: |

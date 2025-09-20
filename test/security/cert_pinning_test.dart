@@ -13,7 +13,7 @@ void main() {
         reason: 'No hosts configured for pinning',
       );
 
-      final pinPattern = RegExp(r'^sha256\/[A-Za-z0-9+\/=]{43,44}\$');
+      final pinPattern = RegExp(r'^sha256/[A-Za-z0-9+/=]{43,44}$');
 
       for (final entry in pinsMap.entries) {
         final host = entry.key;
@@ -32,6 +32,13 @@ void main() {
             p.contains('REPLACE_WITH_SPKI_PIN'),
             false,
             reason: 'Placeholder found in pin for host $host',
+          );
+          expect(
+            p.toUpperCase().contains('PLACEHOLDER') ||
+                p.toUpperCase().contains('YOUR_SPKI_PIN_HERE') ||
+                p.toUpperCase().contains('TODO'),
+            false,
+            reason: 'Generic placeholder token found in pin for host $host',
           );
           expect(
             p.startsWith('sha256/'),

@@ -43,7 +43,14 @@ void _assertNoPlaceholders() {
   assert(
     kPinnedSpki.values
         .expand((e) => e)
-        .every((p) => p.isNotEmpty && !p.contains('REPLACE_WITH_SPKI_PIN')),
+        .every(
+          (p) =>
+              p.isNotEmpty &&
+              !p.contains('REPLACE_WITH_SPKI_PIN') &&
+              !p.toUpperCase().contains('PLACEHOLDER') &&
+              !p.toUpperCase().contains('TODO') &&
+              !p.toUpperCase().contains('YOUR_SPKI_PIN_HERE'),
+        ),
   );
 }
 
