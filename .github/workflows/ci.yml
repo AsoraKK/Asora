@@ -401,12 +401,12 @@ jobs:
           az account set --subscription "$SUBS"
           bash .github/scripts/flex_runtime_fix.sh
 
-      - name: Deploy via Zip Deploy
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Deploying via Zip Deploy with WEBSITE_RUN_FROM_PACKAGE=1..."
-          az functionapp deployment source config-zip -g asora-psql-flex -n asora-function-dev --src dist-v4-final.zip --timeout 600
+      - name: Deploy via Functions Action (One Deploy)
+        uses: Azure/functions-action@v1
+        with:
+          app-name: asora-function-dev
+          package: dist-v4-final.zip
+          remote-build: true
 
       - name: Verify functions indexed via admin API
         env:
@@ -422,57 +422,60 @@ jobs:
             CODE_PARAM="?code=${FUNCTION_KEY}"
           fi
 
-          echo "Probing host status and function indexing..."
-          
-          # Check host status
-          echo "Getting host status..."
-          curl -fsS "https://${HOST}/admin/host/status${CODE_PARAM}" -o host_status.json || true
-          if [ -f host_status.json ]; then
-            jq . host_status.json || cat host_status.json
+          echo "Probing function indexing via ARM..."
+          FUNCTIONS_JSON="[]"
+          CNT=0
+          for i in $(seq 1 20); do
+            echo "Attempt $i/20: Listing functions via ARM API..."
+            FUNCTIONS_JSON=$(az functionapp function list -g "$RG" -n "$APP" 2>/dev/null || echo "[]")
+            CNT=$(jq 'length' <<<"$FUNCTIONS_JSON" 2>/dev/null || echo 0)
+            echo "ARM reported functions: $CNT"
+            if [ "$CNT" -gt 0 ]; then
+              break
+            fi
+            echo "  No functions yet; waiting 15 seconds before retry..."
+            sleep 15
+          done
+
+          if [ "$CNT" -le 0 ]; then
+            echo "::error::Function list returned zero entries after retries"
+            echo "$FUNCTIONS_JSON"
+            exit 1
           fi
 
-          # Wait for functions to be indexed (up to 10 minutes)
-          for i in $(seq 1 20); do
-            echo "Attempt $i/20: Checking function indexing..."
-            
-            # Try admin API first
-            CNT=0
-            if curl -fsS "https://${HOST}/admin/functions${CODE_PARAM}" -o admin_funcs.json 2>/dev/null; then
-              CNT=$(jq 'length' admin_funcs.json 2>/dev/null || echo 0)
-              echo "Admin API reported functions: $CNT"
-            else
-              echo "Admin API not accessible, trying ARM..."
-            fi
-            
-            # Fallback to ARM enumeration
-            if [ "$CNT" -eq 0 ]; then
-              ARM_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions?api-version=2023-01-01"
-              ARM_JSON=$(az rest --method get --url "$ARM_URL" || echo '{}')
-              CNT_ARM=$(jq '.value|length' <<<"$ARM_JSON" 2>/dev/null || echo 0)
-              echo "ARM API reported functions: $CNT_ARM"
-              CNT=$CNT_ARM
-            fi
+          echo "✓ Functions indexed successfully via ARM (${CNT} functions)."
+          jq -r '.[] | "  - " + .name' <<<"$FUNCTIONS_JSON" || true
 
-            if [ "$CNT" -gt 0 ]; then
-              echo "✓ Functions indexed successfully! Found $CNT functions"
-              if [ -f admin_funcs.json ]; then
-                echo "Function list:"
-                jq -r '.[] | "  - " + .name + " (" + .config.bindings[0].type + ")"' admin_funcs.json 2>/dev/null || true
+          echo "Checking host status endpoint..."
+          STATUS="000"
+          for i in $(seq 1 20); do
+            echo "Attempt $i/20: Querying admin host status..."
+            STATUS=$(curl -sS -o host_status.json -w "%{http_code}" "https://${HOST}/admin/host/status${CODE_PARAM}" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Host status returned 200"
+              if jq -e . host_status.json >/dev/null 2>&1; then
+                jq . host_status.json
+              else
+                cat host_status.json
               fi
-              exit 0
+              break
             fi
-            
-            echo "  No functions indexed yet, waiting 30 seconds..."
-            sleep 30
+            echo "  Host status returned HTTP ${STATUS}; waiting 15 seconds before retry..."
+            sleep 15
           done
-          
-          echo "::error::Functions not indexed after 10 minutes"
-          echo "::group::Diagnostics"
-          echo "Host status:"; cat host_status.json 2>/dev/null || echo "No host status"
-          echo "Admin list:"; cat admin_funcs.json 2>/dev/null || echo "No admin response"
-          echo "ARM response:"; echo "$ARM_JSON" || echo "No ARM response"
-          echo "::endgroup::"
-          exit 1
+
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Host status endpoint did not return 200 after retries"
+            cat host_status.json 2>/dev/null || true
+            exit 1
+          fi
+
+          if curl -fsS "https://${HOST}/admin/functions${CODE_PARAM}" -o admin_funcs.json 2>/dev/null; then
+            echo "Admin API returned $(jq 'length' admin_funcs.json 2>/dev/null || echo 0) functions"
+            jq -r '.[] | "  - " + .name' admin_funcs.json 2>/dev/null || cat admin_funcs.json
+          else
+            echo "Admin API not accessible; continuing"
+          fi
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
