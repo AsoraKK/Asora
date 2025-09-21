@@ -401,12 +401,33 @@ jobs:
           az account set --subscription "$SUBS"
           bash .github/scripts/flex_runtime_fix.sh
 
+      - name: Clean Flex-incompatible settings
+        env:
+          APP: asora-function-dev
+          RG: asora-psql-flex
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "$SUBS"
+          az functionapp config appsettings delete -g "$RG" -n "$APP" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP WEBSITE_NODE_DEFAULT_VERSION \
+            --output none || true
+          APP_SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$APP" 2>/dev/null || echo '[]')
+          if jq -e '.[] | select(.name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS" >/dev/null; then
+            echo "::error::Flex-incompatible app settings remain after cleanup"
+            jq '.[] | select(.name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS"
+            exit 1
+          fi
+          echo "✓ Flex-incompatible app settings removed"
+
       - name: Deploy via Functions Action (One Deploy)
         uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
           package: dist-v4-final.zip
-          remote-build: true
+          remote-build: false
+          respect-funcignore: true
 
       - name: Verify functions indexed via admin API
         env:
