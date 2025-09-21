@@ -356,50 +356,16 @@ jobs:
           set -euo pipefail
           MODE=zip ZIP=dist-v4-final.zip bash .github/scripts/preflight.sh
 
-      - name: "B) Normalize Flex settings for Node 20"
+      - name: Normalize Flex settings for Node 20
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          API_VERSION: 2023-01-01
         shell: bash
         run: |
           set -euo pipefail
-          az account set --subscription "$SUBS"
-          
-          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-          
-          echo "=== B) Normalizing Flex Settings ==="
-          
-          # 1) Remove Flex-incompatible settings that can block indexing/deploy
-          echo "Removing incompatible app settings..."
-          az functionapp config appsettings delete -g "$RG" -n "$APP" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP WEBSITE_NODE_DEFAULT_VERSION \
-            -o none || true
-          
-          # 2) Ensure Flex runtime is explicitly set to Node 20
-          echo "Setting Flex runtime to Node 20..."
-          az resource update --ids "$APP_ID" \
-            --set properties.functionAppConfig.runtime.name="node" \
-                  properties.functionAppConfig.runtime.version="20" -o none
-          
-          # 3) Set essential function app settings for Node v4
-          echo "Setting Node v4 function app settings..."
-          az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
-            FUNCTIONS_EXTENSION_VERSION=~4 \
-            FUNCTIONS_WORKER_RUNTIME=node \
-            AzureWebJobsFeatureFlags=EnableWorkerIndexing \
-            FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true
-          
-          # 4) Add Cosmos connection if available
-          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
-            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
-              COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
-              COSMOS_DATABASE_NAME="asora"
-          fi
-          
-          echo "✅ Flex settings normalized"
-          echo "✓ Flex-incompatible app settings removed"
+          bash .github/scripts/normalize_flex.sh
 
       - name: "C) Deploy via Azure Functions Action (Flex optimized)"
         uses: Azure/functions-action@v1
