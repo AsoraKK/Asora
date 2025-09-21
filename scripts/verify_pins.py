@@ -1,37 +1,51 @@
 #!/usr/bin/env python3
-"""Verify that runtime certificate pins match the live endpoints.
+"""Compare live SPKI pins against expected values."""
 
-This script extracts the pinned SPKI hashes from lib/core/security/cert_pinning.dart,
-fetches the current certificate for each host, and ensures the computed hash is one
-of the allowed values. Fails with a non-zero exit code if any host drifts.
-"""
+from __future__ import annotations
 
 import base64
 import json
-import re
+import os
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
-PIN_SOURCE = Path("lib/core/security/cert_pinning.dart")
+EXPECTED_FILE = Path("mobile-expected-pins.json")
 
 
-def extract_pins():
-    text = PIN_SOURCE.read_text(encoding="utf-8")
-    pattern = re.compile(r"'([^']+)':\s*\[(.*?)\]", re.S)
-    mapped = {}
-    for host, body in pattern.findall(text):
-        pins = re.findall(r"'sha256/([A-Za-z0-9+/=]+)'", body)
-        if pins:
-            mapped[host] = pins
-    if not mapped:
-        raise SystemExit("No pins discovered in cert_pinning.dart")
-    return mapped
+def load_expected() -> dict[str, list[str]]:
+    if not EXPECTED_FILE.exists():
+        raise SystemExit(f"Expected pins file not found: {EXPECTED_FILE}")
+    data = json.loads(EXPECTED_FILE.read_text(encoding="utf-8"))
+    return {host: list(dict.fromkeys(pins)) for host, pins in data.items()}
 
 
-def compute_spki_pin(host: str) -> str:
+def collect_hosts() -> set[str]:
+    hosts: set[str] = set()
+
+    base_url = os.environ.get("BASE_URL", "").strip()
+    if base_url:
+        host = urllib.parse.urlparse(base_url).hostname
+        if host:
+            hosts.add(host)
+
+    extra = os.environ.get("EXTRA_PIN_HOSTS", "").strip()
+    if extra:
+        for item in extra.split(","):
+            host = item.strip()
+            if host:
+                hosts.add(host)
+
+    if not hosts:
+        raise SystemExit("No hosts provided. Set BASE_URL or EXTRA_PIN_HOSTS.")
+
+    return hosts
+
+
+def compute_spki(host: str) -> str:
     try:
-        client = subprocess.run(
+        s_client = subprocess.run(
             [
                 "openssl",
                 "s_client",
@@ -44,18 +58,20 @@ def compute_spki_pin(host: str) -> str:
             capture_output=True,
             check=True,
         )
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"openssl s_client failed for {host}: {exc.stderr.decode(errors='ignore')}" ) from exc
+    except subprocess.CalledProcessError as exc:  # pragma: no cover
+        raise RuntimeError(
+            f"openssl s_client failed for {host}: {exc.stderr.decode(errors='ignore')}"
+        ) from exc
 
     try:
         pubkey = subprocess.run(
             ["openssl", "x509", "-pubkey", "-noout"],
-            input=client.stdout,
+            input=s_client.stdout,
             capture_output=True,
             check=True,
         )
         der = subprocess.run(
-            ["openssl", "pkey", "-pubin", "-outform", "der"],
+            ["openssl", "pkey", "-pubin", "-outform", "DER"],
             input=pubkey.stdout,
             capture_output=True,
             check=True,
@@ -66,43 +82,46 @@ def compute_spki_pin(host: str) -> str:
             capture_output=True,
             check=True,
         )
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"openssl pipeline failed for {host}: {exc.stderr.decode(errors='ignore')}" ) from exc
+    except subprocess.CalledProcessError as exc:  # pragma: no cover
+        raise RuntimeError(
+            f"openssl pipeline failed for {host}: {exc.stderr.decode(errors='ignore')}"
+        ) from exc
 
     return base64.b64encode(digest.stdout).decode("ascii")
 
 
 def main() -> int:
-    pin_map = extract_pins()
-    results = []
-    exit_code = 0
+    expected = load_expected()
+    hosts = collect_hosts()
 
-    for host, expected_pins in pin_map.items():
+    report: dict[str, dict[str, object]] = {}
+    failed = False
+
+    for host in hosts:
+        allowed = set(expected.get(host, []))
         try:
-            current_pin = compute_spki_pin(host)
-        except Exception as exc:  # pylint: disable=broad-except
-            print(f"::error::Failed to compute pin for {host}: {exc}")
-            exit_code = 1
+            observed = compute_spki(host)
+        except Exception as exc:  # pragma: no cover
+            report[host] = {"ok": False, "error": str(exc), "expected": list(allowed)}
+            failed = True
             continue
 
-        if current_pin not in expected_pins:
-            print(
-                f"::error::Pin drift detected for {host}.\n"
-                f"Expected one of: {json.dumps(expected_pins)}\n"
-                f"Observed: {current_pin}"
-            )
-            exit_code = 1
-        else:
-            print(f"{host} pin verified ({current_pin})")
+        ok = observed in allowed and bool(allowed)
+        report[host] = {
+            "ok": ok,
+            "observed": observed,
+            "expected": list(allowed),
+        }
+        if not ok:
+            failed = True
 
-        results.append({"host": host, "observed": current_pin, "expected": expected_pins})
+    Path("mobile-pin-report.json").write_text(
+        json.dumps(report, indent=2), encoding="utf-8"
+    )
+    print("Wrote mobile-pin-report.json")
 
-    out_path = Path("mobile-pin-report.json")
-    out_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    print(f"Wrote verification report to {out_path}")
-
-    return exit_code
+    return 1 if failed else 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

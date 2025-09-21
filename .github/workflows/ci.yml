@@ -20,23 +20,7 @@ jobs:
     name: Flutter Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Check Azure credentials
-        id: creds
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_SUBSCRIPTION_ID:-}" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Azure credentials missing; skipping deployment job."
-          else
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: ${{ steps.creds.outputs.available == 'true' }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.0'
@@ -57,15 +41,32 @@ jobs:
           set -euo pipefail
           bash check_p1_coverage.sh | tee p1_coverage_output.txt
 
+      - name: Prepare coverage summary
+        run: |
+          set -euo pipefail
+          if [ -f p1_coverage_output.txt ]; then
+            {
+              echo "### P1 Coverage Report"
+              echo
+              cat p1_coverage_output.txt
+            } > code-coverage-results.md
+          else
+            echo "Coverage summary unavailable" > code-coverage-results.md
+          fi
+
       - name: Comment P1 coverage
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const path = require('path');
-            const summaryPath = path.join(process.env.GITHUB_WORKSPACE, 'p1_coverage_output.txt');
+            const workspace = process.env.GITHUB_WORKSPACE;
+            const candidates = [
+              path.join(workspace, 'code-coverage-results.md'),
+              path.join(workspace, 'p1_coverage_output.txt')
+            ];
             const issue_number = context.issue.number;
 
             if (!issue_number) {
@@ -73,9 +74,16 @@ jobs:
               return;
             }
 
-            const body = fs.existsSync(summaryPath)
-              ? fs.readFileSync(summaryPath, 'utf8').trim() || 'P1 coverage script produced no output.'
-              : 'P1 coverage output unavailable.';
+            let body = 'Coverage summary unavailable.';
+            for (const candidate of candidates) {
+              if (fs.existsSync(candidate)) {
+                const content = fs.readFileSync(candidate, 'utf8').trim();
+                if (content) {
+                  body = content;
+                }
+                break;
+              }
+            }
 
             try {
               await github.rest.issues.createComment({
@@ -91,6 +99,19 @@ jobs:
                 throw error;
               }
             }
+
+      - name: Publish coverage summary to job
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Coverage"
+            if [ -f code-coverage-results.md ]; then
+              cat code-coverage-results.md
+            else
+              echo "Coverage summary unavailable"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail if coverage below threshold
         if: ${{ steps.p1_coverage.outcome == 'failure' }}
@@ -182,37 +203,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Azure credentials
-        id: creds
+      - name: Validate Azure credentials
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_SUBSCRIPTION_ID:-}" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Azure credentials missing; skipping deployment steps."
-          else
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          fi
+          for var in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var is not configured in repository secrets";
+              exit 1;
+            fi
+          done
 
       - uses: actions/download-artifact@v4
-        if: ${{ steps.creds.outputs.available == 'true' }}
         with:
           name: functions-v4-artifact
           path: .
 
-      - name: Azure login
-        uses: azure/login@v2
-        if: ${{ steps.creds.outputs.available == 'true' }}
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Isolate Azure CLI cache (per-run)
-        if: ${{ steps.creds.outputs.available == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -220,7 +230,6 @@ jobs:
           echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
 
       - name: Pre-clear MSAL HTTP cache (NormalizedResponse mitigation)
-        if: ${{ steps.creds.outputs.available == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -228,8 +237,14 @@ jobs:
           rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
           echo "Pre-cleared MSAL caches"
 
-      - name: Show account
-        if: ${{ steps.creds.outputs.available == 'true' }}
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Select subscription and show context
         shell: bash
         env:
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -237,9 +252,27 @@ jobs:
           set -euo pipefail
           az account set --subscription "$SUBS"
           az account show --output table
+
+      - name: Resolve function host
+        shell: bash
+        env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RG: asora-psql-flex
+          APP: asora-function-dev
+          API_VERSION: 2022-03-01
+        run: |
+          set -euo pipefail
+          APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
+          APP_JSON=$(az rest --method get --url "$APP_URL")
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          if [ -z "$HOST" ]; then
+            echo "::error::defaultHostName not returned by ARM"; exit 1; fi
+          echo "Detected function host: $HOST"
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+
       - name: Detect plan tier
         id: plantier
-        if: ${{ steps.creds.outputs.available == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -252,7 +285,6 @@ jobs:
           echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
       - name: "Preflight: confirm build artifacts"
-        if: ${{ steps.creds.outputs.available == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -271,7 +303,6 @@ jobs:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         shell: bash
-        if: ${{ steps.creds.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           az account set --subscription "$SUBS"
@@ -306,7 +337,6 @@ jobs:
           az functionapp restart -g "$RG" -n "$APP" -o none
 
       - name: Deploy (Flex via OneDeploy)
-        if: ${{ steps.creds.outputs.available == 'true' && steps.plantier.outputs.tier == 'FlexConsumption' }}
         uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
@@ -314,14 +344,13 @@ jobs:
           respect-funcignore: true
 
       - name: Deploy (non-Flex via Kudu config-zip)
-        if: ${{ steps.creds.outputs.available == 'true' && steps.plantier.outputs.tier != 'FlexConsumption' }}
+        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' }}
         shell: bash
         run: |
           set -euo pipefail
           az functionapp deployment source config-zip -g asora-psql-flex -n asora-function-dev --src dist-v4-final.zip --timeout 600
 
       - name: Post-deploy verification (ARM + REST)
-        if: ${{ steps.creds.outputs.available == 'true' }}
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
