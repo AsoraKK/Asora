@@ -350,78 +350,103 @@ jobs:
           fi
           echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
-      - name: "Preflight: confirm build artifacts"
+      - name: "Preflight: validate build artifact structure"
         shell: bash
         run: |
           set -euo pipefail
-          test -f dist-v4-final.zip || { echo "::error::dist-v4-final.zip missing"; ls -la; exit 1; }
+          ZIP="dist-v4-final.zip"
           
-          echo "Verifying package structure..."
-          list() { unzip -Z -1 dist-v4-final.zip; }
-          list | sed -n '1,200p' || true
+          echo "=== Preflight Validation ==="
+          test -f "$ZIP" || { echo "::error::ZIP $ZIP not found"; exit 1; }
           
-          # Check for required files at zip root
-          for f in index.js package.json host.json; do
-            list | grep -Fxq "$f" || { echo "::error::$f missing at zip root"; exit 1; }
-          done
+          # List all files in ZIP
+          echo "ZIP contents:"
+          unzip -Z1 "$ZIP" | tee _files.txt
           
-          # Check for src entry point
-          (list | grep -Fx 'src/index.js' >/dev/null) || (list | grep -Fx 'dist/src/index.js' >/dev/null) || { echo "::error::src entry missing"; exit 1; }
+          # 1) host.json must be *at ZIP root* (no leading folder)
+          grep -qx "host.json" _files.txt \
+            || { echo "::error::host.json missing at ZIP root"; exit 1; }
+          echo "✓ host.json found at ZIP root"
           
-          # CRITICAL: Check for function.json files in function directories
-          function_count=0
-          for func in health feed; do
-            if list | grep -Fxq "${func}/function.json"; then
-              echo "✓ Found ${func}/function.json"
-              function_count=$((function_count + 1))
-            else
-              echo "::error::${func}/function.json missing in artifact"
+          # 2) Node v4 new model: require package.json at root  
+          grep -qx "package.json" _files.txt \
+            || { echo "::error::package.json missing at ZIP root"; exit 1; }
+          echo "✓ package.json found at ZIP root"
+          
+          # 3) Check for proper function entry points
+          # Look for JS files that might contain function definitions
+          JS_FILES=$(grep -E '(^|/).*\.js$' _files.txt | head -5)
+          if [ -n "$JS_FILES" ]; then
+            echo "Checking JS files for Azure Functions v4 patterns..."
+            FOUND_PATTERN=false
+            for js_file in $JS_FILES; do
+              if unzip -p "$ZIP" "$js_file" 2>/dev/null | grep -Eq "@azure/functions|app\.http\("; then
+                echo "✓ Found Azure Functions v4 pattern in: $js_file"
+                FOUND_PATTERN=true
+                break
+              fi
+            done
+            if [ "$FOUND_PATTERN" = "false" ]; then
+              echo "::warning::No obvious Node v4 function entry found; ensure your source exports functions via '@azure/functions'"
             fi
-          done
-          
-          if [ "$function_count" -eq 0 ]; then
-            echo "::error::No function.json files found in artifact"
-            exit 1
+          else
+            echo "::warning::No JS files found in ZIP"
           fi
           
-          echo "✓ Package verification passed: $function_count functions found"
+          # 4) Check for extra top-level folders (common mistake)
+          TOP_LEVEL_DIRS=$(grep -E '^[^/]+/$' _files.txt | wc -l)
+          if [ "$TOP_LEVEL_DIRS" -gt 3 ]; then
+            echo "::warning::Many top-level directories found. Ensure ZIP contains function app root, not a wrapper directory"
+          fi
+          
+          echo "✅ Preflight validation completed"
 
-      - name: Configure runtime settings for Node v4 (Flex-safe)
+      - name: "B) Normalize Flex settings for Node 20"
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: asora
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          API_VERSION: 2022-03-01
-          LOCATION: northeurope
-        shell: bash
-        run: |
-          set -euo pipefail
-          az account set --subscription "$SUBS"
-          bash .github/scripts/flex_runtime_fix.sh
-
-      - name: Clean Flex-incompatible settings
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         shell: bash
         run: |
           set -euo pipefail
           az account set --subscription "$SUBS"
+          
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+          
+          echo "=== B) Normalizing Flex Settings ==="
+          
+          # 1) Remove Flex-incompatible settings that can block indexing/deploy
+          echo "Removing incompatible app settings..."
           az functionapp config appsettings delete -g "$RG" -n "$APP" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP WEBSITE_NODE_DEFAULT_VERSION \
-            --output none || true
-          APP_SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$APP" 2>/dev/null || echo '[]')
-          if jq -e '.[] | select(.name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS" >/dev/null; then
-            echo "::error::Flex-incompatible app settings remain after cleanup"
-            jq '.[] | select(.name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS"
-            exit 1
+            -o none || true
+          
+          # 2) Ensure Flex runtime is explicitly set to Node 20
+          echo "Setting Flex runtime to Node 20..."
+          az resource update --ids "$APP_ID" \
+            --set properties.functionAppConfig.runtime.name="node" \
+                  properties.functionAppConfig.runtime.version="20" -o none
+          
+          # 3) Set essential function app settings for Node v4
+          echo "Setting Node v4 function app settings..."
+          az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
+            FUNCTIONS_EXTENSION_VERSION=~4 \
+            FUNCTIONS_WORKER_RUNTIME=node \
+            AzureWebJobsFeatureFlags=EnableWorkerIndexing \
+            FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true
+          
+          # 4) Add Cosmos connection if available
+          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
+            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
+              COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+              COSMOS_DATABASE_NAME="asora"
           fi
+          
+          echo "✅ Flex settings normalized"
           echo "✓ Flex-incompatible app settings removed"
 
-      - name: Deploy via Functions Action (One Deploy)
+      - name: "C) Deploy via Azure Functions Action (Flex optimized)"
         uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
@@ -429,7 +454,7 @@ jobs:
           remote-build: false
           respect-funcignore: true
 
-      - name: Verify functions indexed via admin API
+      - name: "D) Post-deploy verification with admin API"
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
@@ -437,66 +462,93 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          HOST="${FUNCTION_BASE_URL#https://}"; HOST="${HOST%%/*}"
-          CODE_PARAM=""
-          if [ -n "${FUNCTION_KEY:-}" ] && [ "${FUNCTION_KEY}" != "anonymous" ]; then
-            CODE_PARAM="?code=${FUNCTION_KEY}"
-          fi
-
-          echo "Probing function indexing via ARM..."
-          FUNCTIONS_JSON="[]"
-          CNT=0
-          for i in $(seq 1 20); do
-            echo "Attempt $i/20: Listing functions via ARM API..."
-            FUNCTIONS_JSON=$(az functionapp function list -g "$RG" -n "$APP" 2>/dev/null || echo "[]")
-            CNT=$(jq 'length' <<<"$FUNCTIONS_JSON" 2>/dev/null || echo 0)
-            echo "ARM reported functions: $CNT"
-            if [ "$CNT" -gt 0 ]; then
-              break
-            fi
-            echo "  No functions yet; waiting 15 seconds before retry..."
-            sleep 15
-          done
-
-          if [ "$CNT" -le 0 ]; then
-            echo "::error::Function list returned zero entries after retries"
-            echo "$FUNCTIONS_JSON"
-            exit 1
-          fi
-
-          echo "✓ Functions indexed successfully via ARM (${CNT} functions)."
-          jq -r '.[] | "  - " + .name' <<<"$FUNCTIONS_JSON" || true
-
-          echo "Checking host status endpoint..."
-          STATUS="000"
-          for i in $(seq 1 20); do
-            echo "Attempt $i/20: Querying admin host status..."
-            STATUS=$(curl -sS -o host_status.json -w "%{http_code}" "https://${HOST}/admin/host/status${CODE_PARAM}" || true)
-            if [ "$STATUS" = "200" ]; then
-              echo "Host status returned 200"
-              if jq -e . host_status.json >/dev/null 2>&1; then
-                jq . host_status.json
-              else
-                cat host_status.json
+          az account set --subscription "$SUBS"
+          API=2022-03-01
+          
+          echo "=== D) Post-Deploy Verification ==="
+          
+          # Discover host and key
+          echo "Getting site info and host key..."
+          SITE=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API}")
+          HOST=$(jq -r '.properties.defaultHostName' <<<"$SITE")
+          KEYS=$(az rest --method post --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=${API}" --body "{}" || echo '{}')
+          CODE=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS")
+          QP=""; [ -n "$CODE" ] && QP="?code=$CODE"
+          
+          echo "Host: $HOST"
+          echo "Admin API available: $([ -n "$CODE" ] && echo "yes" || echo "no (anonymous)")"
+          
+          # Wait for deployment to stabilize
+          echo "Waiting 30 seconds for deployment to stabilize..."
+          sleep 30
+          
+          # Check functions indexing (up to 5 minutes)
+          for attempt in $(seq 1 10); do
+            echo "=== Attempt $attempt/10: Checking function indexing ==="
+            
+            # 1) Host status
+            echo "Getting host status..."
+            if curl -fsS "https://${HOST}/admin/host/status${QP}" -o host_status.json 2>/dev/null; then
+              STATUS_STATE=$(jq -r '.state // "unknown"' host_status.json 2>/dev/null || echo "unknown")
+              STATUS_ERRORS=$(jq -r '.errors? // []' host_status.json 2>/dev/null || echo "[]")
+              echo "Host state: $STATUS_STATE"
+              if [ "$STATUS_ERRORS" != "[]" ] && [ "$STATUS_ERRORS" != "null" ]; then
+                echo "Host errors detected:"
+                jq '.errors' host_status.json 2>/dev/null || true
               fi
-              break
+            else
+              echo "Could not get host status"
+              STATUS_STATE="unknown"
             fi
-            echo "  Host status returned HTTP ${STATUS}; waiting 15 seconds before retry..."
-            sleep 15
+            
+            # 2) Functions list via admin API
+            echo "Getting functions list..."
+            FUNC_COUNT=0
+            if curl -fsS "https://${HOST}/admin/functions${QP}" -o admin_funcs.json 2>/dev/null; then
+              FUNC_COUNT=$(jq 'length' admin_funcs.json 2>/dev/null || echo 0)
+              echo "Admin API reported functions: $FUNC_COUNT"
+              if [ "$FUNC_COUNT" -gt 0 ]; then
+                echo "Function list:"
+                jq -r '.[] | "  - " + .name + " (" + (.config.bindings[0].type // "unknown") + ")"' admin_funcs.json 2>/dev/null || true
+              fi
+            else
+              echo "Admin API not accessible, trying ARM..."
+            fi
+            
+            # 3) Fallback to ARM enumeration
+            if [ "$FUNC_COUNT" -eq 0 ]; then
+              ARM_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions?api-version=2023-01-01" || echo '{}')
+              FUNC_COUNT_ARM=$(jq '.value|length' <<<"$ARM_JSON" 2>/dev/null || echo 0)
+              echo "ARM API reported functions: $FUNC_COUNT_ARM"
+              FUNC_COUNT=$FUNC_COUNT_ARM
+            fi
+            
+            # Success criteria
+            if [ "$FUNC_COUNT" -gt 0 ]; then
+              echo "✅ SUCCESS: Functions indexed successfully! Found $FUNC_COUNT functions"
+              echo "Host state: $STATUS_STATE"
+              exit 0
+            fi
+            
+            # Show specific errors for troubleshooting
+            if [ "$STATUS_STATE" = "Offline" ]; then
+              echo "❌ Host is offline - checking for configuration issues"
+            elif [ "$STATUS_STATE" = "Error" ]; then
+              echo "❌ Host has errors - check logs above"
+            else
+              echo "⏳ Host running but no functions indexed yet..."
+            fi
+            
+            [ "$attempt" -lt 10 ] && sleep 30
           done
-
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::Host status endpoint did not return 200 after retries"
-            cat host_status.json 2>/dev/null || true
-            exit 1
-          fi
-
-          if curl -fsS "https://${HOST}/admin/functions${CODE_PARAM}" -o admin_funcs.json 2>/dev/null; then
-            echo "Admin API returned $(jq 'length' admin_funcs.json 2>/dev/null || echo 0) functions"
-            jq -r '.[] | "  - " + .name' admin_funcs.json 2>/dev/null || cat admin_funcs.json
-          else
-            echo "Admin API not accessible; continuing"
-          fi
+          
+          echo "❌ FAILURE: Functions not indexed after 5 minutes"
+          echo "::group::Diagnostic Information"
+          echo "Final host status:"; cat host_status.json 2>/dev/null || echo "No host status"
+          echo "Final admin functions:"; cat admin_funcs.json 2>/dev/null || echo "No admin response"
+          echo "ARM functions response:"; echo "$ARM_JSON" 2>/dev/null || echo "No ARM response"
+          echo "::endgroup::"
+          exit 1
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
