@@ -4,7 +4,7 @@ import 'package:asora/core/security/cert_pinning.dart' as cp;
 void main() {
   group('Certificate pinning pins', () {
     test('no placeholders and valid format', () {
-      const pinsMap = cp.kPinnedSpki;
+      const pinsMap = cp.kPinnedDomains;
 
       // Must have at least one host configured
       expect(

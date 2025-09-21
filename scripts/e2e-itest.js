@@ -11,16 +11,25 @@
 const fs = require("fs");
 const path = require("path");
 
-const BASE_URL = process.env.FUNCTION_BASE_URL;
+const DEFAULT_BASE_URL = "https://asora-function-dev.azurewebsites.net";
+const BASE_URL = process.env.BASE_URL || process.env.FUNCTION_BASE_URL || DEFAULT_BASE_URL;
 const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
 const VERBOSE = process.argv.includes("--verbose");
+const LATENCY_THRESHOLD_SEC = Number(process.env.LATENCY_THRESHOLD_SEC || process.env.THRESHOLD_SEC || 2.0);
 
-const ok = (j) => j?.ok === true || j?.success === true || j?.status === 'ok';
+const ok = (j) => j?.ok === true || j?.success === true || j?.status === "ok";
 
 if (!BASE_URL) {
-  console.error("FUNCTION_BASE_URL is required");
+  console.error("BASE_URL is required (set BASE_URL or FUNCTION_BASE_URL)");
   process.exit(2);
 }
+
+if (Number.isNaN(LATENCY_THRESHOLD_SEC) || LATENCY_THRESHOLD_SEC <= 0) {
+  console.error("Invalid latency threshold; provide a positive number in LATENCY_THRESHOLD_SEC");
+  process.exit(2);
+}
+
+console.log(`[e2e] Target base URL: ${BASE_URL} (threshold ${LATENCY_THRESHOLD_SEC}s)`);
 
 function withSlash(base, p) {
   return `${base.replace(/\/$/, "")}/${p.replace(/^\//, "")}`;
@@ -62,13 +71,14 @@ async function getJson(url, options = {}) {
     headers["x-functions-key"] = FUNCTION_KEY;
   }
   const res = await fetch(url, { method: "GET", headers });
+  const text = await res.text();
   let json = null;
   try {
-    json = await res.json();
+    json = JSON.parse(text);
   } catch (_) {
     // ignore JSON parse error; keep json as null
   }
-  return { status: res.status, ok: res.ok, json };
+  return { status: res.status, ok: res.ok, json, text };
 }
 
 async function main() {
@@ -76,45 +86,54 @@ async function main() {
   const results = [];
   let failures = 0;
 
-  // Test 1: /api/health
-  try {
-    const url = withSlash(BASE_URL, "/api/health");
-    const t0 = Date.now();
-    const res = await getJsonWithRetry(url);
-    const durationMs = Date.now() - t0;
-    const pass = res.status === 200 && res.json && ok(res.json);
-    if (!pass) {
+  async function runCheck(name, path) {
+    try {
+      const url = withSlash(BASE_URL, path);
+      const t0 = Date.now();
+      const res = await getJsonWithRetry(url);
+      const durationMs = Date.now() - t0;
+      const snippet = (res.text || "").replace(/\s+/g, " ").slice(0, 200);
+      let pass = res.status === 200 && res.json && ok(res.json);
+      if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
+        pass = false;
+      }
+
+      const logLine = `[${name}] status=${res.status} latency=${durationMs}ms body=${snippet}`;
+      if (pass) {
+        if (VERBOSE) {
+          console.log(`${logLine} (pass)`);
+        } else {
+          console.log(`${logLine}`);
+        }
+      } else {
+        console.error(`${logLine} (fail)`);
+        failures++;
+        if (!res.json || !ok(res.json)) {
+          console.error(`${name} response validation failed: ${JSON.stringify(res.json)}`);
+        }
+        if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
+          console.error(`${name} latency ${durationMs}ms exceeded threshold ${LATENCY_THRESHOLD_SEC}s`);
+        }
+      }
+
+      results.push({
+        name,
+        url,
+        status: res.status,
+        durationMs,
+        pass,
+        body: res.json,
+        snippet,
+      });
+    } catch (err) {
       failures++;
-      console.error(`health check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
-    } else if (VERBOSE) {
-      console.log(`health check ok: status=${res.status}, body=${JSON.stringify(res.json)}`);
+      console.error(`${name} check error:`, err);
+      results.push({ name, error: String(err) });
     }
-    results.push({ name: "health", url, status: res.status, durationMs, pass, body: res.json });
-  } catch (err) {
-    failures++;
-    console.error("health check error:", err);
-    results.push({ name: "health", error: String(err) });
   }
 
-  // Test 2: /api/feed
-  try {
-    const url = withSlash(BASE_URL, "/api/feed");
-    const t0 = Date.now();
-    const res = await getJsonWithRetry(url);
-    const durationMs = Date.now() - t0;
-    const pass = res.status === 200 && res.json && ok(res.json);
-    if (!pass) {
-      failures++;
-      console.error(`feed check failed: status=${res.status}, body=${JSON.stringify(res.json)}`);
-    } else if (VERBOSE) {
-      console.log(`feed check ok: status=${res.status}, body=${JSON.stringify(res.json)}`);
-    }
-    results.push({ name: "feed", url, status: res.status, durationMs, pass, body: res.json });
-  } catch (err) {
-    failures++;
-    console.error("feed check error:", err);
-    results.push({ name: "feed", error: String(err) });
-  }
+  await runCheck("health", "/api/health");
+  await runCheck("feed", "/api/feed");
 
   const finishedAt = new Date().toISOString();
   const summary = {
@@ -153,4 +172,3 @@ main().catch((e) => {
   console.error("E2E script error:", e);
   process.exit(1);
 });
-

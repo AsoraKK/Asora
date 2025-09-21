@@ -98,6 +98,7 @@ jobs:
           fi
           
           echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
+          echo "BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
 
       - name: "Wait for Function App readiness"

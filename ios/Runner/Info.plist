@@ -45,5 +45,45 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSPinnedDomains</key>
+		<dict>
+			<key>asora-function-dev.azurewebsites.net</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+				<key>NSPinnedLeafIdentities</key>
+				<array>
+					<dict>
+						<key>SPKI-SHA256</key>
+						<data>x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=</data>
+					</dict>
+					<dict>
+						<key>SPKI-SHA256</key>
+						<data>sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=</data>
+					</dict>
+				</array>
+			</dict>
+			<key>asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<false/>
+				<key>NSPinnedLeafIdentities</key>
+				<array>
+					<dict>
+						<key>SPKI-SHA256</key>
+						<data>x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=</data>
+					</dict>
+					<dict>
+						<key>SPKI-SHA256</key>
+						<data>sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=</data>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>
