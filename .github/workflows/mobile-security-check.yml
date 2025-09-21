@@ -8,12 +8,60 @@ on:
   schedule:
     - cron: '0 6 * * 1'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   check-pins-and-integrity:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate Azure credentials
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          for var in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var is not configured in repository secrets";
+              exit 1;
+            fi
+          done
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Select subscription and show context
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show --output table
+
+      - name: Resolve function host
+        env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RG: asora-psql-flex
+          APP: asora-function-dev
+          API_VERSION: 2022-03-01
+        run: |
+          set -euo pipefail
+          APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
+          APP_JSON=$(az rest --method get --url "$APP_URL")
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          if [ -z "$HOST" ]; then
+            echo "::error::defaultHostName not returned by ARM"; exit 1; fi
+          echo "Detected function host: $HOST"
+          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+
       
       - name: Check for SPKI pin placeholders in entire codebase
         shell: bash
@@ -39,6 +87,8 @@ jobs:
           fi
 
       - name: Verify live certificate pins
+        env:
+          EXTRA_PIN_HOSTS: asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
         shell: bash
         run: |
           set -euo pipefail
