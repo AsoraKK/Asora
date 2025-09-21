@@ -62,9 +62,8 @@ jobs:
           # ARM API for reliable function app details
           echo "Getting function app details via ARM API..."
           app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
-          access_token=$(az account get-access-token --query accessToken -o tsv)
           
-          app_data=$(curl -s -H "Authorization: Bearer $access_token" "$app_url")
+          app_data=$(az rest --method get --url "$app_url")
           host=$(echo "$app_data" | jq -r '.properties.defaultHostName // empty')
           
           if [ -z "$host" ]; then
@@ -73,17 +72,18 @@ jobs:
           fi
           
           echo "Function app hostname: $host"
-          
+
           # RBAC-safe key discovery
           echo "Attempting key discovery..."
           key=""
           
-          # Try function keys first (requires Function App Operator role)
-          key_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions/admin/masterkey?api-version=2022-03-01"
-          key_response=$(curl -s -w "%{http_code}" -H "Authorization: Bearer $access_token" "$key_url" 2>/dev/null || echo "")
+          # Try function host keys (requires Function App Operator role)
+          # Use POST to listkeys endpoint which is the proper way
+          keys_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=2022-03-01"
+          keys_response=$(az rest --method post --url "$keys_url" --headers "Content-Type=application/json" --body "{}" 2>/dev/null || echo "{}")
           
-          if [[ "$key_response" == *"200" ]]; then
-            key=$(echo "$key_response" | head -n -1 | jq -r '.value // empty')
+          if [ "$keys_response" != "{}" ]; then
+            key=$(echo "$keys_response" | jq -r '.masterKey // .functionKeys.default // empty' 2>/dev/null || echo "")
           fi
           
           # Fallback to CLI if ARM fails or insufficient permissions
@@ -100,6 +100,7 @@ jobs:
           echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
+          echo "Resolved deployment endpoint: https://${host}"
 
       - name: "Wait for Function App readiness"
         shell: bash
