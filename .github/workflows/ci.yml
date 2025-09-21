@@ -350,56 +350,11 @@ jobs:
           fi
           echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
 
-      - name: "Preflight: validate build artifact structure"
+      - name: Preflight artifact validation
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="dist-v4-final.zip"
-          
-          echo "=== Preflight Validation ==="
-          test -f "$ZIP" || { echo "::error::ZIP $ZIP not found"; exit 1; }
-          
-          # List all files in ZIP
-          echo "ZIP contents:"
-          unzip -Z1 "$ZIP" | tee _files.txt
-          
-          # 1) host.json must be *at ZIP root* (no leading folder)
-          grep -qx "host.json" _files.txt \
-            || { echo "::error::host.json missing at ZIP root"; exit 1; }
-          echo "✓ host.json found at ZIP root"
-          
-          # 2) Node v4 new model: require package.json at root  
-          grep -qx "package.json" _files.txt \
-            || { echo "::error::package.json missing at ZIP root"; exit 1; }
-          echo "✓ package.json found at ZIP root"
-          
-          # 3) Check for proper function entry points
-          # Look for JS files that might contain function definitions
-          JS_FILES=$(grep -E '(^|/).*\.js$' _files.txt | head -5)
-          if [ -n "$JS_FILES" ]; then
-            echo "Checking JS files for Azure Functions v4 patterns..."
-            FOUND_PATTERN=false
-            for js_file in $JS_FILES; do
-              if unzip -p "$ZIP" "$js_file" 2>/dev/null | grep -Eq "@azure/functions|app\.http\("; then
-                echo "✓ Found Azure Functions v4 pattern in: $js_file"
-                FOUND_PATTERN=true
-                break
-              fi
-            done
-            if [ "$FOUND_PATTERN" = "false" ]; then
-              echo "::warning::No obvious Node v4 function entry found; ensure your source exports functions via '@azure/functions'"
-            fi
-          else
-            echo "::warning::No JS files found in ZIP"
-          fi
-          
-          # 4) Check for extra top-level folders (common mistake)
-          TOP_LEVEL_DIRS=$(grep -E '^[^/]+/$' _files.txt | wc -l)
-          if [ "$TOP_LEVEL_DIRS" -gt 3 ]; then
-            echo "::warning::Many top-level directories found. Ensure ZIP contains function app root, not a wrapper directory"
-          fi
-          
-          echo "✅ Preflight validation completed"
+          MODE=zip ZIP=dist-v4-final.zip bash .github/scripts/preflight.sh
 
       - name: "B) Normalize Flex settings for Node 20"
         env:
