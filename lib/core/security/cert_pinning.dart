@@ -25,6 +25,7 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 ///     | openssl x509 -pubkey -noout \
 ///     | openssl pkey -pubin -outform der \
 ///     | openssl dgst -sha256 -binary | base64
+/// Keep in sync with mobile-expected-pins.json and platform configs.
 const Map<String, List<String>> kPinnedDomains = {
   // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
