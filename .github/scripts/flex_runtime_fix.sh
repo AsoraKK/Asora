@@ -30,7 +30,7 @@ echo "kind=${KIND:-<unknown>} tier=${PLAN_TIER:-<unknown>} flex=${IS_FLEX}"
 if [ "$IS_FLEX" -eq 1 ]; then
   echo "Flex plan detected. Removing deprecated app settings..."
   az functionapp config appsettings delete -g "$RG" -n "$APP" \
-    --setting-names FUNCTIONS_WORKER_RUNTIME FUNCTIONS_EXTENSION_VERSION WEBSITE_NODE_DEFAULT_VERSION \
+    --setting-names FUNCTIONS_WORKER_RUNTIME FUNCTIONS_EXTENSION_VERSION WEBSITE_NODE_DEFAULT_VERSION WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
     --output none || true
 
   echo "Ensuring linuxFxVersion cleared for Flex..."
@@ -39,8 +39,7 @@ if [ "$IS_FLEX" -eq 1 ]; then
   echo "Setting safe baseline app settings..."
   az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
     AzureWebJobsFeatureFlags=EnableWorkerIndexing \
-    FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-    WEBSITE_RUN_FROM_PACKAGE=1
+    FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true
 
   echo "Fetching current runtime configuration..."
   RUNTIME_JSON="$(az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API_VERSION}")"
@@ -64,9 +63,9 @@ if [ "$IS_FLEX" -eq 1 ]; then
 
   echo "Asserting deprecated settings are absent..."
   APP_SETTINGS_JSON="$(az functionapp config appsettings list -g "$RG" -n "$APP")"
-  if jq -e '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" or .name=="FUNCTIONS_EXTENSION_VERSION" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS_JSON" >/dev/null; then
+  if jq -e '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" or .name=="FUNCTIONS_EXTENSION_VERSION" or .name=="WEBSITE_NODE_DEFAULT_VERSION" or .name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP")' <<<"$APP_SETTINGS_JSON" >/dev/null; then
     echo "::error::Deprecated app settings still present after cleanup" >&2
-    jq '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" or .name=="FUNCTIONS_EXTENSION_VERSION" or .name=="WEBSITE_NODE_DEFAULT_VERSION")' <<<"$APP_SETTINGS_JSON"
+    jq '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" or .name=="FUNCTIONS_EXTENSION_VERSION" or .name=="WEBSITE_NODE_DEFAULT_VERSION" or .name=="WEBSITE_RUN_FROM_PACKAGE" or .name=="WEBSITE_RUN_FROM_ZIP")' <<<"$APP_SETTINGS_JSON"
     exit 1
   fi
   echo "✓ Deprecated app settings removed."
