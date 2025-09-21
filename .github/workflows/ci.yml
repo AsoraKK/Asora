@@ -164,21 +164,43 @@ jobs:
           echo "Packing v4 artifact..."
           rm -rf "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
           mkdir -p "$ROOT/deploy"
+          
           # host.json lives at repo root, include it at zip root
           cp "$ROOT/host.json" "$ROOT/deploy/"
+          
           # include functions package.json
           cp "$ROOT/functions/package.json" "$ROOT/deploy/"
+          
           # compiled output (copy entire dist to preserve relative imports)
           test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
           cp -R "$ROOT/functions/dist/"* "$ROOT/deploy/"
+          
           # create thin root entrypoint for v4 runtime
           cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
+          
+          # CRITICAL: Copy function directories with function.json files
+          echo "Copying function directories..."
+          for func_dir in health feed; do
+            if [ -d "$ROOT/functions/$func_dir" ]; then
+              echo "  Copying $func_dir..."
+              mkdir -p "$ROOT/deploy/$func_dir"
+              cp "$ROOT/functions/$func_dir/function.json" "$ROOT/deploy/$func_dir/"
+            else
+              echo "  Warning: $func_dir directory not found"
+            fi
+          done
+          
           # production node_modules
           # re-install prod deps in functions and copy
           pushd "$ROOT/functions" >/dev/null
           npm ci --omit=dev
           popd >/dev/null
           cp -R "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
+          
+          # Verify package structure before zipping
+          echo "Package contents:"
+          find "$ROOT/deploy" -name "*.json" | sort
+          
           # create zip
           pushd "$ROOT/deploy" >/dev/null
           zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db"
@@ -289,12 +311,36 @@ jobs:
         run: |
           set -euo pipefail
           test -f dist-v4-final.zip || { echo "::error::dist-v4-final.zip missing"; ls -la; exit 1; }
+          
+          echo "Verifying package structure..."
           list() { unzip -Z -1 dist-v4-final.zip; }
           list | sed -n '1,200p' || true
+          
+          # Check for required files at zip root
           for f in index.js package.json host.json; do
             list | grep -Fxq "$f" || { echo "::error::$f missing at zip root"; exit 1; }
           done
+          
+          # Check for src entry point
           (list | grep -Fx 'src/index.js' >/dev/null) || (list | grep -Fx 'dist/src/index.js' >/dev/null) || { echo "::error::src entry missing"; exit 1; }
+          
+          # CRITICAL: Check for function.json files in function directories
+          function_count=0
+          for func in health feed; do
+            if list | grep -Fxq "${func}/function.json"; then
+              echo "✓ Found ${func}/function.json"
+              function_count=$((function_count + 1))
+            else
+              echo "::error::${func}/function.json missing in artifact"
+            fi
+          done
+          
+          if [ "$function_count" -eq 0 ]; then
+            echo "::error::No function.json files found in artifact"
+            exit 1
+          fi
+          
+          echo "✓ Package verification passed: $function_count functions found"
 
       - name: Configure runtime settings for Node v4 (Flex-safe)
         env:
@@ -313,19 +359,22 @@ jobs:
           [ -n "$PLAN_ID" ] && PLAN_TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv || true)"
           KIND="$(az functionapp show -g "$RG" -n "$APP" --query kind -o tsv || true)"
 
+          echo "Configuring Node.js runtime settings..."
           az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
             AzureWebJobsFeatureFlags=EnableWorkerIndexing \
             FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-            FUNCTIONS_EXTENSION_VERSION=~4
+            FUNCTIONS_EXTENSION_VERSION=~4 \
+            FUNCTIONS_WORKER_RUNTIME=node \
+            WEBSITE_RUN_FROM_PACKAGE=1
 
           if [ "$PLAN_TIER" = "FlexConsumption" ]; then
-            az functionapp config appsettings delete -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || true
+            az functionapp config appsettings delete -g "$RG" -n "$APP" --setting-names WEBSITE_NODE_DEFAULT_VERSION || true
             az resource update -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none || true
           else
             if [[ "$KIND" == *linux* ]]; then
               az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none
             fi
-            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+            az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings WEBSITE_NODE_DEFAULT_VERSION=~20
           fi
 
           if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
@@ -336,21 +385,31 @@ jobs:
 
           az functionapp restart -g "$RG" -n "$APP" -o none
 
-      - name: Deploy (Flex via OneDeploy)
-        uses: Azure/functions-action@v1
-        with:
-          app-name: asora-function-dev
-          package: dist-v4-final.zip
-          respect-funcignore: true
-
-      - name: Deploy (non-Flex via Kudu config-zip)
-        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' }}
+      - name: Deploy via Zip Deploy
         shell: bash
         run: |
           set -euo pipefail
+          echo "Deploying via Zip Deploy with WEBSITE_RUN_FROM_PACKAGE=1..."
           az functionapp deployment source config-zip -g asora-psql-flex -n asora-function-dev --src dist-v4-final.zip --timeout 600
 
-      - name: Post-deploy verification (ARM + REST)
+      - name: Fetch host key for admin API
+        env:
+          RG: asora-psql-flex
+          APP: asora-function-dev
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "$SUBS"
+          API_VERSION=2022-03-01
+          KEYS_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=${API_VERSION}"
+          KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}")
+          KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
+          test -n "$KEY" || { echo "::warning::No host key; will try anonymous"; KEY=""; }
+          echo "HOST_KEY=$KEY" >> $GITHUB_ENV
+          echo "Function host key obtained"
+
+      - name: Verify functions indexed via admin API
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
@@ -358,19 +417,60 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          az account set --subscription "$SUBS"
-          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-          get_state(){ az resource show --ids "$APP_ID" --query "properties.state" -o tsv 2>/dev/null || echo ""; }
-          list_cnt(){ az functionapp function list -g "$RG" -n "$APP" --query "length(@)" -o tsv 2>/dev/null || az rest --method GET --url "https://management.azure.com${APP_ID}/functions?api-version=2023-01-01" --query "length(value)" -o tsv 2>/dev/null || echo 0; }
-          for i in $(seq 1 12); do
-            STATE="$(get_state)"; echo "Attempt $i/12 state: ${STATE:-<empty>}"
-            if [ "$STATE" = "Running" ]; then
-              CNT="$(list_cnt)"; echo "Functions: $CNT"
-              [ "$CNT" -gt 0 ] && { az functionapp function list -g "$RG" -n "$APP" -o table 2>/dev/null || true; exit 0; }
+          HOST="${FUNCTION_BASE_URL#https://}"; HOST="${HOST%%/*}"
+          CODE_PARAM=""; [ -n "${HOST_KEY:-}" ] && CODE_PARAM="?code=${HOST_KEY}"
+
+          echo "Probing host status and function indexing..."
+          
+          # Check host status
+          echo "Getting host status..."
+          curl -fsS "https://${HOST}/admin/host/status${CODE_PARAM}" -o host_status.json || true
+          if [ -f host_status.json ]; then
+            jq . host_status.json || cat host_status.json
+          fi
+
+          # Wait for functions to be indexed (up to 10 minutes)
+          for i in $(seq 1 20); do
+            echo "Attempt $i/20: Checking function indexing..."
+            
+            # Try admin API first
+            CNT=0
+            if curl -fsS "https://${HOST}/admin/functions${CODE_PARAM}" -o admin_funcs.json 2>/dev/null; then
+              CNT=$(jq 'length' admin_funcs.json 2>/dev/null || echo 0)
+              echo "Admin API reported functions: $CNT"
+            else
+              echo "Admin API not accessible, trying ARM..."
             fi
-            S=$((5*i)); [ $S -gt 30 ] && S=30; sleep "$S"
+            
+            # Fallback to ARM enumeration
+            if [ "$CNT" -eq 0 ]; then
+              ARM_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions?api-version=2023-01-01"
+              ARM_JSON=$(az rest --method get --url "$ARM_URL" || echo '{}')
+              CNT_ARM=$(jq '.value|length' <<<"$ARM_JSON" 2>/dev/null || echo 0)
+              echo "ARM API reported functions: $CNT_ARM"
+              CNT=$CNT_ARM
+            fi
+
+            if [ "$CNT" -gt 0 ]; then
+              echo "✓ Functions indexed successfully! Found $CNT functions"
+              if [ -f admin_funcs.json ]; then
+                echo "Function list:"
+                jq -r '.[] | "  - " + .name + " (" + .config.bindings[0].type + ")"' admin_funcs.json 2>/dev/null || true
+              fi
+              exit 0
+            fi
+            
+            echo "  No functions indexed yet, waiting 30 seconds..."
+            sleep 30
           done
-          echo "::error::Verification did not complete successfully"; exit 1
+          
+          echo "::error::Functions not indexed after 10 minutes"
+          echo "::group::Diagnostics"
+          echo "Host status:"; cat host_status.json 2>/dev/null || echo "No host status"
+          echo "Admin list:"; cat admin_funcs.json 2>/dev/null || echo "No admin response"
+          echo "ARM response:"; echo "$ARM_JSON" || echo "No ARM response"
+          echo "::endgroup::"
+          exit 1
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
