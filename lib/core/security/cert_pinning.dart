@@ -25,7 +25,7 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 ///     | openssl x509 -pubkey -noout \
 ///     | openssl pkey -pubin -outform der \
 ///     | openssl dgst -sha256 -binary | base64
-const Map<String, List<String>> kPinnedSpki = {
+const Map<String, List<String>> kPinnedDomains = {
   // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
     'sha256/x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=', // primary (leaf)
@@ -41,7 +41,7 @@ const Map<String, List<String>> kPinnedSpki = {
 /// Guard: never ship with placeholders.
 void _assertNoPlaceholders() {
   assert(
-    kPinnedSpki.values
+    kPinnedDomains.values
         .expand((e) => e)
         .every(
           (p) =>
@@ -81,14 +81,14 @@ class PinnedCertHttpClientAdapter implements HttpClientAdapter {
       );
       final host = Uri.parse(options.uri.toString()).host;
 
-      if (kPinnedSpki.containsKey(host)) {
+      if (kPinnedDomains.containsKey(host)) {
         debugPrint('🔒 Certificate validated for pinned host: $host');
       }
 
       return response;
     } catch (e) {
       final host = Uri.parse(options.uri.toString()).host;
-      if (kPinnedSpki.containsKey(host)) {
+      if (kPinnedDomains.containsKey(host)) {
         _logCertPinViolation(host, 'fetch_failed: ${e.toString()}');
       }
       rethrow;
@@ -133,7 +133,7 @@ class _CertPinningInterceptor extends Interceptor {
 
     final host = Uri.parse(options.uri.toString()).host;
 
-    if (kPinnedSpki.containsKey(host)) {
+    if (kPinnedDomains.containsKey(host)) {
       debugPrint('🔍 Certificate pinning check for: $host');
       // Note: In Flutter, we rely on the HttpClientAdapter and platform
       // certificate validation. The actual SPKI validation would need
@@ -149,7 +149,7 @@ class _CertPinningInterceptor extends Interceptor {
     if (err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.unknown) {
       final host = Uri.parse(err.requestOptions.uri.toString()).host;
-      if (kPinnedSpki.containsKey(host)) {
+      if (kPinnedDomains.containsKey(host)) {
         _logCertPinViolation(host, 'connection_failed');
         // Map to a user-friendly message when we suspect pin mismatch / TLS error
         err = DioException(
@@ -171,7 +171,7 @@ bool isPinValidationError(DioException err) {
   if (err.type == DioExceptionType.connectionError ||
       err.type == DioExceptionType.unknown) {
     final host = Uri.parse(err.requestOptions.uri.toString()).host;
-    return kPinnedSpki.containsKey(host);
+    return kPinnedDomains.containsKey(host);
   }
   return false;
 }
@@ -220,7 +220,7 @@ CertPinningInfo getCertPinningInfo() {
   _assertNoPlaceholders();
   return const CertPinningInfo(
     enabled: kEnableCertPinning,
-    pins: kPinnedSpki,
+    pins: kPinnedDomains,
     buildMode: kDebugMode ? 'debug' : 'release',
   );
 }
