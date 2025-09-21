@@ -28,13 +28,13 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 const Map<String, List<String>> kPinnedDomains = {
   // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
-    'sha256/x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=', // primary (leaf)
-    'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=', // backup (planned rotation)
+    'sha256/8Yr68F+Il4QA1qJ0q3przJXW5zckEtwBjUB05FH5AMw=', // Azure leaf cert pattern
+    'sha256/ZkWBotC4nL+Ba/kXaVPx7TpoRSF9uwxEAuufz67J7sQ=', // Azure intermediate cert
   ],
   // Legacy/dev hostname (if still called by any client)
   'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
-    'sha256/x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
-    'sha256/sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
+    'sha256/8Yr68F+Il4QA1qJ0q3przJXW5zckEtwBjUB05FH5AMw=', // Azure leaf cert pattern
+    'sha256/ZkWBotC4nL+Ba/kXaVPx7TpoRSF9uwxEAuufz67J7sQ=', // Azure intermediate cert
   ],
 };
 
