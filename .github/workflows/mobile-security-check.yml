@@ -5,6 +5,8 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  schedule:
+    - cron: '0 6 * * 1'
 
 jobs:
   check-pins-and-integrity:
@@ -37,13 +39,31 @@ jobs:
             echo "✓ No SPKI pin placeholders found in Dart files."
             echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
-          
-          # Additional check for common security placeholder patterns
+
+      - name: Verify live certificate pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_pins.py
+          cat mobile-pin-report.json
+
+      - name: Upload pin verification report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-pin-report
+          path: mobile-pin-report.json
+          if-no-files-found: error
+
+      - name: Check for security placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
           security_placeholders=$(find . -name "*.dart" -type f -exec grep -l "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)
-          
           if [ -n "$security_placeholders" ]; then
             echo "::warning::Found security-related placeholders that may need attention:"
             find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true
+          else
+            echo "✓ No security TODO/FIXME placeholders detected."
           fi
       
       - name: Dart format check (optional)
