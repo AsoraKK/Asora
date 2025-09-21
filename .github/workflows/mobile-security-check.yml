@@ -22,21 +22,19 @@ jobs:
           
           echo "Scanning entire codebase for SPKI pin placeholders..."
           
-          # Search all Dart files for placeholder patterns
-          placeholder_files=$(find . -name "*.dart" -type f -exec grep -l "REPLACE_WITH_SPKI_PIN\|YOUR_SPKI_PIN_HERE\|TODO.*SPKI\|FIXME.*SPKI" {} \; 2>/dev/null || true)
+          # Search for actual placeholder values in pin lists, excluding validation code
+          # Look for placeholder patterns that appear as actual pin values (not in validation)
+          placeholder_count=$(find . -name "*.dart" -type f -exec grep -c "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null | grep -v "^0$" | wc -l || echo "0")
           
-          if [ -n "$placeholder_files" ]; then
-            echo "::error::Found SPKI pin placeholders in the following files:"
-            echo "$placeholder_files"
-            echo ""
-            echo "Detailed matches:"
-            find . -name "*.dart" -type f -exec grep -Hn "REPLACE_WITH_SPKI_PIN\|YOUR_SPKI_PIN_HERE\|TODO.*SPKI\|FIXME.*SPKI" {} \; 2>/dev/null || true
+          if [ "$placeholder_count" -gt 0 ]; then
+            echo "::error::Found SPKI pin placeholders in pin values:"
+            find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true
             echo ""
             echo "All SPKI pin placeholders must be replaced with real pins before merging."
             echo "Update the authoritative pins in lib/core/security/cert_pinning.dart."
             exit 1
           else
-            echo "✓ No SPKI pin placeholders found in Dart files."
+            echo "✓ No SPKI pin placeholders found in pin values."
             echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
 

@@ -58,30 +58,39 @@ jobs:
           bash check_p1_coverage.sh | tee p1_coverage_output.txt
 
       - name: Comment P1 coverage
-        if: ${{ github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let body = '';
-            try {
-              body = fs.readFileSync('p1_coverage_output.txt', 'utf8').trim();
-            } catch (err) {
-              body = 'P1 coverage output unavailable.';
+            const path = require('path');
+            const summaryPath = path.join(process.env.GITHUB_WORKSPACE, 'p1_coverage_output.txt');
+            const issue_number = context.issue.number;
+
+            if (!issue_number) {
+              core.info('Coverage comment skipped: no issue number in context');
+              return;
             }
-            const comment = [
-              '### P1 Coverage Report',
-              '```',
-              body || 'P1 coverage script produced no output.',
-              '```'
-            ].join('\n');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: comment
-            });
+
+            const body = fs.existsSync(summaryPath)
+              ? fs.readFileSync(summaryPath, 'utf8').trim() || 'P1 coverage script produced no output.'
+              : 'P1 coverage output unavailable.';
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body: ['### P1 Coverage Report', '```', body, '```'].join('\n')
+              });
+            } catch (error) {
+              if (error.status === 403) {
+                core.info('Coverage comment skipped: insufficient permissions (likely forked PR).');
+              } else {
+                throw error;
+              }
+            }
 
       - name: Fail if coverage below threshold
         if: ${{ steps.p1_coverage.outcome == 'failure' }}
@@ -173,11 +182,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Azure credentials
+        id: creds
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_SUBSCRIPTION_ID:-}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Azure credentials missing; skipping deployment steps."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
         if: ${{ steps.creds.outputs.available == 'true' }}
         with:
           name: functions-v4-artifact
           path: .
+
+      - name: Azure login
+        uses: azure/login@v2
+        if: ${{ steps.creds.outputs.available == 'true' }}
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Isolate Azure CLI cache (per-run)
         if: ${{ steps.creds.outputs.available == 'true' }}
@@ -196,13 +228,6 @@ jobs:
           rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
           echo "Pre-cleared MSAL caches"
 
-      - name: Azure login
-        uses: azure/login@v2
-        if: ${{ steps.creds.outputs.available == 'true' }}
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Show account
         if: ${{ steps.creds.outputs.available == 'true' }}
         shell: bash
