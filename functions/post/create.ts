@@ -10,11 +10,13 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
 import { CosmosClient } from '@azure/cosmos';
+import { createCosmosClient, getTargetDatabase } from '../shared/cosmos-client';
 import { createHiveClient, HiveAIClient } from '../shared/hive-client';
 import { verifyJWT, extractUserIdFromJWT } from '../shared/auth-utils';
 import { createRateLimiter, endpointKeyGenerator } from '../shared/rate-limiter';
 import { TIER_LIMITS, DEFAULT_TIER } from '../shared/tier-config';
 import { adjustReputation } from '../shared/reputation';
+import * as crypto from 'crypto';
 
 // Request validation schema
 const CreatePostSchema = z.object({
@@ -207,11 +209,12 @@ export async function createPost(
         postStatus = 'under_review';
     }
 
-    // 6. Save to repository (Cosmos when available)
+    // 6. Save to repository (dual-write to legacy and target containers)
     const postId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const postUuid = crypto.randomUUID(); // Use UUID for target schema
     const now = new Date().toISOString();
 
-    const postDocument = {
+    const legacyPostDocument = {
       id: postId,
       userId,
       content,
@@ -237,10 +240,51 @@ export async function createPost(
       }
     };
 
+    // Target schema document for posts_v2
+    const targetPostDocument = {
+      postId: postUuid,  // UUID partition key
+      authorId: userId,  // Keep as field (will be user_uuid after auth migration)
+      text: content,
+      title: title || null,
+      mediaUrls: mediaUrls || [],
+      tags: tags || [],
+      visibility,
+      status: postStatus,
+      createdAt: now,
+      deletedAt: null,
+      score: 0,
+      metadata: {
+        location: null,
+        category: tags?.[0] || null
+      },
+      counts: {
+        likes: 0,
+        replies: 0,
+        reposts: 0,
+        views: 0
+      },
+      moderation: {
+        hiveResponse: moderationResult,
+        reviewedAt: null,
+        reviewedBy: null,
+        finalDecision: null
+      }
+    };
+
     if (database) {
       try {
+        // Create new Cosmos client with proper config
+        const cosmosClient = createCosmosClient();
+        const containers = getTargetDatabase(cosmosClient);
+        
+        // Dual-write: Legacy posts container (temporary)
         const postsContainer = database.container('posts');
-        await postsContainer.items.create(postDocument);
+        await postsContainer.items.create(legacyPostDocument);
+        
+        // Target posts_v2 container with correct partition key
+        await containers.postsV2.items.create(targetPostDocument);
+        
+        context.log(`Post dual-written: legacy=${postId}, target=${postUuid}`);
       } catch (persistErr) {
         context.log('Persist post skipped or failed (non-fatal in test/dev):', persistErr);
       }
@@ -284,7 +328,7 @@ export async function createPost(
 
     // 8. Return result
     const result: PostCreationResult = {
-      postId,
+      postId: postUuid, // Return target UUID
       status: postStatus,
       moderationResult: {
         action: moderationResult.action,
@@ -293,7 +337,7 @@ export async function createPost(
       }
     };
 
-    context.log(`Post ${postId} created with status: ${postStatus}`);
+    context.log(`Post ${postUuid} created with status: ${postStatus}`);
 
     return {
       status: postStatus === 'rejected' ? 200 : 201, // Still 201 for under_review
