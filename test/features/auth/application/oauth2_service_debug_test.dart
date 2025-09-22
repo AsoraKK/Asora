@@ -77,6 +77,7 @@ Future<bool> _fakeLauncher(
   LaunchMode mode = LaunchMode.platformDefault,
 }) async => true;
 
+// ignore: unused_element
 class _FullFlowWebService extends OAuth2Service {
   _FullFlowWebService()
     : super(
@@ -218,6 +219,7 @@ class _MemSecureStorage extends FlutterSecureStorage {
   }
 }
 
+// ignore: unused_element
 class _ErrorHttp extends http.BaseClient {
   final int code;
   final String body;
@@ -232,6 +234,7 @@ class _ErrorHttp extends http.BaseClient {
   }
 }
 
+// ignore: unused_element
 class _ThrowingHttp extends http.BaseClient {
   final Exception ex;
   _ThrowingHttp(this.ex);
