@@ -60,6 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           az account set --subscription "${SUBS}"
+          az account get-access-token --resource https://management.azure.com -o none
           az account show --output table
 
       - name: Setup Azure CLI isolation
@@ -124,6 +125,35 @@ jobs:
           done
 
           echo "::error::App not Running"; exit 1
+
+      - name: Probe admin endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="${FUNCTION_BASE_URL#https://}"
+          KEY="${FUNCTION_KEY}"
+          
+          # Set up query params for authentication
+          if [ "$KEY" != "anonymous" ]; then
+            QP="?code=${KEY}"
+          else
+            QP=""
+          fi
+          
+          echo "Probing admin endpoints on: $HOST"
+          
+          echo "=== GET /admin/host/status ==="
+          curl -fsS "https://${HOST}/admin/host/status${QP}" | jq . || echo "Host status probe failed"
+          
+          echo "=== GET /admin/functions ==="
+          FUNCTIONS_RESP=$(curl -fsS "https://${HOST}/admin/functions${QP}" || echo "[]")
+          echo "$FUNCTIONS_RESP" | jq .
+          FUNCTIONS_COUNT=$(echo "$FUNCTIONS_RESP" | jq length 2>/dev/null || echo "0")
+          echo "Functions count: $FUNCTIONS_COUNT"
+          
+          if [ "$FUNCTIONS_COUNT" -lt 1 ]; then
+            echo "::warning::Expected at least 1 function, found $FUNCTIONS_COUNT"
+          fi
 
       - name: E2E
         run: |
