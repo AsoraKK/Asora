@@ -56,6 +56,12 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify Azure context
+        run: |
+          set -euo pipefail
+          az account set --subscription "${SUBS}"
+          az account show --output table
+
       - name: Setup Azure CLI isolation
         shell: bash
         run: |
@@ -70,49 +76,37 @@ jobs:
         run: |
           set -Eeuo pipefail
           export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
+          : "${SUBS:?}"; : "${RG:?}"; : "${APP:?}"
 
-          # ARM API for reliable function app details
+          # Sanity: token fetch
+          echo "Verifying ARM access..."
+          az account get-access-token --resource https://management.azure.com -o none
+
+          API=2022-03-01
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+          APP_URL="https://management.azure.com${APP_ID}?api-version=${API}"
+
           echo "Getting function app details via ARM API..."
-          app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
-
-          app_data=$(az rest --method get --url "$app_url")
-          host=$(echo "$app_data" | jq -r '.properties.defaultHostName // empty')
-
-          if [ -z "$host" ]; then
-            echo "::error::Failed to get function app hostname via ARM API"
-            exit 1
+          APP_JSON=$(az rest --method get --url "$APP_URL" 2>arm.err || true)
+          if ! jq -e . >/dev/null 2>&1 <<<"$APP_JSON"; then
+            echo "::group::ARM error"; cat arm.err || true; echo "::endgroup::"
+            echo "::error::Failed to GET site via ARM"; exit 1
           fi
 
-          echo "Function app hostname: $host"
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          [ -n "$HOST" ] || { echo "::error::defaultHostName missing"; exit 1; }
 
-          # RBAC-safe key discovery
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+
+          # Keys (graceful if RBAC insufficient)
           echo "Attempting key discovery..."
-          key=""
-
-          # Try function host keys (requires Function App Operator role)
-          # Use POST to listkeys endpoint which is the proper way
-          keys_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=2022-03-01"
-          keys_response=$(az rest --method post --url "$keys_url" --headers "Content-Type=application/json" --body "{}" 2>/dev/null || echo "{}")
-
-          if [ "$keys_response" != "{}" ]; then
-            key=$(echo "$keys_response" | jq -r '.masterKey // .functionKeys.default // empty' 2>/dev/null || echo "")
-          fi
-
-          # Fallback to CLI if ARM fails or insufficient permissions
-          if [ -z "$key" ]; then
-            echo "ARM key discovery failed, trying CLI fallback..."
-            key=$(az functionapp keys list -g "$RG" -n "$APP" --query "functionKeys.default" -o tsv 2>/dev/null || echo "")
-          fi
-
-          if [ -z "$key" ]; then
-            echo "::warning::Could not discover function key, using anonymous access"
-            key="anonymous"
-          fi
-
-          echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
-          echo "BASE_URL=https://${host}" >> $GITHUB_ENV
-          echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
-          echo "Resolved deployment endpoint: https://${host}"
+          KEYS_URL="https://management.azure.com${APP_ID}/host/default/listkeys?api-version=${API}"
+          KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>/dev/null || echo "{}")
+          KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
+          [ -n "$KEY" ] || KEY="anonymous"
+          echo "FUNCTION_KEY=${KEY}" >> "$GITHUB_ENV"
+          echo "Resolved deployment endpoint: https://${HOST}"
 
       - name: "Wait for Function App readiness"
         shell: bash
