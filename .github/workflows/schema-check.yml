@@ -1,0 +1,16 @@
+---
+name: schema-check
+
+on:
+  pull_request:
+    paths:
+      - "database/**"
+      - ".github/workflows/schema-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate SQL files exist
+        run: test -f database/migrate_to_target_schema.sql

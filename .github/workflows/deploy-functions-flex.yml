@@ -1,8 +1,9 @@
+---
 name: Deploy Functions (Flex)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   id-token: write
@@ -13,16 +14,15 @@ concurrency:
   group: deploy-functions-flex-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  AZURE_FUNCTIONAPP_NAME: asora-function-dev
-  AZURE_RESOURCE_GROUP: asora-psql-flex
-  NODE_VERSION: '20'
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_FUNCTIONAPP_NAME: asora-function-dev
+      AZURE_RESOURCE_GROUP: asora-psql-flex
+      NODE_VERSION: '20'
     steps:
       - uses: actions/checkout@v4
 
@@ -53,7 +53,7 @@ jobs:
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log tool versions
         shell: bash
@@ -135,7 +135,9 @@ jobs:
             if [[ "$KIND" == *linux* ]]; then
               [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
             else
-              [[ "$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv --only-show-errors)" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
+              NODE_VER="$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" \
+                --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv --only-show-errors)"
+              [[ "$NODE_VER" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
             fi
           fi
 

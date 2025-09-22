@@ -1,3 +1,4 @@
+---
 name: E2E Integration Test
 
 on:
@@ -10,16 +11,31 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  AZURE_FUNCTIONAPP_NAME: asora-function-dev
-  AZURE_RESOURCE_GROUP: asora-psql-flex
-
 jobs:
+  verify-secrets:
+    name: Verify Required Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure required secrets
+        run: |
+          for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            case $k in
+              AZURE_CLIENT_ID) v="${{ secrets.AZURE_CLIENT_ID }}" ;;
+              AZURE_TENANT_ID) v="${{ secrets.AZURE_TENANT_ID }}" ;;
+              AZURE_SUBSCRIPTION_ID) v="${{ secrets.AZURE_SUBSCRIPTION_ID }}" ;;
+            esac
+            [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
+          done
+
   e2e:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: verify-secrets
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      APP: asora-function-dev
+      RG: asora-psql-flex
     permissions:
       id-token: write
       contents: read
@@ -54,49 +70,45 @@ jobs:
         run: |
           set -Eeuo pipefail
           export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
-          
-          RG="asora-psql-flex"
-          APP="asora-function-dev"
-          SUBS="${AZURE_SUBSCRIPTION_ID}"
 
           # ARM API for reliable function app details
           echo "Getting function app details via ARM API..."
           app_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01"
-          
+
           app_data=$(az rest --method get --url "$app_url")
           host=$(echo "$app_data" | jq -r '.properties.defaultHostName // empty')
-          
+
           if [ -z "$host" ]; then
             echo "::error::Failed to get function app hostname via ARM API"
             exit 1
           fi
-          
+
           echo "Function app hostname: $host"
 
           # RBAC-safe key discovery
           echo "Attempting key discovery..."
           key=""
-          
+
           # Try function host keys (requires Function App Operator role)
           # Use POST to listkeys endpoint which is the proper way
           keys_url="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=2022-03-01"
           keys_response=$(az rest --method post --url "$keys_url" --headers "Content-Type=application/json" --body "{}" 2>/dev/null || echo "{}")
-          
+
           if [ "$keys_response" != "{}" ]; then
             key=$(echo "$keys_response" | jq -r '.masterKey // .functionKeys.default // empty' 2>/dev/null || echo "")
           fi
-          
+
           # Fallback to CLI if ARM fails or insufficient permissions
           if [ -z "$key" ]; then
             echo "ARM key discovery failed, trying CLI fallback..."
             key=$(az functionapp keys list -g "$RG" -n "$APP" --query "functionKeys.default" -o tsv 2>/dev/null || echo "")
           fi
-          
+
           if [ -z "$key" ]; then
             echo "::warning::Could not discover function key, using anonymous access"
             key="anonymous"
           fi
-          
+
           echo "FUNCTION_BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "BASE_URL=https://${host}" >> $GITHUB_ENV
           echo "FUNCTION_KEY=${key}" >> $GITHUB_ENV
@@ -104,10 +116,6 @@ jobs:
 
       - name: "Wait for Function App readiness"
         shell: bash
-        env:
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          RG: ${{ env.AZURE_RESOURCE_GROUP }}
-          APP: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         run: |
           set -euo pipefail
           export AZURE_CONFIG_DIR="$HOME/.azure-e2e"

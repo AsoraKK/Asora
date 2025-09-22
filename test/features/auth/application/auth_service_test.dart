@@ -147,7 +147,6 @@ class MockGoogleSignIn implements GoogleSignIn {
   bool shouldThrow = false;
   Exception? exceptionToThrow;
   GoogleSignInAccount? _mockAccount;
-  GoogleSignInAuthentication? _mockAuth;
 
   void setThrowException(Exception exception) {
     shouldThrow = true;
@@ -159,7 +158,7 @@ class MockGoogleSignIn implements GoogleSignIn {
     GoogleSignInAuthentication? auth,
   ) {
     _mockAccount = account;
-    _mockAuth = auth;
+    // auth parameter removed as it was unused
   }
 
   @override

@@ -1,10 +1,11 @@
+---
 name: Mobile Security Check
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   schedule:
     - cron: '0 6 * * 1'
 
@@ -13,25 +14,27 @@ permissions:
   id-token: write
 
 jobs:
+  verify-secrets:
+    name: Verify Required Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure required secrets
+        run: |
+          for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            case $k in
+              AZURE_CLIENT_ID) v="${{ secrets.AZURE_CLIENT_ID }}" ;;
+              AZURE_TENANT_ID) v="${{ secrets.AZURE_TENANT_ID }}" ;;
+              AZURE_SUBSCRIPTION_ID) v="${{ secrets.AZURE_SUBSCRIPTION_ID }}" ;;
+            esac
+            [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
+          done
+
   check-pins-and-integrity:
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: ubuntu-latest
+    needs: verify-secrets
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate Azure credentials
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          for var in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
-            if [ -z "${!var}" ]; then
-              echo "::error::$var is not configured in repository secrets";
-              exit 1;
-            fi
-          done
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -41,19 +44,21 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Select subscription and show context
+        env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "$SUBS"
           az account show --output table
 
       - name: Resolve function host
         env:
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          RG: asora-psql-flex
-          APP: asora-function-dev
-          API_VERSION: 2022-03-01
         run: |
           set -euo pipefail
+          RG="asora-psql-flex"
+          APP="asora-function-dev"
+          API_VERSION="2022-03-01"
           APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
           APP_JSON=$(az rest --method get --url "$APP_URL")
           HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
@@ -62,18 +67,18 @@ jobs:
           echo "Detected function host: $HOST"
           echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
 
-      
+
       - name: Check for SPKI pin placeholders in entire codebase
         shell: bash
         run: |
           set -euo pipefail
-          
+
           echo "Scanning entire codebase for SPKI pin placeholders..."
-          
+
           # Search for actual placeholder values in pin lists, excluding validation code
           # Look for placeholder patterns that appear as actual pin values (not in validation)
           placeholder_count=$(find . -name "*.dart" -type f -exec grep -c "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null | grep -v "^0$" | wc -l || echo "0")
-          
+
           if [ "$placeholder_count" -gt 0 ]; then
             echo "::error::Found SPKI pin placeholders in pin values:"
             find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true
@@ -113,7 +118,7 @@ jobs:
           else
             echo "✓ No security TODO/FIXME placeholders detected."
           fi
-      
+
       - name: Dart format check (optional)
         shell: bash
         run: |
@@ -124,7 +129,7 @@ jobs:
           else
             echo "Dart not available, skipping format check."
           fi
-      
+
       - name: Dart analyze (optional)
         shell: bash
         run: |
