@@ -14,6 +14,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
+  id-token: write
 
 jobs:
   verify-secrets:
@@ -84,25 +86,30 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const workspace = process.env.GITHUB_WORKSPACE || '.';
-            const summaryPath = path.join(workspace, 'code-coverage-results.md');
-            const body = fs.existsSync(summaryPath)
-              ? fs.readFileSync(summaryPath, 'utf8')
-              : 'Coverage summary unavailable';
-
-            const issue_number = context.issue.number;
-            if (!issue_number) {
-              core.info('No PR context; skipping coverage comment');
+            const summaryPath = path.join(process.env.GITHUB_WORKSPACE, 'code-coverage-results.md');
+            const body = fs.existsSync(summaryPath) ? fs.readFileSync(summaryPath, 'utf8') : 'Coverage summary unavailable';
+            
+            const issueNumber = context.payload.pull_request?.number ?? context.issue.number;
+            if (!issueNumber) {
+              core.info('No issue or pull-request context; skipping coverage comment.');
               return;
             }
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number,
-              body
-            });
-            core.info('Coverage comment posted successfully');
+            
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body
+              });
+              core.info('Coverage comment posted successfully');
+            } catch (error) {
+              if (error.status === 403) {
+                core.info('Skipped coverage comment due to insufficient permissions');
+              } else {
+                throw error;
+              }
+            }
 
       - name: Coverage summary (pushes or forks)
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
