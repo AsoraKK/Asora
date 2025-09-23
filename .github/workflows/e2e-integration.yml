@@ -56,11 +56,11 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify Azure context
+      - name: Auth sanity
         run: |
           set -euo pipefail
-          az account set --subscription "${SUBS}"
-          az account get-access-token --resource https://management.azure.com -o none
+          az account set --subscription "$SUBS"
+          az account get-access-token --resource https://management.azure.com
           az account show --output table
 
       - name: Setup Azure CLI isolation
