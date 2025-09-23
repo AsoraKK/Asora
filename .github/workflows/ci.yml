@@ -14,7 +14,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  id-token: write
 
 jobs:
   verify-secrets:
@@ -87,25 +86,13 @@ jobs:
             const path = require('path');
             const workspace = process.env.GITHUB_WORKSPACE || '.';
             const summaryPath = path.join(workspace, 'code-coverage-results.md');
-            const fallback = 'Coverage summary unavailable';
-
-            let body = fallback;
-            if (fs.existsSync(summaryPath)) {
-              body = fs.readFileSync(summaryPath, 'utf8');
-            } else {
-              core.info('coverage summary file missing; using fallback text');
-            }
-
-            core.info(`coverage body length: ${body.length}`);
-
-            if (!github?.rest?.issues) {
-              core.setFailed('github.rest.issues is unavailable');
-              return;
-            }
+            const body = fs.existsSync(summaryPath)
+              ? fs.readFileSync(summaryPath, 'utf8')
+              : 'Coverage summary unavailable';
 
             const issue_number = context.issue.number;
             if (!issue_number) {
-              core.info('no pull request context; skipping comment');
+              core.info('No PR context; skipping coverage comment');
               return;
             }
 
@@ -115,14 +102,13 @@ jobs:
               issue_number,
               body
             });
-            core.info('coverage comment posted successfully');
+            core.info('Coverage comment posted successfully');
 
-      - name: Coverage summary (non-PR or fork)
+      - name: Coverage summary (pushes or forks)
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
         run: |
-          set -euo pipefail
           echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f code-coverage-results.md ]; then
+          if test -f code-coverage-results.md; then
             cat code-coverage-results.md >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Coverage summary unavailable" >> "$GITHUB_STEP_SUMMARY"
