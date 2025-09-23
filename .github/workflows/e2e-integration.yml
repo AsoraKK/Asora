@@ -36,6 +36,7 @@ jobs:
       SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       APP: asora-function-dev
       RG: asora-psql-flex
+      AZURE_CONFIG_DIR: ${{ runner.temp }}/azure-${{ github.run_id }}
     permissions:
       id-token: write
       contents: read
@@ -59,24 +60,17 @@ jobs:
       - name: Auth sanity
         run: |
           set -euo pipefail
+          echo "AZURE_CONFIG_DIR=${AZURE_CONFIG_DIR:-$HOME/.azure}"
+          ls -la "${AZURE_CONFIG_DIR:-$HOME/.azure}" || true
           az account set --subscription "$SUBS"
-          az account get-access-token --resource https://management.azure.com
+          az account get-access-token --resource https://management.azure.com -o none
           az account show --output table
-
-      - name: Setup Azure CLI isolation
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.azure-e2e"
-          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
-          echo "AZURE_CONFIG_DIR=$HOME/.azure-e2e" >> $GITHUB_ENV
 
       - name: Discover keys & URL
         id: info
         shell: bash
         run: |
           set -Eeuo pipefail
-          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
           : "${SUBS:?}"; : "${RG:?}"; : "${APP:?}"
 
           # Sanity: token fetch
@@ -113,7 +107,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export AZURE_CONFIG_DIR="$HOME/.azure-e2e"
 
           APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
           get_state(){ az resource show --ids "$APP_ID" --query "properties.state" -o tsv 2>/dev/null || echo ""; }
