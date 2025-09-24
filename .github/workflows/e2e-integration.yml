@@ -152,6 +152,49 @@ jobs:
           echo "::group::Function list"; cat "$FUNCS_JSON" || true; echo "::endgroup::"
           exit 1
 
+      - name: Validate feed route
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${FUNCTION_BASE_URL:?FUNCTION_BASE_URL missing from environment}"
+          HOST="${FUNCTION_BASE_URL#https://}"
+          HOST="${HOST%%/}"
+          KEY="${FUNCTION_KEY:-anonymous}"
+
+          if [ -z "$HOST" ]; then
+            echo "::error::Unable to derive host name from FUNCTION_BASE_URL=$FUNCTION_BASE_URL"
+            exit 1
+          fi
+
+          if [ "$KEY" = "anonymous" ]; then
+            QP=""
+          else
+            QP="?code=${KEY}"
+          fi
+
+          curl -fsS "https://${HOST}/admin/functions${QP}" -o funcs.json || {
+            echo "::error::Failed to enumerate functions via admin API";
+            exit 1;
+          }
+
+          echo "Discovered httpTrigger routes:";
+          ROUTES=$(jq -r '.[].config.bindings[]? | select(.type=="httpTrigger") | (.route // "")' funcs.json 2>/dev/null || echo "")
+          if [ -n "$ROUTES" ]; then
+            printf '%s\n' "$ROUTES" | sed 's/^/ - /'
+          else
+            echo " - <none>"
+          fi
+
+          if ! jq -e '.[].config.bindings[]? | select(.type=="httpTrigger" and .route=="feed")' funcs.json >/dev/null; then
+            echo "::group::Admin functions payload"; cat funcs.json; echo "::endgroup::"
+            echo "::error::No 'feed' route deployed. Update route or test path."
+            rm -f funcs.json
+            exit 1
+          fi
+
+          rm -f funcs.json
+
       - name: E2E
         run: |
           echo "Testing Function App at: $FUNCTION_BASE_URL"
