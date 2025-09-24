@@ -13,7 +13,7 @@ echo "✅ Dart formatting check passed"
 
 # Check Functions (JavaScript) formatting and linting with auto-fix
 echo "⚡ Checking Functions formatting and linting..."
-pushd functions > /dev/null
+cd functions
 
 if [ ! -d "node_modules" ]; then
   echo "📦 Installing Functions dependencies (first run)..."
@@ -36,5 +36,5 @@ if ! npm run lint:check >/dev/null 2>&1; then
   echo "❌ Lint issues remain"; exit 1; fi
 echo "✅ Functions lint OK"
 
-popd > /dev/null
+cd ..
 echo "🎉 All formatting checks passed! Commit proceeding..."

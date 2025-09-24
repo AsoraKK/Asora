@@ -96,6 +96,8 @@ paths:
     get:
       operationId: getHealth
       summary: Health check
+      tags: [system]
+      description: Returns system health status
       responses:
         '200':
           description: OK
@@ -106,6 +108,8 @@ paths:
     get:
       operationId: getUserInfo
       summary: OIDC user info
+      tags: [auth]
+      description: Returns authenticated user information
       security: [ { bearerAuth: [] } ]
       responses:
         '200':
@@ -118,6 +122,8 @@ paths:
     get:
       operationId: getFeed
       summary: Get feed
+      tags: [feed]
+      description: Returns paginated feed content
       parameters:
         - in: query
           name: page
@@ -135,6 +141,8 @@ paths:
     post:
       operationId: createPost
       summary: Create a post
+      tags: [posts]
+      description: Creates a new post with content moderation
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -153,6 +161,8 @@ paths:
     delete:
       operationId: deletePost
       summary: Delete a post
+      tags: [posts]
+      description: Deletes a specific post by ID
       security: [ { bearerAuth: [] } ]
       parameters:
         - in: path
@@ -166,6 +176,8 @@ paths:
     post:
       operationId: flagContent
       summary: Flag content for review
+      tags: [moderation]
+      description: Reports content for moderation review
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -179,6 +191,8 @@ paths:
     post:
       operationId: submitAppeal
       summary: Submit an appeal
+      tags: [moderation]
+      description: Appeals a moderation decision
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -191,6 +205,8 @@ paths:
     post:
       operationId: voteOnAppeal
       summary: Vote on an appeal
+      tags: [moderation]
+      description: Casts a vote on a moderation appeal
       security: [ { bearerAuth: [] } ]
       parameters:
         - in: path
@@ -208,6 +224,8 @@ paths:
     get:
       operationId: exportUser
       summary: Export user data
+      tags: [privacy]
+      description: Exports all user data for GDPR compliance
       security: [ { bearerAuth: [] } ]
       responses:
         '200':
@@ -220,6 +238,8 @@ paths:
     delete:
       operationId: deleteUser
       summary: Delete user account
+      tags: [privacy]
+      description: Permanently deletes user account and data
       security: [ { bearerAuth: [] } ]
       responses:
         '200': { description: Deleted }

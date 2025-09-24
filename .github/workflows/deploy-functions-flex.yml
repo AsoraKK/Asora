@@ -158,13 +158,16 @@ jobs:
         shell: bash
         run: |
           [[ -z "${COSMOS_CONNECTION_STRING:-}" ]] && echo "::warning::COSMOS_CONNECTION_STRING unset; functions relying on Cosmos will fail at runtime."
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: functions
-          respect-funcignore: true
+        env:
+          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Verify discovery
         shell: bash
