@@ -2,8 +2,7 @@
   "name": "asora-backend-functions",
   "version": "1.0.0",
   "description": "Asora platform backend Azure Functions with AI-powered moderation",
-  "main": "dist/index.js",
-  "type": "commonjs",
+  "main": "dist/src/index.js",
   "engines": {
     "node": ">=20 <21"
   },
