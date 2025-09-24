@@ -36,12 +36,16 @@ jobs:
       SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       APP: asora-function-dev
       RG: asora-psql-flex
-      AZURE_CONFIG_DIR: ${{ runner.temp }}/azure-${{ github.run_id }}
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set AZURE_CONFIG_DIR
+        shell: bash
+        run: |
+          echo "AZURE_CONFIG_DIR=${RUNNER_TEMP}/azure-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
 
       - name: Clear MSAL cache
         shell: bash
