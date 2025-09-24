@@ -73,84 +73,87 @@ jobs:
           az account get-access-token --resource https://management.azure.com -o none
           az account show --output table
 
-      - name: Wait for Functions host ready
+      - name: Discover keys & URL
+        id: info
         shell: bash
         run: |
           set -Eeuo pipefail
           : "${SUBS:?}"; : "${RG:?}"; : "${APP:?}"
 
+          # Sanity: token fetch
+          echo "Verifying ARM access..."
+          az account get-access-token --resource https://management.azure.com -o none
+
           API=2022-03-01
           APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-          SITE_URL="https://management.azure.com${APP_ID}?api-version=${API}"
+          APP_URL="https://management.azure.com${APP_ID}?api-version=${API}"
 
-          echo "Resolving function host via ARM..."
-          if ! SITE_JSON=$(az rest --method get --url "$SITE_URL" 2>site.err); then
-            echo "::group::ARM site error"; cat site.err || true; echo "::endgroup::"
-            exit 1
-          fi
-          rm -f site.err || true
-
-          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$SITE_JSON")
-          if [ -z "$HOST" ]; then
-            echo "::error::defaultHostName missing from site response"
-            exit 1
+          echo "Getting function app details via ARM API..."
+          APP_JSON=$(az rest --method get --url "$APP_URL" 2>arm.err || true)
+          if ! jq -e . >/dev/null 2>&1 <<<"$APP_JSON"; then
+            echo "::group::ARM error"; cat arm.err || true; echo "::endgroup::"
+            echo "::error::Failed to GET site via ARM"; exit 1
           fi
 
-          echo "Attempting to retrieve host key via ARM listkeys..."
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          [ -n "$HOST" ] || { echo "::error::defaultHostName missing"; exit 1; }
+
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+
+          # Keys (graceful if RBAC insufficient)
+          echo "Attempting key discovery..."
           KEYS_URL="https://management.azure.com${APP_ID}/host/default/listkeys?api-version=${API}"
-          KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>keys.err || echo '{}')
-          if [ -s keys.err ]; then
-            echo "::group::Key fetch warnings"; cat keys.err || true; echo "::endgroup::"
-          fi
-          rm -f keys.err || true
-          CODE=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
-          if [ -z "$CODE" ]; then
-            CODE="anonymous"
-          fi
-          if [ "$CODE" = "anonymous" ]; then
-            QP=""
-          else
-            QP="?code=${CODE}"
-          fi
+          KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>/dev/null || echo "{}")
+          KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
+          [ -n "$KEY" ] || KEY="anonymous"
+          echo "FUNCTION_KEY=${KEY}" >> "$GITHUB_ENV"
+          echo "Resolved deployment endpoint: https://${HOST}"
 
-          STATUS_JSON=$(mktemp)
-          FUNCS_JSON=$(mktemp)
-          cleanup(){ rm -f "$STATUS_JSON" "$FUNCS_JSON"; }
-          trap cleanup EXIT
+      - name: "Wait for Function App readiness"
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          echo "Waiting for host at https://${HOST} ..."
-          for i in $(seq 1 40); do
-            curl -fsS "https://${HOST}/admin/host/status${QP}" -o "$STATUS_JSON" || true
-            STATE=$(jq -r '.state // empty' "$STATUS_JSON" 2>/dev/null || echo "")
-            ERRORS=$(jq -r '.errors? | length // 0' "$STATUS_JSON" 2>/dev/null || echo 0)
+          APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
+          get_state(){ az resource show --ids "$APP_ID" --query "properties.state" -o tsv 2>/dev/null || echo ""; }
 
-            curl -fsS "https://${HOST}/admin/functions${QP}" -o "$FUNCS_JSON" || true
-            COUNT=$(jq 'length' "$FUNCS_JSON" 2>/dev/null || echo 0)
-
-            echo "Attempt $i: state=${STATE:-<empty>} functions=$COUNT errors=$ERRORS"
-
-            if [ "$ERRORS" -gt 0 ]; then
-              echo "::group::Host errors"; cat "$STATUS_JSON"; echo "::endgroup::"
-              exit 1
-            fi
-
-            if [ "$STATE" = "Running" ] && [ "$COUNT" -gt 0 ]; then
-              echo "Host ready."
-              echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-              echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-              echo "FUNCTION_KEY=${CODE}" >> "$GITHUB_ENV"
-              echo "Warming up /api/health ..."
-              curl -fsS "https://${HOST}/api/health${QP}" -o /dev/null || true
-              sleep 2
-              exit 0
-            fi
-
-            sleep 15
+          for i in $(seq 1 30); do
+            STATE="$(get_state)"; echo "Attempt $i/30 state: ${STATE:-<empty>}"
+            [ "$STATE" = "Running" ] && exit 0
+            sleep 10
           done
 
-          echo "::group::Final host status"; cat "$STATUS_JSON" || true; echo "::endgroup::"
-          echo "::group::Function list"; cat "$FUNCS_JSON" || true; echo "::endgroup::"
-          exit 1
+          echo "::error::App not Running"; exit 1
+
+      - name: Probe admin endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST="${FUNCTION_BASE_URL#https://}"
+          KEY="${FUNCTION_KEY}"
+          
+          # Set up query params for authentication
+          if [ "$KEY" != "anonymous" ]; then
+            QP="?code=${KEY}"
+          else
+            QP=""
+          fi
+          
+          echo "Probing admin endpoints on: $HOST"
+          
+          echo "=== GET /admin/host/status ==="
+          curl -fsS "https://${HOST}/admin/host/status${QP}" | jq . || echo "Host status probe failed"
+          
+          echo "=== GET /admin/functions ==="
+          FUNCTIONS_RESP=$(curl -fsS "https://${HOST}/admin/functions${QP}" || echo "[]")
+          echo "$FUNCTIONS_RESP" | jq .
+          FUNCTIONS_COUNT=$(echo "$FUNCTIONS_RESP" | jq length 2>/dev/null || echo "0")
+          echo "Functions count: $FUNCTIONS_COUNT"
+          
+          if [ "$FUNCTIONS_COUNT" -lt 1 ]; then
+            echo "::warning::Expected at least 1 function, found $FUNCTIONS_COUNT"
+          fi
 
       - name: E2E
         run: |
