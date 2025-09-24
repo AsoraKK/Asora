@@ -1,10 +1,17 @@
-import { app } from '@azure/functions';
-import { getFeed } from './feed/get';
+import { app, HttpRequest, HttpResponseInit } from "@azure/functions";
 
-app.http('feed', {
-  methods: ['GET'],
-  authLevel: 'anonymous',
-  route: 'feed',
-  handler: getFeed
+export async function feedHandler(_req: HttpRequest): Promise<HttpResponseInit> {
+  return {
+    status: 200,
+    jsonBody: {
+      items: [],
+    },
+  };
+}
+
+app.http("feed", {
+  route: "feed",
+  methods: ["GET"],
+  authLevel: "function",
+  handler: feedHandler,
 });
-
