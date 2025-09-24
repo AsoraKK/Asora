@@ -13,7 +13,7 @@ const path = require("path");
 
 const DEFAULT_BASE_URL = "https://asora-function-dev.azurewebsites.net";
 const BASE_URL = process.env.BASE_URL || process.env.FUNCTION_BASE_URL || DEFAULT_BASE_URL;
-const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
+const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY || "anonymous";
 const VERBOSE = process.argv.includes("--verbose");
 const DEFAULT_THRESHOLD_MS = 8000;
 const thresholdMsEnv = process.env.THRESHOLD_MS ?? process.env.LATENCY_THRESHOLD_MS;
@@ -32,7 +32,11 @@ const retriesCandidate = rawRetries === undefined || rawRetries === ""
 
 const BACKOFF_SEQUENCE_MS = [1000, 2000, 4000, 8000, 16000, 32000];
 
-const ok = (j) => j?.ok === true || j?.success === true || j?.status === "ok";
+const ok = (j) =>
+  j?.ok === true ||
+  j?.success === true ||
+  j?.status === "ok" ||
+  Array.isArray(j?.items);
 
 if (!BASE_URL) {
   console.error("BASE_URL is required (set BASE_URL or FUNCTION_BASE_URL)");
@@ -55,8 +59,15 @@ const thresholdSeconds = THRESHOLD_MS / 1000;
 
 console.log(`[e2e] Target base URL: ${BASE_URL} (threshold ${THRESHOLD_MS}ms ≈ ${thresholdSeconds.toFixed(2)}s, retries ${RETRIES})`);
 
-function withSlash(base, p) {
-  return `${base.replace(/\/$/, "")}/${p.replace(/^\//, "")}`;
+function buildUrl(path) {
+  const trimmedBase = BASE_URL.replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${trimmedBase}${normalizedPath}`;
+  if (!FUNCTION_KEY || FUNCTION_KEY === "anonymous") {
+    return url;
+  }
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}code=${encodeURIComponent(FUNCTION_KEY)}`;
 }
 
 async function getJsonWithRetry(url, options = {}, retries = RETRIES) {
@@ -95,7 +106,7 @@ async function getJson(url, options = {}) {
     { "Accept": "application/json" },
     options.headers || {}
   );
-  if (FUNCTION_KEY && !headers["x-functions-key"]) {
+  if (FUNCTION_KEY && FUNCTION_KEY !== "anonymous" && !headers["x-functions-key"]) {
     headers["x-functions-key"] = FUNCTION_KEY;
   }
   const res = await fetch(url, { method: "GET", headers });
@@ -116,7 +127,7 @@ async function main() {
 
   async function runCheck(name, path) {
     try {
-      const url = withSlash(BASE_URL, path);
+      const url = buildUrl(path);
       const t0 = Date.now();
       const res = await getJsonWithRetry(url);
       const durationMs = Date.now() - t0;
