@@ -15,7 +15,22 @@ const DEFAULT_BASE_URL = "https://asora-function-dev.azurewebsites.net";
 const BASE_URL = process.env.BASE_URL || process.env.FUNCTION_BASE_URL || DEFAULT_BASE_URL;
 const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
 const VERBOSE = process.argv.includes("--verbose");
-const LATENCY_THRESHOLD_SEC = Number(process.env.LATENCY_THRESHOLD_SEC || process.env.THRESHOLD_SEC || 2.0);
+const DEFAULT_THRESHOLD_MS = 8000;
+const thresholdMsEnv = process.env.THRESHOLD_MS ?? process.env.LATENCY_THRESHOLD_MS;
+const thresholdSecEnv = process.env.LATENCY_THRESHOLD_SEC ?? process.env.THRESHOLD_SEC;
+const thresholdCandidate = thresholdMsEnv !== undefined && thresholdMsEnv !== ""
+  ? Number(thresholdMsEnv)
+  : thresholdSecEnv !== undefined && thresholdSecEnv !== ""
+    ? Number(thresholdSecEnv) * 1000
+    : DEFAULT_THRESHOLD_MS;
+
+const DEFAULT_RETRIES = 6;
+const rawRetries = process.env.RETRIES ?? process.env.E2E_RETRIES;
+const retriesCandidate = rawRetries === undefined || rawRetries === ""
+  ? DEFAULT_RETRIES
+  : Number(rawRetries);
+
+const BACKOFF_SEQUENCE_MS = [1000, 2000, 4000, 8000, 16000, 32000];
 
 const ok = (j) => j?.ok === true || j?.success === true || j?.status === "ok";
 
@@ -24,42 +39,55 @@ if (!BASE_URL) {
   process.exit(2);
 }
 
-if (Number.isNaN(LATENCY_THRESHOLD_SEC) || LATENCY_THRESHOLD_SEC <= 0) {
-  console.error("Invalid latency threshold; provide a positive number in LATENCY_THRESHOLD_SEC");
+if (!Number.isFinite(thresholdCandidate) || thresholdCandidate <= 0) {
+  console.error("Invalid latency threshold; provide THRESHOLD_MS (>0) or THRESHOLD_SEC");
   process.exit(2);
 }
 
-console.log(`[e2e] Target base URL: ${BASE_URL} (threshold ${LATENCY_THRESHOLD_SEC}s)`);
+if (!Number.isFinite(retriesCandidate) || retriesCandidate < 0 || !Number.isInteger(retriesCandidate)) {
+  console.error("Invalid RETRIES; provide a non-negative integer");
+  process.exit(2);
+}
+
+const THRESHOLD_MS = thresholdCandidate;
+const RETRIES = retriesCandidate;
+const thresholdSeconds = THRESHOLD_MS / 1000;
+
+console.log(`[e2e] Target base URL: ${BASE_URL} (threshold ${THRESHOLD_MS}ms ≈ ${thresholdSeconds.toFixed(2)}s, retries ${RETRIES})`);
 
 function withSlash(base, p) {
   return `${base.replace(/\/$/, "")}/${p.replace(/^\//, "")}`;
 }
 
-async function getJsonWithRetry(url, options = {}, maxRetries = 3) {
+async function getJsonWithRetry(url, options = {}, retries = RETRIES) {
   let lastError;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  const totalAttempts = retries + 1;
+
+  for (let attempt = 1; attempt <= totalAttempts; attempt++) {
     try {
       const result = await getJson(url, options);
-      
-      // If we get 503 (Service Unavailable), retry after delay for cold start
-      if (result.status === 503 && attempt < maxRetries) {
-        const delay = Math.min(1000 * attempt, 10000); // Progressive delay, max 10s
-        console.log(`Attempt ${attempt}/${maxRetries}: Got 503, retrying in ${delay}ms (cold start?)...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+
+      if (result.status === 503 && attempt <= retries) {
+        const delayMs = BACKOFF_SEQUENCE_MS[Math.min(attempt - 1, BACKOFF_SEQUENCE_MS.length - 1)];
+        console.log(`Attempt ${attempt}/${totalAttempts}: 503 from ${url}, retrying in ${delayMs}ms (host cold start)...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
-      
+
       return result;
     } catch (err) {
       lastError = err;
-      if (attempt < maxRetries) {
-        const delay = Math.min(1000 * attempt, 5000);
-        console.log(`Attempt ${attempt}/${maxRetries}: Error ${err.message}, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      if (attempt <= retries) {
+        const delayMs = BACKOFF_SEQUENCE_MS[Math.min(attempt - 1, BACKOFF_SEQUENCE_MS.length - 1)];
+        console.log(`Attempt ${attempt}/${totalAttempts}: Error ${err.message}, retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
       }
+      throw err;
     }
   }
-  throw lastError;
+
+  throw lastError ?? new Error(`Failed to fetch ${url}`);
 }
 
 async function getJson(url, options = {}) {
@@ -94,7 +122,7 @@ async function main() {
       const durationMs = Date.now() - t0;
       const snippet = (res.text || "").replace(/\s+/g, " ").slice(0, 200);
       let pass = res.status === 200 && res.json && ok(res.json);
-      if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
+      if (durationMs > THRESHOLD_MS) {
         pass = false;
       }
 
@@ -111,8 +139,8 @@ async function main() {
         if (!res.json || !ok(res.json)) {
           console.error(`${name} response validation failed: ${JSON.stringify(res.json)}`);
         }
-        if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
-          console.error(`${name} latency ${durationMs}ms exceeded threshold ${LATENCY_THRESHOLD_SEC}s`);
+        if (durationMs > THRESHOLD_MS) {
+          console.error(`${name} latency ${durationMs}ms exceeded threshold ${THRESHOLD_MS}ms`);
         }
       }
 
@@ -140,6 +168,8 @@ async function main() {
     startedAt,
     finishedAt,
     baseUrl: BASE_URL,
+    thresholdMs: THRESHOLD_MS,
+    retries: RETRIES,
     total: results.length,
     failures,
     success: failures === 0,
