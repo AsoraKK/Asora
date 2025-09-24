@@ -1,2 +1,2 @@
-import "./functions/health";
-import "./functions/feed";
+import "./health";
+import "./feed";
