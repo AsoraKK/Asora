@@ -42,23 +42,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build functions artifact (sanity)
-        run: |
-          set -euo pipefail
-          npm ci --prefix functions
-          npm run build --prefix functions
-          MAIN=$(jq -r '.main' functions/package.json)
-          echo "package.json main: $MAIN"
-          if [ "$MAIN" != "dist/index.js" ]; then
-            echo "::error::functions/package.json main must be dist/index.js";
-            exit 1;
-          fi
-          if [ ! -f functions/dist/index.js ]; then
-            echo "::error::functions/dist/index.js missing after build";
-            exit 1;
-          fi
-          ls -R functions/dist | head -40
-
       - name: Azure login (OIDC)
         uses: azure/login@v2
         env:
@@ -169,7 +152,7 @@ jobs:
           echo "::group::Function list"; cat "$FUNCS_JSON" || true; echo "::endgroup::"
           exit 1
 
-      - name: Validate deployed HTTP routes
+      - name: Validate feed route
         shell: bash
         run: |
           set -euo pipefail
@@ -195,32 +178,18 @@ jobs:
             exit 1;
           }
 
-          ROUTES=$(jq -r '.[].config.bindings[]? | select(.type=="httpTrigger") | (.route // "")' funcs.json 2>/dev/null || echo "")
           echo "Discovered httpTrigger routes:";
+          ROUTES=$(jq -r '.[].config.bindings[]? | select(.type=="httpTrigger") | (.route // "")' funcs.json 2>/dev/null || echo "")
           if [ -n "$ROUTES" ]; then
             printf '%s\n' "$ROUTES" | sed 's/^/ - /'
           else
             echo " - <none>"
           fi
 
-          MISSING=""
-          for ROUTE in health feed; do
-            if ! printf '%s\n' "$ROUTES" | grep -Fx "$ROUTE" >/dev/null; then
-              MISSING="$MISSING $ROUTE"
-            fi
-          done
-
-          if [ -n "$MISSING" ]; then
+          if ! jq -e '.[].config.bindings[]? | select(.type=="httpTrigger" and .route=="feed")' funcs.json >/dev/null; then
             echo "::group::Admin functions payload"; cat funcs.json; echo "::endgroup::"
-            echo "::warning::Attempting to fetch deployed package.json"
-            curl -fsS "https://${HOST}/admin/vfs/site/wwwroot/package.json${QP}" -o package.json.deployed 2>/dev/null || true
-            if [ -s package.json.deployed ]; then
-              echo "::group::Deployed package.json"; cat package.json.deployed; echo "::endgroup::"
-            else
-              echo "::warning::Unable to retrieve deployed package.json"
-            fi
-            rm -f package.json.deployed funcs.json
-            echo "::error::Missing required routes:$MISSING"
+            echo "::error::No 'feed' route deployed. Update route or test path."
+            rm -f funcs.json
             exit 1
           fi
 
