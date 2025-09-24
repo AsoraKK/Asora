@@ -36,26 +36,33 @@ jobs:
       SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       APP: asora-function-dev
       RG: asora-psql-flex
-      AZURE_CONFIG_DIR: ${{ runner.temp }}/azure-${{ github.run_id }}
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clear MSAL cache
-        shell: bash
-        run: |
-          # Clear MSAL cache to avoid AttributeError issues
-          rm -rf ~/.azure/msal_token_cache.json || true
-          rm -rf ~/.azure/accessTokens.json || true
-
       - name: Azure login (OIDC)
         uses: azure/login@v2
+        env:
+          AZURE_LOGIN_POST_CLEANUP: false
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure credentials
+        run: |
+          set -euo pipefail
+          echo "AZURE_CONFIG_DIR=${AZURE_CONFIG_DIR:-$HOME/.azure}"
+          echo "Default dir listing:"
+          ls -la "$HOME/.azure" || true
+          echo "Configured dir listing:"
+          ls -la "${AZURE_CONFIG_DIR:-$HOME/.azure}" || true
+          echo "az account show:"
+          az account show --output table
+          echo "ARM token fetch:"
+          az account get-access-token --resource https://management.azure.com -o none
 
       - name: Auth sanity
         run: |
