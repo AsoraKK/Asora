@@ -1,12 +1,18 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { app, HttpResponseInit } from "@azure/functions";
 
-export async function health(_req: HttpRequest, _ctx: InvocationContext): Promise<HttpResponseInit> {
-  return { status: 200, jsonBody: { ok: true } };
+export async function healthHandler(): Promise<HttpResponseInit> {
+  return {
+    status: 200,
+    jsonBody: {
+      ok: true,
+      ts: new Date().toISOString(),
+    },
+  };
 }
 
 app.http("health", {
+  route: "health",
   methods: ["GET"],
   authLevel: "anonymous",
-  route: "health",
-  handler: health
+  handler: healthHandler,
 });
