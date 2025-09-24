@@ -22,7 +22,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_FUNCTIONAPP_NAME: asora-function-dev
       AZURE_RESOURCE_GROUP: asora-psql-flex
-      NODE_VERSION: '20'
+      NODE_VERSION: "20"
     steps:
       - uses: actions/checkout@v4
 
@@ -31,15 +31,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Build functions (then prune to prod)
+      - name: Install dependencies (Functions)
         working-directory: functions
         run: |
-          set -Eeuo pipefail
-          rm -rf node_modules
-          npm ci
+          set -euo pipefail
+          npm ci --workspaces=false
+
+      - name: Build functions
+        working-directory: functions
+        run: |
+          rm -rf dist
           npm run build
-          find dist -name '*.js' | grep . || (echo "No JS build output in dist/"; exit 1)
-          npm prune --omit=dev
 
       - name: Isolate Azure CLI cache (per-run)
         shell: bash
@@ -149,10 +151,12 @@ jobs:
         working-directory: functions
         run: |
           set -euo pipefail
-          MAIN=$(jq -r .main package.json)
-          echo "package.json main: $MAIN"
-          test -f "$MAIN" || { echo "::error::missing entrypoint $MAIN"; exit 1; }
           test -f host.json || { echo "::error::host.json missing in functions/"; exit 1; }
+          jq -r '.main' package.json | tee main.txt
+          ENTRY=$(cat main.txt)
+          rm -f main.txt
+          [ -n "$ENTRY" ] || { echo "::error::package.json main missing"; exit 1; }
+          test -f "$ENTRY" || { echo "::error::missing entrypoint $ENTRY"; exit 1; }
 
       - name: Check Cosmos configuration
         shell: bash
@@ -164,6 +168,7 @@ jobs:
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: functions
+          remote-build: true
           respect-funcignore: true
 
       - name: Preflight — verify deployed routes
@@ -176,33 +181,50 @@ jobs:
           APP="${AZURE_FUNCTIONAPP_NAME}"
           API=2022-03-01
           APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-          
+
           # Get function host URL
           SITE_JSON=$(az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}")
           HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$SITE_JSON")
           [ -n "$HOST" ] || { echo "::error::defaultHostName missing"; exit 1; }
-          
+
           # Get admin key for /admin/functions
           KEYS_JSON=$(az rest --method post --url "https://management.azure.com${APP_ID}/host/default/listkeys?api-version=${API}" --headers Content-Type=application/json --body "{}" || echo '{}')
           CODE=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
           [ -n "$CODE" ] || CODE="anonymous"
           QP=""
           [ "$CODE" != "anonymous" ] && QP="?code=${CODE}"
-          
-          # Wait for host to be ready and enumerate functions
-          echo "Waiting for routes to be available..."
+
+          echo "Waiting for host readiness and routes..."
+          LAST_STATUS=""
+          FUNCS_CAPTURE=""
+          MISSING="health feed"
           for i in $(seq 1 20); do
+            STATUS_JSON=$(curl -fsS "https://${HOST}/admin/host/status${QP}" 2>/dev/null || true)
+            LAST_STATUS="$STATUS_JSON"
+            STATE=$(jq -r '.state // ""' <<<"$STATUS_JSON" 2>/dev/null || echo "")
+            ERRORS=$(jq -r '.errors? | length // 0' <<<"$STATUS_JSON" 2>/dev/null || echo 0)
+            echo "Attempt $i: host state=${STATE:-<empty>} errors=$ERRORS"
+            if [ "$ERRORS" -gt 0 ]; then
+              echo "::group::Host status"; echo "$STATUS_JSON"; echo "::endgroup::"
+              exit 1
+            fi
+
+            if [ "$STATE" != "Running" ]; then
+              sleep 10
+              continue
+            fi
+
             if FUNCS_JSON=$(curl -fsS "https://${HOST}/admin/functions${QP}" 2>/dev/null); then
+              FUNCS_CAPTURE="$FUNCS_JSON"
               ROUTES=$(jq -r '.[].config.bindings[]? | select(.type=="httpTrigger") | (.route // "")' <<<"$FUNCS_JSON" 2>/dev/null || echo "")
-              echo "Attempt $i: routes found: $(echo "$ROUTES" | tr '\n' ' ')"
-              
+              echo "Routes found: $(echo "$ROUTES" | tr '\n' ' ')"
               MISSING=""
               for ROUTE in health feed; do
                 if ! grep -Fx "$ROUTE" <<<"$ROUTES" >/dev/null 2>&1; then
                   MISSING="$MISSING $ROUTE"
                 fi
               done
-              
+
               if [ -z "$MISSING" ]; then
                 echo "✅ All required routes (health, feed) are deployed"
                 exit 0
@@ -210,11 +232,10 @@ jobs:
             fi
             sleep 10
           done
-          
+
           echo "::error::Missing required routes after deployment:$MISSING"
-          echo "::group::Final function list"
-          curl -fsS "https://${HOST}/admin/functions${QP}" || echo "Failed to fetch"
-          echo "::endgroup::"
+          echo "::group::Final host status"; echo "$LAST_STATUS"; echo "::endgroup::"
+          echo "::group::Final function list"; echo "${FUNCS_CAPTURE:-Failed to fetch}"; echo "::endgroup::"
           exit 1
 
       - name: Verify discovery
@@ -223,4 +244,3 @@ jobs:
           set -Eeuo pipefail
           sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
           az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
-
