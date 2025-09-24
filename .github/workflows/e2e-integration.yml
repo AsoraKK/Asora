@@ -47,6 +47,13 @@ jobs:
         run: |
           echo "AZURE_CONFIG_DIR=${RUNNER_TEMP}/azure-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
 
+      - name: Install dependencies (fallback)
+        shell: bash
+        run: |
+          # Ensure jq and curl are available (ubuntu-latest should have them)
+          command -v jq >/dev/null || sudo apt-get update && sudo apt-get install -y jq
+          command -v curl >/dev/null || sudo apt-get update && sudo apt-get install -y curl
+
       - name: Clear MSAL cache
         shell: bash
         run: |
@@ -104,6 +111,7 @@ jobs:
           KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>/dev/null || echo "{}")
           KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
           [ -n "$KEY" ] || KEY="anonymous"
+          [ "$KEY" = "anonymous" ] && echo "::warning::No admin key fetched - may lack RBAC permissions"
           echo "FUNCTION_KEY=${KEY}" >> "$GITHUB_ENV"
           echo "Resolved deployment endpoint: https://${HOST}"
 
