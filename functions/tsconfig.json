@@ -5,13 +5,20 @@
     "module": "CommonJS",
     "target": "ES2020",
     "noEmitOnError": true,
-    "strict": true
+    "strict": true,
+    "lib": ["ES2020"],
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/index.ts",
+    "src/health.ts",
+    "src/feed.ts"
+  ],
   "exclude": [
-    "src/**/__tests__/**",
-    "src/**/*.test.ts",
-    "src/index-complex.ts",
-    "src/test-setup.ts"
+    "node_modules",
+    "dist",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "coverage"
   ]
 }
