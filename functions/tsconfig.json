@@ -1,38 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "dist",
     "rootDir": "src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "outDir": "dist",
+    "module": "CommonJS",
+    "target": "ES2020",
     "noEmitOnError": true,
-    "plugins": [
-      {
-        "name": "@azure/functions"
-      }
-    ]
+    "strict": true,
+    "lib": ["ES2020"],
+    "types": ["node"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/index.ts",
+    "src/health.ts",
+    "src/feed.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "**/__tests__/**",
     "**/*.test.ts",
-    "src/index-canary.ts",
-    "src/index-complex.ts",
-    "src/index-minimal.ts",
-    "src/index-previous.ts",
-    "src/index-simple.ts"
+    "coverage"
   ]
 }
