@@ -375,6 +375,13 @@ jobs:
           set -euo pipefail
           MODE=zip ZIP=dist-v4-final.zip bash .github/scripts/preflight.sh
 
+      - name: Enforce host.json schema version
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -p dist-v4-final.zip host.json | jq -e '.version == "2.0"' >/dev/null \
+            || { echo "::error::ZIP host.json.version must be \"2.0\""; exit 1; }
+
       - name: Normalize Flex settings for Node 20
         env:
           APP: asora-function-dev
