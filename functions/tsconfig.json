@@ -3,8 +3,8 @@
     "target": "ES2020",
     "module": "commonjs",
     "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./",
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -23,12 +23,16 @@
     ]
   },
   "include": [
-    "src/**/*.ts",
-    "functions/src/**/*.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "src/index-canary.ts",
+    "src/index-complex.ts",
+    "src/index-minimal.ts",
+    "src/index-previous.ts",
+    "src/index-simple.ts"
   ]
 }
