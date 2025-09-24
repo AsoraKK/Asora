@@ -49,6 +49,7 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = process.env.TAG || '${{ steps.tag.outputs.tag }}';
             try {
@@ -60,7 +61,7 @@ jobs:
               });
             } catch (error) {
               if (error.status === 403) {
-                console.log("skipped due to permissions");
+                core.info("skipped due to permissions");
               } else {
                 throw error;
               }
