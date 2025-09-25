@@ -4,6 +4,7 @@ name: Deploy Functions (Flex)
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -41,6 +42,15 @@ jobs:
           find dist -name '*.js' | grep . || (echo "No JS build output in dist/"; exit 1)
           npm prune --omit=dev
           jq -e '.version=="2.0"' host.json >/dev/null || { echo "host.json.version must be 2.0"; exit 1; }
+
+      - name: Tripwire — no invalid host.json versions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ! grep -R --line-number '"version"[[:space:]]*:[[:space:]]*"4\.0"' . || {
+            echo "Invalid host.json version found";
+            exit 1;
+          }
 
       - name: Isolate Azure CLI cache (per-run)
         shell: bash
@@ -160,7 +170,7 @@ jobs:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
-        uses: Azure/functions-action@v4
+        uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: functions
