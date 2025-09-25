@@ -52,6 +52,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require('@actions/core');
             const tag = process.env.TAG || '${{ steps.tag.outputs.tag }}';
             try {
               await github.rest.repos.createCommitComment({
