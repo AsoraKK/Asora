@@ -40,6 +40,7 @@ jobs:
           npm run build
           find dist -name '*.js' | grep . || (echo "No JS build output in dist/"; exit 1)
           npm prune --omit=dev
+          jq -e '.version=="2.0"' host.json >/dev/null || { echo "host.json.version must be 2.0"; exit 1; }
 
       - name: Isolate Azure CLI cache (per-run)
         shell: bash
@@ -102,22 +103,23 @@ jobs:
           IS_FLEX=${IS_FLEX:-false}
 
           if [ "$IS_FLEX" = true ]; then
-            az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION -o none --only-show-errors || true
+            az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_EXTENSION_VERSION -o none --only-show-errors || true
             retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
               FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-              FUNCTIONS_EXTENSION_VERSION=~4 \
               APPLICATIONINSIGHTS_ROLE_NAME="$APP"
             az resource update ${sub_opt} -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
+            RUNTIME_JSON=$(az webapp show ${sub_opt} -g "$RG" -n "$APP" --query "properties.functionAppConfig.runtime" -o json --only-show-errors)
+            echo "Flex runtime: $RUNTIME_JSON"
+            if ! jq -e '.name=="node" and .version=="20"' <<<"$RUNTIME_JSON" >/dev/null; then
+              echo "::error::Flex runtime mismatch (expected node/20)"
+              exit 6
+            fi
           else
             retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-              FUNCTIONS_WORKER_RUNTIME=node \
               FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-              FUNCTIONS_EXTENSION_VERSION=~4 \
               APPLICATIONINSIGHTS_ROLE_NAME="$APP"
             if [[ "$KIND" == *linux* ]]; then
               retry az functionapp config set ${sub_opt} -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
-            else
-              retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" --settings WEBSITE_NODE_DEFAULT_VERSION=~20 -o none --only-show-errors
             fi
           fi
 
@@ -134,10 +136,6 @@ jobs:
           if [ "$IS_FLEX" != true ]; then
             if [[ "$KIND" == *linux* ]]; then
               [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
-            else
-              NODE_VER="$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" \
-                --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value|[0]" -o tsv --only-show-errors)"
-              [[ "$NODE_VER" == "~20" ]] || { echo "::error::WEBSITE_NODE_DEFAULT_VERSION!=~20"; exit 5; }
             fi
           fi
 
@@ -150,7 +148,7 @@ jobs:
         run: |
           cat > index.js <<'EOF'
           // Azure Functions Node v4 isolated entrypoint
-          try { module.exports = require('./src/index.js'); }
+          try { module.exports = require('./dist/index.js'); }
           catch (e) { module.exports = require('./dist/src/index.js'); }
           EOF
 
@@ -162,10 +160,11 @@ jobs:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
-        uses: Azure/functions-action@v1
+        uses: Azure/functions-action@v4
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: functions
+          scm-do-build-during-deployment: true
         env:
           COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
 
