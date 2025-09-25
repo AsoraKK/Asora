@@ -62,37 +62,12 @@ if ! az functionapp show --name "$FUNCTION_APP_NAME" --resource-group "$RESOURCE
 fi
 echo -e "${GREEN}✅ Function App verified${NC}"
 
-# Set explicit runtime configuration (one-time hardening)
-echo -e "${YELLOW}Setting Node.js runtime configuration...${NC}"
-az functionapp config appsettings set \
+# Inspect current runtime configuration (Flex uses functionAppConfig)
+echo -e "${YELLOW}Inspecting runtime configuration...${NC}"
+az webapp show \
     --name "$FUNCTION_APP_NAME" \
     --resource-group "$RESOURCE_GROUP" \
-    --settings FUNCTIONS_EXTENSION_VERSION=~4 \
-              FUNCTIONS_WORKER_RUNTIME=node \
-              WEBSITE_NODE_DEFAULT_VERSION=~20 \
-              WEBSITE_RUN_FROM_PACKAGE=1
-
-echo -e "${YELLOW}Setting Function App runtime stack...${NC}"
-az functionapp config set \
-    --name "$FUNCTION_APP_NAME" \
-    --resource-group "$RESOURCE_GROUP" \
-    --linux-fx-version "NODE|20"
-
-echo -e "${GREEN}✅ Runtime configuration set${NC}
-
-# Verify runtime configuration
-echo -e "${YELLOW}Verifying runtime configuration...${NC}"
-az functionapp config appsettings list \
-    --name "$FUNCTION_APP_NAME" \
-    --resource-group "$RESOURCE_GROUP" \
-    | jq -e '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME" and .value=="node")' >/dev/null
-
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ FUNCTIONS_WORKER_RUNTIME correctly set to 'node'${NC}"
-else
-    echo -e "${RED}❌ FUNCTIONS_WORKER_RUNTIME verification failed${NC}"
-    exit 1
-fi
+    --query "properties.functionAppConfig.runtime" -o json || true
 
 # Build TypeScript
 echo -e "${YELLOW}Building TypeScript...${NC}"
