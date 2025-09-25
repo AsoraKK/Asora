@@ -9,18 +9,11 @@ RESOURCE_GROUP="asora-psql-flex"
 echo "Fixing Azure Functions Flex app settings for $APP_NAME..."
 
 # Remove invalid settings for Flex plan
-echo "Removing FUNCTIONS_WORKER_RUNTIME (not supported in Flex)..."
+echo "Removing deprecated runtime app settings (Flex doesn't use them)..."
 az functionapp config appsettings delete \
   -g "$RESOURCE_GROUP" \
   -n "$APP_NAME" \
-  --setting-names FUNCTIONS_WORKER_RUNTIME
-
-# Set required settings for Flex plan
-echo "Setting FUNCTIONS_EXTENSION_VERSION to ~4..."
-az functionapp config appsettings set \
-  -g "$RESOURCE_GROUP" \
-  -n "$APP_NAME" \
-  --settings FUNCTIONS_EXTENSION_VERSION="~4"
+  --setting-names FUNCTIONS_WORKER_RUNTIME FUNCTIONS_EXTENSION_VERSION WEBSITE_NODE_DEFAULT_VERSION || true
 
 echo "Flex app settings configuration complete!"
 
