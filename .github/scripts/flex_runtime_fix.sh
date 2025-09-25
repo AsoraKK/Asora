@@ -78,9 +78,6 @@ else
   az functionapp config appsettings set -g "$RG" -n "$APP" -o none --settings \
     AzureWebJobsFeatureFlags=EnableWorkerIndexing \
     FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-    FUNCTIONS_EXTENSION_VERSION=~4 \
-    FUNCTIONS_WORKER_RUNTIME=node \
-    WEBSITE_NODE_DEFAULT_VERSION=~20 \
     WEBSITE_RUN_FROM_PACKAGE=1
 fi
 
