@@ -17,12 +17,14 @@ az webapp log download \
   --log-file recent-logs.zip
 
 # Check function app configuration
-echo "🔧 Current app settings:"
 az functionapp config appsettings list \
   -g asora-psql-flex \
   -n asora-function-dev \
-  --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION' || name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_RUN_FROM_PACKAGE']" \
   --output table
+
+echo "🔧 Flex runtime snapshot (if configured):"
+az rest --method get --uri "https://management.azure.com/subscriptions/99df7ef7-776a-4235-84a4-c77899b2bb04/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev?api-version=2023-01-01" \
+  --query "properties.functionAppConfig.runtime" -o json
 
 # Function host status endpoint
 echo "🔍 Function host status:"
@@ -48,5 +50,5 @@ echo "🛠️  Quick fixes:"
 echo "- Verify package.json 'main': 'src/index.js'"
 echo "- Check host.json 'version': '4.0'"
 echo "- Ensure no function.json files in v4 project"
-echo "- Set WEBSITE_NODE_DEFAULT_VERSION to ~20"
+echo "- For Flex, confirm properties.functionAppConfig.runtime is node@20"
 echo "- Remove 'type': 'module' from package.json for CommonJS"

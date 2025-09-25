@@ -1,56 +1,36 @@
 # Copilot Instructions
 
-## Project Overview
-Asora is a social media platform for human-authored content with AI-powered moderation. The codebase is organized as:
-- **Frontend**: Flutter 3 + Riverpod (multi-platform: iOS, Android, Web)
-- **Backend**: Azure Functions (Node.js 20) with TypeScript
-- **Database**: Azure Cosmos DB + Redis for caching
-- **AI Safety**: Hive AI v2 (primary) + Azure Content Safety (fallback)
+## What to know first
+- Start with [`docs/ADR_001_TLDR.md`](../docs/ADR_001_TLDR.md) for the product vision, target KPIs, and how the Flutter front end aligns with Azure Functions + Cosmos.
+- The repo is split: Flutter app in `lib/` (Riverpod-based clean architecture) and Node.js 20 Azure Functions in `functions/` (TypeScript → CJS build output under `dist/`).
 
-## Architecture Reference
-📋 **Start Here**: See [`docs/ADR_001_TLDR.md`](../docs/ADR_001_TLDR.md) for stack overview, KPIs, and phase roadmap.
+## Architecture hot points
+- **Flutter**: Features live under `lib/features/<feature>` with `domain/`, `application/`, `presentation/` layers. Navigation is gated by `lib/features/auth/presentation/auth_gate.dart`. Critical security/privacy flows sit in `lib/p1_modules/` and must keep ≥80 % coverage (enforced via `check_p1_coverage.sh`).
+- **Azure Functions (Flex Consumption)**: Source in `functions/src/`, compiled via `npm run build` to `dist/`. Entrypoint wiring is handled by `functions/index.js` (generated during deploy). Shared helpers (auth, Cosmos, validation) live under `functions/shared/`.
+- **Data**: Cosmos DB connection string is injected at deploy time (see workflow env `COSMOS_CONNECTION_STRING`). Redis is accessed via services in `lib/services/cache/`.
+- **Moderation pipeline**: Hive AI (primary) then Azure Content Safety fallback; workflows and components live under `lib/features/moderation/` with a demo screen at `lib/screens/moderation_demo_page.dart`.
 
-## Key Patterns & Conventions
+## Build, test, and debug
+- **Flutter**: `flutter test --coverage` (then `bash check_p1_coverage.sh`). Use `lib/debug_sql.dart` for SQL visualization when debugging feeds.
+- **Functions**: From `functions/`, run `npm ci && npm run build` to produce `dist/`, `npm test` for Jest, `npm start` for the local runtime (7072). Avoid ESM—`package.json` is locked to CommonJS.
+- **CI helpers**: `quick-check.sh` executes format + targeted tests; `quick_coverage_demo.sh` is a minimal coverage smoke.
 
-### Flutter Architecture
-- **State Management**: Riverpod providers in `lib/services/service_providers.dart`
-- **Feature Structure**: Clean architecture with `domain/`, `application/`, and `presentation/` layers
-- **Critical Modules**: P1 modules in `lib/p1_modules/` require ≥80% test coverage
-- **Navigation**: AuthGate pattern - `lib/features/auth/presentation/auth_gate.dart` handles auth flow
+## Deployment workflow essentials
+- `.github/workflows/deploy-functions-flex.yml` builds from `functions/`, prunes dev deps, and publishes with `Azure/functions-action@v1`. Flex apps must **not** set `FUNCTIONS_WORKER_RUNTIME`, `FUNCTIONS_EXTENSION_VERSION`, or `WEBSITE_NODE_DEFAULT_VERSION`; the workflow now only validates `properties.functionAppConfig.runtime` is `node@20` and logs Cosmos wiring.
+- Scripts like `.github/scripts/normalize_flex.sh` and `fix-flex-settings.sh` exist to clean legacy settings—rely on ARM patches rather than app-setting writes.
+- PR validations: `canary.yml` handles prerelease tagging, `e2e-integration.yml` fetches admin keys post-deploy and runs smoke requests.
 
-### Azure Functions Backend
-- **Entry Points**: Each function has `index.js` + `function.json` in its directory
-- **Shared Utils**: Common code in `functions/shared/` (auth, cosmos, validation)
-- **Authentication**: JWT validation via `functions/shared/auth.ts`
-- **Testing**: Jest config in `functions/jest.config.ts`
+## Patterns worth copying
+- Services expose typed methods via providers in `lib/services/service_providers.dart`; prefer composing new features by wiring providers instead of manual singletons.
+- API clients live under `lib/core/network/` using Dio with pinned certs—extend `dio_client.dart` for new HTTP stacks.
+- For Functions, each endpoint is structured as `<feature>/<trigger>.function.ts` exporting a handler registered in `functions/src/index.ts`. New endpoints should follow existing logging/error handling helpers in `functions/shared/logger.ts` and `functions/shared/errors.ts`.
 
-### Development Workflows
-**Flutter Tests**: `flutter test --coverage` + `bash check_p1_coverage.sh` for P1 coverage gate
-**Functions Tests**: `cd functions && npm test`
-**Local Backend**: `cd functions && npm start` (port 7072)
-**Deployment**: Automated CI/CD pipelines handle Azure Functions + Flutter web deployment
+## Useful references
+- `functions/jest.config.ts` – Jest + ts-jest setup mirroring the build pipeline.
+- `docs/FEED_IMPLEMENTATION.md` – Explains feed ranking, Redis usage, and moderation hooks.
+- `AZURE_FUNCTIONS_V4_PITFALLS.md` – Historical pitfalls; skim to avoid reverting to forbidden settings.
+- `scripts/diagnostics-v4.sh` – One-stop commands for tailing logs, querying runtime config, and checking admin host health.
 
-### API Integration
-- **Base Config**: `lib/core/config/api_config.dart` for environment-based endpoints
-- **HTTP Client**: `lib/core/network/dio_client.dart` with certificate pinning
-- **Service Layer**: `lib/services/` contains typed service classes with error handling
-
-### Moderation System
-- **AI Processing**: Content passes through Hive AI → Azure Content Safety fallback
-- **Appeal Flow**: Users can appeal via `lib/features/moderation/` components
-- **Demo Mode**: `lib/screens/moderation_demo_page.dart` showcases full moderation workflow
-
-## Common Tasks
-- **Add new API endpoint**: Create function in `functions/` + corresponding service in `lib/services/`
-- **New Flutter screen**: Follow feature structure in `lib/features/[feature]/presentation/screens/`
-- **Update auth flow**: Modify `lib/features/auth/application/auth_service.dart`
-- **Add test coverage**: Focus on P1 modules first (auth, core security, privacy)
-
-## Tool Usage Instructions
-- **Terminal Output Fallback**: The `run_in_terminal` tool sometimes fails to capture command output. If that happens, use the `get_terminal_last_command` tool to retrieve the last command output from the terminal. If that fails, ask the user to copy-paste the output from the terminal.
-
-## Key Files to Reference
-- `lib/main.dart` - App entry point with providers
-- `functions/package.json` - Backend dependencies and scripts
-- `lib/features/auth/presentation/auth_gate.dart` - Authentication routing
-- `functions/shared/auth.ts` - JWT validation logic
+## Tooling tips
+- If a terminal command returns no output via the automation tools, fall back to `run_in_terminal` followed by `get_terminal_output` (or request user pasteback) as noted in `AGENTS.md`.
+- Secrets are managed through Azure Key Vault references; never hard-code secrets in Functions—use the `@Microsoft.KeyVault(...)` pattern visible in existing app settings.
