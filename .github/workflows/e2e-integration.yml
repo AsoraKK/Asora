@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ensure required secrets
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
-            case $k in
-              AZURE_CLIENT_ID) v="${{ secrets.AZURE_CLIENT_ID }}" ;;
-              AZURE_TENANT_ID) v="${{ secrets.AZURE_TENANT_ID }}" ;;
-              AZURE_SUBSCRIPTION_ID) v="${{ secrets.AZURE_SUBSCRIPTION_ID }}" ;;
-            esac
+            v="${!k:-}"
             [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
           done
 
@@ -33,7 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     env:
-      SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       APP: asora-function-dev
       RG: asora-psql-flex
     permissions:
@@ -64,11 +66,13 @@ jobs:
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Auth sanity
+        env:
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
           echo "AZURE_CONFIG_DIR=${AZURE_CONFIG_DIR:-$HOME/.azure}"
@@ -80,6 +84,10 @@ jobs:
       - name: Discover keys & URL
         id: info
         shell: bash
+        env:
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          RG: ${{ env.RG }}
+          APP: ${{ env.APP }}
         run: |
           set -Eeuo pipefail
           : "${SUBS:?}"; : "${RG:?}"; : "${APP:?}"
@@ -117,6 +125,10 @@ jobs:
 
       - name: "Wait for Function App readiness"
         shell: bash
+        env:
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          RG: ${{ env.RG }}
+          APP: ${{ env.APP }}
         run: |
           set -euo pipefail
 
@@ -133,6 +145,9 @@ jobs:
 
       - name: Probe admin endpoints
         shell: bash
+        env:
+          FUNCTION_BASE_URL: ${{ env.FUNCTION_BASE_URL }}
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
         run: |
           set -euo pipefail
           HOST="${FUNCTION_BASE_URL#https://}"

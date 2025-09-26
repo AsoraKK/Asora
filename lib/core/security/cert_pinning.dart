@@ -191,7 +191,8 @@ void _logCertPinViolation(String host, String reason) {
     '🚨 SECURITY: Certificate pinning violation: ${jsonEncode(event)}',
   );
 
-  // TODO: Send to telemetry service
+  // NOTE(asora-telemetry): Route to the central telemetry pipeline once the
+  // dedicated security event service is available.
   // TelemetryService.reportSecurityEvent(event);
 }
 

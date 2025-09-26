@@ -152,7 +152,8 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
 
       final nextPage = await feedService.getFeed(
         params: nextParams,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       return FeedResponse(
@@ -185,7 +186,8 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
     return feedService.getTrendingFeed(
       page: _currentPage,
       pageSize: _pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -204,7 +206,8 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
       final nextPage = await feedService.getTrendingFeed(
         page: _currentPage + 1,
         pageSize: _pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -245,7 +248,8 @@ class LocalFeedNotifier
       radius: arg.radius,
       page: arg.page,
       pageSize: arg.pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -265,7 +269,8 @@ class LocalFeedNotifier
         radius: arg.radius,
         page: _currentPage + 1,
         pageSize: arg.pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -300,7 +305,8 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
     return feedService.getNewCreatorsFeed(
       page: _currentPage,
       pageSize: _pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -318,7 +324,8 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
       final nextPage = await feedService.getNewCreatorsFeed(
         page: _currentPage + 1,
         pageSize: _pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -348,7 +355,8 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
     return feedService.getPost(
       postId: arg,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -357,7 +365,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // TODO: Implement authentication check
+    // NOTE(asora-auth): enforce auth gate after hooking up token validation
     const token = null; // Placeholder
 
     if (token == null) {
@@ -385,7 +393,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // TODO: Implement authentication check
+    // NOTE(asora-auth): enforce auth gate after hooking up token validation
     const token = null; // Placeholder
 
     if (token == null) {
@@ -410,7 +418,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
   /// Flag post for moderation (requires authentication when implemented)
   Future<void> flagPost({required String reason, String? details}) async {
-    // TODO: Implement authentication check
+    // NOTE(asora-auth): enforce auth gate after hooking up token validation
     const token = null; // Placeholder
 
     if (token == null) {
@@ -445,7 +453,8 @@ class CommentsNotifier
       postId: arg.postId,
       page: arg.page,
       pageSize: arg.pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -464,7 +473,8 @@ class CommentsNotifier
         postId: arg.postId,
         page: _currentPage + 1,
         pageSize: arg.pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;

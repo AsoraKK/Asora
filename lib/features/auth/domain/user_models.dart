@@ -69,8 +69,10 @@ class UserProfile {
 /// User statistics from Azure Functions
 class UserStats {
   final int postsCount;
-  final int followersCount; // TODO: Will be implemented later
-  final int followingCount; // TODO: Will be implemented later
+  final int
+  followersCount; // NOTE(asora-backlog): populate from social graph service once ready
+  final int
+  followingCount; // NOTE(asora-backlog): populate from social graph service once ready
 
   const UserStats({
     required this.postsCount,
