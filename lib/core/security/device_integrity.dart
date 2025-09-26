@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart'
     as jailbreak;
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 /// Device integrity state
 enum DeviceIntegrityStatus { unknown, secure, compromised, error }
@@ -119,7 +120,11 @@ class DeviceIntegrityService {
       try {
         debugPrint('🚨 Device integrity check failed: $e');
       } catch (logError) {
-        print('🚨 [FALLBACK] Logging failed: $logError');
+        developer.log(
+          '🚨 [FALLBACK] Logging failed: $logError',
+          name: 'device_integrity',
+          error: logError,
+        );
       }
 
       final errorResult = DeviceIntegrityInfo(

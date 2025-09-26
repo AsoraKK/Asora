@@ -247,15 +247,24 @@ void main() {
         launcher: (uri, {mode = LaunchMode.platformDefault}) async => true,
       );
 
-      const MethodChannel(
+      final defaultMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const MethodChannel urlLauncherChannel = MethodChannel(
         'plugins.flutter.io/url_launcher',
-      ).setMockMethodCallHandler((_) async => true);
+      );
+      defaultMessenger.setMockMethodCallHandler(
+        urlLauncherChannel,
+        (_) async => true,
+      );
     });
 
     tearDown(() {
-      const MethodChannel(
+      final defaultMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const MethodChannel urlLauncherChannel = MethodChannel(
         'plugins.flutter.io/url_launcher',
-      ).setMockMethodCallHandler(null);
+      );
+      defaultMessenger.setMockMethodCallHandler(urlLauncherChannel, null);
     });
 
     group('OAuth2Config', () {

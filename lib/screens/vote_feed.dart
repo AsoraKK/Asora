@@ -506,29 +506,34 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
     bool isContentType = false,
     bool isUrgency = false,
   }) {
+    final groupValue = isContentType
+        ? _contentTypeFilter
+        : isUrgency
+        ? _urgencyFilter
+        : _statusFilter;
+    final isSelected = groupValue == value;
+
     return ListTile(
       title: Text(label),
-      leading: Radio<String>(
-        value: value,
-        groupValue: isContentType
-            ? _contentTypeFilter
-            : isUrgency
-            ? _urgencyFilter
-            : _statusFilter,
-        onChanged: (newValue) {
-          setState(() {
-            if (isContentType) {
-              _contentTypeFilter = newValue!;
-            } else if (isUrgency) {
-              _urgencyFilter = newValue!;
-            } else {
-              _statusFilter = newValue!;
-            }
-          });
-          Navigator.of(context).pop();
-          _applyFiltersAndSort();
-        },
+      leading: Icon(
+        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
+      onTap: () {
+        setState(() {
+          if (isContentType) {
+            _contentTypeFilter = value;
+          } else if (isUrgency) {
+            _urgencyFilter = value;
+          } else {
+            _statusFilter = value;
+          }
+        });
+        Navigator.of(context).pop();
+        _applyFiltersAndSort();
+      },
     );
   }
 

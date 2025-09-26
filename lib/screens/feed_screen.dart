@@ -490,7 +490,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Profile', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to profile screen
+                _showComingSoon(context, 'Profile');
               },
             ),
             ListTile(
@@ -498,7 +498,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Notifications', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to notifications
+                _showComingSoon(context, 'Notifications');
               },
             ),
             ListTile(
@@ -519,7 +519,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Settings', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to general settings
+                _showComingSoon(context, 'Settings');
               },
             ),
             ListTile(
@@ -527,7 +527,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Help & Support', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to help
+                _showComingSoon(context, 'Help & Support');
               },
             ),
             const Divider(),
@@ -545,7 +545,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Sign In', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to sign in
+                _showComingSoon(context, 'Sign In');
               },
             ),
             ListTile(
@@ -553,7 +553,7 @@ class _AsoraDrawer extends ConsumerWidget {
               title: Text('Sign Up', style: GoogleFonts.sora()),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to sign up
+                _showComingSoon(context, 'Sign Up');
               },
             ),
           ],
@@ -568,6 +568,15 @@ class _AsoraDrawer extends ConsumerWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String featureName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$featureName is coming soon.'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

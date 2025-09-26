@@ -8,13 +8,18 @@ void main() {
 
   const channel = MethodChannel('flutter_jailbreak_detection');
 
+  final defaultMessenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
   group('DeviceIntegrityService', () {
     late DeviceIntegrityService service;
     late List<MethodCall> calls;
 
     setUp(() {
       calls = [];
-      channel.setMockMethodCallHandler((MethodCall call) async {
+      defaultMessenger.setMockMethodCallHandler(channel, (
+        MethodCall call,
+      ) async {
         calls.add(call);
         switch (call.method) {
           case 'jailbroken':
@@ -32,7 +37,7 @@ void main() {
     });
 
     tearDown(() {
-      channel.setMockMethodCallHandler(null);
+      defaultMessenger.setMockMethodCallHandler(channel, null);
     });
 
     test('memoizes check results', () async {
@@ -54,7 +59,9 @@ void main() {
         logMessage = message;
       };
 
-      channel.setMockMethodCallHandler((MethodCall call) async {
+      defaultMessenger.setMockMethodCallHandler(channel, (
+        MethodCall call,
+      ) async {
         calls.add(call);
         if (call.method == 'jailbroken') {
           return true;
@@ -77,7 +84,9 @@ void main() {
         throw Exception('log failure');
       };
 
-      channel.setMockMethodCallHandler((MethodCall call) async {
+      defaultMessenger.setMockMethodCallHandler(channel, (
+        MethodCall call,
+      ) async {
         if (call.method == 'jailbroken') {
           return true;
         }

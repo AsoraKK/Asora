@@ -245,22 +245,30 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 12),
-        ...AppealType.values.map(
-          (type) => RadioListTile<String>(
+        ...AppealType.values.map((type) {
+          final isSelected = _appealType == type.value;
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             title: Text(type.displayName),
             subtitle: Text(
               type.description,
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            value: type.value,
-            groupValue: _appealType,
-            onChanged: (value) {
+            onTap: () {
               setState(() {
-                _appealType = value!;
+                _appealType = type.value;
               });
             },
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

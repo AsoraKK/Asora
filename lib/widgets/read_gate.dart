@@ -4,7 +4,7 @@ import '../screens/lock_screen.dart';
 
 // Placeholder provider - replace with your actual user provider
 final meProvider = FutureProvider<UserProfile>((ref) async {
-  // TODO: Implement actual API call to /api/me
+  // NOTE(asora-auth): replace with real /api/me call once backend contract stabilizes
   await Future.delayed(const Duration(seconds: 1));
   return const UserProfile(accountLocked: false);
 });

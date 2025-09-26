@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class UpgradePrompt extends StatelessWidget {
   final String currentTier;
-  const UpgradePrompt({super.key, required this.currentTier});
+  final VoidCallback? onUpgrade;
+  const UpgradePrompt({super.key, required this.currentTier, this.onUpgrade});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +28,17 @@ class UpgradePrompt extends StatelessWidget {
               children: [
                 ElevatedButton(
                   onPressed: () {
-                    /* TODO: navigate to upgrade */
+                    if (onUpgrade != null) {
+                      onUpgrade!();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Upgrade flow coming soon. Check back shortly!',
+                          ),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Upgrade'),
                 ),

@@ -22,13 +22,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ensure required secrets
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
-            case $k in
-              AZURE_CLIENT_ID) v="${{ secrets.AZURE_CLIENT_ID }}" ;;
-              AZURE_TENANT_ID) v="${{ secrets.AZURE_TENANT_ID }}" ;;
-              AZURE_SUBSCRIPTION_ID) v="${{ secrets.AZURE_SUBSCRIPTION_ID }}" ;;
-            esac
+            v="${!k:-}"
             [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
           done
 
@@ -36,6 +36,10 @@ jobs:
     name: Flutter Tests
     runs-on: ubuntu-latest
     needs: verify-secrets
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -93,28 +97,28 @@ jobs:
 
             const issueNumber = context.payload.pull_request?.number ?? context.issue?.number;
             if (!issueNumber) {
-              core.info('No issue or pull-request context; skipping coverage comment.');
-              return;
-            }
-
-            try {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body
-              });
-              core.info('Coverage comment posted successfully');
-            } catch (error) {
-              if (error?.status === 403) {
-                core.info('Skipped coverage comment due to insufficient permissions');
-              } else {
-                throw error;
+              core.info('No PR/issue number available — skipping coverage comment.');
+            } else {
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body,
+                });
+                core.info('Coverage comment posted successfully');
+              } catch (error) {
+                if (error?.status === 403) {
+                  core.info('Skipped coverage comment due to insufficient permissions');
+                } else {
+                  throw error;
+                }
               }
             }
 
       - name: Coverage summary (pushes or forks)
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork }}
+        env:
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
           if test -f code-coverage-results.md; then
@@ -137,6 +141,10 @@ jobs:
         working-directory: functions
     steps:
       - uses: actions/checkout@v4
+
+      - name: Guard Flex-incompatible settings
+        working-directory: ${{ github.workspace }}
+        run: bash scripts/check-flex-settings.sh
 
       - uses: actions/setup-node@v4
         with:
@@ -233,14 +241,18 @@ jobs:
       id-token: write
       contents: read
     environment: dev
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Validate Azure credentials
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: ${{ env.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ env.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
           for var in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
@@ -273,14 +285,14 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Select subscription and show context
         shell: bash
         env:
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
           if [ -z "${SUBS:-}" ]; then
@@ -294,7 +306,7 @@ jobs:
       - name: Resolve function host and key
         shell: bash
         env:
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
           RG: asora-psql-flex
           APP: asora-function-dev
           API_VERSION: 2022-03-01
@@ -379,7 +391,7 @@ jobs:
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
           API_VERSION: 2023-01-01
         shell: bash
         run: |
@@ -398,7 +410,7 @@ jobs:
         env:
           APP: asora-function-dev
           RG: asora-psql-flex
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         shell: bash
         run: |
           set -euo pipefail
