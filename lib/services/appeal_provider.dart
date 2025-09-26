@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio();
-  // TODO: inject baseUrl and auth header elsewhere
+  // NOTE(asora-appeals): configure baseUrl and auth header via interceptors when auth wiring is complete.
   return dio;
 });
 
