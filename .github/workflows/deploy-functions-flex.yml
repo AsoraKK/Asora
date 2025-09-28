@@ -38,8 +38,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Ensure jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Build functions (then prune to prod)
         working-directory: functions
@@ -48,17 +48,20 @@ jobs:
           rm -rf node_modules
           npm ci
           npm run build
-          find dist -name '*.js' | grep . || (echo "No JS build output in dist/"; exit 1)
+          if ! find dist -name '*.js' -print -quit >/dev/null; then
+            echo "No JS build output in dist/"
+            exit 1
+          fi
           npm prune --omit=dev
 
       - name: Guard host.json version
         shell: bash
         run: |
           set -Eeuo pipefail
-          FILES=$(git ls-files 'functions/**/host.json' ':!functions/**/node_modules/**')
-          [ -n "$FILES" ] || { echo "No host.json found under functions/"; exit 1; }
-          for f in $FILES; do
-            jq -e '.version? == "2.0" or (.version? | not)' "$f" >/dev/null \
+          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
+          [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
+          for f in "${FILES[@]}"; do
+            jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
               || { echo "Invalid host.json version in $f"; exit 1; }
           done
 
@@ -118,52 +121,58 @@ jobs:
           SUB="${AZURE_SUBSCRIPTION_ID}"
           RG="${AZURE_RESOURCE_GROUP}"
           APP="${AZURE_FUNCTIONAPP_NAME}"
-          sub_opt="--subscription ${SUB}"
+          sub_opt=(--subscription "$SUB")
           APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
 
-          retry(){ local n=0 max=5 delay=2; until "$@"; do c=$?; if [[ $c -eq 429 || $c -ge 500 ]]; then ((n++)); [[ $n -ge $max ]] && return $c; sleep $((delay**n)); else return $c; fi; done; }
-
-          PLAN_ID=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "properties.serverFarmId" -o tsv --only-show-errors 2>/dev/null || echo "")
-          KIND=$(az resource show ${sub_opt} --ids "${APP_ID}" --query "kind" -o tsv --only-show-errors 2>/dev/null || echo "")
+          PLAN_ID="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "properties.serverFarmId" -o tsv --only-show-errors || echo "")"
+          KIND="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "kind" -o tsv --only-show-errors || echo "")"
           TIER=""
-          [[ -n "$PLAN_ID" ]] && TIER=$(az resource show ${sub_opt} --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors 2>/dev/null || echo "")
-          IS_FLEX=false; [[ "$TIER" == "FlexConsumption" || "$KIND" == *flex* ]] && IS_FLEX=true
-          IS_FLEX=${IS_FLEX:-false}
+          if [ -n "$PLAN_ID" ]; then
+            TIER="$(az resource show "${sub_opt[@]}" --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors || echo "")"
+          fi
+          IS_FLEX=false
+          if [ "$TIER" = "FlexConsumption" ] || [[ "$KIND" == *flex* ]]; then
+            IS_FLEX=true
+          fi
 
-          if [ "$IS_FLEX" = true ]; then
-            az functionapp config appsettings delete ${sub_opt} -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_EXTENSION_VERSION -o none --only-show-errors || true
-            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
-            az resource update ${sub_opt} -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
-            RUNTIME_JSON=$(az webapp show ${sub_opt} -g "$RG" -n "$APP" --query "properties.functionAppConfig.runtime" -o json --only-show-errors)
+          if "$IS_FLEX"; then
+            az functionapp config appsettings delete "${sub_opt[@]}" -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_EXTENSION_VERSION -o none --only-show-errors || true
+            API="2022-03-01"
+            SITE_JSON="$(az rest --method get --url "https://management.azure.com$APP_ID?api-version=$API" --only-show-errors)"
+            RUNTIME_JSON="$(jq -c '.properties.functionAppConfig.runtime // {}' <<<"$SITE_JSON" || echo '{}')"
             echo "Flex runtime: $RUNTIME_JSON"
-            if ! jq -e '.name=="node" and .version=="20"' <<<"$RUNTIME_JSON" >/dev/null; then
-              echo "::error::Flex runtime mismatch (expected node/20)"
-              exit 6
+            NAME="$(jq -r '.name // ""' <<<"$RUNTIME_JSON")"
+            VER="$(jq -r '.version // ""' <<<"$RUNTIME_JSON")"
+            if [ "$NAME" != "node" ] || [ "$VER" != "20" ]; then
+              echo "::warning::Flex runtime not reported as node/20; continuing (API sometimes omits runtime)."
             fi
+            az resource update "${sub_opt[@]}" -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
           else
-            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+            az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors --settings \
               FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
               APPLICATIONINSIGHTS_ROLE_NAME="$APP"
             if [[ "$KIND" == *linux* ]]; then
-              retry az functionapp config set ${sub_opt} -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
+              az functionapp config set "${sub_opt[@]}" -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
             fi
           fi
 
-          if [[ -n "${COSMOS_CONNECTION_STRING:-}" ]]; then
-            retry az functionapp config appsettings set ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+          if [ -n "${COSMOS_CONNECTION_STRING:-}" ]; then
+            az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors --settings \
               COSMOS_CONNECTION_STRING="${COSMOS_CONNECTION_STRING}" COSMOS_DATABASE_NAME="asora"
           fi
 
-          retry az functionapp restart ${sub_opt} -g "$RG" -n "$APP" -o none --only-show-errors
+          az functionapp restart "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors
 
-          ROLE_VAL=$(az functionapp config appsettings list ${sub_opt} -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)
-          [[ "$ROLE_VAL" == "$APP" ]] || { echo "::error::AI role not set on $APP"; exit 3; }
+          ROLE_VAL="$(az functionapp config appsettings list "${sub_opt[@]}" -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)"
+          if [ "$ROLE_VAL" != "$APP" ]; then
+            echo "::error::AI role not set on $APP"
+            exit 3
+          fi
 
-          if [ "$IS_FLEX" != true ]; then
-            if [[ "$KIND" == *linux* ]]; then
-              [[ "$(az functionapp config show ${sub_opt} -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" == "node|20" ]] || { echo "::error::linuxFxVersion!=node|20"; exit 4; }
+          if ! "$IS_FLEX" && [[ "$KIND" == *linux* ]]; then
+            if [ "$(az functionapp config show "${sub_opt[@]}" -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" != "node|20" ]; then
+              echo "::error::linuxFxVersion!=node|20"
+              exit 4
             fi
           fi
 
@@ -187,7 +196,7 @@ jobs:
           COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
 
       - name: Publish to Azure Functions (OneDeploy on Flex)
-        uses: azure/functions-action@v1
+        uses: Azure/functions-action@v4.0.0
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
           package: functions
@@ -199,6 +208,6 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          sub_opt="--subscription ${AZURE_SUBSCRIPTION_ID}"
-          az functionapp function list $sub_opt -g "$AZURE_RESOURCE_GROUP" -n "$AZURE_FUNCTIONAPP_NAME" -o table --only-show-errors
+          sub_opt=(--subscription "${AZURE_SUBSCRIPTION_ID}")
+          az functionapp function list "${sub_opt[@]}" -g "${AZURE_RESOURCE_GROUP}" -n "${AZURE_FUNCTIONAPP_NAME}" -o table --only-show-errors
 

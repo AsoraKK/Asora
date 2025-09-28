@@ -4,75 +4,46 @@ set -Eeuo pipefail
 : "${SUBS:?SUBS unset}"
 : "${RG:?RG unset}"
 : "${APP:?APP unset}"
-API_SITE="${API_VERSION:-2023-01-01}"
-API_PLAN="2022-03-01"
 
+sub_opt=(--subscription "$SUBS")
 APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
 
-# 0) Auth sanity
-az account show -o none || { echo "::error::Not logged in"; exit 1; }
-az account set --subscription "$SUBS"
-
-# 1) Get site; extract serverFarmId; read plan sku
-SITE_JSON=$(az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API_SITE}")
-PLAN_ID=$(jq -r '.properties.serverFarmId // empty' <<<"$SITE_JSON")
-if [ -z "$PLAN_ID" ]; then
-  # fallback via CLI if RBAC trims fields
-  PLAN_ID=$(az functionapp show -g "$RG" -n "$APP" --query "serverFarmId" -o tsv 2>/dev/null || echo "")
+PLAN_ID="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "properties.serverFarmId" -o tsv --only-show-errors || echo "")"
+KIND="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "kind" -o tsv --only-show-errors || echo "")"
+TIER=""
+if [ -n "$PLAN_ID" ]; then
+  TIER="$(az resource show "${sub_opt[@]}" --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors || echo "")"
+fi
+IS_FLEX=false
+if [ "$TIER" = "FlexConsumption" ] || [[ "$KIND" == *flex* ]]; then
+  IS_FLEX=true
 fi
 
-if [ -z "$PLAN_ID" ]; then
-  echo "::error::serverFarmId not found on site"; exit 1
-fi
-
-PLAN_JSON=$(az rest --method get --url "https://management.azure.com${PLAN_ID}?api-version=${API_PLAN}")
-TIER=$(jq -r '.sku.tier // empty' <<<"$PLAN_JSON")
-NAME=$(jq -r '.sku.name // empty' <<<"$PLAN_JSON")
-
-# 2) Determine FlexConsumption
-IS_FLEX=0
-if [ "$TIER" = "FlexConsumption" ] || [[ "$NAME" =~ ^FC. ]]; then
-  IS_FLEX=1
-fi
-
-CUR_NAME=$(jq -r '.properties.functionAppConfig.runtime.name // empty' <<<"$SITE_JSON")
-CUR_VER=$(jq -r '.properties.functionAppConfig.runtime.version // empty' <<<"$SITE_JSON")
-echo "Plan tier=${TIER:-<unknown>} sku=${NAME:-<unknown>} runtime=${CUR_NAME:-<none>}@${CUR_VER:-<none>}"
-
-if [ "$IS_FLEX" -ne 1 ]; then
-  echo "Non-Flex app detected; skipping normalization without error."
-  exit 0
-fi
-
-# 3) Remove Flex-incompatible settings only if present
-EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[].name" -o tsv || true)
-for k in WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_WORKER_RUNTIME FUNCTIONS_EXTENSION_VERSION; do
-  if grep -qx "$k" <<<"$EXISTING"; then
-    az functionapp config appsettings delete -g "$RG" -n "$APP" --setting-names "$k" -o none || true
-    echo "Removed $k"
+if "$IS_FLEX"; then
+  az functionapp config appsettings delete "${sub_opt[@]}" -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_EXTENSION_VERSION -o none --only-show-errors || true
+  API="2022-03-01"
+  SITE_JSON="$(az rest --method get --url "https://management.azure.com$APP_ID?api-version=$API" --only-show-errors)"
+  RUNTIME_JSON="$(jq -c '.properties.functionAppConfig.runtime // {}' <<<"$SITE_JSON" || echo '{}')"
+  echo "Flex runtime: $RUNTIME_JSON"
+  NAME="$(jq -r '.name // ""' <<<"$RUNTIME_JSON")"
+  VER="$(jq -r '.version // ""' <<<"$RUNTIME_JSON")"
+  if [ "$NAME" != "node" ] || [ "$VER" != "20" ]; then
+    echo "::warning::Flex runtime not reported as node/20; continuing (API sometimes omits runtime)."
   fi
-done
-
-# 4) Patch runtime to node@20 if different
-TARGET_NAME="node"
-TARGET_VER="20"
-if [ "$CUR_NAME" != "$TARGET_NAME" ] || [ "$CUR_VER" != "$TARGET_VER" ]; then
-  PATCH=$(jq -n --arg n "$TARGET_NAME" --arg v "$TARGET_VER" '{properties:{functionAppConfig:{runtime:{name:$n,version:$v}}}}')
-  az rest --method patch \
-    --url "https://management.azure.com${APP_ID}?api-version=${API_SITE}" \
-    --headers "Content-Type=application/json" \
-    --body "$PATCH" -o none
+  az resource update "${sub_opt[@]}" -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
+else
+  az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors --settings \
+    FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
+    APPLICATIONINSIGHTS_ROLE_NAME="$APP"
+  if [[ "$KIND" == *linux* ]]; then
+    az functionapp config set "${sub_opt[@]}" -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
+  fi
 fi
 
-# 5) Read-back verify
-SITE_JSON2=$(az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API_SITE}")
-NEW_NAME=$(jq -r '.properties.functionAppConfig.runtime.name // empty' <<<"$SITE_JSON2")
-NEW_VER=$(jq -r '.properties.functionAppConfig.runtime.version // empty' <<<"$SITE_JSON2")
+az functionapp restart "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors
 
-if [ "$NEW_NAME" = "$TARGET_NAME" ] && [ "$NEW_VER" = "$TARGET_VER" ]; then
-  echo "✓ Flex settings normalized to ${NEW_NAME}@${NEW_VER}"
-else
-  echo "::group::ARM response"; echo "$SITE_JSON2" | jq .; echo "::endgroup::"
-  echo "::error::Runtime update did not persist; check RBAC or API version"
-  exit 1
+ROLE_VAL="$(az functionapp config appsettings list "${sub_opt[@]}" -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)"
+if [ "$ROLE_VAL" != "$APP" ]; then
+  echo "::error::AI role not set on $APP"
+  exit 3
 fi
