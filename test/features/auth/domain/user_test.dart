@@ -159,7 +159,8 @@ void main() {
       expect(user1 == user3, isFalse);
 
       // Test with different type
-      expect(user1 == 'not a user', isFalse);
+      final Object notAUser = 'not a user';
+      expect(user1 == notAUser, isFalse);
     });
 
     test('toString', () {

@@ -32,6 +32,22 @@ jobs:
             [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
           done
 
+  actionlint:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          if [ -f actionlint ]; then
+            chmod +x actionlint
+            ./actionlint -color
+          else
+            echo "::error::actionlint binary not found in repository"
+            exit 1
+          fi
+
   tests:
     name: Flutter Tests
     runs-on: ubuntu-latest
@@ -42,6 +58,8 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.0'
@@ -76,49 +94,34 @@ jobs:
           fi
 
       - name: Debug GitHub context
-        uses: actions/github-script@v7
+        uses: actions/github-script@v7.0.1
         with:
           script: |
             core.info(`event=${context.eventName}; isPR=${!!context.issue.number}`);
 
       - name: Comment coverage on PR
         if: ${{ github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const path = require('path');
-            const workspace = process.env.GITHUB_WORKSPACE || '.';
-            const summaryPath = path.join(workspace, 'code-coverage-results.md');
-            const body = fs.existsSync(summaryPath)
-              ? fs.readFileSync(summaryPath, 'utf8')
+            const body = fs.existsSync('code-coverage-results.md')
+              ? fs.readFileSync('code-coverage-results.md', 'utf8')
               : 'Coverage summary unavailable';
-
-            const issueNumber = context.payload.pull_request?.number ?? context.issue?.number;
-            if (!issueNumber) {
-              core.info('No PR/issue number available — skipping coverage comment.');
-            } else {
-              try {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNumber,
-                  body,
-                });
-                core.info('Coverage comment posted successfully');
-              } catch (error) {
-                if (error?.status === 403) {
-                  core.info('Skipped coverage comment due to insufficient permissions');
-                } else {
-                  throw error;
-                }
-              }
+            const pr = context.payload.pull_request?.number;
+            if (!pr) {
+              core.info('No PR context; skipping');
+              return;
             }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body,
+            });
 
       - name: Coverage summary (pushes or forks)
-        env:
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
           if test -f code-coverage-results.md; then
@@ -141,6 +144,8 @@ jobs:
         working-directory: functions
     steps:
       - uses: actions/checkout@v4
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Guard Flex-incompatible settings
         working-directory: ${{ github.workspace }}
@@ -165,6 +170,27 @@ jobs:
       - name: Guard against UTF-8 BOMs
         run: bash ../scripts/check-bom.sh
 
+      - name: Guard host.json version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          FILES=$(git ls-files 'functions/**/host.json' ':!functions/**/node_modules/**')
+          [ -n "$FILES" ] || { echo "No host.json under functions/"; exit 1; }
+          for f in $FILES; do
+            jq -e '(."version" == "2.0") or (has("version") == false)' "$f" >/dev/null \
+              || { echo "Invalid host.json version in $f"; exit 1; }
+          done
+
+      - name: Tripwire against forbidden host versions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ! grep -R --line-number '"version"[[:space:]]*:[[:space:]]*"4\.0"' \
+            -- 'functions/**' ':!functions/**/node_modules/**' ':!**/*.md' || {
+            echo 'Found 4.0 in deployable tree';
+            exit 1;
+          }
+
       - name: npm ci (strict)
         run: npm ci
 
@@ -184,10 +210,8 @@ jobs:
           rm -rf "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
           mkdir -p "$ROOT/deploy"
 
-          # host.json lives at repo root, include it at zip root
-          cp "$ROOT/host.json" "$ROOT/deploy/"
-
-          # include functions package.json
+          # host.json + package.json from canonical functions/ directory
+          cp "$ROOT/functions/host.json" "$ROOT/deploy/"
           cp "$ROOT/functions/package.json" "$ROOT/deploy/"
 
           # compiled output (copy entire dist to preserve relative imports)
@@ -197,23 +221,20 @@ jobs:
           # create thin root entrypoint for v4 runtime
           cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
 
-          # CRITICAL: Copy function directories with function.json files
+          # Copy any function directory containing a function.json
           echo "Copying function directories..."
-          for func_dir in health feed; do
-            if [ -d "$ROOT/functions/$func_dir" ]; then
-              echo "  Copying $func_dir..."
-              mkdir -p "$ROOT/deploy/$func_dir"
-              cp "$ROOT/functions/$func_dir/function.json" "$ROOT/deploy/$func_dir/"
-            else
-              echo "  Warning: $func_dir directory not found"
-            fi
-          done
+          while IFS= read -r d; do
+            echo "  Copying $d..."
+            mkdir -p "$ROOT/deploy/$d"
+            cp "$ROOT/functions/$d/function.json" "$ROOT/deploy/$d/"
+          done < <(
+            find "$ROOT/functions" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' \
+              | grep -v -E '^(dist|node_modules|scripts)$' \
+              | xargs -I{} bash -lc 'test -f "functions/{}/function.json" && echo {}'
+          )
 
-          # production node_modules
-          # re-install prod deps in functions and copy
-          pushd "$ROOT/functions" >/dev/null
-          npm ci --omit=dev
-          popd >/dev/null
+          # production dependencies only
+          (cd "$ROOT/functions" && npm ci --omit=dev)
           cp -R "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
 
           # Verify package structure before zipping
@@ -234,7 +255,7 @@ jobs:
 
   deploy_azure:
     name: Deploy to Azure
-    needs: [verify-secrets, tests, functions_build]
+    needs: [verify-secrets, actionlint, tests, functions_build]
     runs-on: ubuntu-latest
     if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop')) }}
     permissions:
@@ -247,6 +268,8 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Validate Azure credentials
         env:
@@ -303,71 +326,6 @@ jobs:
           az account set --subscription "$SUBS"
           az account show --output table
 
-      - name: Resolve function host and key
-        shell: bash
-        env:
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
-          RG: asora-psql-flex
-          APP: asora-function-dev
-          API_VERSION: 2022-03-01
-        run: |
-          set -euo pipefail
-          if [ -z "${SUBS:-}" ]; then
-            echo "::error::SUBS environment variable is required"
-            exit 1
-          fi
-
-          echo "Requesting ARM access token..."
-          az account get-access-token --resource https://management.azure.com --output none
-
-          APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
-          echo "Fetching site metadata from ARM..."
-          ARM_ERR="$(mktemp)"
-          if ! APP_JSON=$(az rest --method get --url "$APP_URL" 2>"$ARM_ERR"); then
-            echo "::error::Failed to retrieve Function App metadata via ARM"
-            cat "$ARM_ERR" >&2 || true
-            rm -f "$ARM_ERR"
-            exit 1
-          fi
-          rm -f "$ARM_ERR"
-
-          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
-          if [ -z "$HOST" ]; then
-            echo "::error::defaultHostName not returned by ARM"
-            exit 1
-          fi
-          echo "Detected function host: $HOST"
-          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-
-          KEYS_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=${API_VERSION}"
-          echo "Attempting host key discovery..."
-          FUNCTION_KEY="anonymous"
-          KEYS_ERR="$(mktemp)"
-          if KEYS_RESPONSE=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>"$KEYS_ERR"); then
-            PARSED_KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_RESPONSE" 2>/dev/null || echo "")
-            if [ -n "$PARSED_KEY" ]; then
-              FUNCTION_KEY="$PARSED_KEY"
-              echo "Host key retrieved successfully."
-            else
-              echo "::warning::Host keys response did not include a usable key; continuing with anonymous access"
-            fi
-          else
-            if grep -q "403" "$KEYS_ERR" 2>/dev/null; then
-              echo "::warning::Host key discovery returned 403 (insufficient RBAC); continuing with anonymous access"
-            else
-              echo "::warning::Host key discovery failed; continuing with anonymous access"
-            fi
-            cat "$KEYS_ERR" >&2 || true
-          fi
-          rm -f "$KEYS_ERR"
-
-          echo "FUNCTION_KEY=${FUNCTION_KEY}" >> "$GITHUB_ENV"
-          echo "Function base URL: https://${HOST}"
-          if [ "$FUNCTION_KEY" = "anonymous" ]; then
-            echo "Proceeding without function host key."
-          fi
-
       - name: Detect plan tier
         id: plantier
         shell: bash
@@ -399,108 +357,49 @@ jobs:
           bash .github/scripts/normalize_flex.sh
 
       - name: "C) Deploy via Azure Functions Action (Flex optimized)"
-        uses: Azure/functions-action@v1
+        uses: azure/functions-action@v4.0.0
         with:
           app-name: asora-function-dev
           package: dist-v4-final.zip
           remote-build: false
-          respect-funcignore: true
+          respect-funcignore: false
 
-      - name: "D) Post-deploy verification with admin API"
-        env:
-          APP: asora-function-dev
-          RG: asora-psql-flex
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: "D) Post-deploy verification"
         shell: bash
         run: |
-          set -euo pipefail
-          az account set --subscription "$SUBS"
-          API=2022-03-01
+          set -Eeuo pipefail
+          SUBS="${AZURE_SUBSCRIPTION_ID:?AZURE_SUBSCRIPTION_ID is required}"
+          HOST=$(az functionapp show -g asora-psql-flex -n asora-function-dev -o tsv --query defaultHostName)
+          if [ -z "$HOST" ]; then
+            echo "::error::Unable to resolve function host"
+            exit 1
+          fi
+          KEY=$(az functionapp keys list -g asora-psql-flex -n asora-function-dev -o tsv --query masterKey || echo "")
+          QP=""; [ -n "$KEY" ] && QP="?code=$KEY"
+          echo "Function host: $HOST"
 
-          echo "=== D) Post-Deploy Verification ==="
+          STATUS_JSON=$(curl -fsS "https://$HOST/admin/host/status$QP")
+          echo "$STATUS_JSON" | jq '{state,errors}'
+          STATE=$(echo "$STATUS_JSON" | jq -r '.state // "unknown"')
 
-          # Discover host and key
-          echo "Getting site info and host key..."
-          SITE=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API}")
-          HOST=$(jq -r '.properties.defaultHostName' <<<"$SITE")
-          KEYS=$(az rest --method post --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/host/default/listkeys?api-version=${API}" --body "{}" || echo '{}')
-          CODE=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS")
-          QP=""; [ -n "$CODE" ] && QP="?code=$CODE"
+          curl -fsS "https://$HOST/admin/functions$QP" | jq length
+          curl -i "https://$HOST/api/health" | head -n1
 
-          echo "Host: $HOST"
-          echo "Admin API available: $([ -n "$CODE" ] && echo "yes" || echo "no (anonymous)")"
-
-          # Wait for deployment to stabilize
-          echo "Waiting 30 seconds for deployment to stabilize..."
-          sleep 30
-
-          # Check functions indexing (up to 5 minutes)
-          for attempt in $(seq 1 10); do
-            echo "=== Attempt $attempt/10: Checking function indexing ==="
-
-            # 1) Host status
-            echo "Getting host status..."
-            if curl -fsS "https://${HOST}/admin/host/status${QP}" -o host_status.json 2>/dev/null; then
-              STATUS_STATE=$(jq -r '.state // "unknown"' host_status.json 2>/dev/null || echo "unknown")
-              STATUS_ERRORS=$(jq -r '.errors? // []' host_status.json 2>/dev/null || echo "[]")
-              echo "Host state: $STATUS_STATE"
-              if [ "$STATUS_ERRORS" != "[]" ] && [ "$STATUS_ERRORS" != "null" ]; then
-                echo "Host errors detected:"
-                jq '.errors' host_status.json 2>/dev/null || true
+          if [ "$STATE" = "Error" ]; then
+            if echo "$STATUS_JSON" | jq -r '.errors[]? // ""' | grep -qi 'host.json' && \
+               echo "$STATUS_JSON" | jq -r '.errors[]? // ""' | grep -qi '4.0'; then
+              echo "::warning::Host status reports host.json 4.0 error; inspecting deployed package"
+              PKG=$(az resource show --ids \
+                "/subscriptions/${SUBS}/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/appsettings" \
+                --query "properties.properties.WEBSITE_RUN_FROM_PACKAGE" -o tsv)
+              if [ -n "$PKG" ]; then
+                curl -fsS "$PKG" -o /tmp/app.zip
+                unzip -p /tmp/app.zip host.json | jq .
+              else
+                echo "::warning::Unable to determine deployed package URI"
               fi
-            else
-              echo "Could not get host status"
-              STATUS_STATE="unknown"
             fi
-
-            # 2) Functions list via admin API
-            echo "Getting functions list..."
-            FUNC_COUNT=0
-            if curl -fsS "https://${HOST}/admin/functions${QP}" -o admin_funcs.json 2>/dev/null; then
-              FUNC_COUNT=$(jq 'length' admin_funcs.json 2>/dev/null || echo 0)
-              echo "Admin API reported functions: $FUNC_COUNT"
-              if [ "$FUNC_COUNT" -gt 0 ]; then
-                echo "Function list:"
-                jq -r '.[] | "  - " + .name + " (" + (.config.bindings[0].type // "unknown") + ")"' admin_funcs.json 2>/dev/null || true
-              fi
-            else
-              echo "Admin API not accessible, trying ARM..."
-            fi
-
-            # 3) Fallback to ARM enumeration
-            if [ "$FUNC_COUNT" -eq 0 ]; then
-              ARM_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}/functions?api-version=2023-01-01" || echo '{}')
-              FUNC_COUNT_ARM=$(jq '.value|length' <<<"$ARM_JSON" 2>/dev/null || echo 0)
-              echo "ARM API reported functions: $FUNC_COUNT_ARM"
-              FUNC_COUNT=$FUNC_COUNT_ARM
-            fi
-
-            # Success criteria
-            if [ "$FUNC_COUNT" -gt 0 ]; then
-              echo "✅ SUCCESS: Functions indexed successfully! Found $FUNC_COUNT functions"
-              echo "Host state: $STATUS_STATE"
-              exit 0
-            fi
-
-            # Show specific errors for troubleshooting
-            if [ "$STATUS_STATE" = "Offline" ]; then
-              echo "❌ Host is offline - checking for configuration issues"
-            elif [ "$STATUS_STATE" = "Error" ]; then
-              echo "❌ Host has errors - check logs above"
-            else
-              echo "⏳ Host running but no functions indexed yet..."
-            fi
-
-            [ "$attempt" -lt 10 ] && sleep 30
-          done
-
-          echo "❌ FAILURE: Functions not indexed after 5 minutes"
-          echo "::group::Diagnostic Information"
-          echo "Final host status:"; cat host_status.json 2>/dev/null || echo "No host status"
-          echo "Final admin functions:"; cat admin_funcs.json 2>/dev/null || echo "No admin response"
-          echo "ARM functions response:"; echo "$ARM_JSON" 2>/dev/null || echo "No ARM response"
-          echo "::endgroup::"
-          exit 1
+          fi
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
