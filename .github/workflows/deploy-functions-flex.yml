@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -d '' -t FILES < <(git ls-files -z 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
+          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
           [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
           for f in "${FILES[@]}"; do
             jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
@@ -237,7 +237,7 @@ jobs:
           test -f dist-v4-final.zip
           az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
 
-      - name: Resolve host and key (robust)
+      - name: Resolve host and key
         env:
           SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           RG: asora-psql-flex
