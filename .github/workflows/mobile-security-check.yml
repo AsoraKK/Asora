@@ -40,6 +40,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -65,8 +68,8 @@ jobs:
           APP="asora-function-dev"
           API_VERSION="2022-03-01"
           APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
-          APP_JSON=$(az rest --method get --url "$APP_URL")
-          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          APP_JSON="$(az rest --method get --url "$APP_URL")"
+          HOST="$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")"
           if [ -z "$HOST" ]; then
             echo "::error::defaultHostName not returned by ARM"; exit 1; fi
           echo "Detected function host: $HOST"
@@ -82,11 +85,11 @@ jobs:
 
           # Search for actual placeholder values in pin lists, excluding validation code
           # Look for placeholder patterns that appear as actual pin values (not in validation)
-          placeholder_count=$(find . -name "*.dart" -type f -exec grep -c "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null | grep -v "^0$" | wc -l || echo "0")
+          placeholder_matches="$(find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true)"
 
-          if [ "$placeholder_count" -gt 0 ]; then
+          if [ -n "$placeholder_matches" ]; then
             echo "::error::Found SPKI pin placeholders in pin values:"
-            find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true
+            printf '%s\n' "$placeholder_matches"
             echo ""
             echo "All SPKI pin placeholders must be replaced with real pins before merging."
             echo "Update the authoritative pins in lib/core/security/cert_pinning.dart."
@@ -116,10 +119,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          security_placeholders=$(find . -name "*.dart" -type f -exec grep -l "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)
-          if [ -n "$security_placeholders" ]; then
+          security_matches="$(find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)"
+          if [ -n "$security_matches" ]; then
             echo "::warning::Found security-related placeholders that may need attention:"
-            find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true
+            printf '%s\n' "$security_matches"
           else
             echo "✓ No security TODO/FIXME placeholders detected."
           fi

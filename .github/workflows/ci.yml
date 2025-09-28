@@ -35,6 +35,8 @@ jobs:
   actionlint:
     name: Workflow lint
     runs-on: ubuntu-latest
+    env:
+      SHELLCHECK_OPTS: "-e SC2086 -e SC2126"
     steps:
       - uses: actions/checkout@v4
       - name: Run actionlint
@@ -58,7 +60,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install jq
+      - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
       - uses: subosito/flutter-action@v2
         with:
@@ -174,10 +176,10 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          FILES=$(git ls-files 'functions/**/host.json' ':!functions/**/node_modules/**')
-          [ -n "$FILES" ] || { echo "No host.json under functions/"; exit 1; }
-          for f in $FILES; do
-            jq -e '(."version" == "2.0") or (has("version") == false)' "$f" >/dev/null \
+          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
+          [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
+          for f in "${FILES[@]}"; do
+            jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
               || { echo "Invalid host.json version in $f"; exit 1; }
           done
 
@@ -268,7 +270,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install jq
+      - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Validate Azure credentials

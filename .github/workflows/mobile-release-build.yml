@@ -16,8 +16,8 @@ jobs:
         run: flutter pub get
       - name: Build Android AAB (obfuscated)
         run: |
-          TS=$(date +%Y%m%d%H%M%S)
-          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols/android/$TS
+          TS="$(date +%Y%m%d%H%M%S)"
+          flutter build appbundle --release --obfuscate --split-debug-info="build/symbols/android/${TS}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -37,8 +37,8 @@ jobs:
         run: flutter pub get
       - name: Build iOS (obfuscated)
         run: |
-          TS=$(date +%Y%m%d%H%M%S)
-          flutter build ios --release --no-codesign --obfuscate --split-debug-info=build/symbols/ios/$TS
+          TS="$(date +%Y%m%d%H%M%S)"
+          flutter build ios --release --no-codesign --obfuscate --split-debug-info="build/symbols/ios/${TS}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
