@@ -12,6 +12,7 @@ describe('azure-logger', () => {
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined as any);
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined as any);
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined as any);
+    process.env.ASORA_TEST_LOGS = '1';
   });
 
   afterEach(() => {
@@ -27,6 +28,13 @@ describe('azure-logger', () => {
     expect(payload.message).toBe('hello');
     expect(payload.component).toBe('unit/component');
     expect(payload.requestId).toBe('r1');
+  });
+
+  test('suppresses console logs when override disabled in test env', () => {
+    delete process.env.ASORA_TEST_LOGS;
+    const logger = getAzureLogger('unit/component');
+    logger.info('silent', { requestId: 'r-silent' });
+    expect(logSpy).not.toHaveBeenCalled();
   });
 
   test('debug only logs in dev or LOG_LEVEL=debug', () => {
