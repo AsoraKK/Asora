@@ -78,7 +78,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           test -d dist || { echo "::error::dist/ not produced"; exit 1; }
-          ls -la dist | sed -n '1,200p'
+          # Use find instead of ls to safely handle arbitrary filenames
+          find dist -maxdepth 1 -print | sed -n '1,200p'
 
       - name: Package Azure Functions v4 zip
         shell: bash
@@ -97,13 +98,17 @@ jobs:
           cp "$ROOT/host.json" "$DEPLOY/"
 
           # Minimal runtime entry and package.json from functions/
-          cp "$ROOT/functions/package.json" "$DEPLOY/"
-          test -f "$ROOT/functions/runtime-index.js" && cp "$ROOT/functions/runtime-index.js" "$DEPLOY/index.js" || {
-            echo "::error::functions/runtime-index.js missing"; exit 1; }
+          cp -- "$ROOT/functions/package.json" "$DEPLOY/"
+          if [ -f "$ROOT/functions/runtime-index.js" ]; then
+            cp -- "$ROOT/functions/runtime-index.js" "$DEPLOY/index.js"
+          else
+            echo "::error::functions/runtime-index.js missing"; exit 1
+          fi
 
           # Copy compiled JS
           test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
-          cp -R "$ROOT/functions/dist/"* "$DEPLOY/"
+          # Copy compiled JS (use ./ to avoid names beginning with -)
+          cp -R -- "$ROOT/functions/dist/"./* "$DEPLOY/"
 
           # Copy function.json directories present in functions/
           echo "Copying function.json directories..."
@@ -120,7 +125,11 @@ jobs:
           pushd "$ROOT/functions" >/dev/null
           npm ci --omit=dev
           popd >/dev/null
-          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+          if [ -d "$ROOT/functions/node_modules" ]; then
+            cp -R -- "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+          else
+            echo "::warning::functions/node_modules not present after npm ci";
+          fi
 
           echo "Verifying deploy payload..."
           find "$DEPLOY" -maxdepth 2 -type f \( -name '*.json' -o -name 'index.js' \) | sort
