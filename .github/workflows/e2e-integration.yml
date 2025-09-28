@@ -60,15 +60,16 @@ jobs:
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2.1.0
+        uses: azure/login@v2
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify subscription context
+      - name: Set Azure subscription context
         run: |
           set -euo pipefail
+          az cloud set -n AzureCloud
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           az account show -o table
 
@@ -93,34 +94,43 @@ jobs:
           set -Eeuo pipefail
           : "${SUBS:?}"; : "${RG:?}"; : "${APP:?}"
 
-          # Sanity: token fetch
           echo "Verifying ARM access..."
+          az account set --subscription "$SUBS"
           az account get-access-token --resource https://management.azure.com -o none
 
-          API=2022-03-01
           APP_ID="/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-          APP_URL="https://management.azure.com${APP_ID}?api-version=${API}"
-
-          echo "Getting function app details via ARM API..."
-          APP_JSON=$(az rest --method get --url "$APP_URL" 2>arm.err || true)
+          echo "Try ARM first (more reliable across plan types)"
+          APP_JSON=$(az rest --method get --url "https://management.azure.com${APP_ID}?api-version=2022-03-01" 2>arm.err || true)
           if ! jq -e . >/dev/null 2>&1 <<<"$APP_JSON"; then
             echo "::group::ARM error"; cat arm.err || true; echo "::endgroup::"
             echo "::error::Failed to GET site via ARM"; exit 1
           fi
 
           HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
-          [ -n "$HOST" ] || { echo "::error::defaultHostName missing"; exit 1; }
+          [ -n "$HOST" ] || { echo "::error::defaultHostName not returned"; exit 1; }
 
           echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
           echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
 
-          # Keys (graceful if RBAC insufficient)
           echo "Attempting key discovery..."
-          KEYS_URL="https://management.azure.com${APP_ID}/host/default/listkeys?api-version=${API}"
-          KEYS_JSON=$(az rest --method post --url "$KEYS_URL" --headers Content-Type=application/json --body "{}" 2>/dev/null || echo "{}")
-          KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEYS_JSON")
+          if KEY_JSON=$(az functionapp keys list -g "$RG" -n "$APP" 2>keys.err); then
+            KEY=$(jq -r '.masterKey // .functionKeys.default // empty' <<<"$KEY_JSON")
+            if [ -z "$KEY" ]; then
+              echo "::warning::Function key not returned; continuing as anonymous"
+            fi
+          else
+            if grep -q '403' keys.err 2>/dev/null; then
+              echo "::warning::Function key fetch returned 403; continuing as anonymous"
+              KEY=""
+            else
+              cat keys.err >&2 || true
+              echo "::warning::Failed to fetch function keys; continuing as anonymous"
+              KEY=""
+            fi
+          fi
+          rm -f arm.err keys.err || true
           [ -n "$KEY" ] || KEY="anonymous"
-          [ "$KEY" = "anonymous" ] && echo "::warning::No admin key fetched - may lack RBAC permissions"
+          [ "$KEY" = "anonymous" ] && echo "::warning::No admin key fetched - continuing as anonymous"
           echo "FUNCTION_KEY=${KEY}" >> "$GITHUB_ENV"
           echo "Resolved deployment endpoint: https://${HOST}"
 
