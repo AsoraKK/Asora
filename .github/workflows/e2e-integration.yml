@@ -48,6 +48,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Isolate AZ cache
+        # Important: do NOT set AZURE_CONFIG_DIR at the job `env` level using
+        # the runner context (for example, `${{ runner.temp }}`) because GitHub
+        # disallows the `runner` context inside `jobs.<job_id>.env` and the
+        # workflow will fail validation (Unrecognized named-value: 'runner').
+        # Instead compute and export a step-level value using the runtime
+        # environment variable `$RUNNER_TEMP` as shown below.
         shell: bash
         run: |
           set -euo pipefail
