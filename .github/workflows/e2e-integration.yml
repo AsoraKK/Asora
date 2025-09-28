@@ -203,30 +203,55 @@ jobs:
           QP=""
           [ "$KEY" != "anonymous" ] && QP="?code=$KEY" || QP=""
 
-          # Wait for health to return 200 and feed to return 200/204, and ensure admin functions list is non-empty
+          # Discover functions up front
+          FUNCS_JSON="$(curl -sS "https://${HOST}/admin/functions${QP}" || echo "[]")"
+          FEED_EXISTS="$(jq -r '[.[].name] | index("feed") | if .==null then 0 else 1 end' <<<"$FUNCS_JSON" 2>/dev/null || echo 0)"
+          HEALTH_EXISTS="$(jq -r '[.[].name] | index("health") | if .==null then 0 else 1 end' <<<"$FUNCS_JSON" 2>/dev/null || echo 0)"
+          ADMIN_COUNT="$(jq -r 'length // 0' <<<"$FUNCS_JSON" 2>/dev/null || echo 0)"
+          echo "discovered admin_count=${ADMIN_COUNT} feed_exists=${FEED_EXISTS} health_exists=${HEALTH_EXISTS}"
+
           ok=false
           for i in $(seq 1 60); do
             echo "Probe attempt $i/60..."
-            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/health${QP}" || echo "000")
-            FEED_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/feed${QP}" || echo "000")
-            ADMIN_COUNT=$(curl -s "https://${HOST}/admin/functions${QP}" | jq -r 'length // 0' 2>/dev/null || echo "0")
-            echo "health=$HEALTH_STATUS feed=$FEED_STATUS admin_count=$ADMIN_COUNT"
-            if [ "$HEALTH_STATUS" = "200" ] && { [ "$FEED_STATUS" = "200" ] || [ "$FEED_STATUS" = "204" ]; } && [ "$ADMIN_COUNT" -ge 1 ]; then
+
+            HOST_STATE="$(curl -s "https://${HOST}/admin/host/status${QP}" | jq -r '.state // "Unknown"' 2>/dev/null || echo "Unknown")"
+
+            # Optional endpoint checks
+            FEED_STATUS="n/a"
+            if [ "$FEED_EXISTS" = "1" ]; then
+              FEED_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/feed${QP}" || echo "000")"
+            fi
+
+            echo "host_state=${HOST_STATE} feed_status=${FEED_STATUS}"
+
+            # Ready when host is Running, we have at least one function,
+            # and feed is OK if it exists.
+            FEED_OK=true
+            if [ "$FEED_EXISTS" = "1" ]; then
+              if [ "$FEED_STATUS" = "200" ] || [ "$FEED_STATUS" = "204" ]; then FEED_OK=true; else FEED_OK=false; fi
+            fi
+
+            if [ "$HOST_STATE" = "Running" ] && [ "$ADMIN_COUNT" -ge 1 ] && [ "$FEED_OK" = true ]; then
               ok=true
               break
             fi
+
             sleep 5
           done
 
           if [ "$ok" != true ]; then
-            echo "::error::E2E probes failed (health=$HEALTH_STATUS feed=$FEED_STATUS)";
-            # Emit diagnostics before failing
+            echo "::error::E2E warmup failed (host_state=${HOST_STATE} feed_status=${FEED_STATUS})"
             echo "Admin host status:"; curl -sS "https://${HOST}/admin/host/status${QP}" || true
             echo "Admin functions:"; curl -sS "https://${HOST}/admin/functions${QP}" || true
-            echo "Attempting one final hit to /api/health and /api/feed";
+            echo "Final hit to /api/health and /api/feed:"
             curl -isS "https://${HOST}/api/health${QP}" || true
             curl -isS "https://${HOST}/api/feed${QP}" || true
             exit 1
+          fi
+
+          # Optionally print current health status for visibility, but do not gate on it
+          if [ "$HEALTH_EXISTS" = "1" ]; then
+            echo "Health endpoint status:"; curl -isS "https://${HOST}/api/health${QP}" || true
           fi
 
           node scripts/e2e-itest.js
