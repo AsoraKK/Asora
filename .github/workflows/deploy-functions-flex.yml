@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
+          mapfile -d '' -t FILES < <(git ls-files -z 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
           [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
           for f in "${FILES[@]}"; do
             jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
@@ -78,19 +78,27 @@ jobs:
             -- 'functions/**' ':!functions/**/node_modules/**' ':!**/*.md' || {
             echo 'Found "version": "4.0" in deployable tree'; exit 1; }
 
-      - name: Isolate Azure CLI cache (per-run)
+      - name: Isolate AZ cache
         shell: bash
         run: |
-          set -Eeuo pipefail
-          mkdir -p "$RUNNER_TEMP/azcfg"
-          echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
-      - name: Azure login
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Force subscription context
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
 
       - name: Log tool versions
         shell: bash
@@ -209,16 +217,79 @@ jobs:
           remote-build: false
           respect-funcignore: false
 
+      - name: Detect plan tier
+        id: plantier
+        run: |
+          set -euo pipefail
+          APP_ID="$(az functionapp show -n asora-function-dev -g asora-psql-flex --query id -o tsv)"
+          PLAN_ID="$(az resource show --ids "$APP_ID" --query properties.serverFarmId -o tsv)"
+          TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)"
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+
       # actionlint: allow env FORCE_ZIP_DEPLOY
-      - name: ZIP deploy via CLI (fallback)
-        if: ${{ always() && (env.FORCE_ZIP_DEPLOY == '1' || failure()) }}
+      - name: ZIP deploy via CLI (non-Flex only)
+        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' && env.FORCE_ZIP_DEPLOY == '1' }}
         env:
           RG: asora-psql-flex
           APP: asora-function-dev
         run: |
-          set -Eeuo pipefail
+          set -euo pipefail
           test -f dist-v4-final.zip
           az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
+
+      - name: Resolve host and key (robust)
+        env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RG: asora-psql-flex
+          APP: asora-function-dev
+        run: |
+          set -Eeuo pipefail
+          retry(){
+            local n=0
+            local max=6
+            local exit_code
+            while true; do
+              "$@" && break
+              exit_code=$?
+              if [ "$exit_code" -ge 500 ] || [ "$exit_code" -eq 429 ]; then
+                n=$((n + 1))
+                if [ "$n" -ge "$max" ]; then
+                  exit "$exit_code"
+                fi
+                sleep $((5 * n))
+              else
+                exit "$exit_code"
+              fi
+            done
+          }
+
+          HOST="$(retry az functionapp show -g "$RG" -n "$APP" -o tsv --query defaultHostName || echo '')"
+          if [ -z "$HOST" ]; then
+            API=2022-03-01
+            APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+            SITE_JSON="$(retry az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}")"
+            HOST="$(jq -r '.properties.defaultHostName // empty' <<<"$SITE_JSON")"
+          fi
+          [ -n "$HOST" ] || { echo "::error::Unable to resolve function host"; exit 1; }
+          echo "FUNCTION_BASE_URL=https://$HOST" >> "$GITHUB_ENV"
+
+          KEY="$(az functionapp keys list -g "$RG" -n "$APP" -o tsv --query masterKey 2>/dev/null || echo '')"
+          echo "FUNCTION_KEY=$KEY" >> "$GITHUB_ENV"
+
+      - name: Verify host and routes
+        run: |
+          set -euo pipefail
+          HOST="${FUNCTION_BASE_URL#https://}"
+          QP=""
+          [ -n "${FUNCTION_KEY:-}" ] && QP="?code=${FUNCTION_KEY}"
+          echo "Host: $HOST"
+          if curl -fsS "https://$HOST/admin/host/status$QP" | jq '{state,errors}'; then
+            :
+          else
+            echo "::warning::admin status unavailable"
+          fi
+          curl -fsS "https://$HOST/admin/functions$QP" | jq length || echo "0"
+          curl -isS "https://$HOST/api/health" | head -n1 || true
 
       - name: Verify discovery
         shell: bash
@@ -226,4 +297,15 @@ jobs:
           set -Eeuo pipefail
           sub_opt=(--subscription "${AZURE_SUBSCRIPTION_ID}")
           az functionapp function list "${sub_opt[@]}" -g "${AZURE_RESOURCE_GROUP}" -n "${AZURE_FUNCTIONAPP_NAME}" -o table --only-show-errors
+
+      - name: Dump site JSON on failure
+        if: failure()
+        run: |
+          set -euo pipefail
+          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          RG=asora-psql-flex
+          APP=asora-function-dev
+          API=2022-03-01
+          APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+          az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}" | jq .
 

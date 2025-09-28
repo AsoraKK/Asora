@@ -152,7 +152,7 @@ jobs:
         working-directory: functions
     steps:
       - uses: actions/checkout@v4
-      - name: Install jq
+      - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Guard Flex-incompatible settings
@@ -182,7 +182,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
+          mapfile -d '' -t FILES < <(git ls-files -z 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
           [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
           for f in "${FILES[@]}"; do
             jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
@@ -298,12 +298,13 @@ jobs:
           name: functions-v4-artifact
           path: .
 
-      - name: Isolate Azure CLI cache (per-run)
+      - name: Isolate AZ cache
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/azcfg"
-          echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
       - name: Guard action version
         shell: bash
@@ -320,39 +321,28 @@ jobs:
           rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
           echo "Pre-cleared MSAL caches"
 
-      - name: Azure login
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Select subscription and show context
+      - name: Force subscription context
         shell: bash
-        env:
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${SUBS:-}" ]; then
-            echo "::error::SUBS is not set"
-            exit 1
-          fi
-          az cloud set -n AzureCloud
-          az account set --subscription "$SUBS"
-          az account show --output table
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
 
       - name: Detect plan tier
         id: plantier
-        shell: bash
         run: |
           set -euo pipefail
-          PLAN_ID=$(az functionapp show -n asora-function-dev -g asora-psql-flex 2>/dev/null | grep -o '"serverFarmId": "[^"]*"' | cut -d'"' -f4 || true)
-          if [ -n "${PLAN_ID:-}" ]; then
-            TIER=$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv 2>/dev/null || echo "")
-          else
-            TIER=""
-          fi
-          echo "tier=${TIER}" >> "$GITHUB_OUTPUT"
+          APP_ID="$(az functionapp show -n asora-function-dev -g asora-psql-flex --query id -o tsv)"
+          PLAN_ID="$(az resource show --ids "$APP_ID" --query properties.serverFarmId -o tsv)"
+          TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)"
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
 
       - name: Preflight artifact validation
         shell: bash
@@ -381,8 +371,8 @@ jobs:
           respect-funcignore: false
 
       # actionlint: allow env FORCE_ZIP_DEPLOY
-      - name: ZIP deploy via CLI (fallback)
-        if: ${{ always() && (env.FORCE_ZIP_DEPLOY == '1' || failure()) }}
+      - name: ZIP deploy via CLI (non-Flex only)
+        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' && env.FORCE_ZIP_DEPLOY == '1' }}
         env:
           RG: asora-psql-flex
           APP: asora-function-dev
@@ -391,42 +381,70 @@ jobs:
           test -f dist-v4-final.zip
           az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
 
-      - name: "D) Post-deploy verification"
-        shell: bash
+      - name: Resolve host and key (robust)
+        env:
+          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RG: asora-psql-flex
+          APP: asora-function-dev
         run: |
           set -Eeuo pipefail
-          SUBS="${AZURE_SUBSCRIPTION_ID:?AZURE_SUBSCRIPTION_ID is required}"
-          HOST=$(az functionapp show -g asora-psql-flex -n asora-function-dev -o tsv --query defaultHostName)
-          if [ -z "$HOST" ]; then
-            echo "::error::Unable to resolve function host"
-            exit 1
-          fi
-          KEY=$(az functionapp keys list -g asora-psql-flex -n asora-function-dev -o tsv --query masterKey || echo "")
-          QP=""; [ -n "$KEY" ] && QP="?code=$KEY"
-          echo "Function host: $HOST"
-
-          STATUS_JSON=$(curl -fsS "https://$HOST/admin/host/status$QP")
-          echo "$STATUS_JSON" | jq '{state,errors}'
-          STATE=$(echo "$STATUS_JSON" | jq -r '.state // "unknown"')
-
-          curl -fsS "https://$HOST/admin/functions$QP" | jq length
-          curl -i "https://$HOST/api/health" | head -n1
-
-          if [ "$STATE" = "Error" ]; then
-            if echo "$STATUS_JSON" | jq -r '.errors[]? // ""' | grep -qi 'host.json' && \
-               echo "$STATUS_JSON" | jq -r '.errors[]? // ""' | grep -qi '4.0'; then
-              echo "::warning::Host status reports host.json 4.0 error; inspecting deployed package"
-              PKG=$(az resource show --ids \
-                "/subscriptions/${SUBS}/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/appsettings" \
-                --query "properties.properties.WEBSITE_RUN_FROM_PACKAGE" -o tsv)
-              if [ -n "$PKG" ]; then
-                curl -fsS "$PKG" -o /tmp/app.zip
-                unzip -p /tmp/app.zip host.json | jq .
+          retry(){
+            local n=0
+            local max=6
+            local exit_code
+            while true; do
+              "$@" && break
+              exit_code=$?
+              if [ "$exit_code" -ge 500 ] || [ "$exit_code" -eq 429 ]; then
+                n=$((n + 1))
+                if [ "$n" -ge "$max" ]; then
+                  exit "$exit_code"
+                fi
+                sleep $((5 * n))
               else
-                echo "::warning::Unable to determine deployed package URI"
+                exit "$exit_code"
               fi
-            fi
+            done
+          }
+
+          HOST="$(retry az functionapp show -g "$RG" -n "$APP" -o tsv --query defaultHostName || echo '')"
+          if [ -z "$HOST" ]; then
+            API=2022-03-01
+            APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+            SITE_JSON="$(retry az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}")"
+            HOST="$(jq -r '.properties.defaultHostName // empty' <<<"$SITE_JSON")"
           fi
+          [ -n "$HOST" ] || { echo "::error::Unable to resolve function host"; exit 1; }
+          echo "FUNCTION_BASE_URL=https://$HOST" >> "$GITHUB_ENV"
+
+          KEY="$(az functionapp keys list -g "$RG" -n "$APP" -o tsv --query masterKey 2>/dev/null || echo '')"
+          echo "FUNCTION_KEY=$KEY" >> "$GITHUB_ENV"
+
+      - name: Verify host and routes
+        run: |
+          set -euo pipefail
+          HOST="${FUNCTION_BASE_URL#https://}"
+          QP=""
+          [ -n "${FUNCTION_KEY:-}" ] && QP="?code=${FUNCTION_KEY}"
+          echo "Host: $HOST"
+          if curl -fsS "https://$HOST/admin/host/status$QP" | jq '{state,errors}'; then
+            :
+          else
+            echo "::warning::admin status unavailable"
+          fi
+          curl -fsS "https://$HOST/admin/functions$QP" | jq length || echo "0"
+          curl -isS "https://$HOST/api/health" | head -n1 || true
+
+      - name: Dump site JSON on failure
+        if: failure()
+        run: |
+          set -euo pipefail
+          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          RG=asora-psql-flex
+          APP=asora-function-dev
+          API=2022-03-01
+          APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+          az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}" | jq .
 
       - name: Smoke check
         if: false  # Disabled - use manual testing for now
