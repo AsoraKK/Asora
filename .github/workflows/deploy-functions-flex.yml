@@ -181,7 +181,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          FILES=$(git ls-files -- 'host.json' 'functions//host.json' ':!:/node_modules/' ':!:/*.md')
+          FILES=$(git ls-files -- 'host.json' 'functions/**/host.json' ':!:**/node_modules/**' ':!:**/*.md')
           [ -n "$FILES" ] || { echo "::error::No host.json found in repo"; exit 1; }
           for f in $FILES; do
             jq -e '(."version" == "2.0") or (has("version") == false)' "$f" >/dev/null \
