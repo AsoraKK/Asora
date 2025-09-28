@@ -224,7 +224,12 @@ jobs:
 
           # compiled output (copy entire dist to preserve relative imports)
           test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
-          cp -R "$ROOT/functions/dist/"* "$ROOT/deploy/"
+          # Safely copy dist contents using a guarded ./* glob
+          if compgen -G "$ROOT/functions/dist/*" > /dev/null; then
+            (cd "$ROOT/functions/dist" && cp -R -- ./* "$ROOT/deploy/")
+          else
+            echo "::error::functions/dist contains no files"; exit 1
+          fi
 
           # create thin root entrypoint for v4 runtime
           cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
