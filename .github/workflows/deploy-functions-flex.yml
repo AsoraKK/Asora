@@ -31,11 +31,11 @@ jobs:
       NODE_VERSION: '20'
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      # actionlint: allow secrets COSMOS_CONNECTION_STRING
+      # actionlint: allow secret COSMOS_CONNECTION_STRING
       COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
       FORCE_ZIP_DEPLOY: '0'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
 
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
@@ -49,7 +49,7 @@ jobs:
           echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v2.1.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -74,7 +74,7 @@ jobs:
         run: bash scripts/check-flex-settings.sh
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
