@@ -44,11 +44,15 @@ jobs:
       SHELLCHECK_OPTS: "-e SC2086 -e SC2126"
     steps:
       - uses: actions/checkout@v4.1.7
+      - name: Probe SC2035
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number -E '\b(rm|cp|mv|tar|unzip|ls)\s+[^|]*\*' .github/workflows || { echo "::error::unguarded glob remains"; exit 1; }
       - name: Run actionlint
         run: |
           set -euo pipefail
           if [ -f actionlint ]; then
-            chmod +x actionlint
+            chmod +x actionlint || true
             ./actionlint -color
           else
             echo "::error::actionlint binary not found in repository"
@@ -252,7 +256,7 @@ jobs:
           set -Eeuo pipefail
           ROOT="$GITHUB_WORKSPACE"
           DEPLOY="$ROOT/deploy"
-          rm -rf "$DEPLOY" "$ROOT/dist-v4-final.zip"
+          rm -rf -- "$DEPLOY" "$ROOT/dist-v4-final.zip"
           mkdir -p "$DEPLOY"
 
           test -f "$ROOT/host.json" || { echo "::error::repo-root host.json missing"; exit 1; }
@@ -267,7 +271,7 @@ jobs:
 
           test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
           if find "$ROOT/functions/dist" -mindepth 1 -print -quit | grep -q .; then
-            cp -R "$ROOT/functions/dist/." "$DEPLOY/"
+            cp -R -- "$ROOT/functions/dist/." "$DEPLOY/"
           else
             echo "::error::functions/dist contains no files"; exit 1
           fi
@@ -285,7 +289,7 @@ jobs:
           pushd "$ROOT/functions" >/dev/null
           npm ci --omit=dev
           popd >/dev/null
-          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+          cp -R -- "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
 
           (cd "$DEPLOY" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*")
           test -f "$ROOT/dist-v4-final.zip" || { echo "::error::ZIP not created"; exit 1; }
