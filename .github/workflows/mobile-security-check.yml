@@ -43,6 +43,14 @@ jobs:
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -51,13 +59,11 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
           audience: api://AzureADTokenExchange
 
-      - name: Select subscription and show context
-        env:
-          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Force subscription
         run: |
           set -euo pipefail
-          az account set --subscription "$SUBS"
-          az account show --output table
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
 
       - name: Resolve function host
         env:
