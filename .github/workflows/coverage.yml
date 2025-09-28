@@ -17,8 +17,8 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4.1.7
+      - uses: actions/setup-node@v4.0.3
         with:
           node-version: '20'
           cache: 'npm'
@@ -31,7 +31,7 @@ jobs:
         run: |
           npm test -- --coverage --ci
       - name: Upload Functions coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: coverage-functions
           path: functions/coverage/lcov.info
@@ -41,7 +41,7 @@ jobs:
     env:
       ASORA_REQUIRE_REAL_PINS: "false"  # TODO: flip to "true" once real pins land
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -68,7 +68,7 @@ jobs:
       - name: Enforce Flutter coverage >= 80%
         run: bash scripts/check_flutter_coverage.sh 80
       - name: Upload Flutter coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.4.0
         with:
           name: coverage-flutter
           path: coverage/lcov.info
@@ -77,13 +77,13 @@ jobs:
     needs: [ test-functions, test-flutter ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8
         with:
           path: coverage-artifacts
       - name: Setup .NET 8 for ReportGenerator
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v4.0.1
         with:
           dotnet-version: '8.0.x'
       - name: Install ReportGenerator tool
@@ -109,7 +109,7 @@ jobs:
           fail_below_min: false
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -128,7 +128,7 @@ jobs:
 
       - name: Comment coverage on commit
         if: github.event_name == 'push'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

@@ -43,7 +43,7 @@ jobs:
     env:
       SHELLCHECK_OPTS: "-e SC2086 -e SC2126"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Run actionlint
         run: |
           set -euo pipefail
@@ -65,14 +65,14 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       FORCE_ZIP_DEPLOY: '0'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.0'
       - name: Cache pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v4.0.2
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
@@ -151,15 +151,36 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Force subscription
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
 
       - name: Guard Flex-incompatible settings
         working-directory: ${{ github.workspace }}
         run: bash scripts/check-flex-settings.sh
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4.0.3
         with:
           node-version: '20'
           cache: 'npm'
@@ -178,15 +199,25 @@ jobs:
       - name: Guard against UTF-8 BOMs
         run: bash ../scripts/check-bom.sh
 
+      - name: Disable Husky in CI
+        run: echo "HUSKY=0" >> "$GITHUB_ENV"
+
+      - name: Verify build script exists
+        run: |
+          set -Eeuo pipefail
+          test -f package.json || { echo "::error::functions/package.json missing"; exit 1; }
+          jq -e 'has("scripts") and (.scripts|has("build"))' package.json >/dev/null \
+            || { echo "::error::No scripts.build in functions/package.json"; echo "Scripts:"; jq '.scripts' package.json; exit 1; }
+
       - name: Guard host.json version
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
-          [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
+          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!**/node_modules/**' ':!docs/**' ':!**/*.md')
+          [ "${#FILES[@]}" -gt 0 ] || { echo "::error::No host.json found"; exit 1; }
           for f in "${FILES[@]}"; do
             jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
-              || { echo "Invalid host.json version in $f"; exit 1; }
+              || { echo "::error::Invalid host.json version in $f"; exit 1; }
           done
 
       - name: Tripwire against forbidden host versions
@@ -199,68 +230,78 @@ jobs:
             exit 1;
           }
 
-      - name: npm ci (strict)
+      - name: npm ci
         run: npm ci
 
       - name: Test
         run: npm test
 
-      - name: Build (TS -> dist)
-        run: npm run build
+      - name: TypeScript build
+        run: npm run -s build
+
+      - name: Verify dist output
+        run: |
+          set -Eeuo pipefail
+          test -d dist || { echo "::error::functions/dist not produced"; exit 1; }
+          find dist -maxdepth 2 -type f | head -n 50
 
       - name: Package Azure Functions v4 zip
         shell: bash
+        working-directory: ${{ github.workspace }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           ROOT="$GITHUB_WORKSPACE"
-          echo "Root: $ROOT"
-          echo "Packing v4 artifact..."
-          rm -rf "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
-          mkdir -p "$ROOT/deploy"
+          DEPLOY="$ROOT/deploy"
+          rm -rf "$DEPLOY" "$ROOT/dist-v4-final.zip"
+          mkdir -p "$DEPLOY"
 
-          # host.json + package.json from canonical functions/ directory
-          cp "$ROOT/functions/host.json" "$ROOT/deploy/"
-          cp "$ROOT/functions/package.json" "$ROOT/deploy/"
+          test -f "$ROOT/host.json" || { echo "::error::repo-root host.json missing"; exit 1; }
+          jq -e '."version"=="2.0" or (has("version")==false)' "$ROOT/host.json" >/dev/null || { echo "::error::Invalid host.json at root"; exit 1; }
+          cp "$ROOT/host.json" "$DEPLOY/"
 
-          # compiled output (copy entire dist to preserve relative imports)
-          test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
-          # Safely copy dist contents using a guarded ./* glob
-          if compgen -G "$ROOT/functions/dist/*" > /dev/null; then
-            (cd "$ROOT/functions/dist" && cp -R -- ./* "$ROOT/deploy/")
+          test -f "$ROOT/functions/package.json" || { echo "::error::functions/package.json missing"; exit 1; }
+          cp "$ROOT/functions/package.json" "$DEPLOY/"
+
+          test -f "$ROOT/functions/runtime-index.js" || { echo "::error::functions/runtime-index.js missing"; exit 1; }
+          cp "$ROOT/functions/runtime-index.js" "$DEPLOY/index.js"
+
+          test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
+          if find "$ROOT/functions/dist" -mindepth 1 -print -quit | grep -q .; then
+            cp -R "$ROOT/functions/dist/." "$DEPLOY/"
           else
             echo "::error::functions/dist contains no files"; exit 1
           fi
 
-          # create thin root entrypoint for v4 runtime
-          cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
+          echo "Copying function.json directories..."
+          found=0
+          while IFS= read -r rel; do
+            d="$(dirname "$rel")"
+            mkdir -p "$DEPLOY/$d"
+            cp "$ROOT/functions/$d/function.json" "$DEPLOY/$d/"
+            found=$((found+1))
+          done < <(cd "$ROOT/functions" && git ls-files */function.json)
+          [ "$found" -ge 1 ] || { echo "::error::No function.json found under functions/"; exit 1; }
 
-          # Copy any function directory containing a function.json
-          echo "Copying function directories..."
-          while IFS= read -r d; do
-            echo "  Copying $d..."
-            mkdir -p "$ROOT/deploy/$d"
-            cp "$ROOT/functions/$d/function.json" "$ROOT/deploy/$d/"
-          done < <(
-            find "$ROOT/functions" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' \
-              | grep -v -E '^(dist|node_modules|scripts)$' \
-              | xargs -I{} bash -lc 'test -f "functions/{}/function.json" && echo {}'
-          )
-
-          # production dependencies only
-          (cd "$ROOT/functions" && npm ci --omit=dev)
-          cp -R "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
-
-          # Verify package structure before zipping
-          echo "Package contents:"
-          find "$ROOT/deploy" -name "*.json" | sort
-
-          # create zip
-          pushd "$ROOT/deploy" >/dev/null
-          zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db"
+          pushd "$ROOT/functions" >/dev/null
+          npm ci --omit=dev
           popd >/dev/null
-          echo "Created $ROOT/dist-v4-final.zip"
+          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
 
-      - uses: actions/upload-artifact@v4
+          (cd "$DEPLOY" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*")
+          test -f "$ROOT/dist-v4-final.zip" || { echo "::error::ZIP not created"; exit 1; }
+          echo "ZIP size: $(stat -c%s "$ROOT/dist-v4-final.zip") bytes"
+
+      - name: Sanity check ZIP contents
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          unzip -l dist-v4-final.zip | awk '{print $4}' | sed '1,3d' | sort > zip.lst
+          grep -q '^host.json$' zip.lst
+          grep -q '^index.js$' zip.lst
+          grep -q '^package.json$' zip.lst
+          grep -q '^node_modules/' zip.lst
+
+      - uses: actions/upload-artifact@v4.4.0
         with:
           name: functions-v4-artifact
           path: dist-v4-final.zip
@@ -280,9 +321,31 @@ jobs:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Force subscription
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
 
       - name: Validate Azure credentials
         env:
@@ -298,18 +361,10 @@ jobs:
             fi
           done
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4.1.8
         with:
           name: functions-v4-artifact
           path: .
-
-      - name: Isolate AZ cache
-        shell: bash
-        run: |
-          set -euo pipefail
-          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
-          mkdir -p "$DIR"
-          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
       - name: Guard action version
         shell: bash
@@ -317,28 +372,6 @@ jobs:
           set -euo pipefail
           ! grep -R --line-number -E 'uses:\s*Azure/functions-action@v4' .github/workflows || {
             echo "::error::Do not upgrade to v4 here"; exit 1; }
-
-      - name: Pre-clear MSAL HTTP cache (NormalizedResponse mitigation)
-        shell: bash
-        run: |
-          set -euo pipefail
-          CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
-          echo "Pre-cleared MSAL caches"
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Force subscription context
-        shell: bash
-        run: |
-          set -euo pipefail
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          az account show -o table
 
       - name: Detect plan tier
         id: plantier
