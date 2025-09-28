@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Isolate Azure CLI cache (per run)
+      - name: Isolate AZ cache
         shell: bash
         run: |
           set -euo pipefail
@@ -52,12 +52,8 @@ jobs:
           mkdir -p "$DIR"
           echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
-      - name: Install dependencies (fallback)
-        shell: bash
-        run: |
-          # Ensure jq and curl are available (ubuntu-latest should have them)
-          command -v jq >/dev/null || sudo apt-get update && sudo apt-get install -y jq
-          command -v curl >/dev/null || sudo apt-get update && sudo apt-get install -y curl
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
       - name: Clear MSAL cache
         shell: bash
@@ -73,6 +69,12 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Force subscription
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
       - name: Auth sanity
         env:
           SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
@@ -80,7 +82,6 @@ jobs:
           set -euo pipefail
           echo "AZURE_CONFIG_DIR=${AZURE_CONFIG_DIR:-$HOME/.azure}"
           ls -la "${AZURE_CONFIG_DIR:-$HOME/.azure}" || true
-          az account set --subscription "$SUBS"
           az account get-access-token --resource https://management.azure.com -o none
           az account show --output table
 
