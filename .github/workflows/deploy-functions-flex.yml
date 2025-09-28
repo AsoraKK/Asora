@@ -21,6 +21,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
+    defaults:
+      run:
+        working-directory: functions
     env:
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_FUNCTIONAPP_NAME: asora-function-dev
@@ -35,6 +38,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Guard action version
+        working-directory: ${{ github.workspace }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -42,6 +46,7 @@ jobs:
             echo "::error::Do not upgrade to v4 here"; exit 1; }
 
       - name: Guard Flex-incompatible settings
+        working-directory: ${{ github.workspace }}
         run: bash scripts/check-flex-settings.sh
 
       - name: Setup Node
@@ -50,16 +55,96 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install jq, zip, unzip
+        working-directory: ${{ github.workspace }}
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
-      - name: Package Functions (dist-v4-final.zip)
+      - name: Disable Husky in CI
+        run: echo "HUSKY=0" >> "$GITHUB_ENV"
+
+      - name: Verify build script exists
         run: |
           set -Eeuo pipefail
-          bash scripts/package-v4.sh
-          test -f functions/dist-v4-final.zip
-          mv functions/dist-v4-final.zip dist-v4-final.zip
+          test -f package.json || { echo "::error::functions/package.json missing"; exit 1; }
+          jq -e 'has("scripts") and (.scripts|has("build"))' package.json >/dev/null \
+            || { echo "::error::No scripts.build in functions/package.json"; echo "Available:"; jq '.scripts' package.json; exit 1; }
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript build
+        run: npm run -s build
+
+      - name: Verify dist output
+        run: |
+          set -Eeuo pipefail
+          test -d dist || { echo "::error::dist/ not produced"; exit 1; }
+          ls -la dist | sed -n '1,200p'
+
+      - name: Package Azure Functions v4 zip
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          DEPLOY="$ROOT/deploy"
+          rm -rf "$DEPLOY" "$ROOT/dist-v4-final.zip"
+          mkdir -p "$DEPLOY"
+
+          # host.json for v4 must be valid (2.0 or omitted)
+          test -f "$ROOT/host.json" || { echo "::error::repo-root host.json not found"; exit 1; }
+          jq -e '."version"=="2.0" or (has("version")==false)' "$ROOT/host.json" >/dev/null \
+            || { echo "::error::Invalid host.json version at repo root"; cat "$ROOT/host.json"; exit 1; }
+          cp "$ROOT/host.json" "$DEPLOY/"
+
+          # Minimal runtime entry and package.json from functions/
+          cp "$ROOT/functions/package.json" "$DEPLOY/"
+          test -f "$ROOT/functions/runtime-index.js" && cp "$ROOT/functions/runtime-index.js" "$DEPLOY/index.js" || {
+            echo "::error::functions/runtime-index.js missing"; exit 1; }
+
+          # Copy compiled JS
+          test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
+          cp -R "$ROOT/functions/dist/"* "$DEPLOY/"
+
+          # Copy function.json directories present in functions/
+          echo "Copying function.json directories..."
+          found=0
+          while IFS= read -r f; do
+            d="$(dirname "$f")"
+            mkdir -p "$DEPLOY/$d"
+            cp "$ROOT/functions/$d/function.json" "$DEPLOY/$d/"
+            found=$((found+1))
+          done < <(cd "$ROOT/functions" && git ls-files */function.json)
+          [ "$found" -ge 1 ] || { echo "::error::No function.json found under functions/"; exit 1; }
+
+          # Production node_modules
+          pushd "$ROOT/functions" >/dev/null
+          npm ci --omit=dev
+          popd >/dev/null
+          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+
+          echo "Verifying deploy payload..."
+          find "$DEPLOY" -maxdepth 2 -type f \( -name '*.json' -o -name 'index.js' \) | sort
+          test -f "$DEPLOY/index.js" || { echo "::error::index.js missing"; exit 1; }
+          test -f "$DEPLOY/host.json" || { echo "::error::host.json missing"; exit 1; }
+
+          (cd "$DEPLOY" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*")
+          test -f "$ROOT/dist-v4-final.zip" || { echo "::error::zip not created"; exit 1; }
+          echo "ZIP size: $(stat -c%s "$ROOT/dist-v4-final.zip") bytes"
+
+      - name: Sanity check ZIP contents
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          unzip -l dist-v4-final.zip | awk '{print $4}' | sed '1,3d' | sort > zip.lst
+          grep -q '^host.json$' zip.lst
+          grep -q '^index.js$' zip.lst
+          grep -q '^package.json$' zip.lst
+          grep -q '^health/function.json$' zip.lst || echo "::warning::health/function.json not present"
+          grep -q '^feed/function.json$' zip.lst || echo "::warning::feed/function.json not present"
+          grep -q '^node_modules/' zip.lst
 
       - name: Guard host.json version
+        working-directory: ${{ github.workspace }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -71,6 +156,7 @@ jobs:
           done
 
       - name: Tripwire against "4.0" in deployables
+        working-directory: ${{ github.workspace }}
         shell: bash
         run: |
           set -Eeuo pipefail
