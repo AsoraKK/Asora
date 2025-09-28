@@ -180,6 +180,39 @@ jobs:
           fi
 
       - name: E2E
+        shell: bash
         run: |
+          set -euo pipefail
           echo "Testing Function App at: $FUNCTION_BASE_URL"
+
+          HOST="${FUNCTION_BASE_URL#https://}"
+          KEY="${FUNCTION_KEY:-anonymous}"
+          QP=""
+          [ "$KEY" != "anonymous" ] && QP="?code=$KEY" || QP=""
+
+          # Wait for health to return 200 and feed to return 200/204 (30 attempts)
+          ok=false
+          for i in $(seq 1 30); do
+            echo "Probe attempt $i/30..."
+            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/health${QP}" || echo "000")
+            FEED_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/feed${QP}" || echo "000")
+            echo "health=$HEALTH_STATUS feed=$FEED_STATUS"
+            if [ "$HEALTH_STATUS" = "200" ] && { [ "$FEED_STATUS" = "200" ] || [ "$FEED_STATUS" = "204" ]; }; then
+              ok=true
+              break
+            fi
+            sleep 5
+          done
+
+          if [ "$ok" != true ]; then
+            echo "::error::E2E probes failed (health=$HEALTH_STATUS feed=$FEED_STATUS)";
+            # Emit diagnostics before failing
+            echo "Admin host status:"; curl -sS "https://${HOST}/admin/host/status${QP}" || true
+            echo "Admin functions:"; curl -sS "https://${HOST}/admin/functions${QP}" || true
+            echo "Attempting one final hit to /api/health and /api/feed";
+            curl -isS "https://${HOST}/api/health${QP}" || true
+            curl -isS "https://${HOST}/api/feed${QP}" || true
+            exit 1
+          fi
+
           node scripts/e2e-itest.js
