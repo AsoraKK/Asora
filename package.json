@@ -17,7 +17,11 @@
   },
   "devDependencies": {
     "husky": "^8.0.3",
-    "@stoplight/spectral-cli": "^6.11.0"
+    "@stoplight/spectral-cli": "^6.11.0",
+    "typescript": "5.5.4"
+  },
+  "overrides": {
+    "typescript": "5.5.4"
   },
   "workspaces": [
     "functions"
