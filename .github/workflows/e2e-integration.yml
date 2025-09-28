@@ -222,6 +222,9 @@ jobs:
               FEED_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/feed${QP}" || echo "000")"
             fi
 
+            # Re-check admin functions count each iteration in case functions load late
+            ADMIN_COUNT="$(curl -s "https://${HOST}/admin/functions${QP}" | jq -r 'length // 0' 2>/dev/null || echo 0)"
+
             echo "host_state=${HOST_STATE} feed_status=${FEED_STATUS}"
 
             # Ready when host is Running, we have at least one function,
