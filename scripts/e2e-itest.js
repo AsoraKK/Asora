@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 "use strict";
+/* eslint-env node, es2021 */
+/* jshint esversion: 6 */
 
 /**
  * Minimal E2E integration script for Azure Functions.
@@ -8,8 +10,8 @@
  * - Writes `e2e-report.json` to the current working directory
  */
 
-const fs = require("fs");
-const path = require("path");
+var fs = require("fs");
+var path = require("path");
 
 const DEFAULT_BASE_URL = "https://asora-function-dev.azurewebsites.net";
 const BASE_URL = process.env.BASE_URL || process.env.FUNCTION_BASE_URL || DEFAULT_BASE_URL;
