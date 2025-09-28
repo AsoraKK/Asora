@@ -48,6 +48,10 @@ jobs:
         run: |
           set -euo pipefail
           ! grep -R --line-number -E '\b(rm|cp|mv|tar|unzip|ls)\s+[^|]*\*' .github/workflows || { echo "::error::unguarded glob remains"; exit 1; }
+      - name: Ensure no deprecated cache pins
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number -E 'uses:\s*actions/cache@v(1|2|3|4\.0\.)' .github/workflows || { echo "::error::deprecated cache version found"; exit 1; }
       - name: Run actionlint
         run: |
           set -euo pipefail
@@ -76,7 +80,7 @@ jobs:
         with:
           flutter-version: '3.32.0'
       - name: Cache pub dependencies
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4.1.2
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
