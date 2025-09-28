@@ -155,6 +155,27 @@ jobs:
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Force subscription
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
       - name: Guard Flex-incompatible settings
         working-directory: ${{ github.workspace }}
         run: bash scripts/check-flex-settings.sh
@@ -284,6 +305,28 @@ jobs:
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Force subscription
+        shell: bash
+        run: |
+          set -euo pipefail
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
       - name: Validate Azure credentials
         env:
           AZURE_CLIENT_ID: ${{ env.AZURE_CLIENT_ID }}
@@ -303,42 +346,12 @@ jobs:
           name: functions-v4-artifact
           path: .
 
-      - name: Isolate AZ cache
-        shell: bash
-        run: |
-          set -euo pipefail
-          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
-          mkdir -p "$DIR"
-          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
-
       - name: Guard action version
         shell: bash
         run: |
           set -euo pipefail
           ! grep -R --line-number -E 'uses:\s*Azure/functions-action@v4' .github/workflows || {
             echo "::error::Do not upgrade to v4 here"; exit 1; }
-
-      - name: Pre-clear MSAL HTTP cache (NormalizedResponse mitigation)
-        shell: bash
-        run: |
-          set -euo pipefail
-          CACHE_DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$CACHE_DIR/msal_http_cache.bin" "$CACHE_DIR/msal_token_cache.json" || true
-          echo "Pre-cleared MSAL caches"
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Force subscription context
-        shell: bash
-        run: |
-          set -euo pipefail
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          az account show -o table
 
       - name: Detect plan tier
         id: plantier

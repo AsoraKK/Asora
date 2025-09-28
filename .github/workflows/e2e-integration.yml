@@ -44,23 +44,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
       - name: Isolate AZ cache
         shell: bash
         run: |
           set -euo pipefail
-          DIR="$RUNNER_TEMP/azure-${GITHUB_RUN_ID}"
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
           mkdir -p "$DIR"
           echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
-
-      - name: Install jq, zip, unzip
-        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
-
-      - name: Clear MSAL cache
-        shell: bash
-        run: |
-          set -euo pipefail
-          DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
-          rm -f "$DIR/msal_token_cache.json" "$DIR/accessTokens.json" "$DIR/msal_http_cache.bin" || true
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
