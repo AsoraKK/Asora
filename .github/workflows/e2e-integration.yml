@@ -190,14 +190,15 @@ jobs:
           QP=""
           [ "$KEY" != "anonymous" ] && QP="?code=$KEY" || QP=""
 
-          # Wait for health to return 200 and feed to return 200/204 (30 attempts)
+          # Wait for health to return 200 and feed to return 200/204, and ensure admin functions list is non-empty
           ok=false
-          for i in $(seq 1 30); do
-            echo "Probe attempt $i/30..."
+          for i in $(seq 1 60); do
+            echo "Probe attempt $i/60..."
             HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/health${QP}" || echo "000")
             FEED_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/api/feed${QP}" || echo "000")
-            echo "health=$HEALTH_STATUS feed=$FEED_STATUS"
-            if [ "$HEALTH_STATUS" = "200" ] && { [ "$FEED_STATUS" = "200" ] || [ "$FEED_STATUS" = "204" ]; }; then
+            ADMIN_COUNT=$(curl -s "https://${HOST}/admin/functions${QP}" | jq -r 'length // 0' 2>/dev/null || echo "0")
+            echo "health=$HEALTH_STATUS feed=$FEED_STATUS admin_count=$ADMIN_COUNT"
+            if [ "$HEALTH_STATUS" = "200" ] && { [ "$FEED_STATUS" = "200" ] || [ "$FEED_STATUS" = "204" ]; } && [ "$ADMIN_COUNT" -ge 1 ]; then
               ok=true
               break
             fi
