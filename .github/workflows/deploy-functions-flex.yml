@@ -21,6 +21,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: functions
@@ -47,6 +50,10 @@ jobs:
           DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
           mkdir -p "$DIR"
           echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+      - name: Verify OIDC token env
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
 
       - name: Azure login (OIDC)
         uses: azure/login@v2.1.0
@@ -55,11 +62,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Force subscription
+      - name: Verify subscription context
         run: |
           set -euo pipefail
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           az account show -o table
+      - name: Azure ARM probe
+        run: |
+          set -euo pipefail
+          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          RG="asora-psql-flex"; APP="asora-function-dev"; API="2022-03-01"
+          ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+          az rest --method get --url "https://management.azure.com${ID}?api-version=${API}" | jq -e '.properties.defaultHostName' >/dev/null
 
       - name: Guard action version
         working-directory: ${{ github.workspace }}
@@ -107,7 +121,7 @@ jobs:
           set -Eeuo pipefail
           ROOT="$GITHUB_WORKSPACE"
           DEPLOY="$ROOT/deploy"
-          rm -rf "$DEPLOY" "$ROOT/dist-v4-final.zip"
+          rm -rf -- "$DEPLOY" "$ROOT/dist-v4-final.zip"
           mkdir -p "$DEPLOY"
 
           test -f "$ROOT/host.json" || { echo "::error::repo-root host.json missing"; exit 1; }
@@ -122,7 +136,7 @@ jobs:
 
           test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
           if find "$ROOT/functions/dist" -mindepth 1 -print -quit | grep -q .; then
-            cp -R "$ROOT/functions/dist/." "$DEPLOY/"
+            cp -R -- "$ROOT/functions/dist/." "$DEPLOY/"
           else
             echo "::error::functions/dist contains no files"; exit 1
           fi
@@ -140,7 +154,7 @@ jobs:
           pushd "$ROOT/functions" >/dev/null
           npm ci --omit=dev
           popd >/dev/null
-          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+          cp -R -- "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
 
           (cd "$DEPLOY" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*")
           test -f "$ROOT/dist-v4-final.zip" || { echo "::error::ZIP not created"; exit 1; }
