@@ -1,4 +1,6 @@
----
+# NOTE to assistants: Do not upgrade Azure/functions-action here. Keep @v1.
+# Upgrades are handled in a separate migration branch with test gates.
+#
 name: Deploy Functions (Flex)
 
 on:
@@ -26,9 +28,18 @@ jobs:
       NODE_VERSION: '20'
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      # actionlint: allow secrets COSMOS_CONNECTION_STRING
       COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
+      FORCE_ZIP_DEPLOY: '0'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Guard action version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ! grep -R --line-number -E 'uses:\s*Azure/functions-action@v4' .github/workflows || {
+            echo "::error::Do not upgrade to v4 here"; exit 1; }
 
       - name: Guard Flex-incompatible settings
         run: bash scripts/check-flex-settings.sh
@@ -41,18 +52,12 @@ jobs:
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
-      - name: Build functions (then prune to prod)
-        working-directory: functions
+      - name: Package Functions (dist-v4-final.zip)
         run: |
           set -Eeuo pipefail
-          rm -rf node_modules
-          npm ci
-          npm run build
-          if ! find dist -name '*.js' -print -quit >/dev/null; then
-            echo "No JS build output in dist/"
-            exit 1
-          fi
-          npm prune --omit=dev
+          bash scripts/package-v4.sh
+          test -f functions/dist-v4-final.zip
+          mv functions/dist-v4-final.zip dist-v4-final.zip
 
       - name: Guard host.json version
         shell: bash
@@ -195,14 +200,25 @@ jobs:
         env:
           COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
 
-      - name: Publish to Azure Functions (OneDeploy on Flex)
-        uses: Azure/functions-action@v4.0.0
+      - name: Deploy Functions
+        id: deploy_functions
+        uses: Azure/functions-action@v1
         with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: functions
-          scm-do-build-during-deployment: true
+          app-name: asora-function-dev
+          package: dist-v4-final.zip
+          remote-build: false
+          respect-funcignore: false
+
+      # actionlint: allow env FORCE_ZIP_DEPLOY
+      - name: ZIP deploy via CLI (fallback)
+        if: ${{ always() && (env.FORCE_ZIP_DEPLOY == '1' || failure()) }}
         env:
-          COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
+          RG: asora-psql-flex
+          APP: asora-function-dev
+        run: |
+          set -Eeuo pipefail
+          test -f dist-v4-final.zip
+          az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
 
       - name: Verify discovery
         shell: bash

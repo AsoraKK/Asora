@@ -44,10 +44,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set AZURE_CONFIG_DIR
+      - name: Isolate Azure CLI cache (per run)
         shell: bash
         run: |
-          echo "AZURE_CONFIG_DIR=${RUNNER_TEMP}/azure-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azure-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
 
       - name: Install dependencies (fallback)
         shell: bash
@@ -59,9 +62,9 @@ jobs:
       - name: Clear MSAL cache
         shell: bash
         run: |
-          # Clear MSAL cache to avoid AttributeError issues
-          rm -rf ~/.azure/msal_token_cache.json || true
-          rm -rf ~/.azure/accessTokens.json || true
+          set -euo pipefail
+          DIR="${AZURE_CONFIG_DIR:-$HOME/.azure}"
+          rm -f "$DIR/msal_token_cache.json" "$DIR/accessTokens.json" "$DIR/msal_http_cache.bin" || true
 
       - name: Azure login (OIDC)
         uses: azure/login@v2

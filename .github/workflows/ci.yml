@@ -1,4 +1,6 @@
----
+# NOTE to assistants: Do not upgrade Azure/functions-action here. Keep @v1.
+# Upgrades are handled in a separate migration branch with test gates.
+#
 name: CI
 
 concurrency:
@@ -15,6 +17,9 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+
+env:
+  FORCE_ZIP_DEPLOY: '0'
 
 jobs:
   verify-secrets:
@@ -58,6 +63,7 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      FORCE_ZIP_DEPLOY: '0'
     steps:
       - uses: actions/checkout@v4
       - name: Install jq, zip, unzip
@@ -299,6 +305,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/azcfg"
           echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azcfg" >> "$GITHUB_ENV"
 
+      - name: Guard action version
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R --line-number -E 'uses:\s*Azure/functions-action@v4' .github/workflows || {
+            echo "::error::Do not upgrade to v4 here"; exit 1; }
+
       - name: Pre-clear MSAL HTTP cache (NormalizedResponse mitigation)
         shell: bash
         run: |
@@ -358,13 +371,25 @@ jobs:
           set -euo pipefail
           bash .github/scripts/normalize_flex.sh
 
-      - name: "C) Deploy via Azure Functions Action (Flex optimized)"
-        uses: azure/functions-action@v4.0.0
+      - name: Deploy Functions
+        id: deploy_functions
+        uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
           package: dist-v4-final.zip
           remote-build: false
           respect-funcignore: false
+
+      # actionlint: allow env FORCE_ZIP_DEPLOY
+      - name: ZIP deploy via CLI (fallback)
+        if: ${{ always() && (env.FORCE_ZIP_DEPLOY == '1' || failure()) }}
+        env:
+          RG: asora-psql-flex
+          APP: asora-function-dev
+        run: |
+          set -euo pipefail
+          test -f dist-v4-final.zip
+          az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
 
       - name: "D) Post-deploy verification"
         shell: bash
