@@ -31,8 +31,11 @@ jobs:
       - name: Download actionlint
         run: |
           set -euo pipefail
+          mkdir -p ./bin
+          # use a pinned version for reproducibility; or replace with 'latest'
           curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-          | bash -s -- -b ./bin
+          | bash -s -- 1.7.7 ./bin
+          ./bin/actionlint -version
 
       - name: Run actionlint
         env:
