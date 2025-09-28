@@ -107,8 +107,12 @@ jobs:
 
           # Copy compiled JS
           test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
-          # Copy compiled JS (use ./ to avoid names beginning with -)
-          cp -R -- "$ROOT/functions/dist/"./* "$DEPLOY/"
+          # Copy compiled JS using safe ./* glob to avoid names starting with '-'
+          if compgen -G "$ROOT/functions/dist/*" > /dev/null; then
+            (cd "$ROOT/functions/dist" && cp -R -- ./* "$DEPLOY/")
+          else
+            echo "::error::functions/dist contains no files"; exit 1
+          fi
 
           # Copy function.json directories present in functions/
           echo "Copying function.json directories..."
