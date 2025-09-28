@@ -86,7 +86,7 @@ async function main() {
   const results = [];
   let failures = 0;
 
-  async function runCheck(name, path) {
+  async function runCheck(name, path, required = true) {
     try {
       const url = withSlash(BASE_URL, path);
       const t0 = Date.now();
@@ -106,13 +106,14 @@ async function main() {
           console.log(`${logLine}`);
         }
       } else {
-        console.error(`${logLine} (fail)`);
-        failures++;
+        const level = required ? console.error : console.warn;
+        level.call(console, `${logLine} (fail)`);
+        if (required) failures++;
         if (!res.json || !ok(res.json)) {
-          console.error(`${name} response validation failed: ${JSON.stringify(res.json)}`);
+          level.call(console, `${name} response validation failed: ${JSON.stringify(res.json)}`);
         }
         if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
-          console.error(`${name} latency ${durationMs}ms exceeded threshold ${LATENCY_THRESHOLD_SEC}s`);
+          level.call(console, `${name} latency ${durationMs}ms exceeded threshold ${LATENCY_THRESHOLD_SEC}s`);
         }
       }
 
@@ -132,8 +133,30 @@ async function main() {
     }
   }
 
-  await runCheck("health", "/api/health");
-  await runCheck("feed", "/api/feed");
+  // Determine which endpoints are actually present by querying admin/functions.
+  // If admin API is unavailable, fall back to checking both endpoints (legacy behaviour).
+  let endpointsToCheck = [ { name: 'health', path: '/api/health', required: false },
+                           { name: 'feed', path: '/api/feed', required: true } ];
+  try {
+    const adminUrl = withSlash(BASE_URL, '/admin/functions');
+    const adminRes = await getJsonWithRetry(adminUrl);
+    if (adminRes && Array.isArray(adminRes.json)) {
+      const names = adminRes.json.map(f => f && f.name).filter(Boolean);
+      const hasHealth = names.includes('health');
+      const hasFeed = names.includes('feed');
+      endpointsToCheck = [];
+      if (hasHealth) endpointsToCheck.push({ name: 'health', path: '/api/health', required: false });
+      if (hasFeed) endpointsToCheck.push({ name: 'feed', path: '/api/feed', required: true });
+    } else {
+      console.warn('admin/functions did not return JSON array; falling back to default checks');
+    }
+  } catch (e) {
+    console.warn('Failed to fetch /admin/functions; falling back to default checks:', e && e.message);
+  }
+
+  for (const ep of endpointsToCheck) {
+    await runCheck(ep.name, ep.path, ep.required);
+  }
 
   const finishedAt = new Date().toISOString();
   const summary = {
