@@ -59,15 +59,16 @@ jobs:
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2.1.0
+        uses: azure/login@v2
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify subscription context
+      - name: Set Azure subscription context
         run: |
           set -euo pipefail
+          az cloud set -n AzureCloud
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           az account show -o table
 
@@ -76,15 +77,18 @@ jobs:
           SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
+          SUBS="${SUBS:?}"
           RG="asora-psql-flex"
           APP="asora-function-dev"
-          API_VERSION="2022-03-01"
-          APP_URL="https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=${API_VERSION}"
-          APP_JSON="$(az rest --method get --url "$APP_URL")"
-          HOST="$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")"
+          az account set --subscription "$SUBS"
+          echo "Try ARM first (more reliable across plan types)"
+          APP_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01")
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
           if [ -z "$HOST" ]; then
-            echo "::error::defaultHostName not returned by ARM"; exit 1; fi
+            echo "::error::defaultHostName not returned"; exit 1
+          fi
           echo "Detected function host: $HOST"
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
           echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
 
 

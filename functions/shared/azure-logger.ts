@@ -42,6 +42,7 @@ class StructuredAzureLogger implements AzureLogger {
   }
 
   private log(level: string, message: string, context?: LogContext): void {
+    const emitConsoleLogs = this.shouldEmitConsoleLogs();
     const logEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -51,12 +52,31 @@ class StructuredAzureLogger implements AzureLogger {
     };
 
     // In Azure Functions, console.log integrates with Application Insights
-    console.log(JSON.stringify(logEntry));
+    if (emitConsoleLogs) {
+      console.log(JSON.stringify(logEntry));
+    }
 
     // For Application Insights custom telemetry
-    if (typeof process !== 'undefined' && process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+    if (
+      emitConsoleLogs &&
+      typeof process !== 'undefined' &&
+      process.env.APPLICATIONINSIGHTS_CONNECTION_STRING
+    ) {
       this.sendToApplicationInsights(level, message, logEntry);
     }
+  }
+
+  private shouldEmitConsoleLogs(): boolean {
+    if (typeof process === 'undefined') {
+      return true;
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      return true;
+    }
+
+    const override = (process.env.ASORA_TEST_LOGS ?? '').toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(override);
   }
 
   private sendToApplicationInsights(level: string, message: string, logEntry: any): void {

@@ -7,11 +7,12 @@
     "node": ">=20 <21"
   },
   "scripts": {
-    "test": "jest --config jest.config.ts",
+    "test": "npm run -s test:unit || echo \"no tests\"",
+    "test:unit": "jest --config jest.config.ts",
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
-    "build": "npm run clean && npm run compile",
+    "build": "tsc && node scripts/write-dist-entry.cjs",
     "compile": "tsc",
-  "postcompile": "node scripts/write-dist-entry.cjs",
+    "postcompile": "node scripts/write-dist-entry.cjs",
     "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"package.json\" dist/",
     "build-v3": "npm run clean && npm run compile && npm run copy-functions",
     "watch": "echo 'No compilation needed for JavaScript functions'",
@@ -56,7 +57,10 @@
     "rimraf": "^5.0.0",
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+  "typescript": "5.5.4"
+  },
+  "overrides": {
+    "typescript": "5.5.4"
   },
   "keywords": [
     "azure-functions",

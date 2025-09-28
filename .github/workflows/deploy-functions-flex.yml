@@ -56,15 +56,16 @@ jobs:
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2.1.0
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Verify subscription context
+      - name: Set Azure subscription context
         run: |
           set -euo pipefail
+          az cloud set -n AzureCloud
           az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
           az account show -o table
       - name: Azure ARM probe
@@ -113,6 +114,12 @@ jobs:
           set -Eeuo pipefail
           test -d dist || { echo "::error::functions/dist not produced"; exit 1; }
           find dist -maxdepth 2 -type f | head -n 50
+
+      - name: Preflight dist directory
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          test -d "$GITHUB_WORKSPACE/functions/dist" || { echo "functions/dist missing"; exit 1; }
 
       - name: Package Azure Functions v4 zip
         shell: bash
@@ -174,10 +181,10 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!**/node_modules/**' ':!docs/**' ':!**/*.md')
-          [ "${#FILES[@]}" -gt 0 ] || { echo "::error::No host.json found"; exit 1; }
-          for f in "${FILES[@]}"; do
-            jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
+          FILES=$(git ls-files -- 'host.json' 'functions//host.json' ':!:/node_modules/' ':!:/*.md')
+          [ -n "$FILES" ] || { echo "::error::No host.json found in repo"; exit 1; }
+          for f in $FILES; do
+            jq -e '(."version" == "2.0") or (has("version") == false)' "$f" >/dev/null \
               || { echo "::error::Invalid host.json version in $f"; exit 1; }
           done
 
@@ -300,6 +307,7 @@ jobs:
 
       - name: Deploy Functions
         id: deploy_functions
+        # Do not bump to v4; v4 breaks our flex packaging. Keep @v1.
         uses: Azure/functions-action@v1
         with:
           app-name: asora-function-dev
@@ -333,45 +341,48 @@ jobs:
           RG: asora-psql-flex
           APP: asora-function-dev
         run: |
-          set -Eeuo pipefail
-          retry(){
-            local n=0
-            local max=6
-            local exit_code
-            while true; do
-              "$@" && break
-              exit_code=$?
-              if [ "$exit_code" -ge 500 ] || [ "$exit_code" -eq 429 ]; then
-                n=$((n + 1))
-                if [ "$n" -ge "$max" ]; then
-                  exit "$exit_code"
-                fi
-                sleep $((5 * n))
-              else
-                exit "$exit_code"
-              fi
-            done
-          }
-
-          HOST="$(retry az functionapp show -g "$RG" -n "$APP" -o tsv --query defaultHostName || echo '')"
+          set -euo pipefail
+          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          RG="asora-psql-flex"
+          APP="asora-function-dev"
+          az account set --subscription "$SUBS"
+          echo "Try ARM first (more reliable across plan types)"
+          APP_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01")
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
           if [ -z "$HOST" ]; then
-            API=2022-03-01
-            APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
-            SITE_JSON="$(retry az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}")"
-            HOST="$(jq -r '.properties.defaultHostName // empty' <<<"$SITE_JSON")"
+            echo "::error::defaultHostName not returned"; exit 1
           fi
-          [ -n "$HOST" ] || { echo "::error::Unable to resolve function host"; exit 1; }
-          echo "FUNCTION_BASE_URL=https://$HOST" >> "$GITHUB_ENV"
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
 
-          KEY="$(az functionapp keys list -g "$RG" -n "$APP" -o tsv --query masterKey 2>/dev/null || echo '')"
+          echo "Resolving admin key (optional)..."
+          if KEY_JSON=$(az functionapp keys list -g "$RG" -n "$APP" 2>keys.err); then
+            KEY=$(jq -r '.masterKey // empty' <<<"$KEY_JSON")
+            if [ -z "$KEY" ]; then
+              echo "::warning::Function key not returned; continuing as anonymous"
+            fi
+          else
+            if grep -q '403' keys.err 2>/dev/null; then
+              echo "::warning::Function key fetch returned 403; continuing as anonymous"
+              KEY=""
+            else
+              cat keys.err >&2 || true
+              echo "::warning::Failed to fetch function keys; continuing as anonymous"
+              KEY=""
+            fi
+          fi
+          rm -f keys.err || true
           echo "FUNCTION_KEY=$KEY" >> "$GITHUB_ENV"
 
       - name: Verify host and routes
         run: |
           set -euo pipefail
           HOST="${FUNCTION_BASE_URL#https://}"
-          QP=""
-          [ -n "${FUNCTION_KEY:-}" ] && QP="?code=${FUNCTION_KEY}"
+          KEY="${FUNCTION_KEY:-}"
+          if [ -n "$KEY" ] && [ "$KEY" != "anonymous" ]; then
+            QP="?code=${KEY}"
+          else
+            QP=""
+          fi
           echo "Host: $HOST"
           if curl -fsS "https://$HOST/admin/host/status$QP" | jq '{state,errors}'; then
             :
