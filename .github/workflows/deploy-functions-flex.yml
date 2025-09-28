@@ -108,7 +108,8 @@ jobs:
           # Copy compiled JS
           test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
           # Copy compiled JS using safe ./* glob to avoid names starting with '-'
-          if compgen -G "$ROOT/functions/dist/*" > /dev/null; then
+          # Use find to check for any files in functions/dist (safer than globbing)
+          if find "$ROOT/functions/dist" -mindepth 1 -print -quit | grep -q .; then
             (cd "$ROOT/functions/dist" && cp -R -- ./* "$DEPLOY/")
           else
             echo "::error::functions/dist contains no files"; exit 1
