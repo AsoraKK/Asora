@@ -155,7 +155,7 @@ jobs:
             mkdir -p "$DEPLOY/$d"
             cp "$ROOT/functions/$d/function.json" "$DEPLOY/$d/"
             found=$((found+1))
-          done < <(cd "$ROOT/functions" && git ls-files */function.json)
+          done < <(cd "$ROOT/functions" && git ls-files -- '*/function.json')
           [ "$found" -ge 1 ] || { echo "::error::No function.json found under functions/"; exit 1; }
 
           pushd "$ROOT/functions" >/dev/null
