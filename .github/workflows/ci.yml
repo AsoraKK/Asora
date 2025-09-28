@@ -199,15 +199,25 @@ jobs:
       - name: Guard against UTF-8 BOMs
         run: bash ../scripts/check-bom.sh
 
+      - name: Disable Husky in CI
+        run: echo "HUSKY=0" >> "$GITHUB_ENV"
+
+      - name: Verify build script exists
+        run: |
+          set -Eeuo pipefail
+          test -f package.json || { echo "::error::functions/package.json missing"; exit 1; }
+          jq -e 'has("scripts") and (.scripts|has("build"))' package.json >/dev/null \
+            || { echo "::error::No scripts.build in functions/package.json"; echo "Scripts:"; jq '.scripts' package.json; exit 1; }
+
       - name: Guard host.json version
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!functions/**/node_modules/**')
-          [ "${#FILES[@]}" -gt 0 ] || { echo "No host.json found"; exit 1; }
+          mapfile -t FILES < <(git ls-files 'functions/**/host.json' 'host.json' ':!**/node_modules/**' ':!docs/**' ':!**/*.md')
+          [ "${#FILES[@]}" -gt 0 ] || { echo "::error::No host.json found"; exit 1; }
           for f in "${FILES[@]}"; do
             jq -e '."version"=="2.0" or (has("version")==false)' "$f" >/dev/null \
-              || { echo "Invalid host.json version in $f"; exit 1; }
+              || { echo "::error::Invalid host.json version in $f"; exit 1; }
           done
 
       - name: Tripwire against forbidden host versions
@@ -220,66 +230,76 @@ jobs:
             exit 1;
           }
 
-      - name: npm ci (strict)
+      - name: npm ci
         run: npm ci
 
       - name: Test
         run: npm test
 
-      - name: Build (TS -> dist)
-        run: npm run build
+      - name: TypeScript build
+        run: npm run -s build
+
+      - name: Verify dist output
+        run: |
+          set -Eeuo pipefail
+          test -d dist || { echo "::error::functions/dist not produced"; exit 1; }
+          find dist -maxdepth 2 -type f | head -n 50
 
       - name: Package Azure Functions v4 zip
         shell: bash
+        working-directory: ${{ github.workspace }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           ROOT="$GITHUB_WORKSPACE"
-          echo "Root: $ROOT"
-          echo "Packing v4 artifact..."
-          rm -rf "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
-          mkdir -p "$ROOT/deploy"
+          DEPLOY="$ROOT/deploy"
+          rm -rf "$DEPLOY" "$ROOT/dist-v4-final.zip"
+          mkdir -p "$DEPLOY"
 
-          # host.json + package.json from canonical functions/ directory
-          cp "$ROOT/functions/host.json" "$ROOT/deploy/"
-          cp "$ROOT/functions/package.json" "$ROOT/deploy/"
+          test -f "$ROOT/host.json" || { echo "::error::repo-root host.json missing"; exit 1; }
+          jq -e '."version"=="2.0" or (has("version")==false)' "$ROOT/host.json" >/dev/null || { echo "::error::Invalid host.json at root"; exit 1; }
+          cp "$ROOT/host.json" "$DEPLOY/"
 
-          # compiled output (copy entire dist to preserve relative imports)
-          test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
-          # Safely copy dist contents using a guarded ./* glob
-          if compgen -G "$ROOT/functions/dist/*" > /dev/null; then
-            (cd "$ROOT/functions/dist" && cp -R -- ./* "$ROOT/deploy/")
+          test -f "$ROOT/functions/package.json" || { echo "::error::functions/package.json missing"; exit 1; }
+          cp "$ROOT/functions/package.json" "$DEPLOY/"
+
+          test -f "$ROOT/functions/runtime-index.js" || { echo "::error::functions/runtime-index.js missing"; exit 1; }
+          cp "$ROOT/functions/runtime-index.js" "$DEPLOY/index.js"
+
+          test -d "$ROOT/functions/dist" || { echo "::error::functions/dist missing"; exit 1; }
+          if find "$ROOT/functions/dist" -mindepth 1 -print -quit | grep -q .; then
+            cp -R "$ROOT/functions/dist/." "$DEPLOY/"
           else
             echo "::error::functions/dist contains no files"; exit 1
           fi
 
-          # create thin root entrypoint for v4 runtime
-          cp "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
+          echo "Copying function.json directories..."
+          found=0
+          while IFS= read -r rel; do
+            d="$(dirname "$rel")"
+            mkdir -p "$DEPLOY/$d"
+            cp "$ROOT/functions/$d/function.json" "$DEPLOY/$d/"
+            found=$((found+1))
+          done < <(cd "$ROOT/functions" && git ls-files */function.json)
+          [ "$found" -ge 1 ] || { echo "::error::No function.json found under functions/"; exit 1; }
 
-          # Copy any function directory containing a function.json
-          echo "Copying function directories..."
-          while IFS= read -r d; do
-            echo "  Copying $d..."
-            mkdir -p "$ROOT/deploy/$d"
-            cp "$ROOT/functions/$d/function.json" "$ROOT/deploy/$d/"
-          done < <(
-            find "$ROOT/functions" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' \
-              | grep -v -E '^(dist|node_modules|scripts)$' \
-              | xargs -I{} bash -lc 'test -f "functions/{}/function.json" && echo {}'
-          )
-
-          # production dependencies only
-          (cd "$ROOT/functions" && npm ci --omit=dev)
-          cp -R "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
-
-          # Verify package structure before zipping
-          echo "Package contents:"
-          find "$ROOT/deploy" -name "*.json" | sort
-
-          # create zip
-          pushd "$ROOT/deploy" >/dev/null
-          zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db"
+          pushd "$ROOT/functions" >/dev/null
+          npm ci --omit=dev
           popd >/dev/null
-          echo "Created $ROOT/dist-v4-final.zip"
+          cp -R "$ROOT/functions/node_modules" "$DEPLOY/node_modules"
+
+          (cd "$DEPLOY" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*")
+          test -f "$ROOT/dist-v4-final.zip" || { echo "::error::ZIP not created"; exit 1; }
+          echo "ZIP size: $(stat -c%s "$ROOT/dist-v4-final.zip") bytes"
+
+      - name: Sanity check ZIP contents
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -Eeuo pipefail
+          unzip -l dist-v4-final.zip | awk '{print $4}' | sed '1,3d' | sort > zip.lst
+          grep -q '^host.json$' zip.lst
+          grep -q '^index.js$' zip.lst
+          grep -q '^package.json$' zip.lst
+          grep -q '^node_modules/' zip.lst
 
       - uses: actions/upload-artifact@v4
         with:
