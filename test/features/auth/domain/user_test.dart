@@ -159,7 +159,7 @@ void main() {
       expect(user1 == user3, isFalse);
 
       // Test with different type
-      final Object notAUser = 'not a user';
+      const Object notAUser = 'not a user';
       expect(user1 == notAUser, isFalse);
     });
 
