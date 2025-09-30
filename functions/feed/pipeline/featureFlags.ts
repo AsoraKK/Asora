@@ -14,10 +14,16 @@ export class FeatureFlags {
     try {
       if (this.client) {
         const setting = await this.client.getConfigurationSetting({ key });
-        if (setting?.value != null) return Number(setting.value);
+        if (setting?.value != null) {
+          const parsed = Number(setting.value);
+          if (Number.isFinite(parsed)) return parsed;
+        }
       }
       const envVal = process.env[key];
-      if (envVal != null) return Number(envVal);
+      if (envVal != null) {
+        const parsed = Number(envVal);
+        if (Number.isFinite(parsed)) return parsed;
+      }
     } catch {
       // swallow and use fallback
     }

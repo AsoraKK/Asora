@@ -1,10 +1,26 @@
-import { Candidate, FeedContext } from "../pipeline/types";
+import { vi } from "vitest";
+import { Candidate, FeedContext, OutputItem, ReputationLevel } from "../pipeline/types";
+
+export const BASE_TIME = new Date("2024-01-01T00:00:00.000Z");
+
+export function useFixedTime() {
+  vi.useFakeTimers();
+  vi.setSystemTime(BASE_TIME);
+}
+
+export function restoreTime() {
+  vi.useRealTimers();
+}
+
+export function hoursAgo(hours: number): string {
+  return new Date(BASE_TIME.getTime() - hours * 3_600_000).toISOString();
+}
 
 export function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
   const base: Candidate = {
     id: "post-1",
     authorId: "author-1",
-    createdAt: new Date().toISOString(),
+    createdAt: BASE_TIME.toISOString(),
     region: "US",
     topics: ["tech"],
     keywords: ["ai"],
@@ -24,7 +40,12 @@ export function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
     },
   };
 
-  return { ...base, ...overrides, author: { ...base.author, ...overrides.author } };
+  return {
+    ...base,
+    ...overrides,
+    stats: { ...base.stats, ...overrides.stats },
+    author: { ...base.author, ...overrides.author },
+  };
 }
 
 export function makeContext(overrides: Partial<FeedContext> = {}): FeedContext {
@@ -40,5 +61,33 @@ export function makeContext(overrides: Partial<FeedContext> = {}): FeedContext {
       explorationSlots: true,
     },
     ...overrides,
+  };
+}
+
+export function makeOutputItem(
+  overrides: Partial<OutputItem & { _cand?: unknown; _score?: number }> & {
+    id: string;
+    baseScore?: number;
+    cohort?: ReputationLevel;
+  }
+): OutputItem & { _cand: unknown; _score: number } {
+  const base: OutputItem & { _cand: unknown; _score: number } = {
+    id: overrides.id,
+    authorId: overrides.authorId ?? overrides.id,
+    createdAt: overrides.createdAt ?? BASE_TIME.toISOString(),
+    baseScore: overrides.baseScore ?? 1,
+    cohort: overrides.cohort ?? 3,
+    region: overrides.region ?? "US",
+    topics: overrides.topics ?? ["tech"],
+    _cand: overrides._cand ?? null,
+    _score: overrides._score ?? (overrides.baseScore ?? 1),
+  };
+
+  return {
+    ...base,
+    ...overrides,
+    topics: overrides.topics ?? base.topics,
+    _cand: overrides._cand ?? base._cand,
+    _score: overrides._score ?? base._score,
   };
 }
