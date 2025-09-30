@@ -18,8 +18,10 @@ export class Mixer {
 
     const shortage = items.length - out.length;
     if (shortage > 0) {
-      const backfill = local.length < needLocal ? local.slice(needLocal) : global.slice(needGlobal);
-      out.push(...backfill.slice(0, shortage));
+      const remainingLocal = local.slice(needLocal);
+      const remainingGlobal = global.slice(needGlobal);
+      const backfillPool = [...remainingLocal, ...remainingGlobal];
+      out.push(...backfillPool.slice(0, shortage));
     }
 
     return sortPerMode(out, ctx);
