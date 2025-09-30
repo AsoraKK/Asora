@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npm run -s test:unit || echo \"no tests\"",
     "test:unit": "jest --config jest.config.ts",
+    "test:feed": "vitest run --config feed/vitest.config.ts",
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
     "build": "tsc && node scripts/write-dist-entry.cjs",
     "compile": "tsc",
@@ -27,6 +28,7 @@
     "deploy": "az functionapp deployment source config-zip -g \"$AZURE_RESOURCE_GROUP\" -n \"$AZURE_FUNCTIONAPP_NAME\" --src dist.zip"
   },
   "dependencies": {
+    "@azure/app-configuration": "^1.6.0",
     "@azure/cosmos": "^4.0.0",
     "@azure/functions": "^4.7.2",
     "applicationinsights": "^2.9.2",
@@ -48,6 +50,7 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^1.6.0",
     "copyfiles": "^2.4.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
@@ -57,7 +60,8 @@
     "rimraf": "^5.0.0",
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
-  "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "vitest": "^1.6.0"
   },
   "overrides": {
     "typescript": "5.5.4"
