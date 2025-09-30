@@ -113,7 +113,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           test -d dist || { echo "::error::functions/dist not produced"; exit 1; }
-          find dist -maxdepth 2 -type f | head -n 50
+          # `find | head` can produce a SIGPIPE when head closes early; make this tolerant
+          find dist -maxdepth 2 -type f 2>/dev/null | head -n 50 || true
 
       - name: Preflight dist directory
         working-directory: ${{ github.workspace }}
