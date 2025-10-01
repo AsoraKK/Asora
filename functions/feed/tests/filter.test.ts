@@ -55,6 +55,16 @@ describe("Filter", () => {
     expect(drop).toHaveLength(0);
   });
 
+  it("treats missing keywords as non-matching when includes are required", () => {
+    const includeCtx = makeContext({ hardFilters: { includeKeywords: ["ai"] } });
+    const noKeywords = filter.apply([makeCandidate({ keywords: undefined })], includeCtx, new Set());
+    expect(noKeywords).toHaveLength(0);
+
+    const excludeCtx = makeContext({ hardFilters: { excludeKeywords: ["spoiler"] } });
+    const missingKeywords = filter.apply([makeCandidate({ keywords: undefined })], excludeCtx, new Set());
+    expect(missingKeywords).toHaveLength(1);
+  });
+
   it("requires at least one matching topic when includeTopics provided", () => {
     const ctx = makeContext({ hardFilters: { includeTopics: ["science"] } });
     const keep = filter.apply([makeCandidate({ topics: ["science", "tech"] })], ctx, new Set());
