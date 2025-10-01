@@ -106,8 +106,17 @@ jobs:
             functions/coverage/**
             coverage/merged.info
             coverage/html/**
+      - name: Check merged LCOV for content
+        id: check_merged
+        run: |
+          if [ -f coverage/merged.info ] && grep -q 'SF:' coverage/merged.info; then
+            echo "merged_has_records=true" >> $GITHUB_OUTPUT
+          else
+            echo "merged_has_records=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Post coverage summary
+        if: steps.check_merged.outputs.merged_has_records == 'true'
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
           filename: coverage/merged.info
