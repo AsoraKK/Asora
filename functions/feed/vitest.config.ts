@@ -6,7 +6,7 @@ export default defineConfig({
     include: ["feed/tests/**/*.test.ts"],
     environment: "node",
     coverage: {
-      reporter: ["text", "lcov"],
+  reporter: ["text", "lcov", "json-summary"],
       provider: "v8",
       reportsDirectory: "coverage",
       include: ["feed/pipeline/**/*.ts", "feed/pipeline/adapters/**/*.ts"],

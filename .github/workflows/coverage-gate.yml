@@ -37,12 +37,16 @@ jobs:
 
       - name: Run P1 Flutter coverage gate
         run: |
-          if [ -f coverage/lcov.info ]; then
-            chmod +x ./check_p1_coverage.sh || true
-            ./check_p1_coverage.sh
-          else
-            echo "coverage/lcov.info not found; skipping P1 gate"
+          if [ ! -f ./check_p1_coverage.sh ]; then
+            echo "check_p1_coverage.sh not found at repo root"
+            exit 1
           fi
+          if [ ! -f coverage/lcov.info ]; then
+            echo "coverage/lcov.info not found. Run 'flutter test --coverage' before invoking the gate."
+            exit 1
+          fi
+          chmod +x ./check_p1_coverage.sh
+          ./check_p1_coverage.sh
 
       - name: Merge LCOV reports
         run: npx --yes lcov-result-merger 'functions/**/coverage/lcov.info' 'coverage/lcov.info' > coverage/merged.info
@@ -60,8 +64,13 @@ jobs:
 
       - name: Gate Functions coverage
         run: |
-          LINES=$(jq -r '.total.lines.pct' functions/coverage/coverage-summary.json)
-          BRANCHES=$(jq -r '.total.branches.pct' functions/coverage/coverage-summary.json)
+          SUMMARY_FILE="functions/coverage/coverage-summary.json"
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            echo "${SUMMARY_FILE} not found. Ensure vitest generated coverage-summary.json (json-summary reporter enabled)."
+            exit 1
+          fi
+          LINES=$(jq -r '.total.lines.pct // 0' "$SUMMARY_FILE")
+          BRANCHES=$(jq -r '.total.branches.pct // 0' "$SUMMARY_FILE")
           echo "Functions lines=${LINES}% branches=${BRANCHES}%"
           awk "BEGIN {exit !(${LINES}>=96 && ${BRANCHES}>=92)}"
 
