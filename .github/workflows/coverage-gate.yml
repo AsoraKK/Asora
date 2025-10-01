@@ -35,6 +35,15 @@ jobs:
       - name: Run Flutter tests with coverage
         run: flutter test --coverage
 
+      - name: Run P1 Flutter coverage gate
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            chmod +x ./check_p1_coverage.sh || true
+            ./check_p1_coverage.sh
+          else
+            echo "coverage/lcov.info not found; skipping P1 gate"
+          fi
+
       - name: Merge LCOV reports
         run: npx --yes lcov-result-merger 'functions/**/coverage/lcov.info' 'coverage/lcov.info' > coverage/merged.info
 
@@ -42,7 +51,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lcov
 
       - name: Generate coverage HTML report
-        run: genhtml coverage/merged.info -o coverage/html
+        run: |
+          if [ -f coverage/merged.info ] && grep -q 'SF:' coverage/merged.info; then
+            genhtml --ignore-errors source coverage/merged.info -o coverage/html
+          else
+            echo "coverage/merged.info missing or empty; skipping genhtml"
+          fi
 
       - name: Gate Functions coverage
         run: |
