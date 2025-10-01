@@ -1,0 +1,80 @@
+name: Coverage Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  coverage-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install and run Functions feed tests
+        run: |
+          cd functions
+          npm ci
+          npx vitest run --config feed/vitest.config.ts --coverage
+
+      - name: Setup Flutter 3.x
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter tests with coverage
+        run: flutter test --coverage
+
+      - name: Merge LCOV reports
+        run: npx --yes lcov-result-merger 'functions/**/coverage/lcov.info' 'coverage/lcov.info' > coverage/merged.info
+
+      - name: Install lcov tools
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Generate coverage HTML report
+        run: genhtml coverage/merged.info -o coverage/html
+
+      - name: Gate Functions coverage
+        run: |
+          LINES=$(jq -r '.total.lines.pct' functions/coverage/coverage-summary.json)
+          BRANCHES=$(jq -r '.total.branches.pct' functions/coverage/coverage-summary.json)
+          echo "Functions lines=${LINES}% branches=${BRANCHES}%"
+          awk "BEGIN {exit !(${LINES}>=96 && ${BRANCHES}>=92)}"
+
+      - name: Gate merged LCOV coverage
+        run: |
+          HITS=$(grep -Po 'LH:\K\d+' coverage/merged.info | awk '{s+=$1} END{print s}')
+          FOUND=$(grep -Po 'LF:\K\d+' coverage/merged.info | awk '{s+=$1} END{print s}')
+          python -c "import sys; hits=int('${HITS}' or 0); found=int('${FOUND}' or 1); pct=round((hits/found)*100, 2) if found else 0.0; print(f'Merged lines ~ {pct}%'); sys.exit(0 if pct>=96 else 1)"
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-artifacts
+          path: |
+            functions/coverage/**
+            coverage/merged.info
+            coverage/html/**
+
+      - name: Post coverage summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage/merged.info
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: '96 92'
