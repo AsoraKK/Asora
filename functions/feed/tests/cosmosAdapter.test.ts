@@ -56,6 +56,22 @@ describe("CosmosAdapter", () => {
     expect(call.query).toContain("ARRAY_CONTAINS(@regions, c.region)");
   });
 
+  it("applies region filter for trending posts", async () => {
+    const { adapter, posts, users } = createAdapter();
+    posts.fetchAll.mockResolvedValue({ resources: [] });
+    users.fetchAll.mockResolvedValue({ resources: [] });
+
+    await adapter.listTrendingPosts({ limit: 8, regions: ["ZA", "NG"] });
+
+    const call = posts.query.mock.calls[0][0];
+    expect(call.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "@regions", value: ["ZA", "NG"] }),
+      ])
+    );
+    expect(call.query).toContain("ARRAY_CONTAINS(@regions, c.region)");
+  });
+
   it("omits region filter when none provided", async () => {
     const { adapter, posts, users } = createAdapter();
     posts.fetchAll.mockResolvedValue({ resources: [] });
@@ -127,6 +143,54 @@ describe("CosmosAdapter", () => {
 
     const result = await adapter.listRecentPosts({ limit: 5 });
     expect(result[0].author).toMatchObject({ reputationLevel: 5, consistency: 1 });
+  });
+
+  it("clamps author signals to minimum values", async () => {
+    const { adapter, posts, users } = createAdapter();
+    posts.fetchAll.mockResolvedValue({
+      resources: [
+        {
+          id: "p1",
+          authorId: "a1",
+          createdAt: "2024-01-01",
+          stats: { likes: 0, replies: 0, reshares: 0 },
+          aiHumanScore: 1,
+          aiLabeled: false,
+        },
+      ],
+    });
+    users.fetchAll.mockResolvedValue({
+      resources: [
+        { id: "a1", reputationLevel: 0, consistency: -0.5 },
+      ],
+    });
+
+    const result = await adapter.listRecentPosts({ limit: 5 });
+    expect(result[0].author).toMatchObject({ reputationLevel: 1, consistency: 0 });
+  });
+
+  it("fills in defaults when reputation or consistency are undefined", async () => {
+    const { adapter, posts, users } = createAdapter();
+    posts.fetchAll.mockResolvedValue({
+      resources: [
+        {
+          id: "p1",
+          authorId: "a1",
+          createdAt: "2024-01-01",
+          stats: { likes: 0, replies: 0, reshares: 0 },
+          aiHumanScore: 1,
+          aiLabeled: false,
+        },
+      ],
+    });
+    users.fetchAll.mockResolvedValue({
+      resources: [
+        { id: "a1" as const },
+      ],
+    });
+
+    const result = await adapter.listRecentPosts({ limit: 5 });
+    expect(result[0].author).toMatchObject({ reputationLevel: 1, consistency: 0.5 });
   });
 
   it("returns empty list when no follows", async () => {

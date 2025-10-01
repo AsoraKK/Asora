@@ -114,6 +114,21 @@ describe("FairnessPolicy", () => {
     expect(counts.get(4) ?? 0).toBeGreaterThanOrEqual(3);
   });
 
+  it("halts exploration loop when all remaining candidates violate caps", () => {
+    Fairness.perAuthorPageCap = 1;
+    Fairness.exploreRatio = 0.5;
+
+    const pool = [
+      ...sameAuthorItems(3, 6, "solo"),
+      ...cohortItems(2, 2, "other"),
+    ];
+
+    const result = fairness.apply(pool, 6);
+    const soloCount = result.filter((i) => i.authorId === "solo").length;
+    expect(soloCount).toBe(1);
+    expect(result.length).toBeLessThanOrEqual(6);
+  });
+
   it("backfills remaining slots when a cohort is short", () => {
     const pool = [
       ...cohortItems(5, 10, "hi"),
@@ -148,6 +163,22 @@ describe("FairnessPolicy", () => {
     expect(cohort3Count).toBeLessThanOrEqual(1);
     const uniqueAuthors = new Set(result.map((i) => i.authorId));
     expect(uniqueAuthors.size).toBe(result.length);
+  });
+
+  it("treats missing floor configuration as zero floor", () => {
+    Fairness.floors.delete(4);
+    Fairness.exploreRatio = 0;
+    Fairness.caps.set(4, 20);
+    Fairness.caps.set(3, 20);
+    Fairness.perAuthorPageCap = 5;
+
+    const pool = [
+      ...cohortItems(4, 4, "gap"),
+      ...cohortItems(3, 4, "c3"),
+    ];
+
+    const result = fairness.apply(pool, 8);
+    expect(result).toHaveLength(8);
   });
 
   it("stops at cohort cap during floors pass", () => {
@@ -186,6 +217,23 @@ describe("FairnessPolicy", () => {
     expect(result).toHaveLength(3);
   });
 
+  it("skips over authors once the per-author cap is reached in floors", () => {
+    Fairness.floors.set(3, 10);
+    Fairness.caps.set(3, 20);
+    Fairness.perAuthorPageCap = 1;
+    Fairness.exploreRatio = 0;
+
+    const pool = [
+      ...sameAuthorItems(3, 4, "repeat"),
+      ...cohortItems(3, 4, "others"),
+    ];
+
+    const result = fairness.apply(pool, 4);
+    const repeatCount = result.filter((i) => i.authorId === "repeat").length;
+    expect(repeatCount).toBe(1);
+    expect(result).toHaveLength(4);
+  });
+
   it("skips final fill items once cohort hits cap", () => {
     Fairness.caps.set(3, 1);
     Fairness.perAuthorPageCap = 5;
@@ -208,5 +256,23 @@ describe("FairnessPolicy", () => {
     const pool = cohortItems(3, 4, "zero");
     const result = fairness.apply(pool, 0);
     expect(result).toEqual([]);
+  });
+
+  it("avoids re-adding already chosen items during exploration", () => {
+    Fairness.perAuthorPageCap = 5;
+    Fairness.exploreRatio = 0.3;
+    Fairness.caps.set(3, 2);
+
+    const duplicate = makeOutputItem({ id: "dup", authorId: "dup", cohort: 3, _score: 5, baseScore: 5 });
+    const pool = [
+      duplicate,
+      { ...duplicate },
+      ...cohortItems(2, 3, "fill"),
+      ...cohortItems(4, 3, "c4"),
+    ];
+
+    const result = fairness.apply(pool, 6);
+    const dupCount = result.filter((i) => i.id === "dup").length;
+    expect(dupCount).toBe(1);
   });
 });

@@ -139,6 +139,18 @@ describe("pipeline integration", () => {
 		);
 	});
 
+	it("throws when Cosmos key env is missing", async () => {
+		process.env.COSMOS_DB_ENDPOINT = "https://localhost";
+		delete process.env.COSMOS_DB_KEY;
+		delete process.env.COSMOS_KEY;
+		process.env.COSMOS_DB_DATABASE = "db";
+
+		const { buildPipeline } = await import("../pipeline");
+		expect(() => buildPipeline({ log: vi.fn() } as unknown as InvocationContext)).toThrow(
+			"COSMOS_DB_ENDPOINT/COSMOS_ENDPOINT and COSMOS_DB_KEY/COSMOS_KEY must be configured"
+		);
+	});
+
 	it("prefers fallback cosmos env keys and caches the client", async () => {
 		adapterStub.listRecentPosts.mockResolvedValue([]);
 		adapterStub.listTrendingPosts.mockResolvedValue([]);
