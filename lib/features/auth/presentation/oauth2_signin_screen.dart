@@ -79,7 +79,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Sign in securely with OAuth2',
+          'Sign in securely with Microsoft Entra',
           style: TextStyle(fontSize: 16, color: Colors.black54),
           textAlign: TextAlign.center,
         ),
@@ -116,7 +116,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
                 Icon(Icons.security, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Sign in with OAuth2',
+                  'Sign in with Microsoft',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ],

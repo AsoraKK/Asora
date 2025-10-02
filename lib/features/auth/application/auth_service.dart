@@ -247,6 +247,7 @@ class AuthService {
         _secureStorage.delete(key: _userKey),
         _secureStorage.delete(key: _sessionKey),
         _googleSignIn.signOut(),
+        _oauth2Service.signOut(),
       ]);
 
       dev.log('User logged out successfully', name: 'auth');
