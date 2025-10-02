@@ -5,7 +5,7 @@ import { createErrorResponse, createSuccessResponse } from '../shared/http-utils
 
 export async function exportHistory(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const user = requireUser(context, req);
+    const user = await requireUser(context, req);
     const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
     const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora');
     const audit = database.container('privacy_audit');
