@@ -37,7 +37,7 @@ export async function deleteUser(
 
   try {
     // 1. Authentication - throws HttpError(401) if invalid
-    const user = requireUser(context, request);
+    const user = await requireUser(context, request);
     const userId = user.sub;
 
     // 2. Confirmation header check (safety mechanism)
@@ -338,7 +338,7 @@ export async function deleteUser(
     // Handle unexpected errors
     context.error('Critical error during account deletion:', error);
     try {
-      const user = requireUser(context, request);
+      const user = await requireUser(context, request);
       const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
       const audit = cosmosClient.database('asora').container('privacy_audit');
       await audit.items.create({
