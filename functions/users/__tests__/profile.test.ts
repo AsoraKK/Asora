@@ -47,7 +47,7 @@ describe('users/profile upsertProfile', () => {
   });
 
   it('rejects when moderation decision is reject', async () => {
-    (requireUser as jest.Mock).mockReturnValue({ sub: 'u1' });
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'u1' });
     moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'reject', score: 0.9 });
     const req = httpReqMock({ method: 'POST', body: { displayName: 'bad', bio: 'text' } });
     const res = await upsertProfile(req as any, ctx as InvocationContext, () => fakeCosmos());
@@ -56,7 +56,7 @@ describe('users/profile upsertProfile', () => {
   });
 
   it('creates profile with add when no existing profile and review status', async () => {
-    (requireUser as jest.Mock).mockReturnValue({ sub: 'u2' });
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'u2' });
     moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'review', score: 0.5 });
     cosmosStub.usersDoc = { id: 'u2' };
     const req = httpReqMock({ method: 'PUT', body: { displayName: 'Alice' } });
@@ -72,7 +72,7 @@ describe('users/profile upsertProfile', () => {
   });
 
   it('replaces profile when existing and approved status', async () => {
-    (requireUser as jest.Mock).mockReturnValue({ sub: 'u3' });
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'u3' });
     moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'approve', score: 0.1 });
     cosmosStub.usersDoc = { id: 'u3', profile: { displayName: 'Old' } };
     const req = httpReqMock({ method: 'POST', body: { displayName: 'New' } });
@@ -91,7 +91,7 @@ describe('users/profile upsertProfile', () => {
   });
 
   it('returns 500 on unexpected errors (e.g., Cosmos failure)', async () => {
-    (requireUser as jest.Mock).mockReturnValue({ sub: 'u4' });
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'u4' });
     moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'approve', score: 0.2 });
     // Fake cosmos that throws on read
     const throwingCosmos = {

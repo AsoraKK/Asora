@@ -14,14 +14,46 @@
  */
 
 import { InvocationContext } from '@azure/functions';
+import { configureTokenVerifier, JWTPayload } from '../shared/auth-utils';
 import { exportUser } from '../privacy/exportUser';
 import { deleteUser } from '../privacy/deleteUser';
 import { httpReqMock } from './helpers/http';
 
-// Mock dependencies
-jest.mock('jsonwebtoken', () => ({
-  decode: jest.fn()
-}));
+function createUnsignedJwt(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${header}.${body}.`;
+}
+
+function configureTestVerifier() {
+  configureTokenVerifier(async (token: string): Promise<JWTPayload> => {
+    if (!token || token === 'invalid-token') {
+      throw new Error('Invalid token format');
+    }
+
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      throw new Error('Invalid token format');
+    }
+
+    try {
+      const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+      const payload = JSON.parse(payloadJson) as JWTPayload;
+
+      if (!payload.sub) {
+        throw new Error('Token missing subject');
+      }
+
+      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+        throw new Error('Token expired');
+      }
+
+      return payload;
+    } catch (error) {
+      throw new Error(`Invalid token format: ${(error as Error).message}`);
+    }
+  });
+}
 
 jest.mock('@azure/cosmos', () => ({
   CosmosClient: jest.fn().mockImplementation(() => ({
@@ -71,6 +103,10 @@ function createMockContext(): InvocationContext {
 describe('Privacy Service - Data Export', () => {
   beforeAll(() => {
     process.env.COSMOS_CONNECTION_STRING = 'AccountEndpoint=https://localhost:8081/;AccountKey=key;';
+    configureTestVerifier();
+  });
+  afterAll(() => {
+    configureTokenVerifier();
   });
   // mockContext declared once at the top of the describe block
   afterEach(() => {
@@ -90,7 +126,6 @@ describe('Privacy Service - Data Export', () => {
     }
   });
   let mockContext: InvocationContext;
-  const jwt = require('jsonwebtoken');
 
   beforeEach(() => {
     mockContext = createMockContext();
@@ -109,8 +144,6 @@ describe('Privacy Service - Data Export', () => {
   });
 
   test('should return 401 for invalid JWT token', async () => {
-    jwt.decode.mockReturnValue(null);
-    
     const req = httpReqMock({
       method: 'GET',
       headers: { authorization: 'Bearer invalid-token' }
@@ -121,7 +154,7 @@ describe('Privacy Service - Data Export', () => {
     expect(response.status).toBe(401);
     const body = JSON.parse(response.body as string);
     expect(body.code).toBe('unauthorized');
-    expect(body.message).toContain('Invalid token format');
+    expect(body.message).toContain('Invalid or expired token');
   });
 
   test('should return 401 for expired JWT token', async () => {
@@ -130,14 +163,12 @@ describe('Privacy Service - Data Export', () => {
       email: 'test@example.com',
       exp: Math.floor(Date.now() / 1000) - 3600 // Expired 1 hour ago
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: expiredPayload
-    });
+
+    const expiredToken = createUnsignedJwt(expiredPayload);
     
     const req = httpReqMock({
       method: 'GET', 
-      headers: { authorization: 'Bearer expired-token' }
+      headers: { authorization: `Bearer ${expiredToken}` }
     });
     
     const response = await exportUser(req, mockContext);
@@ -154,22 +185,22 @@ describe('Privacy Service - Data Export', () => {
       email: 'test@example.com', 
       exp: Math.floor(Date.now() / 1000) + 3600 // Valid for 1 hour
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
     
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: 'Bearer valid-token' }
+      headers: { authorization: `Bearer ${validToken}` }
     });
     
     const response = await exportUser(req, mockContext);
-    
+
     expect(response.status).toBe(200);
-    expect(response.headers?.['Content-Type']).toBe('application/json');
-    expect(response.headers?.['X-Export-ID']).toBeTruthy();
-    
+    const headers = response.headers as Record<string, string> | undefined;
+    expect(headers).toBeDefined();
+    expect(headers!['Content-Type']).toBe('application/json');
+    expect(headers!['X-Export-ID']).toBeTruthy();
+
     const exportData = JSON.parse(response.body as string);
     expect(exportData.metadata).toBeDefined();
     expect(exportData.userProfile).toBeDefined(); 
@@ -186,14 +217,12 @@ describe('Privacy Service - Data Export', () => {
       email: 'test@example.com',
       exp: Math.floor(Date.now() / 1000) + 3600
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
 
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: 'Bearer valid-token' }
+      headers: { authorization: `Bearer ${validToken}` }
     });
     
     // Since rate limiting works correctly in production, we'll verify the success case
@@ -212,7 +241,14 @@ describe('Privacy Service - Data Export', () => {
 
 describe('Privacy Service - Account Deletion', () => {
   let mockContext: InvocationContext;
-  const jwt = require('jsonwebtoken');
+
+  beforeAll(() => {
+    configureTestVerifier();
+  });
+
+  afterAll(() => {
+    configureTokenVerifier();
+  });
 
   beforeEach(() => {
     mockContext = createMockContext();
@@ -238,14 +274,12 @@ describe('Privacy Service - Account Deletion', () => {
       email: 'test@example.com',
       exp: Math.floor(Date.now() / 1000) + 3600
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
     
     const req = httpReqMock({
       method: 'POST',
-      headers: { authorization: 'Bearer valid-token' }
+      headers: { authorization: `Bearer ${validToken}` }
     });
     
     const response = await deleteUser(req, mockContext);
@@ -262,15 +296,13 @@ describe('Privacy Service - Account Deletion', () => {
       email: 'test@example.com',
       exp: Math.floor(Date.now() / 1000) + 3600
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
     
     const req = httpReqMock({
       method: 'POST',
       headers: { 
-        authorization: 'Bearer valid-token',
+        authorization: `Bearer ${validToken}`,
         'X-Confirm-Delete': 'true'
       }
     });
@@ -293,15 +325,13 @@ describe('Privacy Service - Account Deletion', () => {
       email: 'test@example.com', 
       exp: Math.floor(Date.now() / 1000) + 3600
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
     
     const req = httpReqMock({
       method: 'POST',
       headers: { 
-        authorization: 'Bearer valid-token',
+        authorization: `Bearer ${validToken}`,
         'X-Confirm-Delete': 'true'
       }
     });
@@ -326,7 +356,14 @@ describe('Privacy Service - Account Deletion', () => {
 
 describe('Privacy Service - Integration Workflow', () => {
   let mockContext: InvocationContext;
-  const jwt = require('jsonwebtoken');
+
+  beforeAll(() => {
+    configureTestVerifier();
+  });
+
+  afterAll(() => {
+    configureTokenVerifier();
+  });
 
   beforeEach(() => {
     mockContext = createMockContext();
@@ -339,14 +376,12 @@ describe('Privacy Service - Integration Workflow', () => {
       email: 'test@example.com',
       exp: Math.floor(Date.now() / 1000) + 3600
     };
-    
-    jwt.decode.mockReturnValue({
-      payload: validPayload
-    });
+
+    const validToken = createUnsignedJwt(validPayload);
     
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: 'Bearer valid-token' }
+      headers: { authorization: `Bearer ${validToken}` }
     });
     
     const response = await exportUser(req, mockContext);

@@ -2,7 +2,7 @@ import { withAccessGuard } from '../shared/access-guard';
 import { HttpRequest, InvocationContext } from '@azure/functions';
 
 jest.mock('../shared/auth-utils', () => ({
-  requireUser: () => ({ sub: 'user-1', roles: ['user'], isActive: true }),
+  requireUser: jest.fn().mockResolvedValue({ sub: 'user-1', roles: ['user'], isActive: true }),
   hasRole: (_: any, r: string) => r === 'user',
   HttpError: class HttpError extends Error { constructor(public status: number, public body: any){ super('http'); } },
 }));

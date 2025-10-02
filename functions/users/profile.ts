@@ -29,7 +29,7 @@ export async function upsertProfile(
   if (cors.shouldReturn) return cors.response!;
 
   try {
-    const user = requireUser(context, req);
+    const user = await requireUser(context, req);
     const body = await req.json() as ProfilePayload;
 
     const text = [body.displayName, body.bio].filter(Boolean).join(' \n ');

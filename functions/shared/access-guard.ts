@@ -17,7 +17,7 @@ export type Handler = (req: HttpRequest, ctx: InvocationContext) => Promise<any>
 export function withAccessGuard(handler: Handler, opts: AccessGuardOptions = {}): Handler {
   return async (req, ctx) => {
     // 1) JWT (throws 401 on failure)
-    const user = requireUser(ctx, req);
+    const user = await requireUser(ctx, req);
 
     // 2) Active check
     if ((user as any).isActive === false) {

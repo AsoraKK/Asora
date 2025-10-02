@@ -5,8 +5,7 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>'],
   testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/*.test.ts',
+    '**/__tests__/**/*.test.ts'
   ],
   collectCoverageFrom: [
     '<rootDir>/shared/validation-utils.ts',
