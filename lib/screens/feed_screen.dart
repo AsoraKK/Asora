@@ -7,6 +7,7 @@ import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
 import 'privacy_settings_screen.dart';
 import '../privacy/privacy_screen.dart';
+import '../features/moderation/presentation/screens/moderation_queue_screen.dart';
 
 /// ---------------------------------------------------------------------------
 ///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
@@ -434,6 +435,9 @@ class _AsoraDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isSignedIn = authState.value != null;
+    final user = authState.value;
+    final isModerator =
+        user?.role == UserRole.moderator || user?.role == UserRole.admin;
 
     return Drawer(
       child: ListView(
@@ -486,6 +490,19 @@ class _AsoraDrawer extends ConsumerWidget {
 
           // Navigation items
           if (isSignedIn) ...[
+            if (isModerator)
+              ListTile(
+                leading: const Icon(Icons.rule_folder_outlined),
+                title: Text('Moderation Queue', style: GoogleFonts.sora()),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ModerationQueueScreen(),
+                    ),
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.person),
               title: Text('Profile', style: GoogleFonts.sora()),

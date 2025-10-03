@@ -4,3 +4,4 @@
 
 import './health';
 import './feed';
+import './posts';

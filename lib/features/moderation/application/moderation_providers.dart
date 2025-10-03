@@ -7,6 +7,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../auth/application/auth_providers.dart';
 import '../domain/moderation_repository.dart';
 import '../domain/appeal.dart';
 import '../../../core/providers/repository_providers.dart';
@@ -25,11 +27,7 @@ final moderationClientProvider = Provider<ModerationRepository>((ref) {
 /// Provider for user's appeals list
 final myAppealsProvider = FutureProvider<List<Appeal>>((ref) async {
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await ref.watch(jwtProvider.future);
 
   return repository.getMyAppeals(token: token);
 });
@@ -41,11 +39,7 @@ final votingFeedProvider =
       params,
     ) async {
       final repository = ref.watch(moderationRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const ModerationException('User not authenticated');
-      }
+      final token = await ref.watch(jwtProvider.future);
 
       return repository.getVotingFeed(
         page: params.page,
@@ -61,11 +55,7 @@ final submitVoteProvider = FutureProvider.family<VoteResult, VoteSubmission>((
   submission,
 ) async {
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await ref.watch(jwtProvider.future);
 
   return repository.submitVote(
     appealId: submission.appealId,
@@ -81,11 +71,7 @@ final submitAppealProvider = FutureProvider.family<Appeal, AppealSubmission>((
   submission,
 ) async {
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await ref.watch(jwtProvider.future);
 
   return repository.submitAppeal(
     contentId: submission.contentId,
@@ -104,11 +90,7 @@ final flagContentProvider =
       submission,
     ) async {
       final repository = ref.watch(moderationRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const ModerationException('User not authenticated');
-      }
+      final token = await ref.watch(jwtProvider.future);
 
       return repository.flagContent(
         contentId: submission.contentId,
@@ -120,7 +102,16 @@ final flagContentProvider =
     });
 
 /// Mock JWT provider - replace with your actual authentication provider
-final jwtProvider = StateProvider<String?>((ref) => null);
+final jwtProvider = FutureProvider<String>((ref) async {
+  final oauth2 = ref.watch(oauth2ServiceProvider);
+  final token = await oauth2.getAccessToken();
+
+  if (token == null || token.isEmpty) {
+    throw const ModerationException('User not authenticated');
+  }
+
+  return token;
+});
 
 /// Data classes for provider parameters
 
