@@ -1,4 +1,5 @@
 // lib/features/auth/application/auth_service.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:flutter/foundation.dart'
@@ -238,29 +239,29 @@ class AuthService {
 
   /// Logout user and clear all stored data
   Future<void> logout() async {
-    try {
-      dev.log('Logging out user', name: 'auth');
-
-      // Clear all stored authentication data
-      await Future.wait([
-        _secureStorage.delete(key: _jwtKey),
-        _secureStorage.delete(key: _userKey),
-        _secureStorage.delete(key: _sessionKey),
-        _googleSignIn.signOut(),
-        _oauth2Service.signOut(),
-      ]);
-
-      dev.log('User logged out successfully', name: 'auth');
-    } catch (e, st) {
-      dev.log(
-        'Error during logout: $e',
-        name: 'auth',
-        error: e,
-        stackTrace: st,
-        level: 1000,
-      );
-      // Don't throw error on logout, just log it
+    // Ensure none of the individual logout steps can throw synchronously
+    // or bubble up errors. We want logout() to be safe to call regardless of
+    // storage or platform failures (tests rely on this behaviour).
+    Future<void> safeRun(FutureOr<dynamic> Function() fn) async {
+      try {
+        final res = fn();
+        if (res is Future) await res;
+      } catch (e, st) {
+        dev.log('Ignored logout error: $e', name: 'auth', error: e, stackTrace: st);
+      }
     }
+
+    dev.log('Logging out user', name: 'auth');
+
+    await Future.wait([
+      safeRun(() => _secureStorage.delete(key: _jwtKey)),
+      safeRun(() => _secureStorage.delete(key: _userKey)),
+      safeRun(() => _secureStorage.delete(key: _sessionKey)),
+      safeRun(() => _googleSignIn.signOut()),
+      safeRun(() => _oauth2Service.signOut()),
+    ]);
+
+    dev.log('User logged out (best-effort) completed', name: 'auth');
   }
 
   /// Check if user is currently authenticated
