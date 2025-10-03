@@ -6,6 +6,7 @@ import '../features/auth/domain/user.dart';
 import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
 import 'privacy_settings_screen.dart';
+import '../privacy/privacy_screen.dart';
 
 /// ---------------------------------------------------------------------------
 ///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
@@ -509,6 +510,18 @@ class _AsoraDrawer extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const PrivacySettingsScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: Text('Privacy Center', style: GoogleFonts.sora()),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacyScreen(),
                   ),
                 );
               },

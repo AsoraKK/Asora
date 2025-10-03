@@ -247,7 +247,12 @@ class AuthService {
         final res = fn();
         if (res is Future) await res;
       } catch (e, st) {
-        dev.log('Ignored logout error: $e', name: 'auth', error: e, stackTrace: st);
+        dev.log(
+          'Ignored logout error: $e',
+          name: 'auth',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
 
