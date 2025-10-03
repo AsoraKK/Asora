@@ -1,5 +1,9 @@
 import { getFeed } from '../get';
 import { HttpRequest, InvocationContext } from '@azure/functions';
+import * as redisClient from '../../../shared/redisClient';
+
+let isRedisEnabledSpy: jest.SpyInstance<boolean, []>;
+let withRedisSpy: jest.SpyInstance<Promise<unknown> | null, any[]>;
 
 // Mock the InvocationContext
 const mockContext = {
@@ -37,18 +41,28 @@ const mockRequest = {
 
 describe('Feed GET Handler', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        isRedisEnabledSpy = jest.spyOn(redisClient, 'isRedisEnabled').mockReturnValue(false);
+        withRedisSpy = jest.spyOn(redisClient, 'withRedis').mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     it('should return 200 with feed data structure', async () => {
         const response = await getFeed(mockRequest, mockContext);
 
         expect(response.status).toBe(200);
-        expect(response.headers).toEqual({
+        const headers = response.headers as Record<string, string> | undefined;
+        expect(headers).toEqual(expect.objectContaining({
             'Content-Type': 'application/json',
             'Cache-Control': 'public, max-age=60',
-            'Vary': 'Authorization'
-        });
+            'Vary': 'Authorization',
+            'X-Cache-Status': 'disabled',
+            'X-Redis-Status': 'disabled',
+            'X-RU-Estimate': '1'
+        }));
+        expect(headers?.['X-Request-Duration']).toBeDefined();
         expect(response.jsonBody).toMatchObject({
             status: 'ok',
             service: 'asora-function-dev',
@@ -71,22 +85,19 @@ describe('Feed GET Handler', () => {
         expect(mockContext.log).toHaveBeenCalledWith('Feed GET endpoint called');
     });
 
-    it('should handle errors gracefully', async () => {
-        // Mock an error in the handler by creating a context that throws
-        const errorContext = {
-            ...mockContext,
-            log: jest.fn(() => {
-                throw new Error('Test error');
-            })
-        } as unknown as InvocationContext;
-
-        const response = await getFeed(mockRequest, errorContext);
-
-        expect(response.status).toBe(500);
-        expect(response.jsonBody).toMatchObject({
-            status: 'error',
-            message: 'Internal server error',
-            ts: expect.any(String)
+    it('should surface redis failures via headers without crashing', async () => {
+        isRedisEnabledSpy.mockReturnValue(true);
+        withRedisSpy.mockImplementationOnce(async () => {
+            throw new Error('redis boom');
         });
+
+        const response = await getFeed(mockRequest, mockContext);
+
+        expect(response.status).toBe(200);
+        const headers = response.headers as Record<string, string> | undefined;
+        expect(headers).toEqual(expect.objectContaining({
+            'X-Redis-Status': 'error',
+            'X-Cache-Status': 'miss'
+        }));
     });
 });

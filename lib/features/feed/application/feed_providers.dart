@@ -22,11 +22,7 @@ final votingFeedProvider =
       params,
     ) async {
       final repository = ref.watch(feedRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const FeedException('User not authenticated');
-      }
+      final token = await ref.watch(jwtProvider.future);
 
       return repository.getVotingFeed(
         page: params.page,
@@ -43,11 +39,7 @@ final votingHistoryProvider =
       params,
     ) async {
       final repository = ref.watch(feedRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const FeedException('User not authenticated');
-      }
+      final token = await ref.watch(jwtProvider.future);
 
       return repository.getVotingHistory(
         token: token,
@@ -59,11 +51,7 @@ final votingHistoryProvider =
 /// Provider for feed metrics
 final feedMetricsProvider = FutureProvider<FeedMetrics>((ref) async {
   final repository = ref.watch(feedRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const FeedException('User not authenticated');
-  }
+  final token = await ref.watch(jwtProvider.future);
 
   return repository.getFeedMetrics(token: token);
 });
