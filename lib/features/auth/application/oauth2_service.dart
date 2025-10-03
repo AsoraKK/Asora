@@ -124,9 +124,9 @@ class OAuth2Service {
     this.launcher,
     this.sessionManager,
     this.debugForceWeb = false,
-  })  : _appAuth = appAuth ?? const FlutterAppAuth(),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _httpClient = httpClient ?? http.Client();
+  }) : _appAuth = appAuth ?? const FlutterAppAuth(),
+       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+       _httpClient = httpClient ?? http.Client();
 
   final FlutterAppAuth _appAuth;
   final FlutterSecureStorage _secureStorage;
@@ -428,9 +428,9 @@ class OAuth2Service {
       'nonce': nonce,
     };
 
-    final uri = Uri.parse(OAuth2Config.authorizationEndpoint).replace(
-      queryParameters: params,
-    );
+    final uri = Uri.parse(
+      OAuth2Config.authorizationEndpoint,
+    ).replace(queryParameters: params);
 
     return uri.toString();
   }
