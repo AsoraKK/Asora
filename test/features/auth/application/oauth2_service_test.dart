@@ -82,12 +82,18 @@ void main() {
       httpClient: httpClient,
     );
 
-    when(() => secureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
-        .thenAnswer((_) async {});
-    when(() => secureStorage.delete(key: any(named: 'key')))
-        .thenAnswer((_) async {});
-    when(() => secureStorage.read(key: any(named: 'key')))
-        .thenAnswer((_) async => null);
+    when(
+      () => secureStorage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => secureStorage.delete(key: any(named: 'key')),
+    ).thenAnswer((_) async {});
+    when(
+      () => secureStorage.read(key: any(named: 'key')),
+    ).thenAnswer((_) async => null);
   });
 
   test('signInWithOAuth2 stores tokens and returns user data', () async {
@@ -102,59 +108,65 @@ void main() {
       const {},
     );
 
-    when(() => appAuth.authorizeAndExchangeCode(any()))
-        .thenAnswer((_) async => tokenResponse);
     when(
-      () => httpClient.get(
-        any(),
-        headers: any(named: 'headers'),
-      ),
-    ).thenAnswer(
-      (_) async => http.Response(jsonEncode(userPayload), 200),
-    );
+      () => appAuth.authorizeAndExchangeCode(any()),
+    ).thenAnswer((_) async => tokenResponse);
+    when(
+      () => httpClient.get(any(), headers: any(named: 'headers')),
+    ).thenAnswer((_) async => http.Response(jsonEncode(userPayload), 200));
 
     final user = await service.signInWithOAuth2();
 
     expect(user, isA<User>());
     expect(user.id, equals('user-123'));
 
-    verify(() => secureStorage.write(
-          key: 'oauth2_access_token',
-          value: 'access-token',
-        )).called(1);
-    verify(() => secureStorage.write(
-          key: 'oauth2_refresh_token',
-          value: 'refresh-token',
-        )).called(1);
-    verify(() => secureStorage.write(
-          key: 'oauth2_user_data',
-          value: jsonEncode(userPayload),
-        )).called(1);
+    verify(
+      () => secureStorage.write(
+        key: 'oauth2_access_token',
+        value: 'access-token',
+      ),
+    ).called(1);
+    verify(
+      () => secureStorage.write(
+        key: 'oauth2_refresh_token',
+        value: 'refresh-token',
+      ),
+    ).called(1);
+    verify(
+      () => secureStorage.write(
+        key: 'oauth2_user_data',
+        value: jsonEncode(userPayload),
+      ),
+    ).called(1);
   });
 
-  test('refreshToken clears credentials when no access token returned', () async {
-    when(() => secureStorage.read(key: 'oauth2_refresh_token'))
-        .thenAnswer((_) async => 'refresh-token');
+  test(
+    'refreshToken clears credentials when no access token returned',
+    () async {
+      when(
+        () => secureStorage.read(key: 'oauth2_refresh_token'),
+      ).thenAnswer((_) async => 'refresh-token');
 
-    final failedResponse = TokenResponse(
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      const {},
-    );
+      final failedResponse = TokenResponse(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        const {},
+      );
 
-    when(() => appAuth.token(any())).thenAnswer((_) async => failedResponse);
+      when(() => appAuth.token(any())).thenAnswer((_) async => failedResponse);
 
-    final result = await service.refreshToken();
+      final result = await service.refreshToken();
 
-    expect(result, isNull);
-    verify(() => secureStorage.delete(key: 'oauth2_access_token')).called(1);
-    verify(() => secureStorage.delete(key: 'oauth2_refresh_token')).called(1);
-    verify(() => secureStorage.delete(key: 'oauth2_id_token')).called(1);
-    verify(() => secureStorage.delete(key: 'oauth2_token_expiry')).called(1);
-    verify(() => secureStorage.delete(key: 'oauth2_user_data')).called(1);
-  });
+      expect(result, isNull);
+      verify(() => secureStorage.delete(key: 'oauth2_access_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_refresh_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_id_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_token_expiry')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_user_data')).called(1);
+    },
+  );
 }

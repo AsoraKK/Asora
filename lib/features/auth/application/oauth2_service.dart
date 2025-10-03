@@ -6,6 +6,7 @@
 /// 📱 Platform: Mobile/Desktop (falls back gracefully on Web)
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart'
@@ -14,6 +15,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
+
+import 'package:asora/core/auth/auth_session_manager.dart';
 
 import '../domain/auth_failure.dart';
 import '../domain/user.dart';
@@ -69,6 +73,9 @@ class OAuth2Config {
         .toList(growable: false);
   }
 
+  // Backwards-compatible alias used by older tests.
+  static String get scope => scopeString;
+
   static String get redirectUri {
     if (kIsWeb) {
       return '${Uri.base.origin}/auth/callback';
@@ -92,8 +99,9 @@ class OAuth2Config {
     return AuthorizationServiceConfiguration(
       authorizationEndpoint: authorizationEndpoint,
       tokenEndpoint: tokenEndpoint,
-      endSessionEndpoint:
-          endSessionEndpoint.isNotEmpty ? endSessionEndpoint : null,
+      endSessionEndpoint: endSessionEndpoint.isNotEmpty
+          ? endSessionEndpoint
+          : null,
     );
   }
 
@@ -106,18 +114,30 @@ class OAuth2Config {
 }
 
 /// OAuth2 service backed by flutter_appauth.
+typedef LauncherFn = Future<bool> Function(Uri uri, {LaunchMode mode});
+
 class OAuth2Service {
   OAuth2Service({
     FlutterAppAuth? appAuth,
     FlutterSecureStorage? secureStorage,
     http.Client? httpClient,
-  }) : _appAuth = appAuth ?? const FlutterAppAuth(),
-       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-       _httpClient = httpClient ?? http.Client();
+    this.launcher,
+    this.sessionManager,
+    this.debugForceWeb = false,
+  })  : _appAuth = appAuth ?? const FlutterAppAuth(),
+        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _httpClient = httpClient ?? http.Client();
 
   final FlutterAppAuth _appAuth;
   final FlutterSecureStorage _secureStorage;
   final http.Client _httpClient;
+
+  // Optional test/debug hooks that older tests rely on.
+  final LauncherFn? launcher;
+  final AuthSessionManager? sessionManager;
+  final bool debugForceWeb;
+
+  Completer<String>? _debugCompleter;
 
   static const String _accessTokenKey = 'oauth2_access_token';
   static const String _refreshTokenKey = 'oauth2_refresh_token';
@@ -141,14 +161,12 @@ class OAuth2Service {
           OAuth2Config.redirectUri,
           scopes: OAuth2Config.scopes,
           promptValues: const ['login'],
-          serviceConfiguration:
-              OAuth2Config.discoveryUrl.isEmpty
-                  ? OAuth2Config.serviceConfiguration
-                  : null,
-          discoveryUrl:
-              OAuth2Config.discoveryUrl.isNotEmpty
-                  ? OAuth2Config.discoveryUrl
-                  : null,
+          serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
+              ? OAuth2Config.serviceConfiguration
+              : null,
+          discoveryUrl: OAuth2Config.discoveryUrl.isNotEmpty
+              ? OAuth2Config.discoveryUrl
+              : null,
         ),
       );
 
@@ -198,14 +216,12 @@ class OAuth2Service {
           OAuth2Config.redirectUri,
           refreshToken: refreshToken,
           scopes: OAuth2Config.scopes,
-          serviceConfiguration:
-              OAuth2Config.discoveryUrl.isEmpty
-                  ? OAuth2Config.serviceConfiguration
-                  : null,
-          discoveryUrl:
-              OAuth2Config.discoveryUrl.isNotEmpty
-                  ? OAuth2Config.discoveryUrl
-                  : null,
+          serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
+              ? OAuth2Config.serviceConfiguration
+              : null,
+          discoveryUrl: OAuth2Config.discoveryUrl.isNotEmpty
+              ? OAuth2Config.discoveryUrl
+              : null,
         ),
       );
 
@@ -281,14 +297,12 @@ class OAuth2Service {
             EndSessionRequest(
               idTokenHint: idToken,
               postLogoutRedirectUrl: OAuth2Config.postLogoutRedirectUri,
-              serviceConfiguration:
-                  OAuth2Config.discoveryUrl.isEmpty
-                      ? OAuth2Config.serviceConfiguration
-                      : null,
-              discoveryUrl:
-                  OAuth2Config.discoveryUrl.isNotEmpty
-                      ? OAuth2Config.discoveryUrl
-                      : null,
+              serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
+                  ? OAuth2Config.serviceConfiguration
+                  : null,
+              discoveryUrl: OAuth2Config.discoveryUrl.isNotEmpty
+                  ? OAuth2Config.discoveryUrl
+                  : null,
             ),
           );
         } catch (_) {
@@ -314,13 +328,11 @@ class OAuth2Service {
     }
 
     if (response.idToken != null) {
-      await _secureStorage.write(
-        key: _idTokenKey,
-        value: response.idToken,
-      );
+      await _secureStorage.write(key: _idTokenKey, value: response.idToken);
     }
 
-    final expiresAt = response.accessTokenExpirationDateTime ??
+    final expiresAt =
+        response.accessTokenExpirationDateTime ??
         DateTime.now().add(const Duration(minutes: 5));
     await _secureStorage.write(
       key: _tokenExpiryKey,
@@ -357,10 +369,7 @@ class OAuth2Service {
       }
 
       final user = User.fromJson(data);
-      await _secureStorage.write(
-        key: _userDataKey,
-        value: jsonEncode(data),
-      );
+      await _secureStorage.write(key: _userDataKey, value: jsonEncode(data));
       return user;
     } catch (_) {
       return null;
@@ -377,7 +386,9 @@ class OAuth2Service {
     try {
       final expiry = DateTime.parse(expiryIso);
       // Refresh slightly before expiry to avoid race conditions.
-      return DateTime.now().isBefore(expiry.subtract(const Duration(seconds: 30)));
+      return DateTime.now().isBefore(
+        expiry.subtract(const Duration(seconds: 30)),
+      );
     } catch (_) {
       await _secureStorage.delete(key: _tokenExpiryKey);
       return false;
@@ -393,4 +404,89 @@ class OAuth2Service {
       _secureStorage.delete(key: _userDataKey),
     ]);
   }
+
+  // -----------------
+  // Debug / Test APIs
+  // -----------------
+
+  /// Build the raw authorization URL used by the AppAuth flow. This is
+  /// intended for debug/testing only and mirrors how AppAuth would construct
+  /// the authorization request when discovery isn't used.
+  String debugBuildAuthorizationUrl({
+    required String codeChallenge,
+    required String state,
+    required String nonce,
+  }) {
+    final params = {
+      'response_type': 'code',
+      'client_id': OAuth2Config.clientId,
+      'redirect_uri': OAuth2Config.redirectUri,
+      'scope': OAuth2Config.scope,
+      'code_challenge': codeChallenge,
+      'code_challenge_method': 'S256',
+      'state': state,
+      'nonce': nonce,
+    };
+
+    final uri = Uri.parse(OAuth2Config.authorizationEndpoint).replace(
+      queryParameters: params,
+    );
+
+    return uri.toString();
+  }
+
+  /// Start the authorization flow but return a future that completes when
+  /// [debugHandleCallback] is invoked. Useful for unit tests that simulate
+  /// deep link call-backs.
+  Future<String> debugStartAndWaitForCode() {
+    _debugCompleter = Completer<String>();
+
+    // If we're forcing the web path for tests, simulate opening the href via
+    // the optional launcher (or no-op) and rely on debugSetupCallbackListener
+    // to read the href.
+    if (debugForceWeb) {
+      final href = getWebHref();
+      if (href != null) {
+        final uri = Uri.parse(href);
+        launcher?.call(uri, mode: LaunchMode.platformDefault);
+      }
+    }
+
+    return _debugCompleter!.future;
+  }
+
+  /// Handle a deep-link callback during tests by parsing the supplied [uri]
+  /// and completing the internal completer with the code or throwing an
+  /// [AuthFailure] on error.
+  void debugHandleCallback(Uri uri) {
+    final qp = uri.queryParameters;
+    if (qp.containsKey('error')) {
+      final desc = qp['error_description'] ?? qp['error'] ?? '';
+      _debugCompleter?.completeError(AuthFailure.serverError(desc));
+      return;
+    }
+
+    final code = qp['code'];
+    if (code == null) {
+      _debugCompleter?.completeError(AuthFailure.serverError('no_code'));
+      return;
+    }
+
+    _debugCompleter?.complete(code);
+  }
+
+  /// For web tests, set up a listener that parses the current href and then
+  /// completes the debug completer. Tests can override [getWebHref] to
+  /// control the href returned.
+  void debugSetupCallbackListener() {
+    final href = getWebHref();
+    if (href == null) return;
+    final uri = Uri.parse(href);
+    // Defer to next microtask to simulate listener timing.
+    scheduleMicrotask(() => debugHandleCallback(uri));
+  }
+
+  /// Returns a debug web href for tests. Override in subclasses to provide a
+  /// test-specific href. By default returns null.
+  String? getWebHref() => null;
 }
