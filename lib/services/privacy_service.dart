@@ -26,8 +26,18 @@ enum PrivacyOperationResult {
 class PrivacyService {
   final Dio _dio;
   final AppLogger _logger;
+  final Future<String?> Function() _tokenResolver;
+  final String? _functionKey;
 
-  PrivacyService(this._dio, this._logger);
+  PrivacyService(
+    this._dio,
+    this._logger, {
+    required Future<String?> Function() tokenResolver,
+    String? functionKey,
+  }) : _tokenResolver = tokenResolver,
+       _functionKey = (functionKey != null && functionKey.isNotEmpty)
+           ? functionKey
+           : null;
 
   /// Export user data (GDPR Article 20 - Data Portability)
   ///
@@ -44,7 +54,20 @@ class PrivacyService {
     try {
       _logger.info('Requesting user data export');
 
-      final response = await _dio.get(ApiEndpoints.exportUser);
+      final token = await _tokenResolver();
+      if (token == null || token.isEmpty) {
+        _logger.warning('Export blocked: missing auth token');
+        return (
+          result: PrivacyOperationResult.unauthorized,
+          data: null,
+          errorMessage: 'Please sign in to export your data.',
+        );
+      }
+
+      final response = await _dio.get(
+        ApiEndpoints.exportUser,
+        options: Options(headers: _buildHeaders(token)),
+      );
 
       if (response.statusCode == 200) {
         _logger.info('User data export successful');
@@ -82,9 +105,20 @@ class PrivacyService {
     try {
       _logger.info('Requesting account deletion');
 
+      final token = await _tokenResolver();
+      if (token == null || token.isEmpty) {
+        _logger.warning('Deletion blocked: missing auth token');
+        return (
+          result: PrivacyOperationResult.unauthorized,
+          errorMessage: 'Please sign in to delete your account.',
+        );
+      }
+
       final response = await _dio.post(
         ApiEndpoints.deleteUser,
-        options: Options(headers: {'X-Confirm-Delete': 'true'}),
+        options: Options(
+          headers: {..._buildHeaders(token), 'X-Confirm-Delete': 'true'},
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -149,7 +183,8 @@ class PrivacyService {
         );
 
       case 429:
-        final message = e.response?.data?['error'] ?? 'Rate limit exceeded';
+        final message =
+            _extractErrorMessage(e.response) ?? 'Rate limit exceeded';
         return (
           result: PrivacyOperationResult.rateLimited,
           data: null,
@@ -167,6 +202,7 @@ class PrivacyService {
               result: PrivacyOperationResult.networkError,
               data: null,
               errorMessage:
+                  _extractErrorMessage(e.response) ??
                   'Network connection failed. Please check your internet connection.',
             );
 
@@ -189,9 +225,31 @@ class PrivacyService {
         return (
           result: PrivacyOperationResult.serverError,
           data: null,
-          errorMessage: 'Server error: ${e.response?.statusCode}',
+          errorMessage:
+              _extractErrorMessage(e.response) ??
+              'Server error: ${e.response?.statusCode}',
         );
     }
+  }
+
+  Map<String, String> _buildHeaders(String token) {
+    return {
+      'Authorization': 'Bearer $token',
+      if (_functionKey != null) 'x-functions-key': _functionKey,
+    };
+  }
+
+  String? _extractErrorMessage(Response<dynamic>? response) {
+    final data = response?.data;
+    if (data is Map<String, dynamic>) {
+      return data['message'] as String? ??
+          data['error'] as String? ??
+          data['detail'] as String?;
+    }
+    if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return response?.statusMessage;
   }
 }
 
@@ -199,5 +257,12 @@ class PrivacyService {
 final privacyServiceProvider = Provider<PrivacyService>((ref) {
   final dio = ref.watch(secureDioProvider);
   final logger = ref.watch(appLoggerProvider);
-  return PrivacyService(dio, logger);
+  final authService = ref.watch(enhancedAuthServiceProvider);
+  const functionKey = String.fromEnvironment('AZURE_FUNCTION_KEY');
+  return PrivacyService(
+    dio,
+    logger,
+    tokenResolver: authService.getJwtToken,
+    functionKey: functionKey.isEmpty ? null : functionKey,
+  );
 });
