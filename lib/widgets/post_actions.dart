@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../features/moderation/application/moderation_providers.dart';
+import '../features/moderation/domain/moderation_repository.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///
@@ -291,11 +292,7 @@ class _FlagButton extends ConsumerWidget {
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
-
-      if (token == null) {
-        throw Exception('Please log in to report content');
-      }
+      final token = await ref.read(jwtProvider.future);
 
       final result = await client.flagContent(
         contentId: contentId,
@@ -339,6 +336,8 @@ class _FlagButton extends ConsumerWidget {
           } else if (error.response?.data?['error'] != null) {
             errorMessage = error.response!.data['error'];
           }
+        } else if (error is ModerationException) {
+          errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }

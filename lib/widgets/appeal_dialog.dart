@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../features/moderation/domain/appeal.dart';
+import '../features/moderation/domain/moderation_repository.dart';
 
 /// ASORA APPEAL DIALOG
 ///
@@ -388,11 +389,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
-
-      if (token == null) {
-        throw Exception('Please log in to submit an appeal');
-      }
+      final token = await ref.read(jwtProvider.future);
 
       final result = await client.submitAppeal(
         contentId: widget.contentId,
@@ -443,6 +440,8 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           } else if (error.response?.data?['error'] != null) {
             errorMessage = error.response!.data['error'];
           }
+        } else if (error is ModerationException) {
+          errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }

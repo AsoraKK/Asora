@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../features/moderation/domain/appeal.dart';
+import '../features/moderation/domain/moderation_repository.dart';
 
 /// ASORA APPEAL VOTING CARD
 ///
@@ -697,11 +698,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
-
-      if (token == null) {
-        throw Exception('Please log in to vote');
-      }
+      final token = await ref.read(jwtProvider.future);
 
       final result = await client.submitVote(
         appealId: widget.appeal.appealId,
@@ -751,6 +748,8 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
           } else if (error.response?.data?['error'] != null) {
             errorMessage = error.response!.data['error'];
           }
+        } else if (error is ModerationException) {
+          errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }

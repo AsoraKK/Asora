@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../core/providers/repository_providers.dart';
 import '../features/moderation/domain/appeal.dart';
+import '../features/moderation/domain/moderation_repository.dart';
 import '../features/moderation/presentation/widgets/appeal_card.dart';
 import '../features/moderation/presentation/widgets/analytics_overview_cards.dart';
 import '../features/moderation/presentation/widgets/content_type_breakdown.dart';
@@ -182,11 +183,7 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
 
     try {
       final repository = ref.read(moderationRepositoryProvider);
-      final token = ref.read(jwtProvider);
-
-      if (token == null) {
-        throw Exception('Please log in to view your appeals');
-      }
+      final token = await ref.read(jwtProvider.future);
 
       final appeals = await repository.getMyAppeals(token: token);
 
@@ -197,7 +194,11 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
     } catch (error) {
       setState(() {
         _isLoading = false;
-        _error = error.toString();
+        if (error is ModerationException) {
+          _error = error.message;
+        } else {
+          _error = error.toString();
+        }
       });
     }
   }
