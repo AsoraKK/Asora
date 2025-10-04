@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../features/auth/application/auth_providers.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../features/moderation/domain/appeal.dart';
 import '../features/moderation/domain/moderation_repository.dart';
@@ -699,6 +700,9 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
     try {
       final client = ref.read(moderationClientProvider);
       final token = await ref.read(jwtProvider.future);
+      if (token == null || token.isEmpty) {
+        throw const ModerationException('User not authenticated');
+      }
 
       final result = await client.submitVote(
         appealId: widget.appeal.appealId,

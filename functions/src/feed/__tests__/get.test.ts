@@ -43,6 +43,7 @@ describe('Feed GET Handler', () => {
     beforeEach(() => {
         isRedisEnabledSpy = jest.spyOn(redisClient, 'isRedisEnabled').mockReturnValue(false);
         withRedisSpy = jest.spyOn(redisClient, 'withRedis').mockResolvedValue(null);
+        mockRequest.headers = new Headers();
     });
 
     afterEach(() => {
@@ -99,5 +100,55 @@ describe('Feed GET Handler', () => {
             'X-Redis-Status': 'error',
             'X-Cache-Status': 'miss'
         }));
+    });
+
+    it('should return cached posts when redis returns data', async () => {
+        isRedisEnabledSpy.mockReturnValue(true);
+        withRedisSpy.mockImplementation(async (fn: any) => {
+            const redisMock = {
+                zrevrange: jest.fn().mockResolvedValue([
+                    JSON.stringify({ id: 'p1', title: 'Cached' }),
+                    '{"id"' // malformed to trigger parse guard
+                ])
+            };
+            await fn(redisMock);
+            return null;
+        });
+
+        const response = await getFeed(mockRequest, mockContext);
+        const headers = response.headers as Record<string, string> | undefined;
+        expect(headers).toEqual(expect.objectContaining({
+            'X-Cache-Status': 'hit',
+            'X-Redis-Status': 'connected',
+            'X-RU-Estimate': '0'
+        }));
+        const body = response.jsonBody as any;
+        expect(body.data.posts).toEqual([{ id: 'p1', title: 'Cached' }]);
+    });
+
+    it('should use private cache headers when Authorization header is present', async () => {
+        mockRequest.headers = new Headers({ authorization: 'Bearer token' });
+
+        const response = await getFeed(mockRequest, mockContext);
+        const headers = response.headers as Record<string, string> | undefined;
+        expect(headers?.['Cache-Control']).toBe('private, no-store');
+        expect(headers?.['X-Cache-Status']).toBe('disabled');
+    });
+
+    it('should return 500 when unexpected error occurs', async () => {
+        const failingRequest = {
+            ...mockRequest,
+            headers: {
+                has: () => {
+                    throw new Error('header failure');
+                }
+            }
+        } as any;
+
+        const response = await getFeed(failingRequest, mockContext);
+
+        expect(response.status).toBe(500);
+        const body = response.jsonBody as any;
+        expect(body.status).toBe('error');
     });
 });
