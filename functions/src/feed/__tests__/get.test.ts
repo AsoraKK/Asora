@@ -43,7 +43,6 @@ describe('Feed GET Handler', () => {
     beforeEach(() => {
         isRedisEnabledSpy = jest.spyOn(redisClient, 'isRedisEnabled').mockReturnValue(false);
         withRedisSpy = jest.spyOn(redisClient, 'withRedis').mockResolvedValue(null);
-        mockRequest.headers = new Headers();
     });
 
     afterEach(() => {
@@ -127,9 +126,12 @@ describe('Feed GET Handler', () => {
     });
 
     it('should use private cache headers when Authorization header is present', async () => {
-        mockRequest.headers = new Headers({ authorization: 'Bearer token' });
+        const authRequest = {
+            ...mockRequest,
+            headers: new Headers({ authorization: 'Bearer token' })
+        } as unknown as HttpRequest;
 
-        const response = await getFeed(mockRequest, mockContext);
+        const response = await getFeed(authRequest, mockContext);
         const headers = response.headers as Record<string, string> | undefined;
         expect(headers?.['Cache-Control']).toBe('private, no-store');
         expect(headers?.['X-Cache-Status']).toBe('disabled');

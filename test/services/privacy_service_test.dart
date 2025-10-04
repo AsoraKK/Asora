@@ -249,5 +249,191 @@ void main() {
       expect(result.result, PrivacyOperationResult.networkError);
       expect(result.errorMessage, isNotEmpty);
     });
+
+    test('maps cancel exception to cancelled result', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          type: DioExceptionType.cancel,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.result, PrivacyOperationResult.cancelled);
+      expect(result.errorMessage, equals('Operation was cancelled'));
+    });
+
+    test('maps timeout exceptions to networkError', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          type: DioExceptionType.connectionTimeout,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.result, PrivacyOperationResult.networkError);
+      expect(result.errorMessage, contains('Network connection failed'));
+    });
+
+    test('_extractErrorMessage extracts message from Map data', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<Map<String, dynamic>>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 400,
+            data: {'message': 'Custom error message'},
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.result, PrivacyOperationResult.serverError);
+      expect(result.errorMessage, equals('Custom error message'));
+    });
+
+    test('_extractErrorMessage extracts error field from Map data', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<Map<String, dynamic>>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 500,
+            data: {'error': 'Internal server error'},
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.errorMessage, equals('Internal server error'));
+    });
+
+    test('_extractErrorMessage extracts detail field from Map data', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<Map<String, dynamic>>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 403,
+            data: {'detail': 'Forbidden detail'},
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.errorMessage, equals('Forbidden detail'));
+    });
+
+    test('_extractErrorMessage extracts from String data', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<String>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 400,
+            data: 'Plain text error',
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.errorMessage, equals('Plain text error'));
+    });
+
+    test('_extractErrorMessage uses statusMessage as fallback', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<dynamic>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 404,
+            statusMessage: 'Not Found',
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.errorMessage, equals('Not Found'));
+    });
+
+    test('handles 401 unauthorized exception', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          response: Response<Map<String, dynamic>>(
+            requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+            statusCode: 401,
+            data: {'message': 'Unauthorized'},
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.deleteAccount();
+
+      expect(result.result, PrivacyOperationResult.unauthorized);
+      expect(result.errorMessage, contains('Please sign in'));
+    });
   });
 }

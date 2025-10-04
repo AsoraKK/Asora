@@ -481,51 +481,49 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildActiveVotingButtons() {
-    return Row(
+    final row = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _isVoting ? null : () => _submitVote('approve'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            icon: _isVoting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.thumb_up),
-            label: const Text('Approve'),
+        ElevatedButton.icon(
+          onPressed: _isVoting ? null : () => _submitVote('approve'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
           ),
+          icon: _isVoting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Icon(Icons.thumb_up),
+          label: const Text('Approve'),
         ),
         const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _isVoting ? null : () => _submitVote('reject'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            icon: _isVoting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.thumb_down),
-            label: const Text('Reject'),
+        ElevatedButton.icon(
+          onPressed: _isVoting ? null : () => _submitVote('reject'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
           ),
+          icon: _isVoting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Icon(Icons.thumb_down),
+          label: const Text('Reject'),
         ),
       ],
     );
+    return row;
   }
 
   Future<void> _submitVote(String vote) async {
