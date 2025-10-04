@@ -13,6 +13,10 @@
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
     "test-functions": "cd functions && npm run test",
+    "apply:schema": "node tools/apply_sql_to_pg.js database/migrate_to_target_schema.sql",
+    "migrate:profiles": "node tools/migrate_profiles_to_postgres.js",
+    "reconcile:profiles": "node tools/reconcile_profiles.js",
+    "vuln:scan": "bash tools/run_vuln_scan.sh",
     "lint:api": "spectral lint docs/openapi.yaml -r .spectral.yaml"
   },
   "devDependencies": {
