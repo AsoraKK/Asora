@@ -1,10 +1,12 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
+import { Pool } from 'pg';
 import { requireUser, isHttpError } from '../shared/auth-utils';
 import { withAccessGuard } from '../shared/access-guard';
 import { createErrorResponse, createSuccessResponse, handleCorsAndMethod } from '../shared/http-utils';
 import { moderateProfileText } from '../shared/moderation-text';
 import { getAzureLogger } from '../shared/azure-logger';
+import { emitOutboxEvent } from '../shared/outbox-consumer';
 
 const logger = getAzureLogger('users/profile');
 
@@ -18,6 +20,7 @@ interface ProfilePayload {
   bio?: string;
   location?: string;
   website?: string;
+  avatarUrl?: string | null;
 }
 
 export async function upsertProfile(
@@ -64,6 +67,65 @@ export async function upsertProfile(
       });
     }
 
+    // If POSTGRES_ENABLED, write canonical profile to Postgres and emit outbox event
+    const usePostgres = String(process.env.POSTGRES_ENABLED || '').toLowerCase() === 'true';
+    if (usePostgres) {
+      const pgConn = process.env.POSTGRES_CONNECTION_STRING || process.env.DATABASE_URL;
+      if (!pgConn) {
+        return createErrorResponse(500, 'Postgres connection string not configured');
+      }
+
+      const pool = new Pool({ connectionString: pgConn });
+      const client = await pool.connect();
+      try {
+        // Upsert into profiles table (profiles.user_uuid = user.sub)
+        await client.query(
+          `INSERT INTO profiles (user_uuid, display_name, bio, avatar_url, extras, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+           ON CONFLICT (user_uuid) DO UPDATE SET
+             display_name = EXCLUDED.display_name,
+             bio = EXCLUDED.bio,
+             avatar_url = EXCLUDED.avatar_url,
+             extras = COALESCE(profiles.extras, '{}'::jsonb) || EXCLUDED.extras,
+             updated_at = NOW()`,
+          [
+            user.sub,
+            body.displayName ?? null,
+            body.bio ?? null,
+            body.avatarUrl ?? null,
+            JSON.stringify({ location: body.location ?? null, website: body.website ?? null })
+          ]
+        );
+
+        // Insert an audit row in Postgres audit_log as canonical evidence
+        await client.query(
+          `INSERT INTO audit_log (actor_uuid, action, target_type, target_id, metadata, created_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [user.sub, 'profile_upsert', 'profile', user.sub, JSON.stringify({ moderation })]
+        );
+
+        // Emit outbox event so Cosmos projections (publicProfiles) update
+        try {
+          await emitOutboxEvent('profile.updated', user.sub, {
+            user_uuid: user.sub,
+            display_name: body.displayName ?? null,
+            bio: body.bio ?? null,
+            avatar_url: body.avatarUrl ?? null,
+            tier: (user as any).tier || 'free'
+          }, 'profiles', user.sub);
+        } catch (emitErr) {
+          // Log but do not fail the request
+          logger.error('Failed to emit outbox event', { error: String(emitErr) });
+        }
+
+        return createSuccessResponse({ userId: user.sub, status: decision.decision === 'review' ? 'under_review' : 'approved', moderation }, { 'X-Moderation-Decision': decision.decision });
+      } finally {
+        client.release();
+        await pool.end();
+      }
+    }
+
+    // Fallback: legacy Cosmos patch logic
     // Load current user
     const { resource: doc } = await users.item(user.sub, user.sub).read();
     const profile = {

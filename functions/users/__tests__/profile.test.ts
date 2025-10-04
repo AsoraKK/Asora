@@ -11,6 +11,32 @@ jest.mock('../../shared/auth-utils', () => {
   return { ...actual, requireUser: jest.fn() };
 });
 
+const poolConnectMock = jest.fn();
+const poolEndMock = jest.fn();
+const clientQueryMock = jest.fn();
+const clientReleaseMock = jest.fn();
+
+jest.mock('pg', () => ({
+  Pool: jest.fn(() => ({
+    connect: poolConnectMock,
+    end: poolEndMock
+  }))
+}));
+
+const loggerErrorMock = jest.fn();
+
+jest.mock('../../shared/azure-logger', () => ({
+  getAzureLogger: jest.fn(() => ({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: loggerErrorMock
+  }))
+}));
+
+jest.mock('../../shared/outbox-consumer', () => ({
+  emitOutboxEvent: jest.fn()
+}));
+
 // In-memory Cosmos double via DI factory
 const cosmosStub: any = { usersDoc: null as any, patchCalls: [] as any[], auditCreates: 0 };
 function fakeCosmos() {
@@ -29,14 +55,31 @@ function fakeCosmos() {
 const { moderateProfileText } = require('../../shared/moderation-text');
 const { requireUser, HttpError } = require('../../shared/auth-utils');
 const upsertProfile = require('../../users/profile').default as any;
+const { emitOutboxEvent } = require('../../shared/outbox-consumer');
 
 const ctx: Partial<InvocationContext> = { invocationId: 't', log: jest.fn() };
+const originalEnv = { ...process.env };
 
 describe('users/profile upsertProfile', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     cosmosStub.usersDoc = null;
     cosmosStub.patchCalls = [];
+    cosmosStub.auditCreates = 0;
+    process.env = { ...originalEnv };
+    delete process.env.POSTGRES_ENABLED;
+    delete process.env.POSTGRES_CONNECTION_STRING;
+    delete process.env.DATABASE_URL;
+    poolConnectMock.mockReset();
+    poolEndMock.mockReset();
+    clientQueryMock.mockReset();
+    clientReleaseMock.mockReset();
+    poolConnectMock.mockResolvedValue({ query: clientQueryMock, release: clientReleaseMock });
+    poolEndMock.mockResolvedValue(undefined);
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
   it('handles CORS preflight (OPTIONS)', async () => {
@@ -100,5 +143,59 @@ describe('users/profile upsertProfile', () => {
     const req = httpReqMock({ method: 'POST', body: { displayName: 'X' } });
     const res = await upsertProfile(req as any, ctx as InvocationContext, () => throwingCosmos);
     expect(res.status).toBe(500);
+  });
+
+  it('returns 500 when postgres enabled but connection string missing', async () => {
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'pg1' });
+    moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'approve', score: 0.3 });
+    process.env.POSTGRES_ENABLED = 'true';
+    delete process.env.POSTGRES_CONNECTION_STRING;
+    delete process.env.DATABASE_URL;
+    const req = httpReqMock({ method: 'POST', body: { displayName: 'NoConn' } });
+    const res = await upsertProfile(req as any, ctx as InvocationContext, () => fakeCosmos());
+    expect(res.status).toBe(500);
+    const body = JSON.parse(res.body as string);
+    expect(body.message).toContain('Postgres connection string not configured');
+  });
+
+  it('writes profile to postgres when enabled', async () => {
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'pg2', tier: 'pro' });
+    moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'approve', score: 0.1 });
+    process.env.POSTGRES_ENABLED = 'true';
+    process.env.POSTGRES_CONNECTION_STRING = 'postgres://test';
+    clientQueryMock.mockResolvedValue({ rows: [] });
+    const req = httpReqMock({
+      method: 'PUT',
+      body: { displayName: 'Postgres User', bio: 'Bio', avatarUrl: 'http://avatar', location: 'Earth', website: 'https://example.com' }
+    });
+
+    const res = await upsertProfile(req as any, ctx as InvocationContext, () => fakeCosmos());
+
+    expect(res.status).toBe(200);
+    expect(clientQueryMock).toHaveBeenCalledTimes(2);
+    expect(clientReleaseMock).toHaveBeenCalled();
+    expect(poolEndMock).toHaveBeenCalled();
+    expect(emitOutboxEvent).toHaveBeenCalledWith(
+      'profile.updated',
+      'pg2',
+      expect.objectContaining({ user_uuid: 'pg2', display_name: 'Postgres User', tier: 'pro' }),
+      'profiles',
+      'pg2'
+    );
+  });
+
+  it('logs error when outbox emit fails but still succeeds', async () => {
+    (requireUser as jest.Mock).mockResolvedValue({ sub: 'pg3' });
+    moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'review', score: 0.4 });
+    process.env.POSTGRES_ENABLED = 'true';
+    process.env.POSTGRES_CONNECTION_STRING = 'postgres://test';
+    clientQueryMock.mockResolvedValue({ rows: [] });
+    (emitOutboxEvent as jest.Mock).mockRejectedValueOnce(new Error('outbox fail'));
+
+    const res = await upsertProfile(httpReqMock({ method: 'POST', body: { displayName: 'Emit Fail' } }) as any, ctx as InvocationContext, () => fakeCosmos());
+
+    expect(res.status).toBe(200);
+    expect(loggerErrorMock).toHaveBeenCalledWith('Failed to emit outbox event', expect.any(Object));
+    expect(emitOutboxEvent).toHaveBeenCalled();
   });
 });

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/auth/application/auth_providers.dart';
+import '../features/auth/presentation/auth_gate.dart';
 import '../privacy/privacy_repository.dart';
 import '../services/privacy_service.dart';
 import 'save_file.dart';
@@ -97,8 +99,26 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
     try {
       final res = await repo.deleteAccount();
       if (res.result == PrivacyOperationResult.success) {
-        _showMessage('Account deleted', 'You will be signed out shortly');
-        // Note: signing out handled by service chain in deleteAccountAndSignOut on UI side
+        logger.info('Account deletion succeeded; clearing local session');
+
+        final authService = ref.read(enhancedAuthServiceProvider);
+
+        try {
+          await authService.signOut();
+        } catch (error, stackTrace) {
+          logger.warning('Sign-out after deletion failed', error, stackTrace);
+        }
+
+        ref.invalidate(authStateProvider);
+        ref.invalidate(jwtProvider);
+        ref.invalidate(tokenVersionProvider);
+
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const AuthGate()),
+            (_) => false,
+          );
+        }
       } else {
         _showMessage('Deletion failed', res.errorMessage ?? 'Unexpected error');
       }
