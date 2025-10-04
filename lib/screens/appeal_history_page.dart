@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/auth/application/auth_providers.dart';
 import '../features/moderation/domain/appeal.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../features/moderation/domain/moderation_repository.dart';
@@ -657,6 +658,9 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
     try {
       final client = ref.read(moderationClientProvider);
       final token = await ref.read(jwtProvider.future);
+      if (token == null || token.isEmpty) {
+        throw const ModerationException('User not authenticated');
+      }
 
       final appeals = await client.getMyAppeals(token: token);
 

@@ -183,6 +183,28 @@ void main() {
       ).called(1);
     });
 
+    test('treats 202 accepted response as async success', () async {
+      when(
+        () => dio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer((_) async {
+        return Response<void>(
+          requestOptions: RequestOptions(path: '/privacy/deleteUser'),
+          statusCode: 202,
+        );
+      });
+
+      final result = await service.deleteAccount();
+
+      expect(result.result, PrivacyOperationResult.success);
+      verify(
+        () => logger.info('Account deletion successful', any(), any()),
+      ).called(1);
+    });
+
     test('maps rate limit response to rateLimited result', () async {
       when(
         () => dio.post(
