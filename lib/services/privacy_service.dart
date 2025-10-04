@@ -121,7 +121,7 @@ class PrivacyService {
         ),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 202) {
         _logger.info('Account deletion successful');
         return (result: PrivacyOperationResult.success, errorMessage: null);
       } else {

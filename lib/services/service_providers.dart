@@ -8,11 +8,9 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/dio_client.dart';
-import '../core/logging/app_logger.dart';
 import 'auth_service.dart';
 import 'post_service.dart';
 import 'moderation_service.dart';
-import 'privacy_service.dart';
 
 /// Authentication service provider
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -29,11 +27,4 @@ final postServiceProvider = Provider<PostService>((ref) {
 final moderationServiceProvider = Provider<ModerationClient>((ref) {
   final dio = ref.watch(secureDioProvider);
   return ModerationClient(dio);
-});
-
-/// Privacy service provider (with placeholder endpoints)
-final privacyServiceProvider = Provider<PrivacyService>((ref) {
-  final dio = ref.watch(secureDioProvider);
-  final logger = ref.watch(appLoggerProvider);
-  return PrivacyService(dio, logger);
 });

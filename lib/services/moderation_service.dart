@@ -273,9 +273,6 @@ final moderationClientProvider = Provider<ModerationClient>((ref) {
   return ModerationClient(dio);
 });
 
-// Mock JWT provider - replace with your actual authentication provider
-final jwtProvider = StateProvider<String?>((ref) => null);
-
 // Moderation state models
 class FlagResult {
   final bool success;
