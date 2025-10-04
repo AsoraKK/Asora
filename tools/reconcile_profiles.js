@@ -91,11 +91,15 @@ function main() {
         var summary = { total: total, mismatches: mismatches, report: csvPath };
         console.log('Reconciliation summary:', summary);
 
+        // Write JSON summary file for CI artifacts
+        var jsonPath = path.join(reportDir, 'reconcile_profiles_summary_' + ts + '.json');
+        fs.writeFileSync(jsonPath, JSON.stringify(summary, null, 2));
+
         // Insert summary into audit_log
         var insertSql = 'INSERT INTO audit_log (actor_uuid, action, target_type, target_id, metadata) VALUES ($1, $2, $3, $4, $5)';
         var metadata = JSON.stringify(summary);
         return pool.query(insertSql, [null, 'migration_reconciliation', 'profiles_migration', ts, metadata])
-          .then(function () { return summary; });
+          .then(function () { return { summary: summary, json: jsonPath }; });
       });
     })
     .then(function (summary) { return pool.end().then(function () { return summary; }); })
