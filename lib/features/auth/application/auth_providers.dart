@@ -68,11 +68,10 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  /// Sign in with OAuth2 PKCE flow
+  /// Sign in with OAuth2
   Future<void> signInWithOAuth2() async {
-    state = const AsyncValue.loading();
-
     try {
+      state = const AsyncValue.loading();
       final user = await _authService.signInWithOAuth2();
       state = AsyncValue.data(user);
       _bumpTokenVersion();
@@ -88,9 +87,8 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
 
   /// Sign in with email and password
   Future<void> signInWithEmail(String email, String password) async {
-    state = const AsyncValue.loading();
-
     try {
+      state = const AsyncValue.loading();
       final user = await _authService.loginWithEmail(email, password);
       state = AsyncValue.data(user);
       _bumpTokenVersion();
@@ -108,10 +106,6 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> refreshToken() async {
     try {
       await _authService.refreshOAuth2Token();
-
-      // Reload current user after token refresh
-      final user = await _authService.getCurrentUser();
-      state = AsyncValue.data(user);
       _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
       // Token refresh failed, user needs to sign in again
@@ -131,7 +125,6 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     } catch (error) {
-      // Even if logout fails, clear the state
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     }

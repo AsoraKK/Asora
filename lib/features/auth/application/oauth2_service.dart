@@ -289,28 +289,25 @@ class OAuth2Service {
 
   /// Clears persisted tokens and performs a best-effort end session request.
   Future<void> signOut() async {
-    if (!kIsWeb && OAuth2Config.endSessionEndpoint.isNotEmpty) {
-      final idToken = await _secureStorage.read(key: _idTokenKey);
-      if (idToken != null && idToken.isNotEmpty) {
-        try {
-          await _appAuth.endSession(
-            EndSessionRequest(
-              idTokenHint: idToken,
-              postLogoutRedirectUrl: OAuth2Config.postLogoutRedirectUri,
-              serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
-                  ? OAuth2Config.serviceConfiguration
-                  : null,
-              discoveryUrl: OAuth2Config.discoveryUrl.isNotEmpty
-                  ? OAuth2Config.discoveryUrl
-                  : null,
-            ),
-          );
-        } catch (_) {
-          // Best-effort only; ignore end-session failures.
-        }
+    // Perform end session request if id token is available
+    final idToken = await _secureStorage.read(key: _idTokenKey);
+    if (idToken != null && idToken.isNotEmpty) {
+      try {
+        await _appAuth.endSession(
+          EndSessionRequest(
+            idTokenHint: idToken,
+            postLogoutRedirectUrl: OAuth2Config.postLogoutRedirectUri,
+            serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
+                ? OAuth2Config.serviceConfiguration
+                : null,
+          ),
+        );
+      } catch (_) {
+        // best effort
       }
     }
 
+    // Clear stored tokens
     await _clearStoredTokens();
   }
 
