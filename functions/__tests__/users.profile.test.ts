@@ -2,7 +2,12 @@ import { upsertProfile } from '../users/profile';
 import { HttpRequest, InvocationContext } from '@azure/functions';
 
 jest.mock('../shared/moderation-text', () => ({
-  moderateProfileText: jest.fn(async (text: string) => ({ provider: 'hive', decision: text.includes('bad') ? 'reject' : 'allow', score: text.includes('bad') ? 0.95 : 0.1, durationMs: 10 }))
+  moderateProfileText: jest.fn(async (text: string) => ({
+    provider: 'hive',
+    decision: text.includes('bad') ? 'reject' : 'allow',
+    score: text.includes('bad') ? 0.95 : 0.1,
+    durationMs: 10,
+  })),
 }));
 
 jest.mock('@azure/cosmos', () => ({
@@ -13,17 +18,17 @@ jest.mock('@azure/cosmos', () => ({
           return {
             item: jest.fn().mockReturnValue({
               read: jest.fn().mockResolvedValue({ resource: { id: 'user-1', profile: {} } }),
-              patch: jest.fn().mockResolvedValue({})
-            })
+              patch: jest.fn().mockResolvedValue({}),
+            }),
           };
         }
         if (name === 'profile_audit') {
           return { items: { create: jest.fn().mockResolvedValue({}) } };
         }
         return {} as any;
-      })
-    })
-  }))
+      }),
+    }),
+  })),
 }));
 
 jest.mock('../shared/auth-utils', () => ({
@@ -44,19 +49,24 @@ function req(method: string, body: any): HttpRequest {
 }
 
 function ctx(): InvocationContext {
-  return ({ invocationId: 'test', log: jest.fn(), error: jest.fn() } as unknown) as InvocationContext;
+  return { invocationId: 'test', log: jest.fn(), error: jest.fn() } as unknown as InvocationContext;
 }
 
 describe('users/profile upsert', () => {
   it('allows clean content', async () => {
-    const response = await upsertProfile(req('POST', { displayName: 'Nice', bio: 'Hello there' }), ctx());
+    const response = await upsertProfile(
+      req('POST', { displayName: 'Nice', bio: 'Hello there' }),
+      ctx()
+    );
     expect(response.status).toBe(200);
     expect((response.headers as any)['X-Moderation-Decision']).toBe('allow');
   });
 
   it('rejects toxic content', async () => {
-    const response = await upsertProfile(req('POST', { displayName: 'bad name', bio: 'bad words' }), ctx());
+    const response = await upsertProfile(
+      req('POST', { displayName: 'bad name', bio: 'bad words' }),
+      ctx()
+    );
     expect(response.status).toBe(400);
   });
 });
-

@@ -1,4 +1,4 @@
-import { FeatureFlags } from "./featureFlags";
+import { FeatureFlags } from './featureFlags';
 
 export const Defaults = {
   Weights: {
@@ -38,26 +38,36 @@ export let Fairness = Defaults.Fairness;
 export let Freshness = Defaults.Freshness;
 
 export async function loadDynamicConfig(flags = new FeatureFlags()): Promise<void> {
-  const weights = await flags.getJSON<WeightsType>("FEED_WEIGHTS_JSON", Defaults.Weights);
-  const moderation = await flags.getJSON<ModerationType>("FEED_MODERATION_JSON", Defaults.Moderation);
+  const weights = await flags.getJSON<WeightsType>('FEED_WEIGHTS_JSON', Defaults.Weights);
+  const moderation = await flags.getJSON<ModerationType>(
+    'FEED_MODERATION_JSON',
+    Defaults.Moderation
+  );
   const fairnessRaw = await flags.getJSON<{
     floors: Array<[number, number]>;
     caps: Array<[number, number]>;
     perAuthorPageCap: number;
     exploreRatio: number;
-  }>("FEED_FAIRNESS_JSON", {
+  }>('FEED_FAIRNESS_JSON', {
     floors: Array.from(Defaults.Fairness.floors.entries()),
     caps: Array.from(Defaults.Fairness.caps.entries()),
     perAuthorPageCap: Defaults.Fairness.perAuthorPageCap,
     exploreRatio: Defaults.Fairness.exploreRatio,
   });
-  const freshnessLambda = await flags.getNumber("FEED_FRESHNESS_LAMBDA", Defaults.Freshness.lambdaPerHour);
+  const freshnessLambda = await flags.getNumber(
+    'FEED_FRESHNESS_LAMBDA',
+    Defaults.Freshness.lambdaPerHour
+  );
 
   Weights = weights;
   Moderation = moderation;
   Fairness = {
-    floors: new Map<number, number>(fairnessRaw.floors.map(([level, floor]: [number, number]) => [level, floor])),
-    caps: new Map<number, number>(fairnessRaw.caps.map(([level, cap]: [number, number]) => [level, cap])),
+    floors: new Map<number, number>(
+      fairnessRaw.floors.map(([level, floor]: [number, number]) => [level, floor])
+    ),
+    caps: new Map<number, number>(
+      fairnessRaw.caps.map(([level, cap]: [number, number]) => [level, cap])
+    ),
     perAuthorPageCap: fairnessRaw.perAuthorPageCap,
     exploreRatio: fairnessRaw.exploreRatio,
   };

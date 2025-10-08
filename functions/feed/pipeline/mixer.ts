@@ -1,4 +1,4 @@
-import { OutputItem, FeedContext } from "./types";
+import { OutputItem, FeedContext } from './types';
 
 export class Mixer {
   apply(items: OutputItem[], ctx: FeedContext): OutputItem[] {
@@ -6,8 +6,8 @@ export class Mixer {
       return sortPerMode([...items], ctx);
     }
 
-    const local = items.filter((i) => i.region === ctx.region);
-    const global = items.filter((i) => i.region !== ctx.region);
+    const local = items.filter(i => i.region === ctx.region);
+    const global = items.filter(i => i.region !== ctx.region);
 
     const needLocal = Math.floor(items.length * ctx.localToGlobalRatio);
     const needGlobal = items.length - needLocal;
@@ -29,7 +29,7 @@ export class Mixer {
 }
 
 function sortPerMode(items: OutputItem[], ctx: FeedContext): OutputItem[] {
-  if (ctx.userPrefs.rankMode === "chronological") {
+  if (ctx.userPrefs.rankMode === 'chronological') {
     items.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   } else {
     items.sort((a, b) => b.baseScore - a.baseScore);

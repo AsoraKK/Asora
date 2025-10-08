@@ -1,4 +1,4 @@
-import { Candidate, FeedContext } from "./types";
+import { Candidate, FeedContext } from './types';
 
 export interface CandidateSourcePort {
   fetchDiscovery(userId: string, ctx: FeedContext): Promise<Candidate[]>;
@@ -16,7 +16,9 @@ export class CandidateSource implements CandidateSourcePort {
 
   async fetchDiscovery(userId: string, ctx: FeedContext): Promise<Candidate[]> {
     const limit = ctx.pageSize * 5; // overfetch for ranking/fairness
-    const local = ctx.region ? await this.deps.getRecentPosts({ limit, regions: [ctx.region] }) : [];
+    const local = ctx.region
+      ? await this.deps.getRecentPosts({ limit, regions: [ctx.region] })
+      : [];
     const global = await this.deps.getTrendingPosts({ limit });
     return [...local, ...global];
   }

@@ -1,6 +1,6 @@
 /**
  * ASORA APPEAL VOTING ENDPOINT
- * 
+ *
  * 🎯 Purpose: Allow moderators to vote on content appeals
  * 🔐 Security: JWT authentication + role verification + duplicate prevention
  * 🚨 Features: Democratic voting, quorum tracking, automatic resolution
@@ -18,7 +18,7 @@ const VoteOnAppealSchema = z.object({
   vote: z.enum(['approve', 'reject']),
   reason: z.string().min(10).max(500),
   confidence: z.number().min(1).max(10).default(5),
-  notes: z.string().max(1000).optional()
+  notes: z.string().max(1000).optional(),
 });
 
 export async function voteOnAppeal(
@@ -33,7 +33,7 @@ export async function voteOnAppeal(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -44,7 +44,7 @@ export async function voteOnAppeal(
     // 2. Role verification (optional - for now allow all authenticated users)
     // In production, you might want to restrict to moderators
     const isModerator = hasRole(jwtPayload, 'moderator') || hasRole(jwtPayload, 'admin');
-    
+
     // For development, allow all users to vote (community moderation)
     // if (!isModerator) {
     //   return {
@@ -56,14 +56,14 @@ export async function voteOnAppeal(
     // 3. Request validation
     const requestBody = await request.json();
     const validationResult = VoteOnAppealSchema.safeParse(requestBody);
-    
+
     if (!validationResult.success) {
       return {
         status: 400,
         jsonBody: {
           error: 'Invalid request data',
-          details: validationResult.error.issues
-        }
+          details: validationResult.error.issues,
+        },
       };
     }
 
@@ -83,14 +83,14 @@ export async function voteOnAppeal(
     } catch (error) {
       return {
         status: 404,
-        jsonBody: { error: 'Appeal not found' }
+        jsonBody: { error: 'Appeal not found' },
       };
     }
 
     if (!appealDoc) {
       return {
         status: 404,
-        jsonBody: { error: 'Appeal not found' }
+        jsonBody: { error: 'Appeal not found' },
       };
     }
 
@@ -98,11 +98,11 @@ export async function voteOnAppeal(
     if (appealDoc.status === 'resolved' || appealDoc.status === 'expired') {
       return {
         status: 409,
-        jsonBody: { 
+        jsonBody: {
           error: `Appeal has already been ${appealDoc.status}`,
           currentStatus: appealDoc.status,
-          resolvedAt: appealDoc.resolvedAt
-        }
+          resolvedAt: appealDoc.resolvedAt,
+        },
       };
     }
 
@@ -114,13 +114,13 @@ export async function voteOnAppeal(
       appealDoc.status = 'expired';
       appealDoc.resolvedAt = now.toISOString();
       await appealsContainer.item(appealId, appealId).replace(appealDoc);
-      
+
       return {
         status: 409,
-        jsonBody: { 
+        jsonBody: {
           error: 'Appeal has expired',
-          expiredAt: appealDoc.expiresAt
-        }
+          expiredAt: appealDoc.expiresAt,
+        },
       };
     }
 
@@ -129,22 +129,24 @@ export async function voteOnAppeal(
       query: 'SELECT * FROM c WHERE c.appealId = @appealId AND c.voterId = @voterId',
       parameters: [
         { name: '@appealId', value: appealId },
-        { name: '@voterId', value: userId }
-      ]
+        { name: '@voterId', value: userId },
+      ],
     };
 
-    const { resources: existingVotes } = await votesContainer.items.query(existingVoteQuery).fetchAll();
-    
+    const { resources: existingVotes } = await votesContainer.items
+      .query(existingVoteQuery)
+      .fetchAll();
+
     if (existingVotes.length > 0) {
       return {
         status: 409,
-        jsonBody: { 
+        jsonBody: {
           error: 'You have already voted on this appeal',
           existingVote: {
             vote: existingVotes[0].vote,
-            votedAt: existingVotes[0].createdAt
-          }
-        }
+            votedAt: existingVotes[0].createdAt,
+          },
+        },
       };
     }
 
@@ -152,9 +154,9 @@ export async function voteOnAppeal(
     if (appealDoc.submitterId === userId) {
       return {
         status: 403,
-        jsonBody: { 
-          error: 'You cannot vote on your own appeal'
-        }
+        jsonBody: {
+          error: 'You cannot vote on your own appeal',
+        },
       };
     }
 
@@ -162,11 +164,11 @@ export async function voteOnAppeal(
     const usersContainer = database.container('users');
     let voterName = 'Anonymous';
     let voterWeight = 1; // Default weight
-    
+
     try {
       const { resource: voter } = await usersContainer.item(userId, userId).read();
       voterName = voter?.name || voter?.displayName || 'Anonymous';
-      
+
       // Assign voting weight based on role/reputation
       if (hasRole(jwtPayload, 'admin')) {
         voterWeight = 3;
@@ -192,7 +194,7 @@ export async function voteOnAppeal(
       notes: notes || null,
       weight: voterWeight,
       isModerator,
-      createdAt: now.toISOString()
+      createdAt: now.toISOString(),
     };
 
     await votesContainer.items.create(voteDocument);
@@ -203,14 +205,14 @@ export async function voteOnAppeal(
     } else {
       appealDoc.votesAgainst = (appealDoc.votesAgainst || 0) + voterWeight;
     }
-    
+
     appealDoc.totalVotes = (appealDoc.votesFor || 0) + (appealDoc.votesAgainst || 0);
     appealDoc.updatedAt = now.toISOString();
 
     // 12. Check if quorum is reached and resolve if necessary
     const requiredVotes = appealDoc.requiredVotes || 5;
     const hasQuorum = appealDoc.totalVotes >= requiredVotes;
-    
+
     let finalDecision = null;
     if (hasQuorum) {
       appealDoc.hasReachedQuorum = true;
@@ -226,9 +228,9 @@ export async function voteOnAppeal(
 
       // Update the original content based on decision
       await updateContentBasedOnDecision(
-        database, 
-        appealDoc.contentId, 
-        appealDoc.contentType, 
+        database,
+        appealDoc.contentId,
+        appealDoc.contentType,
         finalDecision as 'approved' | 'rejected',
         context
       );
@@ -250,21 +252,20 @@ export async function voteOnAppeal(
           votesAgainst: appealDoc.votesAgainst,
           totalVotes: appealDoc.totalVotes,
           requiredVotes,
-          hasReachedQuorum: hasQuorum
+          hasReachedQuorum: hasQuorum,
         },
         finalDecision,
-        status: appealDoc.status
-      }
+        status: appealDoc.status,
+      },
     };
-
   } catch (error) {
     context.log('Error voting on appeal:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }
@@ -280,10 +281,10 @@ async function updateContentBasedOnDecision(
   context: InvocationContext
 ): Promise<void> {
   try {
-    const containerName = contentType === 'post' ? 'posts' : 
-                         contentType === 'comment' ? 'comments' : 'users';
+    const containerName =
+      contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users';
     const container = database.container(containerName);
-    
+
     const { resource: content } = await container.item(contentId, contentId).read();
     if (!content) return;
 
@@ -303,7 +304,6 @@ async function updateContentBasedOnDecision(
 
     content.updatedAt = new Date().toISOString();
     await container.item(contentId, contentId).replace(content);
-
   } catch (error) {
     context.log('Error updating content after appeal decision:', error);
   }

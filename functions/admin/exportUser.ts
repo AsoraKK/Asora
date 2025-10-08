@@ -5,7 +5,13 @@ import { CosmosClient } from '@azure/cosmos';
 
 function buildUnsignedJwt(sub: string): string {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({ sub, iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+300 })).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 300,
+    })
+  ).toString('base64url');
   const signature = '';
   return `${header}.${payload}.${signature}`;
 }
@@ -25,8 +31,8 @@ async function adminExport(req: HttpRequest, ctx: InvocationContext): Promise<Ht
     headers: new Headers({ authorization: `Bearer ${token}` }),
     query: new URLSearchParams(),
     params: {},
-    user: (null as any),
-    json: async () => ({} as any),
+    user: null as any,
+    json: async () => ({}) as any,
   } as any;
 
   // Invoke the existing export handler to keep output identical
@@ -43,7 +49,7 @@ async function adminExport(req: HttpRequest, ctx: InvocationContext): Promise<Ht
       action: 'export',
       result: result.status === 200 ? 'success' : 'failure',
       operator: 'admin',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch {
     // TODO: Handle audit log failure - consider retry or alternative logging
@@ -56,8 +62,7 @@ app.http('admin-export', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'admin/export',
-  handler: withAccessGuard(adminExport, { role: 'admin' })
+  handler: withAccessGuard(adminExport, { role: 'admin' }),
 });
 
 export default adminExport;
-

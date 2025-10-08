@@ -6,11 +6,15 @@
 /// 🚀 Performance: Optimized queries with caching and pagination
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse, handleCorsAndMethod } from "../shared/http-utils";
-import { encodeCt, decodeCt } from "../shared/paging";
-import { validatePagination } from "../shared/validation-utils";
-import { getAzureLogger } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import {
+  createSuccessResponse,
+  createErrorResponse,
+  handleCorsAndMethod,
+} from '../shared/http-utils';
+import { encodeCt, decodeCt } from '../shared/paging';
+import { validatePagination } from '../shared/validation-utils';
+import { getAzureLogger } from '../shared/azure-logger';
 
 const logger = getAzureLogger('feed/trending');
 
@@ -30,7 +34,7 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     // Handle CORS and method validation
     const corsCheck = handleCorsAndMethod(req.method, ['GET']);
@@ -41,26 +45,26 @@ const httpTrigger = async function (
     logger.info('Trending feed request started', {
       requestId: context.invocationId,
       query: Object.fromEntries(req.query.entries()),
-      method: req.method
+      method: req.method,
     });
 
     // Parse and validate query parameters
     const queryParams = Object.fromEntries(req.query.entries());
     const params = parseQueryParams(queryParams);
     const validationResult = validatePagination(params.page, params.pageSize);
-    
+
     if (!validationResult.valid) {
       return createErrorResponse(400, validationResult.error || 'Validation failed');
     }
 
     // Build trending query with engagement-based scoring
     const { query, parameters } = buildTrendingQuery(params);
-    
+
     logger.info('Executing trending query', {
       requestId: context.invocationId,
       query,
       parameters,
-      timeWindow: params.timeWindow
+      timeWindow: params.timeWindow,
     });
 
     const querySpec = { query, parameters };
@@ -69,8 +73,16 @@ const httpTrigger = async function (
     const prevToken: string | undefined = state?.c;
 
     const qStart = Date.now();
-    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
-    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const iterator = postsContainer.items.query(querySpec, {
+      maxItemCount: params.pageSize,
+      continuationToken: prevToken,
+    });
+    const {
+      resources: posts,
+      requestCharge,
+      activityId,
+      continuationToken,
+    } = await iterator.fetchNext();
     const queryDurationMs = Date.now() - qStart;
 
     logger.info('Trending query completed', {
@@ -79,14 +91,16 @@ const httpTrigger = async function (
       requestCharge,
       resultCount: posts.length,
       queryDurationMs,
-      timeWindow: params.timeWindow
+      timeWindow: params.timeWindow,
     });
 
     const hasMore = !!continuationToken;
 
     // Transform posts for response
     const authHeader = req.headers.get('authorization');
-    const transformedPosts = posts.map(post => transformPostForResponse(post, authHeader || undefined));
+    const transformedPosts = posts.map(post =>
+      transformPostForResponse(post, authHeader || undefined)
+    );
 
     // Calculate trending metrics for response metadata
     const trendingStats = calculateTrendingStats(transformedPosts);
@@ -98,17 +112,19 @@ const httpTrigger = async function (
       pageSize: params.pageSize,
       trendingWindow: params.timeWindow,
       stats: trendingStats,
-      nextCt: continuationToken ? encodeCt({ v: 1, q: 'trending', c: continuationToken }) : undefined
+      nextCt: continuationToken
+        ? encodeCt({ v: 1, q: 'trending', c: continuationToken })
+        : undefined,
     };
 
     const duration = Date.now() - startTime;
-    
+
     logger.info('Trending feed request completed successfully', {
       requestId: context.invocationId,
       duration,
       postsReturned: transformedPosts.length,
       hasMore,
-      timeWindow: params.timeWindow
+      timeWindow: params.timeWindow,
     });
 
     return createSuccessResponse(response, {
@@ -119,22 +135,21 @@ const httpTrigger = async function (
       'X-Cosmos-RU': requestCharge?.toString() || '0',
       'X-Query-Duration-ms': queryDurationMs.toString(),
       'X-Next-Page': (!!continuationToken).toString(),
-      'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+      'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
     });
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     logger.error('Trending feed request failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
-      duration
+      duration,
     });
 
     return createErrorResponse(
-      500, 
+      500,
       'Failed to load trending feed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
@@ -145,7 +160,7 @@ function parseQueryParams(query: any): TrendingQueryParams {
   return {
     page: parseInt(query.page || '1', 10),
     pageSize: Math.min(parseInt(query.pageSize || '20', 10), 50), // Max 50 per page
-    timeWindow: query.timeWindow || '24h' // Default to 24 hours
+    timeWindow: query.timeWindow || '24h', // Default to 24 hours
   };
 }
 
@@ -221,10 +236,10 @@ function transformPostForResponse(post: any, _authHeader?: string): any {
     metadata: {
       ...post.metadata,
       trendingScore,
-      hoursAgo: Math.round(hoursAgo * 10) / 10 // Round to 1 decimal
+      hoursAgo: Math.round(hoursAgo * 10) / 10, // Round to 1 decimal
     },
     userLiked: false, // TODO: Calculate from user interactions
-    userDisliked: false // TODO: Calculate from user interactions
+    userDisliked: false, // TODO: Calculate from user interactions
   };
 }
 
@@ -233,13 +248,11 @@ function calculateTrendingStats(posts: any[]): any {
     return {
       averageEngagement: 0,
       topScore: 0,
-      totalEngagements: 0
+      totalEngagements: 0,
     };
   }
 
-  const engagements = posts.map(post => 
-    post.likeCount + post.dislikeCount + post.commentCount
-  );
+  const engagements = posts.map(post => post.likeCount + post.dislikeCount + post.commentCount);
 
   const totalEngagements = engagements.reduce((sum, eng) => sum + eng, 0);
   const averageEngagement = Math.round(totalEngagements / posts.length);
@@ -248,7 +261,7 @@ function calculateTrendingStats(posts: any[]): any {
   return {
     averageEngagement,
     topScore,
-    totalEngagements
+    totalEngagements,
   };
 }
 
@@ -257,7 +270,7 @@ app.http('trending', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/trending',
-  handler: httpTrigger
+  handler: httpTrigger,
 });
 
 export default httpTrigger;

@@ -1,4 +1,9 @@
-import { getAzureLogger, logHttpRequest, logAuthAttempt, logPerformanceMetric } from '../../shared/azure-logger';
+import {
+  getAzureLogger,
+  logHttpRequest,
+  logAuthAttempt,
+  logPerformanceMetric,
+} from '../../shared/azure-logger';
 import { extractCorrelationId, logDatabaseOperation } from '../../shared/azure-logger';
 
 describe('azure-logger', () => {
@@ -24,7 +29,7 @@ describe('azure-logger', () => {
     const logger = getAzureLogger('unit/component');
     logger.info('hello', { requestId: 'r1' });
     expect(logSpy).toHaveBeenCalled();
-    const payload = JSON.parse((logSpy.mock.calls[0][0] as string));
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
     expect(payload.message).toBe('hello');
     expect(payload.component).toBe('unit/component');
     expect(payload.requestId).toBe('r1');
@@ -69,11 +74,15 @@ describe('azure-logger', () => {
     process.env.APPLICATIONINSIGHTS_CONNECTION_STRING = 'InstrumentationKey=fake';
     const logger = getAzureLogger('ai/catch');
     // Make console.warn throw to hit the catch inside sendToApplicationInsights
-    warnSpy.mockImplementationOnce(() => { throw new Error('console warn failed'); });
+    warnSpy.mockImplementationOnce(() => {
+      throw new Error('console warn failed');
+    });
     logger.warn('warned');
     // After throwing, logger should emit a fallback [LOG_ERROR] line via console.log
     const calls = logSpy.mock.calls.map(args => String(args[0]));
-    expect(calls.some(s => s.includes('[LOG_ERROR] Failed to send to Application Insights'))).toBe(true);
+    expect(calls.some(s => s.includes('[LOG_ERROR] Failed to send to Application Insights'))).toBe(
+      true
+    );
   });
 
   test('helpers produce info logs', () => {

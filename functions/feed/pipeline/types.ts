@@ -24,7 +24,7 @@ export interface Post {
   text?: string;
   stats: PostStats;
   aiHumanScore: number; // 0..1 (Hive human-likelihood). Low => AI-likely
-  aiLabeled: boolean;   // user tagged as AI
+  aiLabeled: boolean; // user tagged as AI
 }
 
 export interface Candidate extends Post {
@@ -40,11 +40,11 @@ export interface HardFilters {
 }
 
 export interface UserPrefs {
-  rankMode: "balanced" | "chronological" | "qualityFirst";
+  rankMode: 'balanced' | 'chronological' | 'qualityFirst';
 }
 
 export interface FeedContext {
-  mode: "discovery" | "personalized";
+  mode: 'discovery' | 'personalized';
   pageSize: number;
   region?: string;
   localToGlobalRatio: number; // 0..1

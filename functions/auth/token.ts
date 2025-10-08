@@ -7,10 +7,10 @@
 /// 🤖 OAuth2: Authorization code exchange with PKCE verification
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
-import { validateText, validateRequestSize } from "../shared/validation-utils";
-import { getAzureLogger, logAuthAttempt } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import { createSuccessResponse, createErrorResponse } from '../shared/http-utils';
+import { validateText, validateRequestSize } from '../shared/validation-utils';
+import { getAzureLogger, logAuthAttempt } from '../shared/azure-logger';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 
@@ -66,7 +66,9 @@ interface UserDocument {
 
 class InviteRequiredError extends Error {
   code = 'invite_required' as const;
-  constructor(message = 'Awaiting invite') { super(message); }
+  constructor(message = 'Awaiting invite') {
+    super(message);
+  }
 }
 
 const httpTrigger = async function (
@@ -74,7 +76,7 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     // Only allow POST requests
     if (req.method !== 'POST') {
@@ -84,13 +86,13 @@ const httpTrigger = async function (
     logger.info('Token exchange request started', {
       requestId: context.invocationId,
       method: req.method,
-      userAgent: req.headers.get('user-agent')
+      userAgent: req.headers.get('user-agent'),
     });
 
     // Parse and validate request body
-    const body = await req.json() as TokenRequest;
+    const body = (await req.json()) as TokenRequest;
     const validationResult = validateRequestSize(body);
-    
+
     if (!validationResult.valid) {
       return createErrorResponse(400, validationResult.error || 'Invalid request size');
     }
@@ -107,7 +109,7 @@ const httpTrigger = async function (
 
     // Handle different grant types
     let response: any;
-    
+
     switch (body.grant_type) {
       case 'authorization_code':
         response = await handleAuthorizationCodeGrant(body, context.invocationId);
@@ -116,7 +118,11 @@ const httpTrigger = async function (
         response = await handleRefreshTokenGrant(body, context.invocationId);
         break;
       default:
-        return createErrorResponse(400, 'Unsupported grant_type', `Supported types: authorization_code, refresh_token`);
+        return createErrorResponse(
+          400,
+          'Unsupported grant_type',
+          `Supported types: authorization_code, refresh_token`
+        );
     }
 
     const duration = Date.now() - startTime;
@@ -125,14 +131,13 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       duration,
       grantType: body.grant_type,
-      clientId: body.client_id
+      clientId: body.client_id,
     });
 
     return createSuccessResponse(response, {
       'Cache-Control': 'no-cache, no-store',
-      'Pragma': 'no-cache'
+      Pragma: 'no-cache',
     });
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -145,12 +150,12 @@ const httpTrigger = async function (
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache'
+          Pragma: 'no-cache',
         },
         body: JSON.stringify({
           error: error.code,
-          error_description: error.message
-        })
+          error_description: error.message,
+        }),
       };
     }
 
@@ -158,53 +163,44 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration
+      duration,
     });
 
-    logAuthAttempt(
-      logger,
-      false,
-      'unknown',
-      errorMessage,
-      context.invocationId
-    );
+    logAuthAttempt(logger, false, 'unknown', errorMessage, context.invocationId);
 
     return createErrorResponse(
-      500, 
+      500,
       'Token exchange failed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
   }
 };
 
-async function handleAuthorizationCodeGrant(
-  body: TokenRequest, 
-  requestId: string
-): Promise<any> {
+async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: string): Promise<any> {
   // Validate required parameters for authorization code grant
   if (!body.code || !body.redirect_uri || !body.code_verifier) {
-    throw new Error('Missing required parameters for authorization_code grant: code, redirect_uri, code_verifier');
+    throw new Error(
+      'Missing required parameters for authorization_code grant: code, redirect_uri, code_verifier'
+    );
   }
 
   logger.info('Processing authorization code grant', {
     requestId,
     clientId: body.client_id,
-    redirectUri: body.redirect_uri
+    redirectUri: body.redirect_uri,
   });
 
   // Look up the authorization session
   const sessionQuery = {
-    query: 'SELECT * FROM c WHERE c.authorizationCode = @code AND c.clientId = @clientId AND c.used != true',
+    query:
+      'SELECT * FROM c WHERE c.authorizationCode = @code AND c.clientId = @clientId AND c.used != true',
     parameters: [
       { name: '@code', value: body.code },
-      { name: '@clientId', value: body.client_id }
-    ]
+      { name: '@clientId', value: body.client_id },
+    ],
   };
 
-  const { resources: sessions } = await sessionsContainer
-    .items
-    .query(sessionQuery)
-    .fetchAll();
+  const { resources: sessions } = await sessionsContainer.items.query(sessionQuery).fetchAll();
 
   if (sessions.length === 0) {
     throw new Error('Invalid authorization code or code already used');
@@ -234,12 +230,10 @@ async function handleAuthorizationCodeGrant(
   }
 
   // Mark session as used
-  await sessionsContainer
-    .item(session.id, session.partitionKey)
-    .patch([
-      { op: 'add', path: '/used', value: true },
-      { op: 'add', path: '/usedAt', value: new Date().toISOString() }
-    ]);
+  await sessionsContainer.item(session.id, session.partitionKey).patch([
+    { op: 'add', path: '/used', value: true },
+    { op: 'add', path: '/usedAt', value: new Date().toISOString() },
+  ]);
 
   // Get user information
   if (!session.userId) {
@@ -260,9 +254,7 @@ async function handleAuthorizationCodeGrant(
   // Update last login time
   await usersContainer
     .item(user.id, user.id)
-    .patch([
-      { op: 'replace', path: '/lastLoginAt', value: new Date().toISOString() }
-    ]);
+    .patch([{ op: 'replace', path: '/lastLoginAt', value: new Date().toISOString() }]);
 
   // Generate JWT tokens
   const tokenPayload = {
@@ -273,30 +265,20 @@ async function handleAuthorizationCodeGrant(
     reputation: user.reputationScore,
     iss: JWT_ISSUER,
     aud: body.client_id,
-    nonce: session.nonce
+    nonce: session.nonce,
   };
 
   const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
     expiresIn: ACCESS_TOKEN_EXPIRY,
-    jwtid: crypto.randomUUID()
+    jwtid: crypto.randomUUID(),
   });
 
-  const refreshToken = jwt.sign(
-    { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
-    JWT_SECRET,
-    {
-      expiresIn: REFRESH_TOKEN_EXPIRY,
-      jwtid: crypto.randomUUID()
-    }
-  );
+  const refreshToken = jwt.sign({ sub: user.id, iss: JWT_ISSUER, type: 'refresh' }, JWT_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRY,
+    jwtid: crypto.randomUUID(),
+  });
 
-  logAuthAttempt(
-    logger,
-    true,
-    user.id,
-    'Token exchange successful',
-    requestId
-  );
+  logAuthAttempt(logger, true, user.id, 'Token exchange successful', requestId);
 
   return {
     access_token: accessToken,
@@ -309,22 +291,19 @@ async function handleAuthorizationCodeGrant(
       email: user.email,
       role: user.role,
       tier: user.tier,
-      reputationScore: user.reputationScore
-    }
+      reputationScore: user.reputationScore,
+    },
   };
 }
 
-async function handleRefreshTokenGrant(
-  body: TokenRequest, 
-  requestId: string
-): Promise<any> {
+async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): Promise<any> {
   if (!body.refresh_token) {
     throw new Error('Missing refresh_token parameter');
   }
 
   logger.info('Processing refresh token grant', {
     requestId,
-    clientId: body.client_id
+    clientId: body.client_id,
   });
 
   try {
@@ -355,29 +334,22 @@ async function handleRefreshTokenGrant(
       tier: user.tier,
       reputation: user.reputationScore,
       iss: JWT_ISSUER,
-      aud: body.client_id
+      aud: body.client_id,
     };
 
     const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY,
-      jwtid: crypto.randomUUID()
+      jwtid: crypto.randomUUID(),
     });
 
-    logAuthAttempt(
-      logger,
-      true,
-      user.id,
-      'Token refresh successful',
-      requestId
-    );
+    logAuthAttempt(logger, true, user.id, 'Token refresh successful', requestId);
 
     return {
       access_token: accessToken,
       token_type: 'Bearer',
       expires_in: 15 * 60, // 15 minutes in seconds
-      scope: 'read write'
+      scope: 'read write',
     };
-
   } catch (jwtError) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -389,7 +361,7 @@ if (process.env.NODE_ENV !== 'test') {
     methods: ['POST', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'auth/token',
-    handler: httpTrigger
+    handler: httpTrigger,
   });
 }
 

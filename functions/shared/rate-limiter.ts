@@ -1,6 +1,6 @@
 /**
  * ASORA RATE LIMITING UTILITIES
- * 
+ *
  * 🎯 Purpose: Prevent API abuse and spam with configurable rate limits
  * 🔐 Security: Redis-based distributed rate limiting
  * 📊 Features: Sliding window, custom key generators, different limits per endpoint
@@ -46,7 +46,7 @@ export function createRateLimiter(config: RateLimiterConfig) {
       if (!entry || entry.resetTime < now) {
         entry = {
           count: 0,
-          resetTime: now + config.windowMs
+          resetTime: now + config.windowMs,
         };
         rateLimitStore.set(key, entry);
       }
@@ -62,9 +62,9 @@ export function createRateLimiter(config: RateLimiterConfig) {
         limit: config.maxRequests,
         remaining,
         resetTime: entry.resetTime,
-        totalHits: entry.count
+        totalHits: entry.count,
       };
-    }
+    },
   };
 }
 
@@ -72,9 +72,7 @@ export function createRateLimiter(config: RateLimiterConfig) {
  * Default key generator using IP address
  */
 export function defaultKeyGenerator(req: HttpRequest): string {
-  return req.headers.get('x-forwarded-for') || 
-         req.headers.get('x-real-ip') || 
-         'unknown';
+  return req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 }
 
 /**
@@ -83,7 +81,7 @@ export function defaultKeyGenerator(req: HttpRequest): string {
 export function userKeyGenerator(req: HttpRequest): string {
   const authHeader = req.headers.get('authorization') || '';
   const token = authHeader.replace('Bearer ', '');
-  
+
   try {
     const payloadPart = token.split('.')[1] || '';
     const json = Buffer.from(payloadPart, 'base64').toString('utf8');

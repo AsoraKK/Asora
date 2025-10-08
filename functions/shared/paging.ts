@@ -14,7 +14,10 @@ export function decodeCt(ct: string): any {
 export function kWayMergeByCreatedAt(lists: any[][], limit: number): any[] {
   const cursors = lists.map(() => 0);
   const out: any[] = [];
-  const getKey = (item: any) => ({ t: new Date(item.createdAt).getTime(), id: String(item.id || '') });
+  const getKey = (item: any) => ({
+    t: new Date(item.createdAt).getTime(),
+    id: String(item.id || ''),
+  });
 
   while (out.length < limit) {
     let bestList = -1;
@@ -25,12 +28,14 @@ export function kWayMergeByCreatedAt(lists: any[][], limit: number): any[] {
       if (idx >= arr.length) continue;
       const candidate = arr[idx];
       if (!bestItem) {
-        bestItem = candidate; bestList = i;
+        bestItem = candidate;
+        bestList = i;
       } else {
         const a = getKey(candidate);
         const b = getKey(bestItem);
         if (a.t > b.t || (a.t === b.t && a.id < b.id)) {
-          bestItem = candidate; bestList = i;
+          bestItem = candidate;
+          bestList = i;
         }
       }
     }
@@ -40,4 +45,3 @@ export function kWayMergeByCreatedAt(lists: any[][], limit: number): any[] {
   }
   return out;
 }
-

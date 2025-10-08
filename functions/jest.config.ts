@@ -4,9 +4,7 @@ const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>'],
-  testMatch: [
-    '**/__tests__/**/*.test.ts'
-  ],
+  testMatch: ['**/__tests__/**/*.test.ts'],
   collectCoverageFrom: [
     '<rootDir>/shared/validation-utils.ts',
     '<rootDir>/shared/http-utils.ts',
@@ -23,13 +21,16 @@ const config: Config = {
   testPathIgnorePatterns: [
     // Ignore WIP/placeholder test files until implementation
     'voteOnAppeal.*\\.test\\.ts',
-    'reviewAppealedContent.*\\.test\\.ts'
+    'reviewAppealedContent.*\\.test\\.ts',
   ],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.tests.json'
-    }],
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.tests.json',
+      },
+    ],
   },
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   verbose: false,
@@ -38,9 +39,9 @@ const config: Config = {
       branches: 80,
       functions: 85,
       lines: 90,
-      statements: 90
-    }
-  }
+      statements: 90,
+    },
+  },
 };
 
 export default config;

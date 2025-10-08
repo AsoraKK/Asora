@@ -7,11 +7,11 @@
 /// 📍 Location: Filters posts by user's current location or specified area
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
-import { encodeCt, decodeCt } from "../shared/paging";
-import { validatePagination, validateLocation } from "../shared/validation-utils";
-import { getAzureLogger } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import { createSuccessResponse, createErrorResponse } from '../shared/http-utils';
+import { encodeCt, decodeCt } from '../shared/paging';
+import { validatePagination, validateLocation } from '../shared/validation-utils';
+import { getAzureLogger } from '../shared/azure-logger';
 
 const logger = getAzureLogger('feed/local');
 
@@ -33,17 +33,17 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     logger.info('Local feed request started', {
       requestId: context.invocationId,
-      query: Object.fromEntries(req.query.entries())
+      query: Object.fromEntries(req.query.entries()),
     });
 
     // Parse and validate query parameters
     const queryParams = Object.fromEntries(req.query.entries());
     const params = parseLocalFeedParams(queryParams);
-    
+
     // Validate pagination
     const paginationResult = validatePagination(params.page, params.pageSize);
     if (!paginationResult.valid) {
@@ -67,14 +67,22 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       location: params.location,
       radius: params.radius,
-      query
+      query,
     });
 
     // Execute with continuation tokens
     const querySpec = { query, parameters };
     const qStart = Date.now();
-    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
-    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const iterator = postsContainer.items.query(querySpec, {
+      maxItemCount: params.pageSize,
+      continuationToken: prevToken,
+    });
+    const {
+      resources: posts,
+      requestCharge,
+      activityId,
+      continuationToken,
+    } = await iterator.fetchNext();
     const queryDurationMs = Date.now() - qStart;
 
     logger.info('Local feed query completed', {
@@ -83,14 +91,16 @@ const httpTrigger = async function (
       requestCharge,
       resultCount: posts.length,
       queryDurationMs,
-      isCrossPartition: true
+      isCrossPartition: true,
     });
 
     const hasMore = !!continuationToken;
 
     // Transform posts for response
     const authHeader = req.headers.get('authorization');
-    const transformedPosts = posts.map(post => transformPostForResponse(post, authHeader || undefined));
+    const transformedPosts = posts.map(post =>
+      transformPostForResponse(post, authHeader || undefined)
+    );
 
     // Build response with location metadata
     const response = {
@@ -99,16 +109,16 @@ const httpTrigger = async function (
       pageSize: params.pageSize,
       location: params.location,
       radius: params.radius,
-      nextCt: continuationToken ? encodeCt({ v: 1, q: 'local', c: continuationToken }) : undefined
+      nextCt: continuationToken ? encodeCt({ v: 1, q: 'local', c: continuationToken }) : undefined,
     };
 
     const duration = Date.now() - startTime;
-    
+
     logger.info('Local feed request completed successfully', {
       requestId: context.invocationId,
       duration,
       postsReturned: transformedPosts.length,
-      location: params.location
+      location: params.location,
     });
 
     return createSuccessResponse(response, {
@@ -116,23 +126,22 @@ const httpTrigger = async function (
       'X-Radius': params.radius?.toString() || '0',
       'X-Cosmos-RU': requestCharge?.toString() || '0',
       'X-Query-Duration-ms': queryDurationMs.toString(),
-      'X-Next-Page': (!!continuationToken).toString()
+      'X-Next-Page': (!!continuationToken).toString(),
     });
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error('Local feed request failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration
+      duration,
     });
 
     return createErrorResponse(
-      500, 
+      500,
       'Failed to load local feed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
@@ -145,16 +154,14 @@ function parseLocalFeedParams(query: any): LocalFeedParams {
     pageSize: Math.min(parseInt(query.pageSize || '20', 10), 50),
     location: query.location || '',
     radius: query.radius ? parseInt(query.radius, 10) : undefined,
-    category: query.category
+    category: query.category,
   };
 }
 
 function buildLocalQuery(params: LocalFeedParams): { query: string; parameters: any[] } {
   const offset = (params.page - 1) * params.pageSize;
   let whereClause = 'c.metadata.location = @location';
-  const parameters: any[] = [
-    { name: '@location', value: params.location }
-  ];
+  const parameters: any[] = [{ name: '@location', value: params.location }];
 
   // Add category filter if specified
   if (params.category) {
@@ -162,7 +169,7 @@ function buildLocalQuery(params: LocalFeedParams): { query: string; parameters: 
     parameters.push({ name: '@category', value: params.category });
   }
 
-  // Note: For true geographic radius filtering, you would need to use 
+  // Note: For true geographic radius filtering, you would need to use
   // more sophisticated geospatial queries or store lat/lng coordinates
   // This implementation assumes location is a string identifier (city, area, etc.)
 
@@ -192,7 +199,7 @@ function transformPostForResponse(post: any, _authHeader?: string): any {
     moderation: post.moderation,
     metadata: post.metadata,
     userLiked: false, // TODO: Calculate from user interactions
-    userDisliked: false // TODO: Calculate from user interactions
+    userDisliked: false, // TODO: Calculate from user interactions
   };
 }
 
@@ -201,7 +208,7 @@ app.http('feed-local', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/local',
-  handler: httpTrigger
+  handler: httpTrigger,
 });
 
 export default httpTrigger;

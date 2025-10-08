@@ -22,7 +22,7 @@ app.http('admin-set-tier', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'admin/tier',
-  handler: withAccessGuard(setTier, { role: 'admin' })
+  handler: withAccessGuard(setTier, { role: 'admin' }),
 });
 
 export default setTier;

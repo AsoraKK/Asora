@@ -4,7 +4,7 @@ import {
   createCorsResponse,
   handleCorsAndMethod,
   extractAuthToken,
-  checkRateLimit
+  checkRateLimit,
 } from '../../shared/http-utils';
 
 describe('http-utils', () => {

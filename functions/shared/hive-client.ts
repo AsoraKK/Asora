@@ -1,6 +1,6 @@
 /**
  * ASORA HIVE AI V2 INTEGRATION
- * 
+ *
  * 🎯 Purpose: Content moderation using Hive AI v2 API
  * 🔐 Security: Automatic content scanning for policy violations
  * 🚨 Features: Text, image, and video analysis with confidence scores
@@ -42,7 +42,7 @@ export class HiveAIClient {
   private readonly defaultModels = [
     'general_text_classification',
     'hate_speech_detection_text',
-    'violence_text_detection'
+    'violence_text_detection',
   ];
 
   constructor(apiKey: string) {
@@ -53,14 +53,14 @@ export class HiveAIClient {
    * Moderate text content using Hive AI
    */
   async moderateText(
-    userId: string, 
-    text: string, 
+    userId: string,
+    text: string,
     customModels?: string[]
   ): Promise<HiveModerationResponse> {
     const request: HiveModerationRequest = {
       user_id: userId,
       content: { text },
-      models: customModels || this.defaultModels
+      models: customModels || this.defaultModels,
     };
 
     try {
@@ -68,16 +68,16 @@ export class HiveAIClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
       });
 
       if (!response.ok) {
         throw new Error(`Hive API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json() as HiveModerationResponse;
+      return (await response.json()) as HiveModerationResponse;
     } catch (error) {
       console.error('Hive AI moderation failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -89,20 +89,20 @@ export class HiveAIClient {
    * Moderate image content using Hive AI
    */
   async moderateImage(
-    userId: string, 
+    userId: string,
     imageUrl: string,
     customModels?: string[]
   ): Promise<HiveModerationResponse> {
     const imageModels = customModels || [
       'general_image_classification',
       'nudity_image_detection',
-      'violence_image_detection'
+      'violence_image_detection',
     ];
 
     const request: HiveModerationRequest = {
       user_id: userId,
       content: { url: imageUrl },
-      models: imageModels
+      models: imageModels,
     };
 
     try {
@@ -110,16 +110,16 @@ export class HiveAIClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(request),
       });
 
       if (!response.ok) {
         throw new Error(`Hive API error: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json() as HiveModerationResponse;
+      return (await response.json()) as HiveModerationResponse;
     } catch (error) {
       console.error('Hive AI image moderation failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -165,7 +165,7 @@ export class HiveAIClient {
       action: finalAction,
       confidence: highestScore,
       flaggedCategories,
-      details
+      details,
     };
   }
 }

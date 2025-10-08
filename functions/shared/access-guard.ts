@@ -2,13 +2,15 @@ import { HttpRequest, InvocationContext } from '@azure/functions';
 import { requireUser, hasRole, HttpError } from './auth-utils';
 
 export interface AccessGuardOptions {
-  role?: string;        // required role
-  tier?: string;        // required tier
+  role?: string; // required role
+  tier?: string; // required tier
   rateLimit?: {
     key: (req: HttpRequest, userId: string) => string;
     windowMs: number;
     max: number;
-    check: (key: string) => Promise<{ allowed: boolean; resetTime: number; remaining: number; limit: number }>;
+    check: (
+      key: string
+    ) => Promise<{ allowed: boolean; resetTime: number; remaining: number; limit: number }>;
   };
 }
 
@@ -46,7 +48,11 @@ export function withAccessGuard(handler: Handler, opts: AccessGuardOptions = {})
             'X-RateLimit-Remaining': String(rl.remaining),
             'X-RateLimit-Reset': new Date(rl.resetTime).toISOString(),
           },
-          jsonBody: { code: 'rate_limited', message: 'Rate limit exceeded', resetTime: rl.resetTime },
+          jsonBody: {
+            code: 'rate_limited',
+            message: 'Rate limit exceeded',
+            resetTime: rl.resetTime,
+          },
         };
       }
     }
@@ -54,4 +60,3 @@ export function withAccessGuard(handler: Handler, opts: AccessGuardOptions = {})
     return handler(req, ctx);
   };
 }
-

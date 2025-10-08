@@ -9,7 +9,10 @@ import { createRemoteJWKSet, decodeJwt, errors as joseErrors, jwtVerify } from '
  */
 
 export class HttpError extends Error {
-  constructor(public status: number, public body: any) {
+  constructor(
+    public status: number,
+    public body: any
+  ) {
     super(typeof body === 'string' ? body : JSON.stringify(body));
   }
 }
@@ -22,7 +25,7 @@ export function json(status: number, body: any) {
   return {
     status,
     headers: { 'Content-Type': 'application/json' },
-    body: typeof body === 'string' ? body : JSON.stringify(body)
+    body: typeof body === 'string' ? body : JSON.stringify(body),
   };
 }
 
@@ -62,9 +65,14 @@ export function configureTokenVerifier(verifier?: TokenVerifier) {
 }
 
 function getTenantIds(): string[] {
-  const tenants = (process.env.AUTH_ALLOWED_TENANT_IDS ?? process.env.AUTH_TENANT_ID ?? process.env.AZURE_TENANT_ID ?? '')
+  const tenants = (
+    process.env.AUTH_ALLOWED_TENANT_IDS ??
+    process.env.AUTH_TENANT_ID ??
+    process.env.AZURE_TENANT_ID ??
+    ''
+  )
     .split(',')
-    .map((t) => t.trim())
+    .map(t => t.trim())
     .filter(Boolean);
   if (!tenants.length) {
     throw new Error('Missing AUTH_TENANT_ID or AUTH_ALLOWED_TENANT_IDS configuration.');
@@ -73,14 +81,15 @@ function getTenantIds(): string[] {
 }
 
 function getAudienceList(): string[] {
-  const rawAudiences = process.env.AUTH_ALLOWED_AUDIENCES
-    ?? process.env.AUTH_CLIENT_ID
-    ?? process.env.AUTH_MICROSOFT_CLIENT_ID
-    ?? '';
+  const rawAudiences =
+    process.env.AUTH_ALLOWED_AUDIENCES ??
+    process.env.AUTH_CLIENT_ID ??
+    process.env.AUTH_MICROSOFT_CLIENT_ID ??
+    '';
 
   const audiences = rawAudiences
     .split(',')
-    .map((aud) => aud.trim())
+    .map(aud => aud.trim())
     .filter(Boolean);
 
   if (!audiences.length) {
@@ -120,7 +129,7 @@ function resolveOpenIdConfigurationUrl(): string {
 
 async function getOpenIdConfiguration(): Promise<OpenIdConfiguration> {
   const now = Date.now();
-  if (cachedOpenIdConfig && (now - cachedOpenIdConfig.fetchedAt) < OPENID_CACHE_TTL_MS) {
+  if (cachedOpenIdConfig && now - cachedOpenIdConfig.fetchedAt < OPENID_CACHE_TTL_MS) {
     return cachedOpenIdConfig.value;
   }
 
@@ -129,7 +138,7 @@ async function getOpenIdConfiguration(): Promise<OpenIdConfiguration> {
   if (!response.ok) {
     throw new Error(`Failed to download OpenID configuration from ${url}: ${response.status}`);
   }
-  const data = await response.json() as OpenIdConfiguration;
+  const data = (await response.json()) as OpenIdConfiguration;
 
   if (!data.issuer || !data.jwks_uri) {
     throw new Error('OpenID configuration missing required issuer/jwks_uri fields.');
@@ -164,15 +173,26 @@ function normalizePayload(payload: Record<string, unknown>): JWTPayload {
       : '';
 
   const expClaim = payload.exp;
-  const exp = typeof expClaim === 'number' ? expClaim : typeof expClaim === 'string' ? Number(expClaim) : undefined;
+  const exp =
+    typeof expClaim === 'number'
+      ? expClaim
+      : typeof expClaim === 'string'
+        ? Number(expClaim)
+        : undefined;
   const iatClaim = payload.iat;
-  const iat = typeof iatClaim === 'number' ? iatClaim : typeof iatClaim === 'string' ? Number(iatClaim) : undefined;
+  const iat =
+    typeof iatClaim === 'number'
+      ? iatClaim
+      : typeof iatClaim === 'string'
+        ? Number(iatClaim)
+        : undefined;
 
-  const sub = typeof payload.sub === 'string'
-    ? payload.sub
-    : typeof payload.oid === 'string'
-      ? payload.oid
-      : '';
+  const sub =
+    typeof payload.sub === 'string'
+      ? payload.sub
+      : typeof payload.oid === 'string'
+        ? payload.oid
+        : '';
 
   if (!sub) {
     throw new Error('Token is missing required subject claim');
@@ -188,15 +208,18 @@ function normalizePayload(payload: Record<string, unknown>): JWTPayload {
     roles,
     email: typeof payload.email === 'string' ? payload.email : undefined,
     name: typeof payload.name === 'string' ? payload.name : undefined,
-    preferred_username: typeof payload.preferred_username === 'string' ? payload.preferred_username : undefined,
+    preferred_username:
+      typeof payload.preferred_username === 'string' ? payload.preferred_username : undefined,
     tid: typeof payload.tid === 'string' ? payload.tid : undefined,
     oid: typeof payload.oid === 'string' ? payload.oid : undefined,
   };
 }
 
 function shouldAllowInsecureDecode(): boolean {
-  return process.env.AUTH_ALLOW_INSECURE_TOKENS === 'true'
-    || ['development', 'test'].includes(process.env.NODE_ENV ?? '');
+  return (
+    process.env.AUTH_ALLOW_INSECURE_TOKENS === 'true' ||
+    ['development', 'test'].includes(process.env.NODE_ENV ?? '')
+  );
 }
 
 function enforceTokenFreshness(payload: JWTPayload) {
@@ -254,7 +277,10 @@ export async function verifyJWT(token: string): Promise<JWTPayload> {
   }
 }
 
-export async function requireUser(context: InvocationContext, req: HttpRequest): Promise<JWTPayload> {
+export async function requireUser(
+  context: InvocationContext,
+  req: HttpRequest
+): Promise<JWTPayload> {
   const cached = (req as any).__asoraUser as JWTPayload | undefined;
   if (cached) {
     return cached;
@@ -276,7 +302,10 @@ export async function requireUser(context: InvocationContext, req: HttpRequest):
       throw error;
     }
 
-    if (error instanceof Error && (error.message.includes('expired') || error.message.includes('Token has expired'))) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('expired') || error.message.includes('Token has expired'))
+    ) {
       throw new HttpError(401, { code: 'unauthorized', message: 'Token expired' });
     }
 

@@ -1,6 +1,6 @@
 /**
  * ASORA CONTENT FLAGGING ENDPOINT
- * 
+ *
  * 🎯 Purpose: Allow users to flag inappropriate content for review
  * 🔐 Security: JWT authentication + rate limiting + spam prevention
  * 🚨 Features: Content flagging, duplicate prevention, Hive AI analysis
@@ -21,16 +21,16 @@ const FlagContentSchema = z.object({
   reason: z.enum([
     'spam',
     'harassment',
-    'hate_speech', 
+    'hate_speech',
     'violence',
     'adult_content',
     'misinformation',
     'copyright',
     'privacy',
-    'other'
+    'other',
   ]),
   additionalDetails: z.string().max(1000).optional(),
-  urgency: z.enum(['low', 'medium', 'high']).default('medium')
+  urgency: z.enum(['low', 'medium', 'high']).default('medium'),
 });
 
 // Rate limiter: 5 flags per hour per user to prevent abuse
@@ -42,9 +42,10 @@ const flagRateLimiter = createRateLimiter({
     try {
       return endpointKeyGenerator('flag-content');
     } catch {
-      return (req: HttpRequest) => `flag:${extractUserIdFromJWT(req.headers.get('authorization') || '')}`;
+      return (req: HttpRequest) =>
+        `flag:${extractUserIdFromJWT(req.headers.get('authorization') || '')}`;
     }
-  })()
+  })(),
 });
 
 export async function flagContent(
@@ -59,7 +60,7 @@ export async function flagContent(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -75,28 +76,28 @@ export async function flagContent(
         headers: {
           'X-RateLimit-Limit': rateLimitResult.limit.toString(),
           'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
         },
-        jsonBody: { 
+        jsonBody: {
           error: 'Too many flags. Please wait before flagging more content.',
           limit: rateLimitResult.limit,
           remaining: rateLimitResult.remaining,
-          resetTime: rateLimitResult.resetTime
-        }
+          resetTime: rateLimitResult.resetTime,
+        },
       };
     }
 
     // 3. Request validation
     const requestBody = await request.json();
     const validationResult = FlagContentSchema.safeParse(requestBody);
-    
+
     if (!validationResult.success) {
       return {
         status: 400,
         jsonBody: {
           error: 'Invalid request data',
-          details: validationResult.error.issues
-        }
+          details: validationResult.error.issues,
+        },
       };
     }
 
@@ -109,22 +110,25 @@ export async function flagContent(
 
     // 5. Check for duplicate flags by the same user
     const existingFlagQuery = {
-      query: 'SELECT * FROM c WHERE c.contentId = @contentId AND c.flaggedBy = @userId AND c.status = "active"',
+      query:
+        'SELECT * FROM c WHERE c.contentId = @contentId AND c.flaggedBy = @userId AND c.status = "active"',
       parameters: [
         { name: '@contentId', value: contentId },
-        { name: '@userId', value: userId }
-      ]
+        { name: '@userId', value: userId },
+      ],
     };
 
-    const { resources: existingFlags } = await flagsContainer.items.query(existingFlagQuery).fetchAll();
-    
+    const { resources: existingFlags } = await flagsContainer.items
+      .query(existingFlagQuery)
+      .fetchAll();
+
     if (existingFlags.length > 0) {
       return {
         status: 409,
-        jsonBody: { 
+        jsonBody: {
           error: 'You have already flagged this content',
-          existingFlagId: existingFlags[0].id
-        }
+          existingFlagId: existingFlags[0].id,
+        },
       };
     }
 
@@ -134,7 +138,7 @@ export async function flagContent(
       if (contentType === 'post' || contentType === 'comment') {
         const contentContainer = database.container(contentType === 'post' ? 'posts' : 'comments');
         const { resource: content } = await contentContainer.item(contentId, contentId).read();
-        
+
         if (content && content.content) {
           const hiveClient = createHiveClient();
           const hiveResponse = await hiveClient.moderateText(userId, content.content);
@@ -152,15 +156,15 @@ export async function flagContent(
 
     // Calculate priority score based on reason and urgency
     const priorityScores: Record<string, number> = {
-      'violence': 10,
-      'hate_speech': 9,
-      'harassment': 8,
-      'adult_content': 7,
-      'misinformation': 6,
-      'spam': 5,
-      'privacy': 4,
-      'copyright': 3,
-      'other': 2
+      violence: 10,
+      hate_speech: 9,
+      harassment: 8,
+      adult_content: 7,
+      misinformation: 6,
+      spam: 5,
+      privacy: 4,
+      copyright: 3,
+      other: 2,
     };
 
     const urgencyMultiplier: Record<string, number> = { high: 2, medium: 1.5, low: 1 };
@@ -181,26 +185,27 @@ export async function flagContent(
       resolvedAt: null,
       resolvedBy: null,
       aiAnalysis: aiAnalysis || null,
-      moderatorNotes: null
+      moderatorNotes: null,
     };
 
     await flagsContainer.items.create(flagDocument);
 
     // 8. Update content flag count (for trending/priority)
     try {
-      const contentContainer = database.container(contentType === 'post' ? 'posts' : 
-                                                  contentType === 'comment' ? 'comments' : 'users');
+      const contentContainer = database.container(
+        contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users'
+      );
       const { resource: contentDoc } = await contentContainer.item(contentId, contentId).read();
-      
+
       if (contentDoc) {
         contentDoc.flagCount = (contentDoc.flagCount || 0) + 1;
         contentDoc.lastFlaggedAt = now;
-        
+
         // Auto-hide content if it reaches threshold
         if (contentDoc.flagCount >= 5) {
           contentDoc.status = 'hidden_pending_review';
         }
-        
+
         await contentContainer.item(contentId, contentId).replace(contentDoc);
       }
     } catch (error) {
@@ -216,22 +221,23 @@ export async function flagContent(
         flagId,
         message: 'Content flagged successfully',
         priorityScore,
-        aiAnalysis: aiAnalysis ? {
-          confidence: aiAnalysis.confidence,
-          action: aiAnalysis.action,
-          categories: aiAnalysis.flaggedCategories
-        } : null
-      }
+        aiAnalysis: aiAnalysis
+          ? {
+              confidence: aiAnalysis.confidence,
+              action: aiAnalysis.action,
+              categories: aiAnalysis.flaggedCategories,
+            }
+          : null,
+      },
     };
-
   } catch (error) {
     context.log('Error flagging content:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

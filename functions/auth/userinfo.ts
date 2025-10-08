@@ -7,9 +7,9 @@
 /// 🤖 OIDC: Standard UserInfo endpoint with profile claims
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse, extractAuthToken } from "../shared/http-utils";
-import { getAzureLogger, logAuthAttempt } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import { createSuccessResponse, createErrorResponse, extractAuthToken } from '../shared/http-utils';
+import { getAzureLogger, logAuthAttempt } from '../shared/azure-logger';
 import * as jwt from 'jsonwebtoken';
 
 const logger = getAzureLogger('auth/userinfo');
@@ -71,12 +71,12 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     logger.info('UserInfo request started', {
       requestId: context.invocationId,
       method: req.method,
-      userAgent: req.headers.get('user-agent')
+      userAgent: req.headers.get('user-agent'),
     });
 
     // Extract and validate authorization token
@@ -91,7 +91,11 @@ const httpTrigger = async function (
         'Missing or invalid authorization header',
         context.invocationId
       );
-      return createErrorResponse(401, 'Bearer token required', 'Authorization header must contain a valid Bearer token');
+      return createErrorResponse(
+        401,
+        'Bearer token required',
+        'Authorization header must contain a valid Bearer token'
+      );
     }
 
     // Verify JWT token
@@ -100,7 +104,7 @@ const httpTrigger = async function (
       tokenPayload = jwt.verify(token, JWT_SECRET) as TokenPayload;
     } catch (jwtError) {
       const errorMsg = jwtError instanceof Error ? jwtError.message : 'Token verification failed';
-      
+
       logAuthAttempt(
         logger,
         false,
@@ -108,19 +112,19 @@ const httpTrigger = async function (
         `Invalid JWT token: ${errorMsg}`,
         context.invocationId
       );
-      
+
       return createErrorResponse(401, 'Invalid token', 'The provided token is invalid or expired');
     }
 
     logger.info('JWT token validated', {
       requestId: context.invocationId,
       userId: tokenPayload.sub,
-      tokenIssuer: tokenPayload.iss
+      tokenIssuer: tokenPayload.iss,
     });
 
     // Retrieve user information from database
     const userDoc = await usersContainer.item(tokenPayload.sub, tokenPayload.sub).read();
-    
+
     if (!userDoc.resource) {
       logAuthAttempt(
         logger,
@@ -129,7 +133,11 @@ const httpTrigger = async function (
         'User not found in database',
         context.invocationId
       );
-      return createErrorResponse(404, 'User not found', 'The user associated with this token does not exist');
+      return createErrorResponse(
+        404,
+        'User not found',
+        'The user associated with this token does not exist'
+      );
     }
 
     const user: UserDocument = userDoc.resource;
@@ -152,16 +160,19 @@ const httpTrigger = async function (
       sub: user.id,
       email: user.email,
       email_verified: true, // In production, this should be based on actual verification status
-      
+
       // Profile claims (if available)
-      name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+      name:
+        user.displayName ||
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.username,
       given_name: user.firstName,
       family_name: user.lastName,
       preferred_username: user.username,
       picture: user.profilePicture,
       profile: user.profile?.website,
       locale: user.profile?.timezone,
-      
+
       // Custom Asora claims
       role: user.role,
       tier: user.tier,
@@ -195,37 +206,30 @@ const httpTrigger = async function (
       requestId: context.invocationId,
       duration,
       userId: user.id,
-      claimsReturned: Object.keys(userInfo).length
+      claimsReturned: Object.keys(userInfo).length,
     });
 
-    logAuthAttempt(
-      logger,
-      true,
-      user.id,
-      'UserInfo retrieved successfully',
-      context.invocationId
-    );
+    logAuthAttempt(logger, true, user.id, 'UserInfo retrieved successfully', context.invocationId);
 
     return createSuccessResponse(userInfo, {
       'Cache-Control': 'no-cache, no-store',
-      'Pragma': 'no-cache',
-      'Content-Type': 'application/json'
+      Pragma: 'no-cache',
+      'Content-Type': 'application/json',
     });
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error('UserInfo request failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration
+      duration,
     });
 
     return createErrorResponse(
-      500, 
+      500,
       'UserInfo request failed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
@@ -237,7 +241,7 @@ app.http('auth-userinfo', {
   methods: ['GET', 'POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'auth/userinfo',
-  handler: httpTrigger
+  handler: httpTrigger,
 });
 
 export default httpTrigger;

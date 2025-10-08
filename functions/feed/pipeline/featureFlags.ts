@@ -1,4 +1,4 @@
-import { AppConfigurationClient } from "@azure/app-configuration";
+import { AppConfigurationClient } from '@azure/app-configuration';
 
 export class FeatureFlags {
   private client?: AppConfigurationClient;

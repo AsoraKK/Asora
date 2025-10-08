@@ -30,7 +30,7 @@ export class OutboxConsumer {
 
   constructor() {
     this.pg = new Pool({
-      connectionString: process.env.DATABASE_URL
+      connectionString: process.env.DATABASE_URL,
     });
     this.cosmos = getTargetDatabase(createCosmosClient());
   }
@@ -52,7 +52,7 @@ export class OutboxConsumer {
 
   private async processOutboxEvents(): Promise<void> {
     const client = await this.pg.connect();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -68,9 +68,9 @@ export class OutboxConsumer {
         FOR UPDATE SKIP LOCKED
       `);
 
-      const events = result.rows as (OutboxEvent & { 
-        retry_count: number; 
-        max_retries: number; 
+      const events = result.rows as (OutboxEvent & {
+        retry_count: number;
+        max_retries: number;
       })[];
 
       if (events.length === 0) {
@@ -89,38 +89,43 @@ export class OutboxConsumer {
           await this.processEvent(event);
           processedIds.push(event.id);
         } catch (error) {
-          failedEvents.push({ 
-            id: event.id, 
-            error: error instanceof Error ? error.message : 'Unknown error' 
+          failedEvents.push({
+            id: event.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
           });
         }
       }
 
       // Mark successful events as processed
       if (processedIds.length > 0) {
-        await client.query(`
+        await client.query(
+          `
           UPDATE outbox 
           SET processed_at = NOW() 
           WHERE id = ANY($1)
-        `, [processedIds]);
+        `,
+          [processedIds]
+        );
       }
 
       // Update retry count and exponential backoff for failed events
       if (failedEvents.length > 0) {
         const failedIds = failedEvents.map(f => f.id);
-        await client.query(`
+        await client.query(
+          `
           UPDATE outbox 
           SET retry_count = retry_count + 1,
               next_retry_at = NOW() + INTERVAL '60 seconds' * POW(2, retry_count)
           WHERE id = ANY($1)
-        `, [failedIds]);
+        `,
+          [failedIds]
+        );
 
         console.warn(`Failed to process ${failedEvents.length} events:`, failedEvents);
       }
 
       await client.query('COMMIT');
       console.log(`✅ Processed ${processedIds.length} events, ${failedEvents.length} failed`);
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -134,15 +139,15 @@ export class OutboxConsumer {
       case 'profile.updated':
         await this.handleProfileUpdated(event.payload as ProfileUpdatedEvent);
         break;
-      
+
       case 'user.tier_changed':
         await this.handleTierChanged(event.payload);
         break;
-        
+
       case 'post.admin_mirror':
         await this.handlePostAdminMirror(event.payload);
         break;
-        
+
       default:
         console.warn(`Unknown outbox topic: ${event.topic}`);
     }
@@ -159,7 +164,7 @@ export class OutboxConsumer {
       bio: payload.bio,
       avatarUrl: payload.avatar_url,
       badges: [payload.tier], // Convert tier to badge array
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await this.cosmos.publicProfiles.items.upsert(profileProjection);
@@ -171,17 +176,17 @@ export class OutboxConsumer {
   private async handleTierChanged(payload: any): Promise<void> {
     try {
       const { user_uuid, new_tier } = payload;
-      
+
       // Read current profile projection
       const response = await this.cosmos.publicProfiles.item(user_uuid, user_uuid).read();
-      
+
       if (response.resource) {
         const updated = {
           ...response.resource,
           badges: [new_tier], // Update badge
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
-        
+
         await this.cosmos.publicProfiles.items.upsert(updated);
       }
     } catch (error) {
@@ -194,11 +199,12 @@ export class OutboxConsumer {
    */
   private async handlePostAdminMirror(payload: any): Promise<void> {
     const client = await this.pg.connect();
-    
+
     try {
       const { post_uuid, author_uuid, text, tags, status, created_at } = payload;
-      
-      await client.query(`
+
+      await client.query(
+        `
         INSERT INTO posts_admin_mirror 
         (post_uuid, author_uuid, text, tags, status, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -208,8 +214,9 @@ export class OutboxConsumer {
           tags = EXCLUDED.tags,
           status = EXCLUDED.status,
           updated_at = NOW()
-      `, [post_uuid, author_uuid, text, tags, status, created_at]);
-      
+      `,
+        [post_uuid, author_uuid, text, tags, status, created_at]
+      );
     } finally {
       client.release();
     }
@@ -236,9 +243,10 @@ export async function emitOutboxEvent(
 ): Promise<void> {
   const pg = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pg.connect();
-  
+
   try {
-    await client.query(`
+    await client.query(
+      `
       INSERT INTO outbox (
         topic, key, payload, aggregate_type, aggregate_id,
         retry_count, max_retries, next_retry_at
@@ -246,13 +254,9 @@ export async function emitOutboxEvent(
       VALUES ($1, $2, $3, $4, $5, 0, 3, NOW())
       ON CONFLICT (aggregate_type, aggregate_id, topic, created_at) 
       DO NOTHING
-    `, [
-      topic, 
-      key, 
-      JSON.stringify(payload),
-      aggregateType || 'unknown',
-      aggregateId || key
-    ]);
+    `,
+      [topic, key, JSON.stringify(payload), aggregateType || 'unknown', aggregateId || key]
+    );
   } catch (error) {
     // If we hit the unique constraint, that's expected for duplicates
     if (error instanceof Error && error.message.includes('unique_outbox_event')) {

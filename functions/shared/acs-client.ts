@@ -6,7 +6,11 @@ export interface ACSTextResult {
   categoryScores: Record<string, number>;
 }
 
-export async function moderateTextWithACS(text: string, categories: string[], timeoutMs: number): Promise<ACSTextResult> {
+export async function moderateTextWithACS(
+  text: string,
+  categories: string[],
+  timeoutMs: number
+): Promise<ACSTextResult> {
   const endpoint = process.env.ACS_ENDPOINT || '';
   const key = process.env.ACS_KEY || '';
   if (!endpoint || !key) {
@@ -19,7 +23,7 @@ export async function moderateTextWithACS(text: string, categories: string[], ti
     const payload = {
       text,
       categories,
-      outputType: 'FourSeverityLevels'
+      outputType: 'FourSeverityLevels',
     } as any;
     const res = await fetch(url, {
       method: 'POST',
@@ -37,7 +41,7 @@ export async function moderateTextWithACS(text: string, categories: string[], ti
     // Map categories to scores (0..1). ACS returns severity 0..3; normalize to 0..1.
     const categoryScores: Record<string, number> = {};
     let max = 0;
-    for (const c of (data?.categoriesAnalysis || [])) {
+    for (const c of data?.categoriesAnalysis || []) {
       const name = c?.category || 'Unknown';
       const sev = typeof c?.severity === 'number' ? c.severity : 0; // 0..3
       const score = Math.max(0, Math.min(1, sev / 3));
@@ -49,4 +53,3 @@ export async function moderateTextWithACS(text: string, categories: string[], ti
     clearTimeout(t);
   }
 }
-

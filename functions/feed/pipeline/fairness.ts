@@ -1,12 +1,18 @@
-import { Fairness } from "./config";
-import { OutputItem, ReputationLevel } from "./types";
+import { Fairness } from './config';
+import { OutputItem, ReputationLevel } from './types';
 
 export class FairnessPolicy {
-  apply(items: Array<OutputItem & { _cand: unknown; _score: number }>, pageSize: number): OutputItem[] {
+  apply(
+    items: Array<OutputItem & { _cand: unknown; _score: number }>,
+    pageSize: number
+  ): OutputItem[] {
     const byAuthorCount = new Map<string, number>();
     const authorOk = (a: string) => (byAuthorCount.get(a) ?? 0) < Fairness.perAuthorPageCap;
 
-    const byCohort = new Map<ReputationLevel, Array<OutputItem & { _cand: unknown; _score: number }>>();
+    const byCohort = new Map<
+      ReputationLevel,
+      Array<OutputItem & { _cand: unknown; _score: number }>
+    >();
     for (const it of items) {
       if (!byCohort.has(it.cohort)) byCohort.set(it.cohort, []);
       byCohort.get(it.cohort)!.push(it);
@@ -15,13 +21,16 @@ export class FairnessPolicy {
 
     const scale = pageSize / 20;
     const floors = new Map<ReputationLevel, number>(
-      Array.from(Fairness.floors.entries(), ([level, floor]) => [level as ReputationLevel, Math.floor(floor * scale)])
+      Array.from(Fairness.floors.entries(), ([level, floor]) => [
+        level as ReputationLevel,
+        Math.floor(floor * scale),
+      ])
     );
     const caps = new Map<ReputationLevel, number>(
-      Array.from(
-        Fairness.caps.entries(),
-        ([level, cap]) => [level as ReputationLevel, Math.floor(cap * scale) || 1]
-      )
+      Array.from(Fairness.caps.entries(), ([level, cap]) => [
+        level as ReputationLevel,
+        Math.floor(cap * scale) || 1,
+      ])
     );
 
     const out: OutputItem[] = [];
@@ -49,7 +58,10 @@ export class FairnessPolicy {
       for (const lv of rrOrder) {
         const pool = byCohort.get(lv) ?? [];
         const next = pool.find(
-          (p) => !alreadyChosen(out, p) && authorOk(p.authorId) && countCohort(out, lv) < (caps.get(lv) ?? pageSize)
+          p =>
+            !alreadyChosen(out, p) &&
+            authorOk(p.authorId) &&
+            countCohort(out, lv) < (caps.get(lv) ?? pageSize)
         );
         if (next) {
           out.push(strip(next));
@@ -82,7 +94,7 @@ function countCohort(arr: OutputItem[], lv: ReputationLevel): number {
 }
 
 function alreadyChosen(arr: OutputItem[], it: OutputItem): boolean {
-  return arr.some((x) => x.id === it.id);
+  return arr.some(x => x.id === it.id);
 }
 
 function strip<T extends OutputItem>(it: T): OutputItem {

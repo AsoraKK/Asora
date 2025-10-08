@@ -1,7 +1,7 @@
-import { vi } from "vitest";
-import { Candidate, FeedContext, OutputItem, ReputationLevel } from "../pipeline/types";
+import { vi } from 'vitest';
+import { Candidate, FeedContext, OutputItem, ReputationLevel } from '../pipeline/types';
 
-export const BASE_TIME = new Date("2024-01-01T00:00:00.000Z");
+export const BASE_TIME = new Date('2024-01-01T00:00:00.000Z');
 
 export function useFixedTime() {
   vi.useFakeTimers();
@@ -18,13 +18,13 @@ export function hoursAgo(hours: number): string {
 
 export function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
   const base: Candidate = {
-    id: "post-1",
-    authorId: "author-1",
+    id: 'post-1',
+    authorId: 'author-1',
     createdAt: BASE_TIME.toISOString(),
-    region: "US",
-    topics: ["tech"],
-    keywords: ["ai"],
-    text: "Hello world",
+    region: 'US',
+    topics: ['tech'],
+    keywords: ['ai'],
+    text: 'Hello world',
     stats: {
       likes: 10,
       replies: 1,
@@ -33,7 +33,7 @@ export function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
     aiHumanScore: 0.9,
     aiLabeled: false,
     author: {
-      authorId: "author-1",
+      authorId: 'author-1',
       reputationLevel: 3,
       reputationNorm: 0.8,
       consistency: 0.6,
@@ -50,12 +50,12 @@ export function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
 
 export function makeContext(overrides: Partial<FeedContext> = {}): FeedContext {
   return {
-    mode: "personalized",
+    mode: 'personalized',
     pageSize: 10,
-    region: "US",
+    region: 'US',
     localToGlobalRatio: 0.6,
     hardFilters: {},
-    userPrefs: { rankMode: "balanced" },
+    userPrefs: { rankMode: 'balanced' },
     featureFlags: {
       fairnessQuotas: true,
       explorationSlots: true,
@@ -77,10 +77,10 @@ export function makeOutputItem(
     createdAt: overrides.createdAt ?? BASE_TIME.toISOString(),
     baseScore: overrides.baseScore ?? 1,
     cohort: overrides.cohort ?? 3,
-    region: overrides.region ?? "US",
-    topics: overrides.topics ?? ["tech"],
+    region: overrides.region ?? 'US',
+    topics: overrides.topics ?? ['tech'],
     _cand: overrides._cand ?? null,
-    _score: overrides._score ?? (overrides.baseScore ?? 1),
+    _score: overrides._score ?? overrides.baseScore ?? 1,
   };
 
   return {

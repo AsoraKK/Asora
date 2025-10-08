@@ -1,22 +1,24 @@
-import { InvocationContext } from "@azure/functions";
-import { CosmosClient } from "@azure/cosmos";
-import { CandidateSource } from "./candidateSource";
-import { Filter } from "./filter";
-import { Ranker } from "./ranker";
-import { FairnessPolicy } from "./fairness";
-import { Mixer } from "./mixer";
-import { FeedContext, FeedResult } from "./types";
-import { CosmosAdapter } from "./adapters/cosmos";
-import { loadDynamicConfig } from "./config";
+import { InvocationContext } from '@azure/functions';
+import { CosmosClient } from '@azure/cosmos';
+import { CandidateSource } from './candidateSource';
+import { Filter } from './filter';
+import { Ranker } from './ranker';
+import { FairnessPolicy } from './fairness';
+import { Mixer } from './mixer';
+import { FeedContext, FeedResult } from './types';
+import { CosmosAdapter } from './adapters/cosmos';
+import { loadDynamicConfig } from './config';
 
 let sharedCosmosClient: CosmosClient | undefined;
 
 function getCosmosClient(): CosmosClient {
   if (!sharedCosmosClient) {
-  const endpoint = process.env.COSMOS_DB_ENDPOINT ?? process.env.COSMOS_ENDPOINT;
-  const key = process.env.COSMOS_DB_KEY ?? process.env.COSMOS_KEY;
+    const endpoint = process.env.COSMOS_DB_ENDPOINT ?? process.env.COSMOS_ENDPOINT;
+    const key = process.env.COSMOS_DB_KEY ?? process.env.COSMOS_KEY;
     if (!endpoint || !key) {
-      throw new Error("COSMOS_DB_ENDPOINT/COSMOS_ENDPOINT and COSMOS_DB_KEY/COSMOS_KEY must be configured");
+      throw new Error(
+        'COSMOS_DB_ENDPOINT/COSMOS_ENDPOINT and COSMOS_DB_KEY/COSMOS_KEY must be configured'
+      );
     }
     sharedCosmosClient = new CosmosClient({ endpoint, key });
   }
@@ -26,19 +28,20 @@ function getCosmosClient(): CosmosClient {
 export function buildPipeline(ctx: InvocationContext) {
   const database = process.env.COSMOS_DB_DATABASE ?? process.env.COSMOS_DATABASE;
   if (!database) {
-    throw new Error("COSMOS_DB_DATABASE or COSMOS_DATABASE must be configured");
+    throw new Error('COSMOS_DB_DATABASE or COSMOS_DATABASE must be configured');
   }
 
   const adapter = new CosmosAdapter(getCosmosClient(), database, {
-  posts: process.env.COSMOS_CONTAINER_POSTS ?? process.env.COSMOS_POSTS_CONTAINER ?? "posts",
-  follows: process.env.COSMOS_CONTAINER_FOLLOWS ?? process.env.COSMOS_FOLLOWS_CONTAINER ?? "follows",
-  users: process.env.COSMOS_CONTAINER_USERS ?? process.env.COSMOS_USERS_CONTAINER ?? "users",
+    posts: process.env.COSMOS_CONTAINER_POSTS ?? process.env.COSMOS_POSTS_CONTAINER ?? 'posts',
+    follows:
+      process.env.COSMOS_CONTAINER_FOLLOWS ?? process.env.COSMOS_FOLLOWS_CONTAINER ?? 'follows',
+    users: process.env.COSMOS_CONTAINER_USERS ?? process.env.COSMOS_USERS_CONTAINER ?? 'users',
   });
 
   const source = new CandidateSource({
-    getRecentPosts: (args) => adapter.listRecentPosts(args),
-    getTrendingPosts: (args) => adapter.listTrendingPosts(args),
-    getFollowingPosts: (args) => adapter.listFollowingPosts(args),
+    getRecentPosts: args => adapter.listRecentPosts(args),
+    getTrendingPosts: args => adapter.listTrendingPosts(args),
+    getFollowingPosts: args => adapter.listFollowingPosts(args),
   });
   const filter = new Filter();
   const ranker = new Ranker();
@@ -51,9 +54,10 @@ export function buildPipeline(ctx: InvocationContext) {
       const t0 = Date.now();
 
       const cStart = Date.now();
-      const cands = context.mode === "personalized"
-        ? await source.fetchPersonalized(userId, context)
-        : await source.fetchDiscovery(userId, context);
+      const cands =
+        context.mode === 'personalized'
+          ? await source.fetchPersonalized(userId, context)
+          : await source.fetchDiscovery(userId, context);
       const tCand = Date.now() - cStart;
 
       const fStart = Date.now();
@@ -81,7 +85,7 @@ export function buildPipeline(ctx: InvocationContext) {
         mixMs: tMix,
         totalMs: Date.now() - t0,
       };
-      ctx.log("feed timings", timings);
+      ctx.log('feed timings', timings);
 
       return { items: mixed, timingsMs: timings, meta: { mode: context.mode } };
     },

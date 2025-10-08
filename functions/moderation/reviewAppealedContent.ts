@@ -1,6 +1,6 @@
 /**
  * ASORA REVIEW APPEALED CONTENT ENDPOINT
- * 
+ *
  * 🎯 Purpose: Moderator queue for reviewing appeals and votes
  * 🔐 Security: JWT authentication + moderator role verification
  * 📊 Features: Priority queue, batch operations, detailed context
@@ -79,7 +79,7 @@ export async function reviewAppealedContent(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -91,7 +91,7 @@ export async function reviewAppealedContent(
     if (!isModerator) {
       return {
         status: 403,
-        jsonBody: { error: 'Insufficient permissions. Moderator role required.' }
+        jsonBody: { error: 'Insufficient permissions. Moderator role required.' },
       };
     }
 
@@ -107,14 +107,14 @@ export async function reviewAppealedContent(
     if (page < 1) {
       return {
         status: 400,
-        jsonBody: { error: 'Page must be greater than 0' }
+        jsonBody: { error: 'Page must be greater than 0' },
       };
     }
 
     if (!['all', 'critical', 'high', 'medium', 'low'].includes(urgency)) {
       return {
         status: 400,
-        jsonBody: { error: 'Urgency must be one of: all, critical, high, medium, low' }
+        jsonBody: { error: 'Urgency must be one of: all, critical, high, medium, low' },
       };
     }
 
@@ -129,9 +129,7 @@ export async function reviewAppealedContent(
 
     // 4. Build appeals query with smart prioritization
     let queryText = 'SELECT * FROM c WHERE c.status = @status';
-    const parameters: Array<{ name: string; value: any }> = [
-      { name: '@status', value: 'pending' }
-    ];
+    const parameters: Array<{ name: string; value: any }> = [{ name: '@status', value: 'pending' }];
 
     // Filter by urgency if specified
     if (urgency !== 'all') {
@@ -150,7 +148,8 @@ export async function reviewAppealedContent(
     switch (sortBy) {
       case 'urgency_time':
         // Custom sort: Critical first, then by time remaining
-        queryText += ' ORDER BY (CASE c.urgency WHEN "critical" THEN 1 WHEN "high" THEN 2 WHEN "medium" THEN 3 ELSE 4 END), c.expiresAt ASC';
+        queryText +=
+          ' ORDER BY (CASE c.urgency WHEN "critical" THEN 1 WHEN "high" THEN 2 WHEN "medium" THEN 3 ELSE 4 END), c.expiresAt ASC';
         break;
       case 'time_remaining':
         queryText += ' ORDER BY c.expiresAt ASC';
@@ -201,7 +200,10 @@ export async function reviewAppealedContent(
         // Calculate time remaining
         const now = new Date();
         const expiresAt = new Date(appeal.expiresAt);
-        const timeRemaining = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))); // Hours
+        const timeRemaining = Math.max(
+          0,
+          Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60))
+        ); // Hours
 
         // Get submitter info
         let submitterName = 'Unknown User';
@@ -209,17 +211,21 @@ export async function reviewAppealedContent(
           totalPosts: 0,
           moderatedPosts: 0,
           appealSuccess: 0,
-          accountAge: 0
+          accountAge: 0,
         };
 
         try {
-          const { resource: submitter } = await usersContainer.item(appeal.submitterId, appeal.submitterId).read();
+          const { resource: submitter } = await usersContainer
+            .item(appeal.submitterId, appeal.submitterId)
+            .read();
           if (submitter) {
             submitterName = submitter.name || submitter.displayName || 'Anonymous';
-            
+
             // Calculate user history stats
             const accountCreated = new Date(submitter.createdAt || '2020-01-01');
-            userHistory.accountAge = Math.round((now.getTime() - accountCreated.getTime()) / (1000 * 60 * 60 * 24)); // Days
+            userHistory.accountAge = Math.round(
+              (now.getTime() - accountCreated.getTime()) / (1000 * 60 * 60 * 24)
+            ); // Days
 
             // Get user's content stats (simplified)
             userHistory.totalPosts = submitter.postCount || 0;
@@ -236,13 +242,18 @@ export async function reviewAppealedContent(
           imageUrls?: string[];
           metadata?: Record<string, any>;
         } = { text: 'Content not found' };
-        
+
         try {
-          const contentContainer = appeal.contentType === 'post' ? postsContainer : 
-                                  appeal.contentType === 'comment' ? database.container('comments') : 
-                                  usersContainer;
-          
-          const { resource: content } = await contentContainer.item(appeal.contentId, appeal.contentId).read();
+          const contentContainer =
+            appeal.contentType === 'post'
+              ? postsContainer
+              : appeal.contentType === 'comment'
+                ? database.container('comments')
+                : usersContainer;
+
+          const { resource: content } = await contentContainer
+            .item(appeal.contentId, appeal.contentId)
+            .read();
           if (content) {
             originalContent = {
               text: content.content || content.text || content.bio || 'No text content',
@@ -250,8 +261,8 @@ export async function reviewAppealedContent(
               metadata: {
                 createdAt: content.createdAt,
                 likes: (content as any).likes || 0,
-                comments: (content as any).comments || 0
-              }
+                comments: (content as any).comments || 0,
+              },
             };
           }
         } catch (error) {
@@ -261,7 +272,7 @@ export async function reviewAppealedContent(
         // Get recent votes
         const votesQuery = {
           query: 'SELECT * FROM c WHERE c.appealId = @appealId ORDER BY c.createdAt DESC',
-          parameters: [{ name: '@appealId', value: appeal.id }]
+          parameters: [{ name: '@appealId', value: appeal.id }],
         };
 
         const { resources: votes } = await votesContainer.items.query(votesQuery).fetchAll();
@@ -274,13 +285,13 @@ export async function reviewAppealedContent(
         } = {
           reportCount: 0,
           reportReasons: [],
-          firstReportedAt: ''
+          firstReportedAt: '',
         };
 
         try {
           const flagsQuery = {
             query: 'SELECT * FROM c WHERE c.contentId = @contentId ORDER BY c.createdAt ASC',
-            parameters: [{ name: '@contentId', value: appeal.contentId }]
+            parameters: [{ name: '@contentId', value: appeal.contentId }],
           };
 
           const { resources: flags } = await flagsContainer.items.query(flagsQuery).fetchAll();
@@ -289,7 +300,7 @@ export async function reviewAppealedContent(
             reportContext = {
               reportCount: flags.length,
               reportReasons: [...new Set(reasons)] as string[],
-              firstReportedAt: flags[0].createdAt
+              firstReportedAt: flags[0].createdAt,
             };
           }
         } catch (error) {
@@ -315,7 +326,7 @@ export async function reviewAppealedContent(
             reason: appeal.originalReason || 'Content flagged for review',
             flaggedAt: appeal.originalFlaggedAt || appeal.createdAt,
             moderationScore: appeal.moderationScore,
-            aiConfidence: appeal.aiConfidence
+            aiConfidence: appeal.aiConfidence,
           },
           votingStatus: {
             votesFor: appeal.votesFor || 0,
@@ -331,17 +342,16 @@ export async function reviewAppealedContent(
               confidence: vote.confidence,
               votedAt: vote.createdAt,
               isModerator: vote.isModerator || false,
-              weight: vote.weight || 1
-            }))
+              weight: vote.weight || 1,
+            })),
           },
           context: {
             userHistory,
-            reportContext
-          }
+            reportContext,
+          },
         };
 
         enrichedAppeals.push(enrichedAppeal);
-
       } catch (error) {
         context.log(`Error enriching appeal ${appeal.id}:`, error);
       }
@@ -355,10 +365,14 @@ export async function reviewAppealedContent(
         critical: enrichedAppeals.filter(a => a.urgency === 'critical').length,
         high: enrichedAppeals.filter(a => a.urgency === 'high').length,
         medium: enrichedAppeals.filter(a => a.urgency === 'medium').length,
-        low: enrichedAppeals.filter(a => a.urgency === 'low').length
+        low: enrichedAppeals.filter(a => a.urgency === 'low').length,
       },
-      averageTimeRemaining: enrichedAppeals.length > 0 ? 
-        Math.round(enrichedAppeals.reduce((sum, a) => sum + a.timeRemaining, 0) / enrichedAppeals.length) : 0
+      averageTimeRemaining:
+        enrichedAppeals.length > 0
+          ? Math.round(
+              enrichedAppeals.reduce((sum, a) => sum + a.timeRemaining, 0) / enrichedAppeals.length
+            )
+          : 0,
     };
 
     context.log(`Retrieved ${enrichedAppeals.length} appeals for moderation review`);
@@ -373,25 +387,24 @@ export async function reviewAppealedContent(
           totalCount,
           limit,
           hasNextPage: page * limit < totalCount,
-          hasPreviousPage: page > 1
+          hasPreviousPage: page > 1,
         },
         queueStatistics: queueStats,
         filters: {
           urgency,
           sortBy,
-          includeExpiringSoon
-        }
-      }
+          includeExpiringSoon,
+        },
+      },
     };
-
   } catch (error) {
     context.log('Error reviewing appealed content:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

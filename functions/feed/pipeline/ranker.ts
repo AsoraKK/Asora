@@ -1,5 +1,5 @@
-import { Candidate, FeedContext, OutputItem } from "./types";
-import { Freshness, Weights } from "./config";
+import { Candidate, FeedContext, OutputItem } from './types';
+import { Freshness, Weights } from './config';
 
 function freshness(createdAtIso: string): number {
   const ageHours = Math.max(0, (Date.now() - Date.parse(createdAtIso)) / 3_600_000);
@@ -21,10 +21,13 @@ function repNorm(level: number): number {
 }
 
 export class Ranker {
-  scoreAll(cands: Candidate[], ctx: FeedContext): Array<OutputItem & { _cand: Candidate; _score: number }> {
-    const w = ctx.mode === "personalized" ? Weights.personalized : Weights.discovery;
+  scoreAll(
+    cands: Candidate[],
+    ctx: FeedContext
+  ): Array<OutputItem & { _cand: Candidate; _score: number }> {
+    const w = ctx.mode === 'personalized' ? Weights.personalized : Weights.discovery;
 
-    return cands.map((c) => {
+    return cands.map(c => {
       const f = freshness(c.createdAt);
       const r = repNorm(c.author.reputationLevel);
       const e = engagement(c.stats);

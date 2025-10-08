@@ -1,6 +1,6 @@
 /**
  * ASORA POST CREATION ENDPOINT
- * 
+ *
  * 🎯 Purpose: Create new posts with AI-powered content moderation
  * 🔐 Security: JWT authentication + Hive AI content scanning
  * 🚨 Features: Automatic content flagging, rate limiting, spam prevention
@@ -25,7 +25,7 @@ const CreatePostSchema = z.object({
   contentType: z.enum(['text', 'image', 'video', 'link']),
   mediaUrls: z.array(z.string().url()).optional(),
   tags: z.array(z.string()).max(10).optional(),
-  visibility: z.enum(['public', 'followers', 'private']).default('public')
+  visibility: z.enum(['public', 'followers', 'private']).default('public'),
 });
 
 interface PostCreationResult {
@@ -42,9 +42,10 @@ interface PostCreationResult {
 const rateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 10,
-  keyGenerator: typeof endpointKeyGenerator === 'function'
-    ? endpointKeyGenerator('post-create')
-    : (req: HttpRequest) => extractUserIdFromJWT(req.headers.get('authorization') || '')
+  keyGenerator:
+    typeof endpointKeyGenerator === 'function'
+      ? endpointKeyGenerator('post-create')
+      : (req: HttpRequest) => extractUserIdFromJWT(req.headers.get('authorization') || ''),
 });
 
 export async function createPost(
@@ -59,7 +60,7 @@ export async function createPost(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -70,7 +71,7 @@ export async function createPost(
     if (!userId) {
       return {
         status: 401,
-        jsonBody: { error: 'Invalid token: missing user ID' }
+        jsonBody: { error: 'Invalid token: missing user ID' },
       };
     }
 
@@ -82,28 +83,28 @@ export async function createPost(
         headers: {
           'X-RateLimit-Limit': rateLimitResult.limit.toString(),
           'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
         },
-        jsonBody: { 
+        jsonBody: {
           error: 'Rate limit exceeded',
           limit: rateLimitResult.limit,
           remaining: rateLimitResult.remaining,
-          resetTime: rateLimitResult.resetTime
-        }
+          resetTime: rateLimitResult.resetTime,
+        },
       };
     }
 
     // 3. Request validation
     const requestBody = await request.json();
     const validationResult = CreatePostSchema.safeParse(requestBody);
-    
+
     if (!validationResult.success) {
       return {
         status: 400,
         jsonBody: {
           error: 'Invalid request data',
-          details: validationResult.error.issues
-        }
+          details: validationResult.error.issues,
+        },
       };
     }
 
@@ -128,14 +129,14 @@ export async function createPost(
     if (content.length > limits.maxChars) {
       return {
         status: 400,
-        jsonBody: { error: 'tier_limit_exceeded', field: 'content', max: limits.maxChars }
+        jsonBody: { error: 'tier_limit_exceeded', field: 'content', max: limits.maxChars },
       };
     }
     const mediaCount = (mediaUrls || []).length;
     if (mediaCount > limits.maxMedia) {
       return {
         status: 400,
-        jsonBody: { error: 'tier_limit_exceeded', field: 'mediaUrls', max: limits.maxMedia }
+        jsonBody: { error: 'tier_limit_exceeded', field: 'mediaUrls', max: limits.maxMedia },
       };
     }
 
@@ -143,7 +144,7 @@ export async function createPost(
     const tierLimiter = createRateLimiter({
       windowMs: 60 * 60 * 1000,
       maxRequests: limits.postsPerHour,
-      keyGenerator: endpointKeyGenerator('posts_per_hour')
+      keyGenerator: endpointKeyGenerator('posts_per_hour'),
     });
     const tierRL = await tierLimiter.checkRateLimit(request);
     if (tierRL.blocked) {
@@ -152,9 +153,14 @@ export async function createPost(
         headers: {
           'X-RateLimit-Limit': tierRL.limit.toString(),
           'X-RateLimit-Remaining': tierRL.remaining.toString(),
-          'X-RateLimit-Reset': new Date(tierRL.resetTime).toISOString()
+          'X-RateLimit-Reset': new Date(tierRL.resetTime).toISOString(),
         },
-        jsonBody: { error: 'tier_rate_limited', limit: tierRL.limit, remaining: tierRL.remaining, resetTime: tierRL.resetTime }
+        jsonBody: {
+          error: 'tier_rate_limited',
+          limit: tierRL.limit,
+          remaining: tierRL.remaining,
+          resetTime: tierRL.resetTime,
+        },
       };
     }
 
@@ -171,11 +177,14 @@ export async function createPost(
         for (const mediaUrl of mediaUrls) {
           if (contentType === 'image') {
             const imageModerationResponse = await hiveClient.moderateImage(userId, mediaUrl);
-            const imageModerationResult = HiveAIClient.parseModerationResult(imageModerationResponse);
-            
+            const imageModerationResult =
+              HiveAIClient.parseModerationResult(imageModerationResponse);
+
             // Take the strictest action
-            if (imageModerationResult.action === 'reject' || 
-                (imageModerationResult.action === 'review' && moderationResult.action === 'accept')) {
+            if (
+              imageModerationResult.action === 'reject' ||
+              (imageModerationResult.action === 'review' && moderationResult.action === 'accept')
+            ) {
               moderationResult = imageModerationResult;
             }
           }
@@ -188,13 +197,13 @@ export async function createPost(
         action: 'review' as const,
         confidence: 0.8,
         flaggedCategories: ['moderation_error'],
-        details: { error: 'Moderation service unavailable' }
+        details: { error: 'Moderation service unavailable' },
       };
     }
 
     // 5. Determine post status based on moderation result
     let postStatus: 'published' | 'under_review' | 'rejected';
-    
+
     switch (moderationResult.action) {
       case 'accept':
         postStatus = 'published';
@@ -230,20 +239,20 @@ export async function createPost(
         hiveResponse: moderationResult,
         reviewedAt: null,
         reviewedBy: null,
-        finalDecision: null
+        finalDecision: null,
       },
       metrics: {
         likes: 0,
         shares: 0,
         comments: 0,
-        views: 0
-      }
+        views: 0,
+      },
     };
 
     // Target schema document for posts_v2
     const targetPostDocument = {
-      postId: postUuid,  // UUID partition key
-      authorId: userId,  // Keep as field (will be user_uuid after auth migration)
+      postId: postUuid, // UUID partition key
+      authorId: userId, // Keep as field (will be user_uuid after auth migration)
       text: content,
       title: title || null,
       mediaUrls: mediaUrls || [],
@@ -255,20 +264,20 @@ export async function createPost(
       score: 0,
       metadata: {
         location: null,
-        category: tags?.[0] || null
+        category: tags?.[0] || null,
       },
       counts: {
         likes: 0,
         replies: 0,
         reposts: 0,
-        views: 0
+        views: 0,
       },
       moderation: {
         hiveResponse: moderationResult,
         reviewedAt: null,
         reviewedBy: null,
-        finalDecision: null
-      }
+        finalDecision: null,
+      },
     };
 
     if (database) {
@@ -276,14 +285,14 @@ export async function createPost(
         // Create new Cosmos client with proper config
         const cosmosClient = createCosmosClient();
         const containers = getTargetDatabase(cosmosClient);
-        
+
         // Dual-write: Legacy posts container (temporary)
         const postsContainer = database.container('posts');
         await postsContainer.items.create(legacyPostDocument);
-        
+
         // Target posts_v2 container with correct partition key
         await containers.postsV2.items.create(targetPostDocument);
-        
+
         context.log(`Post dual-written: legacy=${postId}, target=${postUuid}`);
       } catch (persistErr) {
         context.log('Persist post skipped or failed (non-fatal in test/dev):', persistErr);
@@ -317,7 +326,7 @@ export async function createPost(
           details: moderationResult.details,
           status: 'active',
           createdAt: now,
-          resolvedAt: null
+          resolvedAt: null,
         };
 
         await flagsContainer.items.create(flagDocument);
@@ -333,25 +342,24 @@ export async function createPost(
       moderationResult: {
         action: moderationResult.action,
         confidence: moderationResult.confidence,
-        flaggedCategories: moderationResult.flaggedCategories
-      }
+        flaggedCategories: moderationResult.flaggedCategories,
+      },
     };
 
     context.log(`Post ${postUuid} created with status: ${postStatus}`);
 
     return {
       status: postStatus === 'rejected' ? 200 : 201, // Still 201 for under_review
-      jsonBody: result
+      jsonBody: result,
     };
-
   } catch (error) {
     context.log('Error creating post:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

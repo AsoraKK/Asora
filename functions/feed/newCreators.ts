@@ -7,11 +7,11 @@
 /// 🌟 Discovery: Promotes content from creators with lower follower counts
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createSuccessResponse, createErrorResponse } from "../shared/http-utils";
-import { encodeCt, decodeCt } from "../shared/paging";
-import { validatePagination } from "../shared/validation-utils";
-import { getAzureLogger } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import { createSuccessResponse, createErrorResponse } from '../shared/http-utils';
+import { encodeCt, decodeCt } from '../shared/paging';
+import { validatePagination } from '../shared/validation-utils';
+import { getAzureLogger } from '../shared/azure-logger';
 
 const logger = getAzureLogger('feed/newCreators');
 
@@ -42,17 +42,17 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     logger.info('New creators feed request started', {
       requestId: context.invocationId,
-      query: Object.fromEntries(req.query.entries())
+      query: Object.fromEntries(req.query.entries()),
     });
 
     // Parse and validate query parameters
     const queryParams = Object.fromEntries(req.query.entries());
     const params = parseNewCreatorsParams(queryParams);
-    
+
     const paginationResult = validatePagination(params.page, params.pageSize);
     if (!paginationResult.valid) {
       return createErrorResponse(400, paginationResult.error || 'Invalid pagination');
@@ -60,12 +60,12 @@ const httpTrigger = async function (
 
     // Build new creators query
     const { query, parameters } = buildNewCreatorsQuery(params);
-    
+
     logger.info('Executing new creators query', {
       requestId: context.invocationId,
       maxFollowers: params.maxFollowers,
       minEngagement: params.minEngagement,
-      timeWindow: params.timeWindow
+      timeWindow: params.timeWindow,
     });
 
     const querySpec = { query, parameters };
@@ -74,8 +74,16 @@ const httpTrigger = async function (
     const prevToken: string | undefined = state?.c;
 
     const qStart = Date.now();
-    const iterator = postsContainer.items.query(querySpec, { maxItemCount: params.pageSize, continuationToken: prevToken });
-    const { resources: posts, requestCharge, activityId, continuationToken } = await iterator.fetchNext();
+    const iterator = postsContainer.items.query(querySpec, {
+      maxItemCount: params.pageSize,
+      continuationToken: prevToken,
+    });
+    const {
+      resources: posts,
+      requestCharge,
+      activityId,
+      continuationToken,
+    } = await iterator.fetchNext();
     const queryDurationMs = Date.now() - qStart;
 
     logger.info('New creators query completed', {
@@ -83,7 +91,7 @@ const httpTrigger = async function (
       activityId,
       requestCharge,
       resultCount: posts.length,
-      queryDurationMs
+      queryDurationMs,
     });
 
     const hasMore = !!continuationToken;
@@ -102,41 +110,42 @@ const httpTrigger = async function (
       discoverySettings: {
         maxFollowers: params.maxFollowers,
         minEngagement: params.minEngagement,
-        timeWindow: params.timeWindow
+        timeWindow: params.timeWindow,
       },
-      nextCt: continuationToken ? encodeCt({ v: 1, q: 'newCreators', c: continuationToken }) : undefined
+      nextCt: continuationToken
+        ? encodeCt({ v: 1, q: 'newCreators', c: continuationToken })
+        : undefined,
     };
 
     const duration = Date.now() - startTime;
-    
+
     logger.info('New creators feed request completed successfully', {
       requestId: context.invocationId,
       duration,
       postsReturned: transformedPosts.length,
-      discoveryPosts: transformedPosts.filter(p => p.isNewCreator).length
+      discoveryPosts: transformedPosts.filter(p => p.isNewCreator).length,
     });
 
     return createSuccessResponse(response, {
       'X-New-Creators': transformedPosts.filter(p => p.isNewCreator).length.toString(),
       'X-Cosmos-RU': requestCharge?.toString() || '0',
       'X-Query-Duration-ms': queryDurationMs.toString(),
-      'X-Next-Page': (!!continuationToken).toString()
+      'X-Next-Page': (!!continuationToken).toString(),
     });
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error('New creators feed request failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration
+      duration,
     });
 
     return createErrorResponse(
-      500, 
+      500,
       'Failed to load new creators feed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
@@ -149,7 +158,7 @@ function parseNewCreatorsParams(query: any): NewCreatorsParams {
     pageSize: Math.min(parseInt(query.pageSize || '20', 10), 50),
     maxFollowers: parseInt(query.maxFollowers || '1000', 10), // Default: under 1k followers
     minEngagement: parseInt(query.minEngagement || '5', 10), // Minimum total engagement
-    timeWindow: parseInt(query.timeWindow || '30', 10) // Last 30 days
+    timeWindow: parseInt(query.timeWindow || '30', 10), // Last 30 days
   };
 }
 
@@ -160,12 +169,12 @@ function buildNewCreatorsQuery(params: NewCreatorsParams): { query: string; para
   const cutoffDateStr = cutoffDate.toISOString();
 
   // This query combines posts with engagement and creator freshness
-  // In a real implementation, you might want to join with user data or 
+  // In a real implementation, you might want to join with user data or
   // maintain denormalized creator metrics in post documents
-  
+
   const parameters: any[] = [
     { name: '@cutoffDate', value: cutoffDateStr },
-    { name: '@minEngagement', value: params.minEngagement || 5 }
+    { name: '@minEngagement', value: params.minEngagement || 5 },
   ];
 
   const query = `
@@ -184,11 +193,12 @@ async function transformPostWithCreatorInfo(post: any, _authHeader?: string): Pr
   // 1. Query user/creator metrics from users container
   // 2. Determine if creator meets "new creator" criteria
   // 3. Add discovery flags and creator information
-  
+
   // For now, we'll simulate this logic
   const creatorMetrics = await getCreatorMetrics(post.authorId);
-  const isNewCreator = creatorMetrics ? 
-    (creatorMetrics.followerCount <= 1000 && creatorMetrics.accountAge <= 90) : false;
+  const isNewCreator = creatorMetrics
+    ? creatorMetrics.followerCount <= 1000 && creatorMetrics.accountAge <= 90
+    : false;
 
   return {
     id: post.id,
@@ -206,11 +216,13 @@ async function transformPostWithCreatorInfo(post: any, _authHeader?: string): Pr
     userLiked: false, // TODO: Calculate from user interactions
     userDisliked: false, // TODO: Calculate from user interactions
     isNewCreator,
-    creatorInfo: creatorMetrics ? {
-      followerCount: creatorMetrics.followerCount,
-      accountAge: creatorMetrics.accountAge,
-      totalPosts: creatorMetrics.totalPosts
-    } : undefined
+    creatorInfo: creatorMetrics
+      ? {
+          followerCount: creatorMetrics.followerCount,
+          accountAge: creatorMetrics.accountAge,
+          totalPosts: creatorMetrics.totalPosts,
+        }
+      : undefined,
   };
 }
 
@@ -220,13 +232,10 @@ async function getCreatorMetrics(authorId: string): Promise<CreatorMetrics | nul
     // This is a simplified version - in production you might cache this data
     const userQuery = {
       query: 'SELECT * FROM c WHERE c.id = @userId',
-      parameters: [{ name: '@userId', value: authorId }]
+      parameters: [{ name: '@userId', value: authorId }],
     };
 
-    const { resources: users } = await usersContainer
-      .items
-      .query(userQuery)
-      .fetchAll();
+    const { resources: users } = await usersContainer.items.query(userQuery).fetchAll();
 
     if (users.length === 0) {
       return null;
@@ -241,7 +250,7 @@ async function getCreatorMetrics(authorId: string): Promise<CreatorMetrics | nul
       followerCount: user.followerCount || 0,
       totalPosts: user.totalPosts || 0,
       accountAge,
-      avgEngagement: user.avgEngagement || 0
+      avgEngagement: user.avgEngagement || 0,
     };
   } catch (error) {
     logger.warn('Failed to get creator metrics', { authorId, error });
@@ -254,7 +263,7 @@ app.http('feed-newCreators', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/newCreators',
-  handler: httpTrigger
+  handler: httpTrigger,
 });
 
 export default httpTrigger;

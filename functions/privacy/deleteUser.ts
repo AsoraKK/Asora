@@ -10,7 +10,12 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter, endpointKeyGenerator, userKeyGenerator, defaultKeyGenerator } from '../shared/rate-limiter';
+import {
+  createRateLimiter,
+  endpointKeyGenerator,
+  userKeyGenerator,
+  defaultKeyGenerator,
+} from '../shared/rate-limiter';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
@@ -22,10 +27,11 @@ const deleteRateLimiter = createRateLimiter({
       return endpointKeyGenerator('privacy_delete');
     }
     return (req: HttpRequest) => {
-      const userKey = typeof userKeyGenerator === 'function' ? userKeyGenerator(req) : defaultKeyGenerator(req);
+      const userKey =
+        typeof userKeyGenerator === 'function' ? userKeyGenerator(req) : defaultKeyGenerator(req);
       return `privacy_delete:${userKey}`;
     };
-  })()
+  })(),
 });
 
 export async function deleteUser(
@@ -46,7 +52,7 @@ export async function deleteUser(
       context.log(`Deletion attempted without confirmation header for user: ${userId}`);
       return json(400, {
         code: 'confirmation_required',
-        message: 'Account deletion requires X-Confirm-Delete header set to "true"'
+        message: 'Account deletion requires X-Confirm-Delete header set to "true"',
       });
     }
 
@@ -57,14 +63,14 @@ export async function deleteUser(
       return json(429, {
         code: 'rate_limit_exceeded',
         message: 'Account deletion is limited to prevent abuse. Please try again later.',
-        resetTime: rateLimitResult.resetTime
+        resetTime: rateLimitResult.resetTime,
       });
     }
 
     // 4. Initialize Cosmos DB
     const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
     const database = cosmosClient.database('asora');
-    
+
     const usersContainer = database.container('users');
     const postsContainer = database.container('posts');
     const commentsContainer = database.container('comments');
@@ -83,11 +89,11 @@ export async function deleteUser(
       likes: 0,
       flags: 0,
       appeals: 0,
-      votes: 0
+      votes: 0,
     };
     const contentMarking = {
       postsAnonymized: 0,
-      commentsAnonymized: 0
+      commentsAnonymized: 0,
     };
 
     // 5. Check if user exists first (idempotent check)
@@ -106,8 +112,8 @@ export async function deleteUser(
             userId,
             deletionId,
             deletedAt: new Date().toISOString(),
-            alreadyDeleted: true
-          }
+            alreadyDeleted: true,
+          },
         };
       }
       context.log(`Error checking user existence: ${error.message}`);
@@ -117,11 +123,12 @@ export async function deleteUser(
     // 6. Anonymize/mark user's posts as deleted (preserve for forum integrity)
     try {
       const postsQuery = {
-        query: 'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
-        parameters: [{ name: '@userId', value: userId }]
+        query:
+          'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: userPosts } = await postsContainer.items.query(postsQuery).fetchAll();
-      
+
       for (const post of userPosts) {
         try {
           // Mark as deleted and anonymize author info
@@ -133,7 +140,7 @@ export async function deleteUser(
             deletedAt: new Date().toISOString(),
             deletedBy: 'user_request',
             originalAuthorId: userId, // Keep for audit purposes only
-            lastModified: new Date().toISOString()
+            lastModified: new Date().toISOString(),
           };
 
           await postsContainer.item(post.id, post.id).replace(updatedPost);
@@ -152,11 +159,14 @@ export async function deleteUser(
     // 7. Anonymize/mark user's comments as deleted
     try {
       const commentsQuery = {
-        query: 'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
-        parameters: [{ name: '@userId', value: userId }]
+        query:
+          'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
+        parameters: [{ name: '@userId', value: userId }],
       };
-      const { resources: userComments } = await commentsContainer.items.query(commentsQuery).fetchAll();
-      
+      const { resources: userComments } = await commentsContainer.items
+        .query(commentsQuery)
+        .fetchAll();
+
       for (const comment of userComments) {
         try {
           // Mark as deleted and anonymize author info
@@ -168,7 +178,7 @@ export async function deleteUser(
             deletedAt: new Date().toISOString(),
             deletedBy: 'user_request',
             originalAuthorId: userId, // Keep for audit purposes only
-            lastModified: new Date().toISOString()
+            lastModified: new Date().toISOString(),
           };
 
           await commentsContainer.item(comment.id, comment.id).replace(updatedComment);
@@ -188,10 +198,10 @@ export async function deleteUser(
     try {
       const likesQuery = {
         query: 'SELECT * FROM c WHERE c.userId = @userId',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: userLikes } = await likesContainer.items.query(likesQuery).fetchAll();
-      
+
       for (const like of userLikes) {
         try {
           await likesContainer.item(like.id, like.userId).delete();
@@ -210,10 +220,10 @@ export async function deleteUser(
     try {
       const flagsQuery = {
         query: 'SELECT * FROM c WHERE c.flaggerId = @userId',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: userFlags } = await flagsContainer.items.query(flagsQuery).fetchAll();
-      
+
       for (const flag of userFlags) {
         try {
           await flagsContainer.item(flag.id, flag.id).delete();
@@ -232,10 +242,12 @@ export async function deleteUser(
     try {
       const appealsQuery = {
         query: 'SELECT * FROM c WHERE c.submitterId = @userId',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
-      const { resources: userAppeals } = await appealsContainer.items.query(appealsQuery).fetchAll();
-      
+      const { resources: userAppeals } = await appealsContainer.items
+        .query(appealsQuery)
+        .fetchAll();
+
       for (const appeal of userAppeals) {
         try {
           await appealsContainer.item(appeal.id, appeal.id).delete();
@@ -254,10 +266,10 @@ export async function deleteUser(
     try {
       const votesQuery = {
         query: 'SELECT * FROM c WHERE c.voterId = @userId',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: userVotes } = await votesContainer.items.query(votesQuery).fetchAll();
-      
+
       for (const vote of userVotes) {
         try {
           await votesContainer.item(vote.id, vote.appealId).delete();
@@ -292,15 +304,15 @@ export async function deleteUser(
     context.log(`Account deletion completed successfully for user ${userId}:`, {
       deletionId,
       totalItemsDeleted: Object.values(itemsProcessed).reduce((sum: number, val) => {
-        return sum + (typeof val === 'number' ? val : (val ? 1 : 0));
+        return sum + (typeof val === 'number' ? val : val ? 1 : 0);
       }, 0),
       postsAnonymized: contentMarking.postsAnonymized,
       commentsAnonymized: contentMarking.commentsAnonymized,
       warningCount: warnings.length,
       rateLimitInfo: {
         blocked: rateLimitResult.blocked,
-        remaining: rateLimitResult.remaining
-      }
+        remaining: rateLimitResult.remaining,
+      },
     });
 
     try {
@@ -311,7 +323,7 @@ export async function deleteUser(
         action: 'delete',
         result: 'success',
         operator: 'self',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (auditErr) {
       // Non-fatal: log audit write failures for later investigation
@@ -326,15 +338,14 @@ export async function deleteUser(
       message: 'Account deletion completed successfully',
       userId,
       deletedAt: new Date().toISOString(),
-      deletionId
+      deletionId,
     });
-
   } catch (error) {
     // Handle structured HTTP errors (like 401 from auth)
     if (isHttpError(error)) {
       return json(error.status, error.body);
     }
-    
+
     // Handle unexpected errors
     context.error('Critical error during account deletion:', error);
     try {
@@ -347,7 +358,7 @@ export async function deleteUser(
         action: 'delete',
         result: 'failure',
         operator: 'self',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (auditErr) {
       try {
@@ -356,13 +367,11 @@ export async function deleteUser(
         // best-effort logging only
       }
     }
-    return json(500, { 
+    return json(500, {
       code: 'server_error',
       message: 'Internal server error during deletion',
       deletionId,
-      note: 'Your account deletion request has been logged. Please contact support if the issue persists.'
+      note: 'Your account deletion request has been logged. Please contact support if the issue persists.',
     });
   }
 }
-
-

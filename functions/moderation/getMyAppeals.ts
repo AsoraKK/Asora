@@ -1,6 +1,6 @@
 /**
  * ASORA GET MY APPEALS ENDPOINT
- * 
+ *
  * 🎯 Purpose: Retrieve user's appeal history with detailed status
  * 🔐 Security: JWT authentication + user ownership verification
  * 📊 Features: Pagination, filtering by status, detailed vote information
@@ -48,7 +48,7 @@ export async function getMyAppeals(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -68,21 +68,21 @@ export async function getMyAppeals(
     if (page < 1) {
       return {
         status: 400,
-        jsonBody: { error: 'Page must be greater than 0' }
+        jsonBody: { error: 'Page must be greater than 0' },
       };
     }
 
     if (!['all', 'pending', 'resolved', 'expired'].includes(status)) {
       return {
         status: 400,
-        jsonBody: { error: 'Status must be one of: all, pending, resolved, expired' }
+        jsonBody: { error: 'Status must be one of: all, pending, resolved, expired' },
       };
     }
 
     if (!['submittedAt', 'urgency', 'status', 'expiresAt'].includes(sortBy)) {
       return {
         status: 400,
-        jsonBody: { error: 'sortBy must be one of: submittedAt, urgency, status, expiresAt' }
+        jsonBody: { error: 'sortBy must be one of: submittedAt, urgency, status, expiresAt' },
       };
     }
 
@@ -93,9 +93,7 @@ export async function getMyAppeals(
 
     // 4. Build query
     let queryText = 'SELECT * FROM c WHERE c.submitterId = @userId';
-    const parameters: Array<{ name: string; value: any }> = [
-      { name: '@userId', value: userId }
-    ];
+    const parameters: Array<{ name: string; value: any }> = [{ name: '@userId', value: userId }];
 
     // Add status filter
     if (status !== 'all') {
@@ -116,7 +114,7 @@ export async function getMyAppeals(
     const { resources: appeals } = await appealsContainer.items
       .query({
         query: queryText,
-        parameters
+        parameters,
       })
       .fetchAll();
 
@@ -132,7 +130,7 @@ export async function getMyAppeals(
     const { resources: countResult } = await appealsContainer.items
       .query({
         query: countQuery,
-        parameters: countParameters
+        parameters: countParameters,
       })
       .fetchAll();
 
@@ -148,7 +146,7 @@ export async function getMyAppeals(
         reason: appeal.reason,
         status: appeal.status,
         urgency: appeal.urgency,
-        submittedAt: appeal.createdAt
+        submittedAt: appeal.createdAt,
       };
 
       // Add optional fields if they exist
@@ -163,7 +161,7 @@ export async function getMyAppeals(
           votesAgainst: appeal.votesAgainst || 0,
           totalVotes: appeal.totalVotes || 0,
           requiredVotes: appeal.requiredVotes || 5,
-          hasReachedQuorum: appeal.hasReachedQuorum || false
+          hasReachedQuorum: appeal.hasReachedQuorum || false,
         };
       }
 
@@ -172,7 +170,7 @@ export async function getMyAppeals(
         appealSummary.appealDetails = {
           originalReason: appeal.originalReason,
           evidenceUrls: appeal.evidenceUrls,
-          context: appeal.context
+          context: appeal.context,
         };
       }
 
@@ -193,7 +191,7 @@ export async function getMyAppeals(
     const { resources: statsResult } = await appealsContainer.items
       .query({
         query: statsQuery,
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       })
       .fetchAll();
 
@@ -202,7 +200,7 @@ export async function getMyAppeals(
       pending: 0,
       approved: 0,
       rejected: 0,
-      expired: 0
+      expired: 0,
     };
 
     context.log(`Retrieved ${appeals.length} appeals for user ${userId}`);
@@ -217,7 +215,7 @@ export async function getMyAppeals(
           totalCount,
           limit,
           hasNextPage: page < totalPages,
-          hasPreviousPage: page > 1
+          hasPreviousPage: page > 1,
         },
         statistics: {
           total: stats.total,
@@ -225,25 +223,26 @@ export async function getMyAppeals(
           approved: stats.approved,
           rejected: stats.rejected,
           expired: stats.expired,
-          successRate: stats.total > 0 ? 
-            Math.round((stats.approved / (stats.approved + stats.rejected)) * 100) : 0
+          successRate:
+            stats.total > 0
+              ? Math.round((stats.approved / (stats.approved + stats.rejected)) * 100)
+              : 0,
         },
         filters: {
           status,
           sortBy,
-          sortOrder
-        }
-      }
+          sortOrder,
+        },
+      },
     };
-
   } catch (error) {
     context.log('Error retrieving appeals:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

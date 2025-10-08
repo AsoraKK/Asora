@@ -35,7 +35,7 @@ export async function getUserFeed(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -46,7 +46,7 @@ export async function getUserFeed(
     if (!userUuid) {
       return {
         status: 401,
-        jsonBody: { error: 'Invalid token: missing user ID' }
+        jsonBody: { error: 'Invalid token: missing user ID' },
       };
     }
 
@@ -64,10 +64,10 @@ export async function getUserFeed(
       ORDER BY c.createdAt DESC
       OFFSET 0 LIMIT @limit
     `;
-    
+
     const parameters = [
       { name: '@recipientId', value: userUuid },
-      { name: '@limit', value: limit }
+      { name: '@limit', value: limit },
     ];
 
     // Add cursor support for pagination
@@ -85,7 +85,7 @@ export async function getUserFeed(
     const feedResponse = await containers.userFeed.items
       .query<FeedItem>({
         query,
-        parameters
+        parameters,
       })
       .fetchAll();
 
@@ -93,14 +93,13 @@ export async function getUserFeed(
 
     // 4. Determine if there are more items
     const hasMore = feedItems.length === limit;
-    const nextCursor = hasMore && feedItems.length > 0 
-      ? feedItems[feedItems.length - 1].createdAt 
-      : undefined;
+    const nextCursor =
+      hasMore && feedItems.length > 0 ? feedItems[feedItems.length - 1].createdAt : undefined;
 
     const response: FeedResponse = {
       items: feedItems,
       hasMore,
-      nextCursor
+      nextCursor,
     };
 
     context.log(`Returned ${feedItems.length} feed items for user ${userUuid}`);
@@ -109,18 +108,17 @@ export async function getUserFeed(
       status: 200,
       jsonBody: response,
       headers: {
-        'Cache-Control': 'private, max-age=30' // 30-second cache
-      }
+        'Cache-Control': 'private, max-age=30', // 30-second cache
+      },
     };
-
   } catch (error) {
     context.log('Error getting user feed:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }
@@ -156,8 +154,8 @@ export async function getTrendingFeed(
         `,
         parameters: [
           { name: '@cutoff', value: cutoffTime },
-          { name: '@limit', value: limit }
-        ]
+          { name: '@limit', value: limit },
+        ],
       })
       .fetchAll();
 
@@ -170,21 +168,20 @@ export async function getTrendingFeed(
       jsonBody: {
         posts: trendingPosts,
         timeWindow,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
       },
       headers: {
-        'Cache-Control': 'public, max-age=300' // 5-minute cache for trending
-      }
+        'Cache-Control': 'public, max-age=300', // 5-minute cache for trending
+      },
     };
-
   } catch (error) {
     context.log('Error getting trending feed:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

@@ -7,10 +7,10 @@
 /// 🤖 OAuth2: Authorization code generation with PKCE challenge storage
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from "@azure/cosmos";
-import { createErrorResponse } from "../shared/http-utils";
-import { validateText } from "../shared/validation-utils";
-import { getAzureLogger } from "../shared/azure-logger";
+import { CosmosClient } from '@azure/cosmos';
+import { createErrorResponse } from '../shared/http-utils';
+import { validateText } from '../shared/validation-utils';
+import { getAzureLogger } from '../shared/azure-logger';
 import * as crypto from 'crypto';
 
 const logger = getAzureLogger('auth/authorize');
@@ -43,12 +43,12 @@ const httpTrigger = async function (
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
-  
+
   try {
     logger.info('Authorization request started', {
       requestId: context.invocationId,
       method: req.method,
-      userAgent: req.headers.get('user-agent')
+      userAgent: req.headers.get('user-agent'),
     });
 
     // Parse query parameters
@@ -58,14 +58,19 @@ const httpTrigger = async function (
     // Validate the authorization request
     const validationError = validateAuthorizeRequest(authRequest);
     if (validationError) {
-      return createAuthError(authRequest.redirect_uri, authRequest.state, 'invalid_request', validationError);
+      return createAuthError(
+        authRequest.redirect_uri,
+        authRequest.state,
+        'invalid_request',
+        validationError
+      );
     }
 
     logger.info('Authorization request validated', {
       requestId: context.invocationId,
       clientId: authRequest.client_id,
       responseType: authRequest.response_type,
-      redirectUri: authRequest.redirect_uri
+      redirectUri: authRequest.redirect_uri,
     });
 
     // In a real implementation, this is where you would:
@@ -83,9 +88,9 @@ const httpTrigger = async function (
     const userExists = await verifyUserExists(userId);
     if (!userExists) {
       return createAuthError(
-        authRequest.redirect_uri, 
-        authRequest.state, 
-        'access_denied', 
+        authRequest.redirect_uri,
+        authRequest.state,
+        'access_denied',
         'User not found or not authorized'
       );
     }
@@ -109,7 +114,7 @@ const httpTrigger = async function (
       scope: authRequest.scope || 'read write',
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
-      used: false
+      used: false,
     };
 
     await sessionsContainer.items.create(session);
@@ -119,7 +124,7 @@ const httpTrigger = async function (
       sessionId: session.id,
       userId,
       clientId: authRequest.client_id,
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt.toISOString(),
     });
 
     // Build redirect URL with authorization code
@@ -132,29 +137,28 @@ const httpTrigger = async function (
     logger.info('Authorization request completed successfully', {
       requestId: context.invocationId,
       duration,
-      redirectTo: authRequest.redirect_uri
+      redirectTo: authRequest.redirect_uri,
     });
 
     // Return redirect response
     return {
       status: 302,
       headers: {
-        'Location': redirectUrl.toString(),
+        Location: redirectUrl.toString(),
         'Cache-Control': 'no-cache, no-store',
-        'Pragma': 'no-cache'
-      }
+        Pragma: 'no-cache',
+      },
     };
-
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error('Authorization request failed', {
       requestId: context.invocationId,
       error: errorMessage,
       stack: errorStack,
-      duration
+      duration,
     });
 
     // Try to return error to redirect URI if possible
@@ -169,7 +173,7 @@ const httpTrigger = async function (
     }
 
     return createErrorResponse(
-      500, 
+      500,
       'Authorization failed',
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
@@ -186,7 +190,7 @@ function parseAuthorizeRequest(params: any): AuthorizeRequest {
     nonce: params.nonce,
     code_challenge: params.code_challenge || '',
     code_challenge_method: params.code_challenge_method || '',
-    user_id: params.user_id // For testing only
+    user_id: params.user_id, // For testing only
   };
 }
 
@@ -247,9 +251,9 @@ async function verifyUserExists(userId: string): Promise<boolean> {
 }
 
 function createAuthError(
-  redirectUri: string, 
-  state: string, 
-  error: string, 
+  redirectUri: string,
+  state: string,
+  error: string,
   errorDescription?: string
 ): HttpResponseInit {
   try {
@@ -263,9 +267,9 @@ function createAuthError(
     return {
       status: 302,
       headers: {
-        'Location': redirectUrl.toString(),
-        'Cache-Control': 'no-cache, no-store'
-      }
+        Location: redirectUrl.toString(),
+        'Cache-Control': 'no-cache, no-store',
+      },
     };
   } catch {
     // If redirect URI is invalid, return direct error response
@@ -278,7 +282,7 @@ app.http('auth-authorize', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'auth/authorize',
-  handler: httpTrigger
+  handler: httpTrigger,
 });
 
 export default httpTrigger;

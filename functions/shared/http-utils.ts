@@ -31,7 +31,7 @@ export function createSuccessResponse<T>(
   const response: SuccessResponse<T> = {
     success: true,
     data,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   return {
@@ -45,9 +45,9 @@ export function createSuccessResponse<T>(
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'X-XSS-Protection': '1; mode=block',
-      ...additionalHeaders
+      ...additionalHeaders,
     },
-    body: JSON.stringify(response)
+    body: JSON.stringify(response),
   };
 }
 
@@ -64,7 +64,7 @@ export function createErrorResponse(
     success: false,
     message,
     error: process.env.NODE_ENV === 'development' ? error : undefined,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   return {
@@ -78,9 +78,9 @@ export function createErrorResponse(
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'X-XSS-Protection': '1; mode=block',
-      ...additionalHeaders
+      ...additionalHeaders,
     },
-    body: JSON.stringify(response)
+    body: JSON.stringify(response),
   };
 }
 
@@ -95,9 +95,9 @@ export function createCorsResponse() {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
       'Access-Control-Max-Age': '86400',
-      'Content-Length': '0'
+      'Content-Length': '0',
     },
-    body: ''
+    body: '',
   };
 }
 
@@ -105,14 +105,14 @@ export function createCorsResponse() {
  * Validate request method and handle OPTIONS
  */
 export function handleCorsAndMethod(
-  method: string, 
+  method: string,
   allowedMethods: string[]
 ): { shouldReturn: boolean; response?: any } {
   // Handle CORS preflight
   if (method === 'OPTIONS') {
     return {
       shouldReturn: true,
-      response: createCorsResponse()
+      response: createCorsResponse(),
     };
   }
 
@@ -120,7 +120,7 @@ export function handleCorsAndMethod(
   if (!allowedMethods.includes(method)) {
     return {
       shouldReturn: true,
-      response: createErrorResponse(405, `Method ${method} not allowed`)
+      response: createErrorResponse(405, `Method ${method} not allowed`),
     };
   }
 
@@ -134,7 +134,7 @@ export function extractAuthToken(authHeader?: string): string | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-  
+
   return authHeader.substring(7); // Remove 'Bearer ' prefix
 }
 
@@ -145,37 +145,37 @@ export function extractAuthToken(authHeader?: string): string | null {
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 export function checkRateLimit(
-  identifier: string, 
-  maxRequests: number = 100, 
+  identifier: string,
+  maxRequests: number = 100,
   windowMs: number = 60 * 1000 // 1 minute
 ): { allowed: boolean; remainingRequests: number; resetTime: number } {
   const now = Date.now();
   const window = rateLimitStore.get(identifier);
-  
+
   if (!window || now > window.resetTime) {
     // New window or expired window
     const resetTime = now + windowMs;
     rateLimitStore.set(identifier, { count: 1, resetTime });
-    return { 
-      allowed: true, 
-      remainingRequests: maxRequests - 1, 
-      resetTime 
+    return {
+      allowed: true,
+      remainingRequests: maxRequests - 1,
+      resetTime,
     };
   }
-  
+
   if (window.count >= maxRequests) {
-    return { 
-      allowed: false, 
-      remainingRequests: 0, 
-      resetTime: window.resetTime 
+    return {
+      allowed: false,
+      remainingRequests: 0,
+      resetTime: window.resetTime,
     };
   }
-  
+
   window.count++;
-  return { 
-    allowed: true, 
-    remainingRequests: maxRequests - window.count, 
-    resetTime: window.resetTime 
+  return {
+    allowed: true,
+    remainingRequests: maxRequests - window.count,
+    resetTime: window.resetTime,
   };
 }
 

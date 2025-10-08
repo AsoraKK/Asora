@@ -2,7 +2,7 @@ import { httpReqMock } from '../../__tests__/helpers/http';
 import { InvocationContext } from '@azure/functions';
 
 jest.mock('../../shared/moderation-text', () => ({
-  moderateProfileText: jest.fn()
+  moderateProfileText: jest.fn(),
 }));
 
 // Partially mock auth-utils, keep real HttpError/isHttpError
@@ -19,8 +19,8 @@ const clientReleaseMock = jest.fn();
 jest.mock('pg', () => ({
   Pool: jest.fn(() => ({
     connect: poolConnectMock,
-    end: poolEndMock
-  }))
+    end: poolEndMock,
+  })),
 }));
 
 const loggerErrorMock = jest.fn();
@@ -29,25 +29,34 @@ jest.mock('../../shared/azure-logger', () => ({
   getAzureLogger: jest.fn(() => ({
     info: jest.fn(),
     warn: jest.fn(),
-    error: loggerErrorMock
-  }))
+    error: loggerErrorMock,
+  })),
 }));
 
 jest.mock('../../shared/outbox-consumer', () => ({
-  emitOutboxEvent: jest.fn()
+  emitOutboxEvent: jest.fn(),
 }));
 
 // In-memory Cosmos double via DI factory
 const cosmosStub: any = { usersDoc: null as any, patchCalls: [] as any[], auditCreates: 0 };
 function fakeCosmos() {
   const containers: any = {
-    profile_audit: { items: { create: async () => { cosmosStub.auditCreates++; return {}; } } },
+    profile_audit: {
+      items: {
+        create: async () => {
+          cosmosStub.auditCreates++;
+          return {};
+        },
+      },
+    },
     users: {
       item: () => ({
         read: async () => ({ resource: cosmosStub.usersDoc }),
-        patch: async (ops: any) => { cosmosStub.patchCalls.push(ops); }
-      })
-    }
+        patch: async (ops: any) => {
+          cosmosStub.patchCalls.push(ops);
+        },
+      }),
+    },
   };
   return { database: (_: string) => ({ container: (n: string) => containers[n] }) } as any;
 }
@@ -127,7 +136,9 @@ describe('users/profile upsertProfile', () => {
   });
 
   it('returns 401 via HttpError when requireUser fails', async () => {
-    (requireUser as jest.Mock).mockImplementation(() => { throw new HttpError(401, { code: 'unauthorized' }); });
+    (requireUser as jest.Mock).mockImplementation(() => {
+      throw new HttpError(401, { code: 'unauthorized' });
+    });
     const req = httpReqMock({ method: 'POST', body: {} });
     const res = await upsertProfile(req as any, ctx as InvocationContext);
     expect(res.status).toBe(401);
@@ -138,7 +149,15 @@ describe('users/profile upsertProfile', () => {
     moderateProfileText.mockResolvedValue({ provider: 'unit', decision: 'approve', score: 0.2 });
     // Fake cosmos that throws on read
     const throwingCosmos = {
-      database: () => ({ container: () => ({ item: () => ({ read: async () => { throw new Error('boom'); } }) }) })
+      database: () => ({
+        container: () => ({
+          item: () => ({
+            read: async () => {
+              throw new Error('boom');
+            },
+          }),
+        }),
+      }),
     } as any;
     const req = httpReqMock({ method: 'POST', body: { displayName: 'X' } });
     const res = await upsertProfile(req as any, ctx as InvocationContext, () => throwingCosmos);
@@ -166,7 +185,13 @@ describe('users/profile upsertProfile', () => {
     clientQueryMock.mockResolvedValue({ rows: [] });
     const req = httpReqMock({
       method: 'PUT',
-      body: { displayName: 'Postgres User', bio: 'Bio', avatarUrl: 'http://avatar', location: 'Earth', website: 'https://example.com' }
+      body: {
+        displayName: 'Postgres User',
+        bio: 'Bio',
+        avatarUrl: 'http://avatar',
+        location: 'Earth',
+        website: 'https://example.com',
+      },
     });
 
     const res = await upsertProfile(req as any, ctx as InvocationContext, () => fakeCosmos());
@@ -192,7 +217,11 @@ describe('users/profile upsertProfile', () => {
     clientQueryMock.mockResolvedValue({ rows: [] });
     (emitOutboxEvent as jest.Mock).mockRejectedValueOnce(new Error('outbox fail'));
 
-    const res = await upsertProfile(httpReqMock({ method: 'POST', body: { displayName: 'Emit Fail' } }) as any, ctx as InvocationContext, () => fakeCosmos());
+    const res = await upsertProfile(
+      httpReqMock({ method: 'POST', body: { displayName: 'Emit Fail' } }) as any,
+      ctx as InvocationContext,
+      () => fakeCosmos()
+    );
 
     expect(res.status).toBe(200);
     expect(loggerErrorMock).toHaveBeenCalledWith('Failed to emit outbox event', expect.any(Object));

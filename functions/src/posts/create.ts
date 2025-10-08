@@ -29,7 +29,7 @@ export function __resetPostRateLimiterForTests(): void {
 
 export async function createPost(
   request: HttpRequest,
-  context: InvocationContext,
+  context: InvocationContext
 ): Promise<HttpResponseInit> {
   const start = performance.now();
 
@@ -42,7 +42,7 @@ export async function createPost(
 
   let payload: CreatePostBody;
   try {
-  payload = (await request.json()) as CreatePostBody;
+    payload = (await request.json()) as CreatePostBody;
   } catch (error) {
     context.log('posts.create.invalid_json', error);
     return buildResponse(400, {
@@ -105,7 +105,7 @@ export async function createPost(
 
   if (isRedisEnabled()) {
     try {
-      await withRedis(async (redis) => {
+      await withRedis(async redis => {
         const rateKey = `ratelimit:posts:${windowKey}`;
         const currentRate = await redis.incr(rateKey);
         if (currentRate === 1) {
@@ -148,7 +148,7 @@ export async function createPost(
         'X-RateLimit-Window': RATE_LIMIT_WINDOW_SECONDS.toString(),
         'X-Redis-Status': redisStatus,
         'X-Cache-Primed': cachePrimed ? 'true' : 'false',
-      },
+      }
     );
   }
 
@@ -176,14 +176,14 @@ export async function createPost(
       'X-Redis-Status': redisStatus,
       'X-Cache-Primed': cachePrimed ? 'true' : 'false',
       'X-RU-Estimate': '1',
-    },
+    }
   );
 }
 
 function buildResponse(
   status: number,
   body: Record<string, unknown>,
-  headers: Record<string, string> = {},
+  headers: Record<string, string> = {}
 ): HttpResponseInit {
   return {
     status,

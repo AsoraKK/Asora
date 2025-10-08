@@ -1,6 +1,6 @@
 /**
  * VOTE ON APPEAL - INTEGRATION TESTS
- * 
+ *
  * 🚧 TODO: Implement integration tests for vote on appeal functionality
  * This test suite is planned but not yet implemented.
  */

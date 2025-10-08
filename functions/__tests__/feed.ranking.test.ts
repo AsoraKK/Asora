@@ -1,5 +1,5 @@
 describe('FeedRanking Test Placeholder', () => {
-	it('should run a placeholder test', () => {
-		expect(true).toBe(true);
-	});
+  it('should run a placeholder test', () => {
+    expect(true).toBe(true);
+  });
 });

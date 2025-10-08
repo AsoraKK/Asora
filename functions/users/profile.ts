@@ -3,7 +3,11 @@ import { CosmosClient } from '@azure/cosmos';
 import { Pool } from 'pg';
 import { requireUser, isHttpError } from '../shared/auth-utils';
 import { withAccessGuard } from '../shared/access-guard';
-import { createErrorResponse, createSuccessResponse, handleCorsAndMethod } from '../shared/http-utils';
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  handleCorsAndMethod,
+} from '../shared/http-utils';
 import { moderateProfileText } from '../shared/moderation-text';
 import { getAzureLogger } from '../shared/azure-logger';
 import { emitOutboxEvent } from '../shared/outbox-consumer';
@@ -33,7 +37,7 @@ export async function upsertProfile(
 
   try {
     const user = await requireUser(context, req);
-    const body = await req.json() as ProfilePayload;
+    const body = (await req.json()) as ProfilePayload;
 
     const text = [body.displayName, body.bio].filter(Boolean).join(' \n ');
     const decision = await moderateProfileText(text, user.sub);
@@ -48,7 +52,7 @@ export async function upsertProfile(
       provider: decision.provider,
       decision: decision.decision,
       score: decision.score,
-      at: new Date().toISOString()
+      at: new Date().toISOString(),
     };
 
     // Write audit log
@@ -58,13 +62,18 @@ export async function upsertProfile(
       action: 'profile_upsert',
       contentPreview: text.slice(0, 256),
       moderation,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     });
 
     if (decision.decision === 'reject') {
-      return createErrorResponse(400, 'Profile content rejected by moderation', 'moderation_rejected', {
-        'X-Moderation-Decision': 'reject'
-      });
+      return createErrorResponse(
+        400,
+        'Profile content rejected by moderation',
+        'moderation_rejected',
+        {
+          'X-Moderation-Decision': 'reject',
+        }
+      );
     }
 
     // If POSTGRES_ENABLED, write canonical profile to Postgres and emit outbox event
@@ -93,7 +102,7 @@ export async function upsertProfile(
             body.displayName ?? null,
             body.bio ?? null,
             body.avatarUrl ?? null,
-            JSON.stringify({ location: body.location ?? null, website: body.website ?? null })
+            JSON.stringify({ location: body.location ?? null, website: body.website ?? null }),
           ]
         );
 
@@ -106,19 +115,32 @@ export async function upsertProfile(
 
         // Emit outbox event so Cosmos projections (publicProfiles) update
         try {
-          await emitOutboxEvent('profile.updated', user.sub, {
-            user_uuid: user.sub,
-            display_name: body.displayName ?? null,
-            bio: body.bio ?? null,
-            avatar_url: body.avatarUrl ?? null,
-            tier: (user as any).tier || 'free'
-          }, 'profiles', user.sub);
+          await emitOutboxEvent(
+            'profile.updated',
+            user.sub,
+            {
+              user_uuid: user.sub,
+              display_name: body.displayName ?? null,
+              bio: body.bio ?? null,
+              avatar_url: body.avatarUrl ?? null,
+              tier: (user as any).tier || 'free',
+            },
+            'profiles',
+            user.sub
+          );
         } catch (emitErr) {
           // Log but do not fail the request
           logger.error('Failed to emit outbox event', { error: String(emitErr) });
         }
 
-        return createSuccessResponse({ userId: user.sub, status: decision.decision === 'review' ? 'under_review' : 'approved', moderation }, { 'X-Moderation-Decision': decision.decision });
+        return createSuccessResponse(
+          {
+            userId: user.sub,
+            status: decision.decision === 'review' ? 'under_review' : 'approved',
+            moderation,
+          },
+          { 'X-Moderation-Decision': decision.decision }
+        );
       } finally {
         client.release();
         await pool.end();
@@ -140,16 +162,19 @@ export async function upsertProfile(
     await users.item(user.sub, user.sub).patch([
       { op: doc?.profile ? 'replace' : 'add', path: '/profile', value: profile },
       { op: 'add', path: '/profileModeration', value: moderation },
-      { op: 'add', path: '/profileStatus', value: decision.decision === 'review' ? 'under_review' : 'approved' }
+      {
+        op: 'add',
+        path: '/profileStatus',
+        value: decision.decision === 'review' ? 'under_review' : 'approved',
+      },
     ]);
 
     const res = {
       userId: user.sub,
       status: decision.decision === 'review' ? 'under_review' : 'approved',
-      moderation
+      moderation,
     };
     return createSuccessResponse(res, { 'X-Moderation-Decision': decision.decision });
-
   } catch (err) {
     if (isHttpError(err)) {
       return createErrorResponse(err.status, err.message);
@@ -164,7 +189,7 @@ if (process.env.NODE_ENV !== 'test') {
     methods: ['POST', 'PUT', 'OPTIONS'],
     authLevel: 'anonymous',
     route: 'users/profile',
-    handler: withAccessGuard(upsertProfile, { role: undefined })
+    handler: withAccessGuard(upsertProfile, { role: undefined }),
   });
 }
 

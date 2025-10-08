@@ -14,14 +14,14 @@ interface MockRequestInit {
 
 export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
   const headers = new Headers();
-  
+
   // Add headers from init
   if (init.headers) {
     for (const [key, value] of Object.entries(init.headers)) {
       headers.set(key, value);
     }
   }
-  
+
   return {
     method: init.method ?? 'GET',
     url: init.url ?? 'https://example.com/api',
@@ -29,20 +29,20 @@ export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
     query: init.query ?? {},
     params: init.params ?? {},
     body: init.body ?? undefined,
-    
+
     // Required HttpRequest methods
-    async json() { 
-      return init.body ?? {}; 
+    async json() {
+      return init.body ?? {};
     },
-    
-    async text() { 
-      return JSON.stringify(init.body ?? {}); 
+
+    async text() {
+      return JSON.stringify(init.body ?? {});
     },
-    
+
     bodyUsed: false,
-    
-    clone() { 
-      return this; 
+
+    clone() {
+      return this;
     },
   } as unknown as HttpRequest;
 }

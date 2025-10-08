@@ -1,6 +1,6 @@
 /**
  * ASORA USER DATA EXPORT ENDPOINT
- * 
+ *
  * 🎯 Purpose: GDPR Article 20 (Data Portability) compliance - Export user data
  * 🔐 Security: JWT authentication + user ownership verification + rate limiting
  * 📊 Features: Complete data aggregation, rate limiting, privacy-safe export
@@ -10,7 +10,12 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { CosmosClient } from '@azure/cosmos';
 import { requireUser, isHttpError, json } from '../shared/auth-utils';
-import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator, userKeyGenerator } from '../shared/rate-limiter';
+import {
+  createRateLimiter,
+  endpointKeyGenerator,
+  defaultKeyGenerator,
+  userKeyGenerator,
+} from '../shared/rate-limiter';
 
 interface UserDataExport {
   metadata: {
@@ -119,10 +124,11 @@ const exportRateLimiter = createRateLimiter({
       return endpointKeyGenerator('privacy_export');
     }
     return (req: HttpRequest) => {
-      const userKey = typeof userKeyGenerator === 'function' ? userKeyGenerator(req) : defaultKeyGenerator(req);
+      const userKey =
+        typeof userKeyGenerator === 'function' ? userKeyGenerator(req) : defaultKeyGenerator(req);
       return `privacy_export:${userKey}`;
     };
-  })()
+  })(),
 });
 
 export async function exportUser(
@@ -145,7 +151,7 @@ export async function exportUser(
         code: 'rate_limit_exceeded',
         message: 'You can only export your data once every 24 hours',
         resetTime: rateLimitResult.resetTime,
-        limit: rateLimitResult.limit
+        limit: rateLimitResult.limit,
       });
     }
 
@@ -156,7 +162,7 @@ export async function exportUser(
       return json(500, {
         code: 'configuration_error',
         message: 'Server misconfiguration: database connection string is missing.',
-        exportId
+        exportId,
       });
     }
     const cosmosClient = new CosmosClient(cosmosConnectionString);
@@ -174,7 +180,7 @@ export async function exportUser(
     // 4. Get user profile data
     let userProfile: any = {};
     let accountCreationDate = new Date();
-    
+
     try {
       const { resource: user } = await usersContainer.item(userId, userId).read();
       if (user) {
@@ -192,8 +198,10 @@ export async function exportUser(
             totalComments: 0, // Will be calculated below
             totalLikes: 0, // Will be calculated below
             totalFlags: 0, // Will be calculated below
-            accountAgeInDays: Math.round((Date.now() - accountCreationDate.getTime()) / (1000 * 60 * 60 * 24))
-          }
+            accountAgeInDays: Math.round(
+              (Date.now() - accountCreationDate.getTime()) / (1000 * 60 * 60 * 24)
+            ),
+          },
         };
       } else {
         context.log(`Warning: User profile not found for ${userId}, using minimal data`);
@@ -207,8 +215,8 @@ export async function exportUser(
             totalComments: 0,
             totalLikes: 0,
             totalFlags: 0,
-            accountAgeInDays: 0
-          }
+            accountAgeInDays: 0,
+          },
         };
       }
     } catch (error) {
@@ -218,7 +226,13 @@ export async function exportUser(
         displayName: 'User',
         createdAt: new Date().toISOString(),
         tier: 'freemium',
-        statistics: { totalPosts: 0, totalComments: 0, totalLikes: 0, totalFlags: 0, accountAgeInDays: 0 }
+        statistics: {
+          totalPosts: 0,
+          totalComments: 0,
+          totalLikes: 0,
+          totalFlags: 0,
+          accountAgeInDays: 0,
+        },
       };
     }
 
@@ -227,10 +241,10 @@ export async function exportUser(
     try {
       const postsQuery = {
         query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: posts } = await postsContainer.items.query(postsQuery).fetchAll();
-      
+
       posts.forEach(post => {
         userPosts.push({
           id: post.id,
@@ -245,8 +259,8 @@ export async function exportUser(
           moderationInfo: {
             flagged: post.isFlagged || false,
             flagReason: post.flagReason,
-            flaggedAt: post.flaggedAt
-          }
+            flaggedAt: post.flaggedAt,
+          },
         });
       });
 
@@ -261,10 +275,10 @@ export async function exportUser(
     try {
       const commentsQuery = {
         query: 'SELECT * FROM c WHERE c.authorId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: comments } = await commentsContainer.items.query(commentsQuery).fetchAll();
-      
+
       comments.forEach(comment => {
         userComments.push({
           id: comment.id,
@@ -273,7 +287,7 @@ export async function exportUser(
           postId: comment.postId,
           parentCommentId: comment.parentCommentId,
           likes: comment.likes || 0,
-          status: comment.status || 'published'
+          status: comment.status || 'published',
         });
       });
 
@@ -288,15 +302,15 @@ export async function exportUser(
     try {
       const likesQuery = {
         query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: likes } = await likesContainer.items.query(likesQuery).fetchAll();
-      
+
       likes.forEach(like => {
         userLikes.push({
           contentId: like.contentId || like.postId,
           contentType: like.contentType || 'post',
-          likedAt: like.createdAt || like.likedAt
+          likedAt: like.createdAt || like.likedAt,
         });
       });
 
@@ -311,10 +325,10 @@ export async function exportUser(
     try {
       const flagsQuery = {
         query: 'SELECT * FROM c WHERE c.flaggerId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: flags } = await flagsContainer.items.query(flagsQuery).fetchAll();
-      
+
       flags.forEach(flag => {
         userFlags.push({
           id: flag.id,
@@ -323,7 +337,7 @@ export async function exportUser(
           reason: flag.reason,
           description: flag.description,
           flaggedAt: flag.createdAt,
-          status: flag.status
+          status: flag.status,
         });
       });
 
@@ -338,10 +352,10 @@ export async function exportUser(
     try {
       const appealsQuery = {
         query: 'SELECT * FROM c WHERE c.submitterId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: appeals } = await appealsContainer.items.query(appealsQuery).fetchAll();
-      
+
       appeals.forEach(appeal => {
         userAppeals.push({
           id: appeal.id,
@@ -350,7 +364,7 @@ export async function exportUser(
           status: appeal.status,
           submittedAt: appeal.createdAt,
           resolvedAt: appeal.resolvedAt,
-          finalDecision: appeal.finalDecision
+          finalDecision: appeal.finalDecision,
         });
       });
 
@@ -364,16 +378,16 @@ export async function exportUser(
     try {
       const votesQuery = {
         query: 'SELECT * FROM c WHERE c.voterId = @userId ORDER BY c.createdAt DESC',
-        parameters: [{ name: '@userId', value: userId }]
+        parameters: [{ name: '@userId', value: userId }],
       };
       const { resources: votes } = await votesContainer.items.query(votesQuery).fetchAll();
-      
+
       votes.forEach(vote => {
         userVotes.push({
           appealId: vote.appealId,
           vote: vote.vote,
           reason: vote.reason,
-          votedAt: vote.createdAt
+          votedAt: vote.createdAt,
         });
       });
 
@@ -395,25 +409,26 @@ export async function exportUser(
         exportedBy: userId,
         dataVersion: '1.0',
         exportId,
-        retentionPeriod: 'This export contains your personal data as of the export date. Data may be deleted from our systems according to our retention policy.'
+        retentionPeriod:
+          'This export contains your personal data as of the export date. Data may be deleted from our systems according to our retention policy.',
       },
       userProfile,
       content: {
         posts: userPosts,
-        comments: userComments
+        comments: userComments,
       },
       interactions: {
         likes: userLikes,
-        flags: userFlags
+        flags: userFlags,
       },
       moderation: {
         appeals: userAppeals,
-        votes: userVotes
+        votes: userVotes,
       },
       privacy: {
         previousExports,
-        dataRequests
-      }
+        dataRequests,
+      },
     };
 
     // 13. Log export completion for audit
@@ -424,14 +439,14 @@ export async function exportUser(
       totalLikes: userLikes.length,
       totalFlags: userFlags.length,
       totalAppeals: userAppeals.length,
-      totalVotes: userVotes.length
+      totalVotes: userVotes.length,
     });
 
     // 14. Rate limiting is automatically handled by the checkRateLimit call above
     context.log(`Data export request processed with rate limit status:`, {
       rateLimited: rateLimitResult.blocked,
       remaining: rateLimitResult.remaining,
-      resetTime: rateLimitResult.resetTime
+      resetTime: rateLimitResult.resetTime,
     });
 
     try {
@@ -443,13 +458,21 @@ export async function exportUser(
         action: 'export',
         result: 'success',
         operator: 'self',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       // Append consent entry (policy version)
       const policyVersion = process.env.GDPR_POLICY_VERSION || '1.0';
       try {
         await usersContainer.item(userId, userId).patch([
-          { op: 'add', path: '/consents/-', value: { policy: 'GDPR', version: policyVersion, timestamp: new Date().toISOString() } }
+          {
+            op: 'add',
+            path: '/consents/-',
+            value: {
+              policy: 'GDPR',
+              version: policyVersion,
+              timestamp: new Date().toISOString(),
+            },
+          },
         ]);
       } catch {
         // TODO: Handle consent update failure
@@ -464,22 +487,22 @@ export async function exportUser(
       headers: {
         'Content-Type': 'application/json',
         'X-Export-ID': exportId,
-        'X-Data-Version': '1.0'
-      }
+        'X-Data-Version': '1.0',
+      },
     };
-
   } catch (err) {
     // make failures diagnosable in Jest
     if (isHttpError(err)) {
       return json(err.status, err.body);
     }
     // TypeScript fix: context.log('error', ...) and type err as any for property access
-    context.log && context.log('error', 'exportUser error', {
-      name: (err as any)?.name,
-      code: (err as any)?.code,
-      message: (err as any)?.message,
-      stack: (err as any)?.stack,
-    });
+    context.log &&
+      context.log('error', 'exportUser error', {
+        name: (err as any)?.name,
+        code: (err as any)?.code,
+        message: (err as any)?.message,
+        stack: (err as any)?.stack,
+      });
     const failure = {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -488,8 +511,17 @@ export async function exportUser(
     try {
       const user = await requireUser(context, request);
       const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-      const audit = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora').container('privacy_audit');
-      await audit.items.create({ id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, userId: user.sub, action: 'export', result: 'failure', operator: 'self', timestamp: new Date().toISOString() });
+      const audit = cosmosClient
+        .database(process.env.COSMOS_DATABASE_NAME || 'asora')
+        .container('privacy_audit');
+      await audit.items.create({
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: user.sub,
+        action: 'export',
+        result: 'failure',
+        operator: 'self',
+        timestamp: new Date().toISOString(),
+      });
     } catch {
       // TODO: Handle audit log creation failure
     }

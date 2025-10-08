@@ -1,6 +1,6 @@
 /**
  * Jest Test Setup
- * 
+ *
  * Global Jest configuration and type definitions
  */
 

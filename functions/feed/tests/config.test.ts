@@ -1,4 +1,4 @@
-import { describe, expect, it, afterEach, vi } from "vitest";
+import { describe, expect, it, afterEach, vi } from 'vitest';
 
 function clearFeedEnv() {
   delete process.env.FEED_WEIGHTS_JSON;
@@ -7,13 +7,13 @@ function clearFeedEnv() {
   delete process.env.FEED_FRESHNESS_LAMBDA;
 }
 
-describe("loadDynamicConfig", () => {
+describe('loadDynamicConfig', () => {
   afterEach(() => {
     clearFeedEnv();
     vi.resetModules();
   });
 
-  it("overrides defaults using environment JSON", async () => {
+  it('overrides defaults using environment JSON', async () => {
     const fairnessOverride = {
       floors: [
         [5, 1],
@@ -39,9 +39,9 @@ describe("loadDynamicConfig", () => {
     });
     process.env.FEED_MODERATION_JSON = JSON.stringify({ aiBlockThreshold: 0.42 });
     process.env.FEED_FAIRNESS_JSON = JSON.stringify(fairnessOverride);
-    process.env.FEED_FRESHNESS_LAMBDA = "0.11";
+    process.env.FEED_FRESHNESS_LAMBDA = '0.11';
 
-    const config = await import("../pipeline/config");
+    const config = await import('../pipeline/config');
     await config.loadDynamicConfig();
 
     expect(config.Weights.discovery.freshness).toBeCloseTo(0.4);
@@ -54,13 +54,13 @@ describe("loadDynamicConfig", () => {
     expect(config.Freshness.lambdaPerHour).toBeCloseTo(0.11, 5);
   });
 
-  it("falls back to defaults when JSON is invalid", async () => {
-    process.env.FEED_WEIGHTS_JSON = "{not-json";
-    process.env.FEED_MODERATION_JSON = "{bad";
-    process.env.FEED_FAIRNESS_JSON = "{bad";
-    process.env.FEED_FRESHNESS_LAMBDA = "not-a-number";
+  it('falls back to defaults when JSON is invalid', async () => {
+    process.env.FEED_WEIGHTS_JSON = '{not-json';
+    process.env.FEED_MODERATION_JSON = '{bad';
+    process.env.FEED_FAIRNESS_JSON = '{bad';
+    process.env.FEED_FRESHNESS_LAMBDA = 'not-a-number';
 
-    const config = await import("../pipeline/config");
+    const config = await import('../pipeline/config');
     const defaults = config.Defaults;
 
     await config.loadDynamicConfig();

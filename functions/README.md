@@ -1,6 +1,7 @@
 # Asora Backend Functions
 
 ## Overview
+
 Complete TypeScript-based Azure Functions backend for the Asora platform, featuring AI-powered content moderation, JWT authentication, and tier-based user management.
 
 ## Architecture
@@ -25,18 +26,22 @@ Asora Backend Functions
 ## Quick Start
 
 > NOTE: Azure Functions Core Tools are not installed via local devDependencies to avoid CI failures (exit code 127). Install them globally if you need the `func` CLI locally:
+>
 > ```bash
 > npm i -g azure-functions-core-tools@4 --unsafe-perm true
 > ```
 
 ### 1. Install Dependencies
+
 ```bash
 cd functions
 npm install
 ```
 
 ### 2. Configure Environment
+
 Create `local.settings.json`:
+
 ```json
 {
   "IsEncrypted": false,
@@ -52,6 +57,7 @@ Create `local.settings.json`:
 ```
 
 ### 3. Build & Start
+
 ```bash
 npm run build
 npm start
@@ -62,15 +68,18 @@ npm start
 Each function is documented with comprehensive prompts for GitHub Copilot:
 
 ### Example: Post Creation
+
 Open `/post/create.ts` and start typing after the docstring. Copilot will auto-generate:
+
 - JWT token validation
-- Input sanitization  
+- Input sanitization
 - Hive AI moderation call
 - Cosmos DB insertion
 - Error handling
 - Response formatting
 
 ### Copilot-Ready Features
+
 - ✅ **Detailed function specifications**
 - ✅ **Request/response schemas**
 - ✅ **Integration requirements**
@@ -80,17 +89,20 @@ Open `/post/create.ts` and start typing after the docstring. Copilot will auto-g
 ## 🔐 Security Features
 
 ### JWT Authentication
+
 - Token validation with configurable expiration
 - User role extraction (user/moderator/admin)
 - Tier-based access control (free/premium/enterprise)
 
 ### Input Validation
+
 - Schema-based request validation
 - SQL injection prevention
 - XSS protection
 - Rate limiting by user tier
 
 ### Content Moderation
+
 - Hive AI integration for real-time analysis
 - Automated action triggers
 - Human moderator workflow
@@ -98,17 +110,18 @@ Open `/post/create.ts` and start typing after the docstring. Copilot will auto-g
 
 ## Tier-Based Features
 
-| Feature | Free | Premium | Enterprise |
-|---------|------|---------|------------|
-| API Rate Limit | 100/hour | 1000/hour | Unlimited |
-| Post Character Limit | 280 | 2000 | 5000 |
-| Media Attachments | 1 | 5 | Unlimited |
-| AI Priority | Standard | High | Instant |
-| Custom Feeds | Basic | Advanced | Full Control |
+| Feature              | Free     | Premium   | Enterprise   |
+| -------------------- | -------- | --------- | ------------ |
+| API Rate Limit       | 100/hour | 1000/hour | Unlimited    |
+| Post Character Limit | 280      | 2000      | 5000         |
+| Media Attachments    | 1        | 5         | Unlimited    |
+| AI Priority          | Standard | High      | Instant      |
+| Custom Feeds         | Basic    | Advanced  | Full Control |
 
 ## 🗄️ Database Schema
 
 ### Collections
+
 - **users**: User profiles, authentication data
 - **posts**: Content with AI moderation scores
 - **comments**: Threaded discussions
@@ -120,21 +133,26 @@ Open `/post/create.ts` and start typing after the docstring. Copilot will auto-g
 ## 📡 API Endpoints
 
 ### Authentication
+
 - `GET /auth/userinfo` - Get comprehensive user profile
 
-### Content Management  
+### Content Management
+
 - `POST /post/create` - Create AI-moderated posts
 - `DELETE /post/delete` - Delete posts with authorization
 
 ### Content Discovery
+
 - `GET /feed` - Personalized content feeds
 
 ### Community Safety
+
 - `POST /moderation/flag` - Report inappropriate content
 
 ## 🧪 Testing
 
 ### Local Testing
+
 ```bash
 # Test with curl
 curl -H "Authorization: Bearer <JWT>" \
@@ -148,6 +166,7 @@ curl -X POST -H "Authorization: Bearer <JWT>" \
 ```
 
 ### Flutter Integration
+
 ```dart
 // AuthService already configured for 10.0.2.2:7072
 final userInfo = await authService.getCurrentUser();
@@ -163,12 +182,14 @@ final userInfo = await authService.getCurrentUser();
 ## 📦 Dependencies
 
 ### Core
+
 - `@azure/functions` - Azure Functions runtime
 - `@azure/cosmos` - Cosmos DB SDK v4
 - `jsonwebtoken` - JWT token handling
 - `axios` - HTTP requests to external APIs
 
 ### Development
+
 - `typescript` - TypeScript compiler
 - `@types/*` - Type definitions
 - `jest` - Testing framework
@@ -178,6 +199,7 @@ final userInfo = await authService.getCurrentUser();
 **Prerequisites**: Ensure you're authenticated with Azure CLI (`az login`) or using GitHub Actions OIDC for automated deployments.
 
 ### Azure Functions Deployment
+
 ```bash
 # Deploy to Azure
 func azure functionapp publish <function-app-name>
@@ -190,6 +212,7 @@ az functionapp config appsettings set \
 ```
 
 ### CI/CD Considerations
+
 - The `azure-functions-core-tools` package was removed from `devDependencies` to prevent `npm ci` failures in Linux runners.
 - Deployment workflows install the core tools globally just-in-time.
 - Local developers should install core tools globally (see Quick Start note) rather than adding it back to `package.json`.
@@ -197,7 +220,7 @@ az functionapp config appsettings set \
 ## 📈 Monitoring & Analytics
 
 - **Application Insights**: Function performance monitoring
-- **Cosmos DB Metrics**: Database performance tracking  
+- **Cosmos DB Metrics**: Database performance tracking
 - **Custom Telemetry**: User engagement analytics
 - **Error Tracking**: Comprehensive error logging
 

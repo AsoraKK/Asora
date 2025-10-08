@@ -1,0 +1,7 @@
+{
+  "name": "probe",
+  "main": "index.js",
+  "dependencies": {
+    "@azure/functions": "^4"
+  }
+}

@@ -5,6 +5,5 @@ app.http('feed', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'feed',
-  handler: getFeed
+  handler: getFeed,
 });
-

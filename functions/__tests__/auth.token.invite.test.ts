@@ -21,15 +21,15 @@ jest.mock('@azure/cosmos', () => ({
                       expiresAt: new Date(Date.now() + 10 * 60000).toISOString(),
                       codeChallenge: 'iMnq5o6zALKXGivsnlom_0F5_WYda32GHkxlV7mq7hQ',
                       codeChallengeMethod: 'S256',
-                      nonce: 'nonce'
-                    }
-                  ]
-                })
-              })
+                      nonce: 'nonce',
+                    },
+                  ],
+                }),
+              }),
             },
             item: jest.fn().mockReturnValue({
-              patch: jest.fn().mockResolvedValue({})
-            })
+              patch: jest.fn().mockResolvedValue({}),
+            }),
           };
         }
         if (name === 'users') {
@@ -44,20 +44,23 @@ jest.mock('@azure/cosmos', () => ({
                   reputationScore: 0,
                   createdAt: new Date().toISOString(),
                   lastLoginAt: new Date().toISOString(),
-                  isActive: false
-                }
-              })
-            })
+                  isActive: false,
+                },
+              }),
+            }),
           };
         }
         return {};
-      })
-    })
-  }))
+      }),
+    }),
+  })),
 }));
 
 // Minimal crypto/jwt behavior
-jest.mock('jsonwebtoken', () => ({ sign: jest.fn(() => 'tok'), verify: jest.fn(() => ({ sub: 'user-1', type: 'refresh' })) }));
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'tok'),
+  verify: jest.fn(() => ({ sub: 'user-1', type: 'refresh' })),
+}));
 
 function req(body: any): HttpRequest {
   return {
@@ -72,7 +75,7 @@ function req(body: any): HttpRequest {
 }
 
 function ctx(): InvocationContext {
-  return ({ invocationId: 'test', log: jest.fn(), error: jest.fn() } as unknown) as InvocationContext;
+  return { invocationId: 'test', log: jest.fn(), error: jest.fn() } as unknown as InvocationContext;
 }
 
 describe('auth/token invite gating', () => {
@@ -83,7 +86,7 @@ describe('auth/token invite gating', () => {
       code: 'abc',
       redirect_uri: 'http://localhost/cb',
       client_id: 'asora-mobile-app',
-      code_verifier: 'verifier'
+      code_verifier: 'verifier',
     };
     const response = await tokenHandler(req(body), ctx());
     expect(response.status).toBe(403);
@@ -92,4 +95,3 @@ describe('auth/token invite gating', () => {
     expect(parsed.error_description).toMatch(/Awaiting invite/i);
   });
 });
-

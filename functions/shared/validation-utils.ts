@@ -14,28 +14,28 @@ interface ValidationResult {
  * Validate pagination parameters
  */
 export function validatePagination(
-  page: number, 
+  page: number,
   pageSize: number,
   maxPageSize: number = 50
 ): ValidationResult {
   if (!Number.isInteger(page) || page < 1) {
     return {
       valid: false,
-      error: 'Page must be a positive integer starting from 1'
+      error: 'Page must be a positive integer starting from 1',
     };
   }
 
   if (!Number.isInteger(pageSize) || pageSize < 1) {
     return {
       valid: false,
-      error: 'Page size must be a positive integer'
+      error: 'Page size must be a positive integer',
     };
   }
 
   if (pageSize > maxPageSize) {
     return {
       valid: false,
-      error: `Page size cannot exceed ${maxPageSize}`
+      error: `Page size cannot exceed ${maxPageSize}`,
     };
   }
 
@@ -54,7 +54,7 @@ export function validateText(
   if (typeof text !== 'string') {
     return {
       valid: false,
-      error: `${fieldName} must be a string`
+      error: `${fieldName} must be a string`,
     };
   }
 
@@ -63,14 +63,14 @@ export function validateText(
   if (trimmedText.length < minLength) {
     return {
       valid: false,
-      error: `${fieldName} must be at least ${minLength} characters long`
+      error: `${fieldName} must be at least ${minLength} characters long`,
     };
   }
 
   if (trimmedText.length > maxLength) {
     return {
       valid: false,
-      error: `${fieldName} cannot exceed ${maxLength} characters`
+      error: `${fieldName} cannot exceed ${maxLength} characters`,
     };
   }
 
@@ -78,7 +78,7 @@ export function validateText(
   if (containsSuspiciousPatterns(trimmedText)) {
     return {
       valid: false,
-      error: `${fieldName} contains invalid characters or patterns`
+      error: `${fieldName} contains invalid characters or patterns`,
     };
   }
 
@@ -90,11 +90,11 @@ export function validateText(
  */
 export function validateUUID(id: string, fieldName: string = 'id'): ValidationResult {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  
+
   if (!uuidRegex.test(id)) {
     return {
       valid: false,
-      error: `${fieldName} must be a valid UUID`
+      error: `${fieldName} must be a valid UUID`,
     };
   }
 
@@ -106,11 +106,11 @@ export function validateUUID(id: string, fieldName: string = 'id'): ValidationRe
  */
 export function validateEmail(email: string): ValidationResult {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
+
   if (!emailRegex.test(email)) {
     return {
       valid: false,
-      error: 'Invalid email format'
+      error: 'Invalid email format',
     };
   }
 
@@ -129,14 +129,14 @@ export function validateStringArray(
   if (!Array.isArray(arr)) {
     return {
       valid: false,
-      error: `${fieldName} must be an array`
+      error: `${fieldName} must be an array`,
     };
   }
 
   if (arr.length > maxItems) {
     return {
       valid: false,
-      error: `${fieldName} cannot have more than ${maxItems} items`
+      error: `${fieldName} cannot have more than ${maxItems} items`,
     };
   }
 
@@ -144,14 +144,14 @@ export function validateStringArray(
     if (typeof arr[i] !== 'string') {
       return {
         valid: false,
-        error: `${fieldName} item ${i + 1} must be a string`
+        error: `${fieldName} item ${i + 1} must be a string`,
       };
     }
 
     if (arr[i].length > maxItemLength) {
       return {
         valid: false,
-        error: `${fieldName} item ${i + 1} cannot exceed ${maxItemLength} characters`
+        error: `${fieldName} item ${i + 1} cannot exceed ${maxItemLength} characters`,
       };
     }
   }
@@ -166,7 +166,7 @@ export function validateLocation(location: string): ValidationResult {
   // Simple validation for location format
   // In production, you might want more sophisticated geo-validation
   const result = validateText(location, 2, 100, 'location');
-  
+
   if (!result.valid) {
     return result;
   }
@@ -175,7 +175,7 @@ export function validateLocation(location: string): ValidationResult {
   if (!/^[a-zA-Z0-9\s,.-]+$/.test(location)) {
     return {
       valid: false,
-      error: 'Location contains invalid characters'
+      error: 'Location contains invalid characters',
     };
   }
 
@@ -189,14 +189,14 @@ export function validateRadius(radius: number): ValidationResult {
   if (!Number.isFinite(radius) || radius < 0) {
     return {
       valid: false,
-      error: 'Radius must be a non-negative number'
+      error: 'Radius must be a non-negative number',
     };
   }
 
   if (radius > 1000) {
     return {
       valid: false,
-      error: 'Radius cannot exceed 1000 km'
+      error: 'Radius cannot exceed 1000 km',
     };
   }
 
@@ -208,11 +208,11 @@ export function validateRadius(radius: number): ValidationResult {
  */
 export function validateFeedType(type: string): ValidationResult {
   const validTypes = ['trending', 'newest', 'local', 'following', 'newCreators'];
-  
+
   if (!validTypes.includes(type)) {
     return {
       valid: false,
-      error: `Feed type must be one of: ${validTypes.join(', ')}`
+      error: `Feed type must be one of: ${validTypes.join(', ')}`,
     };
   }
 
@@ -224,14 +224,23 @@ export function validateFeedType(type: string): ValidationResult {
  */
 export function validateCategory(category: string): ValidationResult {
   const validCategories = [
-    'general', 'technology', 'entertainment', 'sports', 'news', 
-    'education', 'health', 'travel', 'food', 'art', 'music'
+    'general',
+    'technology',
+    'entertainment',
+    'sports',
+    'news',
+    'education',
+    'health',
+    'travel',
+    'food',
+    'art',
+    'music',
   ];
-  
+
   if (!validCategories.includes(category.toLowerCase())) {
     return {
       valid: false,
-      error: `Category must be one of: ${validCategories.join(', ')}`
+      error: `Category must be one of: ${validCategories.join(', ')}`,
     };
   }
 
@@ -267,7 +276,7 @@ function containsSuspiciousPatterns(text: string): boolean {
     /INSERT.*INTO/i,
     /UPDATE.*SET/i,
     /DELETE.*FROM/i,
-    /DROP.*TABLE/i
+    /DROP.*TABLE/i,
   ];
 
   return suspiciousPatterns.some(pattern => pattern.test(text));
@@ -277,7 +286,7 @@ function containsSuspiciousPatterns(text: string): boolean {
  * Validate request body size
  */
 export function validateRequestSize(
-  body: any, 
+  body: any,
   maxSizeBytes: number = 1024 * 1024 // 1MB default
 ): ValidationResult {
   const bodyString = JSON.stringify(body);
@@ -286,7 +295,7 @@ export function validateRequestSize(
   if (sizeBytes > maxSizeBytes) {
     return {
       valid: false,
-      error: `Request body size (${sizeBytes} bytes) exceeds maximum allowed size (${maxSizeBytes} bytes)`
+      error: `Request body size (${sizeBytes} bytes) exceeds maximum allowed size (${maxSizeBytes} bytes)`,
     };
   }
 

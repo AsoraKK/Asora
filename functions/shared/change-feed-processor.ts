@@ -44,7 +44,7 @@ export class PostChangeFeedProcessor {
     console.log('Starting posts_v2 change feed processor...');
 
     const iterator = this.containers.postsV2.items.readChangeFeed({
-      maxItemCount: 100
+      maxItemCount: 100,
     });
 
     while (iterator.hasMoreResults) {
@@ -59,7 +59,7 @@ export class PostChangeFeedProcessor {
     for (const change of changes) {
       try {
         const post = change as PostDocument;
-        
+
         // Only process published posts
         if (post.status !== 'published') {
           continue;
@@ -69,7 +69,7 @@ export class PostChangeFeedProcessor {
           this.fanOutToFollowers(post),
           this.updateCounters(post),
           this.enqueueModeration(post),
-          this.updateAdminMirror(post)
+          this.updateAdminMirror(post),
         ]);
 
         console.log(`Processed change for post ${post.postId}`);
@@ -85,10 +85,10 @@ export class PostChangeFeedProcessor {
   private async fanOutToFollowers(post: PostDocument): Promise<void> {
     // TODO: Query PostgreSQL for author's followers
     // For now, create feed item for author's own feed with idempotent ID
-    
+
     // Use deterministic ID for idempotency: ${recipientId}:${postId}
     const deterministicId = `${post.authorId}:${post.postId}`;
-    
+
     const feedItem: UserFeedItem = {
       id: deterministicId,
       recipientId: post.authorId, // Partition key
@@ -96,7 +96,7 @@ export class PostChangeFeedProcessor {
       authorId: post.authorId,
       type: 'post',
       createdAt: post.createdAt,
-      relevanceScore: 1.0
+      relevanceScore: 1.0,
     };
 
     // Use upsert for idempotency - handles duplicate processing
@@ -113,7 +113,7 @@ export class PostChangeFeedProcessor {
       subjectId: post.postId, // Partition key
       type: 'post_likes',
       count: post.counts.likes,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     // Upsert ensures idempotency for counter updates
@@ -123,9 +123,9 @@ export class PostChangeFeedProcessor {
     const repliesCounter = {
       id: `${post.postId}:replies`,
       subjectId: post.postId,
-      type: 'post_replies', 
+      type: 'post_replies',
       count: post.counts.replies,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     const repostsCounter = {
@@ -133,12 +133,12 @@ export class PostChangeFeedProcessor {
       subjectId: post.postId,
       type: 'post_reposts',
       count: post.counts.reposts,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     await Promise.all([
       this.containers.counters.items.upsert(repliesCounter),
-      this.containers.counters.items.upsert(repostsCounter)
+      this.containers.counters.items.upsert(repostsCounter),
     ]);
   }
 

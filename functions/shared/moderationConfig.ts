@@ -28,7 +28,10 @@ export function getModerationConfig(): ModerationProviderConfig {
 
   const acsReject = parseFloat(process.env.ACS_REJECT_THRESHOLD || '0.90');
   const acsReview = parseFloat(process.env.ACS_REVIEW_THRESHOLD || '0.70');
-  const categories = (process.env.ACS_CATEGORIES || 'Hate,Violence,Sexual').split(',').map(s => s.trim()).filter(Boolean);
+  const categories = (process.env.ACS_CATEGORIES || 'Hate,Violence,Sexual')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 
   return {
     provider,
@@ -39,4 +42,3 @@ export function getModerationConfig(): ModerationProviderConfig {
     enableFallback,
   };
 }
-

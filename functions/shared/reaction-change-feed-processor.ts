@@ -37,7 +37,7 @@ export class ReactionChangeFeedProcessor {
     console.log('Starting reactions change feed processor...');
 
     const iterator = this.containers.reactions.items.readChangeFeed({
-      maxItemCount: 100
+      maxItemCount: 100,
     });
 
     while (iterator.hasMoreResults) {
@@ -66,14 +66,14 @@ export class ReactionChangeFeedProcessor {
   private async updateReactionCounters(reaction: ReactionDocument): Promise<void> {
     // Get current count for this post+reaction type
     const postReactions = await this.getPostReactionCount(reaction.postId, reaction.type);
-    
+
     // Use deterministic ID for idempotency: ${postId}:${reactionType}
     const counterDoc: CounterDocument = {
       id: `${reaction.postId}:${reaction.type}`,
       subjectId: reaction.postId, // Partition key
       type: `post_${reaction.type}`,
       count: postReactions,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     // Upsert ensures idempotency for counter updates
@@ -86,7 +86,7 @@ export class ReactionChangeFeedProcessor {
       subjectId: reaction.postId,
       type: 'post_total_reactions',
       count: totalReactions,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     await this.containers.counters.items.upsert(totalCounterDoc);
@@ -97,16 +97,19 @@ export class ReactionChangeFeedProcessor {
    */
   private async getPostReactionCount(postId: string, reactionType: string): Promise<number> {
     const query = {
-      query: 'SELECT VALUE COUNT(1) FROM c WHERE c.postId = @postId AND c.type = @type AND NOT IS_DEFINED(c.deletedAt)',
+      query:
+        'SELECT VALUE COUNT(1) FROM c WHERE c.postId = @postId AND c.type = @type AND NOT IS_DEFINED(c.deletedAt)',
       parameters: [
         { name: '@postId', value: postId },
-        { name: '@type', value: reactionType }
-      ]
+        { name: '@type', value: reactionType },
+      ],
     };
 
-    const { resources } = await this.containers.reactions.items.query(query, {
-      partitionKey: postId
-    }).fetchAll();
+    const { resources } = await this.containers.reactions.items
+      .query(query, {
+        partitionKey: postId,
+      })
+      .fetchAll();
 
     return resources[0] || 0;
   }
@@ -116,15 +119,16 @@ export class ReactionChangeFeedProcessor {
    */
   private async getTotalPostReactionCount(postId: string): Promise<number> {
     const query = {
-      query: 'SELECT VALUE COUNT(1) FROM c WHERE c.postId = @postId AND NOT IS_DEFINED(c.deletedAt)',
-      parameters: [
-        { name: '@postId', value: postId }
-      ]
+      query:
+        'SELECT VALUE COUNT(1) FROM c WHERE c.postId = @postId AND NOT IS_DEFINED(c.deletedAt)',
+      parameters: [{ name: '@postId', value: postId }],
     };
 
-    const { resources } = await this.containers.reactions.items.query(query, {
-      partitionKey: postId
-    }).fetchAll();
+    const { resources } = await this.containers.reactions.items
+      .query(query, {
+        partitionKey: postId,
+      })
+      .fetchAll();
 
     return resources[0] || 0;
   }

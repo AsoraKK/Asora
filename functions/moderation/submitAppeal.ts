@@ -1,6 +1,6 @@
 /**
  * ASORA APPEAL SUBMISSION ENDPOINT
- * 
+ *
  * 🎯 Purpose: Allow users to appeal content moderation decisions
  * 🔐 Security: JWT authentication + one appeal per content limit
  * 🚨 Features: Appeal creation, duplicate prevention, auto-prioritization
@@ -17,15 +17,15 @@ const SubmitAppealSchema = z.object({
   contentId: z.string().min(1),
   contentType: z.enum(['post', 'comment', 'user']),
   appealType: z.enum([
-    'false_positive', 
-    'context_missing', 
+    'false_positive',
+    'context_missing',
     'policy_disagreement',
     'technical_error',
-    'other'
+    'other',
   ]),
   appealReason: z.string().min(10).max(200),
   userStatement: z.string().min(20).max(2000),
-  evidenceUrls: z.array(z.string().url()).max(5).optional()
+  evidenceUrls: z.array(z.string().url()).max(5).optional(),
 });
 
 export async function submitAppeal(
@@ -40,7 +40,7 @@ export async function submitAppeal(
     if (!authHeader) {
       return {
         status: 401,
-        jsonBody: { error: 'Missing authorization header' }
+        jsonBody: { error: 'Missing authorization header' },
       };
     }
 
@@ -51,25 +51,19 @@ export async function submitAppeal(
     // 2. Request validation
     const requestBody = await request.json();
     const validationResult = SubmitAppealSchema.safeParse(requestBody);
-    
+
     if (!validationResult.success) {
       return {
         status: 400,
         jsonBody: {
           error: 'Invalid request data',
-          details: validationResult.error.issues
-        }
+          details: validationResult.error.issues,
+        },
       };
     }
 
-    const { 
-      contentId, 
-      contentType, 
-      appealType, 
-      appealReason, 
-      userStatement,
-      evidenceUrls 
-    } = validationResult.data;
+    const { contentId, contentType, appealType, appealReason, userStatement, evidenceUrls } =
+      validationResult.data;
 
     // 3. Initialize Cosmos DB
     const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
@@ -78,29 +72,33 @@ export async function submitAppeal(
 
     // 4. Check for existing appeals by the same user for the same content
     const existingAppealQuery = {
-      query: 'SELECT * FROM c WHERE c.contentId = @contentId AND c.submitterId = @userId AND c.status != "resolved"',
+      query:
+        'SELECT * FROM c WHERE c.contentId = @contentId AND c.submitterId = @userId AND c.status != "resolved"',
       parameters: [
         { name: '@contentId', value: contentId },
-        { name: '@userId', value: userId }
-      ]
+        { name: '@userId', value: userId },
+      ],
     };
 
-    const { resources: existingAppeals } = await appealsContainer.items.query(existingAppealQuery).fetchAll();
-    
+    const { resources: existingAppeals } = await appealsContainer.items
+      .query(existingAppealQuery)
+      .fetchAll();
+
     if (existingAppeals.length > 0) {
       return {
         status: 409,
-        jsonBody: { 
+        jsonBody: {
           error: 'You already have a pending appeal for this content',
           existingAppealId: existingAppeals[0].id,
-          status: existingAppeals[0].status
-        }
+          status: existingAppeals[0].status,
+        },
       };
     }
 
     // 5. Verify the content exists and is actually flagged/moderated
-    const contentContainer = database.container(contentType === 'post' ? 'posts' : 
-                                                contentType === 'comment' ? 'comments' : 'users');
+    const contentContainer = database.container(
+      contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users'
+    );
     let contentDoc;
     try {
       const { resource } = await contentContainer.item(contentId, contentId).read();
@@ -108,17 +106,17 @@ export async function submitAppeal(
     } catch (error) {
       return {
         status: 404,
-        jsonBody: { error: 'Content not found' }
+        jsonBody: { error: 'Content not found' },
       };
     }
 
     // Check if content is actually moderated/flagged
-    if (!contentDoc || (!contentDoc.status || contentDoc.status === 'published')) {
+    if (!contentDoc || !contentDoc.status || contentDoc.status === 'published') {
       return {
         status: 400,
-        jsonBody: { 
-          error: 'Content is not under moderation and does not require an appeal' 
-        }
+        jsonBody: {
+          error: 'Content is not under moderation and does not require an appeal',
+        },
       };
     }
 
@@ -138,7 +136,7 @@ export async function submitAppeal(
       technical_error: 7, // High urgency - system issue
       context_missing: 6, // Medium-high urgency
       policy_disagreement: 4, // Medium urgency
-      other: 3 // Lower urgency
+      other: 3, // Lower urgency
     };
 
     const baseUrgency = urgencyFactors[appealType] || 3;
@@ -162,20 +160,20 @@ export async function submitAppeal(
       appealReason,
       userStatement,
       evidenceUrls: evidenceUrls || [],
-      
+
       // Submitter info
       submitterId: userId,
       submitterName,
       submittedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
-      
+
       // Original moderation info
       flagReason: contentDoc.flagReason || 'unknown',
       aiScore: contentDoc.moderation?.hiveResponse?.confidence || null,
       aiAnalysis: contentDoc.moderation?.hiveResponse?.details || null,
       flagCategories: contentDoc.moderation?.hiveResponse?.flaggedCategories || [],
       flagCount,
-      
+
       // Voting status
       status: 'pending',
       votingStatus: 'not_started',
@@ -185,12 +183,12 @@ export async function submitAppeal(
       totalVotes: 0,
       requiredVotes: 5, // Configurable threshold
       hasReachedQuorum: false,
-      
+
       // Timestamps
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       resolvedAt: null,
-      resolvedBy: null
+      resolvedBy: null,
     };
 
     await appealsContainer.items.create(appealDocument);
@@ -215,18 +213,17 @@ export async function submitAppeal(
         message: 'Appeal submitted successfully',
         urgencyScore,
         expiresAt: expiresAt.toISOString(),
-        estimatedReviewTime: urgencyScore >= 7 ? '24-48 hours' : '3-7 days'
-      }
+        estimatedReviewTime: urgencyScore >= 7 ? '24-48 hours' : '3-7 days',
+      },
     };
-
   } catch (error) {
     context.log('Error submitting appeal:', error);
     return {
       status: 500,
-      jsonBody: { 
+      jsonBody: {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
     };
   }
 }

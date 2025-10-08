@@ -9,7 +9,7 @@ import {
   validateFeedType,
   validateCategory,
   sanitizeText,
-  validateRequestSize
+  validateRequestSize,
 } from '../../shared/validation-utils';
 
 describe('validation-utils', () => {

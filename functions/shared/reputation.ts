@@ -5,7 +5,12 @@ const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asor
 const usersContainer = database.container('users');
 const auditContainer = database.container('reputation_audit');
 
-export async function adjustReputation(userId: string, delta: number, reason: string, idempotencyKey: string): Promise<void> {
+export async function adjustReputation(
+  userId: string,
+  delta: number,
+  reason: string,
+  idempotencyKey: string
+): Promise<void> {
   const auditId = `rep_${idempotencyKey}`;
   try {
     const existing = await auditContainer.item(auditId, auditId).read();
@@ -20,7 +25,12 @@ export async function adjustReputation(userId: string, delta: number, reason: st
     const newScore = Math.max(0, (user.reputationScore || 0) + delta);
     await usersContainer.item(userId, userId).replace({ ...user, reputationScore: newScore });
   } finally {
-    await auditContainer.items.create({ id: auditId, userId, delta, reason, createdAt: new Date().toISOString() });
+    await auditContainer.items.create({
+      id: auditId,
+      userId,
+      delta,
+      reason,
+      createdAt: new Date().toISOString(),
+    });
   }
 }
-

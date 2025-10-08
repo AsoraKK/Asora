@@ -104,6 +104,8 @@ describe('createPost', () => {
     const res = await createPost(requestWithBody({ text: '   ' }), mockContext());
 
     expect(res.status).toBe(400);
-    expect(res.jsonBody).toMatchObject({ message: expect.stringContaining('Field "text" is required') });
+    expect(res.jsonBody).toMatchObject({
+      message: expect.stringContaining('Field "text" is required'),
+    });
   });
 });
