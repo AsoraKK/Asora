@@ -1,41 +1,35 @@
-# Azure Functions Identity-Based ## Current Status (Updated: Oct 7, 2025 19:40 UTC)
+# Azure Functions Flex Consumption Migration — CRITICAL PLATFORM ISSUE
 
-### ✅ Flex Consumption Runtime Configured
+## Current Status (Updated: Oct 8, 2025 16:32 UTC)
 
-**Correctly configured using ARM API:**
-```json
-{
-  "functionAppConfig": {
-    "runtime": { "name": "node", "version": "20" },
-    "deployment": {
-      "storage": {
-        "type": "blobcontainer",
-        "value": "https://asorapsqlflex8fa9.blob.core.windows.net/app-package-asora-function-dev-5589db8",
-        "authentication": {
-          "type": "storageaccountconnectionstring",
-          "storageAccountConnectionStringName": "DEPLOYMENT_STORAGE_CONNECTION_STRING"
-        }
-      }
-    },
-    "scaleAndConcurrency": {
-      "instanceMemoryMB": 2048,
-      "maximumInstanceCount": 100
-    }
-  }
-}
-```
+### ❌ FLEX CONSUMPTION HOST FAILURE — PLATFORM ISSUE
 
-### ❌ Host Still Failing (502 Bad Gateway)
+**Root Cause Identified:**  
+The Flex Consumption app `asora-function-dev` **cannot start the host** despite correct configuration. This appears to be a **platform-level defect** or incompatible initial provisioning.
 
-**URL:** `https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api/health`
+**Evidence:**
+1. ✅ Deployment storage correctly set to **container URI** (not blob): `https://asoraflexdev1404.blob.core.windows.net/deployments`
+2. ✅ Authentication via **SystemAssignedIdentity** with all required RBAC roles
+3. ✅ `clientCertMode` set to **Optional** (not Required/mTLS forced)
+4. ✅ Runtime configured: **Node 20** via ARM API `functionAppConfig`
+5. ✅ **Minimal probe package** (5 packages, 647KB) uploaded and tested — **also fails with 502**
+6. ✅ No VNet integration, no storage firewall, no network restrictions
+7. ❌ ARM API returns `sku: null` and `tier: null` (suspicious for Flex app)
+8. ❌ **All endpoints return 502 Bad Gateway** including internal host status endpoint
+9. ❌ **Zero telemetry** in Application Insights (host never initializes)
 
-**Error:** 502 Bad Gateway after restart (sometimes timeouts during cold start)
+**Conclusion:** The app cannot load **any** deployment package from the configured storage, suggesting the Flex worker infrastructure cannot bootstrap or access the deployment blob container despite having correct MI permissions.
 
-**Observations:**
-1. No telemetry flowing to Application Insights (host not starting successfully)
-2. Functions are discovered (`/health` endpoint visible in function list)
-3. Deployment package exists in correct storage location
-4. App state shows "Running" but host fails during startupation
+### Recommended Actions
+
+**IMMEDIATE:**  
+1. **Recreate the Function App from scratch** using IaC (Bicep/Terraform) with Flex Consumption SKU explicitly set
+2. **Or** deploy to **standard Consumption plan** (`Y1` SKU) as a workaround to unblock development
+3. **Open Azure Support ticket** — this is a platform issue, not a configuration problem
+
+**Medium-term:**  
+- Investigate if this app was migrated from Consumption → Flex (may have incompatible legacy state)
+- Check Azure Service Health for Flex Consumption issues in North Europe region
 
 **Date:** October 7, 2025  
 **Function App:** asora-function-dev  
@@ -201,3 +195,37 @@ Based on successful Flex deployments, the app should have:
 - [Identity-based connections](https://learn.microsoft.com/azure/azure-functions/functions-reference?tabs=blob#connecting-to-host-storage-with-an-identity-preview)
 - [Linux Consumption runtime](https://learn.microsoft.com/azure/azure-functions/functions-app-settings#website_node_default_version)
 - [Flex Consumption configuration](https://learn.microsoft.com/azure/azure-functions/flex-consumption-how-to)
+
+---
+
+## Complete Fix History (Oct 7-8, 2025)
+
+### Fixes Applied (All Successful)
+
+1. **Deployment storage URI corrected** — Changed from `/app.zip` (blob) to `/deployments` (container)
+2. **Authentication method** — SystemAssignedIdentity (MI) instead of connection string
+3. **RBAC roles granted** — Storage Blob Data Contributor, Queue Data Contributor, Blob Data Reader
+4. **Key Vault access** — Managed identity has `get`/`list` secret permissions
+5. **Client cert mode** — Set to `Optional` (was `Required`, causing mTLS front-door 502s)
+6. **Legacy settings removed** — Deleted `DEPLOYMENT_STORAGE_CONNECTION_STRING`, `WEBSITE_RUN_FROM_PACKAGE`, etc.
+7. **Runtime configuration** — Node 20 via ARM API `functionAppConfig` (CLI blocked)
+8. **Deployment packages tested**:
+   - 20MB full app with node_modules ❌
+   - 647KB minimal probe (3 files, @azure/functions only) ❌
+   - Both fail identically with 502 Bad Gateway
+
+### Platform Issue Confirmed — IRRECOVERABLE STATE
+
+**Final Verification (Oct 8, 2025 16:44 UTC):**
+- ✅ RBAC role exists: `Storage Blob Data Contributor` granted Oct 7 19:16 (>21 hours ago)
+- ✅ Verified role assignment ID: `29ecd693-b5d9-403f-8c1a-3dfb542ba735`
+- ✅ Only one ZIP in container: `app.zip` (662KB probe, uploaded Oct 8 16:29)
+- ✅ Waited 90 seconds post-restart for RBAC propagation
+- ❌ **Still returns 502 Bad Gateway on all endpoints**
+
+Despite all correct configuration (verified via ARM API), the Flex worker **cannot load any package**. The `sku: null` response and persistent 502s on minimal probe indicate the app is in an **irrecoverable broken state**, likely due to:
+- Incompatible initial provisioning (migrated from another SKU?)
+- Flex platform defect in North Europe region
+- Orphaned worker infrastructure unable to bootstrap
+
+**Resolution:** App must be **deleted and recreated** from scratch, or migrate to standard Consumption plan (Y1 SKU) as workaround.
