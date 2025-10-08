@@ -1,53 +1,91 @@
-# Azure Functions Platform Failure (Critical)
+# Azure Functions Platform Failure (RESOLVED)
 
 **Date:** October 8, 2025  
-**Status:** ALL FUNCTION APPS BROKEN IN SUBSCRIPTION  
-**Severity:** P0 - Complete Service Outage
+**Status:** RESOLVED - Was Worker Indexing issue, not platform failure  
+**Severity:** User Error (misunderstanding of SKU null)  
 
 ## Summary
 
-All Azure Function Apps in the `asora-psql-flex` resource group are in an irrecoverable state with `SKU: null`. This is a **platform issue** affecting:
+The "platform failure" was actually a **configuration issue** with Worker Indexing on Y1 Consumption plan. The `SKU: null` response from `az functionapp show` is **normal for Function Apps** and does not indicate a platform outage.
 
-- `asora-function-consumption` (Y1 Dynamic - freshly created)
-- `asora-function-dev` (Flex FC1 - recreated)
-- `asora-function-test` (existing app)
-- `asora-function-flex` (existing app)
+**Root Cause:** Attempting to use v4 JS programming model with Worker Indexing on Y1 (Windows Consumption), which is brittle and fails to index functions, resulting in 503 errors.
 
-## Symptoms
-
-- All apps return HTTP 503 on function endpoints
-- Root endpoints return 200 (host is running)
-- `az functionapp show` returns `"SKU": null` for all apps
-- ZIP deploy fails with "Bad Request" on trigger sync
-- No telemetry appears in Application Insights
-- Log streaming unavailable/times out
+**Resolution:** Switched to classic function.json-based HTTP function, deployed via config-zip, and verified 200 response.
 
 ## Evidence
 
+### Before Fix
+- All apps showed `SKU: null` in CLI (normal behavior)
+- Y1 app returned 503 on /api/health
+- ZIP deploy failed with "Bad Request" on trigger sync
+- No telemetry in Application Insights
+
+### After Fix
+- ✅ Y1 app returns **HTTP/2 200** on /api/health
+- ✅ Classic function.json model deployed successfully
+- ✅ No Worker Indexing required
+- ✅ Config-zip deployment works without SAS tokens
+
+## Key Learnings
+
+1. **`SKU: null` is normal** - Azure CLI shows null for Function Apps; use `az appservice plan show` for actual SKU
+2. **Y1 (Consumption) ≠ Flex** - Y1 requires classic function.json, not v4 programming model with Worker Indexing
+3. **Avoid user-delegation SAS** - Use config-zip or shared-key SAS for WEBSITE_RUN_FROM_PACKAGE
+4. **Worker Indexing brittle on Y1** - Classic model indexes immediately and reliably
+
+## Configuration Applied
+
+### App Settings (Y1 Consumption)
 ```bash
-$ az functionapp list -g asora-psql-flex --query "[].{Name:name,SKU:sku}" -o json
-[
-  {"Name": "asora-function-consumption", "SKU": null},
-  {"Name": "asora-function-dev", "SKU": null},
-  {"Name": "asora-function-test", "SKU": null},
-  {"Name": "asora-function-flex", "SKU": null}
-]
+AzureWebJobsStorage="<full connection string>"
+FUNCTIONS_EXTENSION_VERSION="~4"
+FUNCTIONS_WORKER_RUNTIME="node"
+WEBSITE_NODE_DEFAULT_VERSION="~18"
+AzureWebJobsFeatureFlags=""  # Disabled Worker Indexing
+WEBSITE_RUN_FROM_PACKAGE=""  # Disabled
+WEBSITE_SKIP_CONTENTSHARE=""  # Disabled
 ```
 
-### Expected Values
+### Function Structure (Classic Model)
+```
+probe.zip/
+├── host.json (version: "2.0")
+└── health/
+    ├── function.json (HTTP trigger bindings)
+    └── index.js (classic module.exports handler)
+```
 
-- **Y1 Consumption**: `"SKU": "Dynamic"`
-- **Flex Consumption**: `"SKU": "FlexConsumption"` or valid SKU name
-- **Premium (EP1)**: `"SKU": "ElasticPremium"`
+### Deployment Method
+- **config-zip** instead of WEBSITE_RUN_FROM_PACKAGE
+- No SAS tokens required
+- Direct ZIP upload via Azure CLI
 
-## Configuration Attempted
+## Verification
 
-### Y1 Consumption (asora-function-consumption)
+```bash
+$ curl -i https://asora-function-consumption.azurewebsites.net/api/health
+HTTP/2 200
+content-type: text/plain; charset=utf-8
+date: Wed, 08 Oct 2025 18:58:19 GMT
+server: Kestrel
+```
 
-✅ All required settings configured:
-- `AzureWebJobsStorage`: Connection string (not MI)
-- `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING`: Set
-- `WEBSITE_CONTENTSHARE`: "asora-function-consumption"
+## Related Documents
+
+- `Y1_CONFIGURATION_STATUS.md` - Updated with successful deployment
+- `AZURE_FUNCTIONS_IDENTITY_STORAGE_MIGRATION.md` - Flex troubleshooting (separate issue)
+- CI/CD pipelines should now pass (host.json version fixed to 2.0)
+
+## Timeline
+
+- **Oct 8, 17:55 UTC**: Created Y1 app with correct settings
+- **Oct 8, 19:55 UTC**: Discovered 503 errors, assumed platform issue
+- **Oct 8, 20:15 UTC**: Applied classic function.json fix
+- **Oct 8, 20:58 UTC**: Verified 200 response - RESOLVED
+
+---
+
+**Status:** ✅ RESOLVED - Y1 app serving traffic successfully
 - `FUNCTIONS_EXTENSION_VERSION`: "~4"
 - `FUNCTIONS_WORKER_RUNTIME`: "node"
 - `AzureWebJobsFeatureFlags`: "EnableWorkerIndexing"

@@ -4,50 +4,42 @@
 
 **App Name:** asora-function-consumption  
 **SKU:** Y1 (Consumption)  
-**Host Status:** Running (200 OK on root, 503 on /api/health)  
-**Created:** 2025-10-08
+**Host Status:** ✅ RUNNING (200 OK on root AND /api/health)  
+**Created:** 2025-10-08  
+**Resolved:** 2025-10-08 20:58 UTC
+
+## Root Cause Identified
+
+**Issue:** Worker Indexing failure with v4 JS programming model on Y1 Consumption plan.
+
+**Solution:** Switched to classic function.json-based HTTP function deployed via config-zip.
 
 ## Configuration Applied
 
-### App Settings
+### App Settings (Final Working Config)
 ```bash
+AzureWebJobsStorage=<full connection string>
 FUNCTIONS_EXTENSION_VERSION=~4
 FUNCTIONS_WORKER_RUNTIME=node
-AzureWebJobsFeatureFlags=EnableWorkerIndexing
+WEBSITE_NODE_DEFAULT_VERSION=~18
+AzureWebJobsFeatureFlags=  # Disabled (empty)
+WEBSITE_RUN_FROM_PACKAGE=  # Disabled (empty)
+WEBSITE_SKIP_CONTENTSHARE=  # Disabled (empty)
 ```
 
-### Package Deployment
-- **Package:** probe-deploy.zip (646KB)
-- **Location:** asoraflexdev1404/deployments/app.zip
-- **Structure:**
-  ```
-  host.json
-  package.json
-  index.js
-  node_modules/
-    @azure/functions/
-    cookie/
-    long/
-    undici/
-    @fastify/busboy/
-    .package-lock.json
-  ```
+### Function Structure (Classic Model)
+```
+probe.zip/
+├── host.json (version: "2.0")
+└── health/
+    ├── function.json (HTTP trigger bindings)
+    └── index.js (classic module.exports handler)
+```
 
-### WEBSITE_RUN_FROM_PACKAGE
-Set with 6-day user-delegated SAS token expires 2025-10-14T23:59:59Z
-
-## Current Issue (Updated: Oct 8, 2025 19:55 UTC)
-
-Host returns 503 on /api/health endpoint despite correct configuration.
-
-### Configuration Verified ✅
-1. **AzureWebJobsStorage** — Full connection string set (not MI-based like Flex)
-2. **WEBSITE_CONTENTAZUREFILECONNECTIONSTRING** — Configured for file share
-3. **WEBSITE_CONTENTSHARE** — Set to "asora-function-consumption"
-4. **FUNCTIONS_EXTENSION_VERSION** — "~4"
-5. **FUNCTIONS_WORKER_RUNTIME** — "node"
-6. **AzureWebJobsFeatureFlags** — "EnableWorkerIndexing"
-7. **WEBSITE_RUN_FROM_PACKAGE** — SAS URL to deployments/app.zip
+### Deployment Method
+- **config-zip** instead of WEBSITE_RUN_FROM_PACKAGE
+- No SAS tokens required
+- Direct ZIP upload via Azure CLI
 
 ### Package Structure Verified ✅
 ```
