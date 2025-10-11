@@ -1,35 +1,62 @@
 # Azure Functions Flex Consumption Migration — CRITICAL PLATFORM ISSUE
 
-## Current Status (Updated: Oct 8, 2025 16:32 UTC)
+## Current Status (Updated: Oct 8, 2025 20:15 UTC)
 
-### ❌ FLEX CONSUMPTION HOST FAILURE — PLATFORM ISSUE
+### ✅ **Y1 Consumption App Working**
+- **Status:** HTTP 200 on `/api/health`
+- **App Name:** `asora-function-consumption`
+- **Configuration:** Classic `function.json` model (no Worker Indexing issues)
+- **Plan:** `NorthEuropeLinuxDynamicPlan` (Y1 SKU)
+- **Deployment:** Config-zip via GitHub Actions
 
-**Root Cause Identified:**  
-The Flex Consumption app `asora-function-dev` **cannot start the host** despite correct configuration. This appears to be a **platform-level defect** or incompatible initial provisioning.
+### ❌ **Flex Consumption App Still Failing**
 
-**Evidence:**
-1. ✅ Deployment storage correctly set to **container URI** (not blob): `https://asoraflexdev1404.blob.core.windows.net/deployments`
-2. ✅ Authentication via **SystemAssignedIdentity** with all required RBAC roles
-3. ✅ `clientCertMode` set to **Optional** (not Required/mTLS forced)
-4. ✅ Runtime configured: **Node 20** via ARM API `functionAppConfig`
-5. ✅ **Minimal probe package** (5 packages, 647KB) uploaded and tested — **also fails with 502**
-6. ✅ No VNet integration, no storage firewall, no network restrictions
-7. ❌ ARM API returns `sku: null` and `tier: null` (suspicious for Flex app)
-8. ❌ **All endpoints return 502 Bad Gateway** including internal host status endpoint
-9. ❌ **Zero telemetry** in Application Insights (host never initializes)
+**Root Cause Identified:** Flex Consumption requires `functionAppConfig.deployment` via ARM API, not WEBSITE_RUN_FROM_PACKAGE or config-zip.
 
-**Conclusion:** The app cannot load **any** deployment package from the configured storage, suggesting the Flex worker infrastructure cannot bootstrap or access the deployment blob container despite having correct MI permissions.
+**Current Configuration:**
+- ✅ ARM API `functionAppConfig` with Node 20 runtime
+- ✅ Managed identity authentication to storage
+- ✅ Blob container deployment pointing to `deployments` container
+- ✅ Scale settings: 2048MB memory, 100 max instances
+- ❌ **API rejects `AzureBlob` type** - only accepts `BlobContainer`
+- ❌ **No functions discovered** - deployment not loading package
+- ❌ **Classic function.json model not supported** - Flex requires v4 programmatic model
+- ❌ **ARM REST API calls failing** with "Invalid URL" error
+
+**Latest Attempt (v4 Programmatic Model):**
+1. ✅ Created minimal v4 function (host.json + package.json + src/index.js + src/health.js)
+2. ✅ Uploaded as `probe-v4.zip` and copied to `functionapp.zip` in deployments container
+3. ✅ Configured `functionAppConfig.deployment` with `blobcontainer` type
+4. ✅ Used `systemAssignedIdentity` authentication
+5. ❌ **Still returns 404 on `/api/health`** - functions not discovered
+6. ❌ **ARM API calls blocked** by `FunctionAppScaleLimit` setting incompatibility
+
+**API Constraints Discovered:**
+- `functionAppConfig.deployment.storage.type` only accepts `"BlobContainer"`, not `"AzureBlob"`
+- URL format: `https://account.blob.core.windows.net/container?blob=name`
+- Classic `function.json` model not supported on Flex Consumption
+- v4 programmatic model requires `@azure/functions` dependency
+- CLI commands blocked by legacy `functionAppScaleLimit` setting
+- ARM REST API calls failing with "Invalid URL" error
+
+**Conclusion:** The Flex Consumption app has multiple blocking issues: incompatible legacy settings, API changes, and deployment model differences. The app infrastructure is configured but the runtime cannot load functions.
 
 ### Recommended Actions
 
 **IMMEDIATE:**  
-1. **Recreate the Function App from scratch** using IaC (Bicep/Terraform) with Flex Consumption SKU explicitly set
-2. **Or** deploy to **standard Consumption plan** (`Y1` SKU) as a workaround to unblock development
-3. **Open Azure Support ticket** — this is a platform issue, not a configuration problem
+1. **Use Y1 Consumption app as workaround** - The Y1 app is working reliably with classic model
+2. **Recreate the Function App from scratch** using IaC (Bicep/Terraform) with Flex Consumption SKU explicitly set
+3. **Remove incompatible settings** - `functionAppScaleLimit` and `WEBSITE_RUN_FROM_PACKAGE` block Flex operations
+4. **Open Azure Support ticket** — Multiple platform issues: API changes, CLI blocks, deployment failures
 
 **Medium-term:**  
 - Investigate if this app was migrated from Consumption → Flex (may have incompatible legacy state)
 - Check Azure Service Health for Flex Consumption issues in North Europe region
+- Update deployment scripts to use v4 programmatic model with proper dependencies
+
+**Workaround Deployed:**
+- Y1 Consumption app (`asora-function-dev-y1`) working on `/api/health`
+- Use this for development until Flex issues are resolved
 
 **Date:** October 7, 2025  
 **Function App:** asora-function-dev  
