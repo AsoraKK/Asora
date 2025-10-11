@@ -18,6 +18,7 @@ az ad app federated-credential list --id e9835371-8877-47a5-be8f-e0995d173cb4 -o
 | Name        | Issuer                                      | Subject                                  |
 |-------------|---------------------------------------------|------------------------------------------|
 | gh-main     | https://token.actions.githubusercontent.com | repo:AsoraKK/Asora:ref:refs/heads/main   |
+| gh-env-dev  | https://token.actions.githubusercontent.com | repo:AsoraKK/Asora:environment:dev      |
 | gh-env-prod | https://token.actions.githubusercontent.com | repo:AsoraKK/Asora:environment:prod      |
 
 ### ✅ Client Secrets (0 remaining)
