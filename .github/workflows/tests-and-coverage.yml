@@ -81,6 +81,12 @@ jobs:
             exit 1
           fi
 
+      - name: Assert LCOV discovered
+        run: |
+          set -e
+          ls -l coverage-artifacts/coverage-functions/lcov.info || { echo "missing functions lcov"; exit 1; }
+          ls -l coverage-artifacts/coverage-flutter/lcov.info   || { echo "missing flutter lcov"; exit 1; }
+
       - name: Install reportgenerator
         run: dotnet tool update --global dotnet-reportgenerator-globaltool
 
@@ -89,11 +95,16 @@ jobs:
           ~/.dotnet/tools/reportgenerator \
             -reports:coverage-artifacts/coverage-functions/lcov.info \
             -targetdir:coverage-artifacts/coverage-functions \
-            -reporttypes:Cobertura || true
+            -reporttypes:Cobertura
           ~/.dotnet/tools/reportgenerator \
             -reports:coverage-artifacts/coverage-flutter/lcov.info \
             -targetdir:coverage-artifacts/coverage-flutter \
-            -reporttypes:Cobertura || true
+            -reporttypes:Cobertura
+
+      - name: Assert Cobertura generated
+        run: |
+          test -f coverage-artifacts/coverage-functions/Cobertura.xml
+          test -f coverage-artifacts/coverage-flutter/Cobertura.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
