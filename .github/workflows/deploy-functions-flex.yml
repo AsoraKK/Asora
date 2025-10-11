@@ -270,6 +270,10 @@ jobs:
             # Set AzureWebJobsStorage for Flex Consumption
             STORAGE_CONN="$(az storage account show-connection-string "${sub_opt[@]}" -g "$RG" -n "asoraflexdev1404" --query connectionString -o tsv --only-show-errors)"
             az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" --settings AzureWebJobsStorage="$STORAGE_CONN" -o none --only-show-errors
+            # Assign Storage Blob Data Contributor role to MI for deployment access
+            PRINCIPAL_ID="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "identity.principalId" -o tsv --only-show-errors)"
+            STORAGE_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Storage/storageAccounts/asoraflexdev1404"
+            az role assignment create "${sub_opt[@]}" --assignee "$PRINCIPAL_ID" --role "Storage Blob Data Contributor" --scope "$STORAGE_ID" -o none --only-show-errors || true
           else
             az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors --settings \
               FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
