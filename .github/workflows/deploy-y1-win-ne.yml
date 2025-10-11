@@ -1,0 +1,120 @@
+# .github/workflows/deploy-y1-win-ne.yml
+name: Deploy Y1 Windows NE (function.json)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  AZ_SUBSCRIPTION: "99df7ef7-776a-4235-84a4-c77899b2bb04"
+  AZ_RESOURCE_GROUP: "asora-y1-win-ne"
+  AZ_FUNCTIONAPP: "asora-func-y1-win-ne"
+  ZIP_PATH: "/tmp/release.zip"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail if legacy Azure secrets are present
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          [ -z "${AZURE_CREDENTIALS:-}" ] || { echo "ERROR: legacy secret AZURE_CREDENTIALS present"; exit 1; }
+          [ -z "${AZURE_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret AZURE_CLIENT_SECRET present"; exit 1; }
+          [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
+
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set subscription
+        run: az account set --subscription "$AZ_SUBSCRIPTION"
+
+      # Build a minimal classic model (function.json) package
+      - name: Build classic function.json package (Node v20)
+        run: |
+          WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
+
+          # host.json (v2 schema works with Functions v4 runtime)
+          cat > host.json <<'JSON'
+          { "version": "2.0" }
+          JSON
+
+          # app-level package.json (no dev deps)
+          cat > package.json <<'JSON'
+          {
+            "name": "asora-health",
+            "version": "1.0.0",
+            "private": true,
+            "type": "commonjs",
+            "dependencies": {}
+          }
+          JSON
+
+          # function folder with classic handler (no @azure/functions v4 app model)
+          mkdir -p Health
+          cat > Health/function.json <<'JSON'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": [ "get" ],
+                "route": "health"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "$return"
+              }
+            ]
+          }
+          JSON
+
+          cat > Health/index.js <<'JS'
+          module.exports = async function (context, req) {
+            context.res = {
+              status: 200,
+              headers: { "content-type": "application/json" },
+              body: { ok: true }
+            };
+          };
+          JS
+
+          # zip it
+          (cd "$WORK" && zip -qr "$ZIP_PATH" .)
+          popd >/dev/null
+          echo "Built: $ZIP_PATH"
+
+      - name: Ensure required app settings (classic model on v4 runtime)
+        run: |
+          az functionapp config appsettings set -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" \
+            --settings FUNCTIONS_WORKER_RUNTIME=node FUNCTIONS_EXTENSION_VERSION="~4" WEBSITE_NODE_DEFAULT_VERSION="~20" > /dev/null
+
+      - name: Deploy ZIP (Kudu config-zip)
+        run: |
+          az functionapp deployment source config-zip -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" --src "$ZIP_PATH"
+
+      - name: Restart & verify
+        run: |
+          az functionapp restart -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" >/dev/null
+          sleep 20
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://${AZ_FUNCTIONAPP}.azurewebsites.net/api/health")
+          echo "Health status: $code"
+          test "$code" = "200"

@@ -15,18 +15,18 @@ permissions:
 
 jobs:
   verify-secrets:
-    name: Verify Required Secrets
+    name: Verify Required Variables
     runs-on: ubuntu-latest
     steps:
-      - name: Ensure required secrets
+      - name: Ensure required variables
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
           for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
             v="${!k:-}"
-            [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
+            [ -n "$v" ] || { echo "Missing variable: $k"; exit 1; }
           done
 
   check-pins-and-integrity:
@@ -37,9 +37,9 @@ jobs:
       id-token: write
       contents: read
     env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4.1.7
 
@@ -58,6 +58,17 @@ jobs:
           set -euo pipefail
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
 
+      - name: Fail if legacy Azure secrets are present
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          [ -z "${AZURE_CREDENTIALS:-}" ] || { echo "ERROR: legacy secret AZURE_CREDENTIALS present"; exit 1; }
+          [ -z "${AZURE_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret AZURE_CLIENT_SECRET present"; exit 1; }
+          [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -69,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           az cloud set -n AzureCloud
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
           az account show -o table
 
       - name: Resolve function host
