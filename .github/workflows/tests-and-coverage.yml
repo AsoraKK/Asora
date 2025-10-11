@@ -3,6 +3,7 @@ name: tests-and-coverage
 on:
   pull_request:
     branches: [ main ]
+    paths: ['lib/', 'functions/', 'scripts/', '.github/workflows/']
 
 permissions:
   contents: read
@@ -110,32 +111,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ github.sha }}
-          path: |
-            coverage/
-            coverage-artifacts/
+          path: coverage/**
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Extract overall coverage %
         id: cov
         run: |
           pct=$(grep -Eo '[0-9]+(\.[0-9]+)?%' coverage/coverage-summary.txt | head -n1 | tr -d '%')
           echo "pct=$pct" >> "$GITHUB_OUTPUT"
-
-      - name: Comment coverage on PR
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pct = core.getInput('pct', { required: true });
-            const body = `**Coverage:** ${pct}%\n\nArtifact: \`${process.env.GITHUB_SHA}\``;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
-          result-encoding: string
-        env:
-          pct: ${{ steps.cov.outputs.pct }}
 
       - name: Enforce ≥80% gate
         run: |

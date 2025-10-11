@@ -2,12 +2,14 @@
 name: Coverage Gate
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
+  actions: read
 
 on:
-  pull_request:
-  push:
+  workflow_run:
+    workflows: [tests-and-coverage]
+    types: [completed]
     branches: [main]
 
 jobs:
@@ -17,7 +19,7 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.3
         with:
           node-version: '20'
@@ -41,7 +43,7 @@ jobs:
     env:
       ASORA_REQUIRE_REAL_PINS: "false"  # TODO: flip to "true" once real pins land
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -77,11 +79,14 @@ jobs:
     needs: [ test-functions, test-flutter ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v4
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           path: coverage-artifacts
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Get PR number
+        run: echo "PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}" >> $GITHUB_ENV
       - name: Normalize coverage paths
         run: |
           set -euo pipefail
@@ -104,7 +109,7 @@ jobs:
           ls -l coverage-artifacts/coverage-flutter/lcov.info   || { echo "missing flutter lcov"; exit 1; }
 
       - name: Setup .NET 8 for ReportGenerator
-        uses: actions/setup-dotnet@v4.0.1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
       - name: Install ReportGenerator tool
@@ -135,8 +140,7 @@ jobs:
           thresholds: '80 80'
           fail_below_min: false
       - name: Comment coverage on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7.0.1
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -144,7 +148,7 @@ jobs:
             const path = require('path');
             const p = path.join(process.env.GITHUB_WORKSPACE, 'code-coverage-results.md');
             const body = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : 'Coverage summary unavailable';
-            const pr = context.payload.pull_request?.number;
+            const pr = process.env.PR_NUMBER;
             if (!pr) { core.info('No PR context; skipping'); return; }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -153,19 +157,4 @@ jobs:
               body
             });
 
-      - name: Comment coverage on commit
-        if: github.event_name == 'push'
-        uses: actions/github-script@v7.0.1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const body = fs.existsSync('code-coverage-results.md')
-              ? fs.readFileSync('code-coverage-results.md','utf8')
-              : 'Coverage summary unavailable';
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body
-            });
+
