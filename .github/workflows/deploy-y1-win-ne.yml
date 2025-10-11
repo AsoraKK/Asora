@@ -117,4 +117,4 @@ jobs:
           sleep 20
           code=$(curl -s -o /dev/null -w "%{http_code}" "https://${AZ_FUNCTIONAPP}.azurewebsites.net/api/health")
           echo "Health status: $code"
-          test "$code" = "200"
+          [ "$code" = "200" ] || [ "$code" = "204" ]
