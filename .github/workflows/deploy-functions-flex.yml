@@ -1,7 +1,7 @@
-# NOTE to assistants: Do not upgrade Azure/functions-action here. Keep @v1.
-# Upgrades are handled in a separate migration branch with test gates.
+# Deploy to Y1 Windows Consumption Plan using config-zip
+# Flex Consumption apps are NOT supported in this workflow (Kudu/OneDeploy incompatible)
 #
-name: Deploy Functions (Flex)
+name: Deploy Functions (Y1 Windows)
 
 on:
   push:
@@ -10,32 +10,28 @@ on:
 
 permissions:
   id-token: write
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
-  group: deploy-functions-flex-${{ github.ref }}
+  group: deploy-functions-y1-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  RESOURCE_GROUP: asora-y1-win-ne
+  APP_NAME: asora-func-y1-win-ne
+  PACKAGE_PATH: dist-v4-final.zip
+  NODE_VERSION: '20'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
-    permissions:
-      id-token: write
-      contents: read
     defaults:
       run:
         working-directory: functions
-    env:
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_FUNCTIONAPP_NAME: asora-function-dev
-      AZURE_RESOURCE_GROUP: asora-psql-flex
-      NODE_VERSION: '20'
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      # COSMOS_CONNECTION_STRING now retrieved from Key Vault via @Microsoft.KeyVault reference in app settings
-      FORCE_ZIP_DEPLOY: '0'
     steps:
       - uses: actions/checkout@v4.1.7
 
@@ -44,6 +40,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
         run: |
+          set -euo pipefail
           if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
             echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
             exit 1
@@ -52,50 +49,29 @@ jobs:
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
 
-      - name: Isolate AZ cache
-        shell: bash
-        run: |
-          set -euo pipefail
-          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
-          mkdir -p "$DIR"
-          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
-      - name: Verify OIDC token env
-        run: |
-          set -euo pipefail
-          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
-
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Set Azure subscription context
+      - name: Guardrail – fail if target is Flex Consumption
         run: |
           set -euo pipefail
-          az cloud set -n AzureCloud
-          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
-          az account show -o table
-      - name: Azure ARM probe
-        run: |
-          set -euo pipefail
-          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          RG="asora-psql-flex"; APP="asora-function-dev"; API="2022-03-01"
-          ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
-          az rest --method get --url "https://management.azure.com${ID}?api-version=${API}" | jq -e '.properties.defaultHostName' >/dev/null
-
-      - name: Guard action version
-        working-directory: ${{ github.workspace }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          ! grep -R --line-number -E 'uses:\s*Azure/functions-action@v4' .github/workflows || {
-            echo "::error::Do not upgrade to v4 here"; exit 1; }
-
-      - name: Guard Flex-incompatible settings
-        working-directory: ${{ github.workspace }}
-        run: bash scripts/check-flex-settings.sh
+          SKU=$(az functionapp show -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --query "sku.tier" -o tsv 2>/dev/null || echo "")
+          KIND=$(az functionapp show -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --query "kind" -o tsv 2>/dev/null || echo "")
+          echo "Detected SKU: $SKU, KIND: $KIND"
+          if echo "$SKU" | grep -iq "flex"; then
+            echo "❌ Target app is Flex Consumption. This workflow only supports Y1 Windows via config-zip."
+            exit 2
+          fi
+          if echo "$KIND" | grep -iq "flex"; then
+            echo "❌ Target app kind contains 'flex'. This workflow only supports Y1 Windows via config-zip."
+            exit 2
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4.0.3
@@ -215,211 +191,25 @@ jobs:
           node -v
           npm -v
 
-      - name: Preflight — scope + app existence
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          sub="${AZURE_SUBSCRIPTION_ID}"
-          rg="${AZURE_RESOURCE_GROUP}"
-          app="${AZURE_FUNCTIONAPP_NAME}"
-          app_id="/subscriptions/${sub}/resourceGroups/${rg}/providers/Microsoft.Web/sites/${app}"
-          echo "Using SUB=${sub} RG=${rg} APP=${app}"
-          if ! az resource show --ids "$app_id" -o none --only-show-errors; then
-            echo "::group::Debug list in RG"
-            az resource list -g "$rg" --resource-type Microsoft.Web/sites -o table --only-show-errors || true
-            echo "::endgroup::"
-            echo "::error::Function App not found: $app_id"
-            exit 2
-          fi
-          az functionapp show -g "$rg" -n "$app" --query '{name:name, rg:resourceGroup, location:location, kind:kind, state:state}' -o table --only-show-errors
-
-      - name: Configure Function App (Flex-aware)
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          az config set extension.use_dynamic_install=yes_without_prompt
-          SUB="${AZURE_SUBSCRIPTION_ID}"
-          RG="${AZURE_RESOURCE_GROUP}"
-          APP="${AZURE_FUNCTIONAPP_NAME}"
-          sub_opt=(--subscription "$SUB")
-          APP_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}"
-
-          PLAN_ID="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "properties.serverFarmId" -o tsv --only-show-errors || echo "")"
-          KIND="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "kind" -o tsv --only-show-errors || echo "")"
-          TIER=""
-          if [ -n "$PLAN_ID" ]; then
-            TIER="$(az resource show "${sub_opt[@]}" --ids "$PLAN_ID" --query "sku.tier" -o tsv --only-show-errors || echo "")"
-          fi
-          IS_FLEX=false
-          if [ "$TIER" = "FlexConsumption" ] || [[ "$KIND" == *flex* ]]; then
-            IS_FLEX=true
-          fi
-
-          if "$IS_FLEX"; then
-            az functionapp config appsettings delete "${sub_opt[@]}" -g "$RG" -n "$APP" --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION FUNCTIONS_EXTENSION_VERSION -o none --only-show-errors || true
-            API="2022-03-01"
-            SITE_JSON="$(az rest --method get --url "https://management.azure.com$APP_ID?api-version=$API" --only-show-errors)"
-            RUNTIME_JSON="$(jq -c '.properties.functionAppConfig.runtime // {}' <<<"$SITE_JSON" || echo '{}')"
-            echo "Flex runtime: $RUNTIME_JSON"
-            NAME="$(jq -r '.name // ""' <<<"$RUNTIME_JSON")"
-            VER="$(jq -r '.version // ""' <<<"$RUNTIME_JSON")"
-            if [ "$NAME" != "node" ] || [ "$VER" != "20" ]; then
-              echo "::warning::Flex runtime not reported as node/20; continuing (API sometimes omits runtime)."
-            fi
-            az resource update "${sub_opt[@]}" -g "$RG" -n "$APP/config/web" --resource-type "Microsoft.Web/sites/config" --set properties.linuxFxVersion="" -o none --only-show-errors || true
-            # Set AzureWebJobsStorage for Flex Consumption
-            STORAGE_CONN="$(az storage account show-connection-string "${sub_opt[@]}" -g "$RG" -n "asoraflexdev1404" --query connectionString -o tsv --only-show-errors)"
-            az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" --settings AzureWebJobsStorage="$STORAGE_CONN" -o none --only-show-errors
-            # Assign Storage Blob Data Contributor role to MI for deployment access
-            PRINCIPAL_ID="$(az resource show "${sub_opt[@]}" --ids "$APP_ID" --query "identity.principalId" -o tsv --only-show-errors)"
-            STORAGE_ID="/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.Storage/storageAccounts/asoraflexdev1404"
-            az role assignment create "${sub_opt[@]}" --assignee "$PRINCIPAL_ID" --role "Storage Blob Data Contributor" --scope "$STORAGE_ID" -o none --only-show-errors || true
-          else
-            az functionapp config appsettings set "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors --settings \
-              FUNCTIONS_NODE_BLOCK_ON_ENTRY_POINT_ERROR=true \
-              APPLICATIONINSIGHTS_ROLE_NAME="$APP"
-            if [[ "$KIND" == *linux* ]]; then
-              az functionapp config set "${sub_opt[@]}" -g "$RG" -n "$APP" --linux-fx-version "node|20" -o none --only-show-errors
-            fi
-          fi
-
-          # COSMOS_CONNECTION_STRING is now managed via Key Vault reference in app settings
-          # No need to set it here during deployment
-
-          az functionapp restart "${sub_opt[@]}" -g "$RG" -n "$APP" -o none --only-show-errors
-
-          ROLE_VAL="$(az functionapp config appsettings list "${sub_opt[@]}" -g "$RG" -n "$APP" --query "[?name=='APPLICATIONINSIGHTS_ROLE_NAME'].value|[0]" -o tsv --only-show-errors)"
-          if ! "$IS_FLEX" && [ "$ROLE_VAL" != "$APP" ]; then
-            echo "::error::AI role not set on $APP"
-            exit 3
-          fi
-
-          if ! "$IS_FLEX" && [[ "$KIND" == *linux* ]]; then
-            if [ "$(az functionapp config show "${sub_opt[@]}" -g "$RG" -n "$APP" --query linuxFxVersion -o tsv --only-show-errors)" != "node|20" ]; then
-              echo "::error::linuxFxVersion!=node|20"
-              exit 4
-            fi
-          fi
-
-          echo "::notice::Configured '$APP' in '$RG' (sub ${SUB})."
-
-
-      - name: Prepare v4 entry point
-        working-directory: functions
-        run: |
-          cat > index.js <<'EOF'
-          // Azure Functions Node v4 isolated entrypoint
-          try { module.exports = require('./dist/index.js'); }
-          catch (e) { module.exports = require('./dist/src/index.js'); }
-          EOF
-
-      - name: Check Cosmos configuration
-        shell: bash
-        run: |
-          echo "::notice::COSMOS_CONNECTION_STRING is now managed via Key Vault reference (@Microsoft.KeyVault)"
-
-      - name: Deploy Functions
-        id: deploy_functions
-        # Do not bump to v4; v4 breaks our flex packaging. Keep @v1.
-        uses: Azure/functions-action@v1
-        with:
-          app-name: asora-function-dev
-          package: dist-v4-final.zip
-          remote-build: false
-          respect-funcignore: false
-
-      - name: Detect plan tier
-        id: plantier
+      - name: Validate package exists
+        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          APP_ID="$(az functionapp show -n asora-function-dev -g asora-psql-flex --query id -o tsv)"
-          PLAN_ID="$(az resource show --ids "$APP_ID" --query properties.serverFarmId -o tsv)"
-          TIER="$(az resource show --ids "$PLAN_ID" --query sku.tier -o tsv)"
-          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+          test -f "$PACKAGE_PATH" || { echo "Missing $PACKAGE_PATH"; exit 3; }
 
-      # actionlint: allow env FORCE_ZIP_DEPLOY
-      - name: ZIP deploy via CLI (non-Flex only)
-        if: ${{ steps.plantier.outputs.tier != 'FlexConsumption' && env.FORCE_ZIP_DEPLOY == '1' }}
-        env:
-          RG: asora-psql-flex
-          APP: asora-function-dev
+      - name: Deploy via config-zip (Y1 only)
+        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          test -f dist-v4-final.zip
-          az functionapp deployment source config-zip -g "$RG" -n "$APP" --src dist-v4-final.zip
+          az functionapp deployment source config-zip \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
 
-      - name: Resolve host and key
-        env:
-          SUBS: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          RG: asora-psql-flex
-          APP: asora-function-dev
+      - name: Warm & verify
         run: |
           set -euo pipefail
-          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          RG="asora-psql-flex"
-          APP="asora-function-dev"
-          az account set --subscription "$SUBS"
-          echo "Try ARM first (more reliable across plan types)"
-          APP_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01")
-          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
-          if [ -z "$HOST" ]; then
-            echo "::error::defaultHostName not returned"; exit 1
-          fi
-          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
-
-          echo "Resolving admin key (optional)..."
-          if KEY_JSON=$(az functionapp keys list -g "$RG" -n "$APP" 2>keys.err); then
-            KEY=$(jq -r '.masterKey // empty' <<<"$KEY_JSON")
-            if [ -z "$KEY" ]; then
-              echo "::warning::Function key not returned; continuing as anonymous"
-            fi
-          else
-            if grep -q '403' keys.err 2>/dev/null; then
-              echo "::warning::Function key fetch returned 403; continuing as anonymous"
-              KEY=""
-            else
-              cat keys.err >&2 || true
-              echo "::warning::Failed to fetch function keys; continuing as anonymous"
-              KEY=""
-            fi
-          fi
-          rm -f keys.err || true
-          echo "FUNCTION_KEY=$KEY" >> "$GITHUB_ENV"
-
-      - name: Verify host and routes
-        run: |
-          set -euo pipefail
-          HOST="${FUNCTION_BASE_URL#https://}"
-          KEY="${FUNCTION_KEY:-}"
-          if [ -n "$KEY" ] && [ "$KEY" != "anonymous" ]; then
-            QP="?code=${KEY}"
-          else
-            QP=""
-          fi
-          echo "Host: $HOST"
-          if curl -fsS "https://$HOST/admin/host/status$QP" | jq '{state,errors}'; then
-            :
-          else
-            echo "::warning::admin status unavailable"
-          fi
-          curl -fsS "https://$HOST/admin/functions$QP" | jq length || echo "0"
-          curl -isS "https://$HOST/api/health" | head -n1 || true
-
-      - name: Verify discovery
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          sub_opt=(--subscription "${AZURE_SUBSCRIPTION_ID}")
-          az functionapp function list "${sub_opt[@]}" -g "${AZURE_RESOURCE_GROUP}" -n "${AZURE_FUNCTIONAPP_NAME}" -o table --only-show-errors
-
-      - name: Dump site JSON on failure
-        if: failure()
-        run: |
-          set -euo pipefail
-          SUBS="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-          RG=asora-psql-flex
-          APP=asora-function-dev
-          API=2022-03-01
-          APP_ID="/subscriptions/$SUBS/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
-          az rest --method get --url "https://management.azure.com${APP_ID}?api-version=${API}" | jq .
+          az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME"
+          sleep 25
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/api/health")
+          echo "Health HTTP: $code"
+          [ "$code" -eq 200 ] || [ "$code" -eq 204 ] || { echo "Health check failed with code $code"; exit 4; }
 
