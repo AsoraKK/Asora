@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "npm run -s test:unit || echo \"no tests\"",
-    "test:unit": "jest --config jest.config.ts",
+    "test:unit": "jest --config jest.config.ts --coverage",
     "test:feed": "vitest --config feed/vitest.config.ts --coverage",
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
     "build": "tsc && node scripts/write-dist-entry.cjs",
