@@ -82,6 +82,41 @@ jobs:
         uses: actions/download-artifact@v4.1.8
         with:
           path: coverage-artifacts
+      - name: Normalize coverage paths
+        run: |
+          set -euo pipefail
+          mkdir -p coverage-artifacts/coverage-functions coverage-artifacts/coverage-flutter
+
+          echo "Locate LCOV files after download:"
+          find coverage-artifacts -maxdepth 6 -type f -name 'lcov.info' -print || true
+          echo
+
+          fn_src=$(find coverage-artifacts -maxdepth 6 -type f -name 'lcov.info' | grep -E '/coverage-functions/' | head -n1 || true)
+          if [ -z "${fn_src:-}" ]; then
+            fn_src=$(find coverage-artifacts -maxdepth 6 -type f -name 'lcov.info' | grep -vi 'flutter' | head -n1 || true)
+          fi
+          if [ -n "${fn_src:-}" ]; then
+            cp "$fn_src" coverage-artifacts/coverage-functions/lcov.info
+          else
+            echo "warn: no Functions lcov.info found"
+          fi
+
+          fl_src=$(find coverage-artifacts -maxdepth 6 -type f -name 'lcov.info' | grep -i 'flutter' | head -n1 || true)
+          if [ -z "${fl_src:-}" ]; then
+            if [ -f coverage/lcov.info ]; then
+              fl_src=coverage/lcov.info
+            fi
+          fi
+          if [ -n "${fl_src:-}" ]; then
+            cp "$fl_src" coverage-artifacts/coverage-flutter/lcov.info
+          else
+            echo "warn: no Flutter lcov.info found"
+          fi
+
+          if [ ! -f coverage-artifacts/coverage-functions/lcov.info ] && [ ! -f coverage-artifacts/coverage-flutter/lcov.info ]; then
+            echo "error: no lcov.info discovered. Check upstream coverage steps and artifact paths." >&2
+            exit 1
+          fi
       - name: Setup .NET 8 for ReportGenerator
         uses: actions/setup-dotnet@v4.0.1
         with:
