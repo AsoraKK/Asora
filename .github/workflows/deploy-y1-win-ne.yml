@@ -111,10 +111,28 @@ jobs:
         run: |
           az functionapp deployment source config-zip -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" --src "$ZIP_PATH"
 
-      - name: Restart & verify
+      - name: Restart & wait
         run: |
           az functionapp restart -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" >/dev/null
           sleep 20
+
+      - name: List deployed functions
+        run: |
+          echo "Listing deployed functions..."
+          az functionapp function list -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" -o table || true
+
+      - name: Assert functions present
+        run: |
+          set -euo pipefail
+          n=$(az functionapp function list -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" --query "length([])" -o tsv)
+          echo "Found $n function(s)"
+          if [ "$n" -lt 1 ]; then
+            echo "::error::Expected at least 1 function. Found $n."
+            exit 1
+          fi
+
+      - name: Verify health endpoint
+        run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" "https://${AZ_FUNCTIONAPP}.azurewebsites.net/api/health")
           echo "Health status: $code"
           [ "$code" = "200" ] || [ "$code" = "204" ]

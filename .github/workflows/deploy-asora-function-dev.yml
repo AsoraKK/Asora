@@ -1,0 +1,249 @@
+name: Deploy to asora-function-dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-asora-function-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  RESOURCE_GROUP: asora-psql-flex
+  APP_NAME: asora-function-dev
+  NODE_VERSION: '20'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - name: Block legacy SP secrets
+        env:
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
+            echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
+            exit 1
+          fi
+
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Disable Husky in CI
+        run: echo "HUSKY=0" >> "$GITHUB_ENV"
+
+      - name: Build classic function.json package
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
+
+          # host.json with no route prefix (routes are /health, /feed directly)
+          cat > host.json <<'JSON'
+          {
+            "version": "2.0",
+            "extensions": {
+              "http": {
+                "routePrefix": ""
+              }
+            }
+          }
+          JSON
+
+          # app-level package.json
+          cat > package.json <<'JSON'
+          {
+            "name": "asora-functions",
+            "version": "1.0.0",
+            "private": true,
+            "type": "commonjs",
+            "dependencies": {}
+          }
+          JSON
+
+          # Health function
+          mkdir -p Health
+          cat > Health/function.json <<'JSON'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "health"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "$return"
+              }
+            ]
+          }
+          JSON
+
+          cat > Health/index.js <<'JS'
+          module.exports = async function (context, req) {
+            context.res = {
+              status: 200,
+              headers: { "content-type": "application/json" },
+              body: { ok: true, timestamp: new Date().toISOString(), service: "asora-function-dev" }
+            };
+          };
+          JS
+
+          # Feed function
+          mkdir -p Feed
+          cat > Feed/function.json <<'JSON'
+          {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "feed"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "$return"
+              }
+            ]
+          }
+          JSON
+
+          cat > Feed/index.js <<'JS'
+          module.exports = async function (context, req) {
+            const guest = req.query.guest === "1";
+            const limit = parseInt(req.query.limit || "10", 10);
+            
+            context.res = {
+              status: 200,
+              headers: { "content-type": "application/json" },
+              body: {
+                data: [],
+                meta: {
+                  total: 0,
+                  limit: limit,
+                  offset: 0,
+                  guest: guest
+                }
+              }
+            };
+          };
+          JS
+
+          # Verify structure
+          echo "Package structure:"
+          find . -type f | sort
+
+          # zip it
+          zip -qr "$GITHUB_WORKSPACE/asora-function-dev.zip" .
+          popd >/dev/null
+          echo "Built package: asora-function-dev.zip"
+
+      - name: Validate package exists
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          test -f "asora-function-dev.zip" || { echo "Missing asora-function-dev.zip"; exit 3; }
+          echo "Package size:"
+          ls -lh asora-function-dev.zip
+          echo "Package contents:"
+          unzip -l asora-function-dev.zip
+
+      - name: Ensure required app settings
+        run: |
+          az functionapp config appsettings set -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --settings \
+              FUNCTIONS_WORKER_RUNTIME=node \
+              FUNCTIONS_EXTENSION_VERSION="~4" \
+              WEBSITE_NODE_DEFAULT_VERSION="~20" \
+              WEBSITE_RUN_FROM_PACKAGE="1" > /dev/null
+
+      - name: Deploy via config-zip
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          az functionapp deployment source config-zip \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "asora-function-dev.zip" --timeout 600
+
+      - name: Restart function app
+        run: |
+          az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME"
+          echo "Waiting for app to start..."
+          sleep 30
+
+      - name: List deployed functions
+        run: |
+          echo "Listing deployed functions..."
+          az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" -o table || true
+
+      - name: Assert functions are present
+        run: |
+          set -euo pipefail
+          n=$(az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" --query "length([])" -o tsv)
+          echo "Found $n function(s)"
+          if [ "$n" -lt 2 ]; then
+            echo "::error::Expected at least health and feed functions. Found only $n."
+            exit 1
+          fi
+          echo "✅ Functions deployed successfully"
+
+      - name: Verify health endpoint
+        run: |
+          set -euo pipefail
+          echo "Testing https://${APP_NAME}.azurewebsites.net/health"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/health")
+          echo "Health HTTP: $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Health check failed with code $code"
+            exit 1
+          fi
+          echo "✅ Health endpoint responding"
+
+      - name: Verify feed endpoint
+        run: |
+          set -euo pipefail
+          echo "Testing https://${APP_NAME}.azurewebsites.net/feed?guest=1&limit=10"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/feed?guest=1&limit=10")
+          echo "Feed HTTP: $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Feed check failed with code $code"
+            exit 1
+          fi
+          echo "✅ Feed endpoint responding"
+
+      - name: Display function URLs
+        run: |
+          echo "Deployed function URLs:"
+          echo "  Health: https://${APP_NAME}.azurewebsites.net/health"
+          echo "  Feed:   https://${APP_NAME}.azurewebsites.net/feed"

@@ -3,7 +3,7 @@ name: E2E Integration Test
 
 on:
   workflow_run:
-    workflows: ["Deploy Functions (Flex)"]
+    workflows: ["Deploy to asora-function-dev"]
     types: [completed]
     branches: [main]
 
