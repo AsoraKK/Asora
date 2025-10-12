@@ -44,17 +44,21 @@ jobs:
       - id: read_smoke
         name: Read smoke summary
         run: |
-          echo "text<<EOF" >> $GITHUB_OUTPUT
-          cat load/k6/smoke-summary.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "text<<EOF"
+            cat load/k6/smoke-summary.txt
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - id: read_feed
         if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-load') }}
         name: Read feed summary
         run: |
-          echo "text<<EOF" >> $GITHUB_OUTPUT
-          cat load/k6/feed-read-summary.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "text<<EOF"
+            cat load/k6/feed-read-summary.txt
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Post PR comment
         if: ${{ github.event_name == 'pull_request' }}
