@@ -8,6 +8,19 @@ servers:
     description: Flex Consumption (prod)
 security:
   - bearerAuth: []
+tags:
+  - name: system
+    description: System and health check endpoints
+  - name: auth
+    description: Authentication and user identity
+  - name: feed
+    description: Content feed operations
+  - name: posts
+    description: Post creation and management
+  - name: moderation
+    description: Content moderation and appeals
+  - name: privacy
+    description: Privacy and data management
 components:
   securitySchemes:
     bearerAuth:
@@ -73,6 +86,12 @@ components:
         contentId: { type: string }
         reason: { type: string }
         details: { type: string }
+    AppealResponse:
+      type: object
+      properties:
+        appealId: { type: string }
+        status: { type: string, enum: [ pending, approved, rejected ] }
+        submittedAt: { type: string, format: date-time }
     VoteRequest:
       type: object
       required: [ vote ]
@@ -98,6 +117,7 @@ paths:
       summary: Health check
       tags: [system]
       description: Returns system health status
+      security: []
       responses:
         '200':
           description: OK
@@ -124,6 +144,7 @@ paths:
       summary: Get feed
       tags: [feed]
       description: Returns paginated feed content
+      security: [ { bearerAuth: [] } ]
       parameters:
         - in: query
           name: page
@@ -200,7 +221,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/AppealRequest' }
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppealResponse' }
   /api/moderation/appeals/{appealId}/vote:
     post:
       operationId: voteOnAppeal
