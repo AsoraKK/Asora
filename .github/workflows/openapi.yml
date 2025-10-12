@@ -26,6 +26,27 @@ jobs:
             echo "Bundled openapi.json out of date. Run: npm run openapi:bundle and commit."
             exit 1
           fi
+      - name: Check for breaking changes
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          npx oasdiff breaking --fail-on-diff \
+            api/openapi/dist/openapi.json \
+            <(git show origin/${{ github.base_ref }}:api/openapi/dist/openapi.json)
+      - name: Enforce semver when breaking
+        run: |
+          set -e
+          BASE=origin/${{ github.base_ref }}
+          if npx oasdiff breaking api/openapi/dist/openapi.json <(git show $BASE:api/openapi/dist/openapi.json); then
+            exit 0
+          fi
+          CURR=$(node -pe 'JSON.parse(require("node:fs").readFileSync("api/openapi/dist/openapi.json","utf8")).info?.version ?? ""')
+          PREV=$(git show $BASE:api/openapi/dist/openapi.json | node -pe 'JSON.parse(require("node:fs").readFileSync(0,"utf8")).info?.version ?? ""')
+          echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
+          node -e "const s=process.argv[1].split('.').map(Number);const t=process.argv[2].split('.').map(Number);process.exit(!((t[1]>s[1])||(t[0]>s[0])));" "$PREV" "$CURR"
+      - name: Assert Functions routes are covered by OpenAPI
+        run: npx ts-node tools/openapi/assert-routes-covered.ts
+      - name: Validate OpenAPI examples
+        run: npx ts-node tools/openapi/validate-examples.ts
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -39,6 +60,8 @@ jobs:
             git --no-pager diff -- lib/generated/api_client | head -n 200
             exit 1
           fi
+      - name: Generate OpenAPI docs pre-release bundle
+        run: npm run openapi:docs
       - name: Write contract env
         run: |
           cat <<EOF > .env.test
@@ -49,11 +72,14 @@ jobs:
         env:
           STAGING_DOMAIN: ${{ secrets.STAGING_DOMAIN }}
           STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
-        run: |
-          npm run openapi:bundle
-          npx ts-node --compiler-options '{"module":"commonjs"}' node_modules/jest/bin/jest.js tests/contract --runInBand
+        run: npx jest -c jest.contract.config.cjs --runInBand
       - name: Upload bundled spec
         uses: actions/upload-artifact@v4
         with:
           name: openapi.json
           path: api/openapi/dist/openapi.json
+      - name: Upload OpenAPI docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-docs
+          path: api/openapi/dist/index.html
