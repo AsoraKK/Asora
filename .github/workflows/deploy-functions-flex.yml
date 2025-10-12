@@ -155,6 +155,12 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
+          # Clean up conflicting app settings before deployment
+          echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
+          az functionapp config appsettings delete \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
+
           az functionapp deployment source config-zip \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
 

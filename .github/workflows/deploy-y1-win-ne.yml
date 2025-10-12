@@ -107,9 +107,34 @@ jobs:
           az functionapp config appsettings set -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" \
             --settings FUNCTIONS_WORKER_RUNTIME=node FUNCTIONS_EXTENSION_VERSION="~4" WEBSITE_NODE_DEFAULT_VERSION="~20" > /dev/null
 
-      - name: Deploy ZIP (Kudu config-zip)
+      - name: Clean up conflicting app settings
         run: |
-          az functionapp deployment source config-zip -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" --src "$ZIP_PATH"
+          echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
+          az functionapp config appsettings delete -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
+
+      - name: Deploy ZIP (Kudu config-zip) with retry
+        run: |
+          set -euo pipefail
+          max_attempts=3
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Deployment attempt $attempt of $max_attempts..."
+            if az functionapp deployment source config-zip -g "$AZ_RESOURCE_GROUP" -n "$AZ_FUNCTIONAPP" --src "$ZIP_PATH" --timeout 600; then
+              echo "Deployment successful on attempt $attempt"
+              break
+            else
+              echo "Deployment failed on attempt $attempt"
+              if [ $attempt -eq $max_attempts ]; then
+                echo "::error::Deployment failed after $max_attempts attempts"
+                exit 1
+              fi
+              echo "Waiting 30 seconds before retry..."
+              sleep 30
+              attempt=$((attempt + 1))
+            fi
+          done
 
       - name: Restart & wait
         run: |

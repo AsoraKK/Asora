@@ -186,8 +186,13 @@ jobs:
             --settings \
               FUNCTIONS_WORKER_RUNTIME=node \
               FUNCTIONS_EXTENSION_VERSION="~4" \
-              WEBSITE_NODE_DEFAULT_VERSION="~20" \
-              WEBSITE_RUN_FROM_PACKAGE="1" > /dev/null
+              WEBSITE_NODE_DEFAULT_VERSION="~20" > /dev/null
+
+      - name: Clean up conflicting app settings
+        run: |
+          echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
+          az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
 
       - name: Deploy via config-zip
         working-directory: ${{ github.workspace }}
