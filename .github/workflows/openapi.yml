@@ -19,6 +19,32 @@ jobs:
       - run: npm ci
       - run: npm run openapi:lint
       - run: npm run openapi:bundle
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npx openapi-generator-cli version-manager set 7.7.0
+      - run: npm run openapi:gen:dart
+      - name: Fail if client drift
+        run: |
+          if [[ -n "$(git status --porcelain lib/generated/api_client)" ]]; then
+            echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
+            git --no-pager diff -- lib/generated/api_client | head -n 200
+            exit 1
+          fi
+      - name: Write contract env
+        run: |
+          cat <<EOF > .env.test
+          STAGING_DOMAIN=${{ secrets.STAGING_DOMAIN }}
+          STAGING_SMOKE_TOKEN=${{ secrets.STAGING_SMOKE_TOKEN }}
+          EOF
+      - name: Contract tests
+        env:
+          STAGING_DOMAIN: ${{ secrets.STAGING_DOMAIN }}
+          STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+        run: |
+          npm run openapi:bundle
+          npx ts-node --compiler-options '{"module":"commonjs"}' node_modules/jest/bin/jest.js tests/contract --runInBand
       - name: Upload bundled spec
         uses: actions/upload-artifact@v4
         with:
