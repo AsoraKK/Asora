@@ -37,4 +37,11 @@ if ! npm run lint:check >/dev/null 2>&1; then
 echo "✅ Functions lint OK"
 
 cd ..
+echo "📄 Validating OpenAPI spec and client..."
+if ! npm run openapi:lint; then
+  echo "❌ OpenAPI lint failed"; exit 1; fi
+if ! npm run openapi:bundle; then
+  echo "❌ OpenAPI bundle failed"; exit 1; fi
+if ! npm run openapi:gen:dart; then
+  echo "❌ Dart client generation failed"; exit 1; fi
 echo "🎉 All formatting checks passed! Commit proceeding..."
