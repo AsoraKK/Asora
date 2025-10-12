@@ -3,6 +3,7 @@
   "info": {
     "title": "Asora API",
     "version": "v1",
+    "description": "HTTP contract for Asora Functions v1.",
     "license": {
       "name": "MIT",
       "identifier": "MIT"
@@ -24,11 +25,33 @@
       }
     }
   ],
+  "tags": [
+    {
+      "name": "Feed",
+      "description": "Feed retrieval endpoints."
+    },
+    {
+      "name": "Health",
+      "description": "Liveness monitoring endpoints."
+    },
+    {
+      "name": "Posts",
+      "description": "Post authoring endpoints."
+    },
+    {
+      "name": "Moderation",
+      "description": "Moderation workflows."
+    }
+  ],
   "paths": {
     "/feed": {
       "get": {
         "operationId": "getFeed",
         "summary": "Retrieve personalized feed items",
+        "description": "Return a page of feed items.",
+        "tags": [
+          "Feed"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -108,8 +131,79 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks required permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Service health probe",
+        "description": "Liveness/readiness check. No auth.",
+        "tags": [
+          "Health"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Health status payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
             "content": {
               "application/json": {
                 "schema": {
@@ -125,6 +219,10 @@
       "post": {
         "operationId": "createPost",
         "summary": "Create a new post",
+        "description": "Create a new post.",
+        "tags": [
+          "Posts"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -210,6 +308,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Authenticated caller lacks required permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -218,6 +326,10 @@
       "post": {
         "operationId": "flagContent",
         "summary": "Flag content for moderation review",
+        "description": "Flag content for review.",
+        "tags": [
+          "Moderation"
+        ],
         "security": [
           {
             "bearerAuth": []
@@ -302,6 +414,16 @@
           },
           "401": {
             "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks required permissions",
             "content": {
               "application/json": {
                 "schema": {
