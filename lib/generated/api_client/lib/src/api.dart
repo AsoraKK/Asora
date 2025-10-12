@@ -9,7 +9,10 @@ import 'package:asora_api_client/src/auth/api_key_auth.dart';
 import 'package:asora_api_client/src/auth/basic_auth.dart';
 import 'package:asora_api_client/src/auth/bearer_auth.dart';
 import 'package:asora_api_client/src/auth/oauth.dart';
-import 'package:asora_api_client/src/api/default_api.dart';
+import 'package:asora_api_client/src/api/feed_api.dart';
+import 'package:asora_api_client/src/api/health_api.dart';
+import 'package:asora_api_client/src/api/moderation_api.dart';
+import 'package:asora_api_client/src/api/posts_api.dart';
 
 class AsoraApiClient {
   static const String basePath =
@@ -77,9 +80,27 @@ class AsoraApiClient {
     }
   }
 
-  /// Get DefaultApi instance, base route and serializer can be overridden by a given but be careful,
+  /// Get FeedApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
-  DefaultApi getDefaultApi() {
-    return DefaultApi(dio, serializers);
+  FeedApi getFeedApi() {
+    return FeedApi(dio, serializers);
+  }
+
+  /// Get HealthApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  HealthApi getHealthApi() {
+    return HealthApi(dio, serializers);
+  }
+
+  /// Get ModerationApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ModerationApi getModerationApi() {
+    return ModerationApi(dio, serializers);
+  }
+
+  /// Get PostsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  PostsApi getPostsApi() {
+    return PostsApi(dio, serializers);
   }
 }

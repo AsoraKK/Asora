@@ -21,6 +21,7 @@ import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';
 import 'package:asora_api_client/src/model/get_feed200_response_meta.dart';
+import 'package:asora_api_client/src/model/get_health200_response.dart';
 
 part 'serializers.g.dart';
 
@@ -32,6 +33,7 @@ part 'serializers.g.dart';
   FlagContentRequest,
   GetFeed200Response,
   GetFeed200ResponseMeta,
+  GetHealth200Response,
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(

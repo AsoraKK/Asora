@@ -9,7 +9,10 @@ export 'package:asora_api_client/src/auth/oauth.dart';
 export 'package:asora_api_client/src/serializers.dart';
 export 'package:asora_api_client/src/model/date.dart';
 
-export 'package:asora_api_client/src/api/default_api.dart';
+export 'package:asora_api_client/src/api/feed_api.dart';
+export 'package:asora_api_client/src/api/health_api.dart';
+export 'package:asora_api_client/src/api/moderation_api.dart';
+export 'package:asora_api_client/src/api/posts_api.dart';
 
 export 'package:asora_api_client/src/model/create_post201_response.dart';
 export 'package:asora_api_client/src/model/create_post_request.dart';
@@ -18,3 +21,4 @@ export 'package:asora_api_client/src/model/flag_content202_response.dart';
 export 'package:asora_api_client/src/model/flag_content_request.dart';
 export 'package:asora_api_client/src/model/get_feed200_response.dart';
 export 'package:asora_api_client/src/model/get_feed200_response_meta.dart';
+export 'package:asora_api_client/src/model/get_health200_response.dart';
