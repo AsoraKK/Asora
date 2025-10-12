@@ -12,11 +12,10 @@ part 'flag_content202_response.g.dart';
 /// FlagContent202Response
 ///
 /// Properties:
-/// * [flagId]
-/// * [status]
+/// * [flagId] 
+/// * [status] 
 @BuiltValue()
-abstract class FlagContent202Response
-    implements Built<FlagContent202Response, FlagContent202ResponseBuilder> {
+abstract class FlagContent202Response implements Built<FlagContent202Response, FlagContent202ResponseBuilder> {
   @BuiltValueField(wireName: r'flagId')
   String? get flagId;
 
@@ -26,25 +25,18 @@ abstract class FlagContent202Response
 
   FlagContent202Response._();
 
-  factory FlagContent202Response(
-          [void updates(FlagContent202ResponseBuilder b)]) =
-      _$FlagContent202Response;
+  factory FlagContent202Response([void updates(FlagContent202ResponseBuilder b)]) = _$FlagContent202Response;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(FlagContent202ResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<FlagContent202Response> get serializer =>
-      _$FlagContent202ResponseSerializer();
+  static Serializer<FlagContent202Response> get serializer => _$FlagContent202ResponseSerializer();
 }
 
-class _$FlagContent202ResponseSerializer
-    implements PrimitiveSerializer<FlagContent202Response> {
+class _$FlagContent202ResponseSerializer implements PrimitiveSerializer<FlagContent202Response> {
   @override
-  final Iterable<Type> types = const [
-    FlagContent202Response,
-    _$FlagContent202Response
-  ];
+  final Iterable<Type> types = const [FlagContent202Response, _$FlagContent202Response];
 
   @override
   final String wireName = r'FlagContent202Response';
@@ -76,9 +68,7 @@ class _$FlagContent202ResponseSerializer
     FlagContent202Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -137,20 +127,17 @@ class _$FlagContent202ResponseSerializer
 }
 
 class FlagContent202ResponseStatusEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'queued')
-  static const FlagContent202ResponseStatusEnum queued =
-      _$flagContent202ResponseStatusEnum_queued;
+  static const FlagContent202ResponseStatusEnum queued = _$flagContent202ResponseStatusEnum_queued;
   @BuiltValueEnumConst(wireName: r'received')
-  static const FlagContent202ResponseStatusEnum received =
-      _$flagContent202ResponseStatusEnum_received;
+  static const FlagContent202ResponseStatusEnum received = _$flagContent202ResponseStatusEnum_received;
 
-  static Serializer<FlagContent202ResponseStatusEnum> get serializer =>
-      _$flagContent202ResponseStatusEnumSerializer;
+  static Serializer<FlagContent202ResponseStatusEnum> get serializer => _$flagContent202ResponseStatusEnumSerializer;
 
-  const FlagContent202ResponseStatusEnum._(String name) : super(name);
+  const FlagContent202ResponseStatusEnum._(String name): super(name);
 
-  static BuiltSet<FlagContent202ResponseStatusEnum> get values =>
-      _$flagContent202ResponseStatusEnumValues;
-  static FlagContent202ResponseStatusEnum valueOf(String name) =>
-      _$flagContent202ResponseStatusEnumValueOf(name);
+  static BuiltSet<FlagContent202ResponseStatusEnum> get values => _$flagContent202ResponseStatusEnumValues;
+  static FlagContent202ResponseStatusEnum valueOf(String name) => _$flagContent202ResponseStatusEnumValueOf(name);
 }
+

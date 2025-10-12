@@ -14,11 +14,10 @@ part 'get_feed200_response.g.dart';
 /// GetFeed200Response
 ///
 /// Properties:
-/// * [items]
-/// * [meta]
+/// * [items] 
+/// * [meta] 
 @BuiltValue()
-abstract class GetFeed200Response
-    implements Built<GetFeed200Response, GetFeed200ResponseBuilder> {
+abstract class GetFeed200Response implements Built<GetFeed200Response, GetFeed200ResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<BuiltMap<String, JsonObject?>> get items;
 
@@ -27,19 +26,16 @@ abstract class GetFeed200Response
 
   GetFeed200Response._();
 
-  factory GetFeed200Response([void updates(GetFeed200ResponseBuilder b)]) =
-      _$GetFeed200Response;
+  factory GetFeed200Response([void updates(GetFeed200ResponseBuilder b)]) = _$GetFeed200Response;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(GetFeed200ResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<GetFeed200Response> get serializer =>
-      _$GetFeed200ResponseSerializer();
+  static Serializer<GetFeed200Response> get serializer => _$GetFeed200ResponseSerializer();
 }
 
-class _$GetFeed200ResponseSerializer
-    implements PrimitiveSerializer<GetFeed200Response> {
+class _$GetFeed200ResponseSerializer implements PrimitiveSerializer<GetFeed200Response> {
   @override
   final Iterable<Type> types = const [GetFeed200Response, _$GetFeed200Response];
 
@@ -54,9 +50,7 @@ class _$GetFeed200ResponseSerializer
     yield r'items';
     yield serializers.serialize(
       object.items,
-      specifiedType: const FullType(BuiltList, [
-        FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])
-      ]),
+      specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
     );
     yield r'meta';
     yield serializers.serialize(
@@ -71,9 +65,7 @@ class _$GetFeed200ResponseSerializer
     GetFeed200Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -91,10 +83,7 @@ class _$GetFeed200ResponseSerializer
         case r'items':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [
-              FullType(
-                  BuiltMap, [FullType(String), FullType.nullable(JsonObject)])
-            ]),
+            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
           ) as BuiltList<BuiltMap<String, JsonObject?>>;
           result.items.replace(valueDes);
           break;
@@ -133,3 +122,4 @@ class _$GetFeed200ResponseSerializer
     return result.build();
   }
 }
+

@@ -37,8 +37,3 @@ lib/src/model/get_feed200_response_meta.dart
 lib/src/model/get_health200_response.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/feed_api_test.dart
-test/get_health200_response_test.dart
-test/health_api_test.dart
-test/moderation_api_test.dart
-test/posts_api_test.dart

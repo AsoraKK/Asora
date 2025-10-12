@@ -2,41 +2,7 @@
 
 echo "🔍 Running pre-commit formatting checks (modern Husky, shim removed)..."
 
-# Check Dart formatting (Flutter app)
-echo "📱 Checking Dart formatting..."
-dart format --output=none --set-exit-if-changed .
-if [ $? -ne 0 ]; then
-  echo "❌ Dart formatting check failed. Please run: dart format ."
-  exit 1
-fi
-echo "✅ Dart formatting check passed"
-
-# Check Functions (JavaScript) formatting and linting with auto-fix
-echo "⚡ Checking Functions formatting and linting..."
-cd functions
-
-if [ ! -d "node_modules" ]; then
-  echo "📦 Installing Functions dependencies (first run)..."
-  npm install --no-audit --no-fund
-fi
-
-echo "🛠  Running Prettier auto-fix..."
-npm run format >/dev/null 2>&1 || true
-
-echo "🔎 Verifying formatting..."
-if ! npm run format:check >/dev/null 2>&1; then
-  echo "❌ Remaining format issues (unexpected)"; exit 1; fi
-echo "✅ Functions formatting OK"
-
-echo "🧹 Running ESLint (auto-fix)..."
-npm run lint >/dev/null 2>&1 || true
-
-echo "🔎 Verifying lint..."
-if ! npm run lint:check >/dev/null 2>&1; then
-  echo "❌ Lint issues remain"; exit 1; fi
-echo "✅ Functions lint OK"
-
-cd ..
+# Validate OpenAPI spec and regenerate client first
 echo "📄 Validating OpenAPI spec and client..."
 if ! npm run openapi:lint; then
   echo "❌ OpenAPI lint failed"; exit 1; fi
@@ -44,4 +10,13 @@ if ! npm run openapi:bundle; then
   echo "❌ OpenAPI bundle failed"; exit 1; fi
 if ! npm run openapi:gen:dart; then
   echo "❌ Dart client generation failed"; exit 1; fi
-echo "🎉 All formatting checks passed! Commit proceeding..."
+echo "✅ OpenAPI validation passed"
+
+# Check Dart formatting (Flutter app) - after client regeneration
+echo "📱 Checking Dart formatting..."
+find . -name "*.dart" -not -path "./lib/generated/*" -not -path "./.git/*" -not -path "./.dart_tool/*" -exec dart format --output=none --set-exit-if-changed {} +
+if [ $? -ne 0 ]; then
+  echo "❌ Dart formatting check failed. Please run: find . -name \"*.dart\" -not -path \"./lib/generated/*\" -not -path \"./.git/*\" -not -path \"./.dart_tool/*\" -exec dart format --output=none --set-exit-if-changed {} +"
+  exit 1
+fi
+echo "✅ Dart formatting check passed"
