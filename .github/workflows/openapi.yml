@@ -18,6 +18,8 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run openapi:lint
+      - name: Spectral lint
+        run: npx spectral lint api/openapi/openapi.yaml
       - run: npm run openapi:bundle
       - name: Fail if bundled spec drift
         run: |
