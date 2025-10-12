@@ -8,7 +8,7 @@ on:
     branches: [ main ]
 
 env:
-  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net' }}          # set in repo/org Variables
+  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net' }}          # set in repo/org Variables
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
 
 jobs:
@@ -20,6 +20,17 @@ jobs:
 
       - name: Install k6
         uses: grafana/setup-k6-action@v1
+
+      - name: Verify environment and connectivity
+        run: |
+          echo "K6_BASE_URL=$K6_BASE_URL"
+          node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
+          sudo apt-get update -y && sudo apt-get install -y dnsutils curl
+          H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
+          echo "Resolving $H..."
+          dig +short "$H" || { echo "DNS resolution failed for $H"; exit 1; }
+          echo "Testing connectivity to $K6_BASE_URL/health..."
+          curl -f --max-time 10 "$K6_BASE_URL/health" || { echo "Health endpoint unreachable"; exit 1; }
 
       - name: Smoke test
         run: |

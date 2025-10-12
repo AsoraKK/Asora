@@ -6,13 +6,16 @@ export const options = {
   vus: Number(__ENV.K6_VUS || 5),
   duration: __ENV.K6_DURATION || '30s',
   thresholds: {
-    http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<200', 'p(99)<400'],
+    http_req_failed: ['rate<0.01'],                 // error_rate < 1%
+    http_req_duration: ['p(95)<200', 'p(99)<400'],  // p95/p99
   },
-  summaryTrendStats: ['min', 'avg', 'med', 'p(95)', 'p(99)'],
+  summaryTrendStats: ['min','avg','med','p(95)','p(99)'],
 };
 
 const BASE = __ENV.K6_BASE_URL;
+if (!BASE || /your-staging\.example\.com/.test(BASE)) {
+  throw new Error('K6_BASE_URL is missing or still a placeholder. Set a real URL in env/vars.');
+}
 const TOKEN = __ENV.K6_SMOKE_TOKEN || '';
 
 export default function () {
@@ -37,6 +40,7 @@ export function handleSummary(data) {
   };
 }
 
+// Minimal text summary to file
 function textSummary(data) {
   const d = data.metrics;
   const p95 = d.http_req_duration['p(95)'];
@@ -45,6 +49,6 @@ function textSummary(data) {
   return `smoke results
 p95=${p95}ms
 p99=${p99}ms
-error_rate=${(err * 100).toFixed(2)}%
+error_rate=${(err*100).toFixed(2)}%
 `;
 }

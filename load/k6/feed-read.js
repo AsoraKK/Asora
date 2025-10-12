@@ -13,10 +13,13 @@ export const options = {
     http_req_failed: ['rate<0.01'],
     'http_req_duration{scenario:steady_feed}': ['p(95)<200', 'p(99)<400'],
   },
-  summaryTrendStats: ['min', 'avg', 'med', 'p(95)', 'p(99)'],
+  summaryTrendStats: ['min','avg','med','p(95)','p(99)'],
 };
 
 const BASE = __ENV.K6_BASE_URL;
+if (!BASE || /your-staging\.example\.com/.test(BASE)) {
+  throw new Error('K6_BASE_URL is missing or still a placeholder. Set a real URL in env/vars.');
+}
 const TOKEN = __ENV.K6_SMOKE_TOKEN || '';
 
 export default function () {
@@ -41,6 +44,6 @@ function textSummary(data) {
   return `feed-read results
 p95=${p95}ms
 p99=${p99}ms
-error_rate=${(err * 100).toFixed(2)}%
+error_rate=${(err*100).toFixed(2)}%
 `;
 }
