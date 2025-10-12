@@ -1,0 +1,79 @@
+name: Canary SLO Gate (k6)
+
+on:
+  workflow_call:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  K6_BASE_URL: ${{ vars.K6_BASE_URL }}          # set in repo/org Variables
+  K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
+
+jobs:
+  canary-k6:
+    name: Run k6 canary tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Smoke test
+        run: |
+          k6 run load/k6/smoke.js \
+            --summary-export=load/k6/smoke-raw.json
+
+      - name: Feed read test
+        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-load') }}
+        run: |
+          k6 run load/k6/feed-read.js \
+            --summary-export=load/k6/feed-read-raw.json
+
+      - name: Upload k6 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-canary-${{ github.run_id }}
+          path: |
+            load/k6/*-summary.txt
+            load/k6/*-summary.json
+            load/k6/*-raw.json
+
+      - id: read_smoke
+        name: Read smoke summary
+        run: |
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          cat load/k6/smoke-summary.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - id: read_feed
+        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-load') }}
+        name: Read feed summary
+        run: |
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          cat load/k6/feed-read-summary.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ## k6 Canary SLO
+            - Base: `${{ env.K6_BASE_URL }}`
+            - Thresholds: p95<200ms, p99<400ms, error_rate<1%
+            <details><summary>smoke</summary>
+
+            ```txt
+            ${{ steps.read_smoke.outputs.text }}
+            ```
+            </details>
+            <details><summary>feed-read</summary>
+
+            ```txt
+            ${{ steps.read_feed.outputs.text || 'Not run (add run-load label to PR)' }}
+            ```
+            </details>
