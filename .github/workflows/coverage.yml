@@ -19,7 +19,7 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.3
         with:
           node-version: '20'
@@ -43,7 +43,7 @@ jobs:
     env:
       ASORA_REQUIRE_REAL_PINS: "false"  # TODO: flip to "true" once real pins land
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -79,7 +79,7 @@ jobs:
     needs: [ test-functions, test-flutter ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download coverage artifacts
         uses: actions/download-artifact@v4
         with:
