@@ -2,11 +2,18 @@ openapi: 3.1.0
 info:
   title: Asora API
   version: v1
+  license:
+    name: MIT
+    identifier: MIT
 servers:
   - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
     description: Azure Functions staging edge endpoint
   - url: https://${STAGING_DOMAIN}
     description: Asora staging domain (set via environment)
+    variables:
+      STAGING_DOMAIN:
+        default: asora.example.com
+        description: Injected staging domain hostname
 paths:
   /feed:
     get:
@@ -57,7 +64,6 @@ paths:
                         type:
                           - string
                           - 'null'
-                        nullable: true
                       timingsMs:
                         type: object
                         additionalProperties:

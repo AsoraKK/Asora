@@ -13,15 +13,18 @@
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
     "test-functions": "cd functions && npm run test",
+    "openapi:lint": "redocly lint api/openapi/openapi.yaml",
+    "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
     "apply:schema": "node tools/apply_sql_to_pg.js database/migrate_to_target_schema.sql",
     "migrate:profiles": "node tools/migrate_profiles_to_postgres.js",
     "reconcile:profiles": "node tools/reconcile_profiles.js",
     "vuln:scan": "bash tools/run_vuln_scan.sh",
-    "lint:api": "spectral lint docs/openapi.yaml -r .spectral.yaml"
+    "lint:api": "npm run openapi:lint"
   },
   "devDependencies": {
-    "husky": "^8.0.3",
+    "@redocly/cli": "^2.5.0",
     "@stoplight/spectral-cli": "^6.11.0",
+    "husky": "^8.0.3",
     "typescript": "5.5.4"
   },
   "overrides": {

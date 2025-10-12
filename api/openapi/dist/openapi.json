@@ -1,0 +1,345 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Asora API",
+    "version": "v1",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net",
+      "description": "Azure Functions staging edge endpoint"
+    },
+    {
+      "url": "https://${STAGING_DOMAIN}",
+      "description": "Asora staging domain (set via environment)",
+      "variables": {
+        "STAGING_DOMAIN": {
+          "default": "asora.example.com",
+          "description": "Injected staging domain hostname"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/feed": {
+      "get": {
+        "operationId": "getFeed",
+        "summary": "Retrieve personalized feed items",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items to return (1-50)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed items retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "meta"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "count"
+                      ],
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "timingsMs": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        },
+                        "applied": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/post": {
+      "post": {
+        "operationId": "createPost",
+        "summary": "Create a new post",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "text"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client generated UUID v7 for the new post",
+                    "example": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Post body text",
+                    "maxLength": 2000
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "description": "Optional media attachments",
+                    "items": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "example": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "published",
+                        "under_review",
+                        "rejected"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/moderation/flag": {
+      "post": {
+        "operationId": "flagContent",
+        "summary": "Flag content for moderation review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetId",
+                  "reason"
+                ],
+                "properties": {
+                  "targetId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identifier of the content being flagged",
+                    "example": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Moderation reason",
+                    "enum": [
+                      "spam",
+                      "harassment",
+                      "hate_speech",
+                      "violence",
+                      "adult_content",
+                      "misinformation",
+                      "copyright",
+                      "privacy",
+                      "other"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Additional details supporting the flag",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Flag accepted for review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flagId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "example": "018b27d4-83fd-7fff-b5e1-8e779ebf8eab"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "received"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine readable error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human readable error description"
+          }
+        }
+      }
+    }
+  }
+}
