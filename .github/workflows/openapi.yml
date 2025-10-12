@@ -19,6 +19,13 @@ jobs:
       - run: npm ci
       - run: npm run openapi:lint
       - run: npm run openapi:bundle
+      - name: Fail if bundled spec drift
+        run: |
+          git add -N api/openapi/dist/openapi.json
+          if ! git diff --quiet -- api/openapi/dist/openapi.json; then
+            echo "Bundled openapi.json out of date. Run: npm run openapi:bundle and commit."
+            exit 1
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
