@@ -2,10 +2,10 @@ name: Canary SLO Gate (k6)
 
 on:
   workflow_call:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["Deploy to asora-function-dev"]
+    types: [completed]
+    branches: [main]
 
 env:
   K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net' }}          # set in repo/org Variables
@@ -13,6 +13,7 @@ env:
 
 jobs:
   canary-k6:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Run k6 canary tests
     runs-on: ubuntu-latest
     steps:
