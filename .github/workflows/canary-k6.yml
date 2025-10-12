@@ -8,7 +8,7 @@ on:
     branches: [ main ]
 
 env:
-  K6_BASE_URL: ${{ vars.K6_BASE_URL }}          # set in repo/org Variables
+  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net' }}          # set in repo/org Variables
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
 
 jobs:
