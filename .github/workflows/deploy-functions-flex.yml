@@ -154,7 +154,10 @@ jobs:
           echo "Removing runtime settings that break Flex Consumption..."
           az functionapp config appsettings delete \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || echo "Runtime settings already absent"
+            --setting-names FUNCTIONS_WORKER_RUNTIME || echo "FUNCTIONS_WORKER_RUNTIME already absent"
+          az functionapp config appsettings delete \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --setting-names WEBSITE_NODE_DEFAULT_VERSION || echo "WEBSITE_NODE_DEFAULT_VERSION already absent"
 
           echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
           az functionapp config appsettings delete \
