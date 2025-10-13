@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
-import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';

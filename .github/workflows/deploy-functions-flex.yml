@@ -146,16 +146,16 @@ jobs:
           set -euo pipefail
           test -f "$PACKAGE_PATH" || { echo "Missing $PACKAGE_PATH"; exit 3; }
 
-      - name: Ensure required app settings (classic model on v4 runtime)
-        run: |
-          az functionapp config appsettings set -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --settings FUNCTIONS_WORKER_RUNTIME=node FUNCTIONS_EXTENSION_VERSION="~4" WEBSITE_NODE_DEFAULT_VERSION="~20" > /dev/null
-
       - name: Deploy via config-zip (Y1 only)
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           # Clean up conflicting app settings before deployment
+          echo "Removing runtime settings that break Flex Consumption..."
+          az functionapp config appsettings delete \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || echo "Runtime settings already absent"
+
           echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
           az functionapp config appsettings delete \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \

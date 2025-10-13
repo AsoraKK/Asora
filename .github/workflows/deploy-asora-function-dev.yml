@@ -180,19 +180,15 @@ jobs:
           echo "Package contents:"
           unzip -l asora-function-dev.zip
 
-      - name: Ensure required app settings
+      - name: Clean up flex-incompatible app settings
         run: |
-          az functionapp config appsettings set -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --settings \
-              FUNCTIONS_WORKER_RUNTIME=node \
-              FUNCTIONS_EXTENSION_VERSION="~4" \
-              WEBSITE_NODE_DEFAULT_VERSION="~20" > /dev/null
+          echo "Removing runtime settings that break Flex Consumption..."
+          az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --setting-names FUNCTIONS_WORKER_RUNTIME WEBSITE_NODE_DEFAULT_VERSION || echo "Runtime settings already absent"
 
-      - name: Clean up conflicting app settings
-        run: |
           echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
           az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
+            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE already absent"
 
       - name: Deploy via config-zip
         working-directory: ${{ github.workspace }}

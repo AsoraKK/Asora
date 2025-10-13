@@ -1,1 +1,1 @@
-export 'generated/api_client/lib/api.dart';
+export 'api_client/lib/asora_api_client.dart';
