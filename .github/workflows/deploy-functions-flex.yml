@@ -150,19 +150,17 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          # Clean up conflicting app settings before deployment
-          echo "Removing runtime settings that break Flex Consumption..."
-          az functionapp config appsettings delete \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names FUNCTIONS_WORKER_RUNTIME || echo "FUNCTIONS_WORKER_RUNTIME already absent"
-          az functionapp config appsettings delete \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names WEBSITE_NODE_DEFAULT_VERSION || echo "WEBSITE_NODE_DEFAULT_VERSION already absent"
-
-          echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
+          # Reset legacy WEBSITE_RUN_FROM_PACKAGE if present (causes 409 with config-zip)
+          echo "Ensuring WEBSITE_RUN_FROM_PACKAGE is cleared..."
           az functionapp config appsettings delete \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
+
+          # Reinstate runtime baseline to avoid accidental deletion side-effects
+          echo "Restoring runtime baseline..."
+          az functionapp config appsettings set \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 || true
 
           # Use deployment source config-zip for Y1 Consumption (more reliable than az functionapp deploy)
           az functionapp deployment source config-zip \

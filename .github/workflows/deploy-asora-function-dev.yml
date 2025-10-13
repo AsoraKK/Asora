@@ -57,16 +57,20 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      - name: Build classic function.json package
+      - name: Build Flex programmatic model package
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
-
-          # host.json with no route prefix (routes are /health, /feed directly)
+          
+          # host.json for Functions v4 (Flex)
           cat > host.json <<'JSON'
           {
-            "version": "2.0",
+            "version": "4.0",
+            "extensionBundle": {
+              "id": "Microsoft.Azure.Functions.ExtensionBundle",
+              "version": "[3.*, 4.0.0)"
+            },
             "extensions": {
               "http": {
                 "routePrefix": ""
@@ -75,97 +79,71 @@ jobs:
           }
           JSON
 
-          # app-level package.json
+          # package.json using new Node programming model
           cat > package.json <<'JSON'
           {
-            "name": "asora-functions",
+            "name": "asora-flex-functions",
             "version": "1.0.0",
             "private": true,
-            "type": "commonjs",
-            "dependencies": {}
+            "type": "module",
+            "dependencies": {
+              "@azure/functions": "^4.4.0"
+            }
           }
           JSON
 
-          # Health function
-          mkdir -p Health
-          cat > Health/function.json <<'JSON'
-          {
-            "bindings": [
-              {
-                "authLevel": "anonymous",
-                "type": "httpTrigger",
-                "direction": "in",
-                "name": "req",
-                "methods": ["get"],
-                "route": "health"
-              },
-              {
-                "type": "http",
-                "direction": "out",
-                "name": "$return"
+          npm install --omit=dev
+
+          mkdir -p src/functions
+
+          cat > src/functions/health.js <<'JS'
+          import { app } from "@azure/functions";
+
+          app.http("health", {
+            authLevel: "anonymous",
+            methods: ["GET"],
+            route: "health",
+            handler: async () => ({
+              jsonBody: {
+                ok: true,
+                timestamp: new Date().toISOString(),
+                service: "asora-function-dev"
               }
-            ]
-          }
-          JSON
-
-          cat > Health/index.js <<'JS'
-          module.exports = async function (context, req) {
-            context.res = {
-              status: 200,
-              headers: { "content-type": "application/json" },
-              body: { ok: true, timestamp: new Date().toISOString(), service: "asora-function-dev" }
-            };
-          };
+            })
+          });
           JS
 
-          # Feed function
-          mkdir -p Feed
-          cat > Feed/function.json <<'JSON'
-          {
-            "bindings": [
-              {
-                "authLevel": "anonymous",
-                "type": "httpTrigger",
-                "direction": "in",
-                "name": "req",
-                "methods": ["get"],
-                "route": "feed"
-              },
-              {
-                "type": "http",
-                "direction": "out",
-                "name": "$return"
-              }
-            ]
-          }
-          JSON
+          cat > src/functions/feed.js <<'JS'
+          import { app } from "@azure/functions";
 
-          cat > Feed/index.js <<'JS'
-          module.exports = async function (context, req) {
-            const guest = req.query.guest === "1";
-            const limit = parseInt(req.query.limit || "10", 10);
-            
-            context.res = {
-              status: 200,
-              headers: { "content-type": "application/json" },
-              body: {
-                data: [],
-                meta: {
-                  total: 0,
-                  limit: limit,
-                  offset: 0,
-                  guest: guest
+          app.http("feed", {
+            authLevel: "anonymous",
+            methods: ["GET"],
+            route: "feed",
+            handler: async (request) => {
+              const url = new URL(request.url);
+              const guest = url.searchParams.get("guest") === "1";
+              const limit = Number.parseInt(url.searchParams.get("limit") ?? "10", 10);
+
+              return {
+                jsonBody: {
+                  data: [],
+                  meta: {
+                    total: 0,
+                    limit,
+                    offset: 0,
+                    guest
+                  }
                 }
-              }
-            };
-          };
+              };
+            }
+          });
           JS
 
-          # Verify structure
+          # Record package structure for debugging
           echo "Package structure:"
           find . -type f | sort
 
-          # zip it
           zip -qr "$GITHUB_WORKSPACE/asora-function-dev.zip" .
           popd >/dev/null
           echo "Built package: asora-function-dev.zip"
