@@ -86,6 +86,7 @@ jobs:
             "version": "1.0.0",
             "private": true,
             "type": "module",
+            "main": "index.js",
             "dependencies": {
               "@azure/functions": "^4.4.0"
             }
@@ -138,6 +139,12 @@ jobs:
               };
             }
           });
+          JS
+
+          # Create index.js to register functions (required for programmatic model)
+          cat > index.js <<'JS'
+          import './src/functions/health.js';
+          import './src/functions/feed.js';
           JS
 
           # Record package structure for debugging

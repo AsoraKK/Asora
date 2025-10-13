@@ -152,7 +152,7 @@ jobs:
           set -euo pipefail
           # Reset legacy WEBSITE_RUN_FROM_PACKAGE if present (causes 409 with config-zip)
           echo "Ensuring WEBSITE_RUN_FROM_PACKAGE is cleared..."
-          az functionapp config appsettings delete \
+          az webapp config appsettings delete \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
 
