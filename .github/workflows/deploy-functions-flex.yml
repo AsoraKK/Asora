@@ -164,15 +164,36 @@ jobs:
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
 
-          az functionapp deploy \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src-path "$PACKAGE_PATH" --type zip --timeout 600
+          # Use deployment source config-zip for Y1 Consumption (more reliable than az functionapp deploy)
+          az functionapp deployment source config-zip \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
 
       - name: Warm & verify
         run: |
           set -euo pipefail
           az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME"
-          sleep 25
-          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/api/health")
-          echo "Health HTTP: $code"
-          [ "$code" -eq 200 ] || [ "$code" -eq 204 ] || { echo "Health check failed with code $code"; exit 4; }
+          echo "Waiting for app to warm up..."
+          sleep 30
+          
+          # Retry logic for cold starts
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/api/health")
+            echo "Attempt $i/$MAX_RETRIES: Health HTTP $code"
+            
+            if [ "$code" -eq 200 ] || [ "$code" -eq 204 ]; then
+              echo "✅ Health endpoint responding"
+              exit 0
+            fi
+            
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "Waiting ${RETRY_DELAY}s before retry..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          
+          echo "::error::Health check failed after $MAX_RETRIES attempts (last code: $code)"
+          exit 4
 
