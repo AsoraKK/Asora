@@ -197,13 +197,34 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Get storage account name from app settings
+          # Try to get storage account name from identity-based setting first
           STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
           
-          if [ -z "$STORAGE_ACCOUNT" ]; then
-            echo "::error::Cannot determine storage account. Flex apps must have AzureWebJobsStorage__accountName set."
-            exit 1
+          # If not found, extract from connection string
+          if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
+            echo "Identity-based storage not configured, extracting from connection string..."
+            CONNECTION_STRING=$(az functionapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+              --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+            
+            if [ -z "$CONNECTION_STRING" ] || [ "$CONNECTION_STRING" = "None" ]; then
+              echo "::error::Cannot determine storage account. No AzureWebJobsStorage settings found."
+              exit 1
+            fi
+            
+            # Extract account name from connection string (AccountName=xxxxx;)
+            STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
+            # Extract account key from connection string (AccountKey=xxxxx;)
+            STORAGE_KEY=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountKey=\([^;]*\).*/\1/p')
+            
+            if [ -z "$STORAGE_ACCOUNT" ] || [ -z "$STORAGE_KEY" ]; then
+              echo "::error::Cannot extract storage account name and key from connection string."
+              exit 1
+            fi
+          else
+            # For identity-based, we need to get the key differently
+            echo "Using identity-based storage access..."
+            STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --query "[0].value" -o tsv)
           fi
           
           echo "Using storage account: $STORAGE_ACCOUNT"
@@ -211,8 +232,8 @@ jobs:
           # Ensure deployments container exists
           az storage container create \
             --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
             --name deployments \
-            --auth-mode login \
             --only-show-errors || echo "Container already exists"
           
           # Upload package with a unique blob name
@@ -221,20 +242,20 @@ jobs:
           
           az storage blob upload \
             --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
             --container-name deployments \
             --name "$BLOB_NAME" \
             --file "asora-function-dev.zip" \
-            --auth-mode login \
             --overwrite \
             --only-show-errors
           
           # Also upload as functionapp.zip (standard name for Flex)
           az storage blob upload \
             --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
             --container-name deployments \
             --name "functionapp.zip" \
             --file "asora-function-dev.zip" \
-            --auth-mode login \
             --overwrite \
             --only-show-errors
           
