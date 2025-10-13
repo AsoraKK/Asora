@@ -275,26 +275,75 @@ jobs:
               --scope "$SCOPE" \
               || echo "Role assignment already present or pending propagation."
 
-      - name: Deploy functions (Azure CLI for Flex Consumption)
+      - name: Upload package to blob storage for Flex Consumption
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            echo "Deploying to Flex Consumption function app via Azure CLI..."
+            echo "Uploading package to blob storage for Flex Consumption deployment..."
             
-            # Use az functionapp deployment source config-zip for reliable deployment
-            az functionapp deployment source config-zip \
+            # Get storage account details
+            STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            
+            if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
+              CONNECTION_STRING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
+              STORAGE_KEY=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountKey=\([^;]*\).*/\1/p')
+            else
+              STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --query "[0].value" -o tsv)
+            fi
+            
+            # Create deployments container if it doesn't exist
+            az storage container create \
+              --account-name "$STORAGE_ACCOUNT" \
+              --account-key "$STORAGE_KEY" \
+              --name deployments \
+              --only-show-errors || echo "Container already exists"
+            
+            # Upload package with timestamp
+            BLOB_NAME="deploy-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}.zip"
+            echo "Uploading as: $BLOB_NAME"
+            
+            az storage blob upload \
+              --account-name "$STORAGE_ACCOUNT" \
+              --account-key "$STORAGE_KEY" \
+              --container-name deployments \
+              --name "$BLOB_NAME" \
+              --file dist-func.zip \
+              --overwrite \
+              --only-show-errors
+            
+            # Also upload as functionapp.zip (standard name)
+            az storage blob upload \
+              --account-name "$STORAGE_ACCOUNT" \
+              --account-key "$STORAGE_KEY" \
+              --container-name deployments \
+              --name "functionapp.zip" \
+              --file dist-func.zip \
+              --overwrite \
+              --only-show-errors
+            
+            # Set WEBSITE_RUN_FROM_PACKAGE to point to the blob
+            BLOB_URL="https://${STORAGE_ACCOUNT}.blob.core.windows.net/deployments/$BLOB_NAME"
+            echo "Setting WEBSITE_RUN_FROM_PACKAGE to: $BLOB_URL"
+            
+            az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
-              --src dist-func.zip \
-              --timeout 600
+              --settings WEBSITE_RUN_FROM_PACKAGE="$BLOB_URL"
             
-            echo "✅ Deployment completed"
+            echo "✅ Package uploaded and deployment configured"
 
-      - name: Wait for deployment to complete
-        run: |
-          echo "Waiting for deployment to stabilize..."
-          sleep 30
+      - name: Restart function app to pick up new deployment
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            echo "Restarting function app to activate new deployment..."
+            az functionapp restart --resource-group "$RG" --name "$FUNC_APP"
+            echo "Waiting for app to restart..."
+            sleep 45
 
       - name: List functions
         uses: azure/cli@v2
