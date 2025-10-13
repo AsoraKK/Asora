@@ -87,9 +87,9 @@ jobs:
           set -euo pipefail
           WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
 
-          # host.json (v4 schema for Functions v4 runtime)
+          # host.json (v2 schema for classic model on Functions v4 runtime)
           cat > host.json <<'JSON'
-          { "version": "4.0" }
+          { "version": "2.0", "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle", "version": "[3.*, 4.0.0)" } }
           JSON
 
           # app-level package.json (no dev deps)
@@ -150,19 +150,32 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          # Reset legacy WEBSITE_RUN_FROM_PACKAGE if present (causes 409 with config-zip)
-          echo "Ensuring WEBSITE_RUN_FROM_PACKAGE is cleared..."
-          az webapp config appsettings delete \
+          # Check if WEBSITE_RUN_FROM_PACKAGE exists and remove it
+          echo "Checking for WEBSITE_RUN_FROM_PACKAGE..."
+          EXISTING=$(az functionapp config appsettings list \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
+            --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value" -o tsv || echo "")
+          
+          if [ -n "$EXISTING" ]; then
+            echo "Removing WEBSITE_RUN_FROM_PACKAGE..."
+            az functionapp config appsettings delete \
+              -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+              --setting-names WEBSITE_RUN_FROM_PACKAGE
+          else
+            echo "WEBSITE_RUN_FROM_PACKAGE not present, skipping deletion"
+          fi
 
-          # Reinstate runtime baseline to avoid accidental deletion side-effects
-          echo "Restoring runtime baseline..."
+          # Ensure runtime settings are correct
+          echo "Ensuring runtime settings..."
           az functionapp config appsettings set \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 || true
+            --settings \
+              FUNCTIONS_EXTENSION_VERSION=~4 \
+              FUNCTIONS_WORKER_RUNTIME=node \
+              WEBSITE_NODE_DEFAULT_VERSION=~20
 
-          # Use deployment source config-zip for Y1 Consumption (more reliable than az functionapp deploy)
+          # Use deployment source config-zip for Y1 Consumption
+          echo "Starting deployment..."
           az functionapp deployment source config-zip \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
 
@@ -178,12 +191,12 @@ jobs:
         run: |
           set -euo pipefail
           az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME"
-          echo "Waiting for app to warm up..."
-          sleep 30
+          echo "Waiting for app to warm up (Y1 Consumption cold start)..."
+          sleep 45
           
-          # Retry logic for cold starts
-          MAX_RETRIES=5
-          RETRY_DELAY=10
+          # Retry logic for cold starts and 503 errors
+          MAX_RETRIES=8
+          RETRY_DELAY=15
           
           for i in $(seq 1 $MAX_RETRIES); do
             code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/api/health")
@@ -194,6 +207,10 @@ jobs:
               exit 0
             fi
             
+            if [ "$code" -eq 503 ] || [ "$code" -eq 502 ]; then
+              echo "⏳ App still warming up (got $code)..."
+            fi
+            
             if [ $i -lt $MAX_RETRIES ]; then
               echo "Waiting ${RETRY_DELAY}s before retry..."
               sleep $RETRY_DELAY
@@ -201,5 +218,6 @@ jobs:
           done
           
           echo "::error::Health check failed after $MAX_RETRIES attempts (last code: $code)"
+          echo "::error::App may need manual restart or check deployment logs"
           exit 4
 
