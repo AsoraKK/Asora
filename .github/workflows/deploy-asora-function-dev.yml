@@ -14,11 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-  RESOURCE_GROUP: asora-psql-flex
-  APP_NAME: asora-function-dev
+  RG: asora-psql-flex
+  FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
 
 jobs:
@@ -28,26 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.7
 
-      - name: Block legacy SP secrets
-        env:
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-        run: |
-          set -euo pipefail
-          if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
-            echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
-            exit 1
-          fi
+      - name: Install zip utilities
+        run: sudo apt-get update && sudo apt-get install -y zip unzip
 
-      - name: Install jq, zip, unzip
-        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
-
-      - name: Azure login (OIDC)
+      - name: Azure login
         uses: azure/login@v2
         with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Setup Node
         uses: actions/setup-node@v4.0.3
@@ -57,13 +41,13 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      - name: Build Flex programmatic model package
+      - name: Build function package
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
-          
-          # host.json for Functions v4 (Flex)
+
+          # host.json for Functions v4 (Flex) with direct routes
           cat > host.json <<'JSON'
           {
             "version": "4.0",
@@ -79,14 +63,12 @@ jobs:
           }
           JSON
 
-          # package.json using new Node programming model
+          # package.json for classic Node worker
           cat > package.json <<'JSON'
           {
             "name": "asora-flex-functions",
             "version": "1.0.0",
             "private": true,
-            "type": "module",
-            "main": "index.js",
             "dependencies": {
               "@azure/functions": "^4.4.0"
             }
@@ -95,216 +77,202 @@ jobs:
 
           npm install --omit=dev
 
-          mkdir -p src/functions
+          mkdir -p functions/health functions/feed
 
-          cat > src/functions/health.js <<'JS'
-          import { app } from "@azure/functions";
+          cat > functions/health/function.json <<'JSON'
+          {
+            "bindings": [
+              {
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "health",
+                "authLevel": "anonymous"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          JSON
 
-          app.http("health", {
-            authLevel: "anonymous",
-            methods: ["GET"],
-            route: "health",
-            handler: async () => ({
-              jsonBody: {
+          cat > functions/health/index.js <<'JS'
+          module.exports = async function (context, req) {
+            context.log("Health check invoked");
+
+            context.res = {
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: {
                 ok: true,
                 timestamp: new Date().toISOString(),
                 service: "asora-function-dev"
               }
-            })
-          });
+            };
+          };
           JS
 
-          cat > src/functions/feed.js <<'JS'
-          import { app } from "@azure/functions";
+          cat > functions/feed/function.json <<'JSON'
+          {
+            "bindings": [
+              {
+                "type": "httpTrigger",
+                "direction": "in",
+                "name": "req",
+                "methods": ["get"],
+                "route": "feed",
+                "authLevel": "anonymous"
+              },
+              {
+                "type": "http",
+                "direction": "out",
+                "name": "res"
+              }
+            ]
+          }
+          JSON
 
-          app.http("feed", {
-            authLevel: "anonymous",
-            methods: ["GET"],
-            route: "feed",
-            handler: async (request) => {
-              const url = new URL(request.url);
-              const guest = url.searchParams.get("guest") === "1";
-              const limit = Number.parseInt(url.searchParams.get("limit") ?? "10", 10);
+          cat > functions/feed/index.js <<'JS'
+          module.exports = async function (context, req) {
+            const limit = Number.parseInt(req.query.limit || "10", 10);
+            const guest = req.query.guest === "1";
 
-              return {
-                jsonBody: {
-                  data: [],
-                  meta: {
-                    total: 0,
-                    limit,
-                    offset: 0,
-                    guest
-                  }
+            context.res = {
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: {
+                data: [],
+                meta: {
+                  total: 0,
+                  limit,
+                  offset: 0,
+                  guest
                 }
-              };
-            }
-          });
+              }
+            };
+          };
           JS
 
-          # Create index.js to register functions (required for programmatic model)
-          cat > index.js <<'JS'
-          import './src/functions/health.js';
-          import './src/functions/feed.js';
-          JS
+          test -f host.json || (echo "host.json missing at package root" && exit 1)
 
-          # Record package structure for debugging
-          echo "Package structure:"
-          find . -type f | sort
-
-          zip -qr "$GITHUB_WORKSPACE/asora-function-dev.zip" .
+          zip -qr "$GITHUB_WORKSPACE/dist-func.zip" host.json package.json package-lock.json node_modules functions
           popd >/dev/null
-          echo "Built package: asora-function-dev.zip"
+          echo "Built package: dist-func.zip"
 
       - name: Validate package exists
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          test -f "asora-function-dev.zip" || { echo "Missing asora-function-dev.zip"; exit 3; }
+          test -f "dist-func.zip" || { echo "Missing dist-func.zip"; exit 3; }
           echo "Package size:"
-          ls -lh asora-function-dev.zip
+          ls -lh dist-func.zip
           echo "Package contents:"
-          unzip -l asora-function-dev.zip
+          unzip -l dist-func.zip | head -n 20
 
-      - name: Clean up flex-incompatible app settings
-        run: |
-          echo "Removing runtime settings that break Flex Consumption..."
-          az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names FUNCTIONS_WORKER_RUNTIME || echo "FUNCTIONS_WORKER_RUNTIME already absent"
-          az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names WEBSITE_NODE_DEFAULT_VERSION || echo "WEBSITE_NODE_DEFAULT_VERSION already absent"
+      - name: Ensure required app settings
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            az functionapp config appsettings set \
+              --resource-group "$RG" \
+              --name "$FUNC_APP" \
+              --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_RUN_FROM_PACKAGE=1
 
-          echo "Removing WEBSITE_RUN_FROM_PACKAGE if present..."
-          az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE already absent"
+      - name: Ensure identity can access content storage
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
+              CONNECTION_STRING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              if [ -z "$CONNECTION_STRING" ] || [ "$CONNECTION_STRING" = "None" ]; then
+                echo "::error::Unable to determine storage account backing the function app."
+                exit 1
+              fi
+              STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
+            fi
 
-      - name: Upload package to blob storage for Flex Consumption
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          
-          # Try to get storage account name from identity-based setting first
-          STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
-          
-          # If not found, extract from connection string
-          if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
-            echo "Identity-based storage not configured, extracting from connection string..."
-            CONNECTION_STRING=$(az functionapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-              --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
-            
-            if [ -z "$CONNECTION_STRING" ] || [ "$CONNECTION_STRING" = "None" ]; then
-              echo "::error::Cannot determine storage account. No AzureWebJobsStorage settings found."
+            if [ -z "$STORAGE_ACCOUNT" ]; then
+              echo "::error::Storage account name not resolved."
               exit 1
             fi
-            
-            # Extract account name from connection string (AccountName=xxxxx;)
-            STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
-            # Extract account key from connection string (AccountKey=xxxxx;)
-            STORAGE_KEY=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountKey=\([^;]*\).*/\1/p')
-            
-            if [ -z "$STORAGE_ACCOUNT" ] || [ -z "$STORAGE_KEY" ]; then
-              echo "::error::Cannot extract storage account name and key from connection string."
+
+            PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
+            if [ -z "$PRINCIPAL_ID" ] || [ "$PRINCIPAL_ID" = "None" ]; then
+              echo "::error::Function app is missing a system-assigned managed identity."
               exit 1
             fi
-          else
-            # For identity-based, we need to get the key differently
-            echo "Using identity-based storage access..."
-            STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --query "[0].value" -o tsv)
-          fi
-          
-          echo "Using storage account: $STORAGE_ACCOUNT"
-          
-          # Ensure deployments container exists
-          az storage container create \
-            --account-name "$STORAGE_ACCOUNT" \
-            --account-key "$STORAGE_KEY" \
-            --name deployments \
-            --only-show-errors || echo "Container already exists"
-          
-          # Upload package with a unique blob name
-          BLOB_NAME="deploy-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}.zip"
-          echo "Uploading as: $BLOB_NAME"
-          
-          az storage blob upload \
-            --account-name "$STORAGE_ACCOUNT" \
-            --account-key "$STORAGE_KEY" \
-            --container-name deployments \
-            --name "$BLOB_NAME" \
-            --file "asora-function-dev.zip" \
-            --overwrite \
-            --only-show-errors
-          
-          # Also upload as functionapp.zip (standard name for Flex)
-          az storage blob upload \
-            --account-name "$STORAGE_ACCOUNT" \
-            --account-key "$STORAGE_KEY" \
-            --container-name deployments \
-            --name "functionapp.zip" \
-            --file "asora-function-dev.zip" \
-            --overwrite \
-            --only-show-errors
-          
-          echo "✅ Package uploaded to blob storage"
-          echo "BLOB_URL=https://${STORAGE_ACCOUNT}.blob.core.windows.net/deployments/$BLOB_NAME" >> "$GITHUB_ENV"
 
-      - name: Restart function app
-        run: |
-          echo "Restarting to pick up new deployment..."
-          az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME"
-          echo "Waiting for app to start (Flex Consumption may take 30-60s)..."
-          sleep 45
+            SCOPE=$(az storage account show --name "$STORAGE_ACCOUNT" --query id -o tsv)
+            az role assignment create \
+              --assignee-object-id "$PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Contributor" \
+              --scope "$SCOPE" \
+              || echo "Role assignment already present or pending propagation."
 
-      - name: List deployed functions
-        run: |
-          echo "Listing deployed functions..."
-          az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" -o table || true
+      - name: Deploy functions (Zip Deploy)
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.FUNC_APP }}
+          package: dist-func.zip
+          respect-pom-xml: false
 
-      - name: Assert functions are present
+      - name: List functions
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az functionapp list-functions -g "$RG" -n "$FUNC_APP" -o table
+
+      - name: Assert health function exists
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            az functionapp list-functions -g "$RG" -n "$FUNC_APP" \
+              --query "[?contains(name, 'health')]" -o tsv | grep -q health || \
+              (echo "::error::health function missing after deploy" && exit 1)
+
+      - name: Probe health endpoint
         run: |
           set -euo pipefail
-          n=$(az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" -o json | jq 'length')
-          echo "Found $n function(s)"
-          if [ "$n" -lt 2 ]; then
-            echo "::error::Expected at least health and feed functions. Found only $n."
-            exit 1
-          fi
-          echo "✅ Functions deployed successfully"
+          echo "Testing https://${FUNC_APP}.azurewebsites.net/health"
 
-      - name: Verify health endpoint
-        run: |
-          set -euo pipefail
-          echo "Testing https://${APP_NAME}.azurewebsites.net/health"
-          
-          # Retry logic for Flex Consumption cold starts
           MAX_RETRIES=5
           RETRY_DELAY=10
-          
+
           for i in $(seq 1 $MAX_RETRIES); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/health")
+            code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/health")
             echo "Attempt $i/$MAX_RETRIES: Health HTTP $code"
-            
-            if [ "$code" = "200" ] || [ "$code" = "204" ]; then
+
+            if [ "$code" = "200" ]; then
+              cat /tmp/health.out
               echo "✅ Health endpoint responding"
               exit 0
             fi
-            
+
             if [ $i -lt $MAX_RETRIES ]; then
               echo "Waiting ${RETRY_DELAY}s before retry..."
               sleep $RETRY_DELAY
             fi
           done
-          
+
           echo "::error::Health check failed after $MAX_RETRIES attempts (last code: $code)"
           exit 1
 
-      - name: Verify feed endpoint
+      - name: Probe feed endpoint
         run: |
           set -euo pipefail
-          echo "Testing https://${APP_NAME}.azurewebsites.net/feed?guest=1&limit=10"
-          
-          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_NAME}.azurewebsites.net/feed?guest=1&limit=10")
+          echo "Testing https://${FUNC_APP}.azurewebsites.net/feed?guest=1&limit=10"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/feed?guest=1&limit=10")
           echo "Feed HTTP: $code"
-          
           if [ "$code" = "200" ] || [ "$code" = "204" ]; then
             echo "✅ Feed endpoint responding"
           else
@@ -314,5 +282,5 @@ jobs:
       - name: Display function URLs
         run: |
           echo "Deployed function URLs:"
-          echo "  Health: https://${APP_NAME}.azurewebsites.net/health"
-          echo "  Feed:   https://${APP_NAME}.azurewebsites.net/feed"
+          echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
+          echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
