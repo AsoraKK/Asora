@@ -262,7 +262,7 @@ jobs:
       - name: Assert functions are present
         run: |
           set -euo pipefail
-          n=$(az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" --query "length([])" -o tsv)
+          n=$(az functionapp function list -g "$RESOURCE_GROUP" -n "$APP_NAME" -o json | jq 'length')
           echo "Found $n function(s)"
           if [ "$n" -lt 2 ]; then
             echo "::error::Expected at least health and feed functions. Found only $n."
