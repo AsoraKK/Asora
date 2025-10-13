@@ -87,9 +87,9 @@ jobs:
           set -euo pipefail
           WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
 
-          # host.json (v2 schema works with Functions v4 runtime)
+          # host.json (v4 schema for Functions v4 runtime)
           cat > host.json <<'JSON'
-          { "version": "2.0" }
+          { "version": "4.0" }
           JSON
 
           # app-level package.json (no dev deps)
@@ -165,6 +165,14 @@ jobs:
           # Use deployment source config-zip for Y1 Consumption (more reliable than az functionapp deploy)
           az functionapp deployment source config-zip \
             -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
+
+      - name: Show deployment logs on failure
+        if: failure()
+        run: |
+          echo "🔍 Deployment failed. Fetching deployment logs..."
+          az webapp log deployment show -n "$APP_NAME" -g "$RESOURCE_GROUP" || true
+          echo "📋 Recent deployment history:"
+          az webapp log deployment list -n "$APP_NAME" -g "$RESOURCE_GROUP" --query "[0:3]" -o table || true
 
       - name: Warm & verify
         run: |
