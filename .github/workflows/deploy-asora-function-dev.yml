@@ -190,12 +190,52 @@ jobs:
           echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
+      - name: Remove incompatible app settings for Flex Consumption
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "Removing app settings that are not supported by Flex Consumption SKU..."
+            
+            # Check and remove WEBSITE_RUN_FROM_PACKAGE
+            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value" -o tsv || echo "")
+            if [ -n "$EXISTING" ]; then
+              echo "Removing WEBSITE_RUN_FROM_PACKAGE (not supported on Flex)..."
+              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+                --setting-names WEBSITE_RUN_FROM_PACKAGE
+            else
+              echo "WEBSITE_RUN_FROM_PACKAGE not present"
+            fi
+            
+            # Check and remove FUNCTIONS_WORKER_RUNTIME (Flex auto-detects)
+            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value" -o tsv || echo "")
+            if [ -n "$EXISTING" ]; then
+              echo "Removing FUNCTIONS_WORKER_RUNTIME (Flex auto-detects)..."
+              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+                --setting-names FUNCTIONS_WORKER_RUNTIME
+            else
+              echo "FUNCTIONS_WORKER_RUNTIME not present"
+            fi
+            
+            # Check and remove WEBSITE_NODE_DEFAULT_VERSION (Flex auto-detects)
+            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv || echo "")
+            if [ -n "$EXISTING" ]; then
+              echo "Removing WEBSITE_NODE_DEFAULT_VERSION (Flex auto-detects)..."
+              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+                --setting-names WEBSITE_NODE_DEFAULT_VERSION
+            else
+              echo "WEBSITE_NODE_DEFAULT_VERSION not present"
+            fi
+
       - name: Ensure required app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Flex Consumption auto-detects runtime from package, don't set FUNCTIONS_WORKER_RUNTIME or WEBSITE_RUN_FROM_PACKAGE
+            # Flex Consumption only needs FUNCTIONS_EXTENSION_VERSION
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
