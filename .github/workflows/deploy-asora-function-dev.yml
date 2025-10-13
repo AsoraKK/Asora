@@ -195,11 +195,11 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            # Flex Consumption auto-detects runtime from package, don't set FUNCTIONS_WORKER_RUNTIME
+            # Flex Consumption auto-detects runtime from package, don't set FUNCTIONS_WORKER_RUNTIME or WEBSITE_RUN_FROM_PACKAGE
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION=~4 WEBSITE_RUN_FROM_PACKAGE=1
+              --settings FUNCTIONS_EXTENSION_VERSION=~4
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
