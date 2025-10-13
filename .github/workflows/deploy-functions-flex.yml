@@ -174,10 +174,43 @@ jobs:
               FUNCTIONS_WORKER_RUNTIME=node \
               WEBSITE_NODE_DEFAULT_VERSION=~20
 
-          # Use deployment source config-zip for Y1 Consumption
-          echo "Starting deployment..."
-          az functionapp deployment source config-zip \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
+          # Check app status before deployment
+          echo "Checking app status..."
+          APP_STATE=$(az functionapp show -g "$RESOURCE_GROUP" -n "$APP_NAME" --query "state" -o tsv)
+          echo "App state: $APP_STATE"
+          
+          if [ "$APP_STATE" != "Running" ]; then
+            echo "⚠️  App not in Running state, attempting to start..."
+            az functionapp start -g "$RESOURCE_GROUP" -n "$APP_NAME" || echo "Failed to start app, continuing with deployment"
+          fi
+
+          # Use deployment source config-zip for Y1 Consumption with retry
+          echo "Starting deployment with retry logic..."
+          MAX_DEPLOY_RETRIES=3
+          DEPLOY_ATTEMPT=1
+          
+          while [ $DEPLOY_ATTEMPT -le $MAX_DEPLOY_RETRIES ]; do
+            echo "Deployment attempt $DEPLOY_ATTEMPT of $MAX_DEPLOY_RETRIES..."
+            
+            if az functionapp deployment source config-zip \
+              -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600; then
+              echo "✅ Deployment successful on attempt $DEPLOY_ATTEMPT"
+              break
+            else
+              echo "❌ Deployment failed on attempt $DEPLOY_ATTEMPT"
+              
+              if [ $DEPLOY_ATTEMPT -eq $MAX_DEPLOY_RETRIES ]; then
+                echo "::error::Deployment failed after $MAX_DEPLOY_RETRIES attempts"
+                echo "::error::Check app health and deployment logs manually"
+                exit 1
+              fi
+              
+              echo "🔄 Restarting app and waiting before retry..."
+              az functionapp restart -g "$RESOURCE_GROUP" -n "$APP_NAME" || true
+              sleep 30
+              DEPLOY_ATTEMPT=$((DEPLOY_ATTEMPT + 1))
+            fi
+          done
 
       - name: Show deployment logs on failure
         if: failure()
