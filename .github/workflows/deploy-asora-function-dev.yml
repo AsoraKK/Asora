@@ -349,14 +349,14 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az functionapp list-functions -g "$RG" -n "$FUNC_APP" -o table
+            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
       - name: Assert health function exists
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            az functionapp list-functions -g "$RG" -n "$FUNC_APP" \
+            az functionapp function list -g "$RG" -n "$FUNC_APP" \
               --query "[?contains(name, 'health')]" -o tsv | grep -q health || \
               (echo "::error::health function missing after deploy" && exit 1)
 
