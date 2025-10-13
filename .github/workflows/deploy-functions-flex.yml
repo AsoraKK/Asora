@@ -164,8 +164,8 @@ jobs:
             -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE not found or already removed"
 
-          az functionapp deployment source config-zip \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "$PACKAGE_PATH" --timeout 600
+          az functionapp deploy \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src-path "$PACKAGE_PATH" --type zip --timeout 600
 
       - name: Warm & verify
         run: |

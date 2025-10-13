@@ -192,12 +192,12 @@ jobs:
           az functionapp config appsettings delete -g "$RESOURCE_GROUP" -n "$APP_NAME" \
             --setting-names WEBSITE_RUN_FROM_PACKAGE || echo "WEBSITE_RUN_FROM_PACKAGE already absent"
 
-      - name: Deploy via config-zip
+      - name: Deploy via zip
         working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
-          az functionapp deployment source config-zip \
-            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src "asora-function-dev.zip" --timeout 600
+          az functionapp deploy \
+            -g "$RESOURCE_GROUP" -n "$APP_NAME" --src-path "asora-function-dev.zip" --type zip --timeout 600
 
       - name: Restart function app
         run: |
