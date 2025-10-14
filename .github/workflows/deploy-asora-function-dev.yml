@@ -89,44 +89,67 @@ jobs:
           echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
-      - name: Ensure required app settings and clean content share
+      - name: Validate container/share names (Preflight Guard)
+        run: |
+          set -euo pipefail
+          
+          echo "=== Validating Blob Container/Share Names ==="
+          
+          DEPLOY_CONTAINER="deploy-asora-function-dev"
+          CONTENT_SHARE="asora-function-dev-content"
+          
+          # Azure Blob/File naming: lowercase, 3-63 chars, letters/numbers/hyphens only
+          # Cannot start/end with hyphen, no consecutive hyphens
+          re='^[a-z0-9-]{3,63}$'
+          
+          for NAME in "$DEPLOY_CONTAINER" "$CONTENT_SHARE"; do
+            if [[ -n "$NAME" ]] && [[ "$NAME" =~ $re ]] && \
+               [[ "$NAME" != -* ]] && [[ "$NAME" != *- ]] && [[ "$NAME" != *--* ]]; then
+              echo "✅ Valid name: $NAME"
+            else
+              echo "::error::Invalid container/share name: $NAME"
+              echo "::error::Must be lowercase, 3-63 chars, letters/numbers/hyphens only"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All container/share names are valid"
+
+      - name: Configure Flex Consumption app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             
-            # Set valid container/share names for Kudu deployment (lowercase, 3-63 chars)
-            # SCM_ZIPDEPLOY_CONTAINER controls where OneDeploy stores the package
+            # Set valid container/share names (lowercase, 3-63 chars, hyphens only)
             DEPLOY_CONTAINER="deploy-asora-function-dev"
+            CONTENT_SHARE="asora-function-dev-content"
             
-            echo "Setting required app settings with valid deployment container"
+            echo "Setting required app settings for Flex Consumption"
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
                 SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
             
-            # Remove ALL potentially conflicting deployment-related settings
-            # Including Flex Consumption incompatible settings discovered during deployment
-            echo "Removing incompatible and conflicting app settings for Flex Consumption..."
+            # Remove incompatible settings for Flex Consumption
+            echo "Removing incompatible app settings for Flex Consumption..."
             az functionapp config appsettings delete \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --setting-names \
                 WEBSITE_RUN_FROM_PACKAGE \
                 WEBSITE_RUN_FROM_ZIP \
-                FUNCTIONS_WORKER_RUNTIME \
-                WEBSITE_CONTENTSHARE \
                 SCM_RUN_FROM_PACKAGE_CONTAINER \
-                SCM_USE_FUNCPACKAGE \
-                WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
-                SCM_ZIPDEPLOY_CONTAINER \
                 SCM_CONTAINER \
                 SCM_TARGET_PATH \
+                WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
               2>/dev/null || true
             
-            echo "App settings configured successfully"
+            echo "✅ App settings configured successfully"
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
@@ -179,32 +202,29 @@ jobs:
             echo "Waiting 10 seconds for RBAC propagation..."
             sleep 10
 
-      - name: Validate deployment readiness
-        run: |
-          set -euo pipefail
-          
-          echo "=== Validating Blob Container/Share Names ==="
-          
-          # Azure Blob/File naming rules: lowercase, 3-63 chars, letters/numbers/hyphens
-          # Cannot start/end with hyphen, no consecutive hyphens
-          DEPLOY_CONTAINER="deploy-asora-function-dev"
-          
-          # Regex pattern for valid names
-          re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
-          
-          # Validate deployment container name
-          if [[ ! "$DEPLOY_CONTAINER" =~ $re ]] || [[ "$DEPLOY_CONTAINER" == *--* ]]; then
-            echo "::error::Invalid SCM_ZIPDEPLOY_CONTAINER name: $DEPLOY_CONTAINER"
-            echo "::error::Must be 3-63 chars, lowercase letters/numbers/hyphens only"
-            exit 1
-          fi
-          
-          echo "✅ Deployment container name is valid: $DEPLOY_CONTAINER"
+      - name: Assert Flex-specific configuration
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            
+            echo "=== Asserting Flex Consumption Configuration ==="
+            
+            # For Flex: assert NO WEBSITE_RUN_FROM_PACKAGE
+            RUN_FROM_PKG=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
+            
+            if [ -n "$RUN_FROM_PKG" ] && [ "$RUN_FROM_PKG" != "None" ]; then
+              echo "::error::WEBSITE_RUN_FROM_PACKAGE must NOT be set for Flex Consumption"
+              exit 1
+            fi
+            
+            echo "✅ Flex Consumption configuration validated"
             
             # List critical settings for debugging
             echo "=== Critical App Settings ==="
             az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?contains(name, 'FUNCTION') || contains(name, 'WEBSITE') || contains(name, 'SCM') || contains(name, 'AzureWebJobsStorage')].{name:name, value:value}" \
+              --query "[?contains(name, 'FUNCTION') || contains(name, 'WEBSITE') || contains(name, 'SCM')].{name:name, value:value}" \
               -o table
 
       - name: Deploy function package
