@@ -63,18 +63,21 @@ jobs:
           set -euo pipefail
           WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
 
-          # host.json for Functions v4 (Flex) with direct routes
+          # host.json for Functions v4 programmatic model
           cat > host.json <<'JSON'
           {
-            "version": "4.0",
+            "version": "2.0",
+            "logging": {
+              "applicationInsights": {
+                "samplingSettings": {
+                  "isEnabled": true,
+                  "excludedTypes": "Request"
+                }
+              }
+            },
             "extensionBundle": {
               "id": "Microsoft.Azure.Functions.ExtensionBundle",
-              "version": "[3.*, 4.0.0)"
-            },
-            "extensions": {
-              "http": {
-                "routePrefix": ""
-              }
+              "version": "[4.*, 5.0.0)"
             }
           }
           JSON
@@ -95,11 +98,11 @@ jobs:
 
           npm install --omit=dev
 
-          mkdir -p src/functions
-
-          cat > src/functions/health.js <<'JS'
+          # Create index.js with functions defined directly (programmatic model)
+          cat > index.js <<'JS'
           import { app } from "@azure/functions";
 
+          // Health function
           app.http("health", {
             authLevel: "anonymous",
             methods: ["GET"],
@@ -112,11 +115,8 @@ jobs:
               }
             })
           });
-          JS
 
-          cat > src/functions/feed.js <<'JS'
-          import { app } from "@azure/functions";
-
+          // Feed function
           app.http("feed", {
             authLevel: "anonymous",
             methods: ["GET"],
@@ -139,12 +139,6 @@ jobs:
               };
             }
           });
-          JS
-
-          # Create index.js to register functions (required for programmatic model)
-          cat > index.js <<'JS'
-          import './src/functions/health.js';
-          import './src/functions/feed.js';
           JS
 
           test -f host.json || (echo "host.json missing at package root" && exit 1)
