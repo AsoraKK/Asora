@@ -87,26 +87,50 @@ jobs:
           echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
-      - name: Ensure required app settings
+      - name: Ensure required app settings and clean content share
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            
+            # Set a valid, lowercase content share name (Blob container naming rules)
+            # Azure Blob containers: lowercase, 3-63 chars, letters/numbers/hyphens only
+            CONTENT_SHARE="asora-function-dev-content"
+            
+            echo "Setting required app settings with valid content share: $CONTENT_SHARE"
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4"
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_CONTENTSHARE="$CONTENT_SHARE"
+            
+            # Remove all potentially conflicting deployment-related settings
+            echo "Removing incompatible and conflicting app settings..."
             az functionapp config appsettings delete \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
-              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP || true
+              --setting-names \
+                WEBSITE_RUN_FROM_PACKAGE \
+                WEBSITE_RUN_FROM_ZIP \
+                SCM_RUN_FROM_PACKAGE_CONTAINER \
+                SCM_USE_FUNCPACKAGE \
+                WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
+                SCM_ZIPDEPLOY_CONTAINER \
+                SCM_CONTAINER \
+                SCM_TARGET_PATH \
+              2>/dev/null || true
+            
+            echo "App settings configured successfully"
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            
+            # Resolve storage account name
             STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
               CONNECTION_STRING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
@@ -121,20 +145,69 @@ jobs:
               echo "::error::Storage account name not resolved."
               exit 1
             fi
+            
+            echo "Resolved storage account: $STORAGE_ACCOUNT"
+            
+            # Verify storage account exists
+            if ! az storage account show --name "$STORAGE_ACCOUNT" &>/dev/null; then
+              echo "::error::Storage account $STORAGE_ACCOUNT does not exist or is not accessible."
+              exit 1
+            fi
 
+            # Get managed identity principal ID
             PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
             if [ -z "$PRINCIPAL_ID" ] || [ "$PRINCIPAL_ID" = "None" ]; then
               echo "::error::Function app is missing a system-assigned managed identity."
               exit 1
             fi
 
+            # Grant Storage Blob Data Contributor role for content deployment
             SCOPE=$(az storage account show --name "$STORAGE_ACCOUNT" --query id -o tsv)
+            echo "Granting Storage Blob Data Contributor to MI $PRINCIPAL_ID on $STORAGE_ACCOUNT"
             az role assignment create \
               --assignee-object-id "$PRINCIPAL_ID" \
               --assignee-principal-type ServicePrincipal \
               --role "Storage Blob Data Contributor" \
               --scope "$SCOPE" \
-              || echo "Role assignment already present or pending propagation."
+              2>/dev/null || echo "Role assignment already exists or pending propagation"
+            
+            # Wait for role assignment to propagate
+            echo "Waiting 10 seconds for RBAC propagation..."
+            sleep 10
+
+      - name: Validate deployment readiness
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            
+            echo "=== Deployment Readiness Validation ==="
+            
+            # Validate content share name follows Azure Blob container rules
+            CONTENT_SHARE=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
+            
+            if [ -z "$CONTENT_SHARE" ]; then
+              echo "::error::WEBSITE_CONTENTSHARE is not set"
+              exit 1
+            fi
+            
+            echo "Content share name: $CONTENT_SHARE"
+            
+            # Validate naming rules: 3-63 chars, lowercase letters/numbers/hyphens only
+            if ! echo "$CONTENT_SHARE" | grep -qE '^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'; then
+              echo "::error::WEBSITE_CONTENTSHARE '$CONTENT_SHARE' violates Azure Blob container naming rules"
+              echo "::error::Must be 3-63 chars, lowercase letters/numbers/hyphens only, cannot start/end with hyphen"
+              exit 1
+            fi
+            
+            echo "✅ Content share name is valid"
+            
+            # List critical settings for debugging
+            echo "=== Critical App Settings ==="
+            az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?contains(name, 'FUNCTION') || contains(name, 'WEBSITE') || contains(name, 'SCM') || contains(name, 'AzureWebJobsStorage')].{name:name, value:value}" \
+              -o table
 
       - name: Deploy function package
         uses: Azure/functions-action@v1
