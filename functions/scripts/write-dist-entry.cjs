@@ -22,3 +22,19 @@ if (fs.existsSync(srcTypes)) {
   const typesContent = `${banner}export * from './src/index';\n`;
   fs.writeFileSync(destTypes, typesContent, 'utf8');
 }
+
+// Copy required Azure Functions files to dist root
+const rootDir = path.join(__dirname, '..');
+const filesToCopy = ['host.json', 'package.json'];
+
+for (const file of filesToCopy) {
+  const srcPath = path.join(rootDir, file);
+  const destPath = path.join(distDir, file);
+
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, destPath);
+    console.log(`Copied ${file} to dist/`);
+  } else {
+    console.warn(`Warning: ${file} not found in root directory`);
+  }
+}
