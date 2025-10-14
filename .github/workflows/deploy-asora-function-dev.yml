@@ -96,8 +96,7 @@ jobs:
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4" \
-                WEBSITE_RUN_FROM_PACKAGE="1"
+                FUNCTIONS_EXTENSION_VERSION="~4"
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
