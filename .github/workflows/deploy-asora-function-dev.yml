@@ -71,17 +71,8 @@ jobs:
 
           pushd dist >/dev/null
           
-          # List camelCase files that violate Azure Blob naming rules
-          echo "CamelCase files that will be excluded (violate blob naming):"
-          find . -name "*[A-Z]*" -type f | grep -v "/src/" | head -10 || true
-          
-          # Create minimal ZIP with only required files for current functions
-          # Include: index.js, host.json, package.json, health/, feed/, post/, shared/
-          # Exclude: camelCase files (exportUser, appealFlag, etc.) that cause blob naming errors
-          zip -r ../dist-func.zip \
-            index.js index.d.ts \
-            host.json package.json \
-            health/ feed/ post/ shared/ src/ \
+          # Create ZIP package with all compiled output
+          zip -r ../dist-func.zip . \
             -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
 
@@ -104,14 +95,17 @@ jobs:
           inlineScript: |
             set -euo pipefail
             
-            # For Flex Consumption, only set minimal required settings
-            # FUNCTIONS_WORKER_RUNTIME and WEBSITE_CONTENTSHARE are NOT supported in Flex
-            echo "Setting required app settings for Flex Consumption plan"
+            # Set valid container/share names for Kudu deployment (lowercase, 3-63 chars)
+            # SCM_ZIPDEPLOY_CONTAINER controls where OneDeploy stores the package
+            DEPLOY_CONTAINER="deploy-asora-function-dev"
+            
+            echo "Setting required app settings with valid deployment container"
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4"
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
             
             # Remove ALL potentially conflicting deployment-related settings
             # Including Flex Consumption incompatible settings discovered during deployment
@@ -186,28 +180,26 @@ jobs:
             sleep 10
 
       - name: Validate deployment readiness
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            
-            echo "=== Deployment Readiness Validation ==="
-            
-            # For Flex Consumption, validate minimal configuration
-            # WEBSITE_CONTENTSHARE and FUNCTIONS_WORKER_RUNTIME are NOT supported
-            echo "Validating Flex Consumption configuration..."
-            
-            # Ensure critical incompatible settings are removed
-            INCOMPATIBLE_SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_CONTENTSHARE' || name=='FUNCTIONS_WORKER_RUNTIME'].name" -o tsv)
-            
-            if [ -n "$INCOMPATIBLE_SETTINGS" ]; then
-              echo "::error::Found incompatible settings for Flex Consumption: $INCOMPATIBLE_SETTINGS"
-              echo "::error::These settings must be removed for Flex Consumption plans"
-              exit 1
-            fi
-            
-            echo "✅ No incompatible settings detected"
+        run: |
+          set -euo pipefail
+          
+          echo "=== Validating Blob Container/Share Names ==="
+          
+          # Azure Blob/File naming rules: lowercase, 3-63 chars, letters/numbers/hyphens
+          # Cannot start/end with hyphen, no consecutive hyphens
+          DEPLOY_CONTAINER="deploy-asora-function-dev"
+          
+          # Regex pattern for valid names
+          re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
+          
+          # Validate deployment container name
+          if [[ ! "$DEPLOY_CONTAINER" =~ $re ]] || [[ "$DEPLOY_CONTAINER" == *--* ]]; then
+            echo "::error::Invalid SCM_ZIPDEPLOY_CONTAINER name: $DEPLOY_CONTAINER"
+            echo "::error::Must be 3-63 chars, lowercase letters/numbers/hyphens only"
+            exit 1
+          fi
+          
+          echo "✅ Deployment container name is valid: $DEPLOY_CONTAINER"
             
             # List critical settings for debugging
             echo "=== Critical App Settings ==="
