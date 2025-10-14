@@ -93,27 +93,26 @@ jobs:
           inlineScript: |
             set -euo pipefail
             
-            # Set a valid, lowercase content share name (Blob container naming rules)
-            # Azure Blob containers: lowercase, 3-63 chars, letters/numbers/hyphens only
-            CONTENT_SHARE="asora-function-dev-content"
-            
-            echo "Setting required app settings with valid content share: $CONTENT_SHARE"
+            # For Flex Consumption, only set minimal required settings
+            # FUNCTIONS_WORKER_RUNTIME and WEBSITE_CONTENTSHARE are NOT supported in Flex
+            echo "Setting required app settings for Flex Consumption plan"
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
-                WEBSITE_CONTENTSHARE="$CONTENT_SHARE"
+                FUNCTIONS_EXTENSION_VERSION="~4"
             
-            # Remove all potentially conflicting deployment-related settings
-            echo "Removing incompatible and conflicting app settings..."
+            # Remove ALL potentially conflicting deployment-related settings
+            # Including Flex Consumption incompatible settings discovered during deployment
+            echo "Removing incompatible and conflicting app settings for Flex Consumption..."
             az functionapp config appsettings delete \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --setting-names \
                 WEBSITE_RUN_FROM_PACKAGE \
                 WEBSITE_RUN_FROM_ZIP \
+                FUNCTIONS_WORKER_RUNTIME \
+                WEBSITE_CONTENTSHARE \
                 SCM_RUN_FROM_PACKAGE_CONTAINER \
                 SCM_USE_FUNCPACKAGE \
                 WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
@@ -183,25 +182,21 @@ jobs:
             
             echo "=== Deployment Readiness Validation ==="
             
-            # Validate content share name follows Azure Blob container rules
-            CONTENT_SHARE=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
+            # For Flex Consumption, validate minimal configuration
+            # WEBSITE_CONTENTSHARE and FUNCTIONS_WORKER_RUNTIME are NOT supported
+            echo "Validating Flex Consumption configuration..."
             
-            if [ -z "$CONTENT_SHARE" ]; then
-              echo "::error::WEBSITE_CONTENTSHARE is not set"
+            # Ensure critical incompatible settings are removed
+            INCOMPATIBLE_SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_CONTENTSHARE' || name=='FUNCTIONS_WORKER_RUNTIME'].name" -o tsv)
+            
+            if [ -n "$INCOMPATIBLE_SETTINGS" ]; then
+              echo "::error::Found incompatible settings for Flex Consumption: $INCOMPATIBLE_SETTINGS"
+              echo "::error::These settings must be removed for Flex Consumption plans"
               exit 1
             fi
             
-            echo "Content share name: $CONTENT_SHARE"
-            
-            # Validate naming rules: 3-63 chars, lowercase letters/numbers/hyphens only
-            if ! echo "$CONTENT_SHARE" | grep -qE '^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'; then
-              echo "::error::WEBSITE_CONTENTSHARE '$CONTENT_SHARE' violates Azure Blob container naming rules"
-              echo "::error::Must be 3-63 chars, lowercase letters/numbers/hyphens only, cannot start/end with hyphen"
-              exit 1
-            fi
-            
-            echo "✅ Content share name is valid"
+            echo "✅ No incompatible settings detected"
             
             # List critical settings for debugging
             echo "=== Critical App Settings ==="
