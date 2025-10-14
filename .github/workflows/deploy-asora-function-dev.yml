@@ -58,94 +58,24 @@ jobs:
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
       - name: Build function package
-        working-directory: ${{ github.workspace }}
+        working-directory: functions
         run: |
           set -euo pipefail
-          WORK="$(mktemp -d)"; pushd "$WORK" >/dev/null
+          npm ci
+          npm run build
 
-          # host.json for Functions v4 programmatic model
-          cat > host.json <<'JSON'
-          {
-            "version": "2.0",
-            "logging": {
-              "applicationInsights": {
-                "samplingSettings": {
-                  "isEnabled": true,
-                  "excludedTypes": "Request"
-                }
-              }
-            },
-            "extensionBundle": {
-              "id": "Microsoft.Azure.Functions.ExtensionBundle",
-              "version": "[4.*, 5.0.0)"
-            }
-          }
-          JSON
+          # Validate expected deployment artifacts exist before zipping
+          test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
+          test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
+          test -f dist/package.json || { echo "::error::dist/package.json missing"; ls -al dist; exit 1; }
 
-          # package.json for programmatic model
-          cat > package.json <<'JSON'
-          {
-            "name": "asora-flex-functions",
-            "version": "1.0.0",
-            "private": true,
-            "type": "module",
-            "main": "index.js",
-            "dependencies": {
-              "@azure/functions": "^4.4.0"
-            }
-          }
-          JSON
-
-          npm install --omit=dev
-
-          # Create index.js with functions defined directly (programmatic model)
-          cat > index.js <<'JS'
-          import { app } from "@azure/functions";
-
-          // Health function
-          app.http("health", {
-            authLevel: "anonymous",
-            methods: ["GET"],
-            route: "health",
-            handler: async () => ({
-              jsonBody: {
-                ok: true,
-                timestamp: new Date().toISOString(),
-                service: "asora-function-dev"
-              }
-            })
-          });
-
-          // Feed function
-          app.http("feed", {
-            authLevel: "anonymous",
-            methods: ["GET"],
-            route: "feed",
-            handler: async (request) => {
-              const url = new URL(request.url);
-              const guest = url.searchParams.get("guest") === "1";
-              const limit = Number.parseInt(url.searchParams.get("limit") ?? "10", 10);
-
-              return {
-                jsonBody: {
-                  data: [],
-                  meta: {
-                    total: 0,
-                    limit,
-                    offset: 0,
-                    guest
-                  }
-                }
-              };
-            }
-          });
-          JS
-
-          test -f host.json || (echo "host.json missing at package root" && exit 1)
-
-          zip -qr "$GITHUB_WORKSPACE/dist-func.zip" host.json package.json package-lock.json node_modules functions
+          pushd dist >/dev/null
+          zip -r ../dist-func.zip . \
+            -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
-          echo "Built package: dist-func.zip"
+
+          mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
+          echo "Built package: $GITHUB_WORKSPACE/dist-func.zip"
 
       - name: Validate package exists
         working-directory: ${{ github.workspace }}
@@ -157,56 +87,18 @@ jobs:
           echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
-      - name: Remove incompatible app settings for Flex Consumption
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            echo "Removing app settings that are not supported by Flex Consumption SKU..."
-            
-            # Check and remove WEBSITE_RUN_FROM_PACKAGE
-            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value" -o tsv || echo "")
-            if [ -n "$EXISTING" ]; then
-              echo "Removing WEBSITE_RUN_FROM_PACKAGE (not supported on Flex)..."
-              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
-                --setting-names WEBSITE_RUN_FROM_PACKAGE
-            else
-              echo "WEBSITE_RUN_FROM_PACKAGE not present"
-            fi
-            
-            # Check and remove FUNCTIONS_WORKER_RUNTIME (Flex auto-detects)
-            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value" -o tsv || echo "")
-            if [ -n "$EXISTING" ]; then
-              echo "Removing FUNCTIONS_WORKER_RUNTIME (Flex auto-detects)..."
-              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
-                --setting-names FUNCTIONS_WORKER_RUNTIME
-            else
-              echo "FUNCTIONS_WORKER_RUNTIME not present"
-            fi
-            
-            # Check and remove WEBSITE_NODE_DEFAULT_VERSION (Flex auto-detects)
-            EXISTING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv || echo "")
-            if [ -n "$EXISTING" ]; then
-              echo "Removing WEBSITE_NODE_DEFAULT_VERSION (Flex auto-detects)..."
-              az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
-                --setting-names WEBSITE_NODE_DEFAULT_VERSION
-            else
-              echo "WEBSITE_NODE_DEFAULT_VERSION not present"
-            fi
-
       - name: Ensure required app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Flex Consumption only needs FUNCTIONS_EXTENSION_VERSION
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION=~4
+              --settings \
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_RUN_FROM_PACKAGE="1"
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
@@ -242,90 +134,40 @@ jobs:
               --scope "$SCOPE" \
               || echo "Role assignment already present or pending propagation."
 
-      - name: Upload package to blob storage for Flex Consumption
+      - name: Deploy function package
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.FUNC_APP }}
+          package: dist-func.zip
+
+      - name: Show function app status and list functions
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            echo "Uploading package to blob storage for Flex Consumption deployment..."
-            
-            # Get storage account details
-            STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
-            
-            if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
-              CONNECTION_STRING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
-              STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
-              STORAGE_KEY=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountKey=\([^;]*\).*/\1/p')
-            else
-              STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" --query "[0].value" -o tsv)
-            fi
-            
-            # Create deployments container if it doesn't exist
-            az storage container create \
-              --account-name "$STORAGE_ACCOUNT" \
-              --account-key "$STORAGE_KEY" \
-              --name deployments \
-              --only-show-errors || echo "Container already exists"
-            
-            # Upload package with timestamp
-            BLOB_NAME="deploy-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}.zip"
-            echo "Uploading as: $BLOB_NAME"
-            
-            az storage blob upload \
-              --account-name "$STORAGE_ACCOUNT" \
-              --account-key "$STORAGE_KEY" \
-              --container-name deployments \
-              --name "$BLOB_NAME" \
-              --file dist-func.zip \
-              --overwrite \
-              --only-show-errors
-            
-            # Also upload as functionapp.zip (standard name)
-            az storage blob upload \
-              --account-name "$STORAGE_ACCOUNT" \
-              --account-key "$STORAGE_KEY" \
-              --container-name deployments \
-              --name "functionapp.zip" \
-              --file dist-func.zip \
-              --overwrite \
-              --only-show-errors
-            
-            # Set WEBSITE_RUN_FROM_PACKAGE to point to the blob
-            BLOB_URL="https://${STORAGE_ACCOUNT}.blob.core.windows.net/deployments/$BLOB_NAME"
-            echo "Setting WEBSITE_RUN_FROM_PACKAGE to: $BLOB_URL"
-            
-            az functionapp config appsettings set \
-              --resource-group "$RG" \
-              --name "$FUNC_APP" \
-              --settings WEBSITE_RUN_FROM_PACKAGE="$BLOB_URL"
-            
-            echo "✅ Package uploaded and deployment configured"
-
-      - name: Restart function app to pick up new deployment
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            echo "Restarting function app to activate new deployment..."
-            az functionapp restart --resource-group "$RG" --name "$FUNC_APP"
-            echo "Waiting for app to restart..."
-            sleep 45
-
-      - name: List functions
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "{name:name, kind:kind, https:defaultHostName, slot:slotSwapStatus}" -o jsonc
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
-      - name: Assert health function exists
+      - name: Tail function host logs
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            az functionapp function list -g "$RG" -n "$FUNC_APP" \
-              --query "[?contains(name, 'health')]" -o tsv | grep -q health || \
-              (echo "::error::health function missing after deploy" && exit 1)
+            az webapp log config -g "$RG" -n "$FUNC_APP" --application-logging filesystem --level information
+            az webapp log tail -g "$RG" -n "$FUNC_APP" --stack node --timeout 20
+
+      - name: Assert HTTP trigger exists
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            COUNT=$(az functionapp function list -g "$RG" -n "$FUNC_APP" \
+              --query "[?config.bindings[?type=='httpTrigger']]|length(@)" -o tsv)
+            if [ -z "$COUNT" ] || [ "$COUNT" -lt 1 ]; then
+              echo "::error::No HTTP functions detected after deploy"
+              exit 1
+            fi
 
       - name: Probe health endpoint
         run: |
