@@ -11,16 +11,22 @@ Response status code does not indicate success: 400 (The specifed resource name 
 
 ## Root Cause Analysis
 
-**CRITICAL DISCOVERY**: The actual root cause was using app settings that are **explicitly forbidden** for Flex Consumption plans.
+**CRITICAL DISCOVERY**: The root cause has **two layers**:
 
-Azure error: `The following list of 2 app settings (Site.SiteConfig.AppSettings.FUNCTIONS_WORKER_RUNTIME, Site.SiteConfig.AppSettings.WEBSITE_CONTENTSHARE) for Flex Consumption sites is invalid. Please remove or rename them before retrying.`
+1. **App Settings Issue**: Using settings explicitly forbidden for Flex Consumption
+   - `FUNCTIONS_WORKER_RUNTIME` and `WEBSITE_CONTENTSHARE` are invalid for Flex plans
+
+2. **File Naming Issue**: CamelCase file names violate Azure Blob Storage naming rules
+   - Files like `exportUser.js`, `appealFlag.js` contain uppercase letters
+   - Azure Blob container/blob names must be lowercase only
 
 ### What Was Wrong
 
 1. **❌ `FUNCTIONS_WORKER_RUNTIME`**: Explicitly forbidden for Flex Consumption (runtime auto-detected)
-2. **❌ `WEBSITE_CONTENTSHARE`**: Explicitly forbidden for Flex Consumption (content storage auto-managed)
-3. **Conflicting deployment settings**: Legacy settings like `WEBSITE_RUN_FROM_PACKAGE`, `SCM_*` settings were interfering
-4. **RBAC timing issues**: Storage permissions may not have propagated before deployment
+2. **❌ `WEBSITE_CONTENTSHARE`**: Explicitly forbidden for Flex Consumption (content storage auto-managed)  
+3. **❌ CamelCase file names**: Files like `exportUser.js`, `appealFlag.js` violate blob naming rules
+4. **Conflicting deployment settings**: Legacy settings like `WEBSITE_RUN_FROM_PACKAGE`, `SCM_*` settings were interfering
+5. **RBAC timing issues**: Storage permissions may not have propagated before deployment
 
 ### Flex Consumption vs Regular Consumption
 
@@ -61,11 +67,21 @@ az functionapp config appsettings delete \
 - Explicit validation of storage account accessibility
 - Added 10-second wait for RBAC propagation
 
-### 4. Pre-Deployment Validation
-Added validation step to ensure `WEBSITE_CONTENTSHARE` follows naming rules:
+### 3. Exclude CamelCase Files from Deployment
 ```bash
-# Validate: 3-63 chars, lowercase letters/numbers/hyphens only
-echo "$CONTENT_SHARE" | grep -qE '^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
+# Only include required files, exclude camelCase files that violate blob naming
+zip -r dist-func.zip \
+  index.js index.d.ts \
+  host.json package.json \
+  health/ feed/ post/ shared/ src/ \
+  -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
+```
+
+### 4. Pre-Deployment Validation
+Added validation to ensure incompatible settings are absent:
+```bash
+# Ensure critical incompatible settings are removed for Flex Consumption
+INCOMPATIBLE=$(az functionapp config appsettings list --query "[?name=='WEBSITE_CONTENTSHARE' || name=='FUNCTIONS_WORKER_RUNTIME'].name" -o tsv)
 ```
 
 ## Key Settings for Flex Consumption
