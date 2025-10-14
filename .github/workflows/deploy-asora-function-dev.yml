@@ -97,6 +97,10 @@ jobs:
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4"
+            az functionapp config appsettings delete \
+              --resource-group "$RG" \
+              --name "$FUNC_APP" \
+              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP || true
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
