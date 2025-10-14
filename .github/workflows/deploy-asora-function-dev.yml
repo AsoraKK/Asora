@@ -70,7 +70,18 @@ jobs:
           test -f dist/package.json || { echo "::error::dist/package.json missing"; ls -al dist; exit 1; }
 
           pushd dist >/dev/null
-          zip -r ../dist-func.zip . \
+          
+          # List camelCase files that violate Azure Blob naming rules
+          echo "CamelCase files that will be excluded (violate blob naming):"
+          find . -name "*[A-Z]*" -type f | grep -v "/src/" | head -10 || true
+          
+          # Create minimal ZIP with only required files for current functions
+          # Include: index.js, host.json, package.json, health/, feed/, post/, shared/
+          # Exclude: camelCase files (exportUser, appealFlag, etc.) that cause blob naming errors
+          zip -r ../dist-func.zip \
+            index.js index.d.ts \
+            host.json package.json \
+            health/ feed/ post/ shared/ src/ \
             -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
 
