@@ -97,7 +97,6 @@ jobs:
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
                 WEBSITE_RUN_FROM_PACKAGE="1"
 
       - name: Ensure identity can access content storage
