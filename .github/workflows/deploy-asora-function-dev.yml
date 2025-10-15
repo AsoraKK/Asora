@@ -20,15 +20,13 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
-  DEPLOY_CONTAINER: deploy-asora-function-dev
-  CONTENT_SHARE: asora-function-dev-content
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v4
 
       - name: Block legacy SP secrets
         env:
@@ -52,7 +50,7 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4.0.3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -66,16 +64,12 @@ jobs:
           npm ci
           npm run build
 
-          # Validate expected deployment artifacts exist before zipping
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
           test -f dist/package.json || { echo "::error::dist/package.json missing"; ls -al dist; exit 1; }
 
           pushd dist >/dev/null
-          
-          # Create ZIP package with all compiled output
-          zip -r ../dist-func.zip . \
-            -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
+          zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
 
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
@@ -86,121 +80,67 @@ jobs:
         run: |
           set -euo pipefail
           test -f "dist-func.zip" || { echo "Missing dist-func.zip"; exit 3; }
-          echo "Package size:"
           ls -lh dist-func.zip
-          echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
-      - name: Configure Flex Consumption app settings
+      - name: Configure Flex app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
 
-            DEPLOY_CONTAINER="${DEPLOY_CONTAINER:-}"
-            CONTENT_SHARE="${CONTENT_SHARE:-}"
-            re='^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-
-            for NAME in "$DEPLOY_CONTAINER" "$CONTENT_SHARE"; do
-              if [ -z "$NAME" ] || ! [[ "$NAME" =~ $re ]] || [[ "$NAME" == *--* ]]; then
-                echo "::error::Invalid Flex storage name: $NAME"
-                exit 1
-              fi
-            done
-
-            echo "Set Flex-safe app settings"
+            # Only set extension version; remove Flex-incompatible keys.
             az functionapp config appsettings set \
               -g "$RG" -n "$FUNC_APP" \
-              --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
-                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
-                SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
+              --settings FUNCTIONS_EXTENSION_VERSION="~4"
 
-            echo "Remove Flex-incompatible or conflicting settings"
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
-                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
+                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
               2>/dev/null || true
 
-            echo "Ensure WEBSITE_RUN_FROM_PACKAGE is absent"
-            RUN_FROM_PKG=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
-            if [ -n "$RUN_FROM_PKG" ] && [ "$RUN_FROM_PKG" != "None" ]; then
-              echo "::error::WEBSITE_RUN_FROM_PACKAGE must not be set for Flex Consumption."
-              exit 1
-            fi
-
-      - name: Ensure deploy container exists
+      - name: Ensure default scm-zipdeploy container exists
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            CONTAINER="${DEPLOY_CONTAINER:-}"
-            if [ -z "$CONTAINER" ]; then
-              echo "::error::DEPLOY_CONTAINER env is required."
-              exit 1
-            fi
+            CONTAINER="scm-zipdeploy"
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                 --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
               CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                   --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
             az storage account show --name "$SA" >/dev/null
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
 
-      - name: Ensure identity can access content storage
+      - name: Grant MI access to storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            
-            # Resolve storage account name
-            STORAGE_ACCOUNT=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
-            if [ -z "$STORAGE_ACCOUNT" ] || [ "$STORAGE_ACCOUNT" = "None" ]; then
-              CONNECTION_STRING=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
-              if [ -z "$CONNECTION_STRING" ] || [ "$CONNECTION_STRING" = "None" ]; then
-                echo "::error::Unable to determine storage account backing the function app."
-                exit 1
-              fi
-              STORAGE_ACCOUNT=$(echo "$CONNECTION_STRING" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
+            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            if [ -z "$SA" ] || [ "$SA" = "None" ]; then
+              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
+            [ -n "$SA" ] || { echo "::error::Storage account not resolved"; exit 1; }
 
-            if [ -z "$STORAGE_ACCOUNT" ]; then
-              echo "::error::Storage account name not resolved."
-              exit 1
-            fi
-            
-            echo "Resolved storage account: $STORAGE_ACCOUNT"
-            
-            # Verify storage account exists
-            if ! az storage account show --name "$STORAGE_ACCOUNT" &>/dev/null; then
-              echo "::error::Storage account $STORAGE_ACCOUNT does not exist or is not accessible."
-              exit 1
-            fi
-
-            # Get managed identity principal ID
             PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
-            if [ -z "$PRINCIPAL_ID" ] || [ "$PRINCIPAL_ID" = "None" ]; then
-              echo "::error::Function app is missing a system-assigned managed identity."
-              exit 1
-            fi
+            [ -n "$PRINCIPAL_ID" ] || { echo "::error::Missing system-assigned identity"; exit 1; }
 
-            # Grant Storage Blob Data Contributor role for content deployment
-            SCOPE=$(az storage account show --name "$STORAGE_ACCOUNT" --query id -o tsv)
-            echo "Granting Storage Blob Data Contributor to MI $PRINCIPAL_ID on $STORAGE_ACCOUNT"
+            SCOPE=$(az storage account show --name "$SA" --query id -o tsv)
             az role assignment create \
               --assignee-object-id "$PRINCIPAL_ID" \
               --assignee-principal-type ServicePrincipal \
               --role "Storage Blob Data Contributor" \
               --scope "$SCOPE" \
-              2>/dev/null || echo "Role assignment already exists or pending propagation"
-            
-            # Wait for role assignment to propagate
-            echo "Waiting 10 seconds for RBAC propagation..."
+              2>/dev/null || echo "Role assignment exists or pending"
             sleep 10
 
       - name: Assert Flex configuration
@@ -208,38 +148,14 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            EXPECTED_RUNTIME="node"
-            EXPECTED_SHARE="${CONTENT_SHARE:-}"
-            EXPECTED_CONTAINER="${DEPLOY_CONTAINER:-}"
-
-            runtime=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value|[0]" -o tsv)
-            content_share=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
-            deploy_container=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='SCM_ZIPDEPLOY_CONTAINER'].value|[0]" -o tsv)
-            run_from_package=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
-
-            if [ "$runtime" != "$EXPECTED_RUNTIME" ]; then
-              echo "::error::FUNCTIONS_WORKER_RUNTIME must be $EXPECTED_RUNTIME but was: ${runtime:-<unset>}"
-              exit 1
-            fi
-
-            if [ "$content_share" != "$EXPECTED_SHARE" ]; then
-              echo "::error::WEBSITE_CONTENTSHARE must be $EXPECTED_SHARE but was: ${content_share:-<unset>}"
-              exit 1
-            fi
-
-            if [ "$deploy_container" != "$EXPECTED_CONTAINER" ]; then
-              echo "::error::SCM_ZIPDEPLOY_CONTAINER must be $EXPECTED_CONTAINER but was: ${deploy_container:-<unset>}"
-              exit 1
-            fi
-
-            if [ -n "$run_from_package" ] && [ "$run_from_package" != "None" ]; then
-              echo "::error::WEBSITE_RUN_FROM_PACKAGE must not be set for Flex Consumption."
-              exit 1
-            fi
+            # These must NOT be present on Flex
+            bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
+            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
+            # WEBSITE_RUN_FROM_PACKAGE must be unset
+            v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                 --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
+            [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
 
       - name: Deploy function package
         uses: Azure/functions-action@v1
@@ -280,39 +196,23 @@ jobs:
         run: |
           set -euo pipefail
           echo "Testing https://${FUNC_APP}.azurewebsites.net/health"
-
-          MAX_RETRIES=5
-          RETRY_DELAY=10
-
-          for i in $(seq 1 $MAX_RETRIES); do
+          for i in {1..5}; do
             code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/health")
-            echo "Attempt $i/$MAX_RETRIES: Health HTTP $code"
-
-            if [ "$code" = "200" ]; then
-              cat /tmp/health.out
-              echo "✅ Health endpoint responding"
-              exit 0
-            fi
-
-            if [ $i -lt $MAX_RETRIES ]; then
-              echo "Waiting ${RETRY_DELAY}s before retry..."
-              sleep $RETRY_DELAY
-            fi
+            echo "Attempt $i: HTTP $code"
+            [ "$code" = "200" ] && { cat /tmp/health.out; exit 0; }
+            sleep 10
           done
-
-          echo "::error::Health check failed after $MAX_RETRIES attempts (last code: $code)"
-          exit 1
+          echo "::error::Health check failed"; exit 1
 
       - name: Probe feed endpoint
         run: |
           set -euo pipefail
-          echo "Testing https://${FUNC_APP}.azurewebsites.net/feed?guest=1&limit=10"
           code=$(curl -s -o /dev/null -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/feed?guest=1&limit=10")
           echo "Feed HTTP: $code"
           if [ "$code" = "200" ] || [ "$code" = "204" ]; then
-            echo "✅ Feed endpoint responding"
+            echo "Feed endpoint responding"
           else
-            echo "::warning::Feed endpoint returned $code (may need warm-up)"
+            echo "::warning::Feed endpoint returned $code"
           fi
 
       - name: Display function URLs
