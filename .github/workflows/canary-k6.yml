@@ -13,7 +13,7 @@ env:
 
 jobs:
   canary-k6:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     name: Run k6 canary tests
     runs-on: ubuntu-latest
     steps:
