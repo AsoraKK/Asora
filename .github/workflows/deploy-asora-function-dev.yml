@@ -20,6 +20,8 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
+  DEPLOY_CONTAINER: deploy-asora-function-dev
+  CONTENT_SHARE: asora-function-dev-content
 
 jobs:
   deploy:
@@ -94,25 +96,52 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
+
+            DEPLOY_CONTAINER="${DEPLOY_CONTAINER:-}"
+            CONTENT_SHARE="${CONTENT_SHARE:-}"
+            re='^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+
+            for NAME in "$DEPLOY_CONTAINER" "$CONTENT_SHARE"; do
+              if [ -z "$NAME" ] || ! [[ "$NAME" =~ $re ]] || [[ "$NAME" == *--* ]]; then
+                echo "::error::Invalid Flex storage name: $NAME"
+                exit 1
+              fi
+            done
+
             echo "Set Flex-safe app settings"
             az functionapp config appsettings set \
               -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4"
+              --settings \
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
+                SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
 
             echo "Remove Flex-incompatible or conflicting settings"
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
-                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
-                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
               2>/dev/null || true
 
-      - name: Ensure scm-zipdeploy container exists
+            echo "Ensure WEBSITE_RUN_FROM_PACKAGE is absent"
+            RUN_FROM_PKG=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
+            if [ -n "$RUN_FROM_PKG" ] && [ "$RUN_FROM_PKG" != "None" ]; then
+              echo "::error::WEBSITE_RUN_FROM_PACKAGE must not be set for Flex Consumption."
+              exit 1
+            fi
+
+      - name: Ensure deploy container exists
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            CONTAINER="scm-zipdeploy"
+            CONTAINER="${DEPLOY_CONTAINER:-}"
+            if [ -z "$CONTAINER" ]; then
+              echo "::error::DEPLOY_CONTAINER env is required."
+              exit 1
+            fi
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -179,10 +208,38 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            # Must NOT exist on Flex:
-            bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
-            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
+            EXPECTED_RUNTIME="node"
+            EXPECTED_SHARE="${CONTENT_SHARE:-}"
+            EXPECTED_CONTAINER="${DEPLOY_CONTAINER:-}"
+
+            runtime=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value|[0]" -o tsv)
+            content_share=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
+            deploy_container=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='SCM_ZIPDEPLOY_CONTAINER'].value|[0]" -o tsv)
+            run_from_package=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
+
+            if [ "$runtime" != "$EXPECTED_RUNTIME" ]; then
+              echo "::error::FUNCTIONS_WORKER_RUNTIME must be $EXPECTED_RUNTIME but was: ${runtime:-<unset>}"
+              exit 1
+            fi
+
+            if [ "$content_share" != "$EXPECTED_SHARE" ]; then
+              echo "::error::WEBSITE_CONTENTSHARE must be $EXPECTED_SHARE but was: ${content_share:-<unset>}"
+              exit 1
+            fi
+
+            if [ "$deploy_container" != "$EXPECTED_CONTAINER" ]; then
+              echo "::error::SCM_ZIPDEPLOY_CONTAINER must be $EXPECTED_CONTAINER but was: ${deploy_container:-<unset>}"
+              exit 1
+            fi
+
+            if [ -n "$run_from_package" ] && [ "$run_from_package" != "None" ]; then
+              echo "::error::WEBSITE_RUN_FROM_PACKAGE must not be set for Flex Consumption."
+              exit 1
+            fi
 
       - name: Deploy function package
         uses: Azure/functions-action@v1

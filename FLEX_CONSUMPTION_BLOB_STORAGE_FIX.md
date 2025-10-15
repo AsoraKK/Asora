@@ -11,22 +11,28 @@ Response status code does not indicate success: 400 (The specifed resource name 
 
 ## Root Cause Analysis
 
-**CRITICAL DISCOVERY**: The root cause has **two layers**:
+**CORRECT ROOT CAUSE**: Kudu tries to upload the deployment ZIP to a blob container, but the **container name** violates Azure Blob Storage naming rules. This is **NOT** an issue with ZIP contents - it's about the **container name** where Kudu stores the package.
 
-1. **App Settings Issue**: Using settings explicitly forbidden for Flex Consumption
-   - `FUNCTIONS_WORKER_RUNTIME` and `WEBSITE_CONTENTSHARE` are invalid for Flex plans
+### How Container Names Are Determined
 
-2. **File Naming Issue**: CamelCase file names violate Azure Blob Storage naming rules
-   - Files like `exportUser.js`, `appealFlag.js` contain uppercase letters
-   - Azure Blob container/blob names must be lowercase only
+When `SCM_ZIPDEPLOY_CONTAINER` is not explicitly set, Kudu **auto-generates** a container name from:
+- Function app name
+- Other app settings
+- Internal defaults
+
+If this auto-generated name contains invalid characters (uppercase, underscores, etc.), Azure Storage rejects it with a 400 error.
+
+### Azure Blob Container Naming Rules
+
+- **3-63 characters** long
+- **Lowercase letters, numbers, and hyphens** only
+- Cannot start or end with a hyphen
+- Cannot have consecutive hyphens (`--`)
 
 ### What Was Wrong
 
-1. **❌ `FUNCTIONS_WORKER_RUNTIME`**: Explicitly forbidden for Flex Consumption (runtime auto-detected)
-2. **❌ `WEBSITE_CONTENTSHARE`**: Explicitly forbidden for Flex Consumption (content storage auto-managed)  
-3. **❌ CamelCase file names**: Files like `exportUser.js`, `appealFlag.js` violate blob naming rules
-4. **Conflicting deployment settings**: Legacy settings like `WEBSITE_RUN_FROM_PACKAGE`, `SCM_*` settings were interfering
-5. **RBAC timing issues**: Storage permissions may not have propagated before deployment
+1. **Missing explicit container name**: No `SCM_ZIPDEPLOY_CONTAINER` set, causing Kudu to auto-generate an invalid name
+2. **Forbidden app settings** (earlier discovery): `FUNCTIONS_WORKER_RUNTIME` and `WEBSITE_CONTENTSHARE` are invalid for Flex Consumption
 
 ### Flex Consumption vs Regular Consumption
 
