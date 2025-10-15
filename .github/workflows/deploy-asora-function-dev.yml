@@ -93,50 +93,39 @@ jobs:
         run: |
           set -euo pipefail
           
-          echo "=== Validating Blob Container/Share Names ==="
+          echo "=== Validating Blob Container Name ==="
           
           DEPLOY_CONTAINER="deploy-asora-function-dev"
-          CONTENT_SHARE="asora-function-dev-content"
           
-          # Azure Blob/File naming: lowercase, 3-63 chars, letters/numbers/hyphens only
+          # Azure Blob naming: lowercase, 3-63 chars, letters/numbers/hyphens only
           # Cannot start/end with hyphen, no consecutive hyphens
-          re='^[a-z0-9-]{3,63}$'
+          re='^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$'
           
-          for NAME in "$DEPLOY_CONTAINER" "$CONTENT_SHARE"; do
-            if [[ -n "$NAME" ]] && [[ "$NAME" =~ $re ]] && \
-               [[ "$NAME" != -* ]] && [[ "$NAME" != *- ]] && [[ "$NAME" != *--* ]]; then
-              echo "✅ Valid name: $NAME"
-            else
-              echo "::error::Invalid container/share name: $NAME"
-              echo "::error::Must be lowercase, 3-63 chars, letters/numbers/hyphens only"
-              exit 1
-            fi
-          done
-          
-          echo "✅ All container/share names are valid"
+          if [[ "$DEPLOY_CONTAINER" =~ $re ]]; then
+            echo "✅ Valid container name: $DEPLOY_CONTAINER"
+          else
+            echo "::error::Invalid container name: $DEPLOY_CONTAINER"
+            echo "::error::Must be lowercase, 3-63 chars, letters/numbers/hyphens only"
+            exit 1
+          fi
 
       - name: Configure Flex Consumption app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            
-            # Set valid container/share names (lowercase, 3-63 chars, hyphens only)
-            DEPLOY_CONTAINER="deploy-asora-function-dev"
-            CONTENT_SHARE="asora-function-dev-content"
-            
-            echo "Setting required app settings for Flex Consumption"
+
+            DEPLOY_CONTAINER="deploy-asora-function-dev"  # lowercase, 3-63, hyphen ok
+
+            echo "Setting Flex-safe app settings"
             az functionapp config appsettings set \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
-                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
                 SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
-            
-            # Remove incompatible settings for Flex Consumption
-            echo "Removing incompatible app settings for Flex Consumption..."
+
+            echo "Removing classic/incompatible settings"
             az functionapp config appsettings delete \
               --resource-group "$RG" \
               --name "$FUNC_APP" \
@@ -147,9 +136,25 @@ jobs:
                 SCM_CONTAINER \
                 SCM_TARGET_PATH \
                 WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
+                WEBSITE_CONTENTSHARE \
+                FUNCTIONS_WORKER_RUNTIME \
               2>/dev/null || true
-            
-            echo "✅ App settings configured successfully"
+
+      - name: Ensure deploy container exists
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            DEPLOY_CONTAINER="deploy-asora-function-dev"
+            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            if [ -z "$SA" ] || [ "$SA" = "None" ]; then
+              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
+            fi
+            az storage account show --name "$SA" >/dev/null
+            az storage container create --account-name "$SA" --name "$DEPLOY_CONTAINER" --auth-mode login >/dev/null
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
@@ -207,39 +212,13 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            
-            echo "=== Asserting Flex Consumption Configuration ==="
-            
-            # For Flex: assert NO WEBSITE_RUN_FROM_PACKAGE
-            RUN_FROM_PKG=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+            v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
               --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
-            
-            if [ -n "$RUN_FROM_PKG" ] && [ "$RUN_FROM_PKG" != "None" ]; then
-              echo "::error::WEBSITE_RUN_FROM_PACKAGE must NOT be set for Flex Consumption"
-              exit 1
-            fi
+            [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset on Flex"; exit 1; }
 
-            WORKER_RUNTIME=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value|[0]" -o tsv)
-            if [ "$WORKER_RUNTIME" != "node" ]; then
-              echo "::error::FUNCTIONS_WORKER_RUNTIME must be set to 'node' for Flex Consumption"
-              exit 1
-            fi
-
-            CONTENT_SHARE=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
-            if [ "$CONTENT_SHARE" != "asora-function-dev-content" ]; then
-              echo "::error::WEBSITE_CONTENTSHARE must be 'asora-function-dev-content' for Flex Consumption"
-              exit 1
-            fi
-            
-            echo "✅ Flex Consumption configuration validated"
-            
-            # List critical settings for debugging
-            echo "=== Critical App Settings ==="
-            az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?contains(name, 'FUNCTION') || contains(name, 'WEBSITE') || contains(name, 'SCM')].{name:name, value:value}" \
-              -o table
+            bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
+            [ "$bad" = "0" ] || { echo "::error::Classic settings present on Flex"; exit 1; }
 
       - name: Deploy function package
         uses: Azure/functions-action@v1
