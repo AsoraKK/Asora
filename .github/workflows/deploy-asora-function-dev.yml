@@ -20,6 +20,7 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
+  DEPLOY_CONTAINER: zipdeploy
 
 jobs:
   deploy:
@@ -88,12 +89,9 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-
-            # Only set extension version; remove Flex-incompatible keys.
             az functionapp config appsettings set \
               -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4"
-
+              --settings FUNCTIONS_EXTENSION_VERSION="~4" SCM_ZIPDEPLOY_CONTAINER="${DEPLOY_CONTAINER}"
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
@@ -101,12 +99,12 @@ jobs:
                               FUNCTIONS_WORKER_RUNTIME \
               2>/dev/null || true
 
-      - name: Ensure default scm-zipdeploy container exists
+      - name: Ensure deploy container exists
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            CONTAINER="scm-zipdeploy"
+            CONTAINER="${DEPLOY_CONTAINER}"
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -114,6 +112,7 @@ jobs:
                     --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
+            [ -n "$SA" ] || { echo "::error::Storage account not resolved"; exit 1; }
             az storage account show --name "$SA" >/dev/null
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
 
@@ -148,14 +147,16 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            # These must NOT be present on Flex
             bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
             [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
-            # WEBSITE_RUN_FROM_PACKAGE must be unset
             v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                  --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
             [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
+            expect="${DEPLOY_CONTAINER}"
+            c=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                 --query "[?name=='SCM_ZIPDEPLOY_CONTAINER'].value|[0]" -o tsv)
+            [ "$c" = "$expect" ] || { echo "::error::SCM_ZIPDEPLOY_CONTAINER=$c != $expect"; exit 1; }
 
       - name: Install Azure Functions Core Tools
         run: |
