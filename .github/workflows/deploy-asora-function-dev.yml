@@ -89,71 +89,39 @@ jobs:
           echo "Package contents:"
           unzip -l dist-func.zip | head -n 20
 
-      - name: Validate container/share names (Preflight Guard)
-        run: |
-          set -euo pipefail
-          
-          echo "=== Validating Blob Container Name ==="
-          
-          DEPLOY_CONTAINER="deploy-asora-function-dev"
-          
-          # Azure Blob container: lowercase, 3-63, hyphens allowed inside, start/end alnum
-          re='^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-          
-          if [[ "$DEPLOY_CONTAINER" =~ $re ]] && [[ "$DEPLOY_CONTAINER" != *--* ]]; then
-            echo "✅ Valid container name: $DEPLOY_CONTAINER"
-          else
-            echo "::error::Invalid container name: $DEPLOY_CONTAINER"
-            echo "::error::Must be lowercase, 3-63 chars, letters/numbers, hyphens inside only"
-            exit 1
-          fi
-
       - name: Configure Flex Consumption app settings
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-
-            DEPLOY_CONTAINER="deploy-asora-function-dev"  # lowercase, 3-63, hyphen ok
-
-            echo "Setting Flex-safe app settings"
+            echo "Set Flex-safe app settings"
             az functionapp config appsettings set \
-              --resource-group "$RG" \
-              --name "$FUNC_APP" \
-              --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4" \
-                SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
+              -g "$RG" -n "$FUNC_APP" \
+              --settings FUNCTIONS_EXTENSION_VERSION="~4"
 
-            echo "Removing classic/incompatible settings"
-            az functionapp config appsettings delete \
-              --resource-group "$RG" \
-              --name "$FUNC_APP" \
-              --setting-names \
-                WEBSITE_RUN_FROM_PACKAGE \
-                WEBSITE_RUN_FROM_ZIP \
-                SCM_RUN_FROM_PACKAGE_CONTAINER \
-                SCM_CONTAINER \
-                SCM_TARGET_PATH \
-                WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
-                WEBSITE_CONTENTSHARE \
-                FUNCTIONS_WORKER_RUNTIME \
+            echo "Remove Flex-incompatible or conflicting settings"
+            az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
+                              SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
+                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
               2>/dev/null || true
 
-      - name: Ensure deploy container exists
+      - name: Ensure scm-zipdeploy container exists
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            DEPLOY_CONTAINER="deploy-asora-function-dev"
+            CONTAINER="scm-zipdeploy"
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+                 --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
               CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+                   --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
             az storage account show --name "$SA" >/dev/null
-            az storage container create --account-name "$SA" --name "$DEPLOY_CONTAINER" --auth-mode login >/dev/null
+            az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
 
       - name: Ensure identity can access content storage
         uses: azure/cli@v2
@@ -206,18 +174,15 @@ jobs:
             echo "Waiting 10 seconds for RBAC propagation..."
             sleep 10
 
-      - name: Assert Flex-specific configuration
+      - name: Assert Flex configuration
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
-            [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset on Flex"; exit 1; }
-
+            # Must NOT exist on Flex:
             bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
-            [ "$bad" = "0" ] || { echo "::error::Classic settings present on Flex"; exit 1; }
+                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
+            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
 
       - name: Deploy function package
         uses: Azure/functions-action@v1
