@@ -20,7 +20,7 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
-  DEPLOY_CONTAINER: zipdeploy
+  DEPLOY_CONTAINER: scm-zipdeploy
 
 jobs:
   deploy:
@@ -89,9 +89,15 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
+
+            # Flex-safe app settings only. SCM_ZIPDEPLOY_CONTAINER is allowed and used by Kudu.
             az functionapp config appsettings set \
               -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" SCM_ZIPDEPLOY_CONTAINER="${DEPLOY_CONTAINER}"
+              --settings \
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                SCM_ZIPDEPLOY_CONTAINER="${DEPLOY_CONTAINER}"
+
+            # Remove classic or conflicting keys for Flex
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
@@ -105,6 +111,10 @@ jobs:
           inlineScript: |
             set -euo pipefail
             CONTAINER="${DEPLOY_CONTAINER}"
+            # Validate container name per Azure rules
+            re='^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$'
+            [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
+
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -147,16 +157,18 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
+            # Forbidden on Flex
             bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
             [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
+            # WEBSITE_RUN_FROM_PACKAGE must be unset
             v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                  --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
             [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
-            expect="${DEPLOY_CONTAINER}"
+            # SCM_ZIPDEPLOY_CONTAINER must equal our container
             c=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                  --query "[?name=='SCM_ZIPDEPLOY_CONTAINER'].value|[0]" -o tsv)
-            [ "$c" = "$expect" ] || { echo "::error::SCM_ZIPDEPLOY_CONTAINER=$c != $expect"; exit 1; }
+            [ "$c" = "${DEPLOY_CONTAINER}" ] || { echo "::error::SCM_ZIPDEPLOY_CONTAINER mismatch: '$c'"; exit 1; }
 
       - name: Install Azure Functions Core Tools
         run: |
