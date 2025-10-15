@@ -97,15 +97,14 @@ jobs:
           
           DEPLOY_CONTAINER="deploy-asora-function-dev"
           
-          # Azure Blob naming: lowercase, 3-63 chars, letters/numbers/hyphens only
-          # Cannot start/end with hyphen, no consecutive hyphens
-          re='^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$'
+          # Azure Blob container: lowercase, 3-63, hyphens allowed inside, start/end alnum
+          re='^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
           
-          if [[ "$DEPLOY_CONTAINER" =~ $re ]]; then
+          if [[ "$DEPLOY_CONTAINER" =~ $re ]] && [[ "$DEPLOY_CONTAINER" != *--* ]]; then
             echo "✅ Valid container name: $DEPLOY_CONTAINER"
           else
             echo "::error::Invalid container name: $DEPLOY_CONTAINER"
-            echo "::error::Must be lowercase, 3-63 chars, letters/numbers/hyphens only"
+            echo "::error::Must be lowercase, 3-63 chars, letters/numbers, hyphens inside only"
             exit 1
           fi
 
