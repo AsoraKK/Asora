@@ -131,6 +131,8 @@ jobs:
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
                 SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
             
             # Remove incompatible settings for Flex Consumption
@@ -144,8 +146,6 @@ jobs:
                 SCM_RUN_FROM_PACKAGE_CONTAINER \
                 SCM_CONTAINER \
                 SCM_TARGET_PATH \
-                FUNCTIONS_WORKER_RUNTIME \
-                WEBSITE_CONTENTSHARE \
                 WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
               2>/dev/null || true
             
@@ -216,6 +216,20 @@ jobs:
             
             if [ -n "$RUN_FROM_PKG" ] && [ "$RUN_FROM_PKG" != "None" ]; then
               echo "::error::WEBSITE_RUN_FROM_PACKAGE must NOT be set for Flex Consumption"
+              exit 1
+            fi
+
+            WORKER_RUNTIME=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value|[0]" -o tsv)
+            if [ "$WORKER_RUNTIME" != "node" ]; then
+              echo "::error::FUNCTIONS_WORKER_RUNTIME must be set to 'node' for Flex Consumption"
+              exit 1
+            fi
+
+            CONTENT_SHARE=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='WEBSITE_CONTENTSHARE'].value|[0]" -o tsv)
+            if [ "$CONTENT_SHARE" != "asora-function-dev-content" ]; then
+              echo "::error::WEBSITE_CONTENTSHARE must be 'asora-function-dev-content' for Flex Consumption"
               exit 1
             fi
             
