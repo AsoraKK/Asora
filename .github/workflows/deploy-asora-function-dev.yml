@@ -20,7 +20,7 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
-  DEPLOY_CONTAINER: scm-zipdeploy
+  DEPLOY_CONTAINER: zipdeploy
 
 jobs:
   deploy:
