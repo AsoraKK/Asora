@@ -98,7 +98,7 @@ jobs:
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
                               WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
-                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
+                              FUNCTIONS_WORKER_RUNTIME \
               2>/dev/null || true
 
       - name: Ensure default scm-zipdeploy container exists
@@ -150,7 +150,7 @@ jobs:
             set -euo pipefail
             # These must NOT be present on Flex
             bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
+                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
             [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
             # WEBSITE_RUN_FROM_PACKAGE must be unset
             v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
