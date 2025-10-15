@@ -131,8 +131,6 @@ jobs:
               --name "$FUNC_APP" \
               --settings \
                 FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
-                WEBSITE_CONTENTSHARE="$CONTENT_SHARE" \
                 SCM_ZIPDEPLOY_CONTAINER="$DEPLOY_CONTAINER"
             
             # Remove incompatible settings for Flex Consumption
@@ -146,6 +144,8 @@ jobs:
                 SCM_RUN_FROM_PACKAGE_CONTAINER \
                 SCM_CONTAINER \
                 SCM_TARGET_PATH \
+                FUNCTIONS_WORKER_RUNTIME \
+                WEBSITE_CONTENTSHARE \
                 WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
               2>/dev/null || true
             
