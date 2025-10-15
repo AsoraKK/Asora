@@ -6,6 +6,7 @@
     "oasdiff": "bin/oasdiff.js"
   },
   "dependencies": {
+    "js-yaml": "^4.1.0",
     "openapi-diff": "^0.24.1"
   }
 }
