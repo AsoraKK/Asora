@@ -157,11 +157,17 @@ jobs:
                  --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
             [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
 
-      - name: Deploy function package
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ env.FUNC_APP }}
-          package: dist-func.zip
+      - name: Install Azure Functions Core Tools
+        run: |
+          set -euo pipefail
+          npm i -g azure-functions-core-tools@4 --unsafe-perm true
+          func --version
+
+      - name: Publish with Core Tools (remote build)
+        working-directory: functions
+        run: |
+          set -euo pipefail
+          func azure functionapp publish "$FUNC_APP" --javascript --force --build remote
 
       - name: Show function app status and list functions
         uses: azure/cli@v2
