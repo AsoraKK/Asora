@@ -20,6 +20,7 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
+  # Keep for validation only. Kudu will use functionAppConfig->deployment.storage by default on Flex.
   DEPLOY_CONTAINER: zipdeploy
 
 jobs:
@@ -76,7 +77,7 @@ jobs:
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
           echo "Built package: $GITHUB_WORKSPACE/dist-func.zip"
 
-      - name: Resolve & validate AzureWebJobsStorage account
+      - name: Resolve & validate AzureWebJobsStorage account + HNS guard
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -90,35 +91,34 @@ jobs:
             fi
             [ -n "$SA" ] || { echo "::error::AzureWebJobsStorage account not resolved"; exit 1; }
 
-            # HARD GUARD: HNS must be disabled. Kudu/OneDeploy writes blob paths that violate ADLS Gen2 rules (e.g. ':'),
-            # which yields 400 "specified resource name contains invalid characters".
             HNS=$(az storage account show --name "$SA" --query isHnsEnabled -o tsv)
             if [ "$HNS" = "true" ]; then
-              echo "::error::Storage account '$SA' has Hierarchical Namespace (ADLS Gen2) enabled; Kudu deployments fail with 400 invalid characters."
-              echo "::error::Fix: move AzureWebJobsStorage to a non-HNS GPv2 account or create a new one and update app settings, then rerun."
-              exit 1
+              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; Kudu remote build fails with 400 invalid characters. Move to non-HNS account."; exit 1
             fi
 
-            # Also ensure container name is valid. We use 'zipdeploy'.
-            CONTAINER="${DEPLOY_CONTAINER}"
-            re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
-            [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
+            # Validate and pre-create likely containers used by Kudu and Flex.
+            for CONTAINER in deployments zipdeploy scm-zipdeploy; do
+              re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
+              [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
+              az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null || true
+            done
 
-            az storage account show --name "$SA" >/dev/null
-            az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
-
-      - name: Configure Flex app settings (minimal)
+      - name: Configure Flex app settings (align to Flex)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            # Keep Flex-safe minimal set and remove overrides that force Kudu zipdeploy container.
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" SCM_ZIPDEPLOY_CONTAINER="${DEPLOY_CONTAINER}"
+              --settings FUNCTIONS_EXTENSION_VERSION="~4"
+
+            # Ensure no classic or conflicting keys remain on Flex
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
                               WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
-                              FUNCTIONS_WORKER_RUNTIME 2>/dev/null || true
+                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
+              2>/dev/null || true
 
       - name: Grant MI access to storage
         uses: azure/cli@v2
@@ -146,11 +146,16 @@ jobs:
           inlineScript: |
             set -euo pipefail
             bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE']|length(@)" -o tsv)
-            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible setting present"; exit 1; }
+                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
+            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible/override setting present"; exit 1; }
             v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                  --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
             [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
+
+            # Inspect functionAppConfig to confirm Flex storage-based deployment wiring
+            az rest --method get --uri \
+              "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}?api-version=2023-01-01" \
+              --query "{deployment:properties.functionAppConfig.deployment, runtime:properties.functionAppConfig.runtime}" -o jsonc
 
       - name: Install Azure Functions Core Tools
         run: |
