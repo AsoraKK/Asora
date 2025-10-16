@@ -175,41 +175,26 @@ jobs:
               --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
             sleep 10
 
-            CURRENT_CFG="$(mktemp)"
-            az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json >"$CURRENT_CFG"
+            CURRENT_CFG=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "properties.functionAppConfig" -o json)
 
-            if [ ! -s "$CURRENT_CFG" ]; then
+            if [ -z "${CURRENT_CFG:-}" ] || [ "$CURRENT_CFG" = "null" ]; then
               echo "::error::Unable to read current functionAppConfig" >&2
               exit 1
             fi
 
-            PATCH_BODY=$(python3 - "$CURRENT_CFG" <<'PY'
-import json, pathlib, sys
-
-path = pathlib.Path(sys.argv[1])
-config = json.loads(path.read_text())
-if not isinstance(config, dict):
-    raise SystemExit("functionAppConfig missing or invalid")
-
-config["runtime"] = {"name": "node", "version": "20"}
-
-scale = config.get("scaleAndConcurrency") or {}
-scale["instanceMemoryMB"] = 2048
-config["scaleAndConcurrency"] = scale
-
-config["siteUpdateStrategy"] = {"type": "Recreate"}
-
-payload = {"properties": {"functionAppConfig": config}}
-print(json.dumps(payload))
-PY
-)
+            PATCH_BODY=$(jq -c '
+              . as $cfg
+              | ($cfg // {})
+              | .runtime = {"name": "node", "version": "20"}
+              | .scaleAndConcurrency = ((.scaleAndConcurrency // {}) + {"instanceMemoryMB": 2048, "maximumInstanceCount": 40})
+              | .siteUpdateStrategy = {"type": "Recreate"}
+              | {"properties": {"functionAppConfig": .}}
+            ' <<<"$CURRENT_CFG")
 
             az rest --method patch \
               --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body "$PATCH_BODY" >/dev/null
-
-            rm -f "$CURRENT_CFG"
 
       # Upload artifact to storage
       - name: Upload package to storage
