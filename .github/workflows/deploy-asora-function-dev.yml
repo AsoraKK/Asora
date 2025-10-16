@@ -117,20 +117,29 @@ jobs:
             APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
             [ -n "${APP_OBJ_ID:-}" ] || { echo "::error::AZURE_CLIENT_ID not found as service principal"; exit 1; }
 
-            # Assign Data Contributor (and optional Reader) at storage scope
-            az role assignment create \
-              --assignee-object-id "$APP_OBJ_ID" \
-              --assignee-principal-type ServicePrincipal \
+            # Check if Storage Blob Data Contributor role already exists
+            EXISTING=$(az role assignment list \
+              --assignee "$APP_OBJ_ID" \
               --role "Storage Blob Data Contributor" \
-              --scope "$SCOPE" 2>/dev/null || echo "RBAC exists or pending"
-            az role assignment create \
-              --assignee-object-id "$APP_OBJ_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Reader" \
-              --scope "$SCOPE" 2>/dev/null || true
-
-            # Short propagation wait
-            sleep 15
+              --scope "$SCOPE" \
+              --query "[].id" -o tsv)
+            
+            if [ -z "$EXISTING" ]; then
+              echo "Granting Storage Blob Data Contributor to OIDC app..."
+              az role assignment create \
+                --assignee-object-id "$APP_OBJ_ID" \
+                --assignee-principal-type ServicePrincipal \
+                --role "Storage Blob Data Contributor" \
+                --scope "$SCOPE" || {
+                  echo "::error::Failed to grant RBAC. Ensure the OIDC app has Owner or User Access Administrator role on the storage account."
+                  exit 1
+                }
+              echo "RBAC granted successfully. Waiting for propagation..."
+              sleep 30
+            else
+              echo "RBAC already exists, skipping assignment."
+              sleep 5
+            fi
 
       # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
       - name: Resolve storage and prepare container
