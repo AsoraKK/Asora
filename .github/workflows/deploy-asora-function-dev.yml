@@ -41,8 +41,8 @@ jobs:
             exit 1
           fi
 
-      - name: Install zip utilities
-        run: sudo apt-get update && sudo apt-get install -y zip unzip
+      - name: Install tooling
+        run: sudo apt-get update && sudo apt-get install -y zip unzip jq
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -59,24 +59,29 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build Linux-ready artifact in functions/dist and zip it
-      - name: Build function package
+      # Build in repo functions/ and produce a Linux-ready dist
+      - name: Build function package (lockfile-safe)
         working-directory: functions
         run: |
           set -euo pipefail
+
+          # 1) Install with repo lockfile
           npm ci
+
+          # 2) Build TypeScript -> dist/
           npm run build
 
-          # Sanity checks
+          # 3) Sanity checks
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # Install production deps inside dist WITHOUT copying the repo lockfile
-          # Avoids npm ci EUSAGE due to dist/package.json dep subset mismatching root lockfile
+          # 4) Install prod deps in dist WITHOUT copying root lockfile
+          # Avoid npm ci EUSAGE when dist/package.json ⊊ root lockfile
           if [ -f dist/package.json ]; then
             (cd dist && npm install --omit=dev --no-audit --no-fund)
           fi
 
+          # 5) Zip the dist as deployment artifact
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
@@ -116,11 +121,13 @@ jobs:
             done
 
       # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
+main
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+
             CONTAINER="${DEPLOY_CONTAINER}"
             re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
             [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
@@ -142,13 +149,15 @@ jobs:
 
             az storage account show --name "$SA" >/dev/null
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
+
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Ensure Flex runtime + memory
+      - name: Ensure Functions v4 and Node|20, fix invalid deployment.storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+
             # Functions v4
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
@@ -189,7 +198,6 @@ PY
 
             rm -f "$CURRENT_CFG"
 
-      # Upload artifact to storage
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -203,16 +211,14 @@ PY
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      # Publish by calling ARM sites/publish. This bypasses Kudu.
-      - name: Publish package (ARM sites/publish)
+      - name: Publish via ARM sites/publish (no Kudu)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
             az rest --method post \
-              --uri \
-                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
               --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
 
       - name: List functions
@@ -239,3 +245,4 @@ PY
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
+          
