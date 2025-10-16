@@ -91,6 +91,30 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
+      - name: Grant GitHub OIDC SP data access to $STG
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
+            az role assignment create \
+              --assignee "$AZURE_CLIENT_ID" \
+              --role "Storage Blob Data Contributor" \
+              --scope "$SCOPE" \
+              2>/dev/null || echo "Role already assigned or pending propagation"
+
+            for i in {1..12}; do
+              if az storage container exists \
+                   --auth-mode login \
+                   --account-name "$STG" \
+                   --name "$DEPLOY_CONTAINER" -o tsv --query exists 2>/dev/null | grep -q -E 'true|false'; then
+                echo "RBAC active"
+                break
+              fi
+              echo "Waiting for RBAC propagation... $i"
+              sleep 10
+            done
+
       # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
@@ -129,18 +153,41 @@ jobs:
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
 
-            # Minimal PATCH. Do NOT touch functionAppConfig.deployment.storage.
+            CURRENT_CFG="$(mktemp)"
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "properties.functionAppConfig" -o json >"$CURRENT_CFG"
+
+            if [ ! -s "$CURRENT_CFG" ]; then
+              echo "::error::Unable to read current functionAppConfig" >&2
+              exit 1
+            fi
+
+            PATCH_BODY=$(python3 - "$CURRENT_CFG" <<'PY'
+import json, pathlib, sys
+
+path = pathlib.Path(sys.argv[1])
+config = json.loads(path.read_text())
+if not isinstance(config, dict):
+    raise SystemExit("functionAppConfig missing or invalid")
+
+config["runtime"] = {"name": "node", "version": "20"}
+
+scale = config.get("scaleAndConcurrency") or {}
+scale["instanceMemoryMB"] = 2048
+config["scaleAndConcurrency"] = scale
+
+config["siteUpdateStrategy"] = {"type": "Recreate"}
+
+payload = {"properties": {"functionAppConfig": config}}
+print(json.dumps(payload))
+PY
+)
+
             az rest --method patch \
               --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body '{
-                "properties": {
-                  "functionAppConfig": {
-                    "runtime": {"name": "node", "version": "20"},
-                    "scaleAndConcurrency": {"instanceMemoryMB": 2048},
-                    "siteUpdateStrategy": {"type": "Recreate"}
-                  }
-                }
-              }' >/dev/null
+              --body "$PATCH_BODY" >/dev/null
+
+            rm -f "$CURRENT_CFG"
 
       # Upload artifact to storage
       - name: Upload package to storage
