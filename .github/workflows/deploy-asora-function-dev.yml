@@ -89,32 +89,47 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      - name: Grant GitHub OIDC principal RBAC on storage
+      - name: Resolve storage account and export STG
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Scope = storage account
-            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
-            # GitHub OIDC principal object id
-            APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
-            if [ -z "$APP_OBJ_ID" ]; then
-              echo "::error::Could not resolve service principal for AZURE_CLIENT_ID"; exit 1
+            # Resolve the AzureWebJobsStorage account name
+            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            if [ -z "${SA:-}" ] || [ "$SA" = "None" ]; then
+              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
+            [ -n "${SA:-}" ] || { echo "::error::Could not resolve AzureWebJobsStorage account"; exit 1; }
+            echo "STG=$SA" >> "$GITHUB_ENV"
+
+      - name: Grant GitHub OIDC app blob RBAC on STG
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            : "${STG:?STG not set}"
+            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
+
+            # OIDC app object id
+            APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+            [ -n "${APP_OBJ_ID:-}" ] || { echo "::error::AZURE_CLIENT_ID not found as service principal"; exit 1; }
+
+            # Assign Data Contributor (and optional Reader) at storage scope
             az role assignment create \
               --assignee-object-id "$APP_OBJ_ID" \
               --assignee-principal-type ServicePrincipal \
               --role "Storage Blob Data Contributor" \
-              --scope "$SCOPE" \
-              2>/dev/null || echo "RBAC already present or pending"
-            # Optional read for HEAD checks (not strictly required for upload)
+              --scope "$SCOPE" 2>/dev/null || echo "RBAC exists or pending"
             az role assignment create \
               --assignee-object-id "$APP_OBJ_ID" \
               --assignee-principal-type ServicePrincipal \
               --role "Storage Blob Data Reader" \
-              --scope "$SCOPE" \
-              2>/dev/null || true
-            # Allow a brief propagation window
+              --scope "$SCOPE" 2>/dev/null || true
+
+            # Short propagation wait
             sleep 15
 
       # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
