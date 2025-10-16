@@ -8,9 +8,11 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
+import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';
 
 class FeedApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -32,7 +34,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [GetFeed200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetFeed200Response>> getFeed({
+  Future<Response<GetFeed200Response>> getFeed({ 
     String? cursor,
     int? limit,
     CancelToken? cancelToken,
@@ -62,12 +64,8 @@ class FeedApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -83,12 +81,11 @@ class FeedApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(GetFeed200Response),
-            ) as GetFeed200Response;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GetFeed200Response),
+      ) as GetFeed200Response;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -110,4 +107,5 @@ class FeedApi {
       extra: _response.extra,
     );
   }
+
 }

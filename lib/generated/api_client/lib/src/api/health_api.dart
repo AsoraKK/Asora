@@ -7,9 +7,11 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
+import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/get_health200_response.dart';
 
 class HealthApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -29,7 +31,7 @@ class HealthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [GetHealth200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetHealth200Response>> getHealth({
+  Future<Response<GetHealth200Response>> getHealth({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -62,12 +64,11 @@ class HealthApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(GetHealth200Response),
-            ) as GetHealth200Response;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GetHealth200Response),
+      ) as GetHealth200Response;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -89,4 +90,5 @@ class HealthApi {
       extra: _response.extra,
     );
   }
+
 }
