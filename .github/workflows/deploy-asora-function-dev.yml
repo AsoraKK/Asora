@@ -96,7 +96,32 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      # Resolve AzureWebJobsStorage, guard ADLS Gen2, ensure container
+      - name: Grant GitHub OIDC SP data access to $STG
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
+            az role assignment create \
+              --assignee "$AZURE_CLIENT_ID" \
+              --role "Storage Blob Data Contributor" \
+              --scope "$SCOPE" \
+              2>/dev/null || echo "Role already assigned or pending propagation"
+
+            for i in {1..12}; do
+              if az storage container exists \
+                   --auth-mode login \
+                   --account-name "$STG" \
+                   --name "$DEPLOY_CONTAINER" -o tsv --query exists 2>/dev/null | grep -q -E 'true|false'; then
+                echo "RBAC active"
+                break
+              fi
+              echo "Waiting for RBAC propagation... $i"
+              sleep 10
+            done
+
+      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
+main
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
@@ -137,49 +162,41 @@ jobs:
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
 
-            # Build a merge patch that PRESERVES existing config but ensures required fields
-            CURR=$(az functionapp show -g "$RG" -n "$FUNC_APP" -o json \
-                    | jq '.properties.functionAppConfig // {}')
+            CURRENT_CFG="$(mktemp)"
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "properties.functionAppConfig" -o json >"$CURRENT_CFG"
 
-            PATCH=$(jq -n \
-              --arg sa "$STG" \
-              --arg c "$DEPLOY_CONTAINER" \
-              --arg b "$DEPLOY_BLOB_NAME" \
-              --argjson curr "$CURR" \
-              '{
-                properties: {
-                  functionAppConfig:
-                    ($curr
-                     + {runtime: {name:"node", version:"20"}}
-                     + {siteUpdateStrategy: {type:"Recreate"}}
-                     + {scaleAndConcurrency: (($curr.scaleAndConcurrency // {})
-                         + {instanceMemoryMB: 2048, maximumInstanceCount: 100})}
-                     + {deployment: {storage: {type: "blobcontainer",
-                                              value: ("https://"+$sa+".blob.core.windows.net/"+$c+"?blob="+$b),
-                                              authentication: {type: "systemassignedidentity"}}}}
-                    )
-                }
-              }')
+            if [ ! -s "$CURRENT_CFG" ]; then
+              echo "::error::Unable to read current functionAppConfig" >&2
+              exit 1
+            fi
+
+            PATCH_BODY=$(python3 - "$CURRENT_CFG" <<'PY'
+import json, pathlib, sys
+
+path = pathlib.Path(sys.argv[1])
+config = json.loads(path.read_text())
+if not isinstance(config, dict):
+    raise SystemExit("functionAppConfig missing or invalid")
+
+config["runtime"] = {"name": "node", "version": "20"}
+
+scale = config.get("scaleAndConcurrency") or {}
+scale["instanceMemoryMB"] = 2048
+config["scaleAndConcurrency"] = scale
+
+config["siteUpdateStrategy"] = {"type": "Recreate"}
+
+payload = {"properties": {"functionAppConfig": config}}
+print(json.dumps(payload))
+PY
+)
 
             az rest --method patch \
               --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body "$PATCH" >/dev/null
+              --body "$PATCH_BODY" >/dev/null
 
-      - name: Grant Function App MSI read access to package
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
-            [ -n "$PRINCIPAL_ID" ] || { echo "::error::Missing system-assigned identity"; exit 1; }
-            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
-            az role assignment create \
-              --assignee-object-id "$PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Reader" \
-              --scope "$SCOPE" \
-              2>/dev/null || echo "Role exists or pending"
-            sleep 10
+            rm -f "$CURRENT_CFG"
 
       - name: Upload package to storage
         uses: azure/cli@v2
