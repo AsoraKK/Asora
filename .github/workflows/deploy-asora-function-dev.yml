@@ -152,10 +152,8 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            CONTAINER="${DEPLOY_CONTAINER}"
-            re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
-            [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
-
+            CONTAINER="deployments"
+            
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -172,7 +170,7 @@ jobs:
             fi
 
             az storage account show --name "$SA" >/dev/null
-            az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
+            az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null || true
             echo "STG=$SA" >> "$GITHUB_ENV"
 
       - name: Ensure Functions v4 app setting only
