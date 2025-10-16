@@ -16,7 +16,7 @@
 - **CI helpers**: `quick-check.sh` executes format + targeted tests; `quick_coverage_demo.sh` is a minimal coverage smoke.
 
 ## Deployment workflow essentials
-- `.github/workflows/deploy-functions-flex.yml` builds from `functions/`, prunes dev deps, and publishes with `Azure/functions-action@v1`. Flex apps must **not** set `FUNCTIONS_WORKER_RUNTIME`, `FUNCTIONS_EXTENSION_VERSION`, or `WEBSITE_NODE_DEFAULT_VERSION`; the workflow now only validates `properties.functionAppConfig.runtime` is `node@20` and logs Cosmos wiring.
+- `.github/workflows/deploy-asora-function-dev.yml` builds from `functions/`, uploads to blob storage, and deploys to Flex Consumption via ARM `/publish` API (no Kudu). Uses storage-based deployment with OIDC authentication. The PATCH step merges `functionAppConfig` to preserve `deployment.storage` and other critical fields. Flex apps must **not** set `FUNCTIONS_WORKER_RUNTIME`, `WEBSITE_RUN_FROM_PACKAGE`, or Kudu-related settings; runtime is configured via ARM PATCH (`node@20`, `instanceMemoryMB: 2048`).
 - Scripts like `.github/scripts/normalize_flex.sh` and `fix-flex-settings.sh` exist to clean legacy settings—rely on ARM patches rather than app-setting writes.
 - PR validations: `canary.yml` handles prerelease tagging, `e2e-integration.yml` fetches admin keys post-deploy and runs smoke requests.
 
