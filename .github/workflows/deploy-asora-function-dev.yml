@@ -71,9 +71,14 @@ jobs:
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # Install production deps inside dist if applicable
+          # Install production deps inside dist
           if [ -f dist/package.json ]; then
-            (cd dist && npm ci --omit=dev)
+            if [ -f package-lock.json ]; then
+              cp package-lock.json dist/
+              (cd dist && npm ci --omit=dev)
+            else
+              (cd dist && npm install --omit=dev --no-audit --no-fund)
+            fi
           fi
 
           pushd dist >/dev/null
@@ -189,4 +194,5 @@ jobs:
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
+
 
