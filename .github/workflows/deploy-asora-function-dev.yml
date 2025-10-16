@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-      - name: Install zip utils
+      - name: Install zip utilities
         run: sudo apt-get update && sudo apt-get install -y zip unzip
 
       - name: Azure login (OIDC)
@@ -59,7 +59,7 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build and stage production node_modules without lockfile churn
+      # Build Linux-ready artifact in functions/dist and zip it
       - name: Build function package
         working-directory: functions
         run: |
@@ -71,10 +71,11 @@ jobs:
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # Produce production-only node_modules in place, then copy into dist
-          npm prune --omit=dev
-          mkdir -p dist/node_modules
-          cp -R node_modules dist/
+          # Install production deps inside dist WITHOUT copying the repo lockfile
+          # Avoids npm ci EUSAGE due to dist/package.json dep subset mismatching root lockfile
+          if [ -f dist/package.json ]; then
+            (cd dist && npm install --omit=dev --no-audit --no-fund)
+          fi
 
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
@@ -90,7 +91,7 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      # Resolve AzureWebJobsStorage account, guard HNS, ensure container; export STG
+      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
@@ -119,33 +120,29 @@ jobs:
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      # Fix the BadRequest: Deployment.Storage 'type' missing by writing a valid object
-      - name: Repair functionAppConfig.Deployment.Storage and set runtime
+      - name: Ensure Flex runtime + memory
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            # Functions v4
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
 
-            STORAGE_VALUE="https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}?blob=${DEPLOY_BLOB_NAME}"
-            BODY=$(cat <<EOF
-            {"properties":{"functionAppConfig":{
-              "runtime":{"name":"node","version":"20"},
-              "siteUpdateStrategy":{"type":"Recreate"},
-              "deployment":{"storage":{
-                "type":"blobcontainer",
-                "value":"${STORAGE_VALUE}",
-                "authentication":{"type":"systemassignedidentity"}
-              }}
-            }}}
-            EOF
-            )
-
+            # Minimal PATCH. Do NOT touch functionAppConfig.deployment.storage.
             az rest --method patch \
-              --uri "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}?api-version=2023-12-01" \
-              --body "$BODY" >/dev/null
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body '{
+                "properties": {
+                  "functionAppConfig": {
+                    "runtime": {"name": "node", "version": "20"},
+                    "scaleAndConcurrency": {"instanceMemoryMB": 2048},
+                    "siteUpdateStrategy": {"type": "Recreate"}
+                  }
+                }
+              }' >/dev/null
 
+      # Upload artifact to storage
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -159,15 +156,17 @@ jobs:
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
+      # Publish by calling ARM sites/publish. This bypasses Kudu.
       - name: Publish package (ARM sites/publish)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            PACKAGE_URI="https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}/${DEPLOY_BLOB_NAME}"
+            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
             az rest --method post \
-              --uri "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}/publish?api-version=2023-12-01" \
-              --body "{\"type\":\"zip\",\"packageUri\":\"${PACKAGE_URI}\"}"
+              --uri \
+                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
 
       - name: List functions
         uses: azure/cli@v2
@@ -193,4 +192,3 @@ jobs:
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
-
