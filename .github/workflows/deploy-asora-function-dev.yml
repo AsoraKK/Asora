@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
 
       - name: Block legacy SP secrets
         env:
@@ -52,7 +52,7 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -120,27 +120,39 @@ jobs:
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Ensure Flex runtime + memory
+      # Fix invalid functionAppConfig by replacing it wholesale with a valid object
+      - name: Ensure Flex runtime, memory, and deployment.storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Functions v4
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
 
-            # Minimal PATCH. Do NOT touch functionAppConfig.deployment.storage.
-            az rest --method patch \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body '{
-                "properties": {
-                  "functionAppConfig": {
-                    "runtime": {"name": "node", "version": "20"},
-                    "scaleAndConcurrency": {"instanceMemoryMB": 2048},
-                    "siteUpdateStrategy": {"type": "Recreate"}
+            cat > body.json <<'JSON'
+            {
+              "properties": {
+                "functionAppConfig": {
+                  "runtime": {"name": "node", "version": "20"},
+                  "scaleAndConcurrency": {"instanceMemoryMB": 2048},
+                  "siteUpdateStrategy": {"type": "Recreate"},
+                  "deployment": {
+                    "storage": {
+                      "type": "blobcontainer",
+                      "value": "https://__STG__.blob.core.windows.net/__CONTAINER__?blob=__BLOB__",
+                      "authentication": {"type": "systemassignedidentity"}
+                    }
                   }
                 }
-              }' >/dev/null
+              }
+            }
+            JSON
+
+            sed -i "s#__STG__#${STG}#g;s#__CONTAINER__#${DEPLOY_CONTAINER}#g;s#__BLOB__#${DEPLOY_BLOB_NAME}#g" body.json
+
+            az rest --method patch \
+              --uri "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}?api-version=2023-12-01" \
+              --body @body.json >/dev/null
 
       # Upload artifact to storage
       - name: Upload package to storage
@@ -192,3 +204,4 @@ jobs:
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
+
