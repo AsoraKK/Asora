@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Install zip utilities
-        run: sudo apt-get update && sudo apt-get install -y zip unzip
+        run: sudo apt-get update && sudo apt-get install -y zip unzip jq
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -59,20 +59,18 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build Linux-ready artifact in functions/dist and zip it
-      - name: Build function package
+      # Build in functions/ and produce a Linux-ready dist zip without lockfile mismatch
+      - name: Build function package (lockfile-safe dist)
         working-directory: functions
         run: |
           set -euo pipefail
           npm ci
           npm run build
 
-          # Sanity checks
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # Install production deps inside dist WITHOUT copying the repo lockfile
-          # Avoids npm ci EUSAGE due to dist/package.json dep subset mismatching root lockfile
+          # Install production deps inside dist without npm ci to avoid EUSAGE on subset package.json
           if [ -f dist/package.json ]; then
             (cd dist && npm install --omit=dev --no-audit --no-fund)
           fi
@@ -140,7 +138,7 @@ jobs:
 
             HNS=$(az storage account show --name "$SA" --query isHnsEnabled -o tsv)
             if [ "$HNS" = "true" ]; then
-              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS account for deployments."
+              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS GPv2 account for deployments."
               exit 1
             fi
 
@@ -148,14 +146,34 @@ jobs:
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Ensure Flex runtime + memory
+      - name: Ensure Functions v4 app setting only
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Functions v4
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
+            # Remove classic or conflicting keys for Flex
+            az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
+                              SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
+                              FUNCTIONS_WORKER_RUNTIME 2>/dev/null || true
+
+      # Grant RBAC to the GitHub OIDC service principal for blob upload
+      - name: Grant GitHub principal Storage Blob Data Contributor
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
+            SP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+            az role assignment create \
+              --assignee-object-id "$SP_OBJ_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Contributor" \
+              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
+            sleep 10
 
             CURRENT_CFG="$(mktemp)"
             az functionapp show -g "$RG" -n "$FUNC_APP" \
@@ -207,7 +225,7 @@ PY
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      # Publish by calling ARM sites/publish. This bypasses Kudu.
+      # Publish by calling ARM sites/publish. Avoids Kudu.
       - name: Publish package (ARM sites/publish)
         uses: azure/cli@v2
         with:
