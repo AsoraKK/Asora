@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-      - name: Install tooling
+      - name: Install zip utilities
         run: sudo apt-get update && sudo apt-get install -y zip unzip jq
 
       - name: Azure login (OIDC)
@@ -59,29 +59,22 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build in repo functions/ and produce a Linux-ready dist
-      - name: Build function package (lockfile-safe)
+      # Build in functions/ and produce a Linux-ready dist zip without lockfile mismatch
+      - name: Build function package (lockfile-safe dist)
         working-directory: functions
         run: |
           set -euo pipefail
-
-          # 1) Install with repo lockfile
           npm ci
-
-          # 2) Build TypeScript -> dist/
           npm run build
 
-          # 3) Sanity checks
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # 4) Install prod deps in dist WITHOUT copying root lockfile
-          # Avoid npm ci EUSAGE when dist/package.json ⊊ root lockfile
+          # Install production deps inside dist without npm ci to avoid EUSAGE on subset package.json
           if [ -f dist/package.json ]; then
             (cd dist && npm install --omit=dev --no-audit --no-fund)
           fi
 
-          # 5) Zip the dist as deployment artifact
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
@@ -96,38 +89,12 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      - name: Grant GitHub OIDC SP data access to $STG
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
-            az role assignment create \
-              --assignee "$AZURE_CLIENT_ID" \
-              --role "Storage Blob Data Contributor" \
-              --scope "$SCOPE" \
-              2>/dev/null || echo "Role already assigned or pending propagation"
-
-            for i in {1..12}; do
-              if az storage container exists \
-                   --auth-mode login \
-                   --account-name "$STG" \
-                   --name "$DEPLOY_CONTAINER" -o tsv --query exists 2>/dev/null | grep -q -E 'true|false'; then
-                echo "RBAC active"
-                break
-              fi
-              echo "Waiting for RBAC propagation... $i"
-              sleep 10
-            done
-
-      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
-main
+      # Resolve storage account from AzureWebJobsStorage and ensure container; guard ADLS Gen2 HNS
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-
             CONTAINER="${DEPLOY_CONTAINER}"
             re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
             [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
@@ -143,61 +110,44 @@ main
 
             HNS=$(az storage account show --name "$SA" --query isHnsEnabled -o tsv)
             if [ "$HNS" = "true" ]; then
-              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS account for deployments."
+              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS GPv2 account for deployments."
               exit 1
             fi
 
             az storage account show --name "$SA" >/dev/null
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
-
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Ensure Functions v4 and Node|20, fix invalid deployment.storage
+      - name: Ensure Functions v4 app setting only
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-
-            # Functions v4
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
+            # Remove classic or conflicting keys for Flex
+            az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
+              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
+                              SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
+                              FUNCTIONS_WORKER_RUNTIME 2>/dev/null || true
 
-            CURRENT_CFG="$(mktemp)"
-            az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json >"$CURRENT_CFG"
+      # Grant RBAC to the GitHub OIDC service principal for blob upload
+      - name: Grant GitHub principal Storage Blob Data Contributor
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
+            SP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+            az role assignment create \
+              --assignee-object-id "$SP_OBJ_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Contributor" \
+              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
+            sleep 10
 
-            if [ ! -s "$CURRENT_CFG" ]; then
-              echo "::error::Unable to read current functionAppConfig" >&2
-              exit 1
-            fi
-
-            PATCH_BODY=$(python3 - "$CURRENT_CFG" <<'PY'
-import json, pathlib, sys
-
-path = pathlib.Path(sys.argv[1])
-config = json.loads(path.read_text())
-if not isinstance(config, dict):
-    raise SystemExit("functionAppConfig missing or invalid")
-
-config["runtime"] = {"name": "node", "version": "20"}
-
-scale = config.get("scaleAndConcurrency") or {}
-scale["instanceMemoryMB"] = 2048
-config["scaleAndConcurrency"] = scale
-
-config["siteUpdateStrategy"] = {"type": "Recreate"}
-
-payload = {"properties": {"functionAppConfig": config}}
-print(json.dumps(payload))
-PY
-)
-
-            az rest --method patch \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body "$PATCH_BODY" >/dev/null
-
-            rm -f "$CURRENT_CFG"
-
+      # Upload artifact to storage with AAD RBAC
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -211,14 +161,16 @@ PY
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      - name: Publish via ARM sites/publish (no Kudu)
+      # Publish by calling ARM sites/publish. Avoids Kudu.
+      - name: Publish package (ARM sites/publish)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
             az rest --method post \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --uri \
+                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
               --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
 
       - name: List functions
@@ -245,4 +197,3 @@ PY
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
-          
