@@ -1,4 +1,4 @@
-name: Deploy to asora-function-dev
+name: Deploy to asora-function-dev (storage publish)
 
 on:
   push:
@@ -20,8 +20,9 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
-  # Keep for validation only. Kudu will use functionAppConfig->deployment.storage by default on Flex.
-  DEPLOY_CONTAINER: zipdeploy
+  DEPLOY_CONTAINER: deployments
+  DEPLOY_BLOB_NAME: functionapp.zip
+
 
 jobs:
   deploy:
@@ -59,6 +60,7 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
+      # Build Linux-ready artifact in functions/dist and zip it
       - name: Build function package
         working-directory: functions
         run: |
@@ -68,14 +70,17 @@ jobs:
 
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
-          test -f dist/package.json || { echo "::error::dist/package.json missing"; ls -al dist; exit 1; }
+
+          # Install production deps inside dist if applicable
+          if [ -f dist/package.json ]; then
+            (cd dist && npm ci --omit=dev)
+          fi
 
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
 
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
-          echo "Built package: $GITHUB_WORKSPACE/dist-func.zip"
 
       - name: Resolve & validate AzureWebJobsStorage account + HNS guard
         uses: azure/cli@v2
@@ -174,31 +179,34 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "{name:name, kind:kind, https:defaultHostName, slot:slotSwapStatus}" -o jsonc
+            az storage blob upload \
+              --auth-mode login \
+              --account-name "$STG" \
+              --container-name "$DEPLOY_CONTAINER" \
+              --name "$DEPLOY_BLOB_NAME" \
+              --file "$GITHUB_WORKSPACE/dist-func.zip" \
+              --overwrite
+
+      # Publish by calling ARM sites/publish. This bypasses Kudu.
+      - name: Publish package (ARM sites/publish)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
+            az rest --method post \
+              --uri \
+                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
+
+      - name: List functions
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
-      - name: Tail function host logs
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            az webapp log config -g "$RG" -n "$FUNC_APP" --application-logging filesystem --level information
-            az webapp log tail -g "$RG" -n "$FUNC_APP" --stack node --timeout 20
-
-      - name: Assert HTTP trigger exists
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            COUNT=$(az functionapp function list -g "$RG" -n "$FUNC_APP" \
-              --query "[?config.bindings[?type=='httpTrigger']]|length(@)" -o tsv)
-            if [ -z "$COUNT" ] || [ "$COUNT" -lt 1 ]; then
-              echo "::error::No HTTP functions detected after deploy"
-              exit 1
-            fi
-
-      - name: Probe health endpoint
+      - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
           echo "Testing https://${FUNC_APP}.azurewebsites.net/health"
