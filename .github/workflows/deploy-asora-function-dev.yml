@@ -1,4 +1,4 @@
-name: Deploy to asora-function-dev (storage publish)
+name: Deploy to asora-function-dev (Flex - storage publish)
 
 on:
   push:
@@ -20,8 +20,6 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
-  DEPLOY_CONTAINER: deployments
-  DEPLOY_BLOB_NAME: functionapp.zip
 
 jobs:
   deploy:
@@ -184,11 +182,11 @@ jobs:
             set -euo pipefail
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
-            # Remove classic or conflicting keys for Flex
+            # Remove conflicting keys for Flex (but keep WEBSITE_CONTENTSHARE which Flex MAY need)
             az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
               --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
                               SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
-                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
+                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
                               FUNCTIONS_WORKER_RUNTIME 2>/dev/null || true
 
       # Grant RBAC to the GitHub OIDC service principal for blob upload
@@ -227,7 +225,26 @@ jobs:
               --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body "$PATCH_BODY" >/dev/null
 
-      # Upload artifact to storage
+      # Grant Function App MI Storage Blob Data Reader (to read deployment package)
+      - name: Grant Function App MI Storage Blob Data Reader
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
+            MI_PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
+            
+            echo "Granting Storage Blob Data Reader to Function App MI: $MI_PRINCIPAL_ID"
+            az role assignment create \
+              --assignee-object-id "$MI_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Reader" \
+              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
+            
+            echo "Waiting 30s for RBAC propagation..."
+            sleep 30
+
+      # Upload package to storage (non-Kudu path)
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -236,28 +253,37 @@ jobs:
             az storage blob upload \
               --auth-mode login \
               --account-name "$STG" \
-              --container-name "$DEPLOY_CONTAINER" \
-              --name "$DEPLOY_BLOB_NAME" \
+              --container-name deployments \
+              --name functionapp.zip \
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      # Publish by calling ARM sites/publish. Avoids Kudu.
-      - name: Publish package (ARM sites/publish)
+      # Publish via ARM /publish endpoint (storage-based, no Kudu)
+      - name: Publish package via ARM API
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
+            PACKAGE_URI="https://${STG}.blob.core.windows.net/deployments/functionapp.zip"
+            
+            echo "Publishing package: $PACKAGE_URI"
             az rest --method post \
-              --uri \
-                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
               --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
 
-      - name: List functions
+      # Restart to ensure host picks up the new package
+      - name: Restart app and list functions
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            echo "Restarting Function App to pick up deployment..."
+            az functionapp restart -g "$RG" -n "$FUNC_APP"
+            
+            echo "Waiting 20s for restart..."
+            sleep 20
+            
+            echo "Listing deployed functions:"
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
       - name: Smoke test HTTP trigger
