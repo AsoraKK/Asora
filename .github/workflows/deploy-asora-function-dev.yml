@@ -23,7 +23,6 @@ env:
   DEPLOY_CONTAINER: deployments
   DEPLOY_BLOB_NAME: functionapp.zip
 
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -68,6 +67,7 @@ jobs:
           npm ci
           npm run build
 
+          # Sanity checks
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
@@ -82,11 +82,24 @@ jobs:
 
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
 
-      - name: Resolve & validate AzureWebJobsStorage account + HNS guard
+      - name: Validate package exists
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          test -f dist-func.zip || { echo "Missing dist-func.zip"; exit 3; }
+          ls -lh dist-func.zip
+          unzip -l dist-func.zip | head -n 20
+
+      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
+      - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
+            CONTAINER="${DEPLOY_CONTAINER}"
+            re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
+            [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
+
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -98,83 +111,36 @@ jobs:
 
             HNS=$(az storage account show --name "$SA" --query isHnsEnabled -o tsv)
             if [ "$HNS" = "true" ]; then
-              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; Kudu remote build fails with 400 invalid characters. Move to non-HNS account."; exit 1
+              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS account for deployments."
+              exit 1
             fi
 
-            # Validate and pre-create likely containers used by Kudu and Flex.
-            for CONTAINER in deployments zipdeploy scm-zipdeploy; do
-              re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
-              [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
-              az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null || true
-            done
+            az storage account show --name "$SA" >/dev/null
+            az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
+            echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Configure Flex app settings (align to Flex)
+      - name: Ensure minimal app/runtime and Node 20
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            # Keep Flex-safe minimal set and remove overrides that force Kudu zipdeploy container.
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4"
+              --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
+            # Ensure Flex + Node|20 runtime
+            az rest --method patch \
+              --uri \
+                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body '{
+                "properties": {
+                  "functionAppConfig": {
+                    "runtime": {"name": "node", "version": "20"},
+                    "siteUpdateStrategy": {"type": "Recreate"}
+                  }
+                }
+              }' >/dev/null
 
-            # Ensure no classic or conflicting keys remain on Flex
-            az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
-              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
-                              SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
-                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING WEBSITE_CONTENTSHARE \
-                              FUNCTIONS_WORKER_RUNTIME SCM_ZIPDEPLOY_CONTAINER \
-              2>/dev/null || true
-
-      - name: Grant MI access to storage
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
-            if [ -z "$SA" ] || [ "$SA" = "None" ]; then
-              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
-              SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
-            fi
-            [ -n "$SA" ] || { echo "::error::Storage account not resolved"; exit 1; }
-            PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
-            [ -n "$PRINCIPAL_ID" ] || { echo "::error::Missing system-assigned identity"; exit 1; }
-            SCOPE=$(az storage account show --name "$SA" --query id -o tsv)
-            az role assignment create --assignee-object-id "$PRINCIPAL_ID" --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Contributor" --scope "$SCOPE" 2>/dev/null || echo "Role assignment exists or pending"
-            sleep 10
-
-      - name: Assert Flex configuration
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            bad=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='WEBSITE_CONTENTSHARE' || name=='SCM_ZIPDEPLOY_CONTAINER']|length(@)" -o tsv)
-            [ "$bad" = "0" ] || { echo "::error::Flex-incompatible/override setting present"; exit 1; }
-            v=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                 --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value|[0]" -o tsv)
-            [ -z "$v" ] || [ "$v" = "None" ] || { echo "::error::WEBSITE_RUN_FROM_PACKAGE must be unset"; exit 1; }
-
-            # Inspect functionAppConfig to confirm Flex storage-based deployment wiring
-            az rest --method get --uri \
-              "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}?api-version=2023-01-01" \
-              --query "{deployment:properties.functionAppConfig.deployment, runtime:properties.functionAppConfig.runtime}" -o jsonc
-
-      - name: Install Azure Functions Core Tools
-        run: |
-          set -euo pipefail
-          npm i -g azure-functions-core-tools@4 --unsafe-perm true
-          func --version
-
-      - name: Publish with Core Tools (remote build)
-        working-directory: functions
-        run: |
-          set -euo pipefail
-          func azure functionapp publish "$FUNC_APP" --javascript --force --build remote
-
-      - name: Show function app status and list functions
+      # Upload artifact to storage
+      - name: Upload package to storage
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -210,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Testing https://${FUNC_APP}.azurewebsites.net/health"
-          for i in {1..5}; do
+          for i in {1..6}; do
             code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/health")
             echo "Attempt $i: HTTP $code"
             [ "$code" = "200" ] && { cat /tmp/health.out; exit 0; }
@@ -218,19 +184,9 @@ jobs:
           done
           echo "::error::Health check failed"; exit 1
 
-      - name: Probe feed endpoint
-        run: |
-          set -euo pipefail
-          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/feed?guest=1&limit=10")
-          echo "Feed HTTP: $code"
-          if [ "$code" = "200" ] || [ "$code" = "204" ]; then
-            echo "Feed endpoint responding"
-          else
-            echo "::warning::Feed endpoint returned $code"
-          fi
-
       - name: Display function URLs
         run: |
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
+
