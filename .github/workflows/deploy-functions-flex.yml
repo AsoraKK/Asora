@@ -1,12 +1,13 @@
-# Deploy to Y1 Windows Consumption Plan using config-zip
-# Flex Consumption apps are NOT supported in this workflow (Kudu/OneDeploy incompatible)
+# DEPRECATED: Deploy to Y1 Windows Consumption Plan using config-zip
+# This workflow is superseded by deploy-asora-function-dev.yml for Flex Consumption deployments.
+# Kept for manual Y1 Windows deployments only (asora-func-y1-win-ne).
+# Flex Consumption apps are NOT supported in this workflow (Kudu/OneDeploy incompatible).
 #
-name: Deploy Functions (Y1 Windows)
+name: Deploy Functions (Y1 Windows) [DEPRECATED]
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  # Automatic deployments disabled - superseded by deploy-asora-function-dev.yml
 
 permissions:
   id-token: write

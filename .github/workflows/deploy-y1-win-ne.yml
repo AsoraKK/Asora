@@ -1,10 +1,11 @@
 # .github/workflows/deploy-y1-win-ne.yml
-name: Deploy Y1 Windows NE (function.json)
+# DEPRECATED: This workflow is superseded by deploy-asora-function-dev.yml for Flex Consumption deployments.
+# Kept for manual Y1 Windows deployments only (asora-func-y1-win-ne).
+name: Deploy Y1 Windows NE (function.json) [DEPRECATED]
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+  # Automatic deployments disabled - superseded by deploy-asora-function-dev.yml
 
 env:
   AZ_SUBSCRIPTION: "99df7ef7-776a-4235-84a4-c77899b2bb04"
