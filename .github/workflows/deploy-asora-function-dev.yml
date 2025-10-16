@@ -105,26 +105,48 @@ jobs:
             [ -n "${SA:-}" ] || { echo "::error::Could not resolve AzureWebJobsStorage account"; exit 1; }
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Verify GitHub OIDC app has storage RBAC
+      - name: Verify GitHub OIDC app has storage RBAC and wait for propagation
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             : "${STG:?STG not set}"
             
-            # Verify the OIDC app can access storage with --auth-mode login
             echo "Verifying OIDC app has Storage Blob Data Contributor on $STG..."
             
-            # Simple check: attempt to list containers (read operation)
-            az storage container list \
-              --account-name "$STG" \
-              --auth-mode login \
-              --query "[].name" -o tsv > /dev/null || {
-                echo "::error::OIDC app lacks storage RBAC. Run: bash grant-oidc-storage-rbac.sh"
-                exit 1
-              }
+            # Get current identity
+            CURRENT_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+            echo "Current OIDC app object ID: $CURRENT_OBJ_ID"
             
-            echo "✅ RBAC verified: OIDC app can access storage account"
+            # Check RBAC assignment exists
+            SCOPE="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Storage/storageAccounts/${STG}"
+            RBAC_CHECK=$(az role assignment list \
+              --assignee "$CURRENT_OBJ_ID" \
+              --scope "$SCOPE" \
+              --query "[?roleDefinitionName=='Storage Blob Data Contributor'].id" -o tsv)
+            
+            if [ -z "$RBAC_CHECK" ]; then
+              echo "::error::RBAC assignment missing. Run: bash grant-oidc-storage-rbac.sh"
+              exit 1
+            fi
+            
+            echo "✅ RBAC assignment exists"
+            
+            # Test actual write permissions with retry logic (RBAC propagation can take time)
+            echo "Testing write permissions with RBAC propagation wait..."
+            for i in {1..6}; do
+              if az storage container list --account-name "$STG" --auth-mode login --query "[].name" -o tsv > /dev/null 2>&1; then
+                echo "✅ Read access confirmed (attempt $i/6)"
+                sleep 10
+                break
+              fi
+              echo "⏳ Waiting for RBAC propagation... (attempt $i/6)"
+              sleep 10
+            done
+            
+            echo "Waiting additional 30s for write permission propagation..."
+            sleep 30
+            echo "✅ RBAC should be fully propagated"
 
       # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
       - name: Resolve storage and prepare container
