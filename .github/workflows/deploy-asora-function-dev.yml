@@ -1,4 +1,4 @@
-name: Deploy to asora-function-dev (storage publish)
+name: Deploy to asora-function-dev (Flex storage publish)
 
 on:
   push:
@@ -22,13 +22,15 @@ env:
   NODE_VERSION: '20'
   DEPLOY_CONTAINER: deployments
   DEPLOY_BLOB_NAME: functionapp.zip
+  INSTANCE_MEMORY_MB: '2048'   # allowed: 512, 2048, 4096
+  MAX_INSTANCE_COUNT: '100'    # allowed: 40..1000
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v4
 
       - name: Block legacy SP secrets
         env:
@@ -41,8 +43,8 @@ jobs:
             exit 1
           fi
 
-      - name: Install zip utilities
-        run: sudo apt-get update && sudo apt-get install -y zip unzip
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y zip unzip jq
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -52,35 +54,29 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4.0.3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build Linux-ready artifact in functions/dist and zip it
+      # Build Linux-ready artifact and zip it
       - name: Build function package
         working-directory: functions
         run: |
           set -euo pipefail
           npm ci
           npm run build
-
-          # Sanity checks
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
-
-          # Install production deps inside dist WITHOUT copying the repo lockfile
-          # Avoids npm ci EUSAGE due to dist/package.json dep subset mismatching root lockfile
+          # Install production deps inside dist without lockfile to avoid npm ci EUSAGE
           if [ -f dist/package.json ]; then
             (cd dist && npm install --omit=dev --no-audit --no-fund)
           fi
-
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
-
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
 
       - name: Validate package exists
@@ -91,8 +87,7 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
-      - name: Resolve storage and prepare container
+      - name: Resolve storage, guard HNS, ensure container
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -120,8 +115,23 @@ jobs:
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      # Fix invalid functionAppConfig by replacing it wholesale with a valid object
-      - name: Ensure Flex runtime, memory, and deployment.storage
+      - name: Grant MSI read on deployments container
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
+            [ -n "$PRINCIPAL_ID" ] || { echo "::error::Missing system-assigned identity"; exit 1; }
+            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
+            az role assignment create \
+              --assignee-object-id "$PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Reader" \
+              --scope "$SCOPE" \
+              2>/dev/null || echo "Role exists or pending"
+            sleep 10
+
+      - name: Ensure Flex runtime + valid scale + valid deployment.storage
         uses: azure/cli@v2
         with:
           inlineScript: |
@@ -129,17 +139,21 @@ jobs:
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
 
-            cat > body.json <<'JSON'
+            STORAGE_VALUE="https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}?blob=${DEPLOY_BLOB_NAME}"
+            cat > body.json <<JSON
             {
               "properties": {
                 "functionAppConfig": {
                   "runtime": {"name": "node", "version": "20"},
-                  "scaleAndConcurrency": {"instanceMemoryMB": 2048},
                   "siteUpdateStrategy": {"type": "Recreate"},
+                  "scaleAndConcurrency": {
+                    "instanceMemoryMB": ${INSTANCE_MEMORY_MB},
+                    "maximumInstanceCount": ${MAX_INSTANCE_COUNT}
+                  },
                   "deployment": {
                     "storage": {
                       "type": "blobcontainer",
-                      "value": "https://__STG__.blob.core.windows.net/__CONTAINER__?blob=__BLOB__",
+                      "value": "${STORAGE_VALUE}",
                       "authentication": {"type": "systemassignedidentity"}
                     }
                   }
@@ -148,13 +162,10 @@ jobs:
             }
             JSON
 
-            sed -i "s#__STG__#${STG}#g;s#__CONTAINER__#${DEPLOY_CONTAINER}#g;s#__BLOB__#${DEPLOY_BLOB_NAME}#g" body.json
-
             az rest --method patch \
               --uri "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}?api-version=2023-12-01" \
               --body @body.json >/dev/null
 
-      # Upload artifact to storage
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -168,16 +179,14 @@ jobs:
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      # Publish by calling ARM sites/publish. This bypasses Kudu.
-      - name: Publish package (ARM sites/publish)
+      - name: Publish package via sites/publish
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
             az rest --method post \
-              --uri \
-                "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
               --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
 
       - name: List functions
@@ -204,4 +213,4 @@ jobs:
           echo "Deployed function URLs:"
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
-
+          
