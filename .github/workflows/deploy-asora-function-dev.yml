@@ -185,23 +185,23 @@ jobs:
             fi
 
             PATCH_BODY=$(python3 - "$CURRENT_CFG" <<'PY'
-import json, pathlib, sys
+            import json, pathlib, sys
 
-path = pathlib.Path(sys.argv[1])
-config = json.loads(path.read_text())
-if not isinstance(config, dict):
-    raise SystemExit("functionAppConfig missing or invalid")
+            path = pathlib.Path(sys.argv[1])
+            config = json.loads(path.read_text())
+            if not isinstance(config, dict):
+                raise SystemExit("functionAppConfig missing or invalid")
 
-config["runtime"] = {"name": "node", "version": "20"}
+            config["runtime"] = {"name": "node", "version": "20"}
 
-scale = config.get("scaleAndConcurrency") or {}
-scale["instanceMemoryMB"] = 2048
-config["scaleAndConcurrency"] = scale
+            scale = config.get("scaleAndConcurrency") or {}
+            scale["instanceMemoryMB"] = 2048
+            config["scaleAndConcurrency"] = scale
 
-config["siteUpdateStrategy"] = {"type": "Recreate"}
+            config["siteUpdateStrategy"] = {"type": "Recreate"}
 
-payload = {"properties": {"functionAppConfig": config}}
-print(json.dumps(payload))
+            payload = {"properties": {"functionAppConfig": config}}
+            print(json.dumps(payload))
 PY
 )
 
