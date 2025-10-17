@@ -32,8 +32,18 @@ for (const file of filesToCopy) {
   const destPath = path.join(distDir, file);
 
   if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, destPath);
-    console.log(`Copied ${file} to dist/`);
+    if (file === 'package.json') {
+      // Fix the 'main' field for deployment (remove dist/ prefix)
+      const pkg = JSON.parse(fs.readFileSync(srcPath, 'utf8'));
+      if (pkg.main === 'dist/index.js') {
+        pkg.main = 'index.js';
+      }
+      fs.writeFileSync(destPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+      console.log(`Copied ${file} to dist/ (fixed main field)`);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`Copied ${file} to dist/`);
+    }
   } else {
     console.warn(`Warning: ${file} not found in root directory`);
   }
