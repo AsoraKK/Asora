@@ -256,18 +256,33 @@ jobs:
               --file "$GITHUB_WORKSPACE/dist-func.zip" \
               --overwrite
 
-      # Publish via ARM /publish endpoint (storage-based, no Kudu)
-      - name: Publish package via ARM API
+      # Update deployment.storage configuration directly (avoid /publish API which creates malformed URLs)
+      - name: Configure deployment.storage with blob URL
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             PACKAGE_URI="https://${STG}.blob.core.windows.net/deployments/functionapp.zip"
             
-            echo "Publishing package: $PACKAGE_URI"
-            az rest --method post \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
+            echo "Configuring deployment.storage with: $PACKAGE_URI"
+            
+            # Read current config to merge
+            CURRENT_CFG=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "properties.functionAppConfig" -o json)
+            
+            # Update deployment.storage.value with correct URL format
+            PATCH_BODY=$(jq -c '
+              . as $cfg
+              | ($cfg // {})
+              | .deployment.storage.value = "'"$PACKAGE_URI"'"
+              | .deployment.storage.type = "blobcontainer"
+              | .deployment.storage.authentication.type = "systemassignedidentity"
+              | {"properties": {"functionAppConfig": .}}
+            ' <<<"$CURRENT_CFG")
+            
+            az rest --method patch \
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body "$PATCH_BODY" >/dev/null
 
       # Restart to ensure host picks up the new package
       - name: Restart app and list functions

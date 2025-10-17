@@ -8,10 +8,16 @@
 
 ## Root Cause
 
-The workflow's PATCH step was **clobbering `properties.functionAppConfig`** and dropping the critical `deployment.storage` field. This caused the ARM `/publish` endpoint to have nowhere to bind the deployment, resulting in:
+The workflow had TWO critical issues:
+
+1. **PATCH was clobbering `properties.functionAppConfig`** and dropping the `deployment.storage` field
+2. **ARM `/publish` API creates malformed blob URLs** with query parameter format (`?blob=functionapp.zip`) instead of path format (`/functionapp.zip`)
+
+This resulted in:
 - Functions never loading (404 on all endpoints)
 - Empty function list
-- `scmType: "None"` (no deployment source registered)
+- `deployment.storage.value` with incorrect URL format
+- Function App unable to fetch the deployment package
 
 ### Problems Identified
 
