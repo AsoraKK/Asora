@@ -197,8 +197,8 @@ jobs:
       - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
-          echo "Testing health endpoints (trying /health and /api/health)..."
-          for endpoint in health api/health; do
+          echo "Testing health endpoints (trying /api/health and /health)..."
+          for endpoint in api/health health; do
             echo "Testing https://${FUNC_APP}.azurewebsites.net/$endpoint"
             for i in {1..6}; do
               code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/$endpoint")

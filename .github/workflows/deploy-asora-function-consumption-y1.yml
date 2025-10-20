@@ -1,8 +1,12 @@
 name: Deploy to Azure Functions (Consumption Y1 Linux)
 
+# NOTE: This workflow is DISABLED and kept as reference documentation only.
+# It shows how to deploy to Y1 Consumption plan if Flex becomes problematic.
+# The target resource 'asora-function-y1-linux' does not exist.
+# Primary deployment uses: deploy-asora-function-dev.yml (Core Tools → Flex)
+
 on:
-  push:
-    branches: [main]
+  # Disabled - manual trigger only for reference/testing
   workflow_dispatch:
 
 permissions:
