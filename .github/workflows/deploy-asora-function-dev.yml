@@ -138,10 +138,11 @@ jobs:
         with:
           inlineScript: |
             set -euo pipefail
-            CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json)
-            echo "$CUR" | python3 - <<'PY' > body.json
-            import json,sys
-            cfg=json.loads(sys.stdin.read())
+            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur.json
+            python3 - <<'PY' > body.json
+            import json
+            with open("cur.json") as f:
+              cfg=json.load(f)
             if not isinstance(cfg, dict): cfg={}
             cfg.setdefault("runtime",{})["name"]="node"
             cfg["runtime"]["version"]="20"
