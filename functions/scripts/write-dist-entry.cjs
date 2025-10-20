@@ -33,13 +33,22 @@ for (const file of filesToCopy) {
 
   if (fs.existsSync(srcPath)) {
     if (file === 'package.json') {
-      // Fix the 'main' field for deployment (remove dist/ prefix)
+      // Create a clean production package.json for deployment
+      // - Set main to index.js
+      // - Force type to commonjs (critical for Azure Functions Flex)
+      // - Include only essential fields
       const pkg = JSON.parse(fs.readFileSync(srcPath, 'utf8'));
-      if (pkg.main === 'dist/index.js') {
-        pkg.main = 'index.js';
-      }
-      fs.writeFileSync(destPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
-      console.log(`Copied ${file} to dist/ (fixed main field)`);
+      const prodPkg = {
+        name: pkg.name,
+        version: pkg.version,
+        private: true,
+        type: 'commonjs',
+        main: 'index.js',
+        engines: pkg.engines,
+        dependencies: pkg.dependencies
+      };
+      fs.writeFileSync(destPath, JSON.stringify(prodPkg, null, 2) + '\n', 'utf8');
+      console.log(`Copied ${file} to dist/ (production CJS package)`);
     } else {
       fs.copyFileSync(srcPath, destPath);
       console.log(`Copied ${file} to dist/`);
