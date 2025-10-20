@@ -139,7 +139,7 @@ jobs:
           inlineScript: |
             set -euo pipefail
             CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json)
-            python3 - <<'PY' > body.json
+            echo "$CUR" | python3 - <<'PY' > body.json
             import json,sys
             cfg=json.loads(sys.stdin.read())
             if not isinstance(cfg, dict): cfg={}
