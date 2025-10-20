@@ -177,6 +177,7 @@ jobs:
             set -euo pipefail
             : "${STG:?STG not set}"
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
+            export PACKAGE_URI
             
             # Read current config and merge in deployment.storage
             az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur.json
