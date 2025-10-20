@@ -178,22 +178,30 @@ jobs:
             : "${STG:?STG not set}"
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
             
+            # Read current config and merge in deployment.storage
+            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur.json
+            python3 - <<'PY' > body.json
+            import json, os
+            with open("cur.json") as f:
+              cfg = json.load(f)
+            if not isinstance(cfg, dict):
+              cfg = {}
+            
+            # Set deployment storage
+            cfg["deployment"] = {
+              "storage": {
+                "type": "blobcontainer",
+                "value": os.environ["PACKAGE_URI"],
+                "authentication": {"type": "systemassignedidentity"}
+              }
+            }
+            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
+            PY
+            
             echo "Setting Flex deployment source to: $PACKAGE_URI"
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body "{
-                \"properties\": {
-                  \"functionAppConfig\": {
-                    \"deployment\": {
-                      \"storage\": {
-                        \"type\": \"blobcontainer\",
-                        \"value\": \"$PACKAGE_URI\",
-                        \"authentication\": {\"type\": \"systemassignedidentity\"}
-                      }
-                    }
-                  }
-                }
-              }"
+              --body @body.json
             
             echo "Restarting function app..."
             az functionapp restart -g "$RG" -n "$FUNC_APP"
