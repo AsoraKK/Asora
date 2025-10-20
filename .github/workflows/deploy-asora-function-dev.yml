@@ -169,27 +169,38 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      - name: Publish package (ARM sites/publish)
+      # Set Flex deployment source by patching functionAppConfig.deployment.storage
+      - name: Point Flex to blob and restart
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             : "${STG:?STG not set}"
             PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
-            az rest --method post \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
-            az rest --method post \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/syncfunctiontriggers?api-version=2023-12-01" >/dev/null || true
+            
+            echo "Setting Flex deployment source to: $PACKAGE_URI"
+            az rest --method patch \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body "{
+                \"properties\": {
+                  \"functionAppConfig\": {
+                    \"deployment\": {
+                      \"storage\": {
+                        \"type\": \"blobcontainer\",
+                        \"value\": \"$PACKAGE_URI\",
+                        \"authentication\": {\"type\": \"systemassignedidentity\"}
+                      }
+                    }
+                  }
+                }
+              }"
+            
+            echo "Restarting function app..."
             az functionapp restart -g "$RG" -n "$FUNC_APP"
-
-      - name: Wait for deployment and list functions
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            echo "Waiting 30s for function discovery..."
-            sleep 30
+            
+            echo "Waiting 45s for function discovery..."
+            sleep 45
+            
             echo "Listing deployed functions:"
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
