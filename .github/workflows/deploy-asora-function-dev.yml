@@ -20,6 +20,8 @@ env:
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
   NODE_VERSION: '20'
+  DEPLOY_CONTAINER: deployments
+  DEPLOY_BLOB_NAME: functionapp.zip
 
 jobs:
   deploy:
@@ -87,73 +89,16 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
-      - name: Resolve storage account and export STG
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            # Resolve the AzureWebJobsStorage account name
-            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
-            if [ -z "${SA:-}" ] || [ "$SA" = "None" ]; then
-              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
-              SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
-            fi
-            [ -n "${SA:-}" ] || { echo "::error::Could not resolve AzureWebJobsStorage account"; exit 1; }
-            echo "STG=$SA" >> "$GITHUB_ENV"
-
-      - name: Verify GitHub OIDC app has storage RBAC and wait for propagation
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            : "${STG:?STG not set}"
-            
-            echo "Verifying OIDC app has Storage Blob Data Contributor on $STG..."
-            
-            # Get current identity
-            CURRENT_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
-            echo "Current OIDC app object ID: $CURRENT_OBJ_ID"
-            
-            # Check RBAC assignment exists
-            SCOPE="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Storage/storageAccounts/${STG}"
-            RBAC_CHECK=$(az role assignment list \
-              --assignee "$CURRENT_OBJ_ID" \
-              --scope "$SCOPE" \
-              --query "[?roleDefinitionName=='Storage Blob Data Contributor'].id" -o tsv)
-            
-            if [ -z "$RBAC_CHECK" ]; then
-              echo "::error::RBAC assignment missing. Run: bash grant-oidc-storage-rbac.sh"
-              exit 1
-            fi
-            
-            echo "✅ RBAC assignment exists"
-            
-            # Test actual write permissions with retry logic (RBAC propagation can take time)
-            echo "Testing write permissions with RBAC propagation wait..."
-            for i in {1..6}; do
-              if az storage container list --account-name "$STG" --auth-mode login --query "[].name" -o tsv > /dev/null 2>&1; then
-                echo "✅ Read access confirmed (attempt $i/6)"
-                sleep 10
-                break
-              fi
-              echo "⏳ Waiting for RBAC propagation... (attempt $i/6)"
-              sleep 10
-            done
-            
-            echo "Waiting additional 30s for write permission propagation..."
-            sleep 30
-            echo "✅ RBAC should be fully propagated"
-
-      # Resolve storage account from AzureWebJobsStorage and ensure container, guard HNS
+      # A) Resolve storage and prepare container (validates non-HNS, exports STG)
       - name: Resolve storage and prepare container
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            CONTAINER="deployments"
-            
+            CONTAINER="${DEPLOY_CONTAINER}"
+            re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
+            [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
+
             SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
@@ -164,138 +109,86 @@ jobs:
             [ -n "$SA" ] || { echo "::error::AzureWebJobsStorage account not resolved"; exit 1; }
 
             HNS=$(az storage account show --name "$SA" --query isHnsEnabled -o tsv)
-            if [ "$HNS" = "true" ]; then
-              echo "::error::Storage account '$SA' has Hierarchical Namespace enabled; use a non-HNS GPv2 account for deployments."
-              exit 1
-            fi
+            [ "$HNS" != "true" ] || { echo "::error::Storage '$SA' has HNS enabled; use non-HNS for deployments."; exit 1; }
 
             az storage account show --name "$SA" >/dev/null
             az storage container create --account-name "$SA" --name "$CONTAINER" --auth-mode login >/dev/null || true
+
             echo "STG=$SA" >> "$GITHUB_ENV"
 
-      - name: Ensure Functions v4 app setting only
+      # B) Grant RBAC to GitHub OIDC principal for blob upload
+      - name: Grant OIDC RBAC on storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
-            # Remove conflicting keys for Flex (but keep WEBSITE_CONTENTSHARE which Flex MAY need)
-            az functionapp config appsettings delete -g "$RG" -n "$FUNC_APP" \
-              --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP \
-                              SCM_RUN_FROM_PACKAGE_CONTAINER SCM_CONTAINER SCM_TARGET_PATH \
-                              WEBSITE_CONTENTAZUREFILECONNECTIONSTRING \
-                              FUNCTIONS_WORKER_RUNTIME 2>/dev/null || true
+            : "${STG:?STG not set}"
+            SCOPE=$(az storage account show --name "$STG" --query id -o tsv)
+            APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
+            [ -n "$APP_OBJ_ID" ] || { echo "::error::AZURE_CLIENT_ID not resolvable to service principal"; exit 1; }
 
-      # Grant RBAC to the GitHub OIDC service principal for blob upload
-      - name: Grant GitHub principal Storage Blob Data Contributor
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
-            SP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
-            az role assignment create \
-              --assignee-object-id "$SP_OBJ_ID" \
+            az role assignment create --assignee-object-id "$APP_OBJ_ID" \
               --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Contributor" \
-              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
-            sleep 10
+              --role "Storage Blob Data Contributor" --scope "$SCOPE" 2>/dev/null || true
+            sleep 15
 
-            CURRENT_CFG=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json)
-
-            if [ -z "${CURRENT_CFG:-}" ] || [ "$CURRENT_CFG" = "null" ]; then
-              echo "::error::Unable to read current functionAppConfig" >&2
-              exit 1
-            fi
-
-            PATCH_BODY=$(jq -c '
-              . as $cfg
-              | ($cfg // {})
-              | .runtime = {"name": "node", "version": "20"}
-              | .scaleAndConcurrency = ((.scaleAndConcurrency // {}) + {"instanceMemoryMB": 2048, "maximumInstanceCount": 40})
-              | .siteUpdateStrategy = {"type": "Recreate"}
-              | {"properties": {"functionAppConfig": .}}
-            ' <<<"$CURRENT_CFG")
-
+      # C) Patch runtime without breaking deployment.storage (merge current config)
+      - name: Ensure Flex runtime + memory (merge-patch)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json)
+            python3 - <<'PY' > body.json
+            import json,sys
+            cfg=json.loads(sys.stdin.read())
+            if not isinstance(cfg, dict): cfg={}
+            cfg.setdefault("runtime",{})["name"]="node"
+            cfg["runtime"]["version"]="20"
+            sc=cfg.get("scaleAndConcurrency") or {}
+            sc["instanceMemoryMB"]=2048
+            sc.setdefault("maximumInstanceCount",40)
+            cfg["scaleAndConcurrency"]=sc
+            cfg["siteUpdateStrategy"]={"type":"Recreate"}
+            print(json.dumps({"properties":{"functionAppConfig":cfg}}))
+            PY
+            az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
             az rest --method patch \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body "$PATCH_BODY" >/dev/null
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body @body.json >/dev/null
 
-      # Grant Function App MI Storage Blob Data Reader (to read deployment package)
-      - name: Grant Function App MI Storage Blob Data Reader
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
-            MI_PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
-            
-            echo "Granting Storage Blob Data Reader to Function App MI: $MI_PRINCIPAL_ID"
-            az role assignment create \
-              --assignee-object-id "$MI_PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Reader" \
-              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present or pending"
-            
-            echo "Waiting 30s for RBAC propagation..."
-            sleep 30
-
-      # Upload package to storage (non-Kudu path)
+      # D) Upload and publish from storage
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            az storage blob upload \
-              --auth-mode login \
-              --account-name "$STG" \
-              --container-name deployments \
-              --name functionapp.zip \
-              --file "$GITHUB_WORKSPACE/dist-func.zip" \
-              --overwrite
+            : "${STG:?STG not set}"
+            az storage blob upload --auth-mode login \
+              --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
+              --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Update deployment.storage configuration directly (avoid /publish API which creates malformed URLs)
-      - name: Configure deployment.storage with blob URL
+      - name: Publish package (ARM sites/publish)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            PACKAGE_URI="https://${STG}.blob.core.windows.net/deployments/functionapp.zip"
-            
-            echo "Configuring deployment.storage with: $PACKAGE_URI"
-            
-            # Read current config to merge
-            CURRENT_CFG=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json)
-            
-            # Update deployment.storage.value with correct URL format
-            PATCH_BODY=$(jq -c '
-              . as $cfg
-              | ($cfg // {})
-              | .deployment.storage.value = "'"$PACKAGE_URI"'"
-              | .deployment.storage.type = "blobcontainer"
-              | .deployment.storage.authentication.type = "systemassignedidentity"
-              | {"properties": {"functionAppConfig": .}}
-            ' <<<"$CURRENT_CFG")
-            
-            az rest --method patch \
-              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body "$PATCH_BODY" >/dev/null
-
-      # Restart to ensure host picks up the new package
-      - name: Restart app and list functions
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            echo "Restarting Function App to pick up deployment..."
+            : "${STG:?STG not set}"
+            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
+            az rest --method post \
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
+            az rest --method post \
+              --uri "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/syncfunctiontriggers?api-version=2023-12-01" >/dev/null || true
             az functionapp restart -g "$RG" -n "$FUNC_APP"
-            
-            echo "Waiting 20s for restart..."
-            sleep 20
-            
+
+      - name: Wait for deployment and list functions
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "Waiting 30s for function discovery..."
+            sleep 30
             echo "Listing deployed functions:"
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
