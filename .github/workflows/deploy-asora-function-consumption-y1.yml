@@ -70,7 +70,7 @@ jobs:
           
           # Verify package.json has correct CommonJS configuration
           echo "Package configuration:"
-          cat package.json | jq '{name, version, type, main}'
+          jq '{name, version, type, main}' package.json
 
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
