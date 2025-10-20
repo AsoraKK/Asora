@@ -1,0 +1,114 @@
+name: Deploy to Azure Functions (Consumption Y1 Linux)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-asora-function-y1-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_FUNCTIONAPP_NAME: asora-function-y1-linux
+  NODE_VERSION: '20'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'functions'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block legacy SP secrets
+        env:
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
+            echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Disable Husky in CI
+        run: echo "HUSKY=0" >> "$GITHUB_ENV"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build Functions package
+        working-directory: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          
+          # Verify essential files
+          test -f dist/host.json || { echo "::error::dist/host.json missing"; exit 1; }
+          test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
+          
+          # Install production dependencies
+          cd dist && npm install --omit=dev --no-audit --no-fund
+          
+          # Verify package.json has correct CommonJS configuration
+          echo "Package configuration:"
+          cat package.json | jq '{name, version, type, main}'
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/dist
+          respect-funcignore: true
+
+      - name: Wait for deployment to propagate
+        run: sleep 30
+
+      - name: Smoke test health endpoint
+        run: |
+          set -euo pipefail
+          echo "Testing https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/health"
+          for i in {1..6}; do
+            code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/health")
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✅ Health check passed!"
+              cat /tmp/health.out
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Health check failed after 6 attempts"
+          exit 1
+
+      - name: List deployed functions
+        run: |
+          echo "Deployed functions:"
+          az functionapp function list \
+            --resource-group asora-psql-flex \
+            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+            --output table
+
+      - name: Display function URLs
+        run: |
+          echo "Deployed function URLs:"
+          echo "  Health: https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/health"
+          echo "  Feed:   https://${AZURE_FUNCTIONAPP_NAME}.azurewebsites.net/feed"

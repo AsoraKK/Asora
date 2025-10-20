@@ -169,64 +169,53 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Set Flex deployment source by patching functionAppConfig.deployment.storage
-      - name: Point Flex to blob and restart
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            : "${STG:?STG not set}"
-            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
-            export PACKAGE_URI
-            
-            # Read current config and merge in deployment.storage
-            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur.json
-            python3 - <<'PY' > body.json
-            import json, os
-            with open("cur.json") as f:
-              cfg = json.load(f)
-            if not isinstance(cfg, dict):
-              cfg = {}
-            
-            # Set deployment storage
-            cfg["deployment"] = {
-              "storage": {
-                "type": "blobcontainer",
-                "value": os.environ["PACKAGE_URI"],
-                "authentication": {"type": "systemassignedidentity"}
-              }
-            }
-            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
-            PY
-            
-            echo "Setting Flex deployment source to: $PACKAGE_URI"
-            az rest --method patch \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @body.json
-            
-            echo "Restarting function app..."
-            az functionapp restart -g "$RG" -n "$FUNC_APP"
-            
-            echo "Waiting 45s for function discovery..."
-            sleep 45
-            
-            echo "Listing deployed functions:"
-            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
+      # Deploy using Azure Functions Core Tools (Kudu zip deploy)
+      - name: Install Azure Functions Core Tools
+        run: |
+          curl -s https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-ubuntu-$(lsb_release -cs)-prod $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update
+          sudo apt-get install -y azure-functions-core-tools-4
+
+      - name: Deploy to Function App using Core Tools
+        working-directory: functions/dist
+        run: |
+          set -euo pipefail
+          echo "Publishing to $FUNC_APP using Core Tools..."
+          func azure functionapp publish "$FUNC_APP" \
+            --javascript \
+            --build remote \
+            --nozip
+          
+          echo "Waiting 30s for function discovery..."
+          sleep 30
+          
+          echo "Listing deployed functions:"
+          az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
+
 
       - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
-          echo "Testing https://${FUNC_APP}.azurewebsites.net/health"
-          for i in {1..6}; do
-            code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/health")
-            echo "Attempt $i: HTTP $code"
-            [ "$code" = "200" ] && { cat /tmp/health.out; exit 0; }
-            sleep 10
+          echo "Testing health endpoints (trying /health and /api/health)..."
+          for endpoint in health api/health; do
+            echo "Testing https://${FUNC_APP}.azurewebsites.net/$endpoint"
+            for i in {1..6}; do
+              code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/$endpoint")
+              echo "  Attempt $i: HTTP $code"
+              if [ "$code" = "200" ]; then
+                cat /tmp/health.out
+                echo "✅ Health check passed on /$endpoint"
+                exit 0
+              fi
+              sleep 10
+            done
           done
-          echo "::error::Health check failed"; exit 1
+          echo "::error::Health check failed on both /health and /api/health"; exit 1
 
       - name: Display function URLs
         run: |
           echo "Deployed function URLs:"
-          echo "  Health: https://${FUNC_APP}.azurewebsites.net/health"
-          echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed"
+          echo "  Health: https://${FUNC_APP}.azurewebsites.net/health (or /api/health)"
+          echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed (or /api/feed)"
+
