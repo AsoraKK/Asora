@@ -51,3 +51,30 @@ export function clamp(value, min, max) {
   if (max !== undefined && value > max) return max;
   return value;
 }
+
+export function readDurationThreshold(env, key, fallbackMs) {
+  if (!env || typeof env !== 'object') return fallbackMs;
+
+  const raw = env[key];
+  if (raw === undefined || raw === null || raw === '') {
+    return fallbackMs;
+  }
+
+  try {
+    return durationToMs(raw);
+  } catch (error) {
+    throw new Error(`Invalid duration for ${key}: ${error.message}`);
+  }
+}
+
+export function resolveDurationThresholds(env, prefix, defaults) {
+  if (!prefix) {
+    throw new Error('prefix is required');
+  }
+
+  const { p95, p99 } = defaults;
+  const resolvedP95 = readDurationThreshold(env, `${prefix}_P95_THRESHOLD`, p95);
+  const resolvedP99 = readDurationThreshold(env, `${prefix}_P99_THRESHOLD`, p99);
+
+  return { p95: resolvedP95, p99: resolvedP99 };
+}

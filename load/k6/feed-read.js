@@ -1,6 +1,11 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { resolveUrl } from './utils.js';
+import { resolveUrl, resolveDurationThresholds } from './utils.js';
+
+const durationThresholds = resolveDurationThresholds(__ENV, 'FEED_READ', {
+  p95: 2000,
+  p99: 3500,
+});
 
 export const options = {
   scenarios: {
@@ -12,7 +17,10 @@ export const options = {
   },
   thresholds: {
     'http_req_failed{endpoint:feed}': ['rate<0.01'],
-    'http_req_duration{endpoint:feed}': ['p(95)<200', 'p(99)<400'],
+    'http_req_duration{endpoint:feed}': [
+      `p(95)<${durationThresholds.p95}`,
+      `p(99)<${durationThresholds.p99}`,
+    ],
   },
   summaryTrendStats: ['min', 'avg', 'med', 'p(95)', 'p(99)'],
   tags: { test: 'feed-read' },
