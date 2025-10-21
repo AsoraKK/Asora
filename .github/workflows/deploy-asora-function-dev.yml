@@ -30,22 +30,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install k6
+      - name: Export BASE_URL
+        id: export_base_url
         run: |
           set -euo pipefail
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6-archive-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-            | sudo tee /etc/apt/sources.list.d/k6.list >/dev/null
-          sudo apt-get update
-          sudo apt-get install -y k6
-          k6 version
+          url="https://${FUNC_APP}.azurewebsites.net"
+          echo "BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "base_url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
 
       - name: Smoke (health)
-        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=1 DURATION=30s k6 run load/k6/smoke.js
+        env:
+          BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
+        run: |
+          VUS=1 DURATION=30s \
+          k6 run load/k6/smoke.js
 
       - name: Feed read
-        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=5 DURATION=60s k6 run load/k6/feed-read.js
+        env:
+          BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
+        run: |
+          VUS=5 DURATION=60s \
+          k6 run load/k6/feed-read.js
 
       - name: Upload k6 summaries
         uses: actions/upload-artifact@v4
