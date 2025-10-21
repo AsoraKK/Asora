@@ -27,8 +27,6 @@ jobs:
   canary-k6:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
     steps:
       - uses: actions/checkout@v4
 
