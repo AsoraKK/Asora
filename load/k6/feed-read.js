@@ -16,8 +16,14 @@ export const options = {
     },
   },
   thresholds: {
+    // Tag-based thresholds for endpoint-level metrics
     'http_req_failed{endpoint:feed}': ['rate<0.01'],
     'http_req_duration{endpoint:feed}': [
+      `p(95)<${durationThresholds.p95}`,
+      `p(99)<${durationThresholds.p99}`,
+    ],
+    // Scenario-based thresholds (more precise for multi-scenario tests)
+    'http_req_duration{scenario:steady}': [
       `p(95)<${durationThresholds.p95}`,
       `p(99)<${durationThresholds.p99}`,
     ],

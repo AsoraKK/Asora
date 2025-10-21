@@ -57,8 +57,9 @@ jobs:
 
       - name: Upload k6 summaries
         uses: actions/upload-artifact@v4
+        if: always()  # Upload even if k6 fails
         with:
-          name: k6-summaries
+          name: k6-summaries-${{ github.run_id }}
           path: load/k6/*-summary.json
           if-no-files-found: warn
 
