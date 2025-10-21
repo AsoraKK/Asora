@@ -33,17 +33,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Export BASE_URL
-        run: echo "BASE_URL=https://${FUNC_APP}.azurewebsites.net" >> "$GITHUB_ENV"
+        id: export_base_url
+        run: |
+          set -euo pipefail
+          url="https://${FUNC_APP}.azurewebsites.net"
+          echo "BASE_URL=$url" >> "$GITHUB_ENV"
+          echo "base_url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
 
       - name: Smoke (health)
+        env:
+          BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
         run: |
           VUS=1 DURATION=30s \
           k6 run load/k6/smoke.js
 
       - name: Feed read
+        env:
+          BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
         run: |
           VUS=5 DURATION=60s \
           k6 run load/k6/feed-read.js
