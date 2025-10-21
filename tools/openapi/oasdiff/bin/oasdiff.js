@@ -82,50 +82,43 @@ function parseArgs(argv) {
 function resolveSpec(pathLike) {
   const absolutePath = path.resolve(process.cwd(), pathLike);
   const rawContent = fs.readFileSync(absolutePath, 'utf8');
-  const format = inferFormat(absolutePath, rawContent);
 
-  if (format === 'json') {
-    try {
-      const parsed = JSON.parse(rawContent);
-      const yamlContent = yaml.dump(parsed, { noRefs: true });
-      return {
-        location: absolutePath,
-        content: yamlContent,
-        format: 'yaml'
-      };
-    } catch (error) {
-      console.error(`Failed to parse JSON specification at ${absolutePath}.`);
-      throw error;
-    }
+  let document;
+  try {
+    document = yaml.load(rawContent);
+  } catch (error) {
+    console.error(`Failed to parse specification at ${absolutePath}.`);
+    throw error;
   }
+
+  if (!document || typeof document !== 'object') {
+    throw new Error(`Specification at ${absolutePath} must parse to an object.`);
+  }
+
+  const format = detectSpecFormat(document);
+  const yamlContent = yaml.dump(document, { noRefs: true });
 
   return {
     location: absolutePath,
-    content: rawContent,
+    content: yamlContent,
     format
   };
 }
 
-function inferFormat(filePath, rawContent) {
-  const trimmed = typeof rawContent === 'string' ? rawContent.trimStart() : '';
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    try {
-      JSON.parse(rawContent);
-      return 'json';
-    } catch (error) {
-      // Fall back to extension-based detection when JSON parsing fails.
+function detectSpecFormat(document) {
+  if (document && typeof document === 'object') {
+    const openapiVersion = typeof document.openapi === 'string' ? document.openapi.trim() : undefined;
+    if (openapiVersion && openapiVersion.startsWith('3')) {
+      return 'openapi3';
+    }
+
+    const swaggerVersion = typeof document.swagger === 'string' ? document.swagger.trim() : undefined;
+    if (swaggerVersion && swaggerVersion.startsWith('2')) {
+      return 'swagger2';
     }
   }
 
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.json') {
-    return 'json';
-  }
-  if (ext === '.yaml' || ext === '.yml') {
-    return 'yaml';
-  }
-
-  return 'yaml';
+  throw new Error('Unable to determine specification format. Expected OpenAPI 3.x or Swagger 2.0 document.');
 }
 
 function selectDiffFunction(moduleExports) {
