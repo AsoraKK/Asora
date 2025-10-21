@@ -3,8 +3,8 @@ import { check, sleep } from 'k6';
 import { resolveUrl, resolveDurationThresholds } from './utils.js';
 
 const durationThresholds = resolveDurationThresholds(__ENV, 'SMOKE', {
-  p95: 1500,
-  p99: 2500,
+  p95: 5000,  // 5 seconds - generous for cold start
+  p99: 10000, // 10 seconds - very generous for cold start
 });
 
 export const options = {

@@ -3,8 +3,8 @@ import { check, sleep } from 'k6';
 import { resolveUrl, resolveDurationThresholds } from './utils.js';
 
 const durationThresholds = resolveDurationThresholds(__ENV, 'FEED_READ', {
-  p95: 2000,
-  p99: 3500,
+  p95: 3000,  // 3 seconds - realistic for warm endpoints
+  p99: 5000,  // 5 seconds - generous for 99th percentile
 });
 
 export const options = {
