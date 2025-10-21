@@ -21,8 +21,8 @@ export const options = {
   tags: { test: 'smoke' },
 };
 
-const BASE = __ENV.BASE_URL;
-if (!BASE) throw new Error('BASE_URL is required');
+const BASE = __ENV.K6_BASE_URL;
+if (!BASE) throw new Error('K6_BASE_URL is required');
 
 export default function () {
   const res = http.get(resolveUrl(BASE, '/api/health'), {
@@ -33,5 +33,21 @@ export default function () {
 }
 
 export function handleSummary(data) {
-  return { 'load/k6/smoke-summary.json': JSON.stringify(data, null, 2) };
+  const metrics = data.metrics;
+  const p95 = metrics.http_req_duration?.values?.['p(95)'] || 0;
+  const p99 = metrics.http_req_duration?.values?.['p(99)'] || 0;
+  const errorRate = metrics.http_req_failed?.values?.rate || 0;
+  
+  const textSummary = `Smoke Test Results
+====================
+p95: ${p95.toFixed(2)}ms
+p99: ${p99.toFixed(2)}ms
+error_rate: ${(errorRate * 100).toFixed(2)}%
+iterations: ${metrics.iterations?.values?.count || 0}
+`;
+
+  return {
+    'load/k6/smoke-summary.json': JSON.stringify(data, null, 2),
+    'load/k6/smoke-summary.txt': textSummary,
+  };
 }
