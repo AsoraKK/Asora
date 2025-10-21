@@ -37,12 +37,12 @@ jobs:
 
       - name: Smoke (health)
         run: |
-          BASE_URL="$BASE_URL" VUS=1 DURATION=30s \
+          BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=1 DURATION=30s \
           k6 run load/k6/smoke.js
 
       - name: Feed read
         run: |
-          BASE_URL="$BASE_URL" VUS=5 DURATION=60s \
+          BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=5 DURATION=60s \
           k6 run load/k6/feed-read.js
 
       - name: Upload k6 summaries
