@@ -82,7 +82,7 @@ function parseArgs(argv) {
 function resolveSpec(pathLike) {
   const absolutePath = path.resolve(process.cwd(), pathLike);
   const rawContent = fs.readFileSync(absolutePath, 'utf8');
-  const format = inferFormat(absolutePath);
+  const format = inferFormat(absolutePath, rawContent);
 
   if (format === 'json') {
     try {
@@ -106,11 +106,25 @@ function resolveSpec(pathLike) {
   };
 }
 
-function inferFormat(filePath) {
+function inferFormat(filePath, rawContent) {
+  const trimmed = typeof rawContent === 'string' ? rawContent.trimStart() : '';
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      JSON.parse(rawContent);
+      return 'json';
+    } catch (error) {
+      // Fall back to extension-based detection when JSON parsing fails.
+    }
+  }
+
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.json') {
     return 'json';
   }
+  if (ext === '.yaml' || ext === '.yml') {
+    return 'yaml';
+  }
+
   return 'yaml';
 }
 
