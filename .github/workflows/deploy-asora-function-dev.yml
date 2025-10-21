@@ -27,8 +27,6 @@ jobs:
   canary-k6:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
     steps:
       - uses: actions/checkout@v4
 
@@ -41,10 +39,10 @@ jobs:
           sudo apt-get update && sudo apt-get install -y k6
 
       - name: Smoke (health)
-        run: BASE_URL="$BASE_URL" VUS=1 DURATION=30s k6 run load/k6/smoke.js
+        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=1 DURATION=30s k6 run load/k6/smoke.js
 
       - name: Feed read
-        run: BASE_URL="$BASE_URL" VUS=5 DURATION=60s k6 run load/k6/feed-read.js
+        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=5 DURATION=60s k6 run load/k6/feed-read.js
 
       - name: Upload k6 summaries
         uses: actions/upload-artifact@v4
