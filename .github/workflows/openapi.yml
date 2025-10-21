@@ -31,14 +31,14 @@ jobs:
       - name: Check for breaking changes
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          npx oasdiff breaking --fail-on-diff \
+          npx oasdiff --fail-on-diff \
             api/openapi/dist/openapi.json \
             <(git show origin/${{ github.base_ref }}:api/openapi/dist/openapi.json)
       - name: Enforce semver when breaking
         run: |
           set -e
           BASE=origin/${{ github.base_ref }}
-          if npx oasdiff breaking api/openapi/dist/openapi.json <(git show $BASE:api/openapi/dist/openapi.json); then
+          if npx oasdiff --fail-on-breaking api/openapi/dist/openapi.json <(git show $BASE:api/openapi/dist/openapi.json); then
             exit 0
           fi
           CURR=$(node -pe 'JSON.parse(require("node:fs").readFileSync("api/openapi/dist/openapi.json","utf8")).info?.version ?? ""')
