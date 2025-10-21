@@ -1,7 +1,7 @@
 # Copilot Instructions
 
 ## What to know first
-- Start with [`docs/ADR_001_TLDR.md`](../docs/ADR_001_TLDR.md) for the product vision, target KPIs, and how the Flutter front end aligns with Azure Functions + Cosmos.
+- Start with `docs/ADR_001_TLDR.md` for the product vision, target KPIs, and how the Flutter front end aligns with Azure Functions + Cosmos.
 - The repo is split: Flutter app in `lib/` (Riverpod-based clean architecture) and Node.js 20 Azure Functions in `functions/` (TypeScript → CJS build output under `dist/`).
 
 ## Architecture hot points
