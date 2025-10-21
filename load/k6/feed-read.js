@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { resolveUrl } from './utils.js';
 
 export const options = {
   scenarios: {
@@ -20,8 +21,14 @@ export const options = {
 const BASE = __ENV.BASE_URL;
 if (!BASE) throw new Error('BASE_URL is required');
 
+function buildFeedUrl() {
+  const feedBase = resolveUrl(BASE, '/api/feed');
+  const query = 'guest=1&limit=10';
+  return `${feedBase}?${query}`;
+}
+
 export default function () {
-  const res = http.get(`${BASE}/feed?guest=1&limit=10`, { tags: { endpoint: 'feed' } });
+  const res = http.get(buildFeedUrl(), { tags: { endpoint: 'feed' } });
   check(res, { 'status 200/204': (r) => r.status === 200 || r.status === 204 });
   sleep(1);
 }
