@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { resolveUrl } from './utils.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 1),
@@ -15,8 +16,11 @@ export const options = {
 const BASE = __ENV.BASE_URL;
 if (!BASE) throw new Error('BASE_URL is required');
 
+const HEALTH_PATH = __ENV.HEALTH_PATH || '/api/health';
+const HEALTH_URL = resolveUrl(BASE, HEALTH_PATH);
+
 export default function () {
-  const res = http.get(`${BASE}/health`, { tags: { endpoint: 'health' } });
+  const res = http.get(HEALTH_URL, { tags: { endpoint: 'health' } });
   check(res, { 'health 200': (r) => r.status === 200 });
   sleep(1);
 }
