@@ -96,12 +96,13 @@ function resolveSpec(pathLike) {
   }
 
   const format = detectSpecFormat(document);
-  const yamlContent = yaml.dump(document, { noRefs: true });
+  const metadata = collectSpecMetadata(document);
 
   return {
     location: absolutePath,
-    content: yamlContent,
-    format
+    format,
+    document,
+    metadata
   };
 }
 
@@ -119,6 +120,105 @@ function detectSpecFormat(document) {
   }
 
   throw new Error('Unable to determine specification format. Expected OpenAPI 3.x or Swagger 2.0 document.');
+}
+
+function collectSpecMetadata(document) {
+  const metadata = {};
+
+  if (document && typeof document === 'object') {
+    if (typeof document.openapi === 'string' && document.openapi.trim()) {
+      metadata.openapiVersion = document.openapi.trim();
+    }
+
+    if (typeof document.jsonSchemaDialect === 'string' && document.jsonSchemaDialect.trim()) {
+      metadata.jsonSchemaDialect = document.jsonSchemaDialect.trim();
+    }
+  }
+
+  return metadata;
+}
+
+function createDiffSpec(resolvedSpec, documentOverride) {
+  const specDocument = documentOverride || resolvedSpec.document;
+
+  return {
+    location: resolvedSpec.location,
+    format: resolvedSpec.format,
+    content: yaml.dump(specDocument, { noRefs: true })
+  };
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function downgradeOpenApiDocument(document) {
+  const clone = deepClone(document);
+  const openapiVersion = typeof clone.openapi === 'string' ? clone.openapi.trim() : undefined;
+  let downgraded = false;
+
+  if (openapiVersion && /^3\.1(\.|$)/.test(openapiVersion)) {
+    clone.openapi = '3.0.3';
+    downgraded = true;
+  }
+
+  return { document: clone, downgraded };
+}
+
+function isUnsupportedOpenApiVersionError(error) {
+  const message = error instanceof Error ? error.message : '';
+  if (typeof message !== 'string') {
+    return false;
+  }
+
+  return /Unsupported OpenAPI version/i.test(message) || /Swagger Parser only supports versions/i.test(message);
+}
+
+async function diffWithDowngradedSpecs(diffFunction, baseResolved, headResolved) {
+  const downgradedBase = downgradeOpenApiDocument(baseResolved.document);
+  const downgradedHead = downgradeOpenApiDocument(headResolved.document);
+
+  const result = await diffFunction({
+    sourceSpec: createDiffSpec(baseResolved, downgradedBase.document),
+    destinationSpec: createDiffSpec(headResolved, downgradedHead.document)
+  });
+
+  return {
+    result,
+    applied: downgradedBase.downgraded || downgradedHead.downgraded
+  };
+}
+
+function annotateMetadataDifferences(diffResult, baseMetadata, headMetadata) {
+  if (!diffResult || typeof diffResult !== 'object') {
+    return diffResult;
+  }
+
+  const notices = [];
+  const baseVersion = baseMetadata ? baseMetadata.openapiVersion : undefined;
+  const headVersion = headMetadata ? headMetadata.openapiVersion : undefined;
+
+  if (baseVersion !== headVersion) {
+    notices.push(
+      `OpenAPI version changed from ${baseVersion || 'unspecified'} to ${headVersion || 'unspecified'}.`
+    );
+  }
+
+  const baseDialect = baseMetadata ? baseMetadata.jsonSchemaDialect : undefined;
+  const headDialect = headMetadata ? headMetadata.jsonSchemaDialect : undefined;
+
+  if (baseDialect !== headDialect) {
+    notices.push(
+      `jsonSchemaDialect changed from ${baseDialect || 'unspecified'} to ${headDialect || 'unspecified'}.`
+    );
+  }
+
+  if (notices.length > 0) {
+    const existing = Array.isArray(diffResult.unclassifiedDiffs) ? diffResult.unclassifiedDiffs.slice() : [];
+    diffResult.unclassifiedDiffs = existing.concat(notices);
+  }
+
+  return diffResult;
 }
 
 function selectDiffFunction(moduleExports) {
@@ -171,19 +271,42 @@ async function main() {
     process.exit(1);
   }
 
-  const baseSpec = resolveSpec(options.basePath);
-  const headSpec = resolveSpec(options.headPath);
+  const baseResolved = resolveSpec(options.basePath);
+  const headResolved = resolveSpec(options.headPath);
 
   let diffResult;
   try {
     diffResult = await diffFunction({
-      sourceSpec: baseSpec,
-      destinationSpec: headSpec
+      sourceSpec: createDiffSpec(baseResolved),
+      destinationSpec: createDiffSpec(headResolved)
     });
   } catch (error) {
-    console.error('Failed to diff the provided OpenAPI specifications.');
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    if (isUnsupportedOpenApiVersionError(error)) {
+      let fallback;
+      try {
+        fallback = await diffWithDowngradedSpecs(diffFunction, baseResolved, headResolved);
+      } catch (fallbackError) {
+        console.error('Failed to diff the provided OpenAPI specifications.');
+        console.error(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+        process.exit(1);
+      }
+
+      diffResult = fallback && fallback.result;
+
+      if (!diffResult) {
+        console.error('Failed to diff the provided OpenAPI specifications.');
+        process.exit(1);
+      }
+
+      if (fallback.applied) {
+        console.error('Detected OpenAPI 3.1 specification. Downgraded to OpenAPI 3.0.3 for diff compatibility.');
+        diffResult = annotateMetadataDifferences(diffResult, baseResolved.metadata, headResolved.metadata);
+      }
+    } else {
+      console.error('Failed to diff the provided OpenAPI specifications.');
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
   }
 
   const output = serializeResult(diffResult, options.outputFormat);
