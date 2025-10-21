@@ -24,7 +24,35 @@ env:
   DEPLOY_BLOB_NAME: functionapp.zip
 
 jobs:
+  canary-k6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo apt-get update && sudo apt-get install -y gnupg ca-certificates
+          curl -s https://repo.k6.io/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://repo.k6.io/apt stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Smoke (health)
+        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=1 DURATION=30s k6 run load/k6/smoke.js
+
+      - name: Feed read
+        run: BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=5 DURATION=60s k6 run load/k6/feed-read.js
+
+      - name: Upload k6 summaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summaries
+          path: load/k6/*-summary.json
+          if-no-files-found: warn
+
   deploy:
+    needs: [canary-k6]
     runs-on: ubuntu-latest
     environment: dev
     steps:

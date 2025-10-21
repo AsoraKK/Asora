@@ -81,12 +81,27 @@ function parseArgs(argv) {
 
 function resolveSpec(pathLike) {
   const absolutePath = path.resolve(process.cwd(), pathLike);
-  const content = fs.readFileSync(absolutePath, 'utf8');
+  const rawContent = fs.readFileSync(absolutePath, 'utf8');
   const format = inferFormat(absolutePath);
+
+  if (format === 'json') {
+    try {
+      const parsed = JSON.parse(rawContent);
+      const yamlContent = yaml.dump(parsed, { noRefs: true });
+      return {
+        location: absolutePath,
+        content: yamlContent,
+        format: 'yaml'
+      };
+    } catch (error) {
+      console.error(`Failed to parse JSON specification at ${absolutePath}.`);
+      throw error;
+    }
+  }
 
   return {
     location: absolutePath,
-    content,
+    content: rawContent,
     format
   };
 }
