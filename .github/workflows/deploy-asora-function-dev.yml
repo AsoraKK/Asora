@@ -32,17 +32,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Export BASE_URL
+        run: echo "BASE_URL=https://${FUNC_APP}.azurewebsites.net" >> "$GITHUB_ENV"
+
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
 
       - name: Smoke (health)
         run: |
-          BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=1 DURATION=30s \
+          VUS=1 DURATION=30s \
           k6 run load/k6/smoke.js
 
       - name: Feed read
         run: |
-          BASE_URL="https://${FUNC_APP}.azurewebsites.net" VUS=5 DURATION=60s \
+          VUS=5 DURATION=60s \
           k6 run load/k6/feed-read.js
 
       - name: Upload k6 summaries
