@@ -10,3 +10,4 @@ Documents
   configured.
 - [Go API](api.md): How to use actionlint as Go library.
 - [References](reference.md): Links to resources.
+- [Cosmos DB Runbook](COSMOS_RUNBOOK.md): Operational guide for Cosmos throughput, indexes, and Terraform workflows.
