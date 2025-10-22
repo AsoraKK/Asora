@@ -25,4 +25,15 @@ for env in staging prod; do
   terraform -chdir="infra/terraform/envs/${env}" validate
 done
 
+echo "4. Checking config.index.json for best practices..."
+CONFIG_POLICY="database/cosmos/indexes/config.index.json"
+if jq -e '.automatic' "$CONFIG_POLICY" >/dev/null 2>&1; then
+  echo "❌ config.index.json should not contain 'automatic' field" >&2
+  exit 1
+fi
+EMPTY_COMPOSITES=$(jq '.compositeIndexes | length == 0' "$CONFIG_POLICY")
+if [[ "$EMPTY_COMPOSITES" != "false" ]]; then
+  echo "✅ config.index.json uses minimal policy (no composites)"
+fi
+
 echo "✅ Pre-deployment checks passed."
