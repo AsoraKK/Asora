@@ -2,6 +2,8 @@
 // Import each module that performs its own app.http registration so the
 // runtime discovers every trigger when this file is evaluated.
 
-import './health';
+import './shared/routes/health';
 import './feed';
-import './posts';
+import './auth';
+import './moderation';
+import './privacy';

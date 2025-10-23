@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,12 +15,20 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "baseUrl": "src",
+    "paths": {
+      "@shared/*": ["shared/*"],
+      "@auth/*": ["auth/*"],
+      "@feed/*": ["feed/*"],
+      "@moderation/*": ["moderation/*"],
+      "@privacy/*": ["privacy/*"]
+    },
     "plugins": [
       {
         "name": "@azure/functions"
       }
     ]
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*"]
 }

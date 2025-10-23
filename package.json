@@ -13,6 +13,7 @@
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
     "test-functions": "cd functions && npm run test",
+    "verify:routes": "node functions/dev/verify-routes.js",
     "openapi:lint": "redocly lint api/openapi/openapi.yaml",
     "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
     "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora",

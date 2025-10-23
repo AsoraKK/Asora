@@ -1,238 +1,101 @@
 # Asora Backend Functions
 
-## Overview
+TypeScript Azure Functions that power Asora's feed, moderation, privacy, and authentication workflows. The runtime now follows a module-first layout with explicit middleware, making it easy to share logic between HTTP routes, timers, and future background jobs.
 
-Complete TypeScript-based Azure Functions backend for the Asora platform, featuring AI-powered content moderation, JWT authentication, and tier-based user management.
-
-## Architecture
+## Project Layout
 
 ```
-Asora Backend Functions
-├── shared/           # Reusable utilities
-│   ├── auth.ts      # JWT validation & user extraction
-│   ├── cosmosClient.ts # Cosmos DB connection helpers
-│   └── validation.ts   # Input validation utilities
-├── auth/            # Authentication endpoints
-│   └── userinfo.ts  # Enhanced user profile data
-├── post/            # Content management
-│   ├── create.ts    # AI-moderated post creation
-│   └── delete.ts    # Authorized post deletion
-├── feed/            # Content discovery
-│   └── get.ts       # Personalized feeds with tier features
-└── moderation/      # Community safety
-    └── flag.ts      # AI-assisted content reporting
+functions/
+├── src/
+│   ├── auth/
+│   │   ├── routes/         # HTTP triggers (token, authorize, userinfo)
+│   │   └── service/        # OAuth2 + session logic
+│   ├── feed/
+│   │   ├── routes/         # GET /feed, POST /post
+│   │   └── service/        # Redis cache + rate limiting
+│   ├── moderation/
+│   │   ├── routes/         # Flag content, submit appeals, vote on appeals
+│   │   └── service/        # Cosmos + Hive orchestration
+│   ├── privacy/
+│   │   ├── routes/         # GDPR export/deletion workflows
+│   │   └── service/        # Multi-container data scrubbing
+│   └── shared/
+│       ├── middleware/     # `parseAuth`, `authRequired`, `guestOnly`
+│       ├── utils/          # HTTP helpers, validation, error types
+│       └── clients/        # Cosmos, Redis, Hive, Postgres connectors
+└── tests/                  # Module-aligned Jest suites
 ```
+
+All application code lives under `src/`. Path aliases (`@shared/*`, `@feed/*`, `@moderation/*`, …) are configured in `tsconfig.json`, Jest, and ESLint for clean imports.
 
 ## Quick Start
 
-> NOTE: Azure Functions Core Tools are not installed via local devDependencies to avoid CI failures (exit code 127). Install them globally if you need the `func` CLI locally:
->
-> ```bash
-> npm i -g azure-functions-core-tools@4 --unsafe-perm true
-> ```
-
-### 1. Install Dependencies
+> Install Azure Functions Core Tools v4 globally if you plan to run the local runtime: `npm i -g azure-functions-core-tools@4 --unsafe-perm`.
 
 ```bash
 cd functions
 npm install
-```
 
-### 2. Configure Environment
-
-Create `local.settings.json`:
-
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "",
-    "FUNCTIONS_WORKER_RUNTIME": "node",
-    "JWT_SECRET": "your_jwt_secret",
-    "COSMOS_ENDPOINT": "https://your-cosmos.documents.azure.com:443/",
-    "COSMOS_KEY": "your_cosmos_key",
-    "HIVE_API_KEY": "your_hive_ai_key"
-  }
-}
-```
-
-### 3. Build & Start
-
-```bash
+# Type-check + emit to dist/
 npm run build
+
+# Run Jest tests (serialised for Cosmos/Redis mocks)
+npm test
+
+# Launch local Functions host at http://localhost:7071/api
 npm start
+
+# Lint TypeScript sources
+npm run lint
 ```
 
-## 🤖 GitHub Copilot Integration
+Create `local.settings.json` with at least `JWT_SECRET`, `COSMOS_CONNECTION_STRING`, and any Hive/Redis keys you depend on. Everything in `src/shared/clients` reads from `process.env`.
 
-Each function is documented with comprehensive prompts for GitHub Copilot:
+## Middleware & Responses
 
-### Example: Post Creation
+- `parseAuth(req)` inspects the `Authorization` header. It supports RS256 (`JWT_PUBLIC_KEY`) and HS256 (`JWT_SECRET`) tokens and returns a `Principal` describing the caller, including decoded claims for role checks.
+- `authRequired(principal)` and `guestOnly(principal)` gate endpoints at the top of every route. Azure `authLevel` remains `anonymous`; we enforce JWTs ourselves.
+- `@shared/utils/http` exposes typed helpers (`ok`, `created`, `badRequest`, `serverError`, …) so routes always return a serialised JSON body with consistent headers.
 
-Open `/post/create.ts` and start typing after the docstring. Copilot will auto-generate:
+## HTTP Surface
 
-- JWT token validation
-- Input sanitization
-- Hive AI moderation call
-- Cosmos DB insertion
-- Error handling
-- Response formatting
+| Route                               | Method | Module       | Notes                                  |
+| ----------------------------------- | ------ | ------------ | --------------------------------------- |
+| `/auth/token`                       | POST   | auth         | OAuth2 token exchange with PKCE         |
+| `/auth/authorize`                   | GET    | auth         | Authorization code issuance             |
+| `/auth/userinfo`                    | GET    | auth         | OIDC-compliant profile payload          |
+| `/feed`                             | GET    | feed         | Guest-friendly feed with Redis support  |
+| `/post`                             | POST   | feed         | Authenticated post creation w/ limits   |
+| `/moderation/flag`                  | POST   | moderation   | Authenticated content flagging          |
+| `/moderation/appeals`               | POST   | moderation   | Submit an appeal for review             |
+| `/moderation/appeals/{id}/vote`     | POST   | moderation   | Vote on appeals (role aware)            |
+| `/user/export`                      | GET    | privacy      | GDPR data export (24h rate limit)       |
+| `/user/delete`                      | DELETE | privacy      | Irreversible account deletion workflow  |
 
-### Copilot-Ready Features
+Each entry maps to a `src/<module>/routes/*.ts` file that delegates to `service/` for Cosmos/Hive/Redis orchestration.
 
-- ✅ **Detailed function specifications**
-- ✅ **Request/response schemas**
-- ✅ **Integration requirements**
-- ✅ **Error handling patterns**
-- ✅ **Security considerations**
+## Testing
 
-## 🔐 Security Features
-
-### JWT Authentication
-
-- Token validation with configurable expiration
-- User role extraction (user/moderator/admin)
-- Tier-based access control (free/premium/enterprise)
-
-### Input Validation
-
-- Schema-based request validation
-- SQL injection prevention
-- XSS protection
-- Rate limiting by user tier
-
-### Content Moderation
-
-- Hive AI integration for real-time analysis
-- Automated action triggers
-- Human moderator workflow
-- Appeal process support
-
-## Tier-Based Features
-
-| Feature              | Free     | Premium   | Enterprise   |
-| -------------------- | -------- | --------- | ------------ |
-| API Rate Limit       | 100/hour | 1000/hour | Unlimited    |
-| Post Character Limit | 280      | 2000      | 5000         |
-| Media Attachments    | 1        | 5         | Unlimited    |
-| AI Priority          | Standard | High      | Instant      |
-| Custom Feeds         | Basic    | Advanced  | Full Control |
-
-## 🗄️ Database Schema
-
-### Collections
-
-- **users**: User profiles, authentication data
-- **posts**: Content with AI moderation scores
-- **comments**: Threaded discussions
-- **likes**: User interactions (+1/-1 voting)
-- **feeds**: Personalized content algorithms
-- **flags**: Content moderation reports
-- **reputation**: User scoring and achievements
-
-## 📡 API Endpoints
-
-### Authentication
-
-- `GET /auth/userinfo` - Get comprehensive user profile
-
-### Content Management
-
-- `POST /post/create` - Create AI-moderated posts
-- `DELETE /post/delete` - Delete posts with authorization
-
-### Content Discovery
-
-- `GET /feed` - Personalized content feeds
-
-### Community Safety
-
-- `POST /moderation/flag` - Report inappropriate content
-
-## 🧪 Testing
-
-### Local Testing
+- Jest roots: `src/` and `tests/` (configured via `jest.config.ts`).
+- Module-specific suites live in `functions/tests/<module>/`.
+- Example commands:
 
 ```bash
-# Test with curl
-curl -H "Authorization: Bearer <JWT>" \
-  http://localhost:7072/api/auth/userinfo
+# Run all suites
+npm test
 
-# Create test post
-curl -X POST -H "Authorization: Bearer <JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Test post content"}' \
-  http://localhost:7072/api/post/create
+# Target a single file
+npx jest tests/feed/createPost.route.test.ts
 ```
 
-### Flutter Integration
+Minimum coverage expectations include:
 
-```dart
-// AuthService already configured for 10.0.2.2:7072
-final userInfo = await authService.getCurrentUser();
-```
+- Middleware behaviour (`parseAuth`, `authRequired`).
+- Feed service Redis integration and rate limiting.
+- Route-level guards returning 401/403 when principals are missing.
 
-## 🔄 Development Workflow
+## Maintenance Notes
 
-1. **Modify Function**: Edit TypeScript files with Copilot assistance
-2. **Build**: `npm run build` (or use watch mode)
-3. **Test Locally**: Functions run on `localhost:7072`
-4. **Deploy**: Use Azure Functions deployment tools
-
-## 📦 Dependencies
-
-### Core
-
-- `@azure/functions` - Azure Functions runtime
-- `@azure/cosmos` - Cosmos DB SDK v4
-- `jsonwebtoken` - JWT token handling
-- `axios` - HTTP requests to external APIs
-
-### Development
-
-- `typescript` - TypeScript compiler
-- `@types/*` - Type definitions
-- `jest` - Testing framework
-
-## 🚀 Deployment
-
-**Prerequisites**: Ensure you're authenticated with Azure CLI (`az login`) or using GitHub Actions OIDC for automated deployments.
-
-### Azure Functions Deployment
-
-```bash
-# Deploy to Azure
-func azure functionapp publish <function-app-name>
-
-# Set environment variables in Azure
-az functionapp config appsettings set \
-  --name <function-app-name> \
-  --resource-group <resource-group> \
-  --settings JWT_SECRET=<value> COSMOS_ENDPOINT=<value>
-```
-
-### CI/CD Considerations
-
-- The `azure-functions-core-tools` package was removed from `devDependencies` to prevent `npm ci` failures in Linux runners.
-- Deployment workflows install the core tools globally just-in-time.
-- Local developers should install core tools globally (see Quick Start note) rather than adding it back to `package.json`.
-
-## 📈 Monitoring & Analytics
-
-- **Application Insights**: Function performance monitoring
-- **Cosmos DB Metrics**: Database performance tracking
-- **Custom Telemetry**: User engagement analytics
-- **Error Tracking**: Comprehensive error logging
-
-## 🔜 Future Enhancements
-
-- [ ] GraphQL endpoint for complex queries
-- [ ] Real-time notifications via SignalR
-- [ ] Advanced AI features (sentiment analysis, topic detection)
-- [ ] Multi-language content support
-- [ ] Blockchain integration for content verification
-- [ ] Advanced analytics and reporting dashboard
-
----
-
-**Ready for GitHub Copilot to accelerate your Asora backend development!** 🚀
+- When introducing new modules, update `tsconfig.json`, Jest `moduleNameMapper`, and ESLint `settings.import/resolver` so alias imports continue to work.
+- Keep heavy business logic in `service/` files; routes should stay focused on HTTP parsing and response shaping. This keeps services reusable from timers or future queue triggers.
+- Shared infrastructure (Cosmos clients, Redis connectors, schema validation helpers) belongs under `src/shared/` to avoid duplication.

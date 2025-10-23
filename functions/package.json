@@ -7,7 +7,7 @@
     "node": ">=20 <21"
   },
   "scripts": {
-    "test": "npm run -s test:unit || echo \"no tests\"",
+    "test": "jest --config jest.config.ts --runInBand",
     "test:unit": "jest --config jest.config.ts --coverage",
     "test:feed": "vitest --config feed/vitest.config.ts --coverage",
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
@@ -17,10 +17,10 @@
     "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"package.json\" dist/",
     "build-v3": "npm run clean && npm run compile && npm run copy-functions",
     "watch": "echo 'No compilation needed for JavaScript functions'",
-    "start": "func start --port 7072",
+    "start": "func start --typescript",
     "clean": "rimraf dist",
-    "lint": "eslint \"**/*.{ts,js}\" --fix",
-    "lint:check": "eslint \"**/*.{ts,js}\"",
+    "lint": "eslint . --ext .ts",
+    "lint:check": "eslint . --ext .ts",
     "format": "prettier --write \"**/*.js\"",
     "format:check": "prettier --check \"**/*.js\"",
     "prepack": "npm run build",
