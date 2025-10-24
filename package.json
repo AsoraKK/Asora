@@ -4,7 +4,7 @@
   "private": true,
   "description": "Asora platform - Flutter mobile app with Azure Functions backend",
   "scripts": {
-    "prepare": "node -e \"try{require.resolve('husky')}catch(e){process.exit(0)}\" && husky install || true",
+    "prepare": "if [ \"$CI\" = \"true\" ]; then exit 0; fi; command -v npx >/dev/null 2>&1 && npx husky install || true",
     "format-dart": "dart format --output=none --set-exit-if-changed .",
     "format-functions": "cd functions && npm run format",
     "lint-functions": "cd functions && npm run lint",

@@ -22,11 +22,23 @@ export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
     }
   }
 
+  // Create a URLSearchParams-like query object
+  const queryParams = new Map<string, string>(Object.entries(init.query ?? {}));
+  const queryWithEntries = {
+    ...init.query,
+    entries() {
+      return queryParams.entries();
+    },
+    get(key: string) {
+      return queryParams.get(key);
+    },
+  };
+
   return {
     method: init.method ?? 'GET',
     url: init.url ?? 'https://example.com/api',
     headers,
-    query: init.query ?? {},
+    query: queryWithEntries as any,
     params: init.params ?? {},
     body: init.body ?? undefined,
 
