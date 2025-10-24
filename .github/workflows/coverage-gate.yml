@@ -18,11 +18,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install and run Functions feed tests
+      - name: Install and run Functions tests with coverage
         run: |
           cd functions
           npm ci
-          npx vitest run --config feed/vitest.config.ts --coverage
+          npm test -- --coverage
 
       - name: Setup Flutter 3.x
         uses: subosito/flutter-action@v2

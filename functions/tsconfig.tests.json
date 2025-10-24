@@ -9,5 +9,5 @@
     "target": "ES2020",
     "isolatedModules": true
   },
-  "include": ["**/*.test.ts", "**/__tests__/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.test.ts", "tests/**/__tests__/**/*.ts"]
 }
