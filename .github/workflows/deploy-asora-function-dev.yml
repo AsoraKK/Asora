@@ -187,50 +187,39 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Deploy using ARM /publish API (Flex Consumption storage-based deployment)
-      - name: Deploy from storage using ARM API
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            : "${STG:?STG not set}"
-            
-            # Construct the blob URL
-            BLOB_URL="https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}/${DEPLOY_BLOB_NAME}"
-            
-            # Get SAS token for the blob (24 hour expiry)
-            END_DATE=$(date -u -d "24 hours" '+%Y-%m-%dT%H:%MZ')
-            SAS_TOKEN=$(az storage blob generate-sas \
-              --account-name "$STG" \
-              --container-name "$DEPLOY_CONTAINER" \
-              --name "$DEPLOY_BLOB_NAME" \
-              --permissions r \
-              --expiry "$END_DATE" \
-              --auth-mode login \
-              --as-user \
-              -o tsv)
-            
-            # Publish using ARM API
-            PACKAGE_URL="${BLOB_URL}?${SAS_TOKEN}"
-            
-            az rest --method post \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-              --body "{\"properties\": {\"packageUri\": \"$PACKAGE_URL\"}}"
+      # Deploy using Core Tools (proven Flex deployment method)
+      - name: Install Azure Functions Core Tools
+        run: |
+          curl -s https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-ubuntu-$(lsb_release -cs)-prod $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
+          sudo apt-get update
+          sudo apt-get install -y azure-functions-core-tools-4
 
-      # F) Restart app and list functions
-      - name: Restart app and list functions
+      - name: Deploy to Function App using Core Tools
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          
+          # Unzip dist-func.zip to deploy directory
+          mkdir -p deploy-temp
+          unzip -q dist-func.zip -d deploy-temp
+          
+          cd deploy-temp
+          echo "Publishing to $FUNC_APP using Core Tools..."
+          func azure functionapp publish "$FUNC_APP" \
+            --javascript \
+            --build remote \
+            --nozip
+          
+          echo "Waiting 30s for function discovery..."
+          sleep 30
+
+      - name: List deployed functions
         uses: azure/cli@v2
         with:
           inlineScript: |
-            set -euo pipefail
-            echo "Restarting Function App to pick up new deployment..."
-            az functionapp restart -g "$RG" -n "$FUNC_APP"
-            
-            echo "Waiting 30s for host restart..."
-            sleep 30
-            
             echo "Listing deployed functions:"
-            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table || echo "Function list command failed (may be expected for Flex apps)"
+            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
 
 
       - name: Smoke test HTTP trigger
