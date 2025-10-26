@@ -158,7 +158,25 @@ jobs:
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body @body.json >/dev/null
 
-      # D) Upload and publish from storage
+      # D) Grant Function App MI Storage Blob Data Reader
+      - name: Grant Function App MI Storage Blob Data Reader
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            : "${STG:?STG not set}"
+            SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
+            MI_PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
+            
+            az role assignment create \
+              --assignee-object-id "$MI_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Reader" \
+              --scope "$SA_ID" 2>/dev/null || echo "RBAC already present"
+            
+            sleep 30  # RBAC propagation
+
+      # E) Upload and publish from storage
       - name: Upload package to storage
         uses: azure/cli@v2
         with:
@@ -198,9 +216,18 @@ jobs:
             az rest --method post \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
               --body "{\"properties\": {\"packageUri\": \"$PACKAGE_URL\"}}"
+
+      # F) Restart app and list functions
+      - name: Restart app and list functions
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "Restarting Function App to pick up new deployment..."
+            az functionapp restart -g "$RG" -n "$FUNC_APP"
             
-            echo "Deployment initiated. Waiting 45s for function discovery..."
-            sleep 45
+            echo "Waiting 30s for host restart..."
+            sleep 30
             
             echo "Listing deployed functions:"
             az functionapp function list -g "$RG" -n "$FUNC_APP" -o table || echo "Function list command failed (may be expected for Flex apps)"
