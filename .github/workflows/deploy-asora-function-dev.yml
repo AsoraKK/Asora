@@ -187,43 +187,32 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Deploy using Core Tools (proven Flex deployment method)
-      - name: Install Azure Functions Core Tools
-        run: |
-          curl -s https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-ubuntu-$(lsb_release -cs)-prod $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update
-          sudo apt-get install -y azure-functions-core-tools-4
+      # Publish to Flex using ARM /publish with a short-lived SAS to the uploaded blob
+      - name: Publish package via ARM /publish (Flex)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            : "${STG:?STG not set}"
 
-      - name: Deploy to Function App using Core Tools
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          
-          # Unzip dist-func.zip to deploy directory
-          mkdir -p deploy-temp
-          unzip -q dist-func.zip -d deploy-temp
-          
-          cd deploy-temp
-          
-          # Verify required files
-          test -f index.js || { echo "::error::index.js missing"; exit 1; }
-          test -f package.json || { echo "::error::package.json missing"; exit 1; }
-          test -f host.json || { echo "::error::host.json missing"; exit 1; }
-          test -d node_modules || { echo "::error::node_modules missing"; exit 1; }
-          test -d node_modules/@azure/functions || { echo "::error::@azure/functions package missing"; exit 1; }
-          
-          echo "Publishing to $FUNC_APP using Core Tools..."
-          echo "Package contents:"
-          find . -maxdepth 1 -type f -o -type d | head -20
-          
-          # Deploy WITHOUT --build remote (package already has node_modules)
-          func azure functionapp publish "$FUNC_APP" \
-            --javascript \
-            --nozip
-          
-          echo "Waiting 30s for function discovery..."
-          sleep 30
+            EXPIRY=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%MZ")
+            SAS=$(az storage blob generate-sas \
+              --account-name "$STG" \
+              --container-name "$DEPLOY_CONTAINER" \
+              --name "$DEPLOY_BLOB_NAME" \
+              --permissions r \
+              --expiry "$EXPIRY" -o tsv)
+
+            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME?$SAS"
+            echo "Using package URI: ${PACKAGE_URI%%\?*}?(redacted)"
+
+            printf '{"properties":{"packageUri":"%s"}}\n' "$PACKAGE_URI" > body.json
+            az rest --method post \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --body @body.json
+
+            echo "Waiting 60s for function discovery..."
+            sleep 60
 
       - name: List deployed functions
         uses: azure/cli@v2
