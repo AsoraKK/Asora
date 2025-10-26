@@ -237,63 +237,46 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Trigger deployment by updating functionAppConfig.deployment.storage (Flex pattern)
-      - name: Trigger Flex deployment (update storage config)
+      # Deploy using OneDeploy/Kudu ZIP API (proven approach for Flex Consumption)
+      # Based on FLEX_DEPLOYMENT_TROUBLESHOOTING.md: deployment.storage is unreliable for Node v4
+      - name: Deploy to Flex via OneDeploy (Kudu ZIP API)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            : "${STG:?STG not set}"
-
-            # For Flex, the deployment is triggered by ensuring deployment.storage.value points to the uploaded blob
-            # The app watches this config and auto-extracts when it changes or on restart
-            BLOB_URL="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
-            echo "Ensuring deployment config points to: $BLOB_URL"
-
-            # Read current functionAppConfig and update deployment.storage.value
-            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur-deploy.json
             
-            # Build deployment body with updated storage config using Python inline
-            cat > update-deploy.py <<'PYTHON_SCRIPT'
-            import json
-            import os
+            echo "Deploying via OneDeploy/Kudu ZIP API (proven Flex deployment method)"
             
-            # Read current config
-            with open("cur-deploy.json") as f:
-                content = f.read().strip()
-                cfg = json.loads(content) if content else {}
+            # Get publish credentials
+            CREDS_JSON=$(az functionapp deployment list-publishing-credentials -g "$RG" -n "$FUNC_APP" -o json)
+            PUBLISH_URL=$(echo "$CREDS_JSON" | jq -r '.scmUri')
+            PUBLISH_USER=$(echo "$CREDS_JSON" | jq -r '.publishingUserName')
+            PUBLISH_PASS=$(echo "$CREDS_JSON" | jq -r '.publishingPassword')
             
-            if not isinstance(cfg, dict): 
-                cfg = {}
+            # Download the zip from blob storage (using storage account key for simplicity)
+            echo "Downloading deployment package from blob..."
+            KEY=$(az storage account keys list -g "$RG" -n "$STG" --query "[0].value" -o tsv)
+            az storage blob download \
+              --account-name "$STG" \
+              --account-key "$KEY" \
+              --container-name "$DEPLOY_CONTAINER" \
+              --name "$DEPLOY_BLOB_NAME" \
+              --file dist-func.zip
             
-            # Ensure deployment.storage structure exists
-            cfg.setdefault("deployment", {})
-            cfg["deployment"].setdefault("storage", {})
-            cfg["deployment"]["storage"]["type"] = "blobcontainer"
-            cfg["deployment"]["storage"]["value"] = f"https://{os.environ['STG']}.blob.core.windows.net/{os.environ['DEPLOY_CONTAINER']}/{os.environ['DEPLOY_BLOB_NAME']}"
-            cfg["deployment"]["storage"].setdefault("authentication", {})
-            cfg["deployment"]["storage"]["authentication"]["type"] = "systemassignedidentity"
+            # Deploy via Kudu ZIP API (OneDeploy)
+            echo "Deploying to ${PUBLISH_URL}/api/zipdeploy"
+            curl -X POST "${PUBLISH_URL}/api/zipdeploy?isAsync=true" \
+              --user "${PUBLISH_USER}:${PUBLISH_PASS}" \
+              --data-binary @dist-func.zip \
+              -H "Content-Type: application/octet-stream" \
+              -H "Cache-Control: no-cache" \
+              --fail-with-body \
+              --show-error \
+              --location \
+              --max-time 300
             
-            with open("deploy-body.json", "w") as out:
-                json.dump({"properties": {"functionAppConfig": cfg}}, out)
-            PYTHON_SCRIPT
-            
-            python3 update-deploy.py
-
-            # PATCH the functionAppConfig to trigger deployment
-            az rest --method patch \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @deploy-body.json
-
-            echo "Waiting 30s for app to detect config change and extract package..."
-            sleep 30
-
-            # Restart to ensure package is extracted (Flex best practice)
-            echo "Restarting function app to trigger package extraction..."
-            az functionapp restart -g "$RG" -n "$FUNC_APP"
-
-            echo "Waiting 45s for restart and function discovery..."
-            sleep 45
+            echo "Deployment submitted. Waiting 60s for extraction and warm-up..."
+            sleep 60
 
       - name: List deployed functions
         uses: azure/cli@v2
