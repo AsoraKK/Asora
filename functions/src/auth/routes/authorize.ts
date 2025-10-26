@@ -2,8 +2,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 
 import { handleCorsAndMethod } from '@shared/utils/http';
 
-import { authorizeHandler } from '@auth/service/authorizeService';
-
 export async function authorizeRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -13,6 +11,7 @@ export async function authorizeRoute(
     return cors.response;
   }
 
+  const { authorizeHandler } = await import('@auth/service/authorizeService');
   return authorizeHandler(req, context);
 }
 

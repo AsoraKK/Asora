@@ -1,48 +1,85 @@
 // Cosmos DB Client Configuration
 // Target architecture: Endpoint+Key with Session consistency
 
-import { CosmosClient, ConsistencyLevel } from '@azure/cosmos';
+import { CosmosClient, CosmosClientOptions, ConsistencyLevel } from '@azure/cosmos';
 
 export interface CosmosConfig {
-  endpoint: string;
-  key: string;
-  databaseName: string;
+  endpoint?: string;
+  key?: string;
+  connectionString?: string;
+  databaseName?: string;
   consistencyLevel?: ConsistencyLevel;
 }
 
-/**
- * Create Cosmos client with production retry configuration
- */
-export function createCosmosClient(): CosmosClient {
+const defaultConnectionPolicy: CosmosClientOptions['connectionPolicy'] = {
+  requestTimeout: 30000, // 30 seconds
+  enableEndpointDiscovery: true,
+  retryOptions: {
+    maxRetryAttemptCount: 5,
+    fixedRetryIntervalInMilliseconds: 1000,
+    maxWaitTimeInSeconds: 60,
+  },
+};
+
+let cachedClient: CosmosClient | null = null;
+
+function createClientFromEnvironment(): CosmosClient {
+  const connectionString = process.env.COSMOS_CONNECTION_STRING;
+  if (connectionString && connectionString.trim().length > 0) {
+    return new CosmosClient(connectionString);
+  }
+
   const endpoint = process.env.COSMOS_ENDPOINT;
   const key = process.env.COSMOS_KEY;
 
   if (!endpoint || !key) {
-    throw new Error('Missing required Cosmos DB environment variables');
+    if (process.env.NODE_ENV === 'test') {
+      return new CosmosClient({
+        endpoint: 'http://localhost',
+        key: 'test-key',
+      });
+    }
+
+    throw new Error(
+      'Missing Cosmos DB configuration. Provide COSMOS_CONNECTION_STRING or COSMOS_ENDPOINT and COSMOS_KEY.'
+    );
   }
 
-  return new CosmosClient({
+  const options: CosmosClientOptions = {
     endpoint,
     key,
     consistencyLevel: 'Session',
+    connectionPolicy: defaultConnectionPolicy,
+  };
 
-    // Production retry configuration
-    connectionPolicy: {
-      requestTimeout: 30000, // 30 seconds
-      enableEndpointDiscovery: true,
-      retryOptions: {
-        maxRetryAttemptCount: 5,
-        fixedRetryIntervalInMilliseconds: 1000,
-        maxWaitTimeInSeconds: 60,
-      },
-    },
-  });
+  return new CosmosClient(options);
+}
+
+export function getCosmosClient(): CosmosClient {
+  if (!cachedClient) {
+    cachedClient = createClientFromEnvironment();
+  }
+  return cachedClient;
+}
+
+/**
+ * Exposed for compatibility; now returns a cached client instance.
+ */
+export function createCosmosClient(): CosmosClient {
+  return getCosmosClient();
+}
+
+export function resetCosmosClient(): void {
+  cachedClient = null;
 }
 
 /**
  * Get database instance with target containers
  */
-export function getTargetDatabase(cosmosClient: CosmosClient, databaseName = 'asora') {
+export function getTargetDatabase(
+  cosmosClient: CosmosClient = getCosmosClient(),
+  databaseName = process.env.COSMOS_DATABASE_NAME || 'asora'
+) {
   const database = cosmosClient.database(databaseName);
 
   return {
@@ -67,4 +104,4 @@ export function getTargetDatabase(cosmosClient: CosmosClient, databaseName = 'as
  */
 export type CosmosFactory = () => CosmosClient;
 
-export const defaultCosmosFactory: CosmosFactory = () => createCosmosClient();
+export const defaultCosmosFactory: CosmosFactory = () => getCosmosClient();

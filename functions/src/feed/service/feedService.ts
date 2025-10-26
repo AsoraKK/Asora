@@ -22,7 +22,7 @@ function getRateLimitPerMinute(): number {
 }
 
 export async function getFeed({
-  principal,
+  principal: _principal,
   context,
 }: {
   principal: Principal;
@@ -35,7 +35,7 @@ export async function getFeed({
   let cachedPosts: unknown[] | null = null;
   let ruEstimate = '1';
 
-  context.log('feed.get.start', { principal: principal.kind });
+  context.log('feed.get.start', { principal: _principal.kind });
 
   if (redisConfigured) {
     try {
@@ -83,7 +83,7 @@ export async function getFeed({
   context.log('feed.get.complete', {
     durationMs: Number(duration.toFixed(2)),
     cacheStatus,
-    userType: principal.kind === 'user' ? 'authenticated' : 'anonymous',
+  userType: _principal.kind === 'user' ? 'authenticated' : 'anonymous',
   });
 
   return {
@@ -98,7 +98,7 @@ export async function getFeed({
 }
 
 export async function createPost({
-  principal,
+  principal: _principal,
   payload,
   context,
 }: {

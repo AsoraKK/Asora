@@ -7,20 +7,39 @@
 /// OAuth2: Authorization code generation with PKCE challenge storage
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
+import type { Container } from '@azure/cosmos';
 import { createErrorResponse } from '@shared/utils/http';
 import { validateText } from '@shared/utils/validate';
 import { getAzureLogger } from '@shared/utils/logger';
 import type { AuthorizeRequest } from '@auth/types';
 import * as crypto from 'crypto';
+import { getCosmosClient } from '@shared/clients/cosmos';
 
 const logger = getAzureLogger('auth/authorize');
 
-// Cosmos DB configuration
-const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora');
-const usersContainer = database.container('users');
-const sessionsContainer = database.container('auth_sessions');
+type AuthContainers = {
+  users: Container;
+  sessions: Container;
+};
+
+let cachedContainers: AuthContainers | null = null;
+
+function ensureContainers(): AuthContainers {
+  if (cachedContainers) {
+    return cachedContainers;
+  }
+
+  const client = getCosmosClient();
+  const databaseName = process.env.COSMOS_DATABASE_NAME || 'asora';
+  const database = client.database(databaseName);
+
+  cachedContainers = {
+    users: database.container('users'),
+    sessions: database.container('auth_sessions'),
+  };
+
+  return cachedContainers;
+}
 
 // OAuth2 configuration
 const AUTHORIZATION_CODE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -106,7 +125,8 @@ export async function authorizeHandler(
       used: false,
     };
 
-    await sessionsContainer.items.create(session);
+    const { sessions } = ensureContainers();
+    await sessions.items.create(session);
 
     logger.info('Authorization code generated', {
       requestId: context.invocationId,
@@ -149,6 +169,10 @@ export async function authorizeHandler(
       stack: errorStack,
       duration,
     });
+
+    if (error instanceof Error && error.message.includes('Missing Cosmos DB configuration')) {
+      return createErrorResponse(503, 'Service unavailable', 'Cosmos DB configuration missing');
+    }
 
     // Try to return error to redirect URI if possible
     const queryParams = Object.fromEntries(req.query.entries());
@@ -231,7 +255,8 @@ function validateAuthorizeRequest(request: AuthorizeRequest): string | null {
 
 async function verifyUserExists(userId: string): Promise<boolean> {
   try {
-    const userDoc = await usersContainer.item(userId, userId).read();
+  const { users } = ensureContainers();
+  const userDoc = await users.item(userId, userId).read();
     return !!userDoc.resource && userDoc.resource.isActive !== false;
   } catch (error) {
     logger.warn('Error verifying user existence', { userId, error });

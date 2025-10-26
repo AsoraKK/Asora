@@ -1,20 +1,39 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
+import type { Container } from '@azure/cosmos';
 import { createSuccessResponse, createErrorResponse } from '@shared/utils/http';
 import { validateText, validateRequestSize } from '@shared/utils/validate';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { getCosmosClient } from '@shared/clients/cosmos';
 
 import type { AuthSession, TokenPayload, TokenRequest, UserDocument } from '@auth/types';
 
 const logger = getAzureLogger('auth/token');
 
-// Cosmos DB configuration
-const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora');
-const usersContainer = database.container('users');
-const sessionsContainer = database.container('auth_sessions');
+type TokenContainers = {
+  users: Container;
+  sessions: Container;
+};
+
+let cachedContainers: TokenContainers | null = null;
+
+function ensureContainers(): TokenContainers {
+  if (cachedContainers) {
+    return cachedContainers;
+  }
+
+  const client = getCosmosClient();
+  const databaseName = process.env.COSMOS_DATABASE_NAME || 'asora';
+  const database = client.database(databaseName);
+
+  cachedContainers = {
+    users: database.container('users'),
+    sessions: database.container('auth_sessions'),
+  };
+
+  return cachedContainers;
+}
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -103,6 +122,10 @@ export async function tokenHandler(
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
 
+    if (error instanceof Error && error.message.includes('Missing Cosmos DB configuration')) {
+      return createErrorResponse(503, 'Service unavailable', 'Cosmos DB configuration missing');
+    }
+
     if (error instanceof InviteRequiredError) {
       // OAuth2-compliant error payload for token endpoint
       return {
@@ -134,7 +157,7 @@ export async function tokenHandler(
       process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
   }
-};
+}
 
 async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: string): Promise<any> {
   // Validate required parameters for authorization code grant
@@ -160,13 +183,14 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     ],
   };
 
-  const { resources: sessions } = await sessionsContainer.items.query(sessionQuery).fetchAll();
+  const { sessions } = ensureContainers();
+  const { resources: sessionResults } = await sessions.items.query(sessionQuery).fetchAll();
 
-  if (sessions.length === 0) {
+  if (sessionResults.length === 0) {
     throw new Error('Invalid authorization code or code already used');
   }
 
-  const session: AuthSession = sessions[0];
+  const session: AuthSession = sessionResults[0];
 
   // Check if session has expired
   if (new Date(session.expiresAt) < new Date()) {
@@ -190,7 +214,7 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
   }
 
   // Mark session as used
-  await sessionsContainer.item(session.id, session.partitionKey).patch([
+  await sessions.item(session.id, session.partitionKey).patch([
     { op: 'add', path: '/used', value: true },
     { op: 'add', path: '/usedAt', value: new Date().toISOString() },
   ]);
@@ -200,7 +224,8 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     throw new Error('Session missing user information');
   }
 
-  const userDoc = await usersContainer.item(session.userId, session.userId).read();
+  const { users } = ensureContainers();
+  const userDoc = await users.item(session.userId, session.userId).read();
   if (!userDoc.resource) {
     throw new Error('User not found');
   }
@@ -212,7 +237,7 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
   }
 
   // Update last login time
-  await usersContainer
+  await users
     .item(user.id, user.id)
     .patch([{ op: 'replace', path: '/lastLoginAt', value: new Date().toISOString() }]);
 
@@ -275,7 +300,8 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
     }
 
     // Get user information
-    const userDoc = await usersContainer.item(decoded.sub, decoded.sub).read();
+  const { users } = ensureContainers();
+  const userDoc = await users.item(decoded.sub, decoded.sub).read();
     if (!userDoc.resource) {
       throw new Error('User not found');
     }
