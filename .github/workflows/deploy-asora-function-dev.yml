@@ -149,10 +149,10 @@ jobs:
             re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
             [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
 
-            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" $
                   --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
-              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" $
                     --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
@@ -177,8 +177,8 @@ jobs:
             APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
             [ -n "$APP_OBJ_ID" ] || { echo "::error::AZURE_CLIENT_ID not resolvable to service principal"; exit 1; }
 
-            az role assignment create --assignee-object-id "$APP_OBJ_ID" \
-              --assignee-principal-type ServicePrincipal \
+            az role assignment create --assignee-object-id "$APP_OBJ_ID" $
+              --assignee-principal-type ServicePrincipal $
               --role "Storage Blob Data Contributor" --scope "$SCOPE" 2>/dev/null || true
             sleep 15
 
@@ -204,8 +204,8 @@ jobs:
             print(json.dumps({"properties":{"functionAppConfig":cfg}}))
             PY
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
-            az rest --method patch \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+            az rest --method patch $
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" $
               --body @body.json >/dev/null
 
       # D) Grant Function App MI Storage Blob Data Reader
@@ -218,10 +218,10 @@ jobs:
             SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
             MI_PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
             
-            az role assignment create \
-              --assignee-object-id "$MI_PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role "Storage Blob Data Reader" \
+            az role assignment create $
+              --assignee-object-id "$MI_PRINCIPAL_ID" $
+              --assignee-principal-type ServicePrincipal $
+              --role "Storage Blob Data Reader" $
               --scope "$SA_ID" 2>/dev/null || echo "RBAC already present"
             
             sleep 30  # RBAC propagation
@@ -233,50 +233,18 @@ jobs:
           inlineScript: |
             set -euo pipefail
             : "${STG:?STG not set}"
-            az storage blob upload --auth-mode login \
-              --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
+            az storage blob upload --auth-mode login $
+              --account-name "$STG" --container-name "$DEPLOY_CONTAINER" $
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Deploy using OneDeploy/Kudu ZIP API (proven approach for Flex Consumption)
-      # Based on FLEX_DEPLOYMENT_TROUBLESHOOTING.md: deployment.storage is unreliable for Node v4
-      - name: Deploy to Flex via OneDeploy (Kudu ZIP API)
-        uses: azure/cli@v2
+      # Deploy using Azure Functions official GitHub Action (Website Contributor RBAC granted)
+      # Ref: FLEX_DEPLOYMENT_TROUBLESHOOTING.md - uses proven deployment internally
+      - name: Deploy to Flex using Azure Functions Action
+        uses: Azure/functions-action@v1
         with:
-          inlineScript: |
-            set -euo pipefail
-            
-            echo "Deploying via OneDeploy/Kudu ZIP API (proven Flex deployment method)"
-            
-            # Get publish credentials
-            CREDS_JSON=$(az functionapp deployment list-publishing-credentials -g "$RG" -n "$FUNC_APP" -o json)
-            PUBLISH_URL=$(echo "$CREDS_JSON" | jq -r '.scmUri')
-            PUBLISH_USER=$(echo "$CREDS_JSON" | jq -r '.publishingUserName')
-            PUBLISH_PASS=$(echo "$CREDS_JSON" | jq -r '.publishingPassword')
-            
-            # Download the zip from blob storage (using storage account key for simplicity)
-            echo "Downloading deployment package from blob..."
-            KEY=$(az storage account keys list -g "$RG" -n "$STG" --query "[0].value" -o tsv)
-            az storage blob download \
-              --account-name "$STG" \
-              --account-key "$KEY" \
-              --container-name "$DEPLOY_CONTAINER" \
-              --name "$DEPLOY_BLOB_NAME" \
-              --file dist-func.zip
-            
-            # Deploy via Kudu ZIP API (OneDeploy)
-            echo "Deploying to ${PUBLISH_URL}/api/zipdeploy"
-            curl -X POST "${PUBLISH_URL}/api/zipdeploy?isAsync=true" \
-              --user "${PUBLISH_USER}:${PUBLISH_PASS}" \
-              --data-binary @dist-func.zip \
-              -H "Content-Type: application/octet-stream" \
-              -H "Cache-Control: no-cache" \
-              --fail-with-body \
-              --show-error \
-              --location \
-              --max-time 300
-            
-            echo "Deployment submitted. Waiting 60s for extraction and warm-up..."
-            sleep 60
+          app-name: ${{ env.FUNC_APP }}
+          package: ${{ github.workspace }}/dist-func.zip
+          respect-funcignore: true
 
       - name: List deployed functions
         uses: azure/cli@v2
@@ -293,7 +261,7 @@ jobs:
               
               # Debug: Check app settings for deployment config
               echo "--- Checking deployment configuration ---"
-              az functionapp show -g "$RG" -n "$FUNC_APP" \
+              az functionapp show -g "$RG" -n "$FUNC_APP" $
                 --query "properties.functionAppConfig.deployment" -o json || true
               
               exit 1
