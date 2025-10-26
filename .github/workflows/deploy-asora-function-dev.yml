@@ -252,27 +252,33 @@ jobs:
 
             # Read current functionAppConfig and update deployment.storage.value
             az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur-deploy.json
-            python3 - <<'PY' > deploy-body.json
+            
+            # Build deployment body with updated storage config using Python inline
+            cat > update-deploy.py <<'PYTHON_SCRIPT'
             import json
+            import os
+            
+            # Read current config
             with open("cur-deploy.json") as f:
-              cfg = json.load(f) if f.read().strip() else {}
-              f.seek(0)
-              cfg = json.load(f) if cfg else {}
-            if not isinstance(cfg, dict): cfg = {}
+                content = f.read().strip()
+                cfg = json.loads(content) if content else {}
+            
+            if not isinstance(cfg, dict): 
+                cfg = {}
             
             # Ensure deployment.storage structure exists
             cfg.setdefault("deployment", {})
             cfg["deployment"].setdefault("storage", {})
             cfg["deployment"]["storage"]["type"] = "blobcontainer"
-            cfg["deployment"]["storage"]["value"] = "https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}/${DEPLOY_BLOB_NAME}"
+            cfg["deployment"]["storage"]["value"] = f"https://{os.environ['STG']}.blob.core.windows.net/{os.environ['DEPLOY_CONTAINER']}/{os.environ['DEPLOY_BLOB_NAME']}"
             cfg["deployment"]["storage"].setdefault("authentication", {})
             cfg["deployment"]["storage"]["authentication"]["type"] = "systemassignedidentity"
             
-            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
-            PY
-
-            # Replace environment variables in the Python-generated JSON
-            sed -i "s/\${STG}/$STG/g; s/\${DEPLOY_CONTAINER}/$DEPLOY_CONTAINER/g; s/\${DEPLOY_BLOB_NAME}/$DEPLOY_BLOB_NAME/g" deploy-body.json
+            with open("deploy-body.json", "w") as out:
+                json.dump({"properties": {"functionAppConfig": cfg}}, out)
+            PYTHON_SCRIPT
+            
+            python3 update-deploy.py
 
             # PATCH the functionAppConfig to trigger deployment
             az rest --method patch \
