@@ -89,6 +89,56 @@ jobs:
           ls -lh dist-func.zip
           unzip -l dist-func.zip | head -n 40
 
+      # Verify artifact structure for Flex Consumption deployment
+      - name: Verify artifact structure (wwwroot readiness)
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          echo "=== Verifying deployment artifact structure ==="
+          
+          # Create temp extraction dir
+          mkdir -p verify-artifact
+          unzip -q dist-func.zip -d verify-artifact
+          
+          # Check critical files at root
+          echo "Checking root files..."
+          test -f verify-artifact/index.js || { echo "::error::Missing index.js at root"; exit 1; }
+          test -f verify-artifact/package.json || { echo "::error::Missing package.json at root"; exit 1; }
+          test -f verify-artifact/host.json || { echo "::error::Missing host.json"; exit 1; }
+          
+          # Verify package.json config
+          echo "Verifying package.json config..."
+          PKG_MAIN=$(jq -r '.main // "missing"' verify-artifact/package.json)
+          PKG_TYPE=$(jq -r '.type // "missing"' verify-artifact/package.json)
+          
+          [[ "$PKG_MAIN" == "index.js" ]] || { echo "::error::package.json main should be index.js, got: $PKG_MAIN"; exit 1; }
+          [[ "$PKG_TYPE" == "commonjs" ]] || { echo "::error::package.json type should be commonjs, got: $PKG_TYPE"; exit 1; }
+          
+          # Check src/ structure matches route discovery pattern
+          echo "Checking route structure..."
+          ROUTE_COUNT=$(find verify-artifact/src -name "*.js" -path "*/routes/*" | wc -l)
+          [[ "$ROUTE_COUNT" -ge 10 ]] || { echo "::warning::Expected ≥10 route files, found $ROUTE_COUNT"; }
+          
+          # Verify node_modules has production deps
+          echo "Checking production dependencies..."
+          test -d verify-artifact/node_modules/@azure/functions || { echo "::error::Missing @azure/functions in node_modules"; exit 1; }
+          test -d verify-artifact/node_modules/@azure/cosmos || { echo "::error::Missing @azure/cosmos in node_modules"; exit 1; }
+          
+          # List functions that will be discovered (mock test mode)
+          echo "=== Simulating route discovery ==="
+          cd verify-artifact
+          timeout 5 node index.js 2>&1 | grep -E "(WARNING|register function)" | tee ../function-discovery.log || true
+          
+          # Verify expected function count
+          DISCOVERED_COUNT=$(grep -c "register function" ../function-discovery.log || echo "0")
+          echo "Discovered $DISCOVERED_COUNT functions"
+          [[ "$DISCOVERED_COUNT" -ge 10 ]] || { echo "::warning::Expected ≥10 functions, discovered $DISCOVERED_COUNT"; }
+          
+          cd "$GITHUB_WORKSPACE"
+          rm -rf verify-artifact
+          
+          echo "✅ Artifact structure verification passed"
+
       # A) Resolve storage and prepare container (validates non-HNS, exports STG)
       - name: Resolve storage and prepare container
         uses: azure/cli@v2

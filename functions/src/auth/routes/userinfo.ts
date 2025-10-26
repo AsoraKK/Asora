@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized } from '@shared/utils/http';
 
-import { userInfoHandler } from '@auth/service/userinfoService';
-
 export async function userInfoRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -21,6 +19,8 @@ export async function userInfoRoute(
     return unauthorized();
   }
 
+  // Defer service import to avoid module-level initialization
+  const { userInfoHandler } = await import('@auth/service/userinfoService');
   return userInfoHandler(req, context);
 }
 

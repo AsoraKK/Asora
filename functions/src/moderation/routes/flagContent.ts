@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
 
-import { flagContentHandler } from '@moderation/service/flagService';
-
 export async function flagContentRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -22,6 +20,8 @@ export async function flagContentRoute(
   }
 
   try {
+    // Defer service import to avoid module-level initialization
+    const { flagContentHandler } = await import('@moderation/service/flagService');
     return await flagContentHandler({ request: req, context, userId: principal.id });
   } catch (error) {
     context.log('moderation.flag.error', error);

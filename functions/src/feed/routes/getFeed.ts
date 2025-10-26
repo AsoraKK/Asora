@@ -3,11 +3,12 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { parseAuth } from '@shared/middleware/auth';
 import { ok, serverError } from '@shared/utils/http';
 
-import { getFeed as getFeedService } from '@feed/service/feedService';
-
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const principal = parseAuth(req);
+    
+    // Defer service import to avoid module-level initialization
+    const { getFeed: getFeedService } = await import('@feed/service/feedService');
     const result = await getFeedService({ principal, context });
 
     const response = ok(result.body);

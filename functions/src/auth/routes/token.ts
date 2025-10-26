@@ -2,8 +2,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 
 import { handleCorsAndMethod } from '@shared/utils/http';
 
-import { tokenHandler } from '@auth/service/tokenService';
-
 export async function tokenRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -13,6 +11,8 @@ export async function tokenRoute(
     return cors.response;
   }
 
+  // Defer service import to avoid module-level initialization
+  const { tokenHandler } = await import('@auth/service/tokenService');
   return tokenHandler(req, context);
 }
 

@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
 
-import { voteOnAppealHandler } from '@moderation/service/voteService';
-
 export async function voteOnAppealRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -24,6 +22,9 @@ export async function voteOnAppealRoute(
   try {
     // Azure Functions v4: params is an object, not a Map
     const appealId = req.params.appealId as string | undefined;
+    
+    // Defer service import to avoid module-level initialization
+    const { voteOnAppealHandler } = await import('@moderation/service/voteService');
     return await voteOnAppealHandler({
       request: req,
       context,

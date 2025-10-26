@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
 
-import { deleteUserHandler } from '@privacy/service/deleteService';
-
 export async function deleteUserRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -22,6 +20,8 @@ export async function deleteUserRoute(
   }
 
   try {
+    // Defer service import to avoid module-level initialization
+    const { deleteUserHandler } = await import('@privacy/service/deleteService');
     return await deleteUserHandler({ request: req, context, userId: principal.id });
   } catch (error) {
     context.log('privacy.delete.error', error);

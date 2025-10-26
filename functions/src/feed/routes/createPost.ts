@@ -5,7 +5,6 @@ import { badRequest, created, serverError, unauthorized } from '@shared/utils/ht
 import { HttpError } from '@shared/utils/errors';
 
 import type { CreatePostBody } from '@feed/types';
-import { createPost as createPostService } from '@feed/service/feedService';
 
 export async function createPost(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const principal = parseAuth(req);
@@ -23,6 +22,8 @@ export async function createPost(req: HttpRequest, context: InvocationContext): 
   }
 
   try {
+    // Defer service import to avoid module-level initialization
+    const { createPost: createPostService } = await import('@feed/service/feedService');
     const result = await createPostService({ principal, payload, context });
     const response = created(result.body);
     response.headers = {

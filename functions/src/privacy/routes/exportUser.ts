@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
 
-import { exportUserHandler } from '@privacy/service/exportService';
-
 export async function exportUserRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -22,6 +20,8 @@ export async function exportUserRoute(
   }
 
   try {
+    // Defer service import to avoid module-level initialization
+    const { exportUserHandler } = await import('@privacy/service/exportService');
     return await exportUserHandler({ request: req, context, userId: principal.id });
   } catch (error) {
     context.log('privacy.export.error', error);

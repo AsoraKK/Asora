@@ -3,8 +3,6 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { authRequired, parseAuth } from '@shared/middleware/auth';
 import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
 
-import { submitAppealHandler } from '@moderation/service/appealService';
-
 export async function submitAppealRoute(
   req: HttpRequest,
   context: InvocationContext
@@ -22,6 +20,8 @@ export async function submitAppealRoute(
   }
 
   try {
+    // Defer service import to avoid module-level initialization
+    const { submitAppealHandler } = await import('@moderation/service/appealService');
     return await submitAppealHandler({ request: req, context, userId: principal.id });
   } catch (error) {
     context.log('moderation.appeal.submit.error', error);

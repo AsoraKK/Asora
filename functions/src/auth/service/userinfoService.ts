@@ -7,18 +7,22 @@
 /// OIDC: Standard UserInfo endpoint with profile claims
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
 import { createSuccessResponse, createErrorResponse, extractAuthToken } from '@shared/utils/http';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
+import { getCosmosClient } from '@shared/clients/cosmos';
 import * as jwt from 'jsonwebtoken';
 import type { TokenPayload, UserDocument } from '@auth/types';
 
 const logger = getAzureLogger('auth/userinfo');
 
-// Cosmos DB configuration
-const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asora');
-const usersContainer = database.container('users');
+// Lazy Cosmos container resolution
+async function ensureContainers() {
+  const client = await getCosmosClient();
+  const database = client.database(process.env.COSMOS_DATABASE_NAME || 'asora');
+  return {
+    users: database.container('users'),
+  };
+}
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -80,7 +84,8 @@ export async function userInfoHandler(
     });
 
     // Retrieve user information from database
-    const userDoc = await usersContainer.item(tokenPayload.sub, tokenPayload.sub).read();
+    const { users } = await ensureContainers();
+    const userDoc = await users.item(tokenPayload.sub, tokenPayload.sub).read();
 
     if (!userDoc.resource) {
       logAuthAttempt(
