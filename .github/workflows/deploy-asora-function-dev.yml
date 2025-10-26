@@ -205,10 +205,21 @@ jobs:
           unzip -q dist-func.zip -d deploy-temp
           
           cd deploy-temp
+          
+          # Verify required files
+          test -f index.js || { echo "::error::index.js missing"; exit 1; }
+          test -f package.json || { echo "::error::package.json missing"; exit 1; }
+          test -f host.json || { echo "::error::host.json missing"; exit 1; }
+          test -d node_modules || { echo "::error::node_modules missing"; exit 1; }
+          test -d node_modules/@azure/functions || { echo "::error::@azure/functions package missing"; exit 1; }
+          
           echo "Publishing to $FUNC_APP using Core Tools..."
+          echo "Package contents:"
+          ls -la | head -20
+          
+          # Deploy WITHOUT --build remote (package already has node_modules)
           func azure functionapp publish "$FUNC_APP" \
             --javascript \
-            --build remote \
             --nozip
           
           echo "Waiting 30s for function discovery..."
