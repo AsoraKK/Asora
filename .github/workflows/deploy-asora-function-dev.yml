@@ -24,47 +24,7 @@ env:
   DEPLOY_BLOB_NAME: functionapp.zip
 
 jobs:
-  canary-k6:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Export K6_BASE_URL
-        id: export_base_url
-        run: |
-          set -euo pipefail
-          url="https://${FUNC_APP}.azurewebsites.net"
-          echo "K6_BASE_URL=$url" >> "$GITHUB_ENV"
-          echo "base_url=$url" >> "$GITHUB_OUTPUT"
-
-      - name: Setup k6
-        uses: grafana/setup-k6-action@v1
-
-      - name: Smoke (health)
-        env:
-          K6_BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
-          VUS: '1'
-          DURATION: '30s'
-        run: k6 run load/k6/smoke.js
-
-      - name: Feed read
-        env:
-          K6_BASE_URL: ${{ steps.export_base_url.outputs.base_url }}
-          VUS: '5'
-          DURATION: '60s'
-        run: k6 run load/k6/feed-read.js
-
-      - name: Upload k6 summaries
-        uses: actions/upload-artifact@v4
-        if: always()  # Upload even if k6 fails
-        with:
-          name: k6-summaries-${{ github.run_id }}
-          path: load/k6/*-summary.json
-          if-no-files-found: warn
-
   deploy:
-    needs: [canary-k6]
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -259,3 +219,28 @@ jobs:
           echo "  Health: https://${FUNC_APP}.azurewebsites.net/health (or /api/health)"
           echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed (or /api/feed)"
 
+      # Post-deployment validation with k6
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Post-deployment smoke test (health)
+        env:
+          K6_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
+          VUS: '1'
+          DURATION: '30s'
+        run: k6 run load/k6/smoke.js
+
+      - name: Post-deployment feed read test
+        env:
+          K6_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
+          VUS: '5'
+          DURATION: '60s'
+        run: k6 run load/k6/feed-read.js
+
+      - name: Upload k6 summaries
+        uses: actions/upload-artifact@v4
+        if: always()  # Upload even if k6 fails
+        with:
+          name: k6-summaries-${{ github.run_id }}
+          path: load/k6/*-summary.json
+          if-no-files-found: warn
