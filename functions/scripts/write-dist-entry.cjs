@@ -15,7 +15,16 @@ if (!fs.existsSync(srcEntry)) {
 }
 
 fs.mkdirSync(distDir, { recursive: true });
-const jsContent = `${banner}module.exports = require('./src/index.js');\n`;
+
+// Instead of require('./src/index.js'), directly require all route modules
+// This ensures routes are registered at the top level, not nested
+const jsContent = `${banner}// Directly require all route modules to ensure registration
+require('./src/shared/routes/health');
+require('./src/feed');
+require('./src/auth');
+require('./src/moderation');
+require('./src/privacy');
+`;
 fs.writeFileSync(destEntry, jsContent, 'utf8');
 
 if (fs.existsSync(srcTypes)) {
