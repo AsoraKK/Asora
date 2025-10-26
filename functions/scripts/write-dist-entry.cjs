@@ -16,14 +16,20 @@ if (!fs.existsSync(srcEntry)) {
 
 fs.mkdirSync(distDir, { recursive: true });
 
-// Instead of require('./src/index.js'), directly require all route modules
-// This ensures routes are registered at the top level, not nested
+// Directly require ALL individual route files (not module indexes)
+// This ensures app.http() calls execute at top level during module load
 const jsContent = `${banner}// Directly require all route modules to ensure registration
 require('./src/shared/routes/health');
-require('./src/feed');
-require('./src/auth');
-require('./src/moderation');
-require('./src/privacy');
+require('./src/feed/routes/getFeed');
+require('./src/feed/routes/createPost');
+require('./src/auth/routes/authorize');
+require('./src/auth/routes/token');
+require('./src/auth/routes/userinfo');
+require('./src/moderation/routes/flagContent');
+require('./src/moderation/routes/submitAppeal');
+require('./src/moderation/routes/voteOnAppeal');
+require('./src/privacy/routes/deleteUser');
+require('./src/privacy/routes/exportUser');
 `;
 fs.writeFileSync(destEntry, jsContent, 'utf8');
 
