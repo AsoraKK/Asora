@@ -149,11 +149,11 @@ jobs:
             re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
             [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
 
-    SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-      --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
-      CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-        --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+                --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
             [ -n "$SA" ] || { echo "::error::AzureWebJobsStorage account not resolved"; exit 1; }
@@ -204,8 +204,8 @@ jobs:
             print(json.dumps({"properties":{"functionAppConfig":cfg}}))
             PY
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
-            az rest --method patch $
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" $
+            az rest --method patch \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body @body.json >/dev/null
 
       # D) Grant Function App MI Storage Blob Data Reader
@@ -218,10 +218,10 @@ jobs:
             SA_ID=$(az storage account show --name "$STG" --query id -o tsv)
             MI_PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv)
             
-            az role assignment create $
-              --assignee-object-id "$MI_PRINCIPAL_ID" $
-              --assignee-principal-type ServicePrincipal $
-              --role "Storage Blob Data Reader" $
+            az role assignment create \
+              --assignee-object-id "$MI_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Reader" \
               --scope "$SA_ID" 2>/dev/null || echo "RBAC already present"
             
             sleep 30  # RBAC propagation
@@ -233,8 +233,8 @@ jobs:
           inlineScript: |
             set -euo pipefail
             : "${STG:?STG not set}"
-            az storage blob upload --auth-mode login $
-              --account-name "$STG" --container-name "$DEPLOY_CONTAINER" $
+            az storage blob upload --auth-mode login \
+              --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
       # Deploy using Azure Functions official GitHub Action (Website Contributor RBAC granted)
@@ -261,7 +261,7 @@ jobs:
               
               # Debug: Check app settings for deployment config
               echo "--- Checking deployment configuration ---"
-              az functionapp show -g "$RG" -n "$FUNC_APP" $
+              az functionapp show -g "$RG" -n "$FUNC_APP" \
                 --query "properties.functionAppConfig.deployment" -o json || true
               
               exit 1
