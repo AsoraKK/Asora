@@ -169,49 +169,74 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Deploy using Azure Functions Core Tools (Kudu zip deploy)
-      - name: Install Azure Functions Core Tools
-        run: |
-          curl -s https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/microsoft-ubuntu-$(lsb_release -cs)-prod $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
-          sudo apt-get update
-          sudo apt-get install -y azure-functions-core-tools-4
-
-      - name: Deploy to Function App using Core Tools
-        working-directory: functions/dist
-        run: |
-          set -euo pipefail
-          echo "Publishing to $FUNC_APP using Core Tools..."
-          func azure functionapp publish "$FUNC_APP" \
-            --javascript \
-            --build remote \
-            --nozip
-          
-          echo "Waiting 30s for function discovery..."
-          sleep 30
-          
-          echo "Listing deployed functions:"
-          az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
+      # Deploy using ARM /publish API (Flex Consumption storage-based deployment)
+      - name: Deploy from storage using ARM API
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            : "${STG:?STG not set}"
+            
+            # Construct the blob URL
+            BLOB_URL="https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}/${DEPLOY_BLOB_NAME}"
+            
+            # Get SAS token for the blob (24 hour expiry)
+            END_DATE=$(date -u -d "24 hours" '+%Y-%m-%dT%H:%MZ')
+            SAS_TOKEN=$(az storage blob generate-sas \
+              --account-name "$STG" \
+              --container-name "$DEPLOY_CONTAINER" \
+              --name "$DEPLOY_BLOB_NAME" \
+              --permissions r \
+              --expiry "$END_DATE" \
+              --auth-mode login \
+              --as-user \
+              -o tsv)
+            
+            # Publish using ARM API
+            PACKAGE_URL="${BLOB_URL}?${SAS_TOKEN}"
+            
+            az rest --method post \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+              --body "{\"properties\": {\"packageUri\": \"$PACKAGE_URL\"}}"
+            
+            echo "Deployment initiated. Waiting 45s for function discovery..."
+            sleep 45
+            
+            echo "Listing deployed functions:"
+            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table || echo "Function list command failed (may be expected for Flex apps)"
 
 
       - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
-          echo "Testing health endpoints (trying /api/health and /health)..."
-          for endpoint in api/health health; do
-            echo "Testing https://${FUNC_APP}.azurewebsites.net/$endpoint"
-            for i in {1..6}; do
-              code=$(curl -s -o /tmp/health.out -w '%{http_code}' "https://${FUNC_APP}.azurewebsites.net/$endpoint")
-              echo "  Attempt $i: HTTP $code"
-              if [ "$code" = "200" ]; then
-                cat /tmp/health.out
-                echo "✅ Health check passed on /$endpoint"
-                exit 0
+          
+          MAX_ATTEMPTS=8
+          SLEEP_INTERVAL=10
+          HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
+          
+          echo "Testing health endpoint: $HEALTH_URL"
+          
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i/$MAX_ATTEMPTS..."
+            
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            
+            if [[ "$HTTP_CODE" == "200" ]]; then
+              echo "✅ Health check passed (HTTP $HTTP_CODE)"
+              RESPONSE=$(curl -s "$HEALTH_URL")
+              echo "Response: $RESPONSE"
+              exit 0
+            else
+              echo "❌ Health check returned HTTP $HTTP_CODE"
+              if [[ $i -lt $MAX_ATTEMPTS ]]; then
+                echo "Waiting ${SLEEP_INTERVAL}s before retry..."
+                sleep $SLEEP_INTERVAL
               fi
-              sleep 10
-            done
+            fi
           done
-          echo "::error::Health check failed on both /health and /api/health"; exit 1
+          
+          echo "::error::Health check failed after $MAX_ATTEMPTS attempts (80s wait)"
+          exit 1
 
       - name: Display function URLs
         run: |
