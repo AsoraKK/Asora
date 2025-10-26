@@ -15,6 +15,7 @@ const config: Config = {
     '!<rootDir>/src/**/__fixtures__/**',
     '!<rootDir>/src/test-handler.ts',
   ],
+  coverageReporters: ['json-summary', 'lcov', 'text', 'clover'],
   coveragePathIgnorePatterns: ['/node_modules/', '/tests/'],
   testPathIgnorePatterns: [
     // Ignore WIP/placeholder test files until implementation

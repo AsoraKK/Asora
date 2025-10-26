@@ -66,13 +66,16 @@ jobs:
         run: |
           SUMMARY_FILE="functions/coverage/coverage-summary.json"
           if [ ! -f "$SUMMARY_FILE" ]; then
-            echo "${SUMMARY_FILE} not found. Ensure vitest generated coverage-summary.json (json-summary reporter enabled)."
+            echo "${SUMMARY_FILE} not found. Ensure Jest generated coverage-summary.json (json-summary reporter enabled)."
             exit 1
           fi
           LINES=$(jq -r '.total.lines.pct // 0' "$SUMMARY_FILE")
           BRANCHES=$(jq -r '.total.branches.pct // 0' "$SUMMARY_FILE")
-          echo "Functions lines=${LINES}% branches=${BRANCHES}%"
-          awk "BEGIN {exit !(${LINES}>=96 && ${BRANCHES}>=92)}"
+          STATEMENTS=$(jq -r '.total.statements.pct // 0' "$SUMMARY_FILE")
+          FUNCTIONS=$(jq -r '.total.functions.pct // 0' "$SUMMARY_FILE")
+          echo "Functions coverage: statements=${STATEMENTS}%, branches=${BRANCHES}%, lines=${LINES}%, functions=${FUNCTIONS}%"
+          # Match thresholds from functions/jest.config.ts
+          awk "BEGIN {exit !(${STATEMENTS}>=95 && ${BRANCHES}>=80 && ${LINES}>=95 && ${FUNCTIONS}>=92)}"
 
       - name: Gate merged LCOV coverage
         run: |
