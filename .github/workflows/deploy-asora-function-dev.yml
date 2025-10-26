@@ -237,39 +237,87 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Publish to Flex using ARM /publish with a short-lived SAS to the uploaded blob
-      - name: Publish package via ARM /publish (Flex)
+      # Trigger deployment by updating functionAppConfig.deployment.storage (Flex pattern)
+      - name: Trigger Flex deployment (update storage config)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             : "${STG:?STG not set}"
 
-            EXPIRY=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%MZ")
-            SAS=$(az storage blob generate-sas \
-              --account-name "$STG" \
-              --container-name "$DEPLOY_CONTAINER" \
-              --name "$DEPLOY_BLOB_NAME" \
-              --permissions r \
-              --expiry "$EXPIRY" -o tsv)
+            # For Flex, the deployment is triggered by ensuring deployment.storage.value points to the uploaded blob
+            # The app watches this config and auto-extracts when it changes or on restart
+            BLOB_URL="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME"
+            echo "Ensuring deployment config points to: $BLOB_URL"
 
-            PACKAGE_URI="https://$STG.blob.core.windows.net/$DEPLOY_CONTAINER/$DEPLOY_BLOB_NAME?$SAS"
-            echo "Using package URI: ${PACKAGE_URI%%\?*}?(redacted)"
+            # Read current functionAppConfig and update deployment.storage.value
+            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json > cur-deploy.json
+            python3 - <<'PY' > deploy-body.json
+            import json
+            with open("cur-deploy.json") as f:
+              cfg = json.load(f) if f.read().strip() else {}
+              f.seek(0)
+              cfg = json.load(f) if cfg else {}
+            if not isinstance(cfg, dict): cfg = {}
+            
+            # Ensure deployment.storage structure exists
+            cfg.setdefault("deployment", {})
+            cfg["deployment"].setdefault("storage", {})
+            cfg["deployment"]["storage"]["type"] = "blobcontainer"
+            cfg["deployment"]["storage"]["value"] = "https://${STG}.blob.core.windows.net/${DEPLOY_CONTAINER}/${DEPLOY_BLOB_NAME}"
+            cfg["deployment"]["storage"].setdefault("authentication", {})
+            cfg["deployment"]["storage"]["authentication"]["type"] = "systemassignedidentity"
+            
+            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
+            PY
 
-            printf '{"properties":{"packageUri":"%s"}}\n' "$PACKAGE_URI" > body.json
-            az rest --method post \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-              --body @body.json
+            # Replace environment variables in the Python-generated JSON
+            sed -i "s/\${STG}/$STG/g; s/\${DEPLOY_CONTAINER}/$DEPLOY_CONTAINER/g; s/\${DEPLOY_BLOB_NAME}/$DEPLOY_BLOB_NAME/g" deploy-body.json
 
-            echo "Waiting 60s for function discovery..."
-            sleep 60
+            # PATCH the functionAppConfig to trigger deployment
+            az rest --method patch \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body @deploy-body.json
+
+            echo "Waiting 30s for app to detect config change and extract package..."
+            sleep 30
+
+            # Restart to ensure package is extracted (Flex best practice)
+            echo "Restarting function app to trigger package extraction..."
+            az functionapp restart -g "$RG" -n "$FUNC_APP"
+
+            echo "Waiting 45s for restart and function discovery..."
+            sleep 45
 
       - name: List deployed functions
         uses: azure/cli@v2
         with:
           inlineScript: |
-            echo "Listing deployed functions:"
-            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table
+            echo "=== Deployed Functions Inventory ==="
+            FUNC_LIST=$(az functionapp function list -g "$RG" -n "$FUNC_APP" -o json)
+            FUNC_COUNT=$(echo "$FUNC_LIST" | jq 'length')
+            
+            echo "Total functions discovered: $FUNC_COUNT"
+            if [[ "$FUNC_COUNT" -eq 0 ]]; then
+              echo "::error::Zero functions discovered! Package extraction failed."
+              echo "Expected: ≥10 functions (health + routes)"
+              
+              # Debug: Check app settings for deployment config
+              echo "--- Checking deployment configuration ---"
+              az functionapp show -g "$RG" -n "$FUNC_APP" \
+                --query "properties.functionAppConfig.deployment" -o json || true
+              
+              exit 1
+            fi
+            
+            echo "Functions discovered:"
+            echo "$FUNC_LIST" | jq -r '.[].name' | sort
+            
+            if [[ "$FUNC_COUNT" -lt 10 ]]; then
+              echo "::warning::Expected ≥10 functions, only found $FUNC_COUNT"
+            else
+              echo "✅ Function discovery successful ($FUNC_COUNT functions)"
+            fi
 
 
       - name: Smoke test HTTP trigger
