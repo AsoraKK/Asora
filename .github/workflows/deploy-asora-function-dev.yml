@@ -149,11 +149,11 @@ jobs:
             re='^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$'
             [[ "$CONTAINER" =~ $re && "$CONTAINER" != *--* ]] || { echo "::error::Invalid container name: $CONTAINER"; exit 1; }
 
-            SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" $
-                  --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
+    SA=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+      --query "[?name=='AzureWebJobsStorage__accountName'].value|[0]" -o tsv)
             if [ -z "$SA" ] || [ "$SA" = "None" ]; then
-              CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" $
-                    --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
+      CS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+        --query "[?name=='AzureWebJobsStorage'].value|[0]" -o tsv)
               SA=$(echo "$CS" | sed -n 's/.*AccountName=\([^;]*\).*/\1/p')
             fi
             [ -n "$SA" ] || { echo "::error::AzureWebJobsStorage account not resolved"; exit 1; }
@@ -177,8 +177,8 @@ jobs:
             APP_OBJ_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id -o tsv)
             [ -n "$APP_OBJ_ID" ] || { echo "::error::AZURE_CLIENT_ID not resolvable to service principal"; exit 1; }
 
-            az role assignment create --assignee-object-id "$APP_OBJ_ID" $
-              --assignee-principal-type ServicePrincipal $
+            az role assignment create --assignee-object-id "$APP_OBJ_ID" \
+              --assignee-principal-type ServicePrincipal \
               --role "Storage Blob Data Contributor" --scope "$SCOPE" 2>/dev/null || true
             sleep 15
 
