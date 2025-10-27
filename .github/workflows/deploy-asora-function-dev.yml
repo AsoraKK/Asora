@@ -204,12 +204,10 @@ jobs:
             print(json.dumps({"properties":{"functionAppConfig":cfg}}))
             PY
             
-            # Set critical app settings for Flex Consumption runtime detection
+            # Set FUNCTIONS_EXTENSION_VERSION only (Flex forbids FUNCTIONS_WORKER_RUNTIME, WEBSITE_NODE_DEFAULT_VERSION)
+            # Runtime is configured via ARM functionAppConfig.runtime above
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings \
-                FUNCTIONS_EXTENSION_VERSION="~4" \
-                FUNCTIONS_WORKER_RUNTIME="node" \
-                WEBSITE_NODE_DEFAULT_VERSION="~20" >/dev/null
+              --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
             
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
@@ -265,13 +263,14 @@ jobs:
         with:
           inlineScript: |
             echo "=== Runtime Configuration Check ==="
+            echo "App Settings (Flex only allows FUNCTIONS_EXTENSION_VERSION):"
             az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='FUNCTIONS_EXTENSION_VERSION' || name=='WEBSITE_NODE_DEFAULT_VERSION'].{name:name, value:value}" -o table
+              --query "[?name=='FUNCTIONS_EXTENSION_VERSION'].{name:name, value:value}" -o table
             
             echo ""
-            echo "=== Function App Config (ARM) ==="
+            echo "=== Function App Config (ARM - source of truth for Flex runtime) ==="
             az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig.runtime" -o json
+              --query "{runtime: properties.functionAppConfig.runtime, deployment: properties.functionAppConfig.deployment}" -o json
 
       - name: List deployed functions
         uses: azure/cli@v2
