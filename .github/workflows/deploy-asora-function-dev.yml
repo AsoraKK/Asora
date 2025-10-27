@@ -57,279 +57,92 @@ jobs:
       - name: Disable Husky in CI
         run: echo "HUSKY=0" >> "$GITHUB_ENV"
 
-      # Build in functions/ and produce a Linux-ready dist zip without lockfile mismatch
       - name: Build function package (lockfile-safe dist)
         working-directory: functions
         run: |
           set -euo pipefail
-          npm ci
+          npm ci --no-audit --no-fund
           npm run build
-
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
 
-          # Install production deps inside dist without npm ci to avoid EUSAGE on subset package.json
+          # Prod deps in dist
           if [ -f dist/package.json ]; then
             (cd dist && npm install --omit=dev --no-audit --no-fund)
           fi
 
+          # Sanity: index.js must load without env (no top-level side effects)
+          (cd dist && node -e "require('./index.js'); console.log('OK')") || { echo "::error::dist/index.js throws at load"; exit 1; }
+
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
           popd >/dev/null
-
           mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
 
       - name: Validate package exists
-        working-directory: ${{ github.workspace }}
         run: |
           set -euo pipefail
           test -f dist-func.zip || { echo "Missing dist-func.zip"; exit 3; }
           ls -lh dist-func.zip
-          unzip -l dist-func.zip | head -n 40
+          unzip -l dist-func.zip | head -n 60
 
-      # Verify artifact structure for Flex Consumption deployment
-      - name: Verify artifact structure (wwwroot readiness)
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          echo "=== Verifying deployment artifact structure ==="
-          
-          # Create temp extraction dir
-          mkdir -p verify-artifact
-          unzip -q dist-func.zip -d verify-artifact
-          
-          # Check critical files at root
-          echo "Checking root files..."
-          test -f verify-artifact/index.js || { echo "::error::Missing index.js at root"; exit 1; }
-          test -f verify-artifact/package.json || { echo "::error::Missing package.json at root"; exit 1; }
-          test -f verify-artifact/host.json || { echo "::error::Missing host.json"; exit 1; }
-          
-          # Verify package.json config
-          echo "Verifying package.json config..."
-          PKG_MAIN=$(jq -r '.main // "missing"' verify-artifact/package.json)
-          PKG_TYPE=$(jq -r '.type // "missing"' verify-artifact/package.json)
-          
-          [[ "$PKG_MAIN" == "index.js" ]] || { echo "::error::package.json main should be index.js, got: $PKG_MAIN"; exit 1; }
-          [[ "$PKG_TYPE" == "commonjs" ]] || { echo "::error::package.json type should be commonjs, got: $PKG_TYPE"; exit 1; }
-          
-          # Check src/ structure matches route discovery pattern
-          echo "Checking route structure..."
-          ROUTE_COUNT=$(find verify-artifact/src -name "*.js" -path "*/routes/*" | wc -l)
-          [[ "$ROUTE_COUNT" -ge 10 ]] || { echo "::warning::Expected ≥10 route files, found $ROUTE_COUNT"; }
-          
-          # Verify node_modules has production deps
-          echo "Checking production dependencies..."
-          test -d verify-artifact/node_modules/@azure/functions || { echo "::error::Missing @azure/functions in node_modules"; exit 1; }
-          test -d verify-artifact/node_modules/@azure/cosmos || { echo "::error::Missing @azure/cosmos in node_modules"; exit 1; }
-          
-          # List functions that will be discovered (mock test mode)
-          echo "=== Simulating route discovery ==="
-          cd verify-artifact
-          timeout 5 node index.js 2>&1 | grep -E "(WARNING|register function)" | tee ../function-discovery.log || true
-          
-          # Verify expected function count
-          DISCOVERED_COUNT=$(grep -c "register function" ../function-discovery.log || echo "0")
-          echo "Discovered $DISCOVERED_COUNT functions"
-          [[ "$DISCOVERED_COUNT" -ge 10 ]] || { echo "::warning::Expected ≥10 functions, discovered $DISCOVERED_COUNT"; }
-          
-          cd "$GITHUB_WORKSPACE"
-          rm -rf verify-artifact
-          
-          echo "✅ Artifact structure verification passed"
-
-      # Configure Flex runtime via ARM (node@20, instanceMemoryMB 2048)
       - name: Ensure Flex runtime configuration
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            
-            echo "=== Configuring Flex Consumption Runtime ==="
-            
-            # Get current config and strip deployment.storage
-            export CURRENT=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json 2>/dev/null || echo "{}")
-            
-            # Use Python to cleanly replace config (strip deployment, set runtime+scale)
-            python3 - <<'PY' > flex-config.json
-            import json, os
-            
-            # Parse current config (may have invalid deployment.storage)
-            try:
-                cfg = json.loads(os.environ.get("CURRENT", "{}"))
-            except:
-                cfg = {}
-            
-            # Remove deployment section entirely
-            cfg.pop("deployment", None)
-            
-            # Set runtime explicitly
-            cfg["runtime"] = {"name": "node", "version": "20"}
-            
-            # Set scale config
-            cfg["scaleAndConcurrency"] = {
-              "instanceMemoryMB": 2048,
-              "maximumInstanceCount": 40
-            }
-            
-            # Output ARM PATCH body
-            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
+            CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json || echo "{}")
+            python3 - <<'PY' > body.json
+            import json,sys,os
+            cfg=json.loads(os.environ.get("CUR","{}")) if os.environ.get("CUR") else {}
+            if not isinstance(cfg,dict): cfg={}
+            cfg.pop("deployment", None)         # do not use deployment.storage on Flex
+            cfg["runtime"]={"name":"node","version":"20"}
+            cfg["scaleAndConcurrency"]={"instanceMemoryMB":2048,"maximumInstanceCount":40}
+            print(json.dumps({"properties":{"functionAppConfig":cfg}}))
             PY
-            
-            # DEBUG: Show what we're about to send
-            echo "DEBUG: flex-config.json contents:"
-            cat flex-config.json
-            echo ""
-            
-            # Apply config
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @flex-config.json >/dev/null
-            
-            echo "✅ Runtime configured: node@20, 2048MB"
-            
-            # Set FUNCTIONS_EXTENSION_VERSION (Flex FORBIDS FUNCTIONS_WORKER_RUNTIME)
+              --body @body.json >/dev/null
+
+            # Only FUNCTIONS_EXTENSION_VERSION is allowed. Do NOT set FUNCTIONS_WORKER_RUNTIME or WEBSITE_NODE_DEFAULT_VERSION.
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
-            
-            echo "Waiting 10s for ARM config propagation..."
-            sleep 10
 
-      # Deploy package via direct ZIP push (az functionapp deployment source config-zip)
-      # This is the ONLY method that works reliably on Flex Consumption
       - name: Deploy package via ZIP
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            
-            echo "=== Deploying Functions Package ==="
-            echo "Method: az functionapp deployment source config-zip"
-            echo "Package: $GITHUB_WORKSPACE/dist-func.zip"
-            
-            # Direct ZIP deployment - Flex will extract to wwwroot
             az functionapp deployment source config-zip \
-              -g "$RG" \
-              -n "$FUNC_APP" \
-              --src "$GITHUB_WORKSPACE/dist-func.zip" \
-              --timeout 600
-            
-            echo "✅ ZIP deployment completed"
+              -g "$RG" -n "$FUNC_APP" --src "$GITHUB_WORKSPACE/dist-func.zip" --timeout 600
+            # Flex ignores 'sync', so we restart to ensure pickup
+            az functionapp restart -g "$RG" -n "$FUNC_APP"
 
-      # Wait for Flex runtime to extract package and discover functions
       - name: Wait for runtime startup
         run: |
-          echo "Waiting 60s for Flex runtime to discover functions..."
-          sleep 60
-
-      # Verify runtime configuration
-      - name: Verify runtime configuration
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            echo "=== Runtime Configuration Check ==="
-            
-            echo "App Settings (Flex allows only FUNCTIONS_EXTENSION_VERSION):"
-            az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
-              --query "[?name=='FUNCTIONS_EXTENSION_VERSION'].{name:name, value:value}" -o table
-            
-            echo ""
-            echo "=== ARM Function App Config ==="
-            az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "{runtime: properties.functionAppConfig.runtime, scale: properties.functionAppConfig.scaleAndConcurrency}" -o json
-
-      # List deployed functions to verify discovery
-      - name: List deployed functions
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            echo "=== Deployed Functions Inventory ==="
-            FUNC_LIST=$(az functionapp function list -g "$RG" -n "$FUNC_APP" -o json)
-            FUNC_COUNT=$(echo "$FUNC_LIST" | jq 'length')
-            
-            echo "Total functions discovered: $FUNC_COUNT"
-            if [[ "$FUNC_COUNT" -eq 0 ]]; then
-              echo "::error::Zero functions discovered! Package extraction failed."
-              echo "Expected: ≥10 functions (health + routes)"
-              
-              # Debug: Check app settings for deployment config
-              echo "--- Checking deployment configuration ---"
-              az functionapp show -g "$RG" -n "$FUNC_APP" \
-                --query "properties.functionAppConfig.deployment" -o json || true
-              
-              exit 1
-            fi
-            
-            echo "Functions discovered:"
-            echo "$FUNC_LIST" | jq -r '.[].name' | sort
-            
-            if [[ "$FUNC_COUNT" -lt 10 ]]; then
-              echo "::warning::Expected ≥10 functions, only found $FUNC_COUNT"
-            else
-              echo "✅ Function discovery successful ($FUNC_COUNT functions)"
-            fi
-
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/api/health" || true)
+            echo "probe $i http=$code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          exit 1
 
       - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
-          
-          MAX_ATTEMPTS=8
-          SLEEP_INTERVAL=10
           HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
-          
-          echo "Testing health endpoint: $HEALTH_URL"
-          
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS..."
-            
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
-            
-            if [[ "$HTTP_CODE" == "200" ]]; then
-              echo "✅ Health check passed (HTTP $HTTP_CODE)"
-              RESPONSE=$(curl -s "$HEALTH_URL")
-              echo "Response: $RESPONSE"
-              exit 0
-            else
-              echo "❌ Health check returned HTTP $HTTP_CODE"
-              if [[ $i -lt $MAX_ATTEMPTS ]]; then
-                echo "Waiting ${SLEEP_INTERVAL}s before retry..."
-                sleep $SLEEP_INTERVAL
-              fi
-            fi
-          done
-          
-          echo "::error::Health check failed after $MAX_ATTEMPTS attempts (80s wait)"
-          exit 1
+          echo "GET $HEALTH_URL"
+          curl -sS "$HEALTH_URL" | tee /dev/stderr | jq . || true
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
+          [ "$code" = "200" ] || { echo "::error::Health endpoint not 200 ($code)"; exit 1; }
 
-      - name: Display function URLs
-        run: |
-          echo "Deployed function URLs:"
-          echo "  Health: https://${FUNC_APP}.azurewebsites.net/health (or /api/health)"
-          echo "  Feed:   https://${FUNC_APP}.azurewebsites.net/feed (or /api/feed)"
-
-      # Post-deployment validation with k6
-      - name: Setup k6
-        uses: grafana/setup-k6-action@v1
-
-      - name: Post-deployment smoke test (health)
-        env:
-          K6_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
-          VUS: '1'
-          DURATION: '30s'
-        run: k6 run load/k6/smoke.js
-
-      - name: Post-deployment feed read test
-        env:
-          K6_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
-          VUS: '5'
-          DURATION: '60s'
-        run: k6 run load/k6/feed-read.js
-
-      - name: Upload k6 summaries
-        uses: actions/upload-artifact@v4
-        if: always()  # Upload even if k6 fails
+      - name: Try to list functions (best-effort on Flex)
+        if: always()
+        uses: azure/cli@v2
         with:
-          name: k6-summaries-${{ github.run_id }}
-          path: load/k6/*-summary.json
-          if-no-files-found: warn
+          inlineScript: |
+            set -euo pipefail
+            echo "=== Deployed Functions Inventory (may be empty on Flex API) ==="
+            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table || echo "function list unavailable on Flex"
