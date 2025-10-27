@@ -209,9 +209,25 @@ jobs:
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
               --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
             
+            # Merge deployment.storage into the config (point to uploaded blob)
+            python3 - <<'PY2' > deploy-body.json
+            import json, os
+            with open("body.json") as f:
+              patch=json.load(f)
+            cfg = patch["properties"]["functionAppConfig"]
+            cfg.setdefault("deployment", {})["storage"] = {
+              "type": "blobcontainer",
+              "value": f"https://{os.environ['STG']}.blob.core.windows.net/{os.environ['DEPLOY_CONTAINER']}/{os.environ['DEPLOY_BLOB_NAME']}",
+              "authentication": {
+                "type": "systemassignedidentity"
+              }
+            }
+            print(json.dumps(patch))
+            PY2
+            
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @body.json >/dev/null
+              --body @deploy-body.json >/dev/null
             
             echo "Waiting 15s for ARM config propagation..."
             sleep 15
@@ -245,21 +261,16 @@ jobs:
               --account-name "$STG" --container-name "$DEPLOY_CONTAINER" \
               --name "$DEPLOY_BLOB_NAME" --file "$GITHUB_WORKSPACE/dist-func.zip" --overwrite
 
-      # Deploy using Azure Functions official GitHub Action (Website Contributor RBAC granted)
-      # Ref: FLEX_DEPLOYMENT_TROUBLESHOOTING.md - uses proven deployment internally
-      - name: Deploy to Flex using Azure Functions Action
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ env.FUNC_APP }}
-          package: ${{ github.workspace }}/dist-func.zip
-          respect-funcignore: true
+      # Deploy via ARM: runtime + deployment.storage already configured above
+      # Flex will auto-extract from the blob URL referenced in deployment.storage
+      # No need for Azure Functions Action - ARM PATCH triggers extraction
 
       # Force runtime restart to trigger package extraction with updated runtime config
       - name: Restart function app
         uses: azure/cli@v2
         with:
           inlineScript: |
-            echo "Restarting function app to ensure runtime picks up node@20 config and extracts package..."
+            echo "Restarting function app to trigger extraction from deployment.storage blob..."
             az functionapp restart -g "$RG" -n "$FUNC_APP"
 
       # Wait for Flex runtime to extract package and start function host
