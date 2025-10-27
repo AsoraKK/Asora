@@ -176,6 +176,11 @@ jobs:
             print(json.dumps({"properties": {"functionAppConfig": cfg}}))
             PY
             
+            # DEBUG: Show what we're about to send
+            echo "DEBUG: flex-config.json contents:"
+            cat flex-config.json
+            echo ""
+            
             # Apply config
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
