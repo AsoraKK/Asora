@@ -146,23 +146,16 @@ jobs:
             
             echo "=== Configuring Flex Consumption Runtime ==="
             
-            # Get current config
-            CURRENT=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
-              --query "properties.functionAppConfig" -o json || echo "{}")
-            
-            # Build merged config with runtime
+            # Build fresh config (don't merge old deployment.storage)
             python3 - <<'PY' > runtime-patch.json
-            import json, os
-            cfg = json.loads(os.environ.get("CURRENT", "{}"))
-            
-            # Set runtime to Node 20
-            cfg["runtime"] = {"name": "node", "version": "20"}
-            
-            # Configure scale and concurrency
-            sc = cfg.setdefault("scaleAndConcurrency", {})
-            sc["instanceMemoryMB"] = 2048
-            sc.setdefault("maximumInstanceCount", 40)
-            
+            import json
+            cfg = {
+              "runtime": {"name": "node", "version": "20"},
+              "scaleAndConcurrency": {
+                "instanceMemoryMB": 2048,
+                "maximumInstanceCount": 40
+              }
+            }
             print(json.dumps({"properties": {"functionAppConfig": cfg}}))
             PY
             
