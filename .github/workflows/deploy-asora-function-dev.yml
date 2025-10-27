@@ -147,7 +147,7 @@ jobs:
             echo "=== Configuring Flex Consumption Runtime ==="
             
             # Get current config and strip deployment.storage
-            CURRENT=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
+            export CURRENT=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
               --query "properties.functionAppConfig" -o json 2>/dev/null || echo "{}")
             
             # Use Python to cleanly replace config (strip deployment, set runtime+scale)
