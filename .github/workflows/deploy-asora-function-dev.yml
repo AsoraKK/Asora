@@ -146,32 +146,32 @@ jobs:
             
             echo "=== Configuring Flex Consumption Runtime ==="
             
-            # CRITICAL: Remove any legacy deployment.storage field first
-            # (Azure rejects PATCH if deployment.storage exists with empty type)
-            echo "Stripping legacy deployment.storage..."
-            az rest --method patch \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body '{"properties":{"functionAppConfig":{"deployment":null}}}' >/dev/null || true
+            # CRITICAL: One-shot config fix using az functionapp config set
+            # (avoids ARM PATCH merging legacy deployment.storage fields)
+            az functionapp config set -g "$RG" -n "$FUNC_APP" \
+              --linux-fx-version "node|20" >/dev/null
             
-            # Build fresh config (don't merge old deployment.storage)
-            python3 - <<'PY' > runtime-patch.json
-            import json
-            cfg = {
-              "runtime": {"name": "node", "version": "20"},
-              "scaleAndConcurrency": {
-                "instanceMemoryMB": 2048,
-                "maximumInstanceCount": 40
+            echo "✅ Runtime configured: node@20"
+            
+            # Set scale config via ARM (can't use CLI for instanceMemoryMB)
+            cat > scale-patch.json <<'JSON'
+            {
+              "properties": {
+                "functionAppConfig": {
+                  "scaleAndConcurrency": {
+                    "instanceMemoryMB": 2048,
+                    "maximumInstanceCount": 40
+                  }
+                }
               }
             }
-            print(json.dumps({"properties": {"functionAppConfig": cfg}}))
-            PY
+            JSON
             
-            # Apply ARM PATCH
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @runtime-patch.json >/dev/null
+              --body @scale-patch.json >/dev/null
             
-            echo "✅ Runtime configured: node@20, 2048MB"
+            echo "✅ Scale configured: 2048MB, max 40 instances"
             
             # Set FUNCTIONS_EXTENSION_VERSION (Flex FORBIDS FUNCTIONS_WORKER_RUNTIME)
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
