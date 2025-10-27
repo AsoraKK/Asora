@@ -5,8 +5,9 @@ import * as jwt from 'jsonwebtoken';
 // Mutable stub the Cosmos mock can read at call-time
 const dbStub: { sessions: any[]; user: any } = { sessions: [], user: null };
 
-jest.mock('@azure/cosmos', () => ({
-  CosmosClient: jest.fn().mockImplementation(() => ({
+// Mock the cosmos client factory instead of the CosmosClient class
+jest.mock('@shared/clients/cosmos', () => ({
+  getCosmosClient: jest.fn(() => ({
     database: () => ({
       container: (name: string) => {
         if (name === 'auth_sessions') {
@@ -38,13 +39,20 @@ import { InvocationContext } from '@azure/functions';
 import { tokenHandler } from '@auth/service/tokenService';
 import { httpReqMock } from '../helpers/http';
 
-const ctx: Partial<InvocationContext> = { invocationId: 'test', log: jest.fn() };
+const logFn = jest.fn();
+const ctx: Partial<InvocationContext> = { invocationId: 'test', log: logFn, error: logFn };
 
 describe('auth/token validation and method handling', () => {
+  beforeAll(() => {
+    process.env.JWT_SECRET = 'test-secret-key-for-token-validation';
+    process.env.JWT_ISSUER = 'asora-auth';
+  });
+
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
     jest.restoreAllMocks();
+    logFn.mockClear();
   });
   it('rejects non-POST with 405', async () => {
     const req = httpReqMock({ method: 'GET' });
@@ -282,7 +290,21 @@ describe('auth/token validation and method handling', () => {
       code_verifier,
     };
     const req = httpReqMock({ method: 'POST', body });
-    const res = await tokenHandler(req as any, ctx as InvocationContext);
+    
+    let res;
+    try {
+      res = await tokenHandler(req as any, ctx as InvocationContext);
+    } catch (err) {
+      console.error('EXCEPTION IN TOKEN HANDLER:', err);
+      throw err;
+    }
+    
+    // Debug: log error response if not 200
+    if (res.status !== 200) {
+      console.error('ERROR RESPONSE:', { status: res.status, body: res.body });
+      console.error('LOGS:', logFn.mock.calls);
+    }
+    
     expect(res.status).toBe(200);
     const payload = JSON.parse(res.body as string);
     expect(payload.success).toBe(true);

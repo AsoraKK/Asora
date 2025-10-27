@@ -1,9 +1,9 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { tokenRoute as tokenHandler } from '@auth/routes/token';
 
-// Mock Cosmos
-jest.mock('@azure/cosmos', () => ({
-  CosmosClient: jest.fn().mockImplementation(() => ({
+// Mock Cosmos client factory
+jest.mock('@shared/clients/cosmos', () => ({
+  getCosmosClient: jest.fn(() => ({
     database: jest.fn().mockReturnValue({
       container: jest.fn().mockImplementation((name: string) => {
         if (name === 'auth_sessions') {
@@ -79,6 +79,10 @@ function ctx(): InvocationContext {
 }
 
 describe('auth/token invite gating', () => {
+  beforeAll(() => {
+    process.env.JWT_SECRET = 'test-secret-key-for-invite-tests';
+    process.env.JWT_ISSUER = 'asora-auth';
+  });
   it('denies inactive users with invite_required', async () => {
     // code_verifier 'verifier' has SHA256 base64url '4X6T1gZC8P5f1QmHif4Tq3G3Q0vS5yJ8tQ0b3u1z9iA'
     const body = {
