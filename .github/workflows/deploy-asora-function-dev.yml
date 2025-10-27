@@ -146,6 +146,13 @@ jobs:
             
             echo "=== Configuring Flex Consumption Runtime ==="
             
+            # CRITICAL: Remove any legacy deployment.storage field first
+            # (Azure rejects PATCH if deployment.storage exists with empty type)
+            echo "Stripping legacy deployment.storage..."
+            az rest --method patch \
+              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
+              --body '{"properties":{"functionAppConfig":{"deployment":null}}}' >/dev/null || true
+            
             # Build fresh config (don't merge old deployment.storage)
             python3 - <<'PY' > runtime-patch.json
             import json
