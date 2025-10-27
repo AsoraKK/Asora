@@ -203,7 +203,14 @@ jobs:
             cfg["siteUpdateStrategy"]={"type":"Recreate"}
             print(json.dumps({"properties":{"functionAppConfig":cfg}}))
             PY
-            az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
+            
+            # Set critical app settings for Flex Consumption runtime detection
+            az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
+              --settings \
+                FUNCTIONS_EXTENSION_VERSION="~4" \
+                FUNCTIONS_WORKER_RUNTIME="node" \
+                WEBSITE_NODE_DEFAULT_VERSION="~20" >/dev/null
+            
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body @body.json >/dev/null
@@ -245,6 +252,26 @@ jobs:
           app-name: ${{ env.FUNC_APP }}
           package: ${{ github.workspace }}/dist-func.zip
           respect-funcignore: true
+
+      # Wait for Flex runtime to extract package and start function host
+      - name: Wait for runtime startup
+        run: |
+          echo "Waiting 60s for Flex runtime to extract package and discover functions..."
+          sleep 60
+
+      # Verify runtime configuration was applied
+      - name: Verify runtime configuration
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            echo "=== Runtime Configuration Check ==="
+            az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" \
+              --query "[?name=='FUNCTIONS_WORKER_RUNTIME' || name=='FUNCTIONS_EXTENSION_VERSION' || name=='WEBSITE_NODE_DEFAULT_VERSION'].{name:name, value:value}" -o table
+            
+            echo ""
+            echo "=== Function App Config (ARM) ==="
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "properties.functionAppConfig.runtime" -o json
 
       - name: List deployed functions
         uses: azure/cli@v2
