@@ -212,6 +212,9 @@ jobs:
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body @body.json >/dev/null
+            
+            echo "Waiting 15s for ARM config propagation..."
+            sleep 15
 
       # D) Grant Function App MI Storage Blob Data Reader
       - name: Grant Function App MI Storage Blob Data Reader
@@ -251,11 +254,19 @@ jobs:
           package: ${{ github.workspace }}/dist-func.zip
           respect-funcignore: true
 
+      # Force runtime restart to trigger package extraction with updated runtime config
+      - name: Restart function app
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            echo "Restarting function app to ensure runtime picks up node@20 config and extracts package..."
+            az functionapp restart -g "$RG" -n "$FUNC_APP"
+
       # Wait for Flex runtime to extract package and start function host
       - name: Wait for runtime startup
         run: |
-          echo "Waiting 60s for Flex runtime to extract package and discover functions..."
-          sleep 60
+          echo "Waiting 75s for Flex runtime to extract package and discover functions..."
+          sleep 75
 
       # Verify runtime configuration was applied
       - name: Verify runtime configuration
