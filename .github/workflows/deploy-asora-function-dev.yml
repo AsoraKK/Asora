@@ -265,12 +265,24 @@ jobs:
       # Flex will auto-extract from the blob URL referenced in deployment.storage
       # No need for Azure Functions Action - ARM PATCH triggers extraction
 
-      # Force runtime restart to trigger package extraction with updated runtime config
+      # Sync deployment source to trigger package extraction
+      - name: Sync deployment source
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            echo "Triggering deployment sync to extract package from blob..."
+            # For Flex with deployment.storage, sync tells runtime to fetch/extract the blob
+            az functionapp deployment source sync -g "$RG" -n "$FUNC_APP" || {
+              echo "::warning::Sync command failed (may not be supported on Flex)"
+              echo "Falling back to restart-based extraction..."
+            }
+
+      # Restart function app to ensure clean startup with new package
       - name: Restart function app
         uses: azure/cli@v2
         with:
           inlineScript: |
-            echo "Restarting function app to trigger extraction from deployment.storage blob..."
+            echo "Restarting function app to finalize extraction..."
             az functionapp restart -g "$RG" -n "$FUNC_APP"
 
       # Wait for Flex runtime to extract package and start function host
