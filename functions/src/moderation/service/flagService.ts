@@ -9,8 +9,8 @@
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { CosmosClient } from '@azure/cosmos';
 import { createHiveClient, HiveAIClient } from '@shared/clients/hive';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator } from '@shared/utils/rateLimiter';
 
 // Request validation schema
@@ -103,8 +103,7 @@ export async function flagContentHandler({
     const { contentId, contentType, reason, additionalDetails, urgency } = validationResult.data;
 
     // 4. Initialize Cosmos DB
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-    const database = cosmosClient.database('asora');
+    const database = getCosmosDatabase();
     const flagsContainer = database.container('flags');
 
     // 5. Check for duplicate flags by the same user

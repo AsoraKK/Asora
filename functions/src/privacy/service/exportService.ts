@@ -8,7 +8,7 @@
  */
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
+import type { Database } from '@azure/cosmos';
 import { json } from '@shared/utils/http';
 import {
   createRateLimiter,
@@ -16,6 +16,7 @@ import {
   defaultKeyGenerator,
   userKeyGenerator,
 } from '@shared/utils/rateLimiter';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
 
 interface UserDataExport {
   metadata: {
@@ -145,6 +146,7 @@ export async function exportUserHandler({
   context,
   userId,
 }: ExportUserParams): Promise<HttpResponseInit> {
+  let database: Database | null = null;
   const exportId = `exp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   context.log(`Data export request received - Export ID: ${exportId}`);
 
@@ -166,24 +168,26 @@ export async function exportUserHandler({
     }
 
     // 3. Initialize Cosmos DB
-    const cosmosConnectionString = process.env.COSMOS_CONNECTION_STRING;
-    if (!cosmosConnectionString) {
-      context.error('COSMOS_CONNECTION_STRING environment variable is missing or empty.');
+    let activeDatabase: Database;
+    try {
+      activeDatabase = getCosmosDatabase();
+    } catch (error) {
+      context.error('Cosmos DB configuration missing for exportUser handler.', error);
       return json(500, {
         code: 'configuration_error',
-        message: 'Server misconfiguration: database connection string is missing.',
+        message: 'Server misconfiguration: database connection is unavailable.',
         exportId,
       });
     }
-    const cosmosClient = new CosmosClient(cosmosConnectionString);
-    const database = cosmosClient.database('asora');
-    const usersContainer = database.container('users');
-    const postsContainer = database.container('posts');
-    const commentsContainer = database.container('comments');
-    const flagsContainer = database.container('content_flags');
-    const appealsContainer = database.container('appeals');
-    const votesContainer = database.container('appeal_votes');
-    const likesContainer = database.container('likes');
+
+    database = activeDatabase;
+    const usersContainer = activeDatabase.container('users');
+    const postsContainer = activeDatabase.container('posts');
+    const commentsContainer = activeDatabase.container('comments');
+    const flagsContainer = activeDatabase.container('content_flags');
+    const appealsContainer = activeDatabase.container('appeals');
+    const votesContainer = activeDatabase.container('appeal_votes');
+    const likesContainer = activeDatabase.container('likes');
 
     context.log(`Starting comprehensive data export for user: ${userId}`);
 
@@ -461,7 +465,7 @@ export async function exportUserHandler({
 
     try {
       // Write to privacy audit container
-      const privacyAudit = database.container('privacy_audit');
+      const privacyAudit = activeDatabase.container('privacy_audit');
       await privacyAudit.items.create({
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,
@@ -519,10 +523,8 @@ export async function exportUserHandler({
       body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: (err as any)?.message, exportId }),
     };
     try {
-      const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-      const audit = cosmosClient
-        .database(process.env.COSMOS_DATABASE_NAME || 'asora')
-        .container('privacy_audit');
+      const auditDatabase = database ?? getCosmosDatabase();
+      const audit = auditDatabase.container('privacy_audit');
       await audit.items.create({
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,

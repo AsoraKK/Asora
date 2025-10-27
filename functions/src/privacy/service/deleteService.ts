@@ -8,8 +8,9 @@
  */
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { CosmosClient } from '@azure/cosmos';
+import type { Database } from '@azure/cosmos';
 import { json } from '@shared/utils/http';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
 import {
   createRateLimiter,
   endpointKeyGenerator,
@@ -54,6 +55,7 @@ export async function deleteUserHandler({
   context,
   userId,
 }: DeleteUserParams): Promise<HttpResponseInit> {
+  let database: Database | null = null;
   const deletionId = `del_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   context.log(`Account deletion request received - Deletion ID: ${deletionId}`);
 
@@ -84,16 +86,16 @@ export async function deleteUserHandler({
     }
 
     // 4. Initialize Cosmos DB
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-    const database = cosmosClient.database('asora');
+    const activeDatabase = getCosmosDatabase();
+    database = activeDatabase;
 
-    const usersContainer = database.container('users');
-    const postsContainer = database.container('posts');
-    const commentsContainer = database.container('comments');
-    const likesContainer = database.container('likes');
-    const flagsContainer = database.container('content_flags');
-    const appealsContainer = database.container('appeals');
-    const votesContainer = database.container('appeal_votes');
+    const usersContainer = activeDatabase.container('users');
+    const postsContainer = activeDatabase.container('posts');
+    const commentsContainer = activeDatabase.container('comments');
+    const likesContainer = activeDatabase.container('likes');
+    const flagsContainer = activeDatabase.container('content_flags');
+    const appealsContainer = activeDatabase.container('appeals');
+    const votesContainer = activeDatabase.container('appeal_votes');
 
     context.log(`Starting complete account deletion for user: ${userId}`);
 
@@ -332,7 +334,7 @@ export async function deleteUserHandler({
     });
 
     try {
-      const privacyAudit = database.container('privacy_audit');
+      const privacyAudit = activeDatabase.container('privacy_audit');
       await privacyAudit.items.create({
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,
@@ -365,8 +367,8 @@ export async function deleteUserHandler({
     // Handle unexpected errors
     context.error('Critical error during account deletion:', error);
     try {
-      const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-      const audit = cosmosClient.database('asora').container('privacy_audit');
+      const auditDatabase = database ?? getCosmosDatabase();
+      const audit = auditDatabase.container('privacy_audit');
       await audit.items.create({
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,

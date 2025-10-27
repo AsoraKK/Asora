@@ -9,7 +9,7 @@
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
-import { CosmosClient } from '@azure/cosmos';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
 
 // Request validation schema
 const SubmitAppealSchema = z.object({
@@ -66,8 +66,7 @@ export async function submitAppealHandler({
       validationResult.data;
 
     // 3. Initialize Cosmos DB
-    const cosmosClient = new CosmosClient(process.env.COSMOS_CONNECTION_STRING || '');
-    const database = cosmosClient.database('asora');
+    const database = getCosmosDatabase();
     const appealsContainer = database.container('appeals');
 
     // 4. Check for existing appeals by the same user for the same content

@@ -1,7 +1,7 @@
 // Cosmos DB Client Configuration
 // Target architecture: Endpoint+Key with Session consistency
 
-import { CosmosClient, CosmosClientOptions, ConsistencyLevel } from '@azure/cosmos';
+import { CosmosClient, CosmosClientOptions, ConsistencyLevel, Database } from '@azure/cosmos';
 
 export interface CosmosConfig {
   endpoint?: string;
@@ -22,6 +22,7 @@ const defaultConnectionPolicy: CosmosClientOptions['connectionPolicy'] = {
 };
 
 let cachedClient: CosmosClient | null = null;
+let cachedDatabase: { name: string; database: Database } | null = null;
 
 function createClientFromEnvironment(): CosmosClient {
   const connectionString = process.env.COSMOS_CONNECTION_STRING;
@@ -68,9 +69,21 @@ export function getCosmosClient(): CosmosClient {
 export function createCosmosClient(): CosmosClient {
   return getCosmosClient();
 }
-
 export function resetCosmosClient(): void {
   cachedClient = null;
+  cachedDatabase = null;
+}
+
+export function getCosmosDatabase(
+  databaseName = process.env.COSMOS_DATABASE_NAME || 'asora'
+): Database {
+  if (!cachedDatabase || cachedDatabase.name !== databaseName) {
+    cachedDatabase = {
+      name: databaseName,
+      database: getCosmosClient().database(databaseName),
+    };
+  }
+  return cachedDatabase.database;
 }
 
 /**
