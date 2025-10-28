@@ -25,7 +25,7 @@ export async function getFeed({
   principal: _principal,
   context,
 }: {
-  principal: Principal;
+  principal: Principal | null;
   context: InvocationContext;
 }): Promise<FeedResult> {
   const start = performance.now();
@@ -35,7 +35,7 @@ export async function getFeed({
   let cachedPosts: unknown[] | null = null;
   let ruEstimate = '1';
 
-  context.log('feed.get.start', { principal: _principal.kind });
+  context.log('feed.get.start', { principal: _principal ? 'user' : 'guest' });
 
   if (redisConfigured) {
     try {
@@ -83,7 +83,7 @@ export async function getFeed({
   context.log('feed.get.complete', {
     durationMs: Number(duration.toFixed(2)),
     cacheStatus,
-  userType: _principal.kind === 'user' ? 'authenticated' : 'anonymous',
+    userType: _principal ? 'authenticated' : 'anonymous',
   });
 
   return {

@@ -1,11 +1,11 @@
 import type { InvocationContext } from '@azure/functions';
 
-import { submitAppealRoute } from '@moderation/routes/submitAppeal';
-import { submitAppealHandler } from '@moderation/service/appealService';
+import { flagContentRoute } from '@moderation/routes/flagContent';
+import { flagContentHandler } from '@moderation/service/flagService';
 import { httpReqMock } from '../helpers/http';
 
-jest.mock('@moderation/service/appealService', () => ({
-  submitAppealHandler: jest.fn(),
+jest.mock('@moderation/service/flagService', () => ({
+  flagContentHandler: jest.fn(),
 }));
 
 jest.mock('@auth/verifyJwt', () => {
@@ -28,7 +28,7 @@ function authorizedRequest(body?: unknown) {
   });
 }
 
-describe('submitAppeal route', () => {
+describe('flagContent route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     contextStub.log = jest.fn();
@@ -44,51 +44,41 @@ describe('submitAppeal route', () => {
   });
 
   it('returns CORS response for OPTIONS', async () => {
-    const response = await submitAppealRoute(httpReqMock({ method: 'OPTIONS' }), contextStub);
+    const response = await flagContentRoute(httpReqMock({ method: 'OPTIONS' }), contextStub);
     expect(response.status).toBe(200);
     expect(response.body).toBe('');
   });
 
-  it('rejects disallowed methods', async () => {
-    const response = await submitAppealRoute(httpReqMock({ method: 'GET' }), contextStub);
-    expect(response.status).toBe(405);
-    expect(JSON.parse(response.body)).toMatchObject({
-      success: false,
-      message: 'Method GET not allowed',
-    });
-  });
-
   it('returns 401 when authorization is missing', async () => {
-    const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
-    const response = await submitAppealRoute(httpReqMock({ method: 'POST' }), contextStub);
+    const handler = flagContentHandler as jest.MockedFunction<typeof flagContentHandler>;
+    const response = await flagContentRoute(httpReqMock({ method: 'POST' }), contextStub);
     expect(handler).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
     expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
   it('delegates to handler for authorized requests', async () => {
-    const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
-    handler.mockResolvedValueOnce({ status: 201, jsonBody: { id: 'appeal-1' } });
+    const handler = flagContentHandler as jest.MockedFunction<typeof flagContentHandler>;
+    handler.mockResolvedValueOnce({ status: 204 });
 
-    const request = authorizedRequest({ reason: 'please review' });
-    const response = await submitAppealRoute(request, contextStub);
+    const request = authorizedRequest({ reason: 'spam' });
+    const response = await flagContentRoute(request, contextStub);
     expect(handler).toHaveBeenCalledWith({
       request,
       context: contextStub,
       userId: 'moderator-1',
     });
-    expect(response.status).toBe(201);
-    expect(response.jsonBody).toEqual({ id: 'appeal-1' });
+    expect(response.status).toBe(204);
   });
 
   it('returns 500 when handler throws', async () => {
-    const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
-    handler.mockRejectedValueOnce(new Error('database down'));
+    const handler = flagContentHandler as jest.MockedFunction<typeof flagContentHandler>;
+    handler.mockRejectedValueOnce(new Error('cosmos down'));
 
-    const response = await submitAppealRoute(authorizedRequest({ reason: 'please review' }), contextStub);
+    const response = await flagContentRoute(authorizedRequest({ reason: 'spam' }), contextStub);
     expect(contextStub.log).toHaveBeenCalledWith(
-      'moderation.appeal.submit.error',
-      expect.objectContaining({ message: 'database down' })
+      'moderation.flag.error',
+      expect.objectContaining({ message: 'cosmos down' })
     );
     expect(response.status).toBe(500);
     expect(response.body).toBe(JSON.stringify({ error: 'internal' }));

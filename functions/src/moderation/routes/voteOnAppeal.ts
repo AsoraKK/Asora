@@ -1,7 +1,27 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
+
+const protectedVoteOnAppeal = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  try {
+    const appealId = req.params.appealId as string | undefined;
+    const { voteOnAppealHandler } = await import('@moderation/service/voteService');
+    return await voteOnAppealHandler({
+      request: req,
+      context,
+      userId: req.principal.sub,
+      claims: req.principal.claims,
+      appealId,
+    });
+  } catch (error) {
+    context.log('moderation.appeal.vote.error', { message: (error as Error).message });
+    return serverError();
+  }
+});
 
 export async function voteOnAppealRoute(
   req: HttpRequest,
@@ -12,30 +32,7 @@ export async function voteOnAppealRoute(
     return cors.response;
   }
 
-  const principal = parseAuth(req);
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
-
-  try {
-    // Azure Functions v4: params is an object, not a Map
-    const appealId = req.params.appealId as string | undefined;
-    
-    // Defer service import to avoid module-level initialization
-    const { voteOnAppealHandler } = await import('@moderation/service/voteService');
-    return await voteOnAppealHandler({
-      request: req,
-      context,
-      userId: principal.id,
-      claims: principal.claims,
-      appealId,
-    });
-  } catch (error) {
-    context.log('moderation.appeal.vote.error', error);
-    return serverError();
-  }
+  return protectedVoteOnAppeal(req, context);
 }
 
 app.http('moderation-vote-appeal', {

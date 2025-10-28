@@ -1,7 +1,20 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
+
+const protectedSubmitAppeal = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  try {
+    const { submitAppealHandler } = await import('@moderation/service/appealService');
+    return await submitAppealHandler({ request: req, context, userId: req.principal.sub });
+  } catch (error) {
+    context.log('moderation.appeal.submit.error', { message: (error as Error).message });
+    return serverError();
+  }
+});
 
 export async function submitAppealRoute(
   req: HttpRequest,
@@ -12,21 +25,7 @@ export async function submitAppealRoute(
     return cors.response;
   }
 
-  const principal = parseAuth(req);
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
-
-  try {
-    // Defer service import to avoid module-level initialization
-    const { submitAppealHandler } = await import('@moderation/service/appealService');
-    return await submitAppealHandler({ request: req, context, userId: principal.id });
-  } catch (error) {
-    context.log('moderation.appeal.submit.error', error);
-    return serverError();
-  }
+  return protectedSubmitAppeal(req, context);
 }
 
 app.http('moderation-submit-appeal', {

@@ -1,7 +1,20 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
+
+const protectedDeleteUser = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  try {
+    const { deleteUserHandler } = await import('@privacy/service/deleteService');
+    return await deleteUserHandler({ request: req, context, userId: req.principal.sub });
+  } catch (error) {
+    context.log('privacy.delete.error', { message: (error as Error).message });
+    return serverError();
+  }
+});
 
 export async function deleteUserRoute(
   req: HttpRequest,
@@ -11,22 +24,7 @@ export async function deleteUserRoute(
   if (cors.shouldReturn && cors.response) {
     return cors.response;
   }
-
-  const principal = parseAuth(req);
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
-
-  try {
-    // Defer service import to avoid module-level initialization
-    const { deleteUserHandler } = await import('@privacy/service/deleteService');
-    return await deleteUserHandler({ request: req, context, userId: principal.id });
-  } catch (error) {
-    context.log('privacy.delete.error', error);
-    return serverError();
-  }
+  return protectedDeleteUser(req, context);
 }
 
 app.http('privacy-delete-user', {

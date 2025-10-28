@@ -1,5 +1,4 @@
 import type { InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
 
 import { voteOnAppealRoute } from '@moderation/routes/voteOnAppeal';
 import { voteOnAppealHandler } from '@moderation/service/voteService';
@@ -9,19 +8,22 @@ jest.mock('@moderation/service/voteService', () => ({
   voteOnAppealHandler: jest.fn(),
 }));
 
-const originalSecret = process.env.JWT_SECRET;
-const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
 
-function token() {
-  return jwt.sign({ sub: 'moderator-2', roles: ['moderator'] }, process.env.JWT_SECRET!, {
-    algorithm: 'HS256',
-  });
-}
+const { AuthError } = jest.requireActual('@auth/verifyJwt');
+const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
+const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 
 function authorizedRequest(body?: unknown) {
   return httpReqMock({
     method: 'POST',
-    headers: { authorization: `Bearer ${token()}` },
+    headers: { authorization: 'Bearer valid-token' },
     params: { appealId: 'appeal-42' },
     body,
   });
@@ -29,13 +31,17 @@ function authorizedRequest(body?: unknown) {
 
 describe('voteOnAppeal route', () => {
   beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret';
     jest.clearAllMocks();
     contextStub.log = jest.fn();
-  });
-
-  afterAll(() => {
-    process.env.JWT_SECRET = originalSecret;
+    verifyMock.mockImplementation(async header => {
+      if (!header) {
+        throw new AuthError('invalid_request', 'Authorization header missing');
+      }
+      if (header.includes('invalid')) {
+        throw new AuthError('invalid_token', 'Unable to validate token');
+      }
+      return { kind: 'user', sub: 'moderator-2', claims: { roles: ['moderator'] } } as any;
+    });
   });
 
   it('returns CORS response for OPTIONS', async () => {
@@ -58,7 +64,7 @@ describe('voteOnAppeal route', () => {
     const response = await voteOnAppealRoute(httpReqMock({ method: 'POST' }), contextStub);
     expect(handler).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
-    expect(response.body).toBe(JSON.stringify({ error: 'unauthorized' }));
+    expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
   it('delegates to handler with parsed parameters', async () => {
@@ -86,7 +92,10 @@ describe('voteOnAppeal route', () => {
       authorizedRequest({ vote: 'approve', reason: 'valid reason', confidence: 7 }),
       contextStub
     );
-    expect(contextStub.log).toHaveBeenCalledWith('moderation.appeal.vote.error', expect.any(Error));
+    expect(contextStub.log).toHaveBeenCalledWith(
+      'moderation.appeal.vote.error',
+      expect.objectContaining({ message: 'cosmos down' })
+    );
     expect(response.status).toBe(500);
     expect(response.body).toBe(JSON.stringify({ error: 'internal' }));
   });
