@@ -1,5 +1,4 @@
 import type { InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
 
 import { exportUserRoute } from '@privacy/routes/exportUser';
 import { exportUserHandler } from '@privacy/service/exportService';
@@ -9,29 +8,38 @@ jest.mock('@privacy/service/exportService', () => ({
   exportUserHandler: jest.fn(),
 }));
 
-const originalSecret = process.env.JWT_SECRET;
-const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
 
-function token() {
-  return jwt.sign({ sub: 'user-321' }, process.env.JWT_SECRET!, { algorithm: 'HS256' });
-}
+const { AuthError } = jest.requireActual('@auth/verifyJwt');
+const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
+const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 
 function authorizedRequest() {
   return httpReqMock({
     method: 'GET',
-    headers: { authorization: `Bearer ${token()}` },
+    headers: { authorization: 'Bearer valid-token' },
   });
 }
 
 describe('exportUser route', () => {
   beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret';
     jest.clearAllMocks();
     contextStub.log = jest.fn();
-  });
-
-  afterAll(() => {
-    process.env.JWT_SECRET = originalSecret;
+    verifyMock.mockImplementation(async header => {
+      if (!header) {
+        throw new AuthError('invalid_request', 'Authorization header missing');
+      }
+      if (header.includes('invalid')) {
+        throw new AuthError('invalid_token', 'Unable to validate token');
+      }
+      return { kind: 'user', sub: 'user-321', claims: {} } as any;
+    });
   });
 
   it('returns CORS response for OPTIONS', async () => {
@@ -54,7 +62,7 @@ describe('exportUser route', () => {
     const response = await exportUserRoute(httpReqMock({ method: 'GET' }), contextStub);
     expect(handler).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
-    expect(response.body).toBe(JSON.stringify({ error: 'unauthorized' }));
+    expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
   it('delegates to handler for authorized requests', async () => {
@@ -77,7 +85,10 @@ describe('exportUser route', () => {
     handler.mockRejectedValueOnce(new Error('queue offline'));
 
     const response = await exportUserRoute(authorizedRequest(), contextStub);
-    expect(contextStub.log).toHaveBeenCalledWith('privacy.export.error', expect.any(Error));
+    expect(contextStub.log).toHaveBeenCalledWith(
+      'privacy.export.error',
+      expect.objectContaining({ message: 'queue offline' })
+    );
     expect(response.status).toBe(500);
     expect(response.body).toBe(JSON.stringify({ error: 'internal' }));
   });

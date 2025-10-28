@@ -14,7 +14,7 @@
  */
 
 import { InvocationContext } from '@azure/functions';
-import { configureTokenVerifier, JWTPayload } from '../../shared/auth-utils';
+import { configureTokenVerifier, JWTPayload, verifyJWT } from '../../shared/auth-utils';
 import { exportUserRoute } from '@privacy/routes/exportUser';
 import { deleteUserRoute } from '@privacy/routes/deleteUser';
 import { httpReqMock } from '../helpers/http';
@@ -56,35 +56,32 @@ function configureTestVerifier() {
 }
 
 // Mock auth middleware to accept test tokens
-jest.mock('@shared/middleware/auth', () => {
-  const actual = jest.requireActual('@shared/middleware/auth');
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  const verifyAuthorizationHeader = jest.fn(async (header: string | null | undefined) => {
+    const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if (!token) {
+      throw new actual.AuthError('invalid_request', 'Authorization header missing');
+    }
+
+    try {
+      const payload = await verifyJWT(token);
+      return { kind: 'user', sub: payload.sub, claims: payload } as any;
+    } catch (error) {
+      throw new actual.AuthError('invalid_token', (error as Error).message);
+    }
+  });
+
   return {
     ...actual,
-    parseAuth: (req: any) => {
-      const hdr = req.headers.get('authorization') ?? '';
-      const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : '';
-      
-      if (!token || token === 'invalid-token') {
-        return { kind: 'guest' };
-      }
-
+    verifyAuthorizationHeader,
+    tryGetPrincipal: jest.fn(async (header: string | null | undefined) => {
       try {
-        const parts = token.split('.');
-        if (parts.length < 2) return { kind: 'guest' };
-        
-        const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
-        const payload = JSON.parse(payloadJson);
-        
-        if (!payload.sub) return { kind: 'guest' };
-        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-          return { kind: 'guest' };
-        }
-        
-        return { kind: 'user', id: payload.sub, claims: payload };
+        return await verifyAuthorizationHeader(header);
       } catch {
-        return { kind: 'guest' };
+        return null;
       }
-    },
+    }),
   };
 });
 
@@ -188,7 +185,7 @@ describe('Privacy Service - Data Export', () => {
 
     expect(response.status).toBe(401);
     const body = JSON.parse(response.body as string);
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe('invalid_request');
   });
 
   test('should return 401 for invalid JWT token', async () => {
@@ -201,7 +198,7 @@ describe('Privacy Service - Data Export', () => {
 
     expect(response.status).toBe(401);
     const body = JSON.parse(response.body as string);
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe('invalid_token');
   });
 
   test('should return 401 for expired JWT token', async () => {
@@ -222,7 +219,7 @@ describe('Privacy Service - Data Export', () => {
 
     expect(response.status).toBe(401);
     const body = JSON.parse(response.body as string);
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe('invalid_token');
   });
 
   test('should export user data for valid JWT token', async () => {
@@ -311,7 +308,7 @@ describe('Privacy Service - Account Deletion', () => {
 
     expect(response.status).toBe(401);
     const body = JSON.parse(response.body as string);
-    expect(body.error).toBe("unauthorized");
+    expect(body.error).toBe('invalid_request');
   });
 
   test('should return 400 for missing confirmation header', async () => {

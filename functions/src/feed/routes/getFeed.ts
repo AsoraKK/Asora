@@ -5,18 +5,18 @@ import { ok, serverError } from '@shared/utils/http';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const principal = parseAuth(req);
-    
+    const principal = await parseAuth(req);
+
     // Defer service import to avoid module-level initialization
     const { getFeed: getFeedService } = await import('@feed/service/feedService');
-    const result = await getFeedService({ principal, context });
+    const result = await getFeedService({ principal: principal ?? null, context });
 
     const response = ok(result.body);
     response.headers = {
       ...response.headers,
       ...result.headers,
       Vary: 'Authorization',
-      'Cache-Control': principal.kind === 'user' ? 'private, no-store' : 'public, max-age=60',
+      'Cache-Control': principal ? 'private, no-store' : 'public, max-age=60',
     };
     return response;
   } catch (error) {

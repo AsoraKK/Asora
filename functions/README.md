@@ -20,7 +20,7 @@ functions/
 │   │   ├── routes/         # GDPR export/deletion workflows
 │   │   └── service/        # Multi-container data scrubbing
 │   └── shared/
-│       ├── middleware/     # `parseAuth`, `authRequired`, `guestOnly`
+│       ├── middleware/     # JWT verification helpers + requireAuth guard
 │       ├── utils/          # HTTP helpers, validation, error types
 │       └── clients/        # Cosmos, Redis, Hive, Postgres connectors
 └── tests/                  # Module-aligned Jest suites
@@ -53,8 +53,9 @@ Create `local.settings.json` with at least `JWT_SECRET`, `COSMOS_CONNECTION_STRI
 
 ## Middleware & Responses
 
-- `parseAuth(req)` inspects the `Authorization` header. It supports RS256 (`JWT_PUBLIC_KEY`) and HS256 (`JWT_SECRET`) tokens and returns a `Principal` describing the caller, including decoded claims for role checks.
-- `authRequired(principal)` and `guestOnly(principal)` gate endpoints at the top of every route. Azure `authLevel` remains `anonymous`; we enforce JWTs ourselves.
+- `parseAuth(req)` asynchronously inspects the `Authorization` header and returns a `Principal` when the bearer token is valid. Missing or invalid headers yield `null` so public endpoints can stay cache friendly.
+- `requireAuth(handler)` wraps Azure Functions HTTP handlers. It verifies the B2C access token, attaches `principal` to `context.bindingData` and the request object, and returns a 401 with a `WWW-Authenticate` header when validation fails.
+- `authRequired(principal)` remains available for legacy code paths that already pulled a principal via `parseAuth`.
 - `@shared/utils/http` exposes typed helpers (`ok`, `created`, `badRequest`, `serverError`, …) so routes always return a serialised JSON body with consistent headers.
 
 ## HTTP Surface
@@ -90,7 +91,7 @@ npx jest tests/feed/createPost.route.test.ts
 
 Minimum coverage expectations include:
 
-- Middleware behaviour (`parseAuth`, `authRequired`).
+- Middleware behaviour (`parseAuth`, `requireAuth`).
 - Feed service Redis integration and rate limiting.
 - Route-level guards returning 401/403 when principals are missing.
 
@@ -99,3 +100,11 @@ Minimum coverage expectations include:
 - When introducing new modules, update `tsconfig.json`, Jest `moduleNameMapper`, and ESLint `settings.import/resolver` so alias imports continue to work.
 - Keep heavy business logic in `service/` files; routes should stay focused on HTTP parsing and response shaping. This keeps services reusable from timers or future queue triggers.
 - Shared infrastructure (Cosmos clients, Redis connectors, schema validation helpers) belongs under `src/shared/` to avoid duplication.
+
+## Azure AD B2C configuration
+
+1. Open the discovery document for your user flow or custom policy at:
+   `https://{tenant}.b2clogin.com/{tenant}.onmicrosoft.com/{policy}/v2.0/.well-known/openid-configuration`.
+2. Copy the exact `issuer` field into `B2C_EXPECTED_ISSUER`.
+3. Use the Application (client) ID or App ID URI of this API registration for `B2C_EXPECTED_AUDIENCE`.
+4. Set `B2C_TENANT`, `B2C_POLICY`, `B2C_ALLOWED_ALGS`, `AUTH_CACHE_TTL_SECONDS`, `AUTH_MAX_SKEW_SECONDS`, and `B2C_STRICT_ISSUER_MATCH` in your environment configuration. The cache TTL controls discovery/JWKS refreshes; max skew tolerates small clock drift during expiry validation.

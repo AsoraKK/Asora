@@ -1,5 +1,4 @@
 import type { InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
 
 import { userInfoRoute } from '@auth/routes/userinfo';
 import { userInfoHandler } from '@auth/service/userinfoService';
@@ -9,28 +8,37 @@ jest.mock('@auth/service/userinfoService', () => ({
   userInfoHandler: jest.fn(),
 }));
 
-const originalSecret = process.env.JWT_SECRET;
-const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
 
-function token() {
-  return jwt.sign({ sub: 'user-456' }, process.env.JWT_SECRET!, { algorithm: 'HS256' });
-}
+const { AuthError } = jest.requireActual('@auth/verifyJwt');
+const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
+const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 
 function authenticatedRequest(method = 'GET') {
   return httpReqMock({
     method,
-    headers: { authorization: `Bearer ${token()}` },
+    headers: { authorization: 'Bearer valid-token' },
   });
 }
 
 describe('userinfo route', () => {
   beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret';
     jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    process.env.JWT_SECRET = originalSecret;
+    verifyMock.mockImplementation(async header => {
+      if (!header) {
+        throw new AuthError('invalid_request', 'Authorization header missing');
+      }
+      if (header.includes('invalid')) {
+        throw new AuthError('invalid_token', 'Unable to validate token');
+      }
+      return { kind: 'user', sub: 'user-456', claims: {} } as any;
+    });
   });
 
   it('returns CORS response for OPTIONS', async () => {
@@ -53,7 +61,7 @@ describe('userinfo route', () => {
     const response = await userInfoRoute(httpReqMock({ method: 'GET' }), contextStub);
     expect(handler).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
-    expect(response.body).toBe(JSON.stringify({ error: 'unauthorized' }));
+    expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
   it('delegates to handler for authorized users', async () => {

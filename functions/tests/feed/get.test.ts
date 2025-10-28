@@ -1,6 +1,4 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
-
 import { getFeed } from '@feed/routes/getFeed';
 import * as redisClient from '@shared/clients/redis';
 
@@ -9,9 +7,20 @@ jest.mock('@shared/clients/redis', () => ({
   withRedis: jest.fn(),
 }));
 
-const mockedRedis = redisClient as jest.Mocked<typeof redisClient>;
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    tryGetPrincipal: jest.fn(async (header: string | null | undefined) => {
+      if (!header) {
+        return null;
+      }
+      return { kind: 'user', sub: 'user-1', claims: {} } as any;
+    }),
+  };
+});
 
-const originalSecret = process.env.JWT_SECRET;
+const mockedRedis = redisClient as jest.Mocked<typeof redisClient>;
 
 // Mock the InvocationContext
 const mockContext = {
@@ -48,10 +57,6 @@ const mockRequest = {
 } as unknown as HttpRequest;
 
 describe('Feed GET Handler', () => {
-  beforeAll(() => {
-    process.env.JWT_SECRET = 'test-secret';
-  });
-
   beforeEach(() => {
     mockedRedis.isRedisEnabled.mockReturnValue(false);
     mockedRedis.withRedis.mockResolvedValue(null as any);
@@ -59,10 +64,6 @@ describe('Feed GET Handler', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    process.env.JWT_SECRET = originalSecret;
   });
 
   it('should return 200 with feed data structure', async () => {
@@ -149,10 +150,9 @@ describe('Feed GET Handler', () => {
   });
 
   it('should use private cache headers when Authorization header is present', async () => {
-    const token = jwt.sign({ sub: 'user-1' }, process.env.JWT_SECRET!, { algorithm: 'HS256' });
     const authRequest = {
       ...mockRequest,
-      headers: new Headers({ authorization: `Bearer ${token}` }),
+      headers: new Headers({ authorization: 'Bearer valid-token' }),
     } as unknown as HttpRequest;
 
     const response = await getFeed(authRequest, mockContext);

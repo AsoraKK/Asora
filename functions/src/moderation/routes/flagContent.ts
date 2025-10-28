@@ -1,7 +1,20 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { handleCorsAndMethod, unauthorized, serverError } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
+
+const protectedFlagContent = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  try {
+    const { flagContentHandler } = await import('@moderation/service/flagService');
+    return await flagContentHandler({ request: req, context, userId: req.principal.sub });
+  } catch (error) {
+    context.log('moderation.flag.error', { message: (error as Error).message });
+    return serverError();
+  }
+});
 
 export async function flagContentRoute(
   req: HttpRequest,
@@ -12,21 +25,7 @@ export async function flagContentRoute(
     return cors.response;
   }
 
-  const principal = parseAuth(req);
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
-
-  try {
-    // Defer service import to avoid module-level initialization
-    const { flagContentHandler } = await import('@moderation/service/flagService');
-    return await flagContentHandler({ request: req, context, userId: principal.id });
-  } catch (error) {
-    context.log('moderation.flag.error', error);
-    return serverError();
-  }
+  return protectedFlagContent(req, context);
 }
 
 app.http('moderation-flag-content', {

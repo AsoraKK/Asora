@@ -1,7 +1,15 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { handleCorsAndMethod, unauthorized } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { handleCorsAndMethod } from '@shared/utils/http';
+
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
+
+const protectedUserInfo = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  const { userInfoHandler } = await import('@auth/service/userinfoService');
+  return userInfoHandler(req, context);
+});
 
 export async function userInfoRoute(
   req: HttpRequest,
@@ -12,16 +20,7 @@ export async function userInfoRoute(
     return cors.response;
   }
 
-  const principal = parseAuth(req);
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
-
-  // Defer service import to avoid module-level initialization
-  const { userInfoHandler } = await import('@auth/service/userinfoService');
-  return userInfoHandler(req, context);
+  return protectedUserInfo(req, context);
 }
 
 app.http('auth-userinfo', {

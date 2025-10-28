@@ -1,5 +1,4 @@
 import type { HttpRequest, InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
 
 import { HttpError } from '@shared/utils/errors';
 import { createPost as createPostRoute } from '@feed/routes/createPost';
@@ -10,49 +9,55 @@ jest.mock('@feed/service/feedService', () => ({
   createPost: jest.fn(),
 }));
 
-const originalSecret = process.env.JWT_SECRET;
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
+
+const { AuthError } = jest.requireActual('@auth/verifyJwt');
+const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 
 function guestRequest(): HttpRequest {
   return httpReqMock({ method: 'POST' });
 }
 
-function userToken(overrides: Record<string, unknown> = {}) {
-  return jwt.sign({ sub: 'user-123', ...overrides }, process.env.JWT_SECRET!, {
-    algorithm: 'HS256',
-  });
-}
-
 function userRequest(body?: unknown): HttpRequest {
-  const token = userToken();
   return httpReqMock({
     method: 'POST',
-    headers: { authorization: `Bearer ${token}` },
+    headers: { authorization: 'Bearer valid-token' },
     body,
   });
 }
 
 describe('createPost route', () => {
   beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret';
     contextStub.log = jest.fn();
     jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    process.env.JWT_SECRET = originalSecret;
+    verifyMock.mockImplementation(async header => {
+      if (!header) {
+        throw new AuthError('invalid_request', 'Authorization header missing');
+      }
+      if (header.includes('invalid')) {
+        throw new AuthError('invalid_token', 'Unable to validate token');
+      }
+      return { kind: 'user', sub: 'user-123', claims: {} } as any;
+    });
   });
 
   it('returns 401 for guest principal', async () => {
     const response = await createPostRoute(guestRequest(), contextStub);
     expect(response.status).toBe(401);
-    expect(response.body).toBe(JSON.stringify({ error: 'unauthorized' }));
+    expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
   it('returns 400 when JSON body is invalid', async () => {
     const request = guestRequest();
     Object.assign(request, {
-      headers: new Map([['authorization', `Bearer ${userToken()}`]]),
+      headers: new Map([['authorization', 'Bearer valid-token']]),
       json: jest.fn().mockRejectedValue(new Error('bad json')),
     });
 
@@ -81,7 +86,10 @@ describe('createPost route', () => {
     service.mockRejectedValueOnce(new Error('boom'));
 
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
-    expect(contextStub.log).toHaveBeenCalledWith('posts.create.error', expect.any(Error));
+    expect(contextStub.log).toHaveBeenCalledWith(
+      'posts.create.error',
+      expect.objectContaining({ message: 'boom' })
+    );
     expect(response.status).toBe(500);
     expect(response.body).toBe(JSON.stringify({ error: 'internal' }));
   });
@@ -95,7 +103,7 @@ describe('createPost route', () => {
 
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
     expect(service).toHaveBeenCalledWith({
-      principal: expect.objectContaining({ kind: 'user', id: 'user-123' }),
+      principal: expect.objectContaining({ kind: 'user', sub: 'user-123' }),
       payload: { text: 'hello world' },
       context: contextStub,
     });

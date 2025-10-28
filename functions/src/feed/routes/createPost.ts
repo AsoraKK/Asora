@@ -1,19 +1,16 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { authRequired, parseAuth } from '@shared/middleware/auth';
-import { badRequest, created, serverError, unauthorized } from '@shared/utils/http';
+import { requireAuth } from '@shared/middleware/auth';
+import type { Principal } from '@shared/middleware/auth';
+import { badRequest, created, serverError } from '@shared/utils/http';
 import { HttpError } from '@shared/utils/errors';
 
 import type { CreatePostBody } from '@feed/types';
 
-export async function createPost(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-  const principal = parseAuth(req);
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
-  try {
-    authRequired(principal);
-  } catch {
-    return unauthorized();
-  }
+export const createPost = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+  const principal = req.principal;
 
   const payload = (await req.json().catch(() => null)) as CreatePostBody | null;
   if (!payload || typeof payload !== 'object') {
@@ -43,10 +40,10 @@ export async function createPost(req: HttpRequest, context: InvocationContext): 
       };
     }
 
-    context.log('posts.create.error', error);
+    context.log('posts.create.error', { message: (error as Error).message });
     return serverError();
   }
-}
+});
 
 app.http('createPost', {
   methods: ['POST'],

@@ -68,7 +68,7 @@ describe('Moderation System Tests', () => {
       const response = await flagContent(mockRequest, mockContext);
       expect(response.status).toBe(401);
       const body = JSON.parse(response.body as string);
-      expect(body.error).toBe('unauthorized');
+      expect(body.error).toBe('invalid_request');
     });
 
     it('should validate required fields', async () => {
