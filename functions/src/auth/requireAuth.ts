@@ -23,19 +23,21 @@ export function requireAuth(handler: ProtectedHandler): (
   context: InvocationContext,
 ) => Promise<HttpResponseInit> {
   return async (req, context) => {
+    const header = req.headers.get('authorization');
+
+    let principal: Principal;
     try {
-      const header = req.headers.get('authorization');
-      const principal = await verifyAuthorizationHeader(header);
-
-      (req as HttpRequest & { principal: Principal }).principal = principal;
-      context.bindingData = { ...(context.bindingData ?? {}), principal };
-
-      return await handler(req as HttpRequest & { principal: Principal }, context);
+      principal = await verifyAuthorizationHeader(header);
     } catch (error) {
       const authError =
         error instanceof AuthError ? error : new AuthError('invalid_token', 'Unable to validate token');
       context.log('auth.requireAuth.denied', { code: authError.code, message: authError.message });
       return buildUnauthorizedResponse(authError);
     }
+
+    (req as HttpRequest & { principal: Principal }).principal = principal;
+    context.bindingData = { ...(context.bindingData ?? {}), principal };
+
+    return await handler(req as HttpRequest & { principal: Principal }, context);
   };
 }
