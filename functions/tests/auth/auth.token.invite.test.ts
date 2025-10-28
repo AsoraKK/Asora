@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { tokenRoute as tokenHandler } from '@auth/routes/token';
 

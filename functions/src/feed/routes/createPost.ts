@@ -1,4 +1,4 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { app, HttpRequest, InvocationContext } from '@azure/functions';
 
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';

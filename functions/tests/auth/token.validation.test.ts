@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 // Mock cosmos to avoid parsing real connection string at import time
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';

@@ -7,7 +7,15 @@
     "lib": ["ES2020"],
     "module": "commonjs",
     "target": "ES2020",
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@auth/*": ["src/auth/*"],
+      "@feed/*": ["src/feed/*"],
+      "@moderation/*": ["src/moderation/*"],
+      "@privacy/*": ["src/privacy/*"]
+    }
   },
   "include": ["src/**/*.ts", "tests/**/*.test.ts", "tests/**/__tests__/**/*.ts"]
 }

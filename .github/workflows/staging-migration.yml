@@ -11,14 +11,34 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_OPTIONS: --max-old-space-size=1024
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_KEY_VAULT_NAME: kv-asora-dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          node-version: '20'
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch secrets from Key Vault
+        run: |
+          set -euo pipefail
+          : "${AZURE_KEY_VAULT_NAME:?AZURE_KEY_VAULT_NAME not set}"
+          az keyvault show --name "$AZURE_KEY_VAULT_NAME" >/dev/null
+          POSTGRES_CONN=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name PostgresConnectionString --query value -o tsv)
+          COSMOS_CONN=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name CosmosConnectionString --query value -o tsv)
+          COSMOS_DB=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name CosmosDatabaseName --query value -o tsv)
+          {
+            echo "POSTGRES_CONN=$POSTGRES_CONN"
+            echo "COSMOS_CONNECTION_STRING=$COSMOS_CONN"
+            echo "COSMOS_DATABASE_NAME=$COSMOS_DB"
+          } >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: |
@@ -26,23 +46,23 @@ jobs:
 
       - name: Apply schema
         env:
-          POSTGRES_CONN: ${{ secrets.POSTGRES_CONN }}
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
         run: |
           npm run apply:schema
 
       - name: Run migration (dry-run)
         env:
-          POSTGRES_CONN: ${{ secrets.POSTGRES_CONN }}
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: ${{ secrets.COSMOS_DATABASE_NAME }}
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
+          COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: ${{ env.COSMOS_DATABASE_NAME }}
         run: |
           npm run migrate:profiles
 
       - name: Reconcile profiles
         env:
-          POSTGRES_CONN: ${{ secrets.POSTGRES_CONN }}
-          COSMOS_CONNECTION_STRING: ${{ secrets.COSMOS_CONNECTION_STRING }}
-          COSMOS_DATABASE_NAME: ${{ secrets.COSMOS_DATABASE_NAME }}
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
+          COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: ${{ env.COSMOS_DATABASE_NAME }}
         run: |
           npm run reconcile:profiles
 

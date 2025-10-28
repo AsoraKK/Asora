@@ -11,7 +11,7 @@
     "test:unit": "jest --config jest.config.ts --coverage",
     "test:feed": "vitest --config feed/vitest.config.ts --coverage",
     "test:with-no-tests": "jest --config jest.config.ts --passWithNoTests",
-    "build": "tsc && tsc-alias && node scripts/write-dist-entry.cjs",
+    "build": "rimraf dist && tsc && tsc-alias && node scripts/write-dist-entry.cjs",
     "compile": "tsc",
     "postcompile": "node scripts/write-dist-entry.cjs",
     "copy-functions": "copyfiles -u 0 -e \"node_modules/**\" -e \"__tests__/**\" -e \"dist/**\" \"host.json\" \"package.json\" dist/",

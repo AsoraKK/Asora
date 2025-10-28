@@ -45,6 +45,40 @@ jobs:
           set -euo pipefail
           ./bin/actionlint -color
 
+  openapi_lint:
+    name: Lint OpenAPI spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Lint OpenAPI spec
+        run: npm run openapi:lint
+
+      - name: Bundle OpenAPI spec
+        run: npm run openapi:bundle
+
+      - name: Upload bundled spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: api/openapi/dist/openapi.json
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run gitleaks
+        run: scripts/secret-scan.sh
+
   verify-secrets:
     name: Verify required secrets
     runs-on: ubuntu-latest

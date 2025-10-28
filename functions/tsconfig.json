@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
-    "rootDir": ".",
+        "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,13 +15,13 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["shared/*"],
-      "@auth/*": ["auth/*"],
-      "@feed/*": ["feed/*"],
-      "@moderation/*": ["moderation/*"],
-      "@privacy/*": ["privacy/*"]
+      "@shared/*": ["src/shared/*"],
+      "@auth/*": ["src/auth/*"],
+      "@feed/*": ["src/feed/*"],
+      "@moderation/*": ["src/moderation/*"],
+      "@privacy/*": ["src/privacy/*"]
     },
     "plugins": [
       {
