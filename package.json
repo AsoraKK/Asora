@@ -16,7 +16,7 @@
     "verify:routes": "node functions/dev/verify-routes.js",
     "openapi:lint": "redocly lint api/openapi/openapi.yaml",
     "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
-    "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora",
+  "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora,hideGenerationTimestamp=true",
     "openapi:docs": "redoc-cli bundle api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
     "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
     "k6:smoke": "K6_BASE_URL=${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net} K6_SMOKE_TOKEN=$K6_SMOKE_TOKEN k6 run load/k6/smoke.js",

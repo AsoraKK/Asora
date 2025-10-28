@@ -10,6 +10,8 @@ if ! npm run openapi:bundle; then
   echo "❌ OpenAPI bundle failed"; exit 1; fi
 if ! npm run openapi:gen:dart; then
   echo "❌ Dart client generation failed"; exit 1; fi
+# Ensure regenerated client files are staged in this commit
+git add -A lib/generated/api_client || true
 echo "✅ OpenAPI validation passed"
 
 # Check Dart formatting (Flutter app) - after client regeneration

@@ -96,10 +96,18 @@ jobs:
             import json,sys,os
             cfg=json.loads(os.environ.get("CUR","{}")) if os.environ.get("CUR") else {}
             if not isinstance(cfg,dict): cfg={}
-            cfg.pop("deployment", None)         # do not use deployment.storage on Flex
-            cfg["runtime"]={"name":"node","version":"20"}
-            cfg["scaleAndConcurrency"]={"instanceMemoryMB":2048,"maximumInstanceCount":40}
-            print(json.dumps({"properties":{"functionAppConfig":cfg}}))
+            # Remove deployment entirely - Flex doesn't use deployment.storage
+            cfg.pop("deployment", None)
+            # Build clean config with only allowed Flex fields
+            clean_cfg = {
+              "runtime": {"name": "node", "version": "20"},
+              "scaleAndConcurrency": {"instanceMemoryMB": 2048, "maximumInstanceCount": 40}
+            }
+            # Preserve any other top-level keys except deployment
+            for k in cfg:
+              if k not in ("deployment", "runtime", "scaleAndConcurrency"):
+                clean_cfg[k] = cfg[k]
+            print(json.dumps({"properties": {"functionAppConfig": clean_cfg}}))
             PY
             az rest --method patch \
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
