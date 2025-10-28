@@ -1,3 +1,33 @@
+Asora Backend – quick reference
+===============================
+
+This repo contains the Asora Flutter app and Azure Functions backend. For the full backend docs, see `functions/README.md`.
+
+Protected vs Public routes
+--------------------------
+
+| Route                          | Method | Access    | Module      |
+| ------------------------------ | ------ | --------- | ----------- |
+| `/feed`                        | GET    | Public    | feed        |
+| `/health`                      | GET    | Public    | shared      |
+| `/auth/token`                  | POST   | Public    | auth        |
+| `/auth/authorize`              | GET    | Public    | auth        |
+| `/auth/userinfo`               | GET    | Protected | auth        |
+| `/post`                        | POST   | Protected | feed        |
+| `/moderation/flag`             | POST   | Protected | moderation  |
+| `/moderation/appeals`          | POST   | Protected | moderation  |
+| `/moderation/appeals/{id}/vote`| POST   | Protected | moderation  |
+| `/user/export`                 | GET    | Protected | privacy     |
+| `/user/delete`                 | DELETE | Protected | privacy     |
+
+Notes on local.settings.json and Azure Flex
+-------------------------------------------
+
+- `local.settings.json` is for local development only. Do not check in real secrets.
+- For Azure Functions Flex Consumption, do not set `FUNCTIONS_WORKER_RUNTIME` or `WEBSITE_NODE_DEFAULT_VERSION` in app settings. The runtime is configured via ARM on the app. Only set `FUNCTIONS_EXTENSION_VERSION=~4`.
+
+---
+
 actionlint
 ==========
 [![CI Status][ci-badge]][ci]
