@@ -27,8 +27,10 @@
       {
         "name": "@azure/functions"
       }
-    ]
+    ],
+    "types": ["@azure/functions"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/@azure", "./probe/node_modules/@azure", "./src/types"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*", "src/test-setup.ts"]
 }

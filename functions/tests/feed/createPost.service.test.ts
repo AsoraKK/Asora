@@ -11,7 +11,7 @@ jest.mock('@shared/clients/redis', () => ({
 
 const mockedRedis = redisClient as jest.Mocked<typeof redisClient>;
 
-const userPrincipal = { kind: 'user', id: 'user-123' } as const;
+const userPrincipal = { sub: 'user-123', raw: {} } as const;
 
 function mockContext(): InvocationContext {
   return {

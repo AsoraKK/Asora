@@ -22,7 +22,7 @@ function createRequest(header?: string): any {
 }
 
 function createContext(): any {
-  return { log: jest.fn(), bindingData: {} };
+  return { log: jest.fn(), principal: undefined };
 }
 
 describe('requireAuth', () => {
@@ -41,12 +41,12 @@ describe('requireAuth', () => {
   });
 
   it('attaches principal and invokes handler on success', async () => {
-    const principal = { kind: 'user', sub: 'user-123', claims: {} } as any;
+    const principal = { sub: 'user-123', raw: {} } as any;
     verifyMock.mockResolvedValue(principal);
 
     const handler = requireAuth(async (req, context) => {
       expect(req.principal).toBe(principal);
-      expect(context.bindingData.principal).toBe(principal);
+      expect(context.principal).toBe(principal);
       return { status: 200, body: { ok: true } };
     });
 

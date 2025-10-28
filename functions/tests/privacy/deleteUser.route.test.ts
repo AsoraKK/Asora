@@ -38,7 +38,7 @@ describe('deleteUser route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'user-789', claims: {} } as any;
+      return { sub: 'user-789', raw: {} } as any;
     });
   });
 

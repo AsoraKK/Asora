@@ -35,14 +35,14 @@ describe('shared auth middleware', () => {
   });
 
   it('parseAuth returns principal when available', async () => {
-    const principal = { kind: 'user', sub: 'abc', claims: {} } as any;
+    const principal = { sub: 'abc', raw: {} } as any;
     tryGetPrincipalMock.mockResolvedValue(principal);
     const result = await parseAuth(createRequest('Bearer token'));
     expect(result).toBe(principal);
   });
 
   it('getPrincipalOrThrow delegates to verifier', async () => {
-    const principal = { kind: 'user', sub: 'abc', claims: {} } as any;
+    const principal = { sub: 'abc', raw: {} } as any;
     verifyMock.mockResolvedValue(principal);
     const result = await getPrincipalOrThrow(createRequest('Bearer token'));
     expect(result).toBe(principal);

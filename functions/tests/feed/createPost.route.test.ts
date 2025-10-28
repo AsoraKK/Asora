@@ -44,7 +44,7 @@ describe('createPost route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'user-123', claims: {} } as any;
+      return { sub: 'user-123', raw: {} } as any;
     });
   });
 
@@ -103,7 +103,7 @@ describe('createPost route', () => {
 
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
     expect(service).toHaveBeenCalledWith({
-      principal: expect.objectContaining({ kind: 'user', sub: 'user-123' }),
+      principal: expect.objectContaining({ sub: 'user-123' }),
       payload: { text: 'hello world' },
       context: contextStub,
     });

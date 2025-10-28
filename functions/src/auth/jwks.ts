@@ -1,22 +1,15 @@
 import { fetch } from 'undici';
+import { JWK } from 'jose';
 
 import { getB2COpenIdConfig } from './b2cOpenIdConfig';
 import { getAuthConfig, SupportedAlgorithm } from './config';
 
-type JsonWebKey = {
-  kid?: string;
-  kty?: string;
-  alg?: string;
-  use?: string;
-  [key: string]: unknown;
-};
-
 type JwksResponse = {
-  keys: JsonWebKey[];
+  keys: JWK[];
 };
 
 type CachedJwks = {
-  keys: JsonWebKey[];
+  keys: JWK[];
   expiresAt: number;
 };
 
@@ -26,7 +19,7 @@ function isCacheValid(cache: CachedJwks | null): cache is CachedJwks {
   return Boolean(cache && cache.expiresAt > Date.now());
 }
 
-async function loadJwks(): Promise<JsonWebKey[]> {
+async function loadJwks(): Promise<JWK[]> {
   const { cacheTtlSeconds } = getAuthConfig();
   const { jwks_uri } = await getB2COpenIdConfig();
 
@@ -61,7 +54,7 @@ async function loadJwks(): Promise<JsonWebKey[]> {
   return keys;
 }
 
-async function getCachedKeys(): Promise<JsonWebKey[]> {
+async function getCachedKeys(): Promise<JWK[]> {
   if (isCacheValid(cachedJwks)) {
     return cachedJwks.keys;
   }
@@ -79,7 +72,7 @@ function validateAlgorithm(alg: string | undefined, allowed: SupportedAlgorithm[
   }
 }
 
-export async function getSigningKey(kid: string, headerAlg?: string): Promise<JsonWebKey> {
+export async function getJwkByKid(kid: string, headerAlg?: string): Promise<JWK> {
   if (!kid) {
     throw new Error('JWT header missing kid');
   }
@@ -97,7 +90,7 @@ export async function getSigningKey(kid: string, headerAlg?: string): Promise<Js
     throw new Error(`Unable to locate signing key for kid ${kid}`);
   }
 
-  validateAlgorithm((headerAlg ?? key.alg) as string | undefined, allowedAlgorithms);
+  validateAlgorithm((headerAlg ?? (typeof key.alg === 'string' ? key.alg : undefined)) as string | undefined, allowedAlgorithms);
 
   return key;
 }

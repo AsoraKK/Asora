@@ -1,6 +1,7 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { AuthError, Principal, verifyAuthorizationHeader } from './verifyJwt';
+import type { Principal } from '../types/azure';
+import { AuthError, verifyAuthorizationHeader } from './verifyJwt';
 
 type ProtectedHandler = (
   req: HttpRequest & { principal: Principal },
@@ -36,7 +37,7 @@ export function requireAuth(handler: ProtectedHandler): (
     }
 
     (req as HttpRequest & { principal: Principal }).principal = principal;
-    context.bindingData = { ...(context.bindingData ?? {}), principal };
+    context.principal = principal;
 
     return await handler(req as HttpRequest & { principal: Principal }, context);
   };

@@ -5,7 +5,7 @@ import { resetAuthConfigForTesting } from '@auth/config';
 import { tryGetPrincipal, verifyAuthorizationHeader } from '@auth/verifyJwt';
 
 jest.mock('@auth/jwks', () => ({
-  getSigningKey: jest.fn(),
+  getJwkByKid: jest.fn(),
 }));
 
 jest.mock('@auth/b2cOpenIdConfig', () => ({
@@ -16,7 +16,7 @@ jest.mock('@auth/b2cOpenIdConfig', () => ({
   }),
 }));
 
-const getSigningKeyMock = jest.mocked(require('@auth/jwks').getSigningKey);
+const getJwkByKidMock = jest.mocked(require('@auth/jwks').getJwkByKid);
 const getConfigMock = jest.mocked(require('@auth/b2cOpenIdConfig').getB2COpenIdConfig);
 
 const expectedIssuer = 'https://issuer/';
@@ -57,7 +57,7 @@ function setEnv(overrides: Record<string, string> = {}): void {
     ...overrides,
   });
   resetAuthConfigForTesting();
-  getSigningKeyMock.mockReset().mockResolvedValue(publicJwk);
+  getJwkByKidMock.mockReset().mockResolvedValue(publicJwk);
   getConfigMock.mockResolvedValue({
     issuer: expectedIssuer,
     jwks_uri: 'https://issuer/jwks',
@@ -87,7 +87,7 @@ describe('verifyAuthorizationHeader', () => {
 
     const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
     expect(principal.sub).toBe('user-123');
-    expect(principal.scopes).toContain('feed.read');
+    expect(principal.scp).toBe('feed.read');
   });
 
   it('throws invalid_signature when signature does not match', async () => {
@@ -95,12 +95,24 @@ describe('verifyAuthorizationHeader', () => {
     const wrongJwk = await exportJWK(wrongPublic);
     wrongJwk.kty = 'RSA';
     wrongJwk.kid = 'test-key';
-    getSigningKeyMock.mockResolvedValueOnce(wrongJwk);
+    getJwkByKidMock.mockResolvedValueOnce(wrongJwk);
 
     const token = await createToken({ sub: 'user-123' });
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_signature',
+    });
+  });
+
+  it('throws invalid_key when JWK lacks kty', async () => {
+    const jwkWithoutKty = { ...publicJwk };
+    delete jwkWithoutKty.kty;
+    getJwkByKidMock.mockResolvedValueOnce(jwkWithoutKty as any);
+
+    const token = await createToken({ sub: 'user-123' });
+
+    await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
+      code: 'invalid_key',
     });
   });
 
@@ -180,7 +192,7 @@ describe('tryGetPrincipal', () => {
   });
 
   it('returns null for invalid tokens without throwing', async () => {
-    getSigningKeyMock.mockImplementationOnce(() => {
+    getJwkByKidMock.mockImplementationOnce(() => {
       throw new Error('no key');
     });
 

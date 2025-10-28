@@ -14,7 +14,7 @@ const protectedVoteOnAppeal = requireAuth(async (req: AuthenticatedRequest, cont
       request: req,
       context,
       userId: req.principal.sub,
-      claims: req.principal.claims,
+      claims: req.principal.raw,
       appealId,
     });
   } catch (error) {
