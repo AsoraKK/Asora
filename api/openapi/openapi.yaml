@@ -74,9 +74,8 @@ paths:
                         type: integer
                         minimum: 0
                       nextCursor:
-                        type:
-                          - string
-                          - 'null'
+                        type: string
+                        nullable: true
                       timingsMs:
                         type: object
                         additionalProperties:
