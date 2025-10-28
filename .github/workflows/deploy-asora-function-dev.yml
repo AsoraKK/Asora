@@ -92,21 +92,40 @@ jobs:
           inlineScript: |
             set -euo pipefail
             CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json || echo "{}")
+            export CUR
             python3 - <<'PY' > body.json
-            import json,sys,os
-            cfg=json.loads(os.environ.get("CUR","{}")) if os.environ.get("CUR") else {}
-            if not isinstance(cfg,dict): cfg={}
-            # Remove deployment entirely - Flex doesn't use deployment.storage
-            cfg.pop("deployment", None)
-            # Build clean config with only allowed Flex fields
+            import json
+            import os
+
+            raw = os.environ.get("CUR", "{}")
+            try:
+              cfg = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+              cfg = {}
+            if not isinstance(cfg, dict):
+              cfg = {}
+
+            deployment = cfg.get("deployment")
+            deployment_valid = False
+            if isinstance(deployment, dict):
+              storage = deployment.get("storage")
+              if isinstance(storage, dict):
+                dtype = storage.get("type")
+                if isinstance(dtype, str) and dtype.strip():
+                  deployment_valid = True
+
             clean_cfg = {
               "runtime": {"name": "node", "version": "20"},
               "scaleAndConcurrency": {"instanceMemoryMB": 2048, "maximumInstanceCount": 40}
             }
-            # Preserve any other top-level keys except deployment
-            for k in cfg:
-              if k not in ("deployment", "runtime", "scaleAndConcurrency"):
-                clean_cfg[k] = cfg[k]
+
+            clean_cfg["deployment"] = deployment if deployment_valid else None
+
+            for key, value in cfg.items():
+              if key in ("deployment", "runtime", "scaleAndConcurrency"):
+                continue
+              clean_cfg[key] = value
+
             print(json.dumps({"properties": {"functionAppConfig": clean_cfg}}))
             PY
             az rest --method patch \
