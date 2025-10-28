@@ -66,7 +66,7 @@ jest.mock('@auth/verifyJwt', () => {
 
     try {
       const payload = await verifyJWT(token);
-      return { kind: 'user', sub: payload.sub, claims: payload } as any;
+      return { sub: payload.sub, raw: payload } as any;
     } catch (error) {
       throw new actual.AuthError('invalid_token', (error as Error).message);
     }

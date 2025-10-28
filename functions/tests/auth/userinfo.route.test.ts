@@ -37,7 +37,7 @@ describe('userinfo route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'user-456', claims: {} } as any;
+      return { sub: 'user-456', raw: {} } as any;
     });
   });
 

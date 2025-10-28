@@ -15,7 +15,7 @@ jest.mock('@auth/verifyJwt', () => {
       if (!header) {
         return null;
       }
-      return { kind: 'user', sub: 'user-1', claims: {} } as any;
+      return { sub: 'user-1', raw: {} } as any;
     }),
   };
 });

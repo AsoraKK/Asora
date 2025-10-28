@@ -39,7 +39,7 @@ describe('submitAppeal route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'moderator-1', claims: {} } as any;
+      return { sub: 'moderator-1', raw: {} } as any;
     });
   });
 

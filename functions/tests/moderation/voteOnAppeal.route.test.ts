@@ -40,7 +40,7 @@ describe('voteOnAppeal route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'moderator-2', claims: { roles: ['moderator'] } } as any;
+      return { sub: 'moderator-2', raw: { roles: ['moderator'] } } as any;
     });
   });
 

@@ -38,7 +38,7 @@ describe('exportUser route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { kind: 'user', sub: 'user-321', claims: {} } as any;
+      return { sub: 'user-321', raw: {} } as any;
     });
   });
 

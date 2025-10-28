@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 
 import { resetAuthConfigForTesting } from '@auth/config';
-import { getSigningKey, resetJwksCache } from '@auth/jwks';
+import { getJwkByKid, resetJwksCache } from '@auth/jwks';
 
 jest.mock('undici', () => ({
   fetch: jest.fn(),
@@ -52,10 +52,10 @@ describe('jwks', () => {
   it('fetches JWKS once and caches keys by kid', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ keys: [jwk] }) });
 
-    const key = await getSigningKey('key-1', 'RS256');
+    const key = await getJwkByKid('key-1', 'RS256');
     expect(key).toMatchObject(jwk);
 
-    const cached = await getSigningKey('key-1', 'RS256');
+    const cached = await getJwkByKid('key-1', 'RS256');
     expect(cached).toBe(key);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -65,7 +65,7 @@ describe('jwks', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ keys: [{ ...jwk, kid: 'other' }] }) })
       .mockResolvedValue({ ok: true, json: async () => ({ keys: [jwk] }) });
 
-    const key = await getSigningKey('key-1', 'RS256');
+    const key = await getJwkByKid('key-1', 'RS256');
     expect(key.kid).toBe('key-1');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -74,6 +74,6 @@ describe('jwks', () => {
     setEnv({ B2C_ALLOWED_ALGS: 'RS256' });
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ keys: [jwk] }) });
 
-    await expect(getSigningKey('key-1', 'RS512')).rejects.toThrow('Disallowed JWT signing algorithm');
+    await expect(getJwkByKid('key-1', 'RS512')).rejects.toThrow('Disallowed JWT signing algorithm');
   });
 });

@@ -8,6 +8,7 @@
  */
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { JWTPayload } from 'jose';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 
@@ -24,16 +25,16 @@ interface VoteOnAppealParams {
   request: HttpRequest;
   context: InvocationContext;
   userId: string;
-  claims?: Record<string, unknown>;
+  claims?: JWTPayload;
   appealId?: string;
 }
 
-function claimsHasRole(claims: Record<string, unknown> | undefined, role: string): boolean {
+function claimsHasRole(claims: JWTPayload | undefined, role: string): boolean {
   if (!claims) {
     return false;
   }
 
-  const roles = (claims as { roles?: unknown }).roles;
+  const roles = claims.roles as unknown;
   if (Array.isArray(roles)) {
     return roles.includes(role);
   }

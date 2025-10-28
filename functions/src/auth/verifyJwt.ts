@@ -1,9 +1,9 @@
-import type { JWTPayload } from 'jose';
-import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
+import { decodeProtectedHeader, importJWK, JWK, JWTPayload, jwtVerify } from 'jose';
 
 import { getB2COpenIdConfig } from './b2cOpenIdConfig';
 import { getAuthConfig } from './config';
-import { getSigningKey } from './jwks';
+import { getJwkByKid } from './jwks';
+import type { Principal as AzurePrincipal } from '../types/azure';
 
 export type AuthErrorCode =
   | 'invalid_request'
@@ -13,7 +13,8 @@ export type AuthErrorCode =
   | 'invalid_audience'
   | 'invalid_claim'
   | 'token_expired'
-  | 'token_not_yet_valid';
+  | 'token_not_yet_valid'
+  | 'invalid_key';
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode;
@@ -26,23 +27,11 @@ export class AuthError extends Error {
   }
 }
 
-export type Principal = {
-  kind: 'user';
-  sub: string;
-  name?: string;
-  email?: string;
-  scopes?: string[];
-  roles?: string[];
-  claims: JWTPayload;
-};
+export type Principal = AzurePrincipal;
 
-function extractScopes(payload: JWTPayload): string[] | undefined {
+function extractScpClaim(payload: JWTPayload): string | string[] | undefined {
   if (typeof payload.scp === 'string') {
-    const scopes = payload.scp
-      .split(' ')
-      .map(item => item.trim())
-      .filter(Boolean);
-    return scopes.length > 0 ? scopes : undefined;
+    return payload.scp;
   }
 
   if (Array.isArray(payload.scp)) {
@@ -192,12 +181,21 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
 
   try {
     const { expectedAudiences, expectedIssuer, maxClockSkewSeconds, allowedAlgorithms } = getAuthConfig();
-    const jwk = await getSigningKey(kid ?? '', headerAlg);
-    const algorithm = (headerAlg ?? (typeof jwk.alg === 'string' ? jwk.alg : allowedAlgorithms[0])) as string;
-    const keyLike = await importJWK(jwk, algorithm);
     const { issuer } = await getB2COpenIdConfig();
+    const jwk: JWK = await getJwkByKid(kid ?? '', headerAlg);
 
-    const verification = await jwtVerify(token, keyLike, {
+    if (!jwk.kty) {
+      throw new AuthError('invalid_key', 'JWK missing kty');
+    }
+
+    const algorithm = headerAlg ?? (typeof jwk.alg === 'string' ? jwk.alg : allowedAlgorithms[0]);
+    if (!algorithm) {
+      throw new AuthError('invalid_token', 'JWT algorithm missing');
+    }
+
+    const key = await importJWK(jwk, algorithm);
+
+    const verification = await jwtVerify(token, key, {
       issuer: expectedIssuer || issuer,
       audience: expectedAudiences,
       algorithms: allowedAlgorithms,
@@ -213,13 +211,12 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
     }
 
     const principal: Principal = {
-      kind: 'user',
       sub: payload.sub,
       name: typeof payload.name === 'string' ? payload.name : undefined,
       email: extractEmail(payload),
-      scopes: extractScopes(payload),
+      scp: extractScpClaim(payload),
       roles: extractRoles(payload),
-      claims: payload,
+      raw: payload,
     };
 
     return principal;
