@@ -23,6 +23,8 @@ require('./src/shared/routes/health');
 require('./src/feed/routes/getFeed');
 require('./src/feed/routes/createPost');
 require('./src/auth/routes/authorize');
+require('./src/auth/routes/getConfig');
+require('./src/auth/routes/ping');
 require('./src/auth/routes/token');
 require('./src/auth/routes/userinfo');
 require('./src/moderation/routes/flagContent');
