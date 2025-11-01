@@ -18,7 +18,7 @@ export type AuthConfig = {
   googleIdpHint?: string;
 };
 
-async function getAuthConfig(
+export async function getAuthConfig(
   _req: HttpRequest,
   context: InvocationContext,
 ): Promise<HttpResponseInit> {
