@@ -74,6 +74,6 @@ export async function getAuthConfig(
 app.http('auth-config', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'config/auth',
+  route: 'auth/b2c-config',
   handler: getAuthConfig,
 });
