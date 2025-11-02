@@ -46,21 +46,26 @@ az keyvault secret show --vault-name kv-asora-dev --name b2c-google-web-client-s
 
 ## Discovery Endpoints
 
-**CIAM format**: Tenant ID in path + policy as query parameter `?p=`
-
-### OpenID Configuration
+### Tenant-Level OpenID Configuration
 ```
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/v2.0/.well-known/openid-configuration
 ```
+Returns issuer: `https://387719ab-0415-46be-9e8f-b2d988cef70a.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/v2.0`
 
 ### Authorization Endpoint
 ```
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/authorize
+```
+**Note**: Uses tenant NAME in path. Append query params: `?client_id=...&redirect_uri=...&response_type=...&scope=...`
+
+### Token Endpoint  
+```
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/token
 ```
 
-### Token Endpoint
+### JWKS URI
 ```
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/token
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/discovery/v2.0/keys
 ```
 
 ## Key Vault Secrets (Functions Backend)
@@ -94,19 +99,18 @@ flutter run \
 
 ## Validation
 
-### Test Discovery (CIAM format)
+### Test Tenant Discovery
 ```bash
-TENANT_ID=387719ab-0415-46be-9e8f-b2d988cef70a
-HOST=asoraauthlife.ciamlogin.com
-curl -s "https://$HOST/$TENANT_ID/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin" | jq '{issuer,authorization_endpoint,token_endpoint}'
+curl -s "https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/v2.0/.well-known/openid-configuration" | jq '{issuer,authorization_endpoint,token_endpoint}'
 ```
 
 ### Test Authorization Flow (jwt.ms)
+Open in browser:
 ```
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin&client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=select_account
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/authorize?client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=login
 ```
 
-Add `&idp=Google` to test Google sign-in.
+Add `&idp=Google` to test Google sign-in (after configuring Google IdP).
 
 ### Test Config Endpoint
 ```bash
@@ -116,17 +120,33 @@ curl https://asora-function-dev.azurewebsites.net/api/auth/b2c-config | jq
 ## Reference
 - **Azure Subscription Tenant**: `275643fa-37e0-4f67-b616-85a7da674bea`
 - **CIAM Tenant ID**: `387719ab-0415-46be-9e8f-b2d988cef70a`
+- **CIAM Tenant Name**: `asoraauthlife.onmicrosoft.com`
 
-### CIAM vs Classic B2C URL Patterns
+### CIAM URL Patterns (Verified Working)
 
-**CIAM (Entra External ID) - CORRECT:**
+**Discovery** (uses tenant NAME):
 ```
-https://{host}/{tenantId}/v2.0/.well-known/openid-configuration?p={policy}
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/v2.0/.well-known/openid-configuration
 ```
 
-**Classic B2C - WRONG (404):**
+**Authority for MSAL** (from discovery issuer - uses tenant ID subdomain):
 ```
-https://{host}/{tenantName}/{policy}/v2.0/.well-known/openid-configuration
-https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/B2C_1_signupsignin/v2.0/.well-known/openid-configuration ❌
+https://387719ab-0415-46be-9e8f-b2d988cef70a.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a
+```
+
+**Endpoints** (use tenant NAME in path):
+```
+authorize: https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/authorize
+token:     https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/token
+jwks:      https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/discovery/v2.0/keys
+```
+
+**MSAL Configuration**:
+```javascript
+// Use issuer from discovery as authority
+authority: "https://387719ab-0415-46be-9e8f-b2d988cef70a.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a"
+knownAuthorities: ["387719ab-0415-46be-9e8f-b2d988cef70a.ciamlogin.com"]
+// Or use tenant name format:
+// authority: "https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com"
+// knownAuthorities: ["asoraauthlife.ciamlogin.com"]
 ```

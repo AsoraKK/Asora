@@ -83,22 +83,19 @@ If any are missing:
 ## Step 4: Test Configuration
 
 ### 4.1 Test Discovery Endpoint
-**CIAM URL format**: Use tenant ID in path + policy as query parameter.
-
 ```bash
-TENANT_ID=387719ab-0415-46be-9e8f-b2d988cef70a
-HOST=asoraauthlife.ciamlogin.com
-curl -s "https://$HOST/$TENANT_ID/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin" | jq
+curl -s "https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/v2.0/.well-known/openid-configuration" | jq '{issuer,authorization_endpoint,token_endpoint}'
 ```
 
-**Expected**: JSON with `issuer`, `authorization_endpoint`, `token_endpoint`
+**Expected**: JSON with issuer `https://387719ab-0415-46be-9e8f-b2d988cef70a.ciamlogin.com/...`
 
-### 4.2 Test Authorization Flow (Manual Browser Test)
+### 4.2 Test Authorization Flow (Browser Test)
+Open this URL in a browser:
 ```
-https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin&client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=select_account
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/oauth2/v2.0/authorize?client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=login
 ```
 
-**Expected**: Login page (email/password or Google button)
+**Expected**: Login page with email/password (and Google button if configured)
 
 ### 4.3 Test Google Sign-in
 1. On the login page, click **"Sign in with Google"**
