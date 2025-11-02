@@ -27,7 +27,8 @@ final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
   return OAuth2Service(
     dio: dio,
     secureStorage: storage,
-    configEndpoint: 'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config',
+    configEndpoint:
+        'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config',
     tracer: globalTracerProvider.getTracer('oauth2_service'),
   );
 });

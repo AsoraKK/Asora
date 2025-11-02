@@ -40,10 +40,7 @@ class SignInPage extends ConsumerWidget {
               const Text(
                 'Sign in to continue',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF757575),
-                ),
+                style: TextStyle(fontSize: 16, color: Color(0xFF757575)),
               ),
               const SizedBox(height: 48),
 
@@ -76,9 +73,7 @@ class SignInPage extends ConsumerWidget {
               // Loading indicator
               if (authState.isLoading) ...[
                 const SizedBox(height: 24),
-                const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                const Center(child: CircularProgressIndicator()),
               ],
 
               // Error message
@@ -114,10 +109,7 @@ class SignInPage extends ConsumerWidget {
               Text(
                 'By continuing, you agree to our Terms of Service and Privacy Policy',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),

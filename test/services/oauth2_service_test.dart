@@ -58,8 +58,9 @@ void main() {
     });
 
     test('builds correct endpoint URLs', () {
-      final config = AuthConfig(
+      const config = AuthConfig(
         tenant: 'test.onmicrosoft.com',
+        tenantId: null,
         clientId: 'test-client-id',
         policy: 'B2C_1_signupsignin',
         authorityHost: 'test.ciamlogin.com',
@@ -68,7 +69,10 @@ void main() {
         knownAuthorities: ['test.ciamlogin.com'],
       );
 
-      expect(config.issuer, 'https://test.ciamlogin.com/test.onmicrosoft.com/v2.0');
+      expect(
+        config.issuer,
+        'https://test.ciamlogin.com/test.onmicrosoft.com/v2.0',
+      );
       expect(
         config.authorizationEndpoint,
         'https://test.ciamlogin.com/test.onmicrosoft.com/oauth2/v2.0/authorize',
@@ -76,6 +80,24 @@ void main() {
       expect(
         config.tokenEndpoint,
         'https://test.ciamlogin.com/test.onmicrosoft.com/oauth2/v2.0/token',
+      );
+    });
+
+    test('discoveryUrl prefers tenantId and includes policy', () {
+      const config = AuthConfig(
+        tenant: 'test.onmicrosoft.com',
+        tenantId: '11111111-2222-3333-4444-555555555555',
+        clientId: 'test-client-id',
+        policy: 'B2C_1_signupsignin',
+        authorityHost: 'test.ciamlogin.com',
+        scopes: ['openid'],
+        redirectUris: {'android': 'test://callback'},
+        knownAuthorities: ['test.ciamlogin.com'],
+      );
+
+      expect(
+        config.discoveryUrl,
+        'https://test.ciamlogin.com/11111111-2222-3333-4444-555555555555/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin',
       );
     });
 
@@ -112,14 +134,18 @@ void main() {
 
       await service.initialize();
 
-      verify(() => mockDio.get('https://example.com/api/auth/b2c-config')).called(1);
+      verify(
+        () => mockDio.get('https://example.com/api/auth/b2c-config'),
+      ).called(1);
     });
 
     test('falls back to environment config when server fails', () async {
-      when(() => mockDio.get(any())).thenThrow(DioException(
-        requestOptions: RequestOptions(path: ''),
-        type: DioExceptionType.connectionTimeout,
-      ));
+      when(() => mockDio.get(any())).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: ''),
+          type: DioExceptionType.connectionTimeout,
+        ),
+      );
 
       await service.initialize();
 
@@ -144,10 +170,13 @@ void main() {
         ),
       );
 
-      when(() => mockStorage.read(key: 'access_token'))
-          .thenAnswer((_) async => 'cached_token');
-      when(() => mockStorage.read(key: 'expires_on'))
-          .thenAnswer((_) async => DateTime.now().add(const Duration(hours: 1)).toIso8601String());
+      when(
+        () => mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'cached_token');
+      when(() => mockStorage.read(key: 'expires_on')).thenAnswer(
+        (_) async =>
+            DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+      );
 
       await service.initialize();
 
@@ -157,10 +186,7 @@ void main() {
 
   group('AuthException mapping', () {
     test('maps platform exception codes correctly', () {
-      final service = OAuth2Service(
-        dio: mockDio,
-        secureStorage: mockStorage,
-      );
+      final service = OAuth2Service(dio: mockDio, secureStorage: mockStorage);
 
       // Test various error codes
       final cancelException = service.testing_mapAppAuthException(
@@ -191,15 +217,30 @@ void main() {
         accountId: 'account_123',
       );
 
-      when(() => mockStorage.write(key: any(named: 'key'), value: any(named: 'value')))
-          .thenAnswer((_) async => {});
+      when(
+        () => mockStorage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+        ),
+      ).thenAnswer((_) async => {});
 
       await service.testing_cacheToken(result);
 
-      verify(() => mockStorage.write(key: 'access_token', value: 'test_token')).called(1);
-      verify(() => mockStorage.write(key: 'id_token', value: 'id_token')).called(1);
-      verify(() => mockStorage.write(key: 'account_id', value: 'account_123')).called(1);
-      verify(() => mockStorage.write(key: 'expires_on', value: expiresOn.toIso8601String())).called(1);
+      verify(
+        () => mockStorage.write(key: 'access_token', value: 'test_token'),
+      ).called(1);
+      verify(
+        () => mockStorage.write(key: 'id_token', value: 'id_token'),
+      ).called(1);
+      verify(
+        () => mockStorage.write(key: 'account_id', value: 'account_123'),
+      ).called(1);
+      verify(
+        () => mockStorage.write(
+          key: 'expires_on',
+          value: expiresOn.toIso8601String(),
+        ),
+      ).called(1);
     });
 
     test('isExpired returns true for past expiry', () {
@@ -240,9 +281,9 @@ void main() {
 /// Extension to expose private methods for testing
 extension OAuth2ServiceTesting on OAuth2Service {
   Future<void> testing_cacheToken(AuthResult result) => cacheToken(result);
-  
+
   void testing_updateState(AuthState newState) => updateState(newState);
-  
+
   AuthException testing_mapAppAuthException(PlatformException e) =>
       mapAppAuthException(e);
 }

@@ -30,9 +30,9 @@ class AuthControllerState {
 /// Auth controller provider
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthControllerState>((ref) {
-  final oauth2Service = ref.watch(oauth2ServiceProvider);
-  return AuthController(oauth2Service);
-});
+      final oauth2Service = ref.watch(oauth2ServiceProvider);
+      return AuthController(oauth2Service);
+    });
 
 /// Auth controller manages authentication state and actions
 class AuthController extends StateNotifier<AuthControllerState> {
@@ -54,10 +54,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
           );
           break;
         case AuthState.authenticating:
-          state = state.copyWith(
-            isLoading: true,
-            error: null,
-          );
+          state = state.copyWith(isLoading: true, error: null);
           break;
         case AuthState.unauthenticated:
           state = state.copyWith(
@@ -67,9 +64,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
           );
           break;
         case AuthState.error:
-          state = state.copyWith(
-            isLoading: false,
-          );
+          state = state.copyWith(isLoading: false);
           break;
       }
     });
@@ -85,10 +80,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
       await _oauth2Service.signInEmail();
       // State updated via stream listener
     } on AuthException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: _formatError(e),
-      );
+      state = state.copyWith(isLoading: false, error: _formatError(e));
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -104,10 +96,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
       await _oauth2Service.signInGoogle();
       // State updated via stream listener
     } on AuthException catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: _formatError(e),
-      );
+      state = state.copyWith(isLoading: false, error: _formatError(e));
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -122,9 +111,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
       await _oauth2Service.signOut();
       // State updated via stream listener
     } catch (e) {
-      state = state.copyWith(
-        error: 'Sign-out failed. Please try again.',
-      );
+      state = state.copyWith(error: 'Sign-out failed. Please try again.');
     }
   }
 
@@ -150,7 +137,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
         return 'Account unavailable';
       case AuthError.transient:
         return 'Temporary error. Please try again.';
-        case AuthError.unknown:
+      case AuthError.unknown:
         return e.message;
     }
   }

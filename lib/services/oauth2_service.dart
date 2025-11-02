@@ -5,12 +5,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:dio/dio.dart';
 import 'package:opentelemetry/api.dart';
-import 'package:meta/meta.dart';
 
 /// Authentication configuration loaded from backend or environment
 @immutable
 class AuthConfig {
   final String tenant;
+  final String? tenantId; // Optional: prefer tenantId for CIAM URLs
   final String clientId;
   final String policy;
   final String authorityHost;
@@ -21,6 +21,7 @@ class AuthConfig {
 
   const AuthConfig({
     required this.tenant,
+    this.tenantId,
     required this.clientId,
     required this.policy,
     required this.authorityHost,
@@ -33,27 +34,34 @@ class AuthConfig {
   factory AuthConfig.fromJson(Map<String, dynamic> json) {
     return AuthConfig(
       tenant: json['tenant'] as String,
+      tenantId: json['tenantId'] as String?,
       clientId: json['clientId'] as String,
       policy: json['policy'] as String,
       authorityHost: json['authorityHost'] as String,
       scopes: (json['scopes'] as List<dynamic>).cast<String>(),
       redirectUris: Map<String, String>.from(json['redirectUris'] as Map),
-      knownAuthorities:
-          (json['knownAuthorities'] as List<dynamic>).cast<String>(),
+      knownAuthorities: (json['knownAuthorities'] as List<dynamic>)
+          .cast<String>(),
       googleIdpHint: json['googleIdpHint'] as String?,
     );
   }
 
-  /// Build authority URL for MSAL
-  /// Uses tenant name format: https://{host}/{tenant}
-    String get issuer =>
-      'https://$authorityHost/$tenant/v2.0'; // Token issuer
-    String get authorizationEndpoint =>
-      'https://$authorityHost/$tenant/oauth2/v2.0/authorize';
-    String get tokenEndpoint =>
-      'https://$authorityHost/$tenant/oauth2/v2.0/token';
-    String get endSessionEndpoint =>
-      'https://$authorityHost/$tenant/oauth2/v2.0/logout';
+  /// Build endpoints. Prefer CIAM tenantId path when available; fallback to tenant name
+  String get _tenantPath =>
+      (tenantId != null && tenantId!.isNotEmpty) ? tenantId! : tenant;
+
+  /// Policy-specific discovery URL (recommended for B2C/CIAM)
+  String get discoveryUrl =>
+      'https://$authorityHost/$_tenantPath/v2.0/.well-known/openid-configuration?p=$policy';
+
+  /// Token issuer (not policy-bound; for reference/logging only)
+  String get issuer => 'https://$authorityHost/$_tenantPath/v2.0';
+  String get authorizationEndpoint =>
+      'https://$authorityHost/$_tenantPath/oauth2/v2.0/authorize';
+  String get tokenEndpoint =>
+      'https://$authorityHost/$_tenantPath/oauth2/v2.0/token';
+  String get endSessionEndpoint =>
+      'https://$authorityHost/$_tenantPath/oauth2/v2.0/logout';
 
   /// Get platform-appropriate redirect URI
   String get redirectUri {
@@ -65,36 +73,56 @@ class AuthConfig {
     return _fallbackRedirectUri;
   }
 
-  String get _fallbackRedirectUri =>
-      'msal$clientId://auth'; // Fallback pattern
+  String get _fallbackRedirectUri => 'msal$clientId://auth'; // Fallback pattern
 
   /// Create from dart-define environment variables
   factory AuthConfig.fromEnvironment() {
     return AuthConfig(
-      tenant: const String.fromEnvironment('AD_B2C_TENANT',
-          defaultValue: 'asoraauthlife.onmicrosoft.com'),
-      clientId: const String.fromEnvironment('AD_B2C_CLIENT_ID',
-          defaultValue: 'c07bb257-aaf0-4179-be95-fce516f92e8c'),
-      policy: const String.fromEnvironment('AD_B2C_SIGNIN_POLICY',
-          defaultValue: 'B2C_1_signupsignin'),
-      authorityHost: const String.fromEnvironment('AD_B2C_AUTHORITY_HOST',
-          defaultValue: 'asoraauthlife.ciamlogin.com'),
-      scopes: const String.fromEnvironment('AD_B2C_SCOPES',
-              defaultValue: 'openid offline_access email profile')
-          .split(' '),
+      tenant: const String.fromEnvironment(
+        'AD_B2C_TENANT',
+        defaultValue: 'asoraauthlife.onmicrosoft.com',
+      ),
+      tenantId:
+          const String.fromEnvironment(
+            'AD_B2C_TENANT_ID',
+            defaultValue: '',
+          ).isEmpty
+          ? null
+          : const String.fromEnvironment('AD_B2C_TENANT_ID'),
+      clientId: const String.fromEnvironment(
+        'AD_B2C_CLIENT_ID',
+        defaultValue: 'c07bb257-aaf0-4179-be95-fce516f92e8c',
+      ),
+      policy: const String.fromEnvironment(
+        'AD_B2C_SIGNIN_POLICY',
+        defaultValue: 'B2C_1_signupsignin',
+      ),
+      authorityHost: const String.fromEnvironment(
+        'AD_B2C_AUTHORITY_HOST',
+        defaultValue: 'asoraauthlife.ciamlogin.com',
+      ),
+      scopes: const String.fromEnvironment(
+        'AD_B2C_SCOPES',
+        defaultValue: 'openid offline_access email profile',
+      ).split(' '),
       redirectUris: const {
-        'android': String.fromEnvironment('AD_B2C_REDIRECT_URI_ANDROID',
-            defaultValue: 'com.asora.app://oauth/callback'),
-        'ios': String.fromEnvironment('AD_B2C_REDIRECT_URI_IOS',
-            defaultValue:
-                'msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth'),
+        'android': String.fromEnvironment(
+          'AD_B2C_REDIRECT_URI_ANDROID',
+          defaultValue: 'com.asora.app://oauth/callback',
+        ),
+        'ios': String.fromEnvironment(
+          'AD_B2C_REDIRECT_URI_IOS',
+          defaultValue: 'msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth',
+        ),
       },
       knownAuthorities: const String.fromEnvironment(
-              'AD_B2C_KNOWN_AUTHORITIES',
-              defaultValue: 'asoraauthlife.ciamlogin.com')
-          .split(','),
-      googleIdpHint:
-          const String.fromEnvironment('AD_B2C_GOOGLE_IDP_HINT', defaultValue: 'Google'),
+        'AD_B2C_KNOWN_AUTHORITIES',
+        defaultValue: 'asoraauthlife.ciamlogin.com',
+      ).split(','),
+      googleIdpHint: const String.fromEnvironment(
+        'AD_B2C_GOOGLE_IDP_HINT',
+        defaultValue: 'Google',
+      ),
     );
   }
 }
@@ -119,12 +147,7 @@ class AuthResult {
 }
 
 /// Authentication state for UI
-enum AuthState {
-  unauthenticated,
-  authenticating,
-  authenticated,
-  error,
-}
+enum AuthState { unauthenticated, authenticating, authenticated, error }
 
 /// Domain auth errors
 enum AuthError {
@@ -166,10 +189,10 @@ class OAuth2Service {
     required FlutterSecureStorage secureStorage,
     String? configEndpoint,
     Tracer? tracer,
-  })  : _dio = dio,
-        _secureStorage = secureStorage,
-        _configEndpoint = configEndpoint,
-        _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
+  }) : _dio = dio,
+       _secureStorage = secureStorage,
+       _configEndpoint = configEndpoint,
+       _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
 
   /// Get current auth state stream
   Stream<AuthState> get authState => _authStateController.stream;
@@ -188,7 +211,7 @@ class OAuth2Service {
     final span = _tracer.startSpan('auth.initialize');
     try {
       _config = await _loadConfig();
-      
+
       // Check if we have a cached account
       final cachedToken = await _secureStorage.read(key: 'access_token');
       if (cachedToken != null) {
@@ -197,7 +220,7 @@ class OAuth2Service {
         if (expiresOn != null) {
           final expiry = DateTime.parse(expiresOn);
           if (DateTime.now().isBefore(expiry)) {
-          updateState(AuthState.authenticated);
+            updateState(AuthState.authenticated);
           }
         }
       }
@@ -214,7 +237,7 @@ class OAuth2Service {
     final span = _tracer.startSpan('auth.config.fetch');
     try {
       if (_configEndpoint != null) {
-          final response = await _dio.get(_configEndpoint);
+        final response = await _dio.get(_configEndpoint);
         if (response.statusCode == 200) {
           return AuthConfig.fromJson(response.data as Map<String, dynamic>);
         }
@@ -232,39 +255,40 @@ class OAuth2Service {
 
   /// Sign in with Email (standard B2C flow)
   Future<AuthResult> signInEmail() async {
-      final span = _tracer.startSpan('auth.login.start');
-    
+    final span = _tracer.startSpan('auth.login.start');
+
     try {
       updateState(AuthState.authenticating);
-      
-        if (_config == null) {
-        throw const AuthException(
-              AuthError.unknown, 'Config not loaded');
+
+      if (_config == null) {
+        throw const AuthException(AuthError.unknown, 'Config not loaded');
       }
 
-        final result = await _appAuth.authorizeAndExchangeCode(
-          AuthorizationTokenRequest(
-            _config!.clientId,
-            _config!.redirectUri,
-            issuer: _config!.issuer,
-            scopes: _config!.scopes,
-            // No IdP hint - shows email/social picker
-          ),
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          _config!.clientId,
+          _config!.redirectUri,
+          // Use policy-specific discovery for CIAM/B2C
+          discoveryUrl: _config!.discoveryUrl,
+          scopes: _config!.scopes,
+          // Always include policy
+          additionalParameters: {'p': _config!.policy},
+        ),
       );
 
-        final authResult = _mapAppAuthResult(result);
-          await cacheToken(authResult);
-      
-          updateState(AuthState.authenticated);
-      
+      final authResult = _mapAppAuthResult(result);
+      await cacheToken(authResult);
+
+      updateState(AuthState.authenticated);
+
       return authResult;
-      } on PlatformException catch (e) {
+    } on PlatformException catch (e) {
       span.recordException(e);
-          updateState(AuthState.error);
-          throw mapAppAuthException(e);
+      updateState(AuthState.error);
+      throw mapAppAuthException(e);
     } catch (e, stackTrace) {
       span.recordException(e, stackTrace: stackTrace);
-          updateState(AuthState.error);
+      updateState(AuthState.error);
       rethrow;
     } finally {
       span.end();
@@ -273,46 +297,48 @@ class OAuth2Service {
 
   /// Sign in with Google (B2C flow with IdP hint)
   Future<AuthResult> signInGoogle() async {
-      final span = _tracer.startSpan('auth.login.start');
-    
+    final span = _tracer.startSpan('auth.login.start');
+
     try {
       updateState(AuthState.authenticating);
-      
-        if (_config == null) {
-        throw const AuthException(
-              AuthError.unknown, 'Config not loaded');
+
+      if (_config == null) {
+        throw const AuthException(AuthError.unknown, 'Config not loaded');
       }
 
       // Build extra query params for Google IdP hint
-        final additionalParams = <String, String>{};
+      final additionalParams = <String, String>{
+        // Always include policy
+        'p': _config!.policy,
+      };
       if (_config!.googleIdpHint != null) {
-          additionalParams['idp'] = _config!.googleIdpHint!;
-          additionalParams['prompt'] = 'login'; // Force re-auth for IdP
+        additionalParams['idp'] = _config!.googleIdpHint!;
+        additionalParams['prompt'] = 'login'; // Force re-auth for IdP
       }
 
-        final result = await _appAuth.authorizeAndExchangeCode(
-          AuthorizationTokenRequest(
-            _config!.clientId,
-            _config!.redirectUri,
-            issuer: _config!.issuer,
-            scopes: _config!.scopes,
-            additionalParameters: additionalParams,
-          ),
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          _config!.clientId,
+          _config!.redirectUri,
+          discoveryUrl: _config!.discoveryUrl,
+          scopes: _config!.scopes,
+          additionalParameters: additionalParams,
+        ),
       );
 
-        final authResult = _mapAppAuthResult(result);
-          await cacheToken(authResult);
-      
-          updateState(AuthState.authenticated);
-      
+      final authResult = _mapAppAuthResult(result);
+      await cacheToken(authResult);
+
+      updateState(AuthState.authenticated);
+
       return authResult;
-      } on PlatformException catch (e) {
+    } on PlatformException catch (e) {
       span.recordException(e);
-          updateState(AuthState.error);
-          throw mapAppAuthException(e);
+      updateState(AuthState.error);
+      throw mapAppAuthException(e);
     } catch (e, stackTrace) {
       span.recordException(e, stackTrace: stackTrace);
-          updateState(AuthState.error);
+      updateState(AuthState.error);
       rethrow;
     } finally {
       span.end();
@@ -326,7 +352,7 @@ class OAuth2Service {
         // Try to get from cache
         final cachedToken = await _secureStorage.read(key: 'access_token');
         final expiresOn = await _secureStorage.read(key: 'expires_on');
-        
+
         if (cachedToken != null && expiresOn != null) {
           final expiry = DateTime.parse(expiresOn);
           if (DateTime.now().add(const Duration(minutes: 5)).isBefore(expiry)) {
@@ -337,29 +363,30 @@ class OAuth2Service {
       }
 
       // Try silent refresh
-        if (_config == null) {
+      if (_config == null) {
         return null;
       }
 
-        final refreshToken = await _secureStorage.read(key: 'refresh_token');
-        if (refreshToken == null) {
-          updateState(AuthState.unauthenticated);
+      final refreshToken = await _secureStorage.read(key: 'refresh_token');
+      if (refreshToken == null) {
+        updateState(AuthState.unauthenticated);
         return null;
       }
 
-        final result = await _appAuth.token(
-          TokenRequest(
-            _config!.clientId,
-            _config!.redirectUri,
-            issuer: _config!.issuer,
-            refreshToken: refreshToken,
-            scopes: _config!.scopes,
-          ),
+      final result = await _appAuth.token(
+        TokenRequest(
+          _config!.clientId,
+          _config!.redirectUri,
+          discoveryUrl: _config!.discoveryUrl,
+          refreshToken: refreshToken,
+          scopes: _config!.scopes,
+          additionalParameters: {'p': _config!.policy},
+        ),
       );
 
-          final authResult = _mapTokenResult(result);
-        await cacheToken(authResult);
-          return authResult.accessToken;
+      final authResult = _mapTokenResult(result);
+      await cacheToken(authResult);
+      return authResult.accessToken;
     } catch (e) {
       debugPrint('Failed to get access token: $e');
       return null;
@@ -377,7 +404,7 @@ class OAuth2Service {
       await _secureStorage.delete(key: 'expires_on');
       await _secureStorage.delete(key: 'account_id');
 
-    updateState(AuthState.unauthenticated);
+      updateState(AuthState.unauthenticated);
     } catch (e, stackTrace) {
       span.recordException(e, stackTrace: stackTrace);
       debugPrint('Sign out error: $e');
@@ -386,27 +413,29 @@ class OAuth2Service {
     }
   }
 
-    /// Map AppAuth authorization result to domain AuthResult
-    AuthResult _mapAppAuthResult(AuthorizationTokenResponse result) {
-      return AuthResult(
-        accessToken: result.accessToken!,
-        refreshToken: result.refreshToken,
-        idToken: result.idToken,
-        expiresOn: result.accessTokenExpirationDateTime ??
-            DateTime.now().add(const Duration(hours: 1)),
-        accountId: null, // Extract from ID token if needed
-      );
-    }
-
-    /// Map AppAuth token refresh result to domain AuthResult
-    AuthResult _mapTokenResult(TokenResponse result) {
+  /// Map AppAuth authorization result to domain AuthResult
+  AuthResult _mapAppAuthResult(AuthorizationTokenResponse result) {
     return AuthResult(
-        accessToken: result.accessToken!,
-        refreshToken: result.refreshToken,
-        idToken: result.idToken,
-        expiresOn: result.accessTokenExpirationDateTime ??
-            DateTime.now().add(const Duration(hours: 1)),
-        accountId: null,
+      accessToken: result.accessToken!,
+      refreshToken: result.refreshToken,
+      idToken: result.idToken,
+      expiresOn:
+          result.accessTokenExpirationDateTime ??
+          DateTime.now().add(const Duration(hours: 1)),
+      accountId: null, // Extract from ID token if needed
+    );
+  }
+
+  /// Map AppAuth token refresh result to domain AuthResult
+  AuthResult _mapTokenResult(TokenResponse result) {
+    return AuthResult(
+      accessToken: result.accessToken!,
+      refreshToken: result.refreshToken,
+      idToken: result.idToken,
+      expiresOn:
+          result.accessTokenExpirationDateTime ??
+          DateTime.now().add(const Duration(hours: 1)),
+      accountId: null,
     );
   }
 
@@ -418,28 +447,30 @@ class OAuth2Service {
       await _secureStorage.write(key: 'id_token', value: result.idToken);
     }
     await _secureStorage.write(
-        key: 'expires_on', value: result.expiresOn.toIso8601String());
+      key: 'expires_on',
+      value: result.expiresOn.toIso8601String(),
+    );
     if (result.accountId != null) {
       await _secureStorage.write(key: 'account_id', value: result.accountId);
     }
   }
 
-    /// Map AppAuth exception to domain AuthException
-    @visibleForTesting
-    AuthException mapAppAuthException(PlatformException e) {
-      final code = e.code.toLowerCase();
-      final msg = e.message?.toLowerCase() ?? '';
-    
-      if (code.contains('user_cancel') || msg.contains('cancel')) {
-        return AuthException(AuthError.cancelled, 'User cancelled', e);
-      } else if (code.contains('network') || msg.contains('network')) {
-        return AuthException(AuthError.network, 'Network error', e);
-      } else if (msg.contains('policy') || msg.contains('aadb2c')) {
-        return AuthException(AuthError.policyNotFound, 'B2C policy error', e);
-      } else if (code.contains('no_account')) {
-        return AuthException(AuthError.accountUnavailable, 'No account', e);
+  /// Map AppAuth exception to domain AuthException
+  @visibleForTesting
+  AuthException mapAppAuthException(PlatformException e) {
+    final code = e.code.toLowerCase();
+    final msg = e.message?.toLowerCase() ?? '';
+
+    if (code.contains('user_cancel') || msg.contains('cancel')) {
+      return AuthException(AuthError.cancelled, 'User cancelled', e);
+    } else if (code.contains('network') || msg.contains('network')) {
+      return AuthException(AuthError.network, 'Network error', e);
+    } else if (msg.contains('policy') || msg.contains('aadb2c')) {
+      return AuthException(AuthError.policyNotFound, 'B2C policy error', e);
+    } else if (code.contains('no_account')) {
+      return AuthException(AuthError.accountUnavailable, 'No account', e);
     }
-      return AuthException(AuthError.unknown, e.message ?? 'Auth error', e);
+    return AuthException(AuthError.unknown, e.message ?? 'Auth error', e);
   }
 
   void dispose() {
