@@ -1,13 +1,13 @@
 # Azure AD B2C Configuration (Asora-Life)
 
 ## Overview
-Asora uses **Microsoft Entra External ID** (formerly Azure AD B2C) for customer authentication with Email and Google sign-in options.
+Asora uses **Microsoft Entra External ID (CIAM)** for authentication with Email + Google sign-in.
 
-## B2C Tenant Details
+## CIAM Tenant Details
 - **Tenant Name**: Asora-Life
-- **Tenant ID**: `ac06df30-fd50-4195-96fc-4c1fd1de6c43`
-- **Primary Domain**: `asoraauth.onmicrosoft.com`
-- **B2C Login Domain**: `asoraauth.b2clogin.com`
+- **Tenant ID**: `387719ab-0415-46be-9e8f-b2d988cef70a`
+- **Primary Domain**: `asoraauthlife.onmicrosoft.com`
+- **CIAM Login Domain**: `asoraauthlife.ciamlogin.com` (**not** b2clogin.com)
 
 ## User Flows / Policies
 - **Sign-up/Sign-in Policy**: `B2C_1_signupsignin`
@@ -19,12 +19,12 @@ Asora uses **Microsoft Entra External ID** (formerly Azure AD B2C) for customer 
 
 ### Mobile App (Flutter)
 - **Display Name**: Asora
-- **Application (client) ID**: `d993e983-9f6e-44b4-b098-607af033832f`
+- **Application (client) ID**: `c07bb257-aaf0-4179-be95-fce516f92e8c`
 - **Object ID**: `9f75895f-0003-464a-a728-5fc061e5c688`
 - **Supported Account Types**: My organization only
 - **Redirect URIs**:
-  - `msald993e983-9f6e-44b4-b098-607af033832f://auth` (MSAL iOS)
-  - `https://asoraauth.b2clogin.com/oauth2/nativeclient` (MSAL fallback)
+  - `msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth` (MSAL iOS)
+  - `https://asoraauthlife.ciamlogin.com/oauth2/nativeclient` (MSAL fallback)
   - `com.asora.app://oauth/callback` (Android custom scheme)
 - **Scopes**: `openid`, `offline_access`, `email`, `profile`
 
@@ -34,33 +34,33 @@ Asora uses **Microsoft Entra External ID** (formerly Azure AD B2C) for customer 
 
 ## Google OAuth Credentials
 
-### Android
-- **Client ID**: `387920894359-od1qh8iv588ofv1t572v6spkl264srci.apps.googleusercontent.com`
-- **SHA-1 Fingerprint**: `2B:95:04:AF:77:F7:05:FD:6D:84:B0:49:48:5F:EC:A2:3B:FA:A8:FF`
+**Stored in Azure Key Vault** (`kv-asora-dev`):
+- `b2c-google-web-client-id` - Web client ID for B2C Google IdP
+- `b2c-google-web-client-secret` - Web client secret
 
-### Web
-- **Client ID**: `387920894359-p21kvg1j19veq1q83qbsg345bll3vn1u.apps.googleusercontent.com`
-- **Client Secret**: Stored in Key Vault
-
-### Desktop
-- **Client ID**: `387920894359-qq7muh3k1q8lq7h8pfvgtu8icu5h6ebs.apps.googleusercontent.com`
-- **Client Secret**: Stored in Key Vault
+**To retrieve for portal configuration:**
+```bash
+az keyvault secret show --vault-name kv-asora-dev --name b2c-google-web-client-id --query value -o tsv
+az keyvault secret show --vault-name kv-asora-dev --name b2c-google-web-client-secret --query value -o tsv
+```
 
 ## Discovery Endpoints
 
+**CIAM format**: Tenant ID in path + policy as query parameter `?p=`
+
 ### OpenID Configuration
 ```
-https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/v2.0/.well-known/openid-configuration
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin
 ```
 
 ### Authorization Endpoint
 ```
-https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/oauth2/v2.0/authorize
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin
 ```
 
 ### Token Endpoint
 ```
-https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/oauth2/v2.0/token
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/token
 ```
 
 ## Key Vault Secrets (Functions Backend)
@@ -69,13 +69,13 @@ Stored in `kv-asora-dev`:
 
 | Secret Name | Value | Purpose |
 |-------------|-------|---------|
-| `b2c-tenant` | `asoraauth.onmicrosoft.com` | B2C tenant domain |
-| `b2c-mobile-client-id` | `d993e983-9f6e-44b4-b098-607af033832f` | Mobile app client ID |
+| `b2c-tenant` | `asoraauthlife.onmicrosoft.com` | B2C tenant domain |
+| `b2c-mobile-client-id` | `c07bb257-aaf0-4179-be95-fce516f92e8c` | Mobile app client ID |
 | `b2c-signin-policy` | `B2C_1_signupsignin` | User flow name |
-| `b2c-authority-host` | `asoraauth.b2clogin.com` | B2C authority |
+| `b2c-authority-host` | `asoraauthlife.ciamlogin.com` | B2C authority |
 | `b2c-scopes` | `openid offline_access email profile` | OAuth scopes |
 | `b2c-redirect-uri-android` | `com.asora.app://oauth/callback` | Android redirect |
-| `b2c-redirect-uri-ios` | `msald993e983-9f6e-44b4-b098-607af033832f://auth` | iOS redirect |
+| `b2c-redirect-uri-ios` | `msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth` | iOS redirect |
 | `b2c-google-idp-hint` | `Google` | IdP selector hint |
 
 ## Flutter Build Configuration
@@ -94,30 +94,39 @@ flutter run \
 
 ## Validation
 
-### Test Discovery Document
+### Test Discovery (CIAM format)
 ```bash
-curl https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/v2.0/.well-known/openid-configuration
+TENANT_ID=387719ab-0415-46be-9e8f-b2d988cef70a
+HOST=asoraauthlife.ciamlogin.com
+curl -s "https://$HOST/$TENANT_ID/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin" | jq '{issuer,authorization_endpoint,token_endpoint}'
 ```
 
-### Test Authorization Flow (Manual)
+### Test Authorization Flow (jwt.ms)
 ```
-https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/oauth2/v2.0/authorize
-  ?client_id=d993e983-9f6e-44b4-b098-607af033832f
-  &redirect_uri=com.asora.app://oauth/callback
-  &response_type=code
-  &scope=openid%20offline_access
-  &p=B2C_1_signupsignin
-  &prompt=select_account
-  &idp=Google
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin&client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=select_account
 ```
+
+Add `&idp=Google` to test Google sign-in.
 
 ### Test Config Endpoint
 ```bash
-curl https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api/config/auth
+curl https://asora-function-dev.azurewebsites.net/api/auth/b2c-config | jq
 ```
 
 ## Reference
-- **Azure Subscription Tenant**: `275643fa-37e0-4f67-b616-85a7da674bea` (kylekernasoraco.onmicrosoft.com)
-- **B2C Tenant**: `ac06df30-fd50-4195-96fc-4c1fd1de6c43` (asoraauth.onmicrosoft.com)
+- **Azure Subscription Tenant**: `275643fa-37e0-4f67-b616-85a7da674bea`
+- **CIAM Tenant ID**: `387719ab-0415-46be-9e8f-b2d988cef70a`
 
-**Important**: B2C tenant ID is different from the Azure subscription tenant ID.
+### CIAM vs Classic B2C URL Patterns
+
+**CIAM (Entra External ID) - CORRECT:**
+```
+https://{host}/{tenantId}/v2.0/.well-known/openid-configuration?p={policy}
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin
+```
+
+**Classic B2C - WRONG (404):**
+```
+https://{host}/{tenantName}/{policy}/v2.0/.well-known/openid-configuration
+https://asoraauthlife.ciamlogin.com/asoraauthlife.onmicrosoft.com/B2C_1_signupsignin/v2.0/.well-known/openid-configuration ❌
+```

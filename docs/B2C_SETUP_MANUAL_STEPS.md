@@ -1,9 +1,10 @@
 # Azure AD B2C Setup - Manual Steps Required
 
 ## Current Status
-✅ B2C Tenant created: `asoraauth.onmicrosoft.com` (ID: `ac06df30-fd50-4195-96fc-4c1fd1de6c43`)  
-✅ Mobile app registered: `d993e983-9f6e-44b4-b098-607af033832f`  
-⚠️ **User flow and Google IdP need configuration**
+✅ CIAM Tenant created: `asoraauthlife.onmicrosoft.com` (ID: `387719ab-0415-46be-9e8f-b2d988cef70a`)  
+✅ Mobile app registered: `c07bb257-aaf0-4179-be95-fce516f92e8c`  
+✅ `/api/auth/b2c-config` endpoint working  
+⚠️ **User flow and Google IdP need manual portal configuration**
 
 ---
 
@@ -11,7 +12,7 @@
 
 ### 1.1 Access B2C Tenant
 1. Azure Portal → Search "Azure AD B2C" or "Entra External ID"
-2. **Switch directory** to `Asora-Life` (asoraauth.onmicrosoft.com)
+2. **Switch directory** to `Asora-Life` (asoraauthlife.onmicrosoft.com)
 3. Confirm you see "Azure AD B2C" in the left nav
 
 ### 1.2 Add Google as Identity Provider
@@ -19,14 +20,9 @@
 2. Click **+ Google**
 3. Fill in:
    - **Name**: `Google`
-   - **Client ID**: `387920894359-od1qh8iv588ofv1t572v6spkl264srci.apps.googleusercontent.com`
-   - **Client secret**: *(retrieve from Google Cloud Console - Android OAuth client)*
+   - **Client ID**: Retrieve from Key Vault: `az keyvault secret show --vault-name kv-asora-dev --name b2c-google-web-client-id --query value -o tsv`
+   - **Client secret**: Retrieve from Key Vault: `az keyvault secret show --vault-name kv-asora-dev --name b2c-google-web-client-secret --query value -o tsv`
 4. Click **Save**
-
-**Note**: You'll need the client secret from your Google Cloud Console:
-- Go to: https://console.cloud.google.com/apis/credentials
-- Find the Android OAuth client: `387920894359-od1qh8iv588ofv1t572v6spkl264srci`
-- Copy the client secret
 
 ---
 
@@ -70,8 +66,8 @@
 1. Azure AD B2C → **App registrations** → **Asora**
 2. Left nav → **Authentication**
 3. **Verify** these redirect URIs are present:
-   - ✅ `msald993e983-9f6e-44b4-b098-607af033832f://auth` (iOS MSAL)
-   - ✅ `https://asoraauth.b2clogin.com/oauth2/nativeclient` (MSAL fallback)
+   - ✅ `msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth` (iOS MSAL)
+   - ✅ `https://asoraauthlife.ciamlogin.com/oauth2/nativeclient` (MSAL fallback)
    - ✅ `com.asora.app://oauth/callback` (Android custom scheme)
 
 ### 3.2 Add Missing Redirects (if any)
@@ -87,21 +83,22 @@ If any are missing:
 ## Step 4: Test Configuration
 
 ### 4.1 Test Discovery Endpoint
+**CIAM URL format**: Use tenant ID in path + policy as query parameter.
+
 ```bash
-curl https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/v2.0/.well-known/openid-configuration
+TENANT_ID=387719ab-0415-46be-9e8f-b2d988cef70a
+HOST=asoraauthlife.ciamlogin.com
+curl -s "https://$HOST/$TENANT_ID/v2.0/.well-known/openid-configuration?p=B2C_1_signupsignin" | jq
 ```
 
-**Expected**: JSON with `issuer`, `authorization_endpoint`, `token_endpoint`, `jwks_uri`
+**Expected**: JSON with `issuer`, `authorization_endpoint`, `token_endpoint`
 
 ### 4.2 Test Authorization Flow (Manual Browser Test)
-Paste this URL in a browser:
 ```
-https://asoraauth.b2clogin.com/asoraauth.onmicrosoft.com/B2C_1_signupsignin/oauth2/v2.0/authorize?client_id=d993e983-9f6e-44b4-b098-607af033832f&redirect_uri=https://asoraauth.b2clogin.com/oauth2/nativeclient&response_type=code&scope=openid%20offline_access&p=B2C_1_signupsignin&prompt=select_account
+https://asoraauthlife.ciamlogin.com/387719ab-0415-46be-9e8f-b2d988cef70a/oauth2/v2.0/authorize?p=B2C_1_signupsignin&client_id=c07bb257-aaf0-4179-be95-fce516f92e8c&redirect_uri=https%3A%2F%2Fjwt.ms&response_type=id_token&response_mode=fragment&scope=openid&nonce=12345&prompt=select_account
 ```
 
-**Expected**: Login page showing:
-- Email/password input
-- "Sign in with Google" button
+**Expected**: Login page (email/password or Google button)
 
 ### 4.3 Test Google Sign-in
 1. On the login page, click **"Sign in with Google"**
