@@ -38,6 +38,8 @@ const config: Config = {
     '^@feed/(.*)$': '<rootDir>/src/feed/$1',
     '^@moderation/(.*)$': '<rootDir>/src/moderation/$1',
     '^@privacy/(.*)$': '<rootDir>/src/privacy/$1',
+    '^@rate-limit/(.*)$': '<rootDir>/src/rate-limit/$1',
+    '^@http/(.*)$': '<rootDir>/src/http/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts', '<rootDir>/tests/jest.setup.ts'],
   verbose: false,

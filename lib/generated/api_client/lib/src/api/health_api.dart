@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/get_health200_response.dart';
+import 'package:asora_api_client/src/model/rate_limit_error.dart';
 
 class HealthApi {
 

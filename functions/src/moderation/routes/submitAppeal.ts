@@ -3,6 +3,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -28,9 +30,15 @@ export async function submitAppealRoute(
   return protectedSubmitAppeal(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedSubmitAppeal = withRateLimit(
+  submitAppealRoute,
+  (req, context) => getPolicyForFunction('moderation-submit-appeal')
+);
+
 app.http('moderation-submit-appeal', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'moderation/appeals',
-  handler: submitAppealRoute,
+  handler: rateLimitedSubmitAppeal,
 });

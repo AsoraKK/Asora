@@ -4,6 +4,8 @@ import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { badRequest, created, serverError } from '@shared/utils/http';
 import { HttpError } from '@shared/utils/errors';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 import type { CreatePostBody } from '@feed/types';
 
@@ -45,9 +47,12 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
   }
 });
 
+/* istanbul ignore next */
+const rateLimitedCreatePost = withRateLimit(createPost, (req, context) => getPolicyForFunction('createPost'));
+
 app.http('createPost', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'post',
-  handler: createPost,
+  handler: rateLimitedCreatePost,
 });

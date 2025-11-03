@@ -1,6 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { handleCorsAndMethod } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export async function authorizeRoute(
   req: HttpRequest,
@@ -15,9 +17,15 @@ export async function authorizeRoute(
   return authorizeHandler(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedAuthorize = withRateLimit(
+  authorizeRoute,
+  (req, context) => getPolicyForFunction('auth-authorize')
+);
+
 app.http('auth-authorize', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'auth/authorize',
-  handler: authorizeRoute,
+  handler: rateLimitedAuthorize,
 });

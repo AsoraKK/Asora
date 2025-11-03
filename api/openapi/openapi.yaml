@@ -102,6 +102,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              description: Seconds until the client may retry
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Limit:
+              description: Maximum requests allowed in the enforced window
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Remaining requests before hitting the limit
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Unix epoch seconds when the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
   /health:
     get:
       operationId: getHealth
@@ -135,6 +159,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              description: Seconds until the client may retry
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Limit:
+              description: Maximum requests allowed in the enforced window
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Remaining requests before hitting the limit
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Unix epoch seconds when the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
   /post:
     post:
       operationId: createPost
@@ -300,3 +348,46 @@ components:
         message:
           type: string
           description: Human readable error description
+    RateLimitError:
+      type: object
+      required:
+        - error
+        - scope
+        - limit
+        - window_seconds
+        - retry_after_seconds
+        - trace_id
+      properties:
+        error:
+          type: string
+          description: Constant identifier for rate limit breaches
+          enum:
+            - rate_limited
+        scope:
+          type: string
+          description: Scope of the limit that triggered the breach
+          enum:
+            - ip
+            - user
+            - route
+            - auth_backoff
+        limit:
+          type: integer
+          minimum: 0
+          description: Maximum requests permitted within the window
+        window_seconds:
+          type: integer
+          minimum: 1
+          description: Window size for the limit in seconds
+        retry_after_seconds:
+          type: integer
+          minimum: 0
+          description: Seconds until the limit resets
+        trace_id:
+          type: string
+          description: Correlation identifier for tracing
+        reason:
+          type: string
+          description: Additional context for specialized scopes (e.g. auth backoff)
+          enum:
+            - auth_backoff

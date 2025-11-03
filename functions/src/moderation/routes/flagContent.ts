@@ -3,6 +3,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -28,9 +30,15 @@ export async function flagContentRoute(
   return protectedFlagContent(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedFlagContent = withRateLimit(
+  flagContentRoute,
+  (req, context) => getPolicyForFunction('moderation-flag-content')
+);
+
 app.http('moderation-flag-content', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'moderation/flag',
-  handler: flagContentRoute,
+  handler: rateLimitedFlagContent,
 });

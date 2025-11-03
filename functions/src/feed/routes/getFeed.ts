@@ -2,6 +2,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 
 import { parseAuth } from '@shared/middleware/auth';
 import { ok, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
@@ -25,9 +27,12 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
   }
 }
 
+/* istanbul ignore next */
+const rateLimitedGetFeed = withRateLimit(getFeed, (req, context) => getPolicyForFunction('getFeed'));
+
 app.http('getFeed', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'feed',
-  handler: getFeed,
+  handler: rateLimitedGetFeed,
 });

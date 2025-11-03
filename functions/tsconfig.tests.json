@@ -14,7 +14,9 @@
       "@auth/*": ["src/auth/*"],
       "@feed/*": ["src/feed/*"],
       "@moderation/*": ["src/moderation/*"],
-      "@privacy/*": ["src/privacy/*"]
+      "@privacy/*": ["src/privacy/*"],
+      "@rate-limit/*": ["src/rate-limit/*"],
+      "@http/*": ["src/http/*"]
     }
   },
   "include": ["src/**/*.ts", "tests/**/*.test.ts", "tests/**/__tests__/**/*.ts"]

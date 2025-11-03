@@ -13,6 +13,7 @@ doc/GetHealth200Response.md
 doc/HealthApi.md
 doc/ModerationApi.md
 doc/PostsApi.md
+doc/RateLimitError.md
 lib/asora_api_client.dart
 lib/src/api.dart
 lib/src/api/feed_api.dart
@@ -35,5 +36,7 @@ lib/src/model/flag_content_request.dart
 lib/src/model/get_feed200_response.dart
 lib/src/model/get_feed200_response_meta.dart
 lib/src/model/get_health200_response.dart
+lib/src/model/rate_limit_error.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/rate_limit_error_test.dart

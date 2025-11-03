@@ -1,6 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { handleCorsAndMethod } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export async function tokenRoute(
   req: HttpRequest,
@@ -16,9 +18,15 @@ export async function tokenRoute(
   return tokenHandler(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedTokenRoute = withRateLimit(
+  tokenRoute,
+  (req, context) => getPolicyForFunction('auth-token')
+);
+
 app.http('auth-token', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'auth/token',
-  handler: tokenRoute,
+  handler: rateLimitedTokenRoute,
 });

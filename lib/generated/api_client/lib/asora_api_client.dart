@@ -22,3 +22,4 @@ export 'package:asora_api_client/src/model/flag_content_request.dart';
 export 'package:asora_api_client/src/model/get_feed200_response.dart';
 export 'package:asora_api_client/src/model/get_feed200_response_meta.dart';
 export 'package:asora_api_client/src/model/get_health200_response.dart';
+export 'package:asora_api_client/src/model/rate_limit_error.dart';

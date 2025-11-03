@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';
+import 'package:asora_api_client/src/model/rate_limit_error.dart';
 
 class FeedApi {
 

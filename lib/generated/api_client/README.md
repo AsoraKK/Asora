@@ -82,6 +82,7 @@ Class | Method | HTTP request | Description
  - [GetFeed200Response](doc/GetFeed200Response.md)
  - [GetFeed200ResponseMeta](doc/GetFeed200ResponseMeta.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
+ - [RateLimitError](doc/RateLimitError.md)
 
 
 ## Documentation For Authorization

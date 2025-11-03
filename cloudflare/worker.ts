@@ -1,9 +1,14 @@
+import { applyEdgeRateLimitHeaders, enforceEdgeRateLimit } from '../edge/worker/src/rateLimit';
+
 export interface Env {
   FEED_CACHE_ENABLED?: string;
+  RATE_LIMIT_KV?: KVNamespace;
+  EMAIL_HASH_SALT?: string;
 }
 
 const FEED_PATH_PREFIX = "/api/feed";
 const ALLOWED_PARAMS = new Set(["page", "pageSize", "timeWindow"]);
+const EDGE_LIMIT = { limit: 60, windowSeconds: 60 };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -21,6 +26,18 @@ export default {
       r.headers.set("Vary", "Authorization");
       r.headers.set("X-Cache", auth ? "BYPASS" : "BYPASS");
       return r;
+    }
+
+    const rateLimitResult = await enforceEdgeRateLimit(request, env, {
+      limit: EDGE_LIMIT.limit,
+      windowSeconds: EDGE_LIMIT.windowSeconds,
+      scope: 'ip',
+    });
+
+    if (!rateLimitResult.allowed && rateLimitResult.response) {
+      rateLimitResult.response.headers.set('X-Cache', 'RATE_LIMIT');
+      rateLimitResult.response.headers.set('Vary', 'Authorization');
+      return rateLimitResult.response;
     }
 
     // Build normalized cache key: only page, pageSize, timeWindow. Sort for stability.
@@ -42,6 +59,9 @@ export default {
       const hit = new Response(cached.body, cached);
       hit.headers.set("X-Cache", "HIT");
       hit.headers.set("Vary", "Authorization");
+      if (rateLimitResult) {
+        applyEdgeRateLimitHeaders(hit, rateLimitResult);
+      }
       return hit;
     }
 
@@ -53,10 +73,12 @@ export default {
     resp.headers.set("Cache-Control", cacheControl);
     resp.headers.set("Vary", "Authorization");
     resp.headers.set("X-Cache", "MISS");
+    if (rateLimitResult) {
+      applyEdgeRateLimitHeaders(resp, rateLimitResult);
+    }
 
     // Store in cache (best effort)
     ctx.waitUntil(cache.put(cacheKey, resp.clone()));
     return resp;
   },
 };
-

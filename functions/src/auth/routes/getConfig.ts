@@ -3,6 +3,8 @@ import { DefaultAzureCredential } from '@azure/identity';
 import { SecretClient } from '@azure/keyvault-secrets';
 
 import { ok, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export type AuthConfig = {
   tenant: string;
@@ -71,9 +73,15 @@ export async function getAuthConfig(
   }
 }
 
+/* istanbul ignore next */
+const rateLimitedAuthConfig = withRateLimit(
+  getAuthConfig,
+  (req, context) => getPolicyForFunction('auth-config')
+);
+
 app.http('auth-config', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'auth/b2c-config',
-  handler: getAuthConfig,
+  handler: rateLimitedAuthConfig,
 });

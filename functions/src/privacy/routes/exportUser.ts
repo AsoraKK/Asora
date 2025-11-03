@@ -3,6 +3,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -28,9 +30,15 @@ export async function exportUserRoute(
   return protectedExportUser(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedExportUser = withRateLimit(
+  exportUserRoute,
+  (req, context) => getPolicyForFunction('privacy-export-user')
+);
+
 app.http('privacy-export-user', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'user/export',
-  handler: exportUserRoute,
+  handler: rateLimitedExportUser,
 });

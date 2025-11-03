@@ -3,6 +3,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -35,9 +37,15 @@ export async function voteOnAppealRoute(
   return protectedVoteOnAppeal(req, context);
 }
 
+/* istanbul ignore next */
+const rateLimitedVoteOnAppeal = withRateLimit(
+  voteOnAppealRoute,
+  (req, context) => getPolicyForFunction('moderation-vote-appeal')
+);
+
 app.http('moderation-vote-appeal', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'moderation/appeals/{appealId}/vote',
-  handler: voteOnAppealRoute,
+  handler: rateLimitedVoteOnAppeal,
 });
