@@ -1,5 +1,9 @@
-import { health as healthCheck } from '@shared/routes/health';
 import { HttpRequest, InvocationContext } from '@azure/functions';
+
+// Set GIT_SHA before importing the health module
+process.env.GIT_SHA = 'test-abc123';
+
+import { health as healthCheck } from '@shared/routes/health';
 
 // Mock the InvocationContext
 const mockContext: Partial<InvocationContext> = {
@@ -25,7 +29,7 @@ describe('Health Function', () => {
     jest.clearAllMocks();
   });
 
-  it('should return 200 status with ok: true', async () => {
+  it('should return 200 status with build metadata', async () => {
     // Arrange
     const request = createHttpRequest() as HttpRequest;
     const context = mockContext as InvocationContext;
@@ -35,10 +39,13 @@ describe('Health Function', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(response.jsonBody).toEqual({ ok: true });
+    expect(response.jsonBody).toHaveProperty('status', 'ok');
+    expect(response.jsonBody).toHaveProperty('version', 'test-abc123');
+    expect(response.jsonBody).toHaveProperty('uptimeSeconds');
+    expect(response.jsonBody).toHaveProperty('timestamp');
   });
 
-  it('should have minimal response body', async () => {
+  it('should include version headers', async () => {
     // Arrange
     const request = createHttpRequest() as HttpRequest;
     const context = mockContext as InvocationContext;
@@ -47,8 +54,11 @@ describe('Health Function', () => {
     const response = await healthCheck(request, context);
 
     // Assert
-    expect(response.jsonBody).toHaveProperty('ok');
-    expect(response.jsonBody).toEqual({ ok: true });
+    expect(response.headers).toBeDefined();
+    const headers = response.headers as Record<string, string>;
+    expect(headers['X-Commit']).toBe('test-abc123');
+    expect(headers['Cache-Control']).toContain('no-store');
+    expect(headers['X-Uptime-Seconds']).toMatch(/^\d+$/);
   });
 
   it('should not log anything (minimal implementation)', async () => {
@@ -73,6 +83,6 @@ describe('Health Function', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect((response.jsonBody as any).ok).toBe(true);
+    expect((response.jsonBody as any).status).toBe('ok');
   });
 });

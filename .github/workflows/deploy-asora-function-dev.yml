@@ -49,6 +49,12 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Validate Key Vault references (preflight)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            bash .github/scripts/validate-kv-refs.sh "$RG" "$FUNC_APP"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -59,6 +65,8 @@ jobs:
 
       - name: Build function package (lockfile-safe dist)
         working-directory: functions
+        env:
+          GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
@@ -132,9 +140,9 @@ jobs:
               --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
               --body @body.json >/dev/null
 
-            # Only FUNCTIONS_EXTENSION_VERSION is allowed. Do NOT set FUNCTIONS_WORKER_RUNTIME or WEBSITE_NODE_DEFAULT_VERSION.
+            # Core settings: extension version and rate limits enabled
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" RATE_LIMITS_ENABLED="false" >/dev/null
+              --settings FUNCTIONS_EXTENSION_VERSION="~4" RATE_LIMITS_ENABLED="true" >/dev/null
 
       - name: Upload package to Storage and publish (Flex, no Kudu)
         uses: azure/cli@v2
@@ -184,10 +192,22 @@ jobs:
             PACKAGE_URI="https://$STG.blob.core.windows.net/$CONT/$BLOB_NAME"
             echo "Uploaded package to $PACKAGE_URI"
 
-            # Publish via ARM API (Flex)
-            az rest --method post \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-              --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
+            # Publish via ARM API (Flex) with retry
+            MAX_RETRIES=2
+            for i in $(seq 1 $MAX_RETRIES); do
+              if az rest --method post \
+                --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+                --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"; then
+                echo "Publish succeeded on attempt $i"
+                break
+              elif [ "$i" -lt "$MAX_RETRIES" ]; then
+                echo "Publish failed on attempt $i, retrying..."
+                sleep 5
+              else
+                echo "::error::Publish failed after $MAX_RETRIES attempts" >&2
+                exit 1
+              fi
+            done
 
             # Restart to ensure host picks up deployment
             az functionapp restart -g "$RG" -n "$FUNC_APP"
@@ -205,20 +225,66 @@ jobs:
             sleep 10
           done
           if [ "$PASSED" -ne 1 ]; then
-            echo "Health check failed after retries. Dumping response for diagnostics..."
-            curl -i "https://${FUNC_APP}.azurewebsites.net/api/health" || true
-            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json || true
+            echo "::error::Health check failed after retries." >&2
             exit 1
           fi
+
+      - name: Validate health endpoint (permanent)
+        run: |
+          set -euo pipefail
+          HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
+          echo "Validating $HEALTH_URL"
+          
+          RESPONSE=$(curl -sS "$HEALTH_URL")
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
+          
+          echo "$RESPONSE" | jq . || echo "$RESPONSE"
+          
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Health endpoint returned $CODE, expected 200" >&2
+            echo "Response body: $RESPONSE" >&2
+            exit 1
+          fi
+          
+          # Validate required fields
+          echo "$RESPONSE" | jq -e '.status == "ok"' >/dev/null || { echo "::error::Missing or invalid status field"; exit 1; }
+          echo "$RESPONSE" | jq -e '.version' >/dev/null || { echo "::error::Missing version field"; exit 1; }
+          echo "$RESPONSE" | jq -e '.uptimeSeconds' >/dev/null || { echo "::error::Missing uptimeSeconds field"; exit 1; }
+          
+          echo "✅ Health endpoint validation passed"
 
       - name: Smoke test HTTP trigger
         run: |
           set -euo pipefail
           HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
           echo "GET $HEALTH_URL"
-          curl -sS "$HEALTH_URL" | tee /dev/stderr | jq . || true
+          RESPONSE=$(curl -sS "$HEALTH_URL")
+          echo "$RESPONSE" | jq . || echo "$RESPONSE"
           code=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL")
           [ "$code" = "200" ] || { echo "::error::Health endpoint not 200 ($code)"; exit 1; }
+
+      - name: Health endpoint cold-start regression test
+        run: |
+          set -euo pipefail
+          HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
+          echo "Running 3-minute cold-start regression test..."
+          
+          FAILURES=0
+          for i in $(seq 1 3); do
+            echo "Minute $i of 3..."
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            if [ "$CODE" != "200" ]; then
+              echo "::warning::Health probe returned $CODE at minute $i"
+              FAILURES=$((FAILURES + 1))
+            fi
+            [ "$i" -lt 3 ] && sleep 60
+          done
+          
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::Health endpoint failed $FAILURES times during cold-start test" >&2
+            exit 1
+          fi
+          echo "✅ Cold-start regression test passed"
 
       - name: Try to list functions (best-effort on Flex)
         if: always()
