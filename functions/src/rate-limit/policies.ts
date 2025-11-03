@@ -144,7 +144,7 @@ function createAuthEndpointPolicy(routeId: string): RateLimitPolicy {
     routeId,
     limits: [
       createRouteIpRule(routeId, AUTH_BASE_LIMIT.limit, AUTH_BASE_LIMIT.windowSeconds),
-      createGlobalUserRule(routeId, AUTH_BASE_LIMIT.limit, AUTH_BASE_LIMIT.windowSeconds),
+  createGlobalUserRule(routeId),
       createGlobalIpRule(routeId),
     ],
     deriveUserId: deriveUserIdFromAuth,
@@ -212,7 +212,7 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
     case 'auth/ping':
       return createAnonymousPolicy(path);
     case 'health':
-      return createAnonymousPolicy('health', 120);
+  return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
     default:
       return createGenericPolicy(path || 'unknown');
   }
@@ -243,7 +243,7 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
     case 'auth-ping':
       return createAnonymousPolicy(routeId);
     case 'health':
-      return createAnonymousPolicy('health', 120);
+  return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
     default:
       return createGenericPolicy(routeId);
   }

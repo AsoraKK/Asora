@@ -121,12 +121,12 @@ function resolvePolicy(
 }
 
 function extractTraceId(context: InvocationContext): string | undefined {
-  const traceparent = context.traceContext?.traceparent;
-  if (!traceparent) {
+  const traceParent = context.traceContext?.traceParent;
+  if (!traceParent) {
     return undefined;
   }
 
-  const segments = traceparent.split('-');
+  const segments = traceParent.split('-');
   if (segments.length >= 3) {
     return segments[1];
   }

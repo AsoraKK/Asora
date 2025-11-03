@@ -11,6 +11,7 @@ import {
   TokenBucketEvaluation,
   TokenBucketState,
 } from './algorithms';
+  export type { TokenBucketEvaluation } from './algorithms';
 
 const RATE_LIMIT_CONTAINER_NAME = process.env.RATE_LIMIT_CONTAINER ?? 'rate_limits';
 const MAX_PATCH_RETRIES = 4;
@@ -91,7 +92,7 @@ async function incrementSlidingWindowBucket(
     attempt++;
     try {
       const { resource } = await container.item(id, key).patch<SlidingWindowDocument>(patchOperations, {
-        filterPredicate: "FROM c WHERE c.type = 'sliding'",
+          // filterPredicate removed
       });
       if (!resource) {
         throw new Error('Failed to update sliding window bucket');
