@@ -134,7 +134,7 @@ jobs:
 
             # Only FUNCTIONS_EXTENSION_VERSION is allowed. Do NOT set FUNCTIONS_WORKER_RUNTIME or WEBSITE_NODE_DEFAULT_VERSION.
             az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" >/dev/null
+              --settings FUNCTIONS_EXTENSION_VERSION="~4" RATE_LIMITS_ENABLED="false" >/dev/null
 
       - name: Upload package to Storage and publish (Flex, no Kudu)
         uses: azure/cli@v2
@@ -194,13 +194,22 @@ jobs:
 
       - name: Wait for runtime startup
         run: |
+          PASSED=0
           for i in $(seq 1 12); do
             code=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/api/health" || true)
             echo "probe $i http=$code"
-            [ "$code" = "200" ] && exit 0
+            if [ "$code" = "200" ]; then
+              PASSED=1
+              break
+            fi
             sleep 10
           done
-          exit 1
+          if [ "$PASSED" -ne 1 ]; then
+            echo "Health check failed after retries. Dumping response for diagnostics..."
+            curl -i "https://${FUNC_APP}.azurewebsites.net/api/health" || true
+            az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json || true
+            exit 1
+          fi
 
       - name: Smoke test HTTP trigger
         run: |
