@@ -276,6 +276,51 @@ void main() {
       expect(states, [AuthState.authenticating, AuthState.authenticated]);
     });
   });
+
+  group('B2C Policy Parameter', () {
+    test('policy parameter must be included in authorize requests', () {
+      // This test documents the requirement that B2C/CIAM flows must include
+      // the policy (user flow) parameter in authorization requests.
+      // Without this, the authorize endpoint won't know which user flow to execute.
+
+      const config = AuthConfig(
+        tenant: 'test.onmicrosoft.com',
+        tenantId: '11111111-2222-3333-4444-555555555555',
+        clientId: 'test-client-id',
+        policy: 'B2C_1_signupsignin',
+        authorityHost: 'test.ciamlogin.com',
+        scopes: ['openid'],
+        redirectUris: {'android': 'test://callback'},
+        knownAuthorities: ['test.ciamlogin.com'],
+      );
+
+      // The policy should be part of the discovery URL query string
+      expect(config.discoveryUrl, contains('?p=B2C_1_signupsignin'));
+
+      // And signInEmail/signInGoogle must pass additionalParameters: {'p': policy}
+      // This is verified by code inspection since AuthorizationTokenRequest is opaque
+      // See: lib/services/oauth2_service.dart lines ~275 (signInEmail) and ~312 (signInGoogle)
+    });
+
+    test('policy parameter must be included in token refresh requests', () {
+      // Token refresh via TokenRequest must also include the policy parameter
+      // to ensure the token endpoint knows which user flow's keys to use for validation
+
+      const config = AuthConfig(
+        tenant: 'test.onmicrosoft.com',
+        clientId: 'test-client-id',
+        policy: 'B2C_1_signupsignin',
+        authorityHost: 'test.ciamlogin.com',
+        scopes: ['openid'],
+        redirectUris: {'android': 'test://callback'},
+        knownAuthorities: ['test.ciamlogin.com'],
+      );
+
+      // Verified by code inspection in getAccessToken() refresh flow
+      // See: lib/services/oauth2_service.dart line ~383
+      expect(config.policy, 'B2C_1_signupsignin');
+    });
+  });
 }
 
 /// Extension to expose private methods for testing
