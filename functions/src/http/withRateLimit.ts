@@ -121,7 +121,7 @@ function resolvePolicy(
 }
 
 function extractTraceId(context: InvocationContext): string | undefined {
-  const traceParent = context.traceContext?.traceParent;
+  const traceParent = context.traceContext?.traceParent ?? (context.traceContext as any)?.traceparent;
   if (!traceParent) {
     return undefined;
   }
