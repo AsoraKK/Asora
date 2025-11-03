@@ -72,7 +72,7 @@ function createContext(): InvocationContext {
   return {
     invocationId: 'invocation-1',
     traceContext: {
-      traceparent: '00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01',
+      traceParent: '00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01',
     },
   } as InvocationContext;
 }
