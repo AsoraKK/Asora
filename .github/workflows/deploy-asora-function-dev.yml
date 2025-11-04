@@ -273,6 +273,15 @@ jobs:
           
           echo "🔍 Probing $HEALTH_URL with exponential backoff..."
           
+          # First, check if the function app is accessible at all
+          echo "Pre-flight check: Testing basic connectivity..."
+          BASIC_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/" 2>/dev/null || echo "connection-failed")
+          if [ "$BASIC_CODE" = "connection-failed" ]; then
+            echo "::error::Function app is not accessible at all (DNS/network issue)" >&2
+            exit 1
+          fi
+          echo "✅ Function app is accessible (HTTP $BASIC_CODE)"
+          
           for i in $(seq 1 30); do
             # Capture both status code and response body for diagnostics
             RESPONSE=$(curl -sS "$HEALTH_URL" 2>&1 || echo "connection-failed")
@@ -284,10 +293,28 @@ jobs:
               echo "✅ Health check passed"
               PASSED=1
               break
-            elif [ "$CODE" = "500" ] || [ "$CODE" = "503" ]; then
+            elif [ "$CODE" = "500" ] || [ "$CODE" = "503" ] || [ "$CODE" = "502" ] || [ "$CODE" = "504" ]; then
               # Log the error response for diagnosis
-              echo "⚠️  Server error response:"
-              echo "$RESPONSE" | head -20
+              echo "⚠️  Server error response (code: $CODE):"
+              if [ "$RESPONSE" = "connection-failed" ]; then
+                echo "  Connection failed - function app may not be running"
+              elif [ -z "$RESPONSE" ]; then
+                echo "  Empty response body - likely Azure Functions runtime error"
+              else
+                echo "$RESPONSE" | head -10
+              fi
+              
+              # Additional diagnostics on first failure
+              if [ $i -eq 1 ]; then
+                echo "🔍 Additional diagnostics for first 500 error:"
+                echo "  Testing basic connectivity to function app..."
+                BASIC_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/" 2>/dev/null || echo "connection-failed")
+                echo "  Root endpoint: $BASIC_CODE"
+                
+                echo "  Testing admin endpoint..."
+                ADMIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/admin/host/status" 2>/dev/null || echo "connection-failed")
+                echo "  Admin status: $ADMIN_CODE"
+              fi
             fi
             
             # Exponential backoff: 2s, 4s, 6s, 8s, ... up to 60s max
@@ -333,6 +360,52 @@ jobs:
             echo ""
             echo "📝 Last 100 lines from function app logs:"
             az functionapp log tail -g "$RG" -n "$FUNC_APP" --timeout 10 2>&1 | tail -100 || echo "Log streaming unavailable"
+
+      - name: Diagnose function app startup issues
+        if: failure()
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "🔍 Diagnosing Function App startup issues..."
+            
+            echo "=== Function App Status ==="
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "{name:name, state:state, defaultHostname:defaultHostname, lastModifiedTime:lastModifiedTime}" \
+              -o table
+            
+            echo ""
+            echo "=== Runtime Configuration ==="
+            az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "siteConfig.{nodeVersion:linuxFxVersion, alwaysOn:alwaysOn, functionAppScaleLimit:functionAppScaleLimit}" \
+              -o table
+            
+            echo ""
+            echo "=== Key App Settings (sanitized) ==="
+            SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
+            echo "$SETTINGS" | jq -r '.[] | "\(.name): \(.value | if . | startswith("@Microsoft.KeyVault") then "KeyVault reference" else . end)"' | head -20
+            
+            echo ""
+            echo "=== Storage Account Check ==="
+            STORAGE_CONN=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="AzureWebJobsStorage") | .value' 2>/dev/null || echo "NOT_SET")
+            if [ "$STORAGE_CONN" = "NOT_SET" ]; then
+              echo "❌ AzureWebJobsStorage not configured"
+            else
+              echo "✅ AzureWebJobsStorage configured"
+            fi
+            
+            echo ""
+            echo "=== Function List (may be empty on Flex) ==="
+            az functionapp function list -g "$RG" -n "$FUNC_APP" -o table 2>/dev/null || echo "Function list unavailable (normal for Flex Consumption)"
+            
+            echo ""
+            echo "=== Recent Deployments ==="
+            az functionapp deployment list-publishing-profiles -g "$RG" -n "$FUNC_APP" 2>/dev/null | head -5 || echo "Deployment history unavailable"
+            
+            echo ""
+            echo "=== Testing direct health endpoint access ==="
+            # Try to get more detailed error info
+            curl -v "$HEALTH_URL" 2>&1 | head -30 || echo "Direct curl failed"
 
       - name: Validate health endpoint (permanent)
         run: |
