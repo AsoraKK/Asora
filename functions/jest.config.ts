@@ -11,6 +11,7 @@ const config: Config = {
     '<rootDir>/src/**/routes/**/*.{ts,tsx}',
     '!<rootDir>/src/**/routes/**/index.ts',
     '!<rootDir>/src/**/routes/**/types.ts',
+    '!<rootDir>/src/shared/routes/health.ts', // Exclude defensive-only liveness check
     '!<rootDir>/src/shared/clients/**',
     '!<rootDir>/src/**/__fixtures__/**',
     '!<rootDir>/src/test-handler.ts',
