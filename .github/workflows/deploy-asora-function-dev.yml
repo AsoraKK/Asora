@@ -212,22 +212,127 @@ jobs:
             # Restart to ensure host picks up deployment
             az functionapp restart -g "$RG" -n "$FUNC_APP"
 
+      - name: Validate critical app settings
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "🔍 Validating critical app settings that must be present..."
+            
+            SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
+            
+            # Check FUNCTIONS_EXTENSION_VERSION
+            EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
+            if [ "$EXT_VERSION" != "~4" ]; then
+              echo "::error::FUNCTIONS_EXTENSION_VERSION must be ~4, found: ${EXT_VERSION:-NOT_SET}" >&2
+              exit 1
+            fi
+            echo "✅ FUNCTIONS_EXTENSION_VERSION: $EXT_VERSION"
+            
+            # Check that FUNCTIONS_WORKER_RUNTIME is NOT set (Flex requirement)
+            WORKER_RUNTIME=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME") | .value' 2>/dev/null || echo "")
+            if [ -n "$WORKER_RUNTIME" ]; then
+              echo "::error::FUNCTIONS_WORKER_RUNTIME should NOT be set for Flex apps, found: $WORKER_RUNTIME" >&2
+              exit 1
+            fi
+            echo "✅ FUNCTIONS_WORKER_RUNTIME: not set (correct for Flex)"
+            
+            # Check Key Vault references are present
+            EMAIL_HASH=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="EMAIL_HASH_SALT") | .value' || echo "")
+            if [[ ! "$EMAIL_HASH" =~ ^@Microsoft\.KeyVault ]]; then
+              echo "::warning::EMAIL_HASH_SALT is not a Key Vault reference: ${EMAIL_HASH:-NOT_SET}"
+            else
+              echo "✅ EMAIL_HASH_SALT: Key Vault reference configured"
+            fi
+            
+            COSMOS_CONN=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="COSMOS_CONNECTION_STRING") | .value' || echo "")
+            if [[ ! "$COSMOS_CONN" =~ ^@Microsoft\.KeyVault ]]; then
+              echo "::warning::COSMOS_CONNECTION_STRING is not a Key Vault reference: ${COSMOS_CONN:-NOT_SET}"
+            else
+              echo "✅ COSMOS_CONNECTION_STRING: Key Vault reference configured"
+            fi
+            
+            # Check Node version in runtime config
+            RUNTIME_CONFIG=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query "siteConfig" -o json)
+            NODE_VERSION=$(echo "$RUNTIME_CONFIG" | jq -r '.linuxFxVersion' || echo "")
+            echo "Runtime stack: ${NODE_VERSION:-not set}"
+            
+            if [[ ! "$NODE_VERSION" =~ [Nn]ode.*20 ]]; then
+              echo "::warning::Runtime may not be Node 20. Current: $NODE_VERSION"
+            else
+              echo "✅ Node 20 runtime detected"
+            fi
+            
+            echo "✅ Critical app settings validation complete"
+
       - name: Wait for runtime startup
         run: |
+          set -euo pipefail
+          HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
           PASSED=0
-          for i in $(seq 1 12); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_APP}.azurewebsites.net/api/health" || true)
-            echo "probe $i http=$code"
-            if [ "$code" = "200" ]; then
+          
+          echo "🔍 Probing $HEALTH_URL with exponential backoff..."
+          
+          for i in $(seq 1 30); do
+            # Capture both status code and response body for diagnostics
+            RESPONSE=$(curl -sS "$HEALTH_URL" 2>&1 || echo "connection-failed")
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" 2>/dev/null || echo "000")
+            
+            echo "probe $i/$30: http=$CODE"
+            
+            if [ "$CODE" = "200" ]; then
+              echo "✅ Health check passed"
               PASSED=1
               break
+            elif [ "$CODE" = "500" ] || [ "$CODE" = "503" ]; then
+              # Log the error response for diagnosis
+              echo "⚠️  Server error response:"
+              echo "$RESPONSE" | head -20
             fi
-            sleep 10
+            
+            # Exponential backoff: 2s, 4s, 6s, 8s, ... up to 60s max
+            SLEEP_TIME=$((i * 2))
+            if [ $SLEEP_TIME -gt 60 ]; then SLEEP_TIME=60; fi
+            
+            if [ $i -lt 30 ]; then
+              echo "⏳ Waiting ${SLEEP_TIME}s before next probe..."
+              sleep $SLEEP_TIME
+            fi
           done
+          
           if [ "$PASSED" -ne 1 ]; then
-            echo "::error::Health check failed after retries." >&2
+            echo "::error::Health check failed after 30 retries with exponential backoff." >&2
+            echo "::error::Last response code: $CODE" >&2
+            echo "::error::This indicates the Functions host is failing to start or /api/health is crashing." >&2
             exit 1
           fi
+
+      - name: Stream App Insights logs on failure
+        if: failure()
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            echo "🔍 Streaming recent Application Insights logs..."
+            
+            # Get the last 50 traces and exceptions from App Insights
+            APP_INSIGHTS_ID=$(az functionapp show -g "$RG" -n "$FUNC_APP" \
+              --query "appSettings[?name=='APPINSIGHTS_INSTRUMENTATIONKEY'].value | [0]" -o tsv 2>/dev/null || echo "")
+            
+            if [ -n "$APP_INSIGHTS_ID" ]; then
+              echo "📊 Recent exceptions and errors:"
+              az monitor app-insights query \
+                --app "$FUNC_APP" \
+                --resource-group "$RG" \
+                --analytics-query "union exceptions, traces | where timestamp > ago(10m) | order by timestamp desc | take 50 | project timestamp, severityLevel, message, outerMessage" \
+                --output table 2>/dev/null || echo "Could not query App Insights"
+            else
+              echo "⚠️  App Insights not configured, falling back to function app logs"
+            fi
+            
+            echo ""
+            echo "📝 Last 100 lines from function app logs:"
+            az functionapp log tail -g "$RG" -n "$FUNC_APP" --timeout 10 2>&1 | tail -100 || echo "Log streaming unavailable"
 
       - name: Validate health endpoint (permanent)
         run: |

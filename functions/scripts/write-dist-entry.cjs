@@ -20,6 +20,7 @@ fs.mkdirSync(distDir, { recursive: true });
 // direct per-route requires if that fails so /api/health still comes up.
 const fallbackModules = [
   './src/shared/routes/health',
+  './src/shared/routes/ready',
   './src/feed/routes/getFeed',
   './src/feed/routes/createPost',
   './src/auth/routes/authorize',
