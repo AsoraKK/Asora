@@ -16,12 +16,53 @@ if (!fs.existsSync(srcEntry)) {
 
 fs.mkdirSync(distDir, { recursive: true });
 
-// Load the compiled TypeScript entry point. It synchronously registers the
-// health function and defers the rest of the routes behind guarded imports to
-// avoid crashing startup when optional configuration is missing.
-const jsContent = `${banner}// Load compiled entry point for Azure Functions runtime
-require('./src/index.js');
-`;
+// Generated entrypoint: prefer the compiled bootstrap, but fall back to
+// direct per-route requires if that fails so /api/health still comes up.
+const fallbackModules = [
+  './src/shared/routes/health',
+  './src/feed/routes/getFeed',
+  './src/feed/routes/createPost',
+  './src/auth/routes/authorize',
+  './src/auth/routes/getConfig',
+  './src/auth/routes/ping',
+  './src/auth/routes/token',
+  './src/auth/routes/userinfo',
+  './src/moderation/routes/flagContent',
+  './src/moderation/routes/submitAppeal',
+  './src/moderation/routes/voteOnAppeal',
+  './src/privacy/routes/deleteUser',
+  './src/privacy/routes/exportUser',
+];
+
+const jsContent = `${banner}(function bootstrap() {
+  const modules = ${JSON.stringify(fallbackModules)};
+  let healthRegistered = false;
+
+  try {
+    require('./src/index.js');
+    healthRegistered = true;
+  } catch (error) {
+    const reason = error && error.message ? error.message : error;
+    console.error('[bootstrap] Failed to load ./src/index.js:', reason);
+
+    for (const mod of modules) {
+      try {
+        require(mod);
+        if (mod.includes('/health')) {
+          healthRegistered = true;
+        }
+        console.log('[bootstrap] Loaded fallback module:', mod);
+      } catch (moduleError) {
+        const detail = moduleError && moduleError.message ? moduleError.message : moduleError;
+        console.error('[bootstrap] Failed to load fallback module', mod + ':', detail);
+      }
+    }
+  }
+
+  if (!healthRegistered) {
+    console.error('[bootstrap] Health route did not register; deployment cannot serve /api/health.');
+  }
+})();\n`;
 fs.writeFileSync(destEntry, jsContent, 'utf8');
 
 if (fs.existsSync(srcTypes)) {
