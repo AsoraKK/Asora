@@ -2,7 +2,7 @@
  * Health endpoint tests - validates the true liveness check.
  * 
  * The health endpoint is intentionally minimal with zero I/O and no dependencies.
- * It returns a plain Response('ok', { status: 200 }) to ensure it never crashes.
+ * It returns { status: 200, body: 'ok' } to ensure it never crashes.
  * 
  * These tests verify the endpoint is registered correctly and accessible.
  */
@@ -23,16 +23,13 @@ describe('Health Function', () => {
     expect(Object.keys(healthModule).length).toBe(0);
   });
 
-  it('should return a Response object when called directly', async () => {
-    // Simulate the handler behavior directly
-    const handler = async () => new Response('ok', { status: 200 });
+  it('should return HttpResponseInit when called directly', async () => {
+    // Simulate the handler behavior directly using Azure Functions v4 pattern
+    const handler = async () => ({ status: 200, body: 'ok' });
     const response = await handler();
     
-    expect(response).toBeInstanceOf(Response);
-    expect(response.status).toBe(200);
-    
-    const text = await response.text();
-    expect(text).toBe('ok');
+    expect(response).toHaveProperty('status', 200);
+    expect(response).toHaveProperty('body', 'ok');
   });
 
   it('should have no dependencies or side effects', () => {
