@@ -24,7 +24,7 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  final skipInteractive = const bool.fromEnvironment(
+  const skipInteractive = bool.fromEnvironment(
     'SKIP_INTERACTIVE',
     defaultValue: false,
   );

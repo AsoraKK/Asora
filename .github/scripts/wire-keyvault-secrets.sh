@@ -19,7 +19,7 @@ EMAIL_HASH_REF="@Microsoft.KeyVault(SecretUri=${KV_URI}secrets/email-hash-salt/)
 echo "Setting EMAIL_HASH_SALT -> $EMAIL_HASH_REF"
 
 # Wire COSMOS_CONNECTION_STRING
-COSMOS_REF="@Microsoft.KeyVault(SecretUri=${KV_URI}secrets/cosmos-connection-string/)"
+COSMOS_REF="@Microsoft.KeyVault(SecretUri=${KV_URI}secrets/COSMOS-CONN/)"
 echo "Setting COSMOS_CONNECTION_STRING -> $COSMOS_REF"
 
 # Apply settings
