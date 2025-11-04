@@ -278,7 +278,7 @@ jobs:
             RESPONSE=$(curl -sS "$HEALTH_URL" 2>&1 || echo "connection-failed")
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" 2>/dev/null || echo "000")
             
-            echo "probe $i/$30: http=$CODE"
+            echo "probe $i/${30}: http=$CODE"
             
             if [ "$CODE" = "200" ]; then
               echo "✅ Health check passed"
