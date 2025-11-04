@@ -1,9 +1,34 @@
 // Entrypoint for the Azure Functions v4 runtime.
-// Import each module that performs its own app.http registration so the
-// runtime discovers every trigger when this file is evaluated.
+// We must ensure the health endpoint is always available, even if other
+// feature modules fail to load due to missing environment configuration.
+//
+// 1) Import health synchronously so it's registered unconditionally.
+// 2) Attempt to import the rest of the routes asynchronously and defensively.
+//    Any failure will be logged but won't prevent the host from serving /api/health.
 
-import './auth';
-import './feed';
-import './moderation';
-import './privacy';
 import './shared/routes/health';
+
+// Best-effort async registration for non-health routes
+// (dynamic imports are wrapped in try/catch to avoid crashing the host).
+async function registerFeatureRoutes(): Promise<void> {
+	const tryImport = async (label: string, loader: () => Promise<unknown>) => {
+		try {
+			await loader();
+			// eslint-disable-next-line no-console
+			console.log(`[routes] loaded: ${label}`);
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.error(`[routes] failed to load ${label}:`, err instanceof Error ? err.message : err);
+		}
+	};
+
+	await Promise.all([
+		tryImport('auth', () => import('./auth')),
+		tryImport('feed', () => import('./feed')),
+		tryImport('moderation', () => import('./moderation')),
+		tryImport('privacy', () => import('./privacy')),
+	]);
+}
+
+// Kick off route registration without blocking startup of the health endpoint
+void registerFeatureRoutes();
