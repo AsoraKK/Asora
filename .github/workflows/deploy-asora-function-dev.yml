@@ -313,12 +313,12 @@ jobs:
             az monitor app-insights query \
               --app "$FUNC_APP" \
               --resource-group "$RG" \
-              --analytics-query "union exceptions, traces | where timestamp > ago(15m) | order by timestamp desc | take 50 | project timestamp, severityLevel, message, outerMessage" \
+              --analytics-query "union exceptions, traces | where timestamp > ago(15m) | order by timestamp desc | take 50 | project timestamp, severityLevel, message, outerMessage, type, problemId" \
               --output table 2>/dev/null || echo "App Insights query unavailable"
             
             echo ""
-            echo "📝 Function app logs (last 100 lines):"
-            az functionapp log tail -g "$RG" -n "$FUNC_APP" --timeout 10 2>&1 | tail -100 || echo "Log streaming unavailable"
+            echo "📝 Tailing live function app logs for 30 seconds..."
+            az webapp log tail --name "$FUNC_APP" --resource-group "$RG" --timeout 30 2>&1 || echo "Log streaming unavailable"
 
       - name: Verify extension bundle v4 post-deployment
         uses: azure/cli@v2
