@@ -16,22 +16,11 @@ if (!fs.existsSync(srcEntry)) {
 
 fs.mkdirSync(distDir, { recursive: true });
 
-// Directly require ALL individual route files (not module indexes)
-// This ensures app.http() calls execute at top level during module load
-const jsContent = `${banner}// Directly require all route modules to ensure registration
-require('./src/shared/routes/health');
-require('./src/feed/routes/getFeed');
-require('./src/feed/routes/createPost');
-require('./src/auth/routes/authorize');
-require('./src/auth/routes/getConfig');
-require('./src/auth/routes/ping');
-require('./src/auth/routes/token');
-require('./src/auth/routes/userinfo');
-require('./src/moderation/routes/flagContent');
-require('./src/moderation/routes/submitAppeal');
-require('./src/moderation/routes/voteOnAppeal');
-require('./src/privacy/routes/deleteUser');
-require('./src/privacy/routes/exportUser');
+// Load the compiled TypeScript entry point. It synchronously registers the
+// health function and defers the rest of the routes behind guarded imports to
+// avoid crashing startup when optional configuration is missing.
+const jsContent = `${banner}// Load compiled entry point for Azure Functions runtime
+require('./src/index.js');
 `;
 fs.writeFileSync(destEntry, jsContent, 'utf8');
 
