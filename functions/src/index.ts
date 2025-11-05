@@ -2,12 +2,12 @@
 // We must ensure the health endpoint is always available, even if other
 // feature modules fail to load due to missing environment configuration.
 //
-// 1) Import health synchronously so it's registered unconditionally.
+// 1) Health is handled by classic endpoint (zero-dependency, unconditional).
 // 2) Import ready synchronously - it does env checks but doesn't require services at load time.
 // 3) Attempt to import the rest of the routes asynchronously and defensively.
 //    Any failure will be logged but won't prevent the host from serving /api/health.
 
-import './shared/routes/health';
+// import './shared/routes/health'; // Handled by classic health endpoint
 import './shared/routes/ready';
 
 // Best-effort async registration for non-health routes
