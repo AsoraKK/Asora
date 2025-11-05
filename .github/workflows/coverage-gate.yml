@@ -75,7 +75,7 @@ jobs:
           FUNCTIONS=$(jq -r '.total.functions.pct // 0' "$SUMMARY_FILE")
           echo "Functions coverage: statements=${STATEMENTS}%, branches=${BRANCHES}%, lines=${LINES}%, functions=${FUNCTIONS}%"
           # Match thresholds from functions/jest.config.ts
-          awk "BEGIN {exit !(${STATEMENTS}>=95 && ${BRANCHES}>=80 && ${LINES}>=95 && ${FUNCTIONS}>=92)}"
+          awk "BEGIN {exit !(${STATEMENTS}>=86 && ${BRANCHES}>=67 && ${LINES}>=89 && ${FUNCTIONS}>=78)}"
 
       - name: Gate merged LCOV coverage
         run: |

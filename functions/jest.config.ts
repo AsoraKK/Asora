@@ -44,6 +44,14 @@ const config: Config = {
   },
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts', '<rootDir>/tests/jest.setup.ts'],
   verbose: false,
+  coverageThreshold: {
+    global: {
+      statements: 86,
+      branches: 67,
+      lines: 89,
+      functions: 78,
+    },
+  },
 };
 
 export default config;
