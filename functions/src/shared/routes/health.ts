@@ -11,18 +11,31 @@ app.http('health', {
   route: 'health',
   handler: async (): Promise<HttpResponseInit> => {
     try {
-      const commit = process.env.GIT_SHA ?? 'unknown';
+      const commit = (process.env.GIT_SHA ?? 'unknown').trim() || 'unknown';
+      const payload = { status: 'ok', commit };
+      const body = JSON.stringify(payload);
+
       return {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        jsonBody: { status: 'ok', commit },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+        body,
+        jsonBody: payload,
       };
     } catch {
       // Never crash liveness - return minimal response if anything fails
+      const payload = { status: 'ok' };
+
       return {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        jsonBody: { status: 'ok' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+        body: JSON.stringify(payload),
+        jsonBody: payload,
       };
     }
   },
