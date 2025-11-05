@@ -68,7 +68,7 @@ jobs:
           fi
           STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
           CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^?]*\).*#\1#p')
-          az storage blob upload --auth-mode login --account-name "$STG" --container-name "$CONT" --name "functions-dist.zip" --file "functions/functions-dist.zip" --overwrite
+          az storage blob upload --auth-mode login --account-name "$STG" --container-name "$CONT" --name "functions-dist.zip" --file "functions-dist.zip" --overwrite
           PACKAGE_URI="https://$STG.blob.core.windows.net/$CONT/functions-dist.zip"
           az rest --method post \
             --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
