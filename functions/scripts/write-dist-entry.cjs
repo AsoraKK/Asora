@@ -67,7 +67,7 @@ fs.writeFileSync(
   }
 })(distDir);
 
-// 4) Hardened bootstrap: try main, else best-effort route registration (never import health here)
+// 4) Hardened bootstrap: try main, else best-effort route registration (health is always loaded first)
 const fallbackModules = [
   './src/shared/routes/ready',
   './src/feed/routes/getFeed',
@@ -85,7 +85,10 @@ const fallbackModules = [
 ];
 
 fs.writeFileSync(destEntry,
-`try { require('./src/index.js'); }
+`// Always load health first (zero-dependency, unconditional)
+try { require('./health/index.js'); } catch (e) { console.error('[bootstrap] health failed:', (e && e.message) || e); }
+
+try { require('./src/index.js'); }
 catch (e) {
   console.error('[bootstrap] ./src/index.js failed:', (e && e.message) || e);
   for (const m of ${JSON.stringify(fallbackModules)}) {
