@@ -40,7 +40,7 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.join(healthDir, 'index.js'),
-  "const H={\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store, no-cache, must-revalidate\"};module.exports=async c=>{const v=(process.env.GIT_SHA||\"\").trim()||\"unknown\";c.res={status:200,headers:H,body:JSON.stringify({status:\"ok\",commit:v})}};"
+  "const H={\"Content-Type\":\"application/json\",\"Cache-Control\":\"no-store, no-cache, must-revalidate\"};module.exports=async c=>{const v=(process.env.GIT_SHA||\"\").trim()||\"unknown\";c.res={status:200,headers:H,body:JSON.stringify({status:\"ok\",commit:v})}};module.exports.health=module.exports;module.exports.default=module.exports;\n"
 );
 
 // host.json + prod package.json
