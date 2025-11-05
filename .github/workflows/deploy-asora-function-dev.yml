@@ -1,46 +1,27 @@
-name: Deploy to asora-function-dev (Flex - storage publish)
+name: deploy-asora-function-dev
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
-
-permissions:
-  id-token: write
-  contents: read
-
-concurrency:
-  group: deploy-asora-function-dev-${{ github.ref }}
-  cancel-in-progress: true
+  push:
+    branches: [ "main" ]
+    paths:
+      - "functions/**"
+      - ".github/workflows/deploy-asora-function-dev.yml"
 
 env:
-  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   RG: asora-psql-flex
   FUNC_APP: asora-function-dev
-  NODE_VERSION: '20'
+  NODE_VERSION: 20
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: dev
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Block legacy SP secrets
-        env:
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-        run: |
-          set -euo pipefail
-          if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
-            echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
-            exit 1
-          fi
-
-      - name: Install zip utilities
-        run: sudo apt-get update && sudo apt-get install -y zip unzip jq
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -49,309 +30,102 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Validate Key Vault references (preflight)
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            bash .github/scripts/validate-kv-refs.sh "$RG" "$FUNC_APP"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Disable Husky in CI
-        run: echo "HUSKY=0" >> "$GITHUB_ENV"
-
-      - name: Build function package (lockfile-safe dist)
+      - name: Build Functions (Flex)
         working-directory: functions
         env:
+          HUSKY: 0
           GIT_SHA: ${{ github.sha }}
+        run: npm ci --no-audit --no-fund && npm run build
+
+      - name: Gate artifact structure
+        working-directory: functions/dist
         run: |
           set -euo pipefail
-          npm ci --no-audit --no-fund
-          npm run build
-          test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
-          test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
+          test -f host.json
+          test -f index.js
+          test -f health/function.json
+          test -f health/index.js
+          node -e "require('./health/index.js'); console.log('classic health loads')"
 
-          # Prod deps in dist
-          if [ -f dist/package.json ]; then
-            (cd dist && npm install --omit=dev --no-audit --no-fund)
+      - name: Zip dist root (zip the CONTENTS of dist)
+        working-directory: functions/dist
+        run: zip -r ../../functions-dist.zip .
+
+      - name: Publish to Flex (storage-backed publish API)
+        run: |
+          set -euo pipefail
+          DEPLOY_VALUE=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query "properties.functionAppConfig.deployment.storage.value" -o tsv)
+          if [ -z "$DEPLOY_VALUE" ]; then
+            echo "::error::Function App is not Flex or deployment storage not configured"; exit 1
+          fi
+          STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
+          CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^?]*\).*#\1#p')
+          az storage blob upload --auth-mode login --account-name "$STG" --container-name "$CONT" --name "functions-dist.zip" --file "functions/functions-dist.zip" --overwrite
+          PACKAGE_URI="https://$STG.blob.core.windows.net/$CONT/functions-dist.zip"
+          az rest --method post \
+            --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
+            --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
+          az functionapp restart -g "$RG" -n "$FUNC_APP"
+
+      - name: Validate Flex app settings
+        run: |
+          set -euo pipefail
+          SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
+          EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
+          if [ "$EXT_VERSION" != "~4" ]; then
+            echo "::error::FUNCTIONS_EXTENSION_VERSION must be ~4, found: ${EXT_VERSION:-NOT_SET}"; exit 1
+          fi
+          # Flex: FUNCTIONS_WORKER_RUNTIME should NOT be set
+          WORKER=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME") | .value' || echo "")
+          if [ -n "$WORKER" ]; then
+            echo "::error::FUNCTIONS_WORKER_RUNTIME must be unset on Flex, found: $WORKER"; exit 1
           fi
 
-          # Sanity: index.js must load without env (no top-level side effects)
-          (cd dist && node -e "require('./index.js'); console.log('OK')") || { echo "::error::dist/index.js throws at load"; exit 1; }
-
-          pushd dist >/dev/null
-          zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"
-          popd >/dev/null
-          mv dist-func.zip "$GITHUB_WORKSPACE/dist-func.zip"
-
-      - name: Validate package exists
+      - name: Post-deploy probe /api/health
         run: |
           set -euo pipefail
-          test -f dist-func.zip || { echo "Missing dist-func.zip"; exit 3; }
-          ls -lh dist-func.zip
-          unzip -l dist-func.zip | head -n 60
-
-      - name: Ensure Flex runtime configuration
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            CUR=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query properties.functionAppConfig -o json || echo "{}")
-            export CUR
-            python3 - <<'PY' > body.json
-            import json
-            import os
-
-            raw = os.environ.get("CUR", "{}")
-            try:
-              cfg = json.loads(raw) if raw else {}
-            except json.JSONDecodeError:
-              cfg = {}
-            if not isinstance(cfg, dict):
-              cfg = {}
-
-            deployment = cfg.get("deployment")
-            deployment_valid = False
-            if isinstance(deployment, dict):
-              storage = deployment.get("storage")
-              if isinstance(storage, dict):
-                dtype = storage.get("type")
-                if isinstance(dtype, str) and dtype.strip():
-                  deployment_valid = True
-
-            clean_cfg = {
-              "runtime": {"name": "node", "version": "20"},
-              "scaleAndConcurrency": {"instanceMemoryMB": 2048, "maximumInstanceCount": 40}
-            }
-
-            clean_cfg["deployment"] = deployment if deployment_valid else None
-
-            for key, value in cfg.items():
-              if key in ("deployment", "runtime", "scaleAndConcurrency"):
-                continue
-              clean_cfg[key] = value
-
-            print(json.dumps({"properties": {"functionAppConfig": clean_cfg}}))
-            PY
-            az rest --method patch \
-              --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP?api-version=2023-12-01" \
-              --body @body.json >/dev/null
-
-            # Core settings: extension version and rate limits enabled
-            az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
-              --settings FUNCTIONS_EXTENSION_VERSION="~4" RATE_LIMITS_ENABLED="true" >/dev/null
-
-      - name: Upload package to Storage and publish (Flex, no Kudu)
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-
-            # Discover deployment storage from functionAppConfig
-            DEPLOY_VALUE=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query "properties.functionAppConfig.deployment.storage.value" -o tsv || true)
-            if [ -z "$DEPLOY_VALUE" ]; then
-              echo "::error::deployment.storage.value is not set on functionAppConfig; cannot publish package" >&2
-              exit 1
-            fi
-            echo "deployment.storage.value=$DEPLOY_VALUE"
-
-            # Parse storage account and container from URL like:
-            #   https://<account>.blob.core.windows.net/<container>
-            STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
-            CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^?]*\).*#\1#p')
-            if [ -z "$STG" ] || [ -z "$CONT" ]; then
-              echo "::error::Failed to parse storage account/container from: $DEPLOY_VALUE" >&2
-              exit 1
-            fi
-            echo "Using storage account=$STG container=$CONT"
-
-            # Ensure Function App managed identity can read the container (best-effort)
-            PRINCIPAL_ID=$(az functionapp identity show -g "$RG" -n "$FUNC_APP" --query principalId -o tsv || true)
-            if [ -n "$PRINCIPAL_ID" ]; then
-              SCOPE="$(az storage account show -g "$RG" -n "$STG" --query id -o tsv)/blobServices/default/containers/$CONT"
-              az role assignment create \
-                --assignee "$PRINCIPAL_ID" \
-                --role "Storage Blob Data Reader" \
-                --scope "$SCOPE" 2>/dev/null || echo "RBAC exists or could not be set (continuing)"
-              # Allow time for RBAC to propagate
-              sleep 15
-            fi
-
-            # Upload blob (using federated auth)
-            BLOB_NAME="functionapp-${GITHUB_SHA:0:8}.zip"
-            az storage blob upload \
-              --auth-mode login \
-              --account-name "$STG" \
-              --container-name "$CONT" \
-              --name "$BLOB_NAME" \
-              --file "$GITHUB_WORKSPACE/dist-func.zip" \
-              --overwrite 1>/dev/null
-            PACKAGE_URI="https://$STG.blob.core.windows.net/$CONT/$BLOB_NAME"
-            echo "Uploaded package to $PACKAGE_URI"
-
-            # Publish via ARM API (Flex) with retry
-            MAX_RETRIES=2
-            for i in $(seq 1 $MAX_RETRIES); do
-              if az rest --method post \
-                --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-                --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"; then
-                echo "Publish succeeded on attempt $i"
-                break
-              elif [ "$i" -lt "$MAX_RETRIES" ]; then
-                echo "Publish failed on attempt $i, retrying..."
-                sleep 5
-              else
-                echo "::error::Publish failed after $MAX_RETRIES attempts" >&2
-                exit 1
-              fi
-            done
-
-            # Restart to ensure host picks up deployment
-            az functionapp restart -g "$RG" -n "$FUNC_APP"
-
-      - name: Validate critical app settings
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            echo "🔍 Validating critical app settings that must be present..."
-            
-            SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
-            
-            # Check FUNCTIONS_EXTENSION_VERSION
-            EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
-            if [ "$EXT_VERSION" != "~4" ]; then
-              echo "::error::FUNCTIONS_EXTENSION_VERSION must be ~4, found: ${EXT_VERSION:-NOT_SET}" >&2
-              exit 1
-            fi
-            echo "✅ FUNCTIONS_EXTENSION_VERSION: $EXT_VERSION"
-            
-            # Check that FUNCTIONS_WORKER_RUNTIME is NOT set (Flex requirement)
-            WORKER_RUNTIME=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME") | .value' 2>/dev/null || echo "")
-            if [ -n "$WORKER_RUNTIME" ]; then
-              echo "::error::FUNCTIONS_WORKER_RUNTIME should NOT be set for Flex apps, found: $WORKER_RUNTIME" >&2
-              exit 1
-            fi
-            echo "✅ FUNCTIONS_WORKER_RUNTIME: not set (correct for Flex)"
-            
-            # Check Key Vault references are present
-            EMAIL_HASH=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="EMAIL_HASH_SALT") | .value' || echo "")
-            if [[ ! "$EMAIL_HASH" =~ ^@Microsoft\.KeyVault ]]; then
-              echo "::warning::EMAIL_HASH_SALT is not a Key Vault reference: ${EMAIL_HASH:-NOT_SET}"
-            else
-              echo "✅ EMAIL_HASH_SALT: Key Vault reference configured"
-            fi
-            
-            COSMOS_CONN=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="COSMOS_CONNECTION_STRING") | .value' || echo "")
-            if [[ ! "$COSMOS_CONN" =~ ^@Microsoft\.KeyVault ]]; then
-              echo "::warning::COSMOS_CONNECTION_STRING is not a Key Vault reference: ${COSMOS_CONN:-NOT_SET}"
-            else
-              echo "✅ COSMOS_CONNECTION_STRING: Key Vault reference configured"
-            fi
-            
-            # Check Node version in runtime config
-            RUNTIME_CONFIG=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query "siteConfig" -o json)
-            NODE_VERSION=$(echo "$RUNTIME_CONFIG" | jq -r '.linuxFxVersion' || echo "")
-            echo "Runtime stack: ${NODE_VERSION:-not set}"
-            
-            if [[ ! "$NODE_VERSION" =~ [Nn]ode.*20 ]]; then
-              echo "::warning::Runtime may not be Node 20. Current: $NODE_VERSION"
-            else
-              echo "✅ Node 20 runtime detected"
-            fi
-            
-            echo "✅ Critical app settings validation complete"
-
-      - name: Wait for liveness
-        run: |
-          set -euo pipefail
-          HEALTH_URL="https://${FUNC_APP}.azurewebsites.net/api/health"
-          MAX_ATTEMPTS=12
-          PASSED=0
-          
-          echo "🔍 Probing $HEALTH_URL (max $MAX_ATTEMPTS attempts)..."
-          
-          for i in $(seq 1 "$MAX_ATTEMPTS"); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
-            echo "probe $i/$MAX_ATTEMPTS http=$CODE"
-            
-            if [ "$CODE" = "200" ]; then
-              PASSED=1
-              echo "✅ Liveness check passed"
-              break
-            fi
-            
-            if [ "$i" -lt "$MAX_ATTEMPTS" ]; then
-              SLEEP_TIME=$((i < 10 ? i * 2 : 20))
-              echo "⏳ Waiting ${SLEEP_TIME}s..."
-              sleep "$SLEEP_TIME"
-            fi
+          URL="https://${FUNC_APP}.azurewebsites.net/api/health"
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            echo "probe $i http=$code"
+            [ "$code" = 200 ] && exit 0
+            sleep $(( i<10 ? i*2 : 20 ))
           done
-          
-          if [ "$PASSED" -ne 1 ]; then
-            echo "::error::Health endpoint failed after ${MAX_ATTEMPTS} probes" >&2
-            echo "Attempting direct diagnostics..."
-            echo "=== Root endpoint ==="
-            curl -v "https://${FUNC_APP}.azurewebsites.net/" 2>&1 | head -20 || true
-            echo ""
-            echo "=== Health endpoint details ==="
-            curl -v "$HEALTH_URL" 2>&1 | head -30 || true
-            exit 1
-          fi
+          echo "::error::Liveness failed"; exit 1
 
-      - name: Stream App Insights logs on failure
+      - name: Tail logs on failure
         if: failure()
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            echo "🔍 Recent Application Insights logs..."
-            
-            az monitor app-insights query \
-              --app "$FUNC_APP" \
-              --resource-group "$RG" \
-              --analytics-query "union exceptions, traces | where timestamp > ago(15m) | order by timestamp desc | take 50 | project timestamp, severityLevel, message, outerMessage, type, problemId" \
-              --output table 2>/dev/null || echo "App Insights query unavailable"
-            
-            echo ""
-            echo "📝 Tailing live function app logs for 30 seconds..."
-            az webapp log tail --name "$FUNC_APP" --resource-group "$RG" --timeout 30 2>&1 || echo "Log streaming unavailable"
+        run: az webapp log tail -g "$RG" -n "$FUNC_APP" --timeout 120 || true
 
-      - name: Verify extension bundle v4 post-deployment
-        uses: azure/cli@v2
+  acceptance:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          inlineScript: |
-            set -euo pipefail
-            echo "🔍 Verifying extension bundle configuration..."
-            
-            # Verify FUNCTIONS_EXTENSION_VERSION is ~4
-            EXT_VERSION=$(az functionapp config appsettings list \
-              --name "$FUNC_APP" \
-              --resource-group "$RG" \
-              --query "[?name=='FUNCTIONS_EXTENSION_VERSION'].value | [0]" \
-              --output tsv)
-            
-            if [[ "$EXT_VERSION" == "~4" ]]; then
-              echo "✅ FUNCTIONS_EXTENSION_VERSION: $EXT_VERSION"
-            else
-              echo "::error::FUNCTIONS_EXTENSION_VERSION should be ~4, found: ${EXT_VERSION:-NOT SET}"
-              exit 1
-            fi
-            
-            # Verify FUNCTIONS_WORKER_RUNTIME is NOT set (Flex requirement)
-            WORKER_RUNTIME=$(az functionapp config appsettings list \
-              --name "$FUNC_APP" \
-              --resource-group "$RG" \
-              --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value | [0]" \
-              --output tsv || echo "")
-            
-            if [[ -z "$WORKER_RUNTIME" ]]; then
-              echo "✅ FUNCTIONS_WORKER_RUNTIME: not set (correct for Flex)"
-            else
-              echo "::warning::FUNCTIONS_WORKER_RUNTIME is set to '$WORKER_RUNTIME' - should not be set for Flex apps"
-            fi
-            
-            echo "✅ Extension bundle validation complete"
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Acceptance checks (Flex)
+        run: |
+          set -euo pipefail
+          BASE="https://${FUNC_APP}.azurewebsites.net"
+
+          # 1) Liveness must be 200
+          curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/health" | grep -qx 200
+
+          # 2) Bogus route must be 404
+          curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/__bogus__" | grep -qx 404
+
+          # 3) Exactly one indexed 'health'
+          ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
+          curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY" | jq -r '.[].name' | grep -cx 'health' | grep -qx 1

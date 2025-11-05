@@ -2,19 +2,9 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "./dist",
-        "rootDir": ".",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"],
@@ -25,14 +15,22 @@
       "@rate-limit/*": ["src/rate-limit/*"],
       "@http/*": ["src/http/*"]
     },
-    "plugins": [
-      {
-        "name": "@azure/functions"
-      }
-    ],
-    "types": ["@azure/functions"],
-    "typeRoots": ["./node_modules/@types", "./node_modules/@azure", "./probe/node_modules/@azure", "./src/types"]
+    "lib": ["ES2020"],
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["@azure/functions"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*", "src/test-setup.ts"]
+  "exclude": [
+    "dist",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "tests",
+    "src/test-setup.ts",
+    "node_modules"
+  ]
 }
