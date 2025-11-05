@@ -80,6 +80,13 @@
     "hive-ai",
     "asora"
   ],
+  "sideEffects": [
+    "src/shared/routes/*",
+    "src/auth/routes/*",
+    "src/feed/routes/*",
+    "src/moderation/routes/*",
+    "src/privacy/routes/*"
+  ],
   "author": "Asora Team",
   "license": "MIT"
 }

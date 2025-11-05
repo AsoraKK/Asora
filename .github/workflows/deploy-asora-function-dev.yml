@@ -73,6 +73,8 @@ jobs:
           npm run build
           test -f dist/host.json || { echo "::error::dist/host.json missing"; ls -al dist; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; ls -al dist; exit 1; }
+          test -f dist/src/shared/routes/health.js || { echo "::error::dist/src/shared/routes/health.js missing"; ls -al dist/src/shared/routes; exit 1; }
+          node -e "require.resolve('./dist/src/shared/routes/health.js')" || { echo "::error::health route missing from dist"; exit 1; }
 
           # Prod deps in dist
           if [ -f dist/package.json ]; then
@@ -80,7 +82,7 @@ jobs:
           fi
 
           # Sanity: index.js must load without env (no top-level side effects)
-          (cd dist && node -e "require('./index.js'); console.log('OK')") || { echo "::error::dist/index.js throws at load"; exit 1; }
+          (cd dist && node -e "require('./index.js'); require('./src/shared/routes/health.js'); console.log('health OK')") || { echo "::error::dist/index.js throws at load"; exit 1; }
 
           pushd dist >/dev/null
           zip -r ../dist-func.zip . -x "**/*.map" "**/*.ts" "__tests__/*" "tests/*"

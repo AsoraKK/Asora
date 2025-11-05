@@ -64,14 +64,16 @@ jobs:
           set -euo pipefail
           npm ci
           npm run build
-          
+
           # Verify essential files
           test -f dist/host.json || { echo "::error::dist/host.json missing"; exit 1; }
           test -f dist/index.js || { echo "::error::dist/index.js missing"; exit 1; }
-          
+          test -f dist/src/shared/routes/health.js || { echo "::error::dist/src/shared/routes/health.js missing"; ls -al dist/src/shared/routes; exit 1; }
+          node -e "require.resolve('./dist/src/shared/routes/health.js')" || { echo "::error::health route missing from dist"; exit 1; }
+
           # Install production dependencies
           cd dist && npm install --omit=dev --no-audit --no-fund
-          
+
           # Verify package.json has correct CommonJS configuration
           echo "Package configuration:"
           jq '{name, version, type, main}' package.json
