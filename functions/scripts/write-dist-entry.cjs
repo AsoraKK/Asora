@@ -59,8 +59,8 @@ fs.writeFileSync(
 (function prune(dir){
   for (const e of fs.readdirSync(dir, { withFileTypes:true })) {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()){
-      if (e.name === '__tests__' || e.name === 'tests') { fs.rmSync(p, { recursive:true, force:true }); continue; }
+        if (e.isDirectory()){
+          if (/^(?:__tests__|tests|probe|deploy|coverage)$/.test(e.name)) { fs.rmSync(p, { recursive:true, force:true }); continue; }
       prune(p); continue;
     }
     if (/\.(test|spec)\.[cm]?js$/.test(e.name) || /\.test\.d\.ts$/.test(e.name)) fs.rmSync(p, { force:true });

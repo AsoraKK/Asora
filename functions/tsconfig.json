@@ -31,6 +31,12 @@
     "**/__tests__/**",
     "tests",
     "src/test-setup.ts",
-    "node_modules"
+    "node_modules",
+    "probe",
+    "deploy",
+    "coverage",
+    "**/probe/**",
+    "**/deploy/**",
+    "**/coverage/**"
   ]
 }
