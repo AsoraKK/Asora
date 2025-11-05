@@ -8,6 +8,9 @@ on:
       - "functions/**"
       - ".github/workflows/deploy-asora-function-dev.yml"
 
+permissions:
+  id-token: write
+
 env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
