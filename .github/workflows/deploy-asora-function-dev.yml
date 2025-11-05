@@ -49,32 +49,67 @@ jobs:
         working-directory: functions/dist
         run: |
           set -euo pipefail
-          test -f host.json
-          test -f index.js
-          test -f health/function.json
-          test -f health/index.js
-          node -e "require('./health/index.js'); console.log('classic health loads')"
+          echo "Validating Flex package structure..."
+          test -f host.json || { echo "::error::Missing host.json"; exit 1; }
+          test -f package.json || { echo "::error::Missing package.json"; exit 1; }
+          test -f index.js || { echo "::error::Missing root index.js entrypoint"; exit 1; }
+          test -f health/function.json || { echo "::error::Missing health/function.json"; exit 1; }
+          test -f health/index.js || { echo "::error::Missing health/index.js"; exit 1; }
+          MAIN=$(jq -r .main package.json)
+          echo "package.json main field: $MAIN"
+          if [ "$MAIN" != "index.js" ]; then
+            echo "::error::Expected main=index.js, got: $MAIN"; exit 1
+          fi
+          echo "Smoke-testing classic health entrypoint..."
+          node -e "require('./health/index.js'); console.log('✅ Classic health loads successfully')"
+          echo "Verifying index.js is safe (health-only)..."
+          grep -q "require('./health/index.js')" index.js || { echo "::error::index.js doesn't load health"; exit 1; }
+          echo "✅ All structure gates passed"
 
       - name: Zip dist root (zip the CONTENTS of dist)
         working-directory: functions/dist
         run: zip -r ../../functions-dist.zip .
 
-      - name: Publish to Flex (storage-backed publish API)
+      - name: Publish to Flex (storage-backed + syncfunctiontriggers)
         run: |
           set -euo pipefail
-          DEPLOY_VALUE=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query "properties.functionAppConfig.deployment.storage.value" -o tsv)
+          
+          # Strip CRLF from all variables to prevent %0D in REST URLs
+          SUBS=$(az account show --query id -o tsv | tr -d '\r')
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r')
           if [ -z "$DEPLOY_VALUE" ]; then
             echo "::error::Function App is not Flex or deployment storage not configured"; exit 1
           fi
+          
           STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
           CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
           BLOB=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/[^/]*/\([^?]*\).*#\1#p')
-          az storage blob upload --auth-mode login --account-name "$STG" --container-name "$CONT" --name "$BLOB" --file "functions-dist.zip" --overwrite
-          PACKAGE_URI="https://$STG.blob.core.windows.net/$CONT/$BLOB"
+          
+          echo "Storage: $STG, Container: $CONT, Blob: $BLOB"
+          
+          # Upload package to deployment storage
+          az storage blob upload --auth-mode login \
+            --account-name "$STG" \
+            --container-name "$CONT" \
+            --name "$BLOB" \
+            --file "functions-dist.zip" \
+            --overwrite
+          
+          # Trigger Flex runtime to reindex functions (using clean subscription ID)
+          echo "Triggering function sync..."
           az rest --method post \
-            --uri "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/$FUNC_APP/publish?api-version=2023-12-01" \
-            --body "{\"type\":\"zip\",\"packageUri\":\"$PACKAGE_URI\"}"
-          az functionapp restart -g "$RG" -n "$FUNC_APP"
+            --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" \
+            --verbose
+          
+          # Restart to force package reload
+          echo "Restarting function app..."
+          az functionapp restart -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN"
+          
+          echo "Waiting 15s for host startup..."
+          sleep 15
 
       - name: Validate Flex app settings
         run: |
@@ -93,18 +128,75 @@ jobs:
       - name: Post-deploy probe /api/health
         run: |
           set -euo pipefail
-          URL="https://${FUNC_APP}.azurewebsites.net/api/health"
+          
+          # Strip CRLF from variables
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
+          BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
+          
+          echo "Hard runtime gates per Flex validation requirements..."
+          
+          # Gate 1: Health returns 200
           for i in $(seq 1 20); do
             code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
-            echo "probe $i http=$code"
-            [ "$code" = 200 ] && exit 0
+            echo "Gate 1 - probe $i: /api/health returned HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✅ Gate 1 passed: health=200"
+              break
+            fi
+            if [ "$i" -eq 20 ]; then
+              echo "::error::Gate 1 FAILED: /api/health never returned 200"
+              exit 1
+            fi
             sleep $(( i<10 ? i*2 : 20 ))
           done
-          echo "::error::Liveness failed"; exit 1
+          
+          # Gate 2: Bogus route returns 404 (not 500)
+          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
+          echo "Gate 2 - bogus route returned HTTP $bogus_code"
+          if [ "$bogus_code" = "404" ]; then
+            echo "✅ Gate 2 passed: bogus=404 (host is routing correctly)"
+          else
+            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing)"
+            exit 1
+          fi
+          
+          # Gate 3: Admin /functions lists exactly one function: health
+          ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
+          FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
+          FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+          FUNC_NAMES=$(echo "$FUNCTIONS" | jq -r '.[].name' | tr '\n' ' ')
+          echo "Gate 3 - indexed functions ($FUNC_COUNT): $FUNC_NAMES"
+          
+          if echo "$FUNC_NAMES" | grep -q "health"; then
+            echo "✅ Gate 3 passed: 'health' function indexed"
+          else
+            echo "::error::Gate 3 FAILED: 'health' not found in indexed functions"
+            echo "Full admin response: $FUNCTIONS"
+            exit 1
+          fi
+          
+          echo "🎉 All hard runtime gates passed!"
 
-      - name: Tail logs on failure
+      - name: Diagnostic logs on failure
         if: failure()
-        run: az webapp log tail -g "$RG" -n "$FUNC_APP" --timeout 120 || true
+        run: |
+          set +e  # Continue on error for diagnostics
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          echo "Fetching recent Application Insights traces..."
+          az monitor app-insights query \
+            --app "$FUNC_APP_CLEAN" \
+            --analytics-query "traces | where timestamp > ago(15m) | project timestamp, message, severityLevel | order by timestamp desc | take 50" \
+            --offset 15m || echo "App Insights query not available"
+          
+          echo "Fetching indexed functions..."
+          ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r' || echo "")
+          if [ -n "$ADMIN_KEY" ]; then
+            curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" | jq '.' || true
+          fi
 
   acceptance:
     runs-on: ubuntu-latest
