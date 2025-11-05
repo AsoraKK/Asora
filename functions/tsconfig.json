@@ -21,7 +21,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["@azure/functions"]
+    "types": ["@azure/functions", "node", "jest"]
   },
   "include": ["src/**/*.ts"],
   "exclude": [
