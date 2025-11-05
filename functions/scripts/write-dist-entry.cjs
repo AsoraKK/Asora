@@ -55,12 +55,18 @@ fs.writeFileSync(
   }, null, 2)
 );
 
-// 3) Prune tests/specs from dist
+// 3) Prune tests/specs AND src/shared directories from dist (minimal health-only deployment)
+//    For full-feature deployment, comment out the src/shared removal lines
 (function prune(dir){
   for (const e of fs.readdirSync(dir, { withFileTypes:true })) {
     const p = path.join(dir, e.name);
         if (e.isDirectory()){
-          if (/^(?:__tests__|tests|probe|deploy|coverage)$/.test(e.name)) { fs.rmSync(p, { recursive:true, force:true }); continue; }
+          // Remove test directories, src/, and shared/ for minimal health-only package
+          if (/^(?:__tests__|tests|probe|deploy|coverage|src|shared)$/.test(e.name)) { 
+            console.log('[write-dist-entry] Removing directory:', path.relative(distDir, p));
+            fs.rmSync(p, { recursive:true, force:true }); 
+            continue; 
+          }
       prune(p); continue;
     }
     if (/\.(test|spec)\.[cm]?js$/.test(e.name) || /\.test\.d\.ts$/.test(e.name)) fs.rmSync(p, { force:true });
