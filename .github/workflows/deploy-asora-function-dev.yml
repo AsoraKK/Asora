@@ -62,8 +62,12 @@ jobs:
           fi
           echo "Smoke-testing classic health entrypoint..."
           node -e "require('./health/index.js'); console.log('✅ Classic health loads successfully')"
-          echo "Verifying index.js is safe (health-only)..."
-          grep -q "require('./health/index.js')" index.js || { echo "::error::index.js doesn't load health"; exit 1; }
+          echo "Verifying index.js is empty (v4 file-based discovery)..."
+          # For v4 file-based functions, index.js should NOT load handlers
+          # Runtime discovers health/function.json automatically
+          if grep -q "require" index.js; then
+            echo "::error::index.js should be empty for v4 file-based discovery"; exit 1
+          fi
           echo "✅ All structure gates passed"
 
       - name: Zip dist root (zip the CONTENTS of dist)
