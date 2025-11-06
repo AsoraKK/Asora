@@ -74,46 +74,53 @@ jobs:
         working-directory: functions/dist
         run: zip -r ../../functions-dist.zip .
 
-      - name: Publish to Flex (storage-backed + syncfunctiontriggers)
+      - name: Publish to Flex via Kudu (recommended)
         run: |
           set -euo pipefail
-          
+
           # Strip CRLF from all variables to prevent %0D in REST URLs
           SUBS=$(az account show --query id -o tsv | tr -d '\r')
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          
+
+          # Extract storage pointer (as stored in functionApp config) and parse components
           DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r')
           if [ -z "$DEPLOY_VALUE" ]; then
             echo "::error::Function App is not Flex or deployment storage not configured"; exit 1
           fi
-          
+
           STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
           CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
           BLOB=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/[^/]*/\([^?]*\).*#\1#p')
-          
-          echo "Storage: $STG, Container: $CONT, Blob: $BLOB"
-          
-          # Upload package to deployment storage
+
+          echo "Uploading package to $STG/$CONT/$BLOB"
           az storage blob upload --auth-mode login \
             --account-name "$STG" \
             --container-name "$CONT" \
             --name "$BLOB" \
             --file "functions-dist.zip" \
             --overwrite
-          
-          # Trigger Flex runtime to reindex functions (using clean subscription ID)
-          echo "Triggering function sync..."
-          az rest --method post \
-            --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" \
-            --verbose
-          
-          # Restart to force package reload
-          echo "Restarting function app..."
+
+          # Generate short-lived SAS for the uploaded blob
+          EXPIRY=$(date -u -d '30 minutes' +%Y-%m-%dT%H:%MZ)
+          SAS=$(az storage blob generate-sas --account-name "$STG" --container-name "$CONT" --name "$BLOB" --permissions r --expiry "$EXPIRY" --as-user --auth-mode login -o tsv)
+          PKG_URI="https://$STG.blob.core.windows.net/$CONT/$BLOB?$SAS"
+
+          echo "Publishing via Kudu SCM /api/publish using SAS URL"
+          CREDS=$(az webapp deployment list-publishing-credentials -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" -o json)
+          USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          SCM_URL="https://${FUNC_APP_CLEAN}.scm.azurewebsites.net/api/publish"
+
+          curl -fsSL -u "$USER:$PASS" -H "Content-Type: application/json" -X POST -d "{\"type\":\"zip\",\"packageUri\":\"$PKG_URI\"}" "$SCM_URL"
+
+          # Trigger reindex and give the host longer warmup for Flex
+          echo "Triggering function sync and restarting host"
+          az rest --method post --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" --verbose
           az functionapp restart -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN"
-          
-          echo "Waiting 15s for host startup..."
-          sleep 15
+
+          echo "Waiting 90s for host startup..."
+          sleep 90
 
       - name: Validate Flex app settings
         run: |
