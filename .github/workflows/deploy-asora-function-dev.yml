@@ -55,19 +55,33 @@ jobs:
           test -f index.js || { echo "::error::Missing root index.js entrypoint"; exit 1; }
           test -f health/function.json || { echo "::error::Missing health/function.json"; exit 1; }
           test -f health/index.js || { echo "::error::Missing health/index.js"; exit 1; }
+          
+          # Ensure package.json has main=index.js and NO "type":"module"
           MAIN=$(jq -r .main package.json)
           echo "package.json main field: $MAIN"
           if [ "$MAIN" != "index.js" ]; then
             echo "::error::Expected main=index.js, got: $MAIN"; exit 1
           fi
+          TYPE=$(jq -r '.type // "commonjs"' package.json)
+          if [ "$TYPE" = "module" ]; then
+            echo "::error::package.json must NOT have type=module (breaks classic CJS handlers)"; exit 1
+          fi
+          
           echo "Smoke-testing classic health entrypoint..."
           node -e "require('./health/index.js'); console.log('✅ Classic health loads successfully')"
+          
           echo "Verifying index.js is empty (v4 file-based discovery)..."
           # For v4 file-based functions, index.js should NOT load handlers
           # Runtime discovers health/function.json automatically
           if grep -q "require" index.js; then
             echo "::error::index.js should be empty for v4 file-based discovery"; exit 1
           fi
+          
+          echo "Verifying health handler is zero-dependency..."
+          if grep -E "^(import|require\()" health/index.js; then
+            echo "::error::health/index.js must have zero dependencies"; exit 1
+          fi
+          
           echo "✅ All structure gates passed"
 
       - name: Zip dist root (zip the CONTENTS of dist)
@@ -82,6 +96,7 @@ jobs:
           SUBS=$(az account show --query id -o tsv | tr -d '\r')
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
 
           # Extract storage pointer (as stored in functionApp config) and parse components
           DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r')
@@ -91,22 +106,43 @@ jobs:
 
           STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
           CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
-          BLOB=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/[^/]*/\([^?]*\).*#\1#p')
-
-          echo "Uploading package to $STG/$CONT/$BLOB"
+          
+          # Use versioned blob name for audit trail and rollback capability
+          VERSIONED_BLOB="functionapp-${SHORT_SHA}.zip"
+          
+          echo "Uploading versioned package to $STG/$CONT/$VERSIONED_BLOB"
           az storage blob upload --auth-mode login \
             --account-name "$STG" \
             --container-name "$CONT" \
-            --name "$BLOB" \
+            --name "$VERSIONED_BLOB" \
             --file "functions-dist.zip" \
             --overwrite
+          
+          # Artifact integrity check: download what we just uploaded and verify hash
+          echo "Verifying artifact integrity..."
+          az storage blob download --auth-mode login \
+            --account-name "$STG" \
+            --container-name "$CONT" \
+            --name "$VERSIONED_BLOB" \
+            --file "/tmp/deployed-${SHORT_SHA}.zip"
+          
+          LOCAL_HASH=$(sha256sum functions-dist.zip | awk '{print $1}')
+          REMOTE_HASH=$(sha256sum "/tmp/deployed-${SHORT_SHA}.zip" | awk '{print $1}')
+          echo "Local artifact hash:  $LOCAL_HASH"
+          echo "Remote artifact hash: $REMOTE_HASH"
+          
+          if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
+            echo "::error::Artifact integrity check FAILED: hashes do not match"
+            exit 1
+          fi
+          echo "✅ Artifact integrity verified"
 
-          # Generate short-lived SAS for the uploaded blob
+          # Generate short-lived SAS for the versioned blob
           EXPIRY=$(date -u -d '30 minutes' +%Y-%m-%dT%H:%MZ)
-          SAS=$(az storage blob generate-sas --account-name "$STG" --container-name "$CONT" --name "$BLOB" --permissions r --expiry "$EXPIRY" --as-user --auth-mode login -o tsv)
-          PKG_URI="https://$STG.blob.core.windows.net/$CONT/$BLOB?$SAS"
+          SAS=$(az storage blob generate-sas --account-name "$STG" --container-name "$CONT" --name "$VERSIONED_BLOB" --permissions r --expiry "$EXPIRY" --as-user --auth-mode login -o tsv)
+          PKG_URI="https://$STG.blob.core.windows.net/$CONT/$VERSIONED_BLOB?$SAS"
 
-          echo "Publishing via Kudu SCM /api/publish using SAS URL"
+          echo "Publishing via Kudu SCM /api/publish using versioned SAS URL"
           CREDS=$(az webapp deployment list-publishing-credentials -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" -o json)
           USER=$(echo "$CREDS" | jq -r .publishingUserName)
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
@@ -119,7 +155,7 @@ jobs:
           az rest --method post --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" --verbose
           az functionapp restart -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN"
 
-          echo "Waiting 90s for host startup..."
+          echo "Waiting 90s for Flex host warmup..."
           sleep 90
 
       - name: Validate Flex app settings
@@ -147,49 +183,63 @@ jobs:
           URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
           BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
           
-          echo "Hard runtime gates per Flex validation requirements..."
+          echo "Running hardened runtime gates (3 gates: health=200, bogus=404, only health indexed)..."
           
-          # Gate 1: Health returns 200
+          # Gate 1: Health returns 200 (20 probes, 5s intervals)
+          GATE1_PASSED=false
           for i in $(seq 1 20); do
             code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
-            echo "Gate 1 - probe $i: /api/health returned HTTP $code"
+            echo "Gate 1 - probe $i/20: /api/health returned HTTP $code"
             if [ "$code" = "200" ]; then
-              echo "✅ Gate 1 passed: health=200"
+              echo "✅ Gate 1 PASSED: health endpoint returns 200"
+              GATE1_PASSED=true
               break
             fi
-            if [ "$i" -eq 20 ]; then
-              echo "::error::Gate 1 FAILED: /api/health never returned 200"
-              exit 1
+            if [ "$i" -lt 20 ]; then
+              sleep 5
             fi
-            sleep $(( i<10 ? i*2 : 20 ))
           done
           
-          # Gate 2: Bogus route returns 404 (not 500)
-          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
-          echo "Gate 2 - bogus route returned HTTP $bogus_code"
-          if [ "$bogus_code" = "404" ]; then
-            echo "✅ Gate 2 passed: bogus=404 (host is routing correctly)"
-          else
-            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing)"
+          if [ "$GATE1_PASSED" = "false" ]; then
+            echo "::error::Gate 1 FAILED: /api/health never returned 200 after 20 probes"
             exit 1
           fi
           
-          # Gate 3: Admin /functions lists exactly one function: health
+          # Gate 2: Bogus route returns 404 (not 500, validates host routing)
+          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
+          echo "Gate 2 - bogus route returned HTTP $bogus_code"
+          if [ "$bogus_code" = "404" ]; then
+            echo "✅ Gate 2 PASSED: bogus route returns 404 (host routing intact)"
+          else
+            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing correctly)"
+            exit 1
+          fi
+          
+          # Gate 3: Admin /functions lists exactly 'health' (verifies minimal package active)
           ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
           FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
           FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
           FUNC_NAMES=$(echo "$FUNCTIONS" | jq -r '.[].name' | tr '\n' ' ')
-          echo "Gate 3 - indexed functions ($FUNC_COUNT): $FUNC_NAMES"
+          echo "Gate 3 - indexed functions count: $FUNC_COUNT"
+          echo "Gate 3 - indexed function names: $FUNC_NAMES"
           
-          if echo "$FUNC_NAMES" | grep -q "health"; then
-            echo "✅ Gate 3 passed: 'health' function indexed"
-          else
-            echo "::error::Gate 3 FAILED: 'health' not found in indexed functions"
+          if [ "$FUNC_COUNT" -ne 1 ]; then
+            echo "::error::Gate 3 FAILED: Expected exactly 1 function, found $FUNC_COUNT"
             echo "Full admin response: $FUNCTIONS"
             exit 1
           fi
           
-          echo "🎉 All hard runtime gates passed!"
+          if ! echo "$FUNC_NAMES" | grep -qw "health"; then
+            echo "::error::Gate 3 FAILED: 'health' not found in indexed functions: $FUNC_NAMES"
+            exit 1
+          fi
+          
+          echo "✅ Gate 3 PASSED: Exactly one function 'health' is indexed"
+          echo ""
+          echo "🎉 All 3 runtime gates PASSED!"
+          echo "   - Health endpoint: 200 OK"
+          echo "   - Host routing: functional (404 for bogus)"
+          echo "   - Package integrity: minimal (only health indexed)"
 
       - name: Diagnostic logs on failure
         if: failure()
@@ -197,17 +247,79 @@ jobs:
           set +e  # Continue on error for diagnostics
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          echo "Fetching recent Application Insights traces..."
-          az monitor app-insights query \
-            --app "$FUNC_APP_CLEAN" \
-            --analytics-query "traces | where timestamp > ago(15m) | project timestamp, message, severityLevel | order by timestamp desc | take 50" \
-            --offset 15m || echo "App Insights query not available"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           
-          echo "Fetching indexed functions..."
+          echo "=========================================="
+          echo "Auto-diagnostics on deployment failure"
+          echo "=========================================="
+          echo ""
+          
+          echo "--- 1) Indexed functions from /admin/functions ---"
           ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r' || echo "")
           if [ -n "$ADMIN_KEY" ]; then
-            curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" | jq '.' || true
+            FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
+            echo "$FUNCTIONS" | jq '.'
+            FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+            echo "Total functions indexed: $FUNC_COUNT"
+            echo "Function names:"
+            echo "$FUNCTIONS" | jq -r '.[].name'
+          else
+            echo "Could not retrieve admin key"
           fi
+          echo ""
+          
+          echo "--- 2) Deployed artifact verification ---"
+          DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r' || echo "")
+          if [ -n "$DEPLOY_VALUE" ]; then
+            STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
+            CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
+            VERSIONED_BLOB="functionapp-${SHORT_SHA}.zip"
+            
+            echo "Downloading deployed artifact: $STG/$CONT/$VERSIONED_BLOB"
+            az storage blob download --auth-mode login \
+              --account-name "$STG" \
+              --container-name "$CONT" \
+              --name "$VERSIONED_BLOB" \
+              --file "/tmp/diag-${SHORT_SHA}.zip" 2>&1 || echo "Could not download blob"
+            
+            if [ -f "/tmp/diag-${SHORT_SHA}.zip" ]; then
+              echo "Deployed artifact contents:"
+              unzip -l "/tmp/diag-${SHORT_SHA}.zip" | head -n 50
+              echo ""
+              echo "Deployed artifact hash:"
+              sha256sum "/tmp/diag-${SHORT_SHA}.zip"
+            fi
+          fi
+          echo ""
+          
+          echo "--- 3) Recent Application Insights traces (last 15m) ---"
+          az monitor app-insights query \
+            --app "$FUNC_APP_CLEAN" \
+            --analytics-query "traces | where timestamp > ago(15m) and (severityLevel >= 2 or message contains 'error' or message contains 'exception') | project timestamp, severityLevel, message | order by timestamp desc | take 30" \
+            --offset 15m 2>&1 || echo "App Insights query not available or no errors found"
+          echo ""
+          
+          echo "--- 4) Function app configuration ---"
+          echo "FUNCTIONS_EXTENSION_VERSION:"
+          az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "[?name=='FUNCTIONS_EXTENSION_VERSION'].value" -o tsv || echo "Not set"
+          echo "FUNCTIONS_WORKER_RUNTIME (should be empty on Flex):"
+          az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value" -o tsv || echo "Not set (expected)"
+          echo ""
+          
+          echo "--- 5) Kudu diagnostic endpoints ---"
+          echo "Attempting to fetch Kudu logs..."
+          CREDS=$(az webapp deployment list-publishing-credentials -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" -o json 2>/dev/null || echo "{}")
+          KUDU_USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          KUDU_PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          if [ -n "$KUDU_USER" ] && [ "$KUDU_USER" != "null" ]; then
+            echo "Recent Docker logs from Kudu:"
+            curl -s -u "$KUDU_USER:$KUDU_PASS" "https://${FUNC_APP_CLEAN}.scm.azurewebsites.net/api/logs/docker" 2>&1 | tail -n 50 || echo "Could not fetch Kudu logs"
+          fi
+          echo ""
+          
+          echo "=========================================="
+          echo "End of auto-diagnostics"
+          echo "=========================================="
 
   acceptance:
     runs-on: ubuntu-latest
