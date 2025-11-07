@@ -36,7 +36,13 @@ function ensureContainers(): TokenContainers {
 }
 
 // JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || !secret.trim()) {
+    throw new Error('Missing JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
+  }
+  return secret;
+}
 const JWT_ISSUER = process.env.JWT_ISSUER || 'asora-auth';
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
@@ -253,12 +259,12 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     nonce: session.nonce,
   };
 
-  const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
+  const accessToken = jwt.sign(tokenPayload, getJwtSecret(), {
     expiresIn: ACCESS_TOKEN_EXPIRY,
     jwtid: crypto.randomUUID(),
   });
 
-  const refreshToken = jwt.sign({ sub: user.id, iss: JWT_ISSUER, type: 'refresh' }, JWT_SECRET, {
+  const refreshToken = jwt.sign({ sub: user.id, iss: JWT_ISSUER, type: 'refresh' }, getJwtSecret(), {
     expiresIn: REFRESH_TOKEN_EXPIRY,
     jwtid: crypto.randomUUID(),
   });
@@ -293,7 +299,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
 
   try {
     // Verify and decode refresh token
-    const decoded = jwt.verify(body.refresh_token, JWT_SECRET) as any;
+    const decoded = jwt.verify(body.refresh_token, getJwtSecret()) as any;
 
     if (decoded.type !== 'refresh') {
       throw new Error('Invalid token type');
@@ -323,7 +329,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       aud: body.client_id,
     };
 
-    const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
+    const accessToken = jwt.sign(tokenPayload, getJwtSecret(), {
       expiresIn: ACCESS_TOKEN_EXPIRY,
       jwtid: crypto.randomUUID(),
     });

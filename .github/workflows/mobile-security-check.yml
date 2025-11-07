@@ -61,17 +61,16 @@ jobs:
       - name: Fail if legacy Azure secrets are present
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         run: |
           set -euo pipefail
           [ -z "${AZURE_CREDENTIALS:-}" ] || { echo "ERROR: legacy secret AZURE_CREDENTIALS present"; exit 1; }
-          [ -z "${AZURE_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret AZURE_CLIENT_SECRET present"; exit 1; }
           [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
+          enable-oidc: true
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}

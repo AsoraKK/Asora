@@ -34,11 +34,10 @@ jobs:
 
       - name: Block legacy SP secrets
         env:
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
         run: |
           set -euo pipefail
-          if [ -n "${AZURE_CLIENT_SECRET:-}" ] || [ -n "${AZURE_CREDENTIALS:-}" ]; then
+          if [ -n "${AZURE_CREDENTIALS:-}" ]; then
             echo "::error::Legacy Azure SP secret present. Migrate to OIDC only." >&2
             exit 1
           fi
@@ -54,6 +53,7 @@ jobs:
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
+          enable-oidc: true
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}

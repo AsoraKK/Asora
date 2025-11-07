@@ -35,12 +35,14 @@ jobs:
 
       - name: Smoke test
         run: |
+          SMOKE_P95_THRESHOLD=200ms SMOKE_P99_THRESHOLD=400ms \
           k6 run load/k6/smoke.js \
             --summary-export=load/k6/smoke-raw.json
 
       - name: Feed read test
         if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run-load') }}
         run: |
+          FEED_READ_P95_THRESHOLD=200ms FEED_READ_P99_THRESHOLD=400ms \
           k6 run load/k6/feed-read.js \
             --summary-export=load/k6/feed-read-raw.json
 

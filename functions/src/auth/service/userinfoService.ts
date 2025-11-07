@@ -25,7 +25,13 @@ async function ensureContainers() {
 }
 
 // JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || !secret.trim()) {
+    throw new Error('Missing JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
+  }
+  return secret;
+}
 
 export async function userInfoHandler(
   req: HttpRequest,
@@ -62,7 +68,7 @@ export async function userInfoHandler(
     // Verify JWT token
     let tokenPayload: TokenPayload;
     try {
-      tokenPayload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      tokenPayload = jwt.verify(token, getJwtSecret()) as TokenPayload;
     } catch (jwtError) {
       const errorMsg = jwtError instanceof Error ? jwtError.message : 'Token verification failed';
 
