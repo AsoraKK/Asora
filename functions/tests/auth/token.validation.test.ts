@@ -416,16 +416,16 @@ describe('auth/token validation and method handling', () => {
   it('refresh_token: success flow issues new access token', async () => {
     dbStub.user = {
       id: 'u1',
-      email: 'u@example.com',
+      email: 'u1@example.com',
       role: 'user',
       tier: 'free',
       reputationScore: 1,
       isActive: true,
     };
-    // Use the same default secret/issuer as module
+    // Use the same secret as configured in beforeAll
     const refresh = jwt.sign(
       { sub: 'u1', iss: 'asora-auth', type: 'refresh' },
-      'dev-secret-change-in-production',
+      process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
     const req = httpReqMock({
@@ -442,7 +442,7 @@ describe('auth/token validation and method handling', () => {
   it('refresh_token: user not found', async () => {
     const refresh = jwt.sign(
       { sub: 'missing', iss: 'asora-auth', type: 'refresh' },
-      'dev-secret-change-in-production',
+      process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
     dbStub.user = null;
@@ -465,7 +465,7 @@ describe('auth/token validation and method handling', () => {
     };
     const refresh = jwt.sign(
       { sub: 'u9', iss: 'asora-auth', type: 'refresh' },
-      'dev-secret-change-in-production',
+      process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
     const req = httpReqMock({
@@ -480,7 +480,7 @@ describe('auth/token validation and method handling', () => {
     // create a signed token with type access so verify succeeds but type check fails
     const tok = jwt.sign(
       { sub: 'u1', iss: 'asora-auth', type: 'access' },
-      'dev-secret-change-in-production',
+      process.env.JWT_SECRET!,
       { expiresIn: '5m' }
     );
     const req = httpReqMock({
