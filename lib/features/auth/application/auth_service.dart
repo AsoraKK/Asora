@@ -2,80 +2,27 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
-import 'package:meta/meta.dart';
 
 import '../domain/auth_failure.dart';
 import '../domain/user.dart';
 import 'oauth2_service.dart';
 
-GoogleSignIn _buildGoogleSignIn() {
-  // Provide fallback values for client IDs to avoid null issues
-  const webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: 'web-client-id-not-set',
-  );
-  const androidClientId = String.fromEnvironment(
-    'GOOGLE_ANDROID_CLIENT_ID',
-    defaultValue: 'android-client-id-not-set',
-  );
-  const desktopClientId = String.fromEnvironment(
-    'GOOGLE_DESKTOP_CLIENT_ID',
-    defaultValue: 'desktop-client-id-not-set',
-  );
-
-  if (kIsWeb) {
-    return GoogleSignIn(
-      clientId: webClientId,
-      scopes: ['email', 'profile', 'openid'],
-    );
-  }
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-      return GoogleSignIn(
-        clientId: androidClientId,
-        serverClientId: webClientId,
-        scopes: ['email', 'profile', 'openid'],
-      );
-    case TargetPlatform.macOS:
-    case TargetPlatform.linux:
-    case TargetPlatform.windows:
-      return GoogleSignIn(
-        clientId: desktopClientId,
-        serverClientId: webClientId,
-        scopes: ['email', 'profile', 'openid'],
-      );
-    default:
-      dev.log('Unsupported platform: $defaultTargetPlatform', name: 'auth');
-      throw UnsupportedError('Unsupported platform');
-  }
-}
-
-@visibleForTesting
-GoogleSignIn buildGoogleSignInForTest() => _buildGoogleSignIn();
-
 class AuthService {
   AuthService({
-    GoogleSignIn? googleSignIn,
     FlutterSecureStorage? secureStorage,
     LocalAuthentication? localAuth,
     http.Client? httpClient,
     OAuth2Service? oauth2Service,
     String authUrl = _defaultAuthUrl,
-  }) : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
-       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _localAuth = localAuth ?? LocalAuthentication(),
        _httpClient = httpClient ?? http.Client(),
        _oauth2Service = oauth2Service ?? OAuth2Service(),
        _authUrl = authUrl;
-
-  final GoogleSignIn _googleSignIn;
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuth;
   final http.Client _httpClient;
@@ -262,7 +209,6 @@ class AuthService {
       safeRun(() => _secureStorage.delete(key: _jwtKey)),
       safeRun(() => _secureStorage.delete(key: _userKey)),
       safeRun(() => _secureStorage.delete(key: _sessionKey)),
-      safeRun(() => _googleSignIn.signOut()),
       safeRun(() => _oauth2Service.signOut()),
     ]);
 
@@ -290,29 +236,40 @@ class AuthService {
     }
   }
 
-  // Existing methods...
-  Future<String> signInWithGoogle() async {
+  /// Sign in with Google via B2C/Entra External ID
+  ///
+  /// This method initiates OAuth2/OIDC flow through B2C, which federates to Google
+  /// as an identity provider. The user sees "Continue with Google" but the app
+  /// receives a B2C-issued token (not a Google-native token).
+  ///
+  /// Note: Google is configured as an identity provider in B2C/Entra, not called
+  /// directly via google_sign_in SDK. This maintains a single trust boundary.
+  Future<User> signInWithGoogle() async {
     try {
-      final account = await _googleSignIn.signIn();
-      if (account == null) throw AuthFailure.cancelledByUser();
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-      assert(idToken != null, 'Google returned a null idToken');
-      final sessionToken = await verifyTokenWithBackend(idToken!);
-      dev.log('Google sign-in succeeded', name: 'auth');
-      return sessionToken;
+      dev.log('Starting B2C sign-in (Google IdP)', name: 'auth');
+
+      // Use OAuth2/OIDC flow that goes through B2C
+      // B2C will handle Google authentication and return a B2C token
+      final user = await signInWithOAuth2();
+
+      dev.log('B2C sign-in succeeded (Google IdP): ${user.id}', name: 'auth');
+      return user;
     } catch (e, st) {
       dev.log(
-        'Google sign-in failed: $e',
+        'B2C sign-in failed (Google IdP): $e',
         name: 'auth',
         error: e,
         stackTrace: st,
         level: 1000,
       );
-      throw AuthFailure.serverError(e.toString());
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError('B2C sign-in failed: ${e.toString()}');
     }
   }
 
+  /// Legacy backend verification used by some tests. For B2C flows, the client
+  /// receives a token from B2C directly; however, tests may still exercise this
+  /// helper to validate storage and error handling semantics.
   Future<String> verifyTokenWithBackend(String idToken) async {
     try {
       final response = await _httpClient.post(
@@ -323,7 +280,8 @@ class AuthService {
 
       if (response.statusCode != 200) {
         final error = response.body.isNotEmpty
-            ? jsonDecode(response.body)['error'] ?? 'Server error'
+            ? (jsonDecode(response.body) as Map<String, dynamic>)['error'] ??
+                  'Server error'
             : 'Server error';
         throw AuthFailure.serverError(error.toString());
       }

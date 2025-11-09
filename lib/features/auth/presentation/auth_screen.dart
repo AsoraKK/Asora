@@ -28,13 +28,13 @@ class AuthScreen extends ConsumerWidget {
   Future<void> _handleSignIn(BuildContext context, WidgetRef ref) async {
     ref.read(_loadingProvider.notifier).state = true;
 
-    final service = ref.read(authServiceProvider); // still available
+    final service = ref.read(authServiceProvider);
     try {
-      await service.signInWithGoogle();
+      final user = await service.signInWithGoogle();
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Logged in successfully')));
+        ).showSnackBar(SnackBar(content: Text('Logged in as ${user.email}')));
       }
     } on AuthFailure catch (e) {
       if (context.mounted) {

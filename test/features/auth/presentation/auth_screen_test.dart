@@ -5,15 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/auth/presentation/auth_screen.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/domain/user.dart';
 
 class _FakeAuthService extends AuthService {
   bool shouldThrow = false;
-  String token = 'token';
+  User user = User(
+    id: 'test123',
+    email: 'test@example.com',
+    role: UserRole.user,
+    tier: UserTier.bronze,
+    reputationScore: 0,
+    createdAt: DateTime.now(),
+    lastLoginAt: DateTime.now(),
+  );
 
   @override
-  Future<String> signInWithGoogle() async {
+  Future<User> signInWithGoogle() async {
     if (shouldThrow) throw AuthFailure.serverError('Oops');
-    return token;
+    return user;
   }
 }
 
@@ -32,7 +41,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Logged in successfully'), findsOneWidget);
+    expect(find.textContaining('Logged in as'), findsOneWidget);
   });
 
   testWidgets('shows error snackbar on failure', (tester) async {
