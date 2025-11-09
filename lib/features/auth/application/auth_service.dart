@@ -29,7 +29,6 @@ class AuthService {
   final OAuth2Service _oauth2Service;
   final String _authUrl;
 
-  static const _sessionKey = 'sessionToken';
   static const _jwtKey = 'jwt';
   static const _userKey = 'userData';
   static const _defaultAuthUrl = String.fromEnvironment('AUTH_URL');
@@ -208,7 +207,8 @@ class AuthService {
     await Future.wait([
       safeRun(() => _secureStorage.delete(key: _jwtKey)),
       safeRun(() => _secureStorage.delete(key: _userKey)),
-      safeRun(() => _secureStorage.delete(key: _sessionKey)),
+      // Social provider sign-out is handled via the identity provider
+      // (B2C hosted sign-out). No direct google_sign_in SDK call is used.
       safeRun(() => _oauth2Service.signOut()),
     ]);
 
@@ -266,40 +266,6 @@ class AuthService {
       throw AuthFailure.serverError('B2C sign-in failed: ${e.toString()}');
     }
   }
-
-  /// Legacy backend verification used by some tests. For B2C flows, the client
-  /// receives a token from B2C directly; however, tests may still exercise this
-  /// helper to validate storage and error handling semantics.
-  Future<String> verifyTokenWithBackend(String idToken) async {
-    try {
-      final response = await _httpClient.post(
-        Uri.parse(_authUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'token': idToken}),
-      );
-
-      if (response.statusCode != 200) {
-        final error = response.body.isNotEmpty
-            ? (jsonDecode(response.body) as Map<String, dynamic>)['error'] ??
-                  'Server error'
-            : 'Server error';
-        throw AuthFailure.serverError(error.toString());
-      }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = data['sessionToken'] as String?;
-      if (token == null) throw AuthFailure.serverError('Invalid response');
-      await _secureStorage.write(key: _sessionKey, value: token);
-      return token;
-    } catch (e) {
-      if (e is AuthFailure) rethrow;
-      throw AuthFailure.serverError(e.toString());
-    }
-  }
-
-  Future<String?> getSessionToken() => _secureStorage.read(key: _sessionKey);
-
-  Future<void> clearSessionToken() => _secureStorage.delete(key: _sessionKey);
 
   Future<bool> authenticateWithBiometrics() async {
     final canCheck = await _localAuth.canCheckBiometrics;

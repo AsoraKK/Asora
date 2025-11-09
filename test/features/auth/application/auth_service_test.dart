@@ -509,7 +509,6 @@ void main() {
           key: 'userData',
           value: jsonEncode(testUser.toJson()),
         );
-        await mockSecureStorage.write(key: 'sessionToken', value: 'session123');
 
         // Act
         await authService.logout();
@@ -517,11 +516,9 @@ void main() {
         // Assert
         final jwtToken = await mockSecureStorage.read(key: 'jwt');
         final userData = await mockSecureStorage.read(key: 'userData');
-        final sessionToken = await mockSecureStorage.read(key: 'sessionToken');
 
         expect(jwtToken, isNull);
         expect(userData, isNull);
-        expect(sessionToken, isNull);
       });
 
       test('should not throw error when storage operations fail', () async {
@@ -598,42 +595,8 @@ void main() {
     });
 
     // signInWithGoogle now delegates to signInWithOAuth2 (tested separately)
-    // verifyTokenWithBackend removed (backend validation via B2C OAuth2 flow)
-
-    group('getSessionToken', () {
-      test('should return session token when it exists', () async {
-        // Arrange
-        await mockSecureStorage.write(key: 'sessionToken', value: testToken);
-
-        // Act
-        final result = await authService.getSessionToken();
-
-        // Assert
-        expect(result, testToken);
-      });
-
-      test('should return null when session token does not exist', () async {
-        // Act
-        final result = await authService.getSessionToken();
-
-        // Assert
-        expect(result, isNull);
-      });
-    });
-
-    group('clearSessionToken', () {
-      test('should clear session token', () async {
-        // Arrange
-        await mockSecureStorage.write(key: 'sessionToken', value: testToken);
-
-        // Act
-        await authService.clearSessionToken();
-
-        // Assert
-        final result = await mockSecureStorage.read(key: 'sessionToken');
-        expect(result, isNull);
-      });
-    });
+    // verifyTokenWithBackend, getSessionToken, clearSessionToken removed
+    // (B2C OAuth2 is the single flow; legacy session token helpers no longer needed)
 
     group('authenticateWithBiometrics', () {
       test(
