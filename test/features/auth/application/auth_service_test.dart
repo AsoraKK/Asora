@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
@@ -142,74 +141,6 @@ class MockSecureStorage implements FlutterSecureStorage {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-// Mock Google Sign In
-class MockGoogleSignIn implements GoogleSignIn {
-  bool shouldThrow = false;
-  Exception? exceptionToThrow;
-  GoogleSignInAccount? _mockAccount;
-
-  void setThrowException(Exception exception) {
-    shouldThrow = true;
-    exceptionToThrow = exception;
-  }
-
-  void setMockAccount(
-    GoogleSignInAccount? account,
-    GoogleSignInAuthentication? auth,
-  ) {
-    _mockAccount = account;
-    // auth parameter removed as it was unused
-  }
-
-  @override
-  Future<GoogleSignInAccount?> signIn() async {
-    if (shouldThrow && exceptionToThrow != null) {
-      throw exceptionToThrow!;
-    }
-    return _mockAccount;
-  }
-
-  @override
-  Future<GoogleSignInAccount?> signOut() async {
-    if (shouldThrow && exceptionToThrow != null) {
-      throw exceptionToThrow!;
-    }
-    return null;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-// Mock Google Sign In Account
-class MockGoogleSignInAccount implements GoogleSignInAccount {
-  @override
-  final String id;
-  final GoogleSignInAuthentication? _auth;
-
-  MockGoogleSignInAccount({required this.id, GoogleSignInAuthentication? auth})
-    : _auth = auth;
-
-  @override
-  Future<GoogleSignInAuthentication> get authentication async => _auth!;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-// Mock Google Sign In Authentication
-class MockGoogleSignInAuthentication implements GoogleSignInAuthentication {
-  @override
-  final String? idToken;
-  @override
-  final String? accessToken;
-
-  MockGoogleSignInAuthentication({this.idToken, this.accessToken});
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 // Mock Local Authentication
 class MockLocalAuthentication implements LocalAuthentication {
   bool canCheckBiometricsResult = false;
@@ -289,7 +220,6 @@ void main() {
     late AuthService authService;
     late MockHttpClient mockHttpClient;
     late MockSecureStorage mockSecureStorage;
-    late MockGoogleSignIn mockGoogleSignIn;
     late MockLocalAuthentication mockLocalAuth;
     late MockOAuth2Service mockOAuth2Service;
 
@@ -312,14 +242,12 @@ void main() {
     setUp(() {
       mockHttpClient = MockHttpClient();
       mockSecureStorage = MockSecureStorage();
-      mockGoogleSignIn = MockGoogleSignIn();
       mockLocalAuth = MockLocalAuthentication();
       mockOAuth2Service = MockOAuth2Service();
 
       authService = AuthService(
         httpClient: mockHttpClient,
         secureStorage: mockSecureStorage,
-        googleSignIn: mockGoogleSignIn,
         localAuth: mockLocalAuth,
         oauth2Service: mockOAuth2Service,
         authUrl: testAuthUrl,
@@ -599,7 +527,6 @@ void main() {
       test('should not throw error when storage operations fail', () async {
         // Arrange
         mockSecureStorage.setException('jwt', Exception('Storage error'));
-        mockGoogleSignIn.setThrowException(Exception('Google sign out error'));
 
         // Act & Assert
         expect(() => authService.logout(), returnsNormally);
@@ -670,158 +597,8 @@ void main() {
       });
     });
 
-    group('signInWithGoogle', () {
-      test(
-        'should return session token when Google sign-in succeeds',
-        () async {
-          // Arrange
-          final mockAuth = MockGoogleSignInAuthentication(
-            idToken: 'mock-id-token',
-          );
-          final mockAccount = MockGoogleSignInAccount(
-            id: 'test-id',
-            auth: mockAuth,
-          );
-          mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
-
-          mockHttpClient.setResponse(testAuthUrl, {
-            'sessionToken': testToken,
-          }, statusCode: 200);
-
-          // Act
-          final result = await authService.signInWithGoogle();
-
-          // Assert
-          expect(result, testToken);
-          expect(mockSecureStorage.storage['sessionToken'], testToken);
-        },
-      );
-
-      test(
-        'should throw AuthFailure.cancelledByUser when user cancels',
-        () async {
-          // Arrange
-          mockGoogleSignIn.setMockAccount(null, null);
-
-          // Act & Assert
-          expect(
-            () => authService.signInWithGoogle(),
-            throwsA(isA<AuthFailure>()),
-          );
-        },
-      );
-
-      test(
-        'should throw AuthFailure.serverError when backend verification fails',
-        () async {
-          // Arrange
-          final mockAuth = MockGoogleSignInAuthentication(
-            idToken: 'mock-id-token',
-          );
-          final mockAccount = MockGoogleSignInAccount(
-            id: 'test-id',
-            auth: mockAuth,
-          );
-          mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
-
-          mockHttpClient.setResponse(testAuthUrl, {
-            'error': 'Invalid token',
-          }, statusCode: 400);
-
-          // Act & Assert
-          expect(
-            () => authService.signInWithGoogle(),
-            throwsA(isA<AuthFailure>()),
-          );
-        },
-      );
-
-      test(
-        'should throw AuthFailure.serverError when network error occurs',
-        () async {
-          // Arrange
-          final mockAuth = MockGoogleSignInAuthentication(
-            idToken: 'mock-id-token',
-          );
-          final mockAccount = MockGoogleSignInAccount(
-            id: 'test-id',
-            auth: mockAuth,
-          );
-          mockGoogleSignIn.setMockAccount(mockAccount, mockAuth);
-
-          mockHttpClient.setException(testAuthUrl, Exception('Network error'));
-
-          // Act & Assert
-          expect(
-            () => authService.signInWithGoogle(),
-            throwsA(isA<AuthFailure>()),
-          );
-        },
-      );
-    });
-
-    group('verifyTokenWithBackend', () {
-      test('should return session token when verification succeeds', () async {
-        // Arrange
-        mockHttpClient.setResponse(testAuthUrl, {
-          'sessionToken': testToken,
-        }, statusCode: 200);
-
-        // Act
-        final result = await authService.verifyTokenWithBackend(
-          'mock-id-token',
-        );
-
-        // Assert
-        expect(result, testToken);
-        expect(mockSecureStorage.storage['sessionToken'], testToken);
-      });
-
-      test(
-        'should throw AuthFailure.serverError for non-200 response',
-        () async {
-          // Arrange
-          mockHttpClient.setResponse(testAuthUrl, {
-            'error': 'Invalid token',
-          }, statusCode: 400);
-
-          // Act & Assert
-          expect(
-            () => authService.verifyTokenWithBackend('mock-id-token'),
-            throwsA(isA<AuthFailure>()),
-          );
-        },
-      );
-
-      test(
-        'should throw AuthFailure.serverError when sessionToken is missing',
-        () async {
-          // Arrange
-          mockHttpClient.setResponse(
-            testAuthUrl,
-            {'success': true}, // Missing sessionToken
-            statusCode: 200,
-          );
-
-          // Act & Assert
-          expect(
-            () => authService.verifyTokenWithBackend('mock-id-token'),
-            throwsA(isA<AuthFailure>()),
-          );
-        },
-      );
-
-      test('should throw AuthFailure.serverError for network error', () async {
-        // Arrange
-        mockHttpClient.setException(testAuthUrl, Exception('Network error'));
-
-        // Act & Assert
-        expect(
-          () => authService.verifyTokenWithBackend('mock-id-token'),
-          throwsA(isA<AuthFailure>()),
-        );
-      });
-    });
+    // signInWithGoogle now delegates to signInWithOAuth2 (tested separately)
+    // verifyTokenWithBackend removed (backend validation via B2C OAuth2 flow)
 
     group('getSessionToken', () {
       test('should return session token when it exists', () async {

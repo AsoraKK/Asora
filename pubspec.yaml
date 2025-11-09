@@ -36,10 +36,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.4.0
-  google_sign_in: ^6.1.6
   flutter_secure_storage: ^9.0.0
   local_auth: ^2.2.0
-  flutter_appauth: ^7.0.1  # Keep for compatibility, migrate to MSAL gradually
+  flutter_appauth: ^7.0.1  # OAuth2/OIDC client for B2C authentication
   http: ^1.2.0
   dio: ^5.4.0
   google_fonts: ^6.0.0
