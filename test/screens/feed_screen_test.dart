@@ -293,7 +293,6 @@ void main() {
       expect(find.text('Profile'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Privacy Settings'), findsOneWidget);
-      expect(find.text('Privacy Center'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Help & Support'), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);

@@ -52,10 +52,6 @@ dependencies:
   url_launcher: ^6.2.2          # Launch URLs and handle OAuth callbacks
   app_links: ^6.3.2             # Deep link handling for OAuth callbacks (replaces discontinued uni_links)
   
-  # File handling and sharing
-  path_provider: ^2.1.1         # File system access
-  share_plus: ^7.2.1            # File sharing functionality
-  
   # OpenTelemetry for observability and tracing
   opentelemetry: ^0.18.10
 

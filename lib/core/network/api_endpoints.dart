@@ -20,6 +20,7 @@ class ApiEndpoints {
 
   // Privacy & GDPR endpoints
   static const String exportUser = '$_baseApi/privacy/exportUser';
+  static const String exportStatus = '$_baseApi/privacy/exportUser/status';
   static const String deleteUser = '$_baseApi/privacy/deleteUser';
 
   // Feed & Posts

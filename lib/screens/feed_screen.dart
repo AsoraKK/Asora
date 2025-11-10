@@ -5,8 +5,7 @@ import '../features/auth/application/auth_providers.dart';
 import '../features/auth/domain/user.dart';
 import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
-import 'privacy_settings_screen.dart';
-import '../privacy/privacy_screen.dart';
+import '../features/privacy/privacy_settings_screen.dart';
 import '../features/moderation/presentation/screens/moderation_queue_screen.dart';
 
 /// ---------------------------------------------------------------------------
@@ -527,18 +526,6 @@ class _AsoraDrawer extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const PrivacySettingsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: Text('Privacy Center', style: GoogleFonts.sora()),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const PrivacyScreen(),
                   ),
                 );
               },

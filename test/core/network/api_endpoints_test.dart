@@ -27,6 +27,13 @@ void main() {
         expect(ApiEndpoints.exportUser, equals('/api/privacy/exportUser'));
       });
 
+      test('exportStatus is correct', () {
+        expect(
+          ApiEndpoints.exportStatus,
+          equals('/api/privacy/exportUser/status'),
+        );
+      });
+
       test('deleteUser is correct', () {
         expect(ApiEndpoints.deleteUser, equals('/api/privacy/deleteUser'));
       });
