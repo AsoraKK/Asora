@@ -348,3 +348,15 @@ jobs:
           # 3) Exactly one indexed 'health'
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
           curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY" | jq -r '.[].name' | grep -cx 'health' | grep -qx 1
+
+      - name: Verify DSR export storage configuration
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          PRINCIPAL_ID=$(az functionapp identity show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query principalId -o tsv)
+          SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
+          if [ -z "$SA" ]; then
+            echo "::error::DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"; exit 1;
+          fi
+          bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID"

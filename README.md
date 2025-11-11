@@ -3,6 +3,11 @@ Asora Backend – quick reference
 
 This repo contains the Asora Flutter app and Azure Functions backend. For the full backend docs, see `functions/README.md`.
 
+Runbooks
+--------
+
+- Privacy DSR admin workflows: `docs/runbooks/dsr.md`
+
 Protected vs Public routes
 --------------------------
 
@@ -19,6 +24,7 @@ Protected vs Public routes
 | `/moderation/appeals/{id}/vote`| POST   | Protected | moderation  |
 | `/user/export`                 | GET    | Protected | privacy     |
 | `/user/delete`                 | DELETE | Protected | privacy     |
+| `/admin/dsr/*`                 | MIXED  | Admin     | privacy     |
 
 Notes on local.settings.json and Azure Flex
 -------------------------------------------

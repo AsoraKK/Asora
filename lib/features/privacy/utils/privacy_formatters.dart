@@ -1,4 +1,5 @@
 /// Formatting helpers for privacy UI strings.
+library;
 
 String formatPrivacyCountdown(Duration duration) {
   final totalMinutes = duration.inMinutes <= 0 ? 0 : duration.inMinutes;
