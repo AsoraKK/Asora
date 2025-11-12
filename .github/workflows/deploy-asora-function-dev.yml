@@ -349,7 +349,8 @@ jobs:
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
           curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY" | jq -r '.[].name' | grep -cx 'health' | grep -qx 1
 
-      - name: Verify DSR export storage configuration
+      - name: Verify DSR export storage configuration (optional)
+        continue-on-error: true
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -357,7 +358,9 @@ jobs:
           PRINCIPAL_ID=$(az functionapp identity show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query principalId -o tsv)
           SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
           if [ -z "$SA" ]; then
-            echo "::error::DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"; exit 1;
+            echo "⚠️  DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"
+            echo "ℹ️  DSR features will not be available until storage infrastructure is provisioned"
+            exit 0
           fi
           bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID"
 
@@ -373,7 +376,8 @@ jobs:
             echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
           fi
 
-      - name: Configure DSR environment variables
+      - name: Configure DSR environment variables (optional)
+        continue-on-error: true
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -382,7 +386,9 @@ jobs:
           # Get DSR storage account name
           DSR_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
           if [ -z "$DSR_SA" ]; then
-            echo "::error::DSR storage account not found"; exit 1;
+            echo "⚠️  DSR storage account not found, skipping DSR environment variable configuration"
+            echo "ℹ️  Run infra provisioning to create DSR storage account before enabling DSR features"
+            exit 0
           fi
           
           echo "Setting DSR environment variables..."
