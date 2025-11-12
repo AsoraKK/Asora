@@ -360,3 +360,15 @@ jobs:
             echo "::error::DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"; exit 1;
           fi
           bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID"
+
+      - name: Verify Cosmos DB private networking (optional)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          COSMOS_ACCOUNT=$(az cosmosdb list -g "$RG_CLEAN" --query "[0].name" -o tsv)
+          if [ -n "$COSMOS_ACCOUNT" ]; then
+            bash infra/scripts/verify-cosmos-private-endpoint.sh "$COSMOS_ACCOUNT" "$RG_CLEAN"
+          else
+            echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
+          fi
