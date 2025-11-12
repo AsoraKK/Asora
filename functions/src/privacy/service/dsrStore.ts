@@ -1,6 +1,6 @@
 import type { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 import type { AuditEntry, DsrRequest, LegalHold } from '../common/models';
 
@@ -53,7 +53,7 @@ export async function patchDsrRequest(
   const { resource } = await requestsContainer.item(id, id).replace(next);
   if (auditEntry) {
     await auditContainer.items.create({
-      id: uuidv7(),
+      id: uuidv4(),
       requestId: id,
       ...auditEntry,
     });

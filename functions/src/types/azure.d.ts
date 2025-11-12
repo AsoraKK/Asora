@@ -5,7 +5,7 @@ export type Principal = {
   name?: string;
   email?: string;
   scp?: string | string[];
-  roles?: string[];
+  roles?: string | string[];
   raw?: JWTPayload;
 };
 

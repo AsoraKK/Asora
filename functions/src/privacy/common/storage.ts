@@ -19,13 +19,16 @@ if (!STORAGE_ACCOUNT) {
   throw new Error('DSR_EXPORT_STORAGE_ACCOUNT must be configured.');
 }
 
+// TypeScript knows STORAGE_ACCOUNT is defined after the check above
+const validatedStorageAccount = STORAGE_ACCOUNT!;
+
 const credential = new DefaultAzureCredential();
 const blobServiceClient = new BlobServiceClient(
-  `https://${STORAGE_ACCOUNT}.blob.core.windows.net`,
+  `https://${validatedStorageAccount}.blob.core.windows.net`,
   credential,
 );
 const queueServiceClient = new QueueServiceClient(
-  `https://${STORAGE_ACCOUNT}.queue.core.windows.net`,
+  `https://${validatedStorageAccount}.queue.core.windows.net`,
   credential,
 );
 
@@ -76,7 +79,7 @@ export async function createUserDelegationUrl(
       expiresOn,
     },
     key,
-    STORAGE_ACCOUNT,
+    validatedStorageAccount,
   ).toString();
 
   return {

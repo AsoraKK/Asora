@@ -1,10 +1,16 @@
 import type { InvocationContext } from '@azure/functions';
+import type { SqlParameter } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { createAuditEntry, DsrRequest } from '../common/models';
 import { emitSpan } from '../common/telemetry';
 import { patchDsrRequest, hasLegalHold } from '../service/dsrStore';
 
-const CONTAINERS_TO_MARK = [
+const CONTAINERS_TO_MARK: Array<{
+  name: string;
+  filter: string;
+  params: SqlParameter[];
+  holdScope?: string;
+}> = [
   { name: 'users', filter: 'c.id = @userId', params: [{ name: '@userId', value: '' }], holdScope: 'user' },
   { name: 'posts', filter: 'c.authorId = @userId', params: [{ name: '@userId', value: '' }], holdScope: 'post' },
   { name: 'comments', filter: 'c.authorId = @userId', params: [{ name: '@userId', value: '' }] },
@@ -17,7 +23,7 @@ const CONTAINERS_TO_MARK = [
 async function markDeletedRecords(
   containerName: string,
   filter: string,
-  params: Record<string, unknown>[],
+  params: SqlParameter[],
   now: string,
   holdScope?: string,
 ) {

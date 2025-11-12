@@ -52,8 +52,8 @@ export async function packageExportZip(payload: PackageExportPayload): Promise<{
   archive.append(toJsonLines(payload.comments), { name: 'comments.jsonl' });
   archive.append(toJsonLines(payload.likes), { name: 'likes.jsonl' });
   archive.append(toJsonLines(payload.moderation), { name: 'moderation.jsonl' });
-  archive.append(toJsonLines(payload.scoreCards), { name: 'ai_scorecard.jsonl' });
-  archive.append(toJsonLines(payload.mediaLinks), { name: 'media_links.jsonl' });
+  archive.append(toJsonLines(payload.scoreCards as unknown as Record<string, unknown>[]), { name: 'ai_scorecard.jsonl' });
+  archive.append(toJsonLines(payload.mediaLinks as unknown as Record<string, unknown>[]), { name: 'media_links.jsonl' });
 
   await archive.finalize();
   const exportBytes = await uploadPromise;

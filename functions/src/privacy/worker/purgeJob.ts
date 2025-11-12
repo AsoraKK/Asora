@@ -1,4 +1,4 @@
-import { app, InvocationContext } from '@azure/functions';
+import { app, InvocationContext, Timer } from '@azure/functions';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { emitSpan } from '../common/telemetry';
 import { hasLegalHold } from '../service/dsrStore';
@@ -49,14 +49,14 @@ export async function runPurgeJobTask(context: InvocationContext, windowDays = P
   emitSpan(context, 'delete.purge.completed', { cutoff: cutoffDate });
 }
 
-app.timer(
-  'privacyDsrPurge',
-  {
-    schedule: '0 0 2 * * *',
-    runOnStartup: false,
-    useMonitor: true,
-  },
-  async (context: InvocationContext): Promise<void> => {
+app.timer('privacyDsrPurge', {
+  schedule: '0 0 2 * * *',
+  handler: async (myTimer: Timer): Promise<void> => {
+    // Create a minimal InvocationContext for the purge task
+    const context = {
+      invocationId: `timer-${Date.now()}`,
+      functionName: 'privacyDsrPurge',
+    } as InvocationContext;
     await runPurgeJobTask(context);
   },
-);
+});

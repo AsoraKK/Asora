@@ -372,3 +372,26 @@ jobs:
           else
             echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
           fi
+
+      - name: Configure DSR environment variables
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          # Get DSR storage account name
+          DSR_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
+          if [ -z "$DSR_SA" ]; then
+            echo "::error::DSR storage account not found"; exit 1;
+          fi
+          
+          echo "Setting DSR environment variables..."
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_STORAGE_ACCOUNT="$DSR_SA" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_CONTAINER="dsr-exports" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_NAME="dsr-requests" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="AzureWebJobsStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_MAX_CONCURRENCY="5" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_SIGNED_URL_TTL_HOURS="12" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_PURGE_WINDOW_DAYS="30" --output none
+          
+          echo "✅ DSR environment variables configured"

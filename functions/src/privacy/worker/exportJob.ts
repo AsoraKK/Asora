@@ -1,4 +1,5 @@
 import type { InvocationContext } from '@azure/functions';
+import type { SqlParameter } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { withClient } from '@shared/clients/postgres';
 import { createAuditEntry, DsrRequest, ScoreCard, ExportMediaLink } from '../common/models';
@@ -10,14 +11,14 @@ import { redactRecord } from '../common/redaction';
 
 const DSR_TTL_HOURS = Number(process.env.DSR_EXPORT_SIGNED_URL_TTL_HOURS ?? '12');
 
-function makeQuery(filters: string, params: Record<string, unknown>[]) {
+function makeQuery(filters: string, params: SqlParameter[]) {
   return {
     query: `SELECT * FROM c WHERE ${filters}`,
     parameters: params,
   };
 }
 
-async function fetchContainerRecords(containerName: string, filters: string, params: Record<string, unknown>[]) {
+async function fetchContainerRecords(containerName: string, filters: string, params: SqlParameter[]) {
   const db = getCosmosDatabase();
   const container = db.container(containerName);
   const iterator = container.items.query(makeQuery(filters, params));
@@ -82,7 +83,7 @@ function buildScoreCards(records: Array<Record<string, unknown>>): ScoreCard[] {
       const contentId =
         (record.contentId ?? record.content_id ?? record.id ?? record.itemId ?? record.item_id ?? '') as string;
       const createdAt = (record.createdAt ?? record.created_at ?? new Date().toISOString()) as string;
-      const modelName = (record.modelName ?? record.model?.name ?? 'automated-moderation') as string;
+      const modelName = (record.modelName ?? (record.model && typeof record.model === 'object' && 'name' in record.model ? record.model.name : undefined) ?? 'automated-moderation') as string;
       const riskScore = Number(record.riskScore ?? record.score ?? 0);
       const labelSet = Array.isArray(record.labels)
         ? record.labels.map(label => String(label))

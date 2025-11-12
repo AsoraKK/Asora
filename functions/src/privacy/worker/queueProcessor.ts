@@ -1,4 +1,4 @@
-import { app, InvocationContext } from '@azure/functions';
+import { app, InvocationContext, trigger } from '@azure/functions';
 
 import { emitSpan } from '../common/telemetry';
 import type { DsrQueueMessage } from '../common/models';
@@ -28,14 +28,10 @@ function parseMessage(message: unknown): DsrQueueMessage | null {
   return null;
 }
 
-app.queue(
-  'privacyDsrProcessor',
-  {
-    queueName: QUEUE_NAME,
-    connection: QUEUE_CONNECTION,
-    direction: 'in',
-  },
-  async (context: InvocationContext, payload: unknown): Promise<void> => {
+app.storageQueue('privacyDsrProcessor', {
+  queueName: QUEUE_NAME,
+  connection: QUEUE_CONNECTION,
+  handler: async (payload: unknown, context: InvocationContext): Promise<void> => {
     const parsed = parseMessage(payload);
     if (!parsed) {
       context.log('dsr.queue.invalid', { payload });
@@ -72,4 +68,4 @@ app.queue(
       context.log('dsr.queue.unknown_type', { type: parsed.type });
     }
   },
-);
+});
