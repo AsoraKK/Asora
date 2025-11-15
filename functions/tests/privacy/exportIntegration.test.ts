@@ -30,6 +30,7 @@ describe('export release integration', () => {
       requestedBy: 'admin',
       userId: 'userX',
       requestedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
       attempt: 1,
     });
 
