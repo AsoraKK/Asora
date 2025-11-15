@@ -1,7 +1,7 @@
 import type { InvocationContext } from '@azure/functions';
 import { performance } from 'perf_hooks';
 
-import type { QueryRequestOptions, SqlParameter } from '@azure/cosmos';
+import type { FeedOptions, SqlParameter } from '@azure/cosmos';
 import { HttpError } from '@shared/utils/errors';
 import { withClient } from '@shared/clients/postgres';
 import { getTargetDatabase } from '@shared/clients/cosmos';
@@ -66,15 +66,17 @@ export async function getFeed({
   const queryDefinition = buildQuery(cursorValue, modeResult.authorIds, modeResult.visibility);
   const queryOptions = buildQueryOptions(
     resolvedLimit,
-    queryDefinition.partitionKey,
-    queryDefinition.requiresCrossPartition
+    queryDefinition.partitionKey
   );
 
   const container = getTargetDatabase().posts;
   const queryStart = performance.now();
-  const { resources = [], headers = {}, continuationToken } = await container.items
+  const response = await container.items
     .query({ query: queryDefinition.query, parameters: queryDefinition.parameters }, queryOptions)
     .fetchNext();
+  const { resources = [], continuationToken } = response;
+  const ru = response.requestCharge;
+  const queryMetrics = response.queryMetrics;
   const queryDuration = performance.now() - queryStart;
   const totalDuration = performance.now() - start;
 
@@ -87,8 +89,6 @@ export async function getFeed({
       })
     : null;
 
-  const ru = Number.parseFloat((headers['x-ms-request-charge'] as string | undefined) ?? '0');
-  const queryMetrics = headers['x-ms-documentdb-query-metrics'] as string | undefined;
   const authorCount = modeResult.authorCount;
 
   const telemetryProps = {
@@ -297,7 +297,7 @@ async function isFollowing(followerId: string, followeeId: string): Promise<bool
         text: 'SELECT 1 FROM follows WHERE follower_uuid = $1 AND followee_uuid = $2 LIMIT 1',
         values: [followerId, followeeId],
       });
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     });
   } catch {
     return false;
@@ -372,19 +372,17 @@ function appendVisibilityClauses(
 
 function buildQueryOptions(
   limit: number,
-  partitionKey?: string,
-  enableCrossPartition = false
-): QueryRequestOptions {
-  const options: QueryRequestOptions = {
+  partitionKey?: string
+): FeedOptions {
+  const options: FeedOptions = {
     maxItemCount: limit,
     populateQueryMetrics: true,
   };
 
   if (partitionKey) {
     options.partitionKey = partitionKey;
-  } else if (enableCrossPartition) {
-    options.enableCrossPartition = true;
   }
+  // Cross-partition queries are automatically enabled in Cosmos SDK v4 when partitionKey is not set
 
   return options;
 }

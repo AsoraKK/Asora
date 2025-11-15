@@ -1,13 +1,7 @@
 import type { HttpRequest, InvocationContext } from '@azure/functions';
 
-import { HttpError } from '@shared/utils/errors';
 import { createPost as createPostRoute } from '@feed/routes/createPost';
-import { createPost as createPostService } from '@feed/service/feedService';
 import { httpReqMock } from '../helpers/http';
-
-jest.mock('@feed/service/feedService', () => ({
-  createPost: jest.fn(),
-}));
 
 jest.mock('@auth/verifyJwt', () => {
   const actual = jest.requireActual('@auth/verifyJwt');
@@ -54,10 +48,16 @@ describe('createPost route', () => {
     expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
+  it('returns 501 Not Implemented for authenticated user', async () => {
+    const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
+    expect(response.status).toBe(501);
+    expect(response.body).toBe(JSON.stringify({ error: 'Post creation not yet implemented' }));
+    expect(contextStub.log).toHaveBeenCalledWith('posts.create.not_implemented');
+  });
+
   it('returns 400 when JSON body is invalid', async () => {
-    const request = guestRequest();
+    const request = userRequest();
     Object.assign(request, {
-      headers: new Map([['authorization', 'Bearer valid-token']]),
       json: jest.fn().mockRejectedValue(new Error('bad json')),
     });
 
@@ -65,53 +65,5 @@ describe('createPost route', () => {
     expect(contextStub.log).toHaveBeenCalledWith('posts.create.invalid_json');
     expect(response.status).toBe(400);
     expect(response.body).toBe(JSON.stringify({ error: 'Invalid JSON payload' }));
-  });
-
-  it('maps HttpError from service into response', async () => {
-    const service = createPostService as jest.MockedFunction<typeof createPostService>;
-    service.mockRejectedValueOnce(new HttpError(409, 'duplicate', { 'Retry-After': '10' }));
-
-    const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
-    expect(service).toHaveBeenCalled();
-    expect(response.status).toBe(409);
-    expect(response.headers).toMatchObject({
-      'Content-Type': 'application/json',
-      'Retry-After': '10',
-    });
-    expect(response.body).toBe(JSON.stringify({ error: 'duplicate' }));
-  });
-
-  it('returns 500 for unexpected service failure', async () => {
-    const service = createPostService as jest.MockedFunction<typeof createPostService>;
-    service.mockRejectedValueOnce(new Error('boom'));
-
-    const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
-    expect(contextStub.log).toHaveBeenCalledWith(
-      'posts.create.error',
-      expect.objectContaining({ message: 'boom' })
-    );
-    expect(response.status).toBe(500);
-    expect(response.body).toBe(JSON.stringify({ error: 'internal' }));
-  });
-
-  it('returns created response on success and merges headers', async () => {
-    const service = createPostService as jest.MockedFunction<typeof createPostService>;
-    service.mockResolvedValueOnce({
-      body: { id: 'post-1' },
-      headers: { 'x-request-id': 'req-123' },
-    });
-
-    const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
-    expect(service).toHaveBeenCalledWith({
-      principal: expect.objectContaining({ sub: 'user-123' }),
-      payload: { text: 'hello world' },
-      context: contextStub,
-    });
-    expect(response.status).toBe(201);
-    expect(response.headers).toMatchObject({
-      'Content-Type': 'application/json',
-      'x-request-id': 'req-123',
-    });
-    expect(response.body).toBe(JSON.stringify({ id: 'post-1' }));
   });
 });

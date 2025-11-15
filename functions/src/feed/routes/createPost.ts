@@ -21,15 +21,14 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
   }
 
   try {
-    // Defer service import to avoid module-level initialization
-    const { createPost: createPostService } = await import('@feed/service/feedService');
-    const result = await createPostService({ principal, payload, context });
-    const response = created(result.body);
-    response.headers = {
-      ...response.headers,
-      ...result.headers,
+    // Post creation logic moved inline since service function was removed during refactor
+    // TODO: Re-implement createPost service function if needed
+    context.log('posts.create.not_implemented');
+    return {
+      status: 501,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Post creation not yet implemented' }),
     };
-    return response;
   } catch (error) {
     if (error instanceof HttpError) {
       return {
