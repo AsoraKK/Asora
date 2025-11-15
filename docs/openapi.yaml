@@ -535,6 +535,41 @@ paths:
   /admin/dsr/{id}/reviewB:
     post:
       operationId: reviewBDsr
+  /admin/legal-hold/place:
+    post:
+      operationId: placeLegalHold
+      summary: Place a legal hold
+      tags: [privacy-admin]
+      description: Records an active hold on user/post/case scope
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegalHoldInput' }
+      responses:
+        '201':
+          description: Legal hold recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldRecord'
+  /admin/legal-hold/clear:
+    post:
+      operationId: clearLegalHold
+      summary: Clear a legal hold
+      tags: [privacy-admin]
+      description: Marks a hold inactive and records the audit
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegalHoldClear' }
+      responses:
+        '200':
+          description: Hold cleared
+        '404': { description: Hold not found }
       summary: Reviewer B decision
       tags: [privacy-admin]
       description: Captures checklist B (operational) results

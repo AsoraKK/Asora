@@ -86,7 +86,10 @@ class AuthChoiceScreen extends ConsumerWidget {
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
                       child: const Text('Security Debug'),
                     ),

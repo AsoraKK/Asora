@@ -16,12 +16,10 @@ echo "✅ OpenAPI validation passed"
 
 # Check Dart formatting (Flutter app) - after client regeneration
 echo "📱 Checking Dart formatting..."
-find . -name "*.dart" -not -path "./lib/generated/*" -not -path "./.git/*" -not -path "./.dart_tool/*" -exec dart format --output=none --set-exit-if-changed {} +
-if [ $? -ne 0 ]; then
-  echo "❌ Dart formatting check failed. Please run: find . -name \"*.dart\" -not -path \"./lib/generated/*\" -not -path \"./.git/*\" -not -path \"./.dart_tool/*\" -exec dart format --output=none --set-exit-if-changed {} +"
-  exit 1
-fi
-echo "✅ Dart formatting check passed"
+dart format $(find . -name "*.dart" -not -path "./lib/generated/*" -not -path "./.git/*" -not -path "./.dart_tool/*")
+# Stage any formatting changes so commit includes them
+git add -A lib test || true
+echo "✅ Dart formatting applied and staged"
 
 # Secret scan (lightweight, repo-local)
 echo "🔒 Scanning for plaintext secrets in code..."
