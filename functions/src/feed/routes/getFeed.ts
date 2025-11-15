@@ -1,28 +1,45 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { parseAuth } from '@shared/middleware/auth';
-import { ok, serverError } from '@shared/utils/http';
+import { createSuccessResponse, serverError } from '@shared/utils/http';
+import { HttpError } from '@shared/utils/errors';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
     const principal = await parseAuth(req);
+    const cursor = typeof req.query?.get === 'function' ? req.query.get('cursor') ?? null : null;
+    const limit = typeof req.query?.get === 'function' ? req.query.get('limit') ?? null : null;
+    const authorId = typeof req.query?.get === 'function' ? req.query.get('authorId') ?? null : null;
 
     // Defer service import to avoid module-level initialization
     const { getFeed: getFeedService } = await import('@feed/service/feedService');
-    const result = await getFeedService({ principal: principal ?? null, context });
+    const result = await getFeedService({
+      principal: principal ?? null,
+      context,
+      cursor,
+      limit,
+      authorId,
+    });
 
-    const response = ok(result.body);
-    response.headers = {
-      ...response.headers,
+    return createSuccessResponse(result.body, {
       ...result.headers,
       Vary: 'Authorization',
       'Cache-Control': principal ? 'private, no-store' : 'public, max-age=60',
-    };
-    return response;
+    });
   } catch (error) {
-    context.log('feed.get.error', error);
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ error: error.message }),
+      };
+    }
+
+    context.log('feed.get.error', { message: (error as Error).message });
     return serverError();
   }
 }

@@ -21,6 +21,8 @@ tags:
     description: Content moderation and appeals
   - name: privacy
     description: Privacy and data management
+  - name: privacy-admin
+    description: Admin-only Data Subject Request and legal hold flows
 components:
   securitySchemes:
     bearerAuth:
@@ -110,6 +112,127 @@ components:
         interactions: { type: object }
         moderation: { type: object }
         privacy: { type: object }
+    DsrType:
+      type: string
+      enum: [ export, delete ]
+    DsrStatus:
+      type: string
+      enum: [ queued, running, awaiting_review, ready_to_release, released, succeeded, failed, canceled ]
+    DsrReviewerRecord:
+      type: object
+      properties:
+        by: { type: string }
+        at: { type: string, format: date-time }
+        notes: { type: string }
+        pass: { type: boolean }
+    DsrReviewState:
+      type: object
+      properties:
+        reviewerA:
+          $ref: '#/components/schemas/DsrReviewerRecord'
+        reviewerB:
+          $ref: '#/components/schemas/DsrReviewerRecord'
+        approver:
+          type: object
+          properties:
+            by: { type: string }
+            at: { type: string, format: date-time }
+    AuditEntry:
+      type: object
+      properties:
+        at: { type: string, format: date-time }
+        by: { type: string }
+        event: { type: string }
+        meta:
+          type: object
+          additionalProperties: true
+    DsrRequest:
+      type: object
+      properties:
+        id: { type: string }
+        type:
+          $ref: '#/components/schemas/DsrType'
+        userId: { type: string }
+        requestedBy: { type: string }
+        requestedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        status:
+          $ref: '#/components/schemas/DsrStatus'
+        attempt: { type: integer }
+        exportBlobPath: { type: string }
+        exportBytes:
+          type: integer
+          format: int64
+        failureReason: { type: string }
+        signedUrl: { type: string }
+        review:
+          $ref: '#/components/schemas/DsrReviewState'
+        audit:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+    DsrRequestInput:
+      type: object
+      required: [ userId ]
+      properties:
+        userId:
+          type: string
+          description: UUID v7 of the subject
+        note:
+          type: string
+          description: Optional operator note
+    DsrActionResponse:
+      type: object
+      properties:
+        id: { type: string }
+        status:
+          $ref: '#/components/schemas/DsrStatus'
+        message: { type: string }
+    DsrReleaseResponse:
+      type: object
+      properties:
+        downloadUrl: { type: string }
+        expiresAt: { type: string, format: date-time }
+        status:
+          $ref: '#/components/schemas/DsrStatus'
+        signedUrl: { type: string }
+    LegalHoldInput:
+      type: object
+      required: [ scope, scopeId, reason ]
+      properties:
+        scope:
+          type: string
+          enum: [ user, post, case ]
+        scopeId: { type: string }
+        reason: { type: string }
+    LegalHoldRecord:
+      type: object
+      properties:
+        id: { type: string }
+        scope: { type: string }
+        scopeId: { type: string }
+        reason: { type: string }
+        requestedBy: { type: string }
+        startedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        active: { type: boolean }
+        audit:
+          type: array
+          items:
+            type: object
+            properties:
+              at: { type: string, format: date-time }
+              by: { type: string }
+              event:
+                type: string
+                enum: [ placed, cleared ]
+              note: { type: string }
+    LegalHoldClear:
+      type: object
+      required: [ id ]
+      properties:
+        id: { type: string }
 paths:
   /api/health:
     get:
@@ -269,4 +392,211 @@ paths:
       responses:
         '200': { description: Deleted }
         '401': { description: Unauthorized }
+
+  /admin/dsr/export:
+    post:
+      operationId: enqueueDsrExport
+      summary: Enqueue a DSR export
+      tags: [privacy-admin]
+      description: Creates a new export request controlled by privacy_admin role
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DsrRequestInput' }
+      responses:
+        '202':
+          description: Export request queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrActionResponse'
+  /admin/dsr/delete:
+    post:
+      operationId: enqueueDsrDelete
+      summary: Enqueue a DSR delete
+      tags: [privacy-admin]
+      description: Creates a delete request that is soft-deleted and audited
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DsrRequestInput' }
+      responses:
+        '202':
+          description: Delete request queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrActionResponse'
+  /admin/dsr/{id}:
+    get:
+      operationId: getDsrStatus
+      summary: Retrieve the DSR request state
+      tags: [privacy-admin]
+      description: Returns the request with reviewer states and audit log
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: DSR request snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrRequest'
+        '404': { description: Not found }
+    post:
+      operationId: retryDsrRequest
+      summary: Retry a failed DSR request
+      tags: [privacy-admin]
+      description: Increments attempt counter and reschedules the worker
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        description: Optional progress note
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+      responses:
+        '202':
+          description: Retry accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrActionResponse'
+        '409': { description: Cannot retry }
+  /admin/dsr/{id}/cancel:
+    post:
+      operationId: cancelDsrRequest
+      summary: Cancel a queued DSR request
+      tags: [privacy-admin]
+      description: Moves a running request to canceled status and logs the event
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '202':
+          description: Cancellation scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrActionResponse'
+        '409': { description: Cannot cancel }
+  /admin/dsr/{id}/reviewA:
+    post:
+      operationId: reviewADsr
+      summary: Reviewer A decision
+      tags: [privacy-admin]
+      description: Captures checklist A (private export) results
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ pass ]
+              properties:
+                pass: { type: boolean }
+                notes: { type: string }
+      responses:
+        '204': { description: Recorded }
+        '400': { description: Invalid input }
+  /admin/dsr/{id}/reviewB:
+    post:
+      operationId: reviewBDsr
+      summary: Reviewer B decision
+      tags: [privacy-admin]
+      description: Captures checklist B (operational) results
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ pass ]
+              properties:
+                pass: { type: boolean }
+                notes: { type: string }
+      responses:
+        '204': { description: Recorded }
+        '400': { description: Invalid input }
+  /admin/dsr/{id}/release:
+    post:
+      operationId: releaseDsrExport
+      summary: Release signed ZIP link
+      tags: [privacy-admin]
+      description: Validates reviewers, generates 12h SAS, and transitions to released
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200':
+          description: Download link returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrReleaseResponse'
+        '409': { description: Awaiting reviewers }
+  /admin/dsr/{id}/download:
+    get:
+      operationId: downloadDsrExport
+      summary: Regenerate the signed ZIP link
+      tags: [privacy-admin]
+      description: Re-issues a 12h SAS for released exports
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: SAS link for the ZIP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DsrReleaseResponse'
+        '404': { description: Not found }
+  /admin/legal-hold/place:
+    post:
+      operationId: placeLegalHold
+      summary: Place a legal hold
+      tags: [privacy-admin]
+      description: Records an active hold on user/post/case scope
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegalHoldInput' }
+      responses:
+        '201':
+          description: Legal hold recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalHoldRecord'
+  /admin/legal-hold/clear:
+    post:
+      operationId: clearLegalHold
+      summary: Clear a legal hold
+      tags: [privacy-admin]
+      description: Marks a hold inactive and records the audit
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegalHoldClear' }
+      responses:
+        '200':
+          description: Hold cleared
+        '404': { description: Hold not found }
 

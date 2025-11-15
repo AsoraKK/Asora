@@ -13,6 +13,7 @@ import 'package:asora_api_client/src/api/feed_api.dart';
 import 'package:asora_api_client/src/api/health_api.dart';
 import 'package:asora_api_client/src/api/moderation_api.dart';
 import 'package:asora_api_client/src/api/posts_api.dart';
+import 'package:asora_api_client/src/api/privacy_admin_api.dart';
 
 class AsoraApiClient {
   static const String basePath = r'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net';
@@ -90,5 +91,11 @@ class AsoraApiClient {
   /// by doing that all interceptors will not be executed
   PostsApi getPostsApi() {
     return PostsApi(dio, serializers);
+  }
+
+  /// Get PrivacyAdminApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  PrivacyAdminApi getPrivacyAdminApi() {
+    return PrivacyAdminApi(dio, serializers);
   }
 }

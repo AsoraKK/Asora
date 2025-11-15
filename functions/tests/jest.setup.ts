@@ -6,7 +6,11 @@ jest.mock('@azure/functions', () => {
   const actual = jest.requireActual('@azure/functions');
   return {
     ...actual,
-    app: { http: jest.fn() },
+    app: {
+      http: jest.fn(),
+      storageQueue: jest.fn(),
+      timer: jest.fn(),
+    },
   };
 });
 

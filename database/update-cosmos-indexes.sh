@@ -31,6 +31,28 @@ az cosmosdb sql container update \
     ]
   }'
 
+# Update posts with indexes aligned with feed pagination
+az cosmosdb sql container update \
+  --account-name "$ACCOUNT_NAME" \
+  --database-name "$DB_NAME" \
+  --name "posts" \
+  --idx-policy '{
+    "indexingMode": "consistent",
+    "automatic": true,
+    "includedPaths": [{"path": "/*"}],
+    "excludedPaths": [{"path": "/\"_etag\"/?"}],
+    "compositeIndexes": [
+      [
+        {"path": "/createdAt", "order": "descending"},
+        {"path": "/id", "order": "descending"}
+      ],
+      [
+        {"path": "/authorId", "order": "ascending"},
+        {"path": "/createdAt", "order": "descending"}
+      ]
+    ]
+  }'
+
 # Update posts_v2 with indexes for author queries and content discovery
 az cosmosdb sql container update \
   --account-name "$ACCOUNT_NAME" \

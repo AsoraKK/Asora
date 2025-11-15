@@ -1,23 +1,22 @@
-export interface FeedPagination {
-  page: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
+export interface FeedCursor {
+  ts: number;
+  id: string;
 }
 
-export interface FeedResponse {
-  ok: boolean;
-  status: string;
-  service: string;
-  ts: string;
-  data: {
-    posts: unknown[];
-    pagination: FeedPagination;
-  };
+export interface FeedMeta {
+  count: number;
+  nextCursor: string | null;
+  timingsMs?: Record<string, number>;
+  applied?: Record<string, unknown>;
+}
+
+export interface FeedResultBody {
+  items: Record<string, unknown>[];
+  meta: FeedMeta;
 }
 
 export interface FeedResult {
-  body: FeedResponse;
+  body: FeedResultBody;
   headers: Record<string, string>;
 }
 

@@ -1,119 +1,79 @@
 # Data Subject Request (DSR) Runbook
 
-Version: 1.0
-Last Updated: 2025-11-11
-Owners: Privacy Engineering
+Version: 1.1
+Last Updated: 2025-11-15
+Owners: Privacy Engineering + Platform
 
-## 1. Overview
-The DSR subsystem enables administrators with the `privacy_admin` role to fulfill export (data portability) and delete (erasure) requests through a dual-review workflow and controlled release process. Export packages are generated asynchronously; deletion jobs perform soft-delete/anonymization respecting legal holds.
+## 1. Preconditions & Roles
+- **Role requirement:** All `/admin/dsr/*` and `/admin/legal-hold/*` calls require a decorated JWT with the `privacy_admin` role.
+- **Infrastructure:** Dedicated export storage account (see `docs/DSR_INFRASTRUCTURE_SETUP.md`) with container `dsr-exports`, lifecycle 30 days, TLS 1.2+, private networking, and RBAC granting `Storage Blob Data Contributor` to the function MI.
+- **Retention policy reminders:** inactive accounts ≥24 months, user-deleted content ≤30 days, operations logs 30 days, security/audit logs 12 months, moderation artifacts closed +90 days.
 
-## 2. Architecture Summary
-- Ingestion: Admin HTTP endpoints (`/admin/dsr/*`) enqueue requests into the `dsr-requests` queue.
-- Persistence: Cosmos containers `privacy_requests`, `legal_holds`, and `audit_logs` store requests, holds, and audit entries.
-- Processing: Queue-triggered workers execute export (`runExportJob`) and delete (`runDeleteJob`). Concurrency for exports throttled by `DSR_MAX_CONCURRENCY`.
-- Review: Two reviewers (`reviewA`, `reviewB`) must both pass an export before release.
-- Release: Generates a user‑delegation SAS URL (TTL `DSR_EXPORT_SIGNED_URL_TTL_HOURS`) for the packaged blob; URL is returned in response only and not persisted.
-- Legal Holds: Holds prevent delete operations for scoped entities (user/post/case). Export still allowed.
-- Auditing: Every lifecycle transition appends an audit entry and writes to `audit_logs` container.
+## 2. Submit Export or Delete
+- **Export (`/admin/dsr/export`):** Body `{ "userId": "<uuidv7>" }`. Creates `privacy_requests` document with `type: export` and status `queued`, enqueues `dsr-requests` message, emits `dsr.enqueue` span.
+- **Delete (`/admin/dsr/delete`):** Same body shape, `type: delete`. Worker marks content as `deleted: true` on Cosmos/postgres rows, enforcing legal holds.
+- **Additional fields:** Include `note` for traceability (e.g., compliance ticket). `audit_logs` gets `event: enqueue.export` or `.delete` with `by` and `meta.requestId`.
 
-## 3. Endpoint Reference (Admin)
-| Purpose | Method | Path | Notes |
-|---------|--------|------|-------|
-| Enqueue export | POST | `/admin/dsr/export` | Body: `{userId, requestedBy}` |
-| Enqueue delete | POST | `/admin/dsr/delete` | Body: `{userId, requestedBy}` |
-| Get status | GET | `/admin/dsr/{id}` | Full request document |
-| Retry | POST | `/admin/dsr/{id}/retry` | Only failed/canceled |
-| Cancel | POST | `/admin/dsr/{id}/cancel` | Only queued/running |
-| Review A | POST | `/admin/dsr/{id}/reviewA` | Body: `{pass, notes?}` |
-| Review B | POST | `/admin/dsr/{id}/reviewB` | Body: `{pass, notes?}` |
-| Release export | POST | `/admin/dsr/{id}/release` | Export only; requires `ready_to_release` |
-| Download export URL | GET | `/admin/dsr/{id}/download` | After release |
-| Place legal hold | POST | `/admin/dsr/legal-holds` | Body: `{scope, scopeId, reason, expiresAt?}` |
-| Clear legal hold | POST | `/admin/dsr/legal-holds/{id}/clear` | Deactivates hold |
+## 3. Monitor Status & Progress
+- **GET `/admin/dsr/{id}`** returns the request document, including `review`, `audit`, and `exportBlobPath` for exports.
+- **Statuses:** `queued → running → awaiting_review → ready_to_release → released → succeeded` (exports); `queued → running → succeeded` (deletes); `failed` if any step errors; `canceled` if admin aborts.
+- **Audit entries** include `{ event: 'status.changed', meta: { updatedBy } }` and `audit_logs` container mirrors each change for external reporting.
 
-All endpoints: `Authorization: Bearer <JWT>` with `privacy_admin` role.
+## 4. Reviewer A Checklist (Safety Review)
+- Confirm export package contains only hashed IPs (no raw IPs), no provider secrets, and redacted vendor payloads.
+- Verify `ai_scorecard.jsonl` includes only `ScoreCard` entries (content_id, created_at, model_name, risk_score, label_set, decision).
+- Ensure media link list references `media_links.jsonl` with `blobPath`, `sasUrl`, `expiresAt` (12h TTL) and that all `expiresAt` values are `<= now + 12h`.
+- Validate that the package metadata matches the userId in the request and that no extra scopes are bundled.
 
-## 4. Typical Export Flow
-1. Admin enqueues export.
-2. Worker picks up request → status `running` → packages data → `awaiting_review`.
-3. Review A + Review B mark pass → status transitions to `ready_to_release`.
-4. Admin triggers release → SAS URL generated (not persisted) → status `released`.
-5. User (out-of-band) or admin fetches download URL; handler re-generates a fresh SAS per request; audit persists release event only.
+## 5. Reviewer B Checklist (Operational Readiness)
+- Confirm the Azure Storage container `dsr-exports/dsr-<env>/` contains the ZIP and lifecycle metadata (TTL 30 days).
+- Check audit/logging spans `dsr.export.package` and `dsr.export.upload` succeeded with telemetry tags (`env`, `requestId`).
+- Ensure the worker log shows the `DSR_MAX_CONCURRENCY` limit respected and there are no residual `watchdog` errors.
+- Validate there are no active legal holds blocking the requested user (delete requests) before release.
 
-## 5. Typical Delete Flow
-1. Admin enqueues delete.
-2. Worker transitions to `running` and soft-deletes/anonymizes content, skipping items under active holds.
-3. On success → status `succeeded`; failures → `failed` with reason.
+## 6. Release Link Procedures
+- **Release (`/admin/dsr/{id}/release`):** Requires both reviewers recorded as `pass: true` and status `ready_to_release`. Response includes `downloadUrl` + `expiresAt`. The signed URL is built with user-delegation SAS TTL `DSR_EXPORT_SIGNED_URL_TTL_HOURS` (default 12h) and is never persisted.
+- **Download (`/admin/dsr/{id}/download`):** Regenerates a fresh SAS if status is `released`; fails if `completedAt` > 30 days ago (the retention window enforced by blob lifecycle).
+- **Audit:** Release appends audit entry `event: 'release.sas'` with `meta.linkTTL: 12h` and writes to `audit_logs`.
 
-## 6. Legal Holds
-- Prevent deletion of scoped resources; user-level hold blocks entire delete job (fails with hold message).
-- Placement requires reason; clearing records audit entry.
+## 7. Place & Clear Legal Holds
+- **Place (`/admin/legal-hold/place`):** Body `{ scope: user|post|case, scopeId, reason }`. Creates `legal_holds` document, `active: true`, `audit` entry, and prevents any delete job touching the scope.
+- **Clear (`/admin/legal-hold/clear`):** Body `{ id }`. Sets `active: false`, records `audit` entry `{ event: 'cleared' }`, and releases blocked delete jobs; if a delete job is queued, it can now proceed.
 
-## 7. Environment & Settings
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `DSR_EXPORT_STORAGE_ACCOUNT` | Storage account for export blobs | asoradsrstore |
-| `DSR_EXPORT_CONTAINER` | Container name for export packages | dsr-exports |
-| `DSR_QUEUE_NAME` | Queue name for DSR messages | dsr-requests |
-| `DSR_MAX_CONCURRENCY` | Max concurrent export jobs | 3 |
-| `DSR_EXPORT_SIGNED_URL_TTL_HOURS` | SAS TTL for released exports | 12 |
-| `DSR_BLOB_UPLOAD_BUFFER_SIZE` | Stream upload buffer size | 4194304 |
-| `DSR_BLOB_UPLOAD_CONCURRENCY` | Parallel upload concurrency | 5 |
+## 8. Purge Window & Exceptions
+- Soft-deleted data stays flagged for `DSR_PURGE_WINDOW_DAYS` (default 30). A TTL job (`purgeJob`) runs nightly to permanently remove items where `deletedAt <= now - purgeWindow` and no matching active legal hold.
+- If a legal hold covers the record, the purge job skips it and emits `dsr.delete.purge` span noting `holdId`.
+- Ops logs are trimmed at 30 days, security logs at 12 months; the `audit_logs` container is retained per `COSMOS_TERRAFORM_VALIDATION` guidelines.
 
-## 8. Operational Procedures
-### 8.1 Retry Failed Export
-- Verify status is `failed`.
-- POST `/admin/dsr/{id}/retry`.
-- Monitor queue logs; confirm status moves to `running` then `awaiting_review`.
+## 9. Troubleshooting & Failure Drills
+| Scenario | Detection | Remediation |
+| --- | --- | --- |
+| Export stuck in `queued` | No queue pick-ups, telemetry `dsr.queue.wait` high | Ensure `DSR_MAX_CONCURRENCY` not saturating, verify storage queue length, check Function app concurrency limits, rerun `az functionapp restart`. |
+| ZIP creation fails (`failed` status) | Error `zip` or `container unauthorized` in logs | Check storage RBAC, regenerate user-delegation SAS, confirm MI has `Storage Blob Data Contributor`, rerun job with `/admin/dsr/{id}/retry`. |
+| Delete blocked by hold | Delete job logs show `holdId` and job fails | Inspect `legal_holds` container, clear hold if legitimate or escalate to Legal team, then `/admin/dsr/{id}/retry`. |
+| SAS leak report | External request for revoked link | Regenerate storage account user delegation key (invalidates SAS), mark audit entry `event: 'sas.revoked'`, optionally rotate storage roles (`grant-dsr-storage-access.sh`). |
 
-### 8.2 Cancel Running Export
-- POST `/admin/dsr/{id}/cancel` (works only for `queued|running`).
-- Confirm status becomes `canceled`.
+## 10. Runbook Drills
+- **Drill 1:** Queue export → record requestId, verify queue message flows to worker → ensure review endpoints behave per checklist, release link regenerates with new SAS via `/download`.
+- **Drill 2:** Simulate delete for user with active hold → expect worker to skip items and log `legal hold` event; clear hold and rerun to ensure purge is allowed.
+- **Drill 3:** Rotate storage roles via `infra/scripts/grant-dsr-storage-access.sh` then dequeue subsequent export to confirm MI permissions still valid.
 
-### 8.3 Emergency Revoke Released SAS
-SAS URLs are not persisted; they're generated on demand. To revoke outstanding links faster than TTL:
-1. Regenerate the storage account user delegation key (invalidates user delegation SAS tokens).
-2. If needed, rotate storage account keys for defense-in-depth.
+## 11. Monitoring & Observability
+- Telemetry spans of interest: `dsr.enqueue`, `dsr.export.fetch`, `dsr.export.package`, `dsr.export.upload`, `dsr.review.pass`, `dsr.release.sas`, `dsr.delete.soft`, `dsr.delete.purge`.
+- Check App Insights for traces matching requestId; review `audit_logs` container for matching `meta.requestId` entries.
+- Use `scripts/diagnostics-v4.sh` or `az storage queue peek`/`az cosmosdb sql query` for live investigations.
 
-### 8.4 Place Legal Hold
-- POST `/admin/dsr/legal-holds` with scope/id.
-- Confirm hold present in Cosmos `legal_holds` container.
-
-### 8.5 Clear Legal Hold
-- POST `/admin/dsr/legal-holds/{id}/clear`.
-- Verify `active` becomes false; audit entry appended.
-
-## 9. Monitoring & Telemetry
-Key spans/events:
-- `queue.export.dispatch`, `export.fetch`, `export.package`, `export.upload`, `export.error`.
-- `queue.delete.dispatch`, `delete.soft`, `delete.completed`, `delete.error`.
-- Audit entries mirror these events in `audit_logs`.
-
-Use script `scripts/diagnostics-v4.sh` to tail function logs and query health.
-
-## 10. Failure Modes & Runbooks
-| Scenario | Symptom | Action |
-|----------|---------|--------|
-| Export stuck queued | No worker pickup | Check queue message visibility, ensure `DSR_MAX_CONCURRENCY` not throttling; inspect function logs.
-| Export failed packaging | status=failed with reason | Retry; inspect blob storage & Cosmos; verify identity fetch succeeded.
-| Delete blocked | status=failed reason contains hold | Clear legal hold (if approved) or document hold justification.
-| SAS leak concern | External report | Rotate storage account keys & purge signedUrl; plan on-demand SAS change (Hardening Step).
-
-## 11. Security Considerations
-- All admin actions gated by JWT + `privacy_admin` role.
-- Legal holds prevent unauthorized data destruction.
-- SAS TTL kept short (12h). SAS links are generated on-demand and never persisted.
-- Redaction ensures sensitive fields sanitized in exports.
-
-## 12. Backlog / Hardening TODO
-- Add CI assertions for Cosmos private networking if applicable.
-- Extend tests for reviewer combination edge cases (one pass + one fail = remain awaiting_review).
+## 12. Storage Role Rotation Notes
+- When rotating storage roles or regenerating the SAS signing key, run `infra/scripts/grant-dsr-storage-access.sh` to reapply the `Storage Blob Data Contributor` role to the Function MI.
+- Validate private endpoint connectivity by checking `az network private-endpoint show` and ensuring the subnet has access to the storage account firewall.
 
 ## 13. References
-- OpenAPI spec: `api/openapi/openapi.yaml`
-- Worker code: `functions/src/privacy/worker/*`
-- Admin handlers: `functions/src/privacy/admin/*`
-- Storage helper: `functions/src/privacy/common/storage.ts`
+- Infrastructure setup: `docs/DSR_INFRASTRUCTURE_SETUP.md`
+- OpenAPI contract: `api/openapi/openapi.yaml`
+- Admin surface: `functions/src/privacy/admin/*`
+- Worker logic: `functions/src/privacy/worker/*`
+- Storage helpers: `functions/src/privacy/common/storage.ts`
+- Provisioning scripts: `infra/scripts/provision-dsr-storage.sh`
 
 ---
-End of runbook.
+...existing code...

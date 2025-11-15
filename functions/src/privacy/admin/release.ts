@@ -10,7 +10,7 @@ import { createUserDelegationUrl } from '../common/storage';
 type Authed = HttpRequest & { principal: Principal };
 const TTL = Number(process.env.DSR_EXPORT_SIGNED_URL_TTL_HOURS ?? '12');
 
-async function handler(req: Authed): Promise<HttpResponseInit> {
+export async function releaseHandler(req: Authed): Promise<HttpResponseInit> {
   const cors = handleCorsAndMethod(req.method ?? 'POST', ['POST']);
   if (cors.shouldReturn && cors.response) return cors.response;
   try {
@@ -35,7 +35,7 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
   }
 }
 
-const protectedHandler = requireAuth(handler);
+const protectedHandler = requireAuth(releaseHandler);
 
 app.http('privacy-admin-dsr-release', {
   methods: ['POST', 'OPTIONS'],

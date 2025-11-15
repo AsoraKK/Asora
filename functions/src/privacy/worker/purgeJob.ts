@@ -1,11 +1,14 @@
 import { app, InvocationContext, Timer } from '@azure/functions';
+import { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { emitSpan } from '../common/telemetry';
 import { hasLegalHold } from '../service/dsrStore';
 
 const PURGE_WINDOW_DAYS = Number(process.env.DSR_PURGE_WINDOW_DAYS ?? '30');
 
-const CONTAINERS_TO_PURGE = [
+export type PurgeContainer = { name: string; scope?: string };
+
+const CONTAINERS_TO_PURGE: PurgeContainer[] = [
   { name: 'users', scope: 'user' },
   { name: 'posts', scope: 'post' },
   { name: 'comments' },
@@ -15,11 +18,17 @@ const CONTAINERS_TO_PURGE = [
   { name: 'appeal_votes' },
 ];
 
-async function removeExpiredRecords(cutoff: string, requiredScope?: string) {
-  const db = getCosmosDatabase();
-  const containers = requiredScope
-    ? CONTAINERS_TO_PURGE.filter(container => container.scope === requiredScope)
-    : CONTAINERS_TO_PURGE;
+interface RemoveExpiredRecordsOptions {
+  containers?: PurgeContainer[];
+  database?: { container: (name: string) => Container };
+}
+
+export async function removeExpiredRecords(
+  cutoff: string,
+  options: RemoveExpiredRecordsOptions = {},
+) {
+  const db = options.database ?? getCosmosDatabase();
+  const containers = options.containers ?? CONTAINERS_TO_PURGE;
 
   for (const entry of containers) {
     const container = db.container(entry.name);

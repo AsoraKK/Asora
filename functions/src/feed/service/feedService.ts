@@ -1,233 +1,422 @@
 import type { InvocationContext } from '@azure/functions';
 import { performance } from 'perf_hooks';
-import { randomUUID } from 'crypto';
 
+import type { QueryRequestOptions, SqlParameter } from '@azure/cosmos';
+import { HttpError } from '@shared/utils/errors';
+import { withClient } from '@shared/clients/postgres';
+import { getTargetDatabase } from '@shared/clients/cosmos';
+import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import type { Principal } from '@shared/middleware/auth';
-import { isRedisEnabled, withRedis } from '@shared/clients/redis';
-import { HttpError, badRequestError } from '@shared/utils/errors';
+import type { FeedCursor, FeedResult } from '@feed/types';
 
-import type { CreatePostBody, CreatePostResult, FeedResult } from '@feed/types';
+type FeedMode = 'home' | 'public' | 'profile';
 
-const RATE_LIMIT_WINDOW_SECONDS = 60;
-const MAX_CACHE_POSTS = Number(process.env.FEED_TRENDING_CACHE_SIZE ?? '200');
+const DEFAULT_LIMIT = 30;
+const MAX_LIMIT = 50;
+const MAX_AUTHOR_BATCH = 50;
+const DEFAULT_CURSOR: FeedCursor = {
+  ts: Number.MAX_SAFE_INTEGER,
+  id: 'ffffffff-ffff-7fff-bfff-ffffffffffff',
+};
 
-const inMemoryRateWindow = new Map<number, number>();
+const STATUS_PUBLISHED = 'published';
+const VISIBILITY_PUBLIC = 'public';
+const VISIBILITY_FOLLOWERS = 'followers';
+const VISIBILITY_PRIVATE = 'private';
 
-function getRateLimitPerMinute(): number {
-  const parsed = Number(process.env.POST_RATE_LIMIT_PER_MINUTE ?? '900');
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 900;
-  }
-  return Math.floor(parsed);
+export interface GetFeedOptions {
+  principal: Principal | null;
+  context: InvocationContext;
+  cursor?: string | null;
+  limit?: string | number | null;
+  authorId?: string | null;
+}
+
+interface FeedModeResult {
+  mode: FeedMode;
+  authorIds: string[] | null;
+  visibility: string[];
+  authorCount: number;
+}
+
+interface QueryDefinition {
+  query: string;
+  parameters: SqlParameter[];
+  partitionKey?: string;
+  requiresCrossPartition: boolean;
 }
 
 export async function getFeed({
-  principal: _principal,
+  principal,
   context,
-}: {
-  principal: Principal | null;
-  context: InvocationContext;
-}): Promise<FeedResult> {
+  cursor,
+  limit,
+  authorId,
+}: GetFeedOptions): Promise<FeedResult> {
   const start = performance.now();
-  const redisConfigured = isRedisEnabled();
-  let cacheStatus: 'disabled' | 'miss' | 'hit' = redisConfigured ? 'miss' : 'disabled';
-  let redisStatus: 'disabled' | 'connected' | 'error' = redisConfigured ? 'connected' : 'disabled';
-  let cachedPosts: unknown[] | null = null;
-  let ruEstimate = '1';
-
-  context.log('feed.get.start', { principal: _principal ? 'user' : 'guest' });
-
-  if (redisConfigured) {
-    try {
-      await withRedis(async redis => {
-        const raw = await redis.zrevrange('feed:trending', 0, 19);
-        if (raw.length > 0) {
-          cacheStatus = 'hit';
-          ruEstimate = '0';
-          cachedPosts = raw
-            .map(entry => {
-              try {
-                return JSON.parse(entry);
-              } catch (err) {
-                context.log('feed.cache.parse_error', err);
-                return null;
-              }
-            })
-            .filter((item): item is Record<string, unknown> => Boolean(item));
-        }
-      });
-    } catch (err) {
-      cacheStatus = 'miss';
-      redisStatus = 'error';
-      context.log('feed.cache.redis_error', err);
-    }
-  }
-
-  const feedResponse = {
-    ok: true,
-    status: 'ok',
-    service: 'asora-function-dev',
-    ts: new Date().toISOString(),
-    data: {
-      posts: cachedPosts ?? [],
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        hasMore: false,
-      },
-    },
-  };
-
-  const duration = performance.now() - start;
-  context.log('feed.get.complete', {
-    durationMs: Number(duration.toFixed(2)),
-    cacheStatus,
-    userType: _principal ? 'authenticated' : 'anonymous',
+  context.log('feed.get.start', {
+    principal: principal ? 'user' : 'guest',
+    cursor: Boolean(cursor),
+    requestedAuthor: authorId ?? 'none',
   });
 
-  return {
-    body: feedResponse,
-    headers: {
-      'X-Cache-Status': cacheStatus,
-      'X-Redis-Status': redisStatus,
-      'X-Request-Duration': duration.toFixed(2),
-      'X-RU-Estimate': ruEstimate,
-    },
-  };
-}
+  const resolvedLimit = resolveLimit(limit);
+  const cursorValue = parseCursor(cursor);
+  const modeResult = await resolveFeedMode(principal, authorId, context);
+  const queryDefinition = buildQuery(cursorValue, modeResult.authorIds, modeResult.visibility);
+  const queryOptions = buildQueryOptions(
+    resolvedLimit,
+    queryDefinition.partitionKey,
+    queryDefinition.requiresCrossPartition
+  );
 
-export async function createPost({
-  principal: _principal,
-  payload,
-  context,
-}: {
-  principal: Principal;
-  payload: CreatePostBody;
-  context: InvocationContext;
-}): Promise<CreatePostResult> {
-  const start = performance.now();
-  const rateLimit = getRateLimitPerMinute();
+  const container = getTargetDatabase().posts;
+  const queryStart = performance.now();
+  const { resources = [], headers = {}, continuationToken } = await container.items
+    .query({ query: queryDefinition.query, parameters: queryDefinition.parameters }, queryOptions)
+    .fetchNext();
+  const queryDuration = performance.now() - queryStart;
+  const totalDuration = performance.now() - start;
 
-  let redisStatus: 'disabled' | 'connected' | 'error' = isRedisEnabled() ? 'connected' : 'disabled';
-  let cachePrimed = false;
-  let rateLimited = false;
-  let remainingBudget = rateLimit;
+  const sortedItems = [...(resources as Record<string, unknown>[])].sort(sortDocuments);
+  const lastItem = sortedItems[sortedItems.length - 1];
+  const nextCursor = lastItem
+    ? encodeCursor({
+        ts: extractTimestamp(lastItem['createdAt']),
+        id: String(lastItem['id'] ?? ''),
+      })
+    : null;
 
-  const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
-  if (!text) {
-    throw badRequestError('Field "text" is required');
-  }
+  const ru = Number.parseFloat((headers['x-ms-request-charge'] as string | undefined) ?? '0');
+  const queryMetrics = headers['x-ms-documentdb-query-metrics'] as string | undefined;
+  const authorCount = modeResult.authorCount;
 
-  if (text.length > 2000) {
-    throw new HttpError(422, 'Post length exceeds 2000 characters');
-  }
-
-  const authorId = typeof payload?.authorId === 'string' ? payload.authorId : null;
-  const mediaUrl = typeof payload?.mediaUrl === 'string' ? payload.mediaUrl : null;
-
-  const postId = randomUUID();
-  const createdAt = new Date().toISOString();
-  const post = {
-    postId,
-    text,
-    mediaUrl,
-    authorId,
-    createdAt,
-    updatedAt: createdAt,
-    stats: {
-      likes: 0,
-      comments: 0,
-      replies: 0,
-    },
+  const telemetryProps = {
+    'feed.type': modeResult.mode,
+    'feed.cursor.present': Boolean(cursor),
+    'feed.authorSetSize': authorCount,
+    'cosmos.continuation.present': Boolean(continuationToken),
+    'feed.limit': resolvedLimit,
   };
 
-  const windowKey = Math.floor(Date.now() / (RATE_LIMIT_WINDOW_SECONDS * 1000));
+  trackAppMetric({
+    name: 'cosmos_ru_feed_page',
+    value: Number.isFinite(ru) ? ru : 0,
+    properties: telemetryProps,
+  });
 
-  const hitsThisWindow = (inMemoryRateWindow.get(windowKey) ?? 0) + 1;
-  inMemoryRateWindow.set(windowKey, hitsThisWindow);
-  for (const key of inMemoryRateWindow.keys()) {
-    if (key < windowKey - 1) {
-      inMemoryRateWindow.delete(key);
-    }
-  }
+  trackAppEvent({
+    name: 'feed_page',
+    properties: {
+      ...telemetryProps,
+      count: sortedItems.length,
+      hasMore: Boolean(continuationToken),
+    },
+  });
 
-  if (hitsThisWindow > rateLimit) {
-    rateLimited = true;
-    remainingBudget = 0;
-  } else {
-    remainingBudget = Math.max(rateLimit - hitsThisWindow, 0);
-  }
-
-  if (isRedisEnabled()) {
-    try {
-      await withRedis(async redis => {
-        const rateKey = `ratelimit:posts:${windowKey}`;
-        const currentRate = await redis.incr(rateKey);
-        if (currentRate === 1) {
-          await redis.expire(rateKey, RATE_LIMIT_WINDOW_SECONDS);
-        }
-
-        remainingBudget = Math.max(rateLimit - currentRate, 0);
-        if (currentRate > rateLimit) {
-          rateLimited = true;
-          return;
-        }
-
-        const score = Date.now();
-        const pipeline = redis.multi();
-        pipeline.zadd('feed:trending', score, JSON.stringify(post));
-        pipeline.zremrangebyrank('feed:trending', 0, -(MAX_CACHE_POSTS + 1));
-        pipeline.hincrby('metrics:posts', 'total', 1);
-        await pipeline.exec();
-        cachePrimed = true;
-      });
-    } catch (error) {
-      context.log('posts.create.redis_error', error);
-      redisStatus = 'error';
-    }
-  }
-
-  if (rateLimited) {
-    const resetSeconds = (windowKey + 1) * RATE_LIMIT_WINDOW_SECONDS;
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    throw new HttpError(429, 'Post rate limit exceeded. Please retry later.', {
-      'Retry-After': Math.max(resetSeconds - nowSeconds, 1).toString(),
-      'X-RateLimit-Limit': rateLimit.toString(),
-      'X-RateLimit-Remaining': Math.max(remainingBudget, 0).toString(),
-      'X-RateLimit-Window': RATE_LIMIT_WINDOW_SECONDS.toString(),
-      'X-Redis-Status': redisStatus,
-      'X-Cache-Primed': cachePrimed ? 'true' : 'false',
-    });
-  }
-
-  const duration = performance.now() - start;
-
-  context.log('posts.create.metrics', {
-    postId,
-    durationMs: Number(duration.toFixed(2)),
-    redisStatus,
-    cachePrimed,
-    remainingBudget,
+  context.log('feed.get.complete', {
+    feedType: modeResult.mode,
+    durationMs: totalDuration.toFixed(2),
+    queryDurationMs: queryDuration.toFixed(2),
+    authorCount,
+    items: sortedItems.length,
+    continuationToken: Boolean(continuationToken),
+    ru: Number.isFinite(ru) ? ru.toFixed(2) : '0',
   });
 
   return {
     body: {
-      status: 'success',
-      post,
+      items: sortedItems,
+      meta: {
+        count: sortedItems.length,
+        nextCursor,
+        timingsMs: {
+          query: Number(queryDuration.toFixed(2)),
+          total: Number(totalDuration.toFixed(2)),
+        },
+        applied: {
+          feedType: modeResult.mode,
+          visibilityFilters: modeResult.visibility,
+          authorCount,
+          continuationToken,
+        },
+      },
     },
     headers: {
-      'X-Request-Duration': duration.toFixed(2),
-      'X-RateLimit-Limit': rateLimit.toString(),
-      'X-RateLimit-Remaining': Math.max(remainingBudget, 0).toString(),
-      'X-RateLimit-Window': RATE_LIMIT_WINDOW_SECONDS.toString(),
-      'X-Redis-Status': redisStatus,
-      'X-Cache-Primed': cachePrimed ? 'true' : 'false',
-      'X-RU-Estimate': '1',
+      'X-Feed-Limit': resolvedLimit.toString(),
+      'X-Feed-Type': modeResult.mode,
+      'X-Feed-Author-Count': authorCount.toString(),
+      'X-Cosmos-RU': Number.isFinite(ru) ? ru.toFixed(2) : '0',
+      'X-Cosmos-Query-Metrics': queryMetrics ?? '',
+      'X-Cosmos-Continuation-Token': continuationToken ?? '',
+      'X-Request-Duration': totalDuration.toFixed(2),
     },
   };
 }
 
-export function __resetPostRateLimiterForTests(): void {
-  inMemoryRateWindow.clear();
+function resolveLimit(value?: string | number | null): number {
+  const parsed =
+    typeof value === 'string' ? Number.parseInt(value, 10) : Number(value ?? Number.NaN);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_LIMIT);
+}
+
+export function parseCursor(cursor?: string | null): FeedCursor {
+  if (!cursor) {
+    return DEFAULT_CURSOR;
+  }
+
+  try {
+    const decoded = Buffer.from(cursor, 'base64url').toString('utf-8');
+    const parsed = JSON.parse(decoded);
+    const ts = Number(parsed?.ts);
+    const id = typeof parsed?.id === 'string' ? parsed.id : '';
+    if (!Number.isFinite(ts) || !id) {
+      throw new Error('malformed cursor');
+    }
+
+    return { ts, id };
+  } catch (error) {
+    throw new HttpError(400, 'Invalid cursor');
+  }
+}
+
+export function encodeCursor(value: FeedCursor): string {
+  return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+async function resolveFeedMode(
+  principal: Principal | null,
+  requestedAuthor: string | null | undefined,
+  context: InvocationContext
+): Promise<FeedModeResult> {
+  const normalizedAuthorId = requestedAuthor?.trim() || null;
+  if (normalizedAuthorId) {
+    const visibilitySet = new Set<string>([VISIBILITY_PUBLIC]);
+    let showFollowers = false;
+    let showPrivate = false;
+
+    if (principal?.sub) {
+      if (principal.sub === normalizedAuthorId) {
+        showFollowers = true;
+        showPrivate = true;
+      } else {
+        showFollowers = await isFollowing(principal.sub, normalizedAuthorId);
+      }
+    }
+
+    if (showFollowers) {
+      visibilitySet.add(VISIBILITY_FOLLOWERS);
+    }
+    if (showPrivate) {
+      visibilitySet.add(VISIBILITY_PRIVATE);
+    }
+
+    return {
+      mode: 'profile',
+      authorIds: [normalizedAuthorId],
+      visibility: Array.from(visibilitySet),
+      authorCount: 1,
+    };
+  }
+
+  if (!principal) {
+    return {
+      mode: 'public',
+      authorIds: null,
+      visibility: [VISIBILITY_PUBLIC],
+      authorCount: 0,
+    };
+  }
+
+  const authors = await fetchFollowees(principal.sub, context);
+  if (!authors.length) {
+    context.log('feed.home.no_authors', { principal: principal.sub });
+    return {
+      mode: 'public',
+      authorIds: null,
+      visibility: [VISIBILITY_PUBLIC],
+      authorCount: 0,
+    };
+  }
+
+  return {
+    mode: 'home',
+    authorIds: authors,
+    visibility: [VISIBILITY_PUBLIC, VISIBILITY_FOLLOWERS],
+    authorCount: authors.length,
+  };
+}
+
+async function fetchFollowees(principalId: string, context: InvocationContext): Promise<string[]> {
+  try {
+    const rows = await withClient(async client =>
+      client.query({
+        text: 'SELECT followee_uuid FROM follows WHERE follower_uuid = $1 ORDER BY created_at DESC LIMIT $2',
+        values: [principalId, MAX_AUTHOR_BATCH],
+      })
+    );
+
+    const authors: string[] = [];
+    const seen = new Set<string>();
+
+    const add = (id?: string | null) => {
+      if (!id) {
+        return;
+      }
+      if (seen.has(id)) {
+        return;
+      }
+      seen.add(id);
+      authors.push(id);
+    };
+
+    add(principalId);
+    for (const row of rows.rows ?? []) {
+      add(row?.followee_uuid);
+      if (authors.length >= MAX_AUTHOR_BATCH) {
+        break;
+      }
+    }
+
+    return authors;
+  } catch (error) {
+    context.log('feed.followees.error', error);
+    return [];
+  }
+}
+
+async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
+  try {
+    return await withClient(async client => {
+      const result = await client.query({
+        text: 'SELECT 1 FROM follows WHERE follower_uuid = $1 AND followee_uuid = $2 LIMIT 1',
+        values: [followerId, followeeId],
+      });
+      return result.rowCount > 0;
+    });
+  } catch {
+    return false;
+  }
+}
+
+function buildQuery(
+  cursor: FeedCursor,
+  authorIds: string[] | null,
+  visibility: string[]
+): QueryDefinition {
+  const parameters: SqlParameter[] = [
+    { name: '@cursorTs', value: cursor.ts },
+    { name: '@cursorId', value: cursor.id },
+    { name: '@status', value: STATUS_PUBLISHED },
+  ];
+
+  const clauses = [
+    '(c.createdAt < @cursorTs OR (c.createdAt = @cursorTs AND c.id < @cursorId))',
+    'c.status = @status',
+  ];
+
+  appendVisibilityClauses(visibility, parameters, clauses);
+
+  let partitionKey: string | undefined;
+  let requiresCrossPartition = false;
+
+  if (authorIds && authorIds.length === 1) {
+    clauses.push('c.authorId = @authorId');
+    parameters.push({ name: '@authorId', value: authorIds[0] });
+    partitionKey = authorIds[0];
+  } else if (authorIds && authorIds.length > 1) {
+    clauses.push('ARRAY_CONTAINS(@authorIds, c.authorId)');
+    parameters.push({ name: '@authorIds', value: authorIds });
+    requiresCrossPartition = true;
+  } else {
+    requiresCrossPartition = true;
+  }
+
+  const query = `
+    SELECT c.*
+    FROM c
+    WHERE ${clauses.join(' AND ')}
+    ORDER BY c.createdAt DESC, c.id DESC
+  `;
+
+  return { query, parameters, partitionKey, requiresCrossPartition };
+}
+
+function appendVisibilityClauses(
+  visibility: string[],
+  parameters: SqlParameter[],
+  clauses: string[]
+): void {
+  const unique = Array.from(new Set(visibility));
+  if (!unique.length) {
+    return;
+  }
+
+  if (unique.length === 1) {
+    clauses.push('c.visibility = @visibility0');
+    parameters.push({ name: '@visibility0', value: unique[0] });
+    return;
+  }
+
+  const placeholders = unique.map((_, index) => `@visibility${index}`);
+  clauses.push(`c.visibility IN (${placeholders.join(', ')})`);
+  unique.forEach((value, index) => {
+    parameters.push({ name: `@visibility${index}`, value });
+  });
+}
+
+function buildQueryOptions(
+  limit: number,
+  partitionKey?: string,
+  enableCrossPartition = false
+): QueryRequestOptions {
+  const options: QueryRequestOptions = {
+    maxItemCount: limit,
+    populateQueryMetrics: true,
+  };
+
+  if (partitionKey) {
+    options.partitionKey = partitionKey;
+  } else if (enableCrossPartition) {
+    options.enableCrossPartition = true;
+  }
+
+  return options;
+}
+
+function sortDocuments(a: Record<string, unknown>, b: Record<string, unknown>): number {
+  const aTs = extractTimestamp(a['createdAt']);
+  const bTs = extractTimestamp(b['createdAt']);
+
+  if (aTs !== bTs) {
+    return bTs - aTs;
+  }
+
+  const aId = String(a['id'] ?? '');
+  const bId = String(b['id'] ?? '');
+  if (aId === bId) {
+    return 0;
+  }
+
+  return aId < bId ? 1 : -1;
+}
+
+function extractTimestamp(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 0;
 }

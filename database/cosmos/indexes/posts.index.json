@@ -13,6 +13,16 @@
   "compositeIndexes": [
     [
       {
+        "path": "/createdAt",
+        "order": "descending"
+      },
+      {
+        "path": "/id",
+        "order": "descending"
+      }
+    ],
+    [
+      {
         "path": "/authorId",
         "order": "ascending"
       },

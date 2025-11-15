@@ -18,7 +18,16 @@ const requiredPaths = [
   '/api/moderation/appeals',
   '/api/moderation/appeals/{appealId}/vote',
   '/api/user/export',
-  '/api/user/delete'
+  '/api/user/delete',
+  '/admin/dsr/export',
+  '/admin/dsr/delete',
+  '/admin/dsr/{id}',
+  '/admin/dsr/{id}/reviewA',
+  '/admin/dsr/{id}/reviewB',
+  '/admin/dsr/{id}/release',
+  '/admin/dsr/{id}/download',
+  '/admin/legal-hold/place',
+  '/admin/legal-hold/clear'
 ];
 const missing = requiredPaths.filter(p => !text.includes(` ${p}:`) && !text.includes(`\n${p}:`));
 if (missing.length) {

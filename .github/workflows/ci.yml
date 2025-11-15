@@ -293,6 +293,13 @@ jobs:
 
           echo "Created $ROOT/dist-v4-final.zip"
 
+      - name: Upload feed workbook artifact
+        working-directory: ${{ github.workspace }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: feed-workbook
+          path: observability/workbooks/feed-latency.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: functions-v4-artifact

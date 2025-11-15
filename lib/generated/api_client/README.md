@@ -70,18 +70,27 @@ Class | Method | HTTP request | Description
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
 [*PostsApi*](doc/PostsApi.md) | [**createPost**](doc/PostsApi.md#createpost) | **POST** /post | Create a new post
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**clearLegalHold**](doc/PrivacyAdminApi.md#clearlegalhold) | **POST** /admin/legal-hold/clear | Clear an existing legal hold
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrDelete**](doc/PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /admin/dsr/delete | Enqueue a Data Subject Request delete
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrExport**](doc/PrivacyAdminApi.md#enqueuedsrexport) | **POST** /admin/dsr/export | Enqueue a Data Subject Request export
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**placeLegalHold**](doc/PrivacyAdminApi.md#placelegalhold) | **POST** /admin/legal-hold/place | Place a legal hold
 
 
 ## Documentation For Models
 
  - [CreatePost201Response](doc/CreatePost201Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
+ - [DsrRequestInput](doc/DsrRequestInput.md)
+ - [DsrRequestSummary](doc/DsrRequestSummary.md)
  - [Error](doc/Error.md)
  - [FlagContent202Response](doc/FlagContent202Response.md)
  - [FlagContentRequest](doc/FlagContentRequest.md)
  - [GetFeed200Response](doc/GetFeed200Response.md)
  - [GetFeed200ResponseMeta](doc/GetFeed200ResponseMeta.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
+ - [LegalHoldClear](doc/LegalHoldClear.md)
+ - [LegalHoldInput](doc/LegalHoldInput.md)
+ - [LegalHoldRecord](doc/LegalHoldRecord.md)
  - [RateLimitError](doc/RateLimitError.md)
 
 

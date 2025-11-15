@@ -1,5 +1,4 @@
-import type { TelemetryClient } from 'applicationinsights';
-import appInsights from 'applicationinsights';
+import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 
 type RateLimitMetricKind = 'allowed' | 'blocked';
 
@@ -16,60 +15,8 @@ export interface AuthBackoffEventDimensions {
   userIdPresent: boolean;
 }
 
-let telemetryClient: TelemetryClient | null | undefined;
-
-function shouldEnableTelemetry(): boolean {
-  if (process.env.NODE_ENV === 'test') {
-    return false;
-  }
-
-  if ((process.env.RATE_LIMITS_ENABLED ?? 'true').toLowerCase() === 'false') {
-    return false;
-  }
-
-  return Boolean(
-    process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || process.env.APPINSIGHTS_INSTRUMENTATIONKEY
-  );
-}
-
-function getTelemetryClient(): TelemetryClient | null {
-  if (typeof telemetryClient !== 'undefined') {
-    return telemetryClient;
-  }
-
-  if (!shouldEnableTelemetry()) {
-    telemetryClient = null;
-    return telemetryClient;
-  }
-
-  try {
-    if (!appInsights.defaultClient) {
-      appInsights
-        .setup()
-        .setAutoCollectConsole(false)
-        .setAutoCollectDependencies(false)
-        .setAutoCollectPerformance(false)
-        .setAutoCollectRequests(false)
-        .setAutoCollectExceptions(false)
-        .setSendLiveMetrics(false)
-        .start();
-    }
-
-    telemetryClient = appInsights.defaultClient ?? null;
-  } catch (error) {
-    telemetryClient = null;
-  }
-
-  return telemetryClient;
-}
-
 function trackRateLimitMetric(kind: RateLimitMetricKind, dimensions: RateLimitMetricDimensions): void {
-  const client = getTelemetryClient();
-  if (!client) {
-    return;
-  }
-
-  client.trackMetric({
+  trackAppMetric({
     name: `rate_limit.${kind}`,
     value: 1,
     properties: {
@@ -90,12 +37,7 @@ export function trackRateLimitBlocked(dimensions: RateLimitMetricDimensions): vo
 }
 
 export function trackAuthBackoffApplied(dimensions: AuthBackoffEventDimensions): void {
-  const client = getTelemetryClient();
-  if (!client) {
-    return;
-  }
-
-  client.trackEvent({
+  trackAppEvent({
     name: 'auth.backoff_applied',
     properties: {
       route: dimensions.route,
@@ -111,12 +53,7 @@ export function trackAuthBackoffSeconds(
   policy: string,
   scope: string
 ): void {
-  const client = getTelemetryClient();
-  if (!client) {
-    return;
-  }
-
-  client.trackMetric({
+  trackAppMetric({
     name: 'auth.backoff_seconds',
     value: seconds,
     properties: {

@@ -16,12 +16,17 @@ import 'package:asora_api_client/src/model/date.dart';
 
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
+import 'package:asora_api_client/src/model/dsr_request_input.dart';
+import 'package:asora_api_client/src/model/dsr_request_summary.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';
 import 'package:asora_api_client/src/model/get_feed200_response_meta.dart';
 import 'package:asora_api_client/src/model/get_health200_response.dart';
+import 'package:asora_api_client/src/model/legal_hold_clear.dart';
+import 'package:asora_api_client/src/model/legal_hold_input.dart';
+import 'package:asora_api_client/src/model/legal_hold_record.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 
 part 'serializers.g.dart';
@@ -29,12 +34,17 @@ part 'serializers.g.dart';
 @SerializersFor([
   CreatePost201Response,
   CreatePostRequest,
+  DsrRequestInput,
+  DsrRequestSummary,
   Error,
   FlagContent202Response,
   FlagContentRequest,
   GetFeed200Response,
   GetFeed200ResponseMeta,
   GetHealth200Response,
+  LegalHoldClear,
+  LegalHoldInput,
+  LegalHoldRecord,
   RateLimitError,
 ])
 Serializers serializers = (_$serializers.toBuilder()

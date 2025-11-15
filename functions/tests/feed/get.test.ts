@@ -1,10 +1,10 @@
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import { getFeed } from '@feed/routes/getFeed';
-import * as redisClient from '@shared/clients/redis';
+import * as feedService from '@feed/service/feedService';
+import { HttpError } from '@shared/utils/errors';
 
-jest.mock('@shared/clients/redis', () => ({
-  isRedisEnabled: jest.fn(),
-  withRedis: jest.fn(),
+jest.mock('@feed/service/feedService', () => ({
+  getFeed: jest.fn(),
 }));
 
 jest.mock('@auth/verifyJwt', () => {
@@ -20,9 +20,8 @@ jest.mock('@auth/verifyJwt', () => {
   };
 });
 
-const mockedRedis = redisClient as jest.Mocked<typeof redisClient>;
+const mockedFeedService = feedService as jest.Mocked<typeof feedService>;
 
-// Mock the InvocationContext
 const mockContext = {
   log: jest.fn(),
   error: jest.fn(),
@@ -40,141 +39,77 @@ const mockContext = {
   options: {},
 } as unknown as InvocationContext;
 
-// Mock HttpRequest
-const mockRequest = {
-  method: 'GET',
-  url: 'https://test.com/api/feed',
-  headers: new Headers(),
-  query: new URLSearchParams(),
-  params: {},
-  user: null,
-  body: {},
-  formData: jest.fn(),
-  json: jest.fn(),
-  text: jest.fn(),
-  arrayBuffer: jest.fn(),
-  blob: jest.fn(),
-} as unknown as HttpRequest;
+function createRequest(headers?: Record<string, string> | Headers): HttpRequest {
+  const baseRequest = {
+    method: 'GET',
+    url: 'https://test.com/api/feed',
+    headers: new Headers(headers),
+    query: new URLSearchParams(),
+    params: {},
+    user: null,
+    body: {},
+    formData: jest.fn(),
+    json: jest.fn(),
+    text: jest.fn(),
+    arrayBuffer: jest.fn(),
+    blob: jest.fn(),
+  } as unknown as HttpRequest;
+  return baseRequest;
+}
+
+const defaultFeedBody = {
+  items: [
+    {
+      id: 'alpha',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      authorId: 'author-1',
+    },
+  ],
+  meta: {
+    count: 1,
+    nextCursor: null,
+  },
+};
+
+const defaultFeedResult = {
+  body: defaultFeedBody,
+  headers: { 'X-Cosmos-RU': '1.23' },
+};
 
 describe('Feed GET Handler', () => {
   beforeEach(() => {
-    mockedRedis.isRedisEnabled.mockReturnValue(false);
-    mockedRedis.withRedis.mockResolvedValue(null as any);
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
+    mockedFeedService.getFeed.mockResolvedValue(defaultFeedResult);
   });
 
-  it('should return 200 with feed data structure', async () => {
-    const response = await getFeed(mockRequest, mockContext);
+  it('returns wrapped feed data with the merged headers', async () => {
+    const response = await getFeed(createRequest(), mockContext);
 
     expect(response.status).toBe(200);
-    const headers = response.headers as Record<string, string> | undefined;
-    expect(headers).toEqual(
+    const parsed = JSON.parse(response.body ?? '{}');
+    expect(parsed).toMatchObject({
+      success: true,
+      data: defaultFeedBody,
+    });
+    expect(response.headers).toEqual(
       expect.objectContaining({
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=60',
         Vary: 'Authorization',
-        'X-Cache-Status': 'disabled',
-        'X-Redis-Status': 'disabled',
-        'X-RU-Estimate': '1',
-      })
-    );
-    expect(headers?.['X-Request-Duration']).toBeDefined();
-    const body = JSON.parse(response.body ?? '{}');
-    expect(body).toMatchObject({
-      status: 'ok',
-      service: 'asora-function-dev',
-      ts: expect.any(String),
-      data: {
-        posts: expect.any(Array),
-        pagination: {
-          page: expect.any(Number),
-          limit: expect.any(Number),
-          total: expect.any(Number),
-          hasMore: expect.any(Boolean),
-        },
-      },
-    });
-  });
-
-  it('should log the request', async () => {
-    await getFeed(mockRequest, mockContext);
-
-    expect(mockContext.log).toHaveBeenCalledWith('feed.get.start', { principal: 'guest' });
-  });
-
-  it('should surface redis failures via headers without crashing', async () => {
-    mockedRedis.isRedisEnabled.mockReturnValue(true);
-    mockedRedis.withRedis.mockImplementationOnce(async () => {
-      throw new Error('redis boom');
-    });
-
-    const response = await getFeed(mockRequest, mockContext);
-
-    expect(response.status).toBe(200);
-    const headers = response.headers as Record<string, string> | undefined;
-    expect(headers).toEqual(
-      expect.objectContaining({
-        'X-Redis-Status': 'error',
-        'X-Cache-Status': 'miss',
+        'X-Cosmos-RU': '1.23',
       })
     );
   });
 
-  it('should return cached posts when redis returns data', async () => {
-    mockedRedis.isRedisEnabled.mockReturnValue(true);
-    mockedRedis.withRedis.mockImplementation(async (fn: any) => {
-      const redisMock = {
-        zrevrange: jest.fn().mockResolvedValue([
-          JSON.stringify({ id: 'p1', title: 'Cached' }),
-          '{"id"', // malformed to trigger parse guard
-        ]),
-      };
-      await fn(redisMock);
-      return null;
-    });
-
-    const response = await getFeed(mockRequest, mockContext);
-    const headers = response.headers as Record<string, string> | undefined;
-    expect(headers).toEqual(
-      expect.objectContaining({
-        'X-Cache-Status': 'hit',
-        'X-Redis-Status': 'connected',
-        'X-RU-Estimate': '0',
-      })
-    );
-    const body = JSON.parse(response.body ?? '{}');
-    expect(body.data.posts).toEqual([{ id: 'p1', title: 'Cached' }]);
+  it('returns private caching headers for authenticated callers', async () => {
+    const authResponse = await getFeed(createRequest({ authorization: 'Bearer token' }), mockContext);
+    expect(authResponse.headers['Cache-Control']).toBe('private, no-store');
   });
 
-  it('should use private cache headers when Authorization header is present', async () => {
-    const authRequest = {
-      ...mockRequest,
-      headers: new Headers({ authorization: 'Bearer valid-token' }),
-    } as unknown as HttpRequest;
-
-    const response = await getFeed(authRequest, mockContext);
-    const headers = response.headers as Record<string, string> | undefined;
-    expect(headers?.['Cache-Control']).toBe('private, no-store');
-    expect(headers?.['X-Cache-Status']).toBe('disabled');
-  });
-
-  it('should return 500 when unexpected error occurs', async () => {
-    const failingRequest = {
-      ...mockRequest,
-      headers: {
-        has: () => {
-          throw new Error('header failure');
-        },
-      },
-    } as any;
-
-    const response = await getFeed(failingRequest, mockContext);
-
-    expect(response.status).toBe(500);
-    const body = JSON.parse(response.body ?? '{}');
-    expect(body.error).toBe('internal');
+  it('converts HttpError into a client response', async () => {
+    mockedFeedService.getFeed.mockRejectedValueOnce(new HttpError(400, 'bad cursor'));
+    const response = await getFeed(createRequest(), mockContext);
+    expect(response.status).toBe(400);
+    expect(JSON.parse(response.body ?? '{}')).toEqual({ error: 'bad cursor' });
   });
 });
