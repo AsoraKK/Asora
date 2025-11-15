@@ -41,6 +41,14 @@
     {
       "name": "Moderation",
       "description": "Moderation workflows."
+    },
+    {
+      "name": "Privacy",
+      "description": "User data and privacy controls."
+    },
+    {
+      "name": "Privacy Admin",
+      "description": "Data Subject Request and legal hold administration."
     }
   ],
   "paths": {
@@ -508,6 +516,146 @@
           }
         }
       }
+    },
+    "/admin/dsr/export": {
+      "post": {
+        "operationId": "enqueueDsrExport",
+        "summary": "Enqueue a Data Subject Request export",
+        "tags": [
+          "Privacy Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsrRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Export queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsrRequestSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/dsr/delete": {
+      "post": {
+        "operationId": "enqueueDsrDelete",
+        "summary": "Enqueue a Data Subject Request delete",
+        "tags": [
+          "Privacy Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsrRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Delete queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsrRequestSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/legal-hold/place": {
+      "post": {
+        "operationId": "placeLegalHold",
+        "summary": "Place a legal hold",
+        "tags": [
+          "Privacy Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalHoldInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hold placed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalHoldRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/legal-hold/clear": {
+      "post": {
+        "operationId": "clearLegalHold",
+        "summary": "Clear an existing legal hold",
+        "tags": [
+          "Privacy Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalHoldClear"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hold cleared"
+          },
+          "404": {
+            "description": "Hold not found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -589,6 +737,107 @@
             "enum": [
               "auth_backoff"
             ]
+          }
+        }
+      },
+      "DsrRequestSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "awaiting_review",
+              "ready_to_release",
+              "released",
+              "succeeded",
+              "failed",
+              "canceled"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "export",
+              "delete"
+            ]
+          },
+          "exportBlobPath": {
+            "type": "string"
+          },
+          "attemptedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LegalHoldRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DsrRequestInput": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "LegalHoldInput": {
+        "type": "object",
+        "required": [
+          "scope",
+          "scopeId",
+          "reason"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "user",
+              "post",
+              "case"
+            ]
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "LegalHoldClear": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
           }
         }
       }
