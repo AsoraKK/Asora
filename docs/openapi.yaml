@@ -535,6 +535,35 @@ paths:
   /admin/dsr/{id}/reviewB:
     post:
       operationId: reviewBDsr
+      summary: Reviewer B decision
+      tags: [privacy-admin]
+      description: Captures checklist B (operational) results
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ pass ]
+              properties:
+                pass: { type: boolean }
+                notes: { type: string }
+      responses:
+        '200':
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        '400': { description: Invalid input }
   /admin/legal-hold/place:
     post:
       operationId: placeLegalHold
@@ -570,35 +599,6 @@ paths:
         '200':
           description: Hold cleared
         '404': { description: Hold not found }
-      summary: Reviewer B decision
-      tags: [privacy-admin]
-      description: Captures checklist B (operational) results
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ pass ]
-              properties:
-                pass: { type: boolean }
-                notes: { type: string }
-      responses:
-        '200':
-          description: Review recorded
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string }
-        '400': { description: Invalid input }
   /admin/dsr/{id}/release:
     post:
       operationId: releaseDsrExport
@@ -641,7 +641,7 @@ paths:
         '404': { description: Not found }
   /admin/dsr/legal-holds:
     post:
-      operationId: placeLegalHold
+      operationId: placeLegalHoldLegacy
       summary: Place a legal hold
       tags: [privacy-admin]
       description: Records an active hold on user/post/case scope
@@ -660,7 +660,7 @@ paths:
                 $ref: '#/components/schemas/LegalHoldRecord'
   /admin/dsr/legal-holds/{id}/clear:
     post:
-      operationId: clearLegalHold
+      operationId: clearLegalHoldLegacy
       summary: Clear a legal hold
       tags: [privacy-admin]
       description: Marks a hold inactive and records the audit
