@@ -51,9 +51,3 @@ lib/src/model/legal_hold_record.dart
 lib/src/model/rate_limit_error.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/dsr_request_input_test.dart
-test/dsr_request_summary_test.dart
-test/legal_hold_clear_test.dart
-test/legal_hold_input_test.dart
-test/legal_hold_record_test.dart
-test/privacy_admin_api_test.dart

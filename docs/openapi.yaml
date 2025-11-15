@@ -457,6 +457,11 @@ paths:
       tags: [privacy-admin]
       description: Increments attempt counter and reschedules the worker
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       requestBody:
         description: Optional progress note
         required: false
@@ -481,6 +486,11 @@ paths:
       tags: [privacy-admin]
       description: Moves a running request to canceled status and logs the event
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       responses:
         '202':
           description: Cancellation scheduled
@@ -496,6 +506,11 @@ paths:
       tags: [privacy-admin]
       description: Captures checklist A (private export) results
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -507,7 +522,14 @@ paths:
                 pass: { type: boolean }
                 notes: { type: string }
       responses:
-        '204': { description: Recorded }
+        '200':
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
         '400': { description: Invalid input }
   /admin/dsr/{id}/reviewB:
     post:
@@ -516,6 +538,11 @@ paths:
       tags: [privacy-admin]
       description: Captures checklist B (operational) results
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -527,7 +554,14 @@ paths:
                 pass: { type: boolean }
                 notes: { type: string }
       responses:
-        '204': { description: Recorded }
+        '200':
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
         '400': { description: Invalid input }
   /admin/dsr/{id}/release:
     post:
@@ -536,6 +570,11 @@ paths:
       tags: [privacy-admin]
       description: Validates reviewers, generates 12h SAS, and transitions to released
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       responses:
         '200':
           description: Download link returned
