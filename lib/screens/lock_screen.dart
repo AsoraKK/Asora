@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/security/device_integrity_guard.dart';
 
-class FirstPostLockScreen extends StatelessWidget {
+class FirstPostLockScreen extends ConsumerWidget {
   const FirstPostLockScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Center(
         child: Padding(
@@ -27,7 +29,15 @@ class FirstPostLockScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => Navigator.pushNamed(context, "/compose"),
+                onPressed: () => runWithDeviceGuard(
+                  context,
+                  ref,
+                  IntegrityUseCase.postContent,
+                  () async {
+                    if (!context.mounted) return;
+                    Navigator.pushNamed(context, "/compose");
+                  },
+                ),
                 child: const Text("Create first post"),
               ),
             ],

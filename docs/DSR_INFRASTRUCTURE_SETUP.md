@@ -50,7 +50,8 @@ git push origin main
   - Blob versioning enabled (audit trail)
   - HTTPS only, TLS 1.2+
   - Public blob access disabled
-  - 90-day lifecycle policy for automatic cleanup
+  - 30-day lifecycle policy for automatic cleanup
+  - Private endpoint(s) or firewall rules enforced (see runbook/rbac sections)
 
 ### Containers & Queues
 - **Blob Container**: `dsr-exports` (stores export ZIP files)
@@ -69,6 +70,7 @@ DSR_QUEUE_NAME=dsr-requests
 DSR_QUEUE_CONNECTION=AzureWebJobsStorage
 DSR_MAX_CONCURRENCY=5
 DSR_EXPORT_SIGNED_URL_TTL_HOURS=12
+DSR_EXPORT_RETENTION_DAYS=30
 DSR_PURGE_WINDOW_DAYS=30
 ```
 
@@ -130,7 +132,7 @@ Create `lifecycle-policy.json`:
         "actions": {
           "baseBlob": {
             "delete": {
-              "daysAfterModificationGreaterThan": 90
+              "daysAfterModificationGreaterThan": 30
             }
           }
         },

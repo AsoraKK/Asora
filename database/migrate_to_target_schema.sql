@@ -36,6 +36,11 @@ ALTER TABLE users ALTER COLUMN user_uuid SET NOT NULL;
 -- Make user_uuid the primary key (keep old id for now)
 ALTER TABLE users ADD CONSTRAINT users_pkey_uuid PRIMARY KEY (user_uuid);
 
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+
 -- Email hardening with proper index recreation
 ALTER TABLE users ALTER COLUMN email TYPE citext USING email::citext;
 DROP INDEX IF EXISTS idx_users_email;
@@ -57,6 +62,9 @@ CREATE TABLE IF NOT EXISTS auth_identities (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (provider, subject)
 );
+ALTER TABLE auth_identities
+  ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   jti UUID PRIMARY KEY DEFAULT gen_random_uuid(),

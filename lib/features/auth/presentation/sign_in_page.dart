@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/security/device_integrity_guard.dart';
 import '../application/auth_controller.dart';
 
 /// Sign-in page with Email and Google B2C options
@@ -51,7 +52,12 @@ class SignInPage extends ConsumerWidget {
                 icon: Icons.email_outlined,
                 onPressed: authState.isLoading
                     ? null
-                    : () => controller.signInEmail(),
+                    : () => runWithDeviceGuard(
+                        context,
+                        ref,
+                        IntegrityUseCase.signIn,
+                        () => controller.signInEmail(),
+                      ),
                 backgroundColor: const Color(0xFF1976D2),
                 textColor: Colors.white,
               ),
@@ -64,7 +70,14 @@ class SignInPage extends ConsumerWidget {
                 icon: Icons.g_mobiledata,
                 onPressed: authState.isLoading
                     ? null
-                    : () => controller.signInGoogle(),
+                    : () {
+                        runWithDeviceGuard(
+                          context,
+                          ref,
+                          IntegrityUseCase.signIn,
+                          () => controller.signInGoogle(),
+                        );
+                      },
                 backgroundColor: Colors.white,
                 textColor: const Color(0xFF212121),
                 borderColor: const Color(0xFFE0E0E0),

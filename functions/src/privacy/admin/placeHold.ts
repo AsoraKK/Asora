@@ -4,6 +4,7 @@ import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { ensurePrivacyAdmin } from '../common/authz';
 import { placeLegalHold } from '../service/dsrStore';
+import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 
 type Authed = HttpRequest & { principal: Principal };
@@ -23,7 +24,7 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
     const parsed = Schema.safeParse(body);
     if (!parsed.success) return createErrorResponse(400, 'invalid_request');
     const now = new Date().toISOString();
-    const holdId = `hold_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const holdId = uuidv7();
     const hold = {
       id: holdId,
       scope: parsed.data.scope,

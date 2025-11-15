@@ -31,7 +31,11 @@ class AuthControllerState {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthControllerState>((ref) {
       final oauth2Service = ref.watch(oauth2ServiceProvider);
-      return AuthController(oauth2Service);
+      final controller = AuthController(oauth2Service);
+      // Initialize async logic outside the constructor so tests can instantiate
+      // fake controllers without triggering platform/network initialization.
+      controller._init();
+      return controller;
     });
 
 /// Auth controller manages authentication state and actions
@@ -39,7 +43,8 @@ class AuthController extends StateNotifier<AuthControllerState> {
   final OAuth2Service _oauth2Service;
 
   AuthController(this._oauth2Service) : super(const AuthControllerState()) {
-    _init();
+    // Initialization moved to the provider to avoid running async
+    // platform/network code during constructor execution (helps tests).
   }
 
   Future<void> _init() async {

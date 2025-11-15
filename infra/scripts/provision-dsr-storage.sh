@@ -46,6 +46,7 @@ az storage account create \
   --https-only true \
   --min-tls-version TLS1_2 \
   --allow-blob-public-access false \
+  --public-network-access Disabled \
   --tags purpose=dsr-storage environment=dev \
   --output none
 
@@ -94,12 +95,12 @@ cat > /tmp/dsr-lifecycle-policy.json <<EOF
         "actions": {
           "baseBlob": {
             "delete": {
-              "daysAfterModificationGreaterThan": 90
+              "daysAfterModificationGreaterThan": 30
             }
           },
           "snapshot": {
             "delete": {
-              "daysAfterCreationGreaterThan": 90
+              "daysAfterCreationGreaterThan": 30
             }
           }
         },

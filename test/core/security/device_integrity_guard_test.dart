@@ -1,0 +1,360 @@
+/// Tests for device integrity guard
+library;
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/security/security_overrides.dart';
+import 'package:asora/core/config/environment_config.dart';
+
+/// Mock device security service for testing
+class MockDeviceSecurityService implements DeviceSecurityService {
+  final DeviceSecurityState Function() _stateProvider;
+
+  MockDeviceSecurityService(this._stateProvider);
+
+  @override
+  Future<DeviceSecurityState> evaluateSecurity() async {
+    return _stateProvider();
+  }
+
+  @override
+  void clearCache() {
+    // No-op for testing
+  }
+}
+
+void main() {
+  group('DeviceIntegrityDecision', () {
+    test('should create allow decision', () {
+      final decision = DeviceIntegrityDecision.allow();
+
+      expect(decision.allow, isTrue);
+      expect(decision.showBlockingUi, isFalse);
+      expect(decision.warnOnly, isFalse);
+    });
+
+    test('should create warn-only decision', () {
+      final decision = DeviceIntegrityDecision.warnOnly(
+        'security.device_compromised_dev',
+      );
+
+      expect(decision.allow, isTrue);
+      expect(decision.showBlockingUi, isFalse);
+      expect(decision.warnOnly, isTrue);
+      expect(decision.messageKey, equals('security.device_compromised_dev'));
+    });
+
+    test('should create block decision', () {
+      final decision = DeviceIntegrityDecision.block(
+        'security.device_compromised_blocked',
+      );
+
+      expect(decision.allow, isFalse);
+      expect(decision.showBlockingUi, isTrue);
+      expect(decision.warnOnly, isFalse);
+      expect(
+        decision.messageKey,
+        equals('security.device_compromised_blocked'),
+      );
+    });
+  });
+
+  group('DeviceIntegrityGuard - Development Environment', () {
+    test('should warn-only for compromised device in dev', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: true,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: false,
+            strictMode: false,
+            spkiPinsBase64: [],
+          ),
+          strictDeviceIntegrity: false,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.development,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.postContent);
+
+      expect(decision.allow, isTrue);
+      expect(decision.warnOnly, isTrue);
+      expect(decision.messageKey, equals('security.device_compromised_dev'));
+    });
+
+    test('should allow clean device in dev', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: false,
+          isEmulator: false,
+          isDebugBuild: true,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: false,
+            strictMode: false,
+            spkiPinsBase64: [],
+          ),
+          strictDeviceIntegrity: false,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.development,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.readFeed);
+
+      expect(decision.allow, isTrue);
+      expect(decision.showBlockingUi, isFalse);
+      expect(decision.warnOnly, isFalse);
+    });
+  });
+
+  group('DeviceIntegrityGuard - Production Environment', () {
+    test('should block high-risk operations on compromised device', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: true,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: true,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.production,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.signIn);
+
+      expect(decision.allow, isFalse);
+      expect(decision.showBlockingUi, isTrue);
+      expect(
+        decision.messageKey,
+        equals('security.device_compromised_blocked'),
+      );
+    });
+
+    test(
+      'should warn-only for low-risk operations on compromised device',
+      () async {
+        final mockService = MockDeviceSecurityService(() {
+          return DeviceSecurityState(
+            isRootedOrJailbroken: true,
+            isEmulator: false,
+            isDebugBuild: false,
+            lastCheckedAt: DateTime.now(),
+          );
+        });
+
+        final guard = DeviceIntegrityGuard(
+          deviceSecurityService: mockService,
+          config: const MobileSecurityConfig(
+            tlsPins: TlsPinConfig(
+              enabled: true,
+              strictMode: true,
+              spkiPinsBase64: ['pin=='],
+            ),
+            strictDeviceIntegrity: true,
+            blockRootedDevices: true,
+            allowRootedInStagingForQa: false,
+          ),
+          environment: Environment.production,
+        );
+
+        final decision = await guard.evaluate(IntegrityUseCase.readFeed);
+
+        expect(decision.allow, isTrue);
+        expect(decision.warnOnly, isTrue);
+        expect(
+          decision.messageKey,
+          equals('security.device_compromised_warning'),
+        );
+      },
+    );
+
+    test('should allow clean device for all operations', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: false,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: true,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: true,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.production,
+      );
+
+      for (final useCase in IntegrityUseCase.values) {
+        final decision = await guard.evaluate(useCase);
+        expect(
+          decision.allow,
+          isTrue,
+          reason: 'Clean device should pass $useCase',
+        );
+        expect(decision.warnOnly, isFalse);
+      }
+    });
+  });
+
+  group('DeviceIntegrityGuard - Staging with QA Override', () {
+    test('should warn-only when allowRootedInStagingForQa is true', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: false,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: false,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: true, // QA override
+        ),
+        environment: Environment.staging,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.postContent);
+
+      expect(decision.allow, isTrue);
+      expect(decision.warnOnly, isTrue);
+      expect(
+        decision.messageKey,
+        equals('security.device_compromised_staging_qa'),
+      );
+    });
+  });
+
+  group('DeviceIntegrityGuard - Security Overrides', () {
+    test('should apply override when valid', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final override = SecurityOverrideConfig.forQa(
+        reason: 'Testing payment flow on rooted test device',
+        relaxDeviceIntegrity: true,
+      );
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: true,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: true,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.production,
+        overrides: override,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.signIn);
+
+      expect(decision.allow, isTrue);
+      expect(decision.warnOnly, isTrue);
+      expect(
+        decision.messageKey,
+        equals('security.device_compromised_override'),
+      );
+    });
+
+    test('should ignore expired override', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      // Create override that expired 1 hour ago
+      final expiredOverride = SecurityOverrideConfig(
+        relaxDeviceIntegrity: true,
+        overrideReason: 'Expired test override',
+        activatedAt: DateTime.now().subtract(const Duration(hours: 25)),
+        validityDuration: const Duration(hours: 24),
+      );
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: true,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: true,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.production,
+        overrides: expiredOverride,
+      );
+
+      final decision = await guard.evaluate(IntegrityUseCase.signIn);
+
+      // Expired override: should block
+      expect(decision.allow, isFalse);
+      expect(decision.showBlockingUi, isTrue);
+    });
+  });
+}

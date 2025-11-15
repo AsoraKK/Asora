@@ -46,6 +46,7 @@ describe('releaseHandler SAS TTL', () => {
       requestedBy: 'admin',
       userId: 'user-1',
       requestedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
       attempt: 1,
     });
 
@@ -55,6 +56,10 @@ describe('releaseHandler SAS TTL', () => {
     const response = await releaseHandler(buildRequest());
     expect(response.status).toBe(200);
     expect(createUserDelegationUrl).toHaveBeenCalledWith('dsr-exports/dev/req-1.zip', 16);
+    const payload = JSON.parse(response.body);
+    expect(payload.data.downloadUrl).toBe('https://blob.url');
+    expect(payload.data.signedUrl).toBe('https://blob.url');
+    expect(payload.data.status).toBe('released');
   });
 
   it('defaults to 12 hours when env var is missing', async () => {
@@ -72,6 +77,7 @@ describe('releaseHandler SAS TTL', () => {
       requestedBy: 'admin',
       userId: 'user-2',
       requestedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
       attempt: 1,
     });
 
@@ -81,5 +87,35 @@ describe('releaseHandler SAS TTL', () => {
     const response = await releaseHandler(buildRequest());
     expect(response.status).toBe(200);
     expect(createUserDelegationUrl).toHaveBeenCalledWith('dsr-exports/dev/req-2.zip', 12);
+    const payload = JSON.parse(response.body);
+    expect(payload.data.downloadUrl).toBe('https://blob.url');
+    expect(payload.data.signedUrl).toBe('https://blob.url');
+    expect(payload.data.status).toBe('released');
+  });
+
+  it('rejects exports older than the retention window', async () => {
+    process.env.DSR_EXPORT_RETENTION_DAYS = '1';
+    const { releaseHandler } = require('../../src/privacy/admin/release');
+    const { getDsrRequest, createUserDelegationUrl } = getMocks();
+
+    getDsrRequest.mockResolvedValue({
+      id: 'req-old',
+      type: 'export',
+      status: 'ready_to_release',
+      exportBlobPath: 'dsr-exports/dev/req-old.zip',
+      review: {},
+      audit: [],
+      requestedBy: 'admin',
+      userId: 'user-old',
+      requestedAt: new Date().toISOString(),
+      completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      attempt: 1,
+    });
+
+    const response = await releaseHandler(buildRequest());
+    expect(response.status).toBe(409);
+    expect(createUserDelegationUrl).not.toHaveBeenCalled();
+    const payload = JSON.parse(response.body);
+    expect(payload.message).toBe('retention_expired');
   });
 });

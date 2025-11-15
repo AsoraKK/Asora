@@ -7,25 +7,31 @@
 library;
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../security/cert_pinning.dart';
+import '../config/environment_config.dart';
+import '../security/tls_pinning.dart';
+import '../security/device_security_service.dart';
 import '../security/device_integrity.dart';
+import '../security/security_overrides.dart';
+import '../security/security_telemetry.dart';
 
 /// Secure Dio client provider with certificate pinning and integrity checks
 final secureDioProvider = Provider<Dio>((ref) {
-  // Get base URL from environment or use development default
-  const baseUrl = String.fromEnvironment(
-    'AZURE_FUNCTION_URL',
-    defaultValue: kDebugMode
-        ? 'http://10.0.2.2:7072/api' // Local development
-        : 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api',
-  );
+  final envConfig = EnvironmentConfig.fromEnvironment();
+  final baseUrl = envConfig.apiBaseUrl;
 
-  // Create Dio with certificate pinning (only for HTTPS)
-  final dio = baseUrl.startsWith('https')
-      ? createPinnedDio(baseUrl: baseUrl)
-      : Dio(BaseOptions(baseUrl: baseUrl));
+  // Create Dio instance
+  final dio = Dio(BaseOptions(baseUrl: baseUrl));
+
+  // Configure TLS pinning for HTTPS
+  if (baseUrl.startsWith('https') && envConfig.security.tlsPins.enabled) {
+    final pinnedClient = PinnedHttpClientFactory.create(envConfig);
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () => pinnedClient,
+    );
+  }
 
   // Configure timeouts
   dio.options.connectTimeout = const Duration(seconds: 10);
@@ -60,6 +66,25 @@ final secureDioProvider = Provider<Dio>((ref) {
 });
 
 /// Device integrity interceptor
+// Internal unified integrity info to normalize across older/newer services
+class _UnifiedIntegrityInfo {
+  final bool isCompromised;
+  final bool isEmulator;
+  final bool isDebugBuild;
+  final bool allowPosting;
+  final bool allowReading;
+  final Map<String, dynamic> metadata;
+
+  _UnifiedIntegrityInfo({
+    required this.isCompromised,
+    required this.isEmulator,
+    required this.isDebugBuild,
+    required this.allowPosting,
+    required this.allowReading,
+    required this.metadata,
+  });
+}
+
 class _DeviceIntegrityInterceptor extends Interceptor {
   final Ref _ref;
 
@@ -70,14 +95,59 @@ class _DeviceIntegrityInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Always attach integrity header
-    final integrityInfo = await _ref
-        .read(deviceIntegrityServiceProvider)
-        .checkIntegrity();
+    // Try to use legacy/new device integrity provider if present (used by tests)
+    _UnifiedIntegrityInfo securityState;
+    try {
+      // Prefer DeviceIntegrityService API (device_integrity.dart)
+      final legacyService = _ref.read(deviceIntegrityServiceProvider);
+      final info = await legacyService.checkIntegrity();
+      securityState = _UnifiedIntegrityInfo(
+        isCompromised: info.isCompromised,
+        isEmulator: false,
+        isDebugBuild: kDebugMode,
+        allowPosting: info.allowPosting,
+        allowReading: info.allowReading,
+        metadata: info.toJson(),
+      );
+    } catch (_) {
+      // Fallback to DeviceSecurityService (device_security_service.dart)
+      final deviceService = _ref.read(deviceSecurityServiceProvider);
+      final state = await deviceService.evaluateSecurity();
+      securityState = _UnifiedIntegrityInfo(
+        isCompromised: state.isCompromised,
+        isEmulator: state.isEmulator,
+        isDebugBuild: state.isDebugBuild,
+        allowPosting: !state.isCompromised,
+        allowReading: true,
+        metadata: state.toJson(),
+      );
+    }
 
-    options.headers['X-Device-Integrity'] = integrityInfo.status.name;
+    // Always attach integrity headers for backend validation
+    options.headers['X-Device-Rooted'] = securityState.isCompromised.toString();
+    options.headers['X-Device-Emulator'] = securityState.isEmulator.toString();
+    options.headers['X-Device-Debug'] = securityState.isDebugBuild.toString();
 
-    // Block write operations if device is compromised
+    // Check for active security overrides
+    final overrides = SecurityOverridesProvider.current;
+    if (overrides.relaxDeviceIntegrity && overrides.isValid()) {
+      // Override active: log and proceed
+      final event = SecurityEvent.securityOverride(
+        result: 'override_applied',
+        reason: overrides.overrideReason ?? 'unknown',
+        environment: EnvironmentConfig.fromEnvironment().environment,
+        metadata: {
+          'override_type': 'device_integrity',
+          ...securityState.metadata,
+        },
+      );
+      SecurityTelemetry.logEvent(event);
+      handler.next(options);
+      return;
+    }
+
+    // Block write operations if device is compromised (production only)
+    final envConfig = EnvironmentConfig.fromEnvironment();
     final isWriteOperation = [
       'POST',
       'PUT',
@@ -85,11 +155,14 @@ class _DeviceIntegrityInterceptor extends Interceptor {
       'DELETE',
     ].contains(options.method.toUpperCase());
 
-    if (isWriteOperation && !integrityInfo.allowPosting) {
+    if (isWriteOperation &&
+        securityState.isCompromised &&
+        envConfig.security.blockRootedDevices &&
+        envConfig.environment.isProd) {
       final error = DioException(
         requestOptions: options,
-        type: DioExceptionType.unknown,
-        message: 'Device integrity violation: ${integrityInfo.reason}',
+        type: DioExceptionType.badResponse,
+        message: 'Device integrity violation: compromised device detected',
       );
       handler.reject(error);
       return;
@@ -142,17 +215,17 @@ class HttpClientConfig {
 
 /// Get current HTTP client configuration
 HttpClientConfig getHttpClientConfig() {
-  const baseUrl = String.fromEnvironment(
-    'AZURE_FUNCTION_URL',
-    defaultValue: kDebugMode
-        ? 'http://10.0.2.2:7072/api'
-        : 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api',
-  );
+  final envConfig = EnvironmentConfig.fromEnvironment();
 
   return HttpClientConfig(
-    baseUrl: baseUrl,
-    certPinningEnabled: baseUrl.startsWith('https') && kEnableCertPinning,
-    integrityChecksEnabled: true,
+    baseUrl: envConfig.apiBaseUrl,
+    // Only enable cert pinning when talking to HTTPS endpoints
+    certPinningEnabled: envConfig.apiBaseUrl.startsWith('https')
+        ? envConfig.security.tlsPins.enabled
+        : false,
+    // In debug mode, keep integrity checks enabled for testing; otherwise use env config
+    integrityChecksEnabled:
+        envConfig.security.strictDeviceIntegrity || kDebugMode,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 30),
   );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/device_integrity_guard.dart';
+
 import '../auth/presentation/auth_gate.dart';
 import 'state/privacy_controller.dart';
 import 'state/privacy_state.dart';
@@ -68,7 +70,14 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 isBusy: isBusy,
                 isCoolingDown: state.isCoolingDown,
                 buttonLabel: buttonLabel,
-                onRequest: canTap ? () => controller.export() : null,
+                onRequest: canTap
+                    ? () => runWithDeviceGuard(
+                        context,
+                        ref,
+                        IntegrityUseCase.privacyDsr,
+                        () => controller.export(),
+                      )
+                    : null,
                 onRefresh: () => controller.refreshStatus(),
                 cooldownRow: PrivacyCooldownRow(
                   lastRequestLabel: lastRequestLabel,
@@ -107,7 +116,12 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         false;
     if (!mounted) return;
     if (confirmed) {
-      await controller.delete();
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.privacyDsr,
+        () => controller.delete(),
+      );
     } else {
       controller.cancelDeleteConfirmation();
     }

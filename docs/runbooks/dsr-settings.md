@@ -8,6 +8,7 @@ This checklist helps verify the environment configuration for DSR processing acr
 - DSR_QUEUE_NAME (default: dsr-requests)
 - DSR_MAX_CONCURRENCY (exports)
 - DSR_EXPORT_SIGNED_URL_TTL_HOURS (e.g., 12)
+- DSR_EXPORT_RETENTION_DAYS (default: 30)
 - DSR_BLOB_UPLOAD_BUFFER_SIZE (optional, default 4MiB)
 - DSR_BLOB_UPLOAD_CONCURRENCY (optional, default 5)
 

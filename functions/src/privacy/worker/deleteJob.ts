@@ -1,6 +1,7 @@
 import type { InvocationContext } from '@azure/functions';
 import type { SqlParameter } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { withClient } from '@shared/clients/postgres';
 import { createAuditEntry, DsrRequest } from '../common/models';
 import { emitSpan } from '../common/telemetry';
 import { patchDsrRequest, hasLegalHold } from '../service/dsrStore';
@@ -53,6 +54,32 @@ async function markDeletedRecords(
   }
 }
 
+async function flagPostgresRecords(userId: string, timestamp: string, context: InvocationContext) {
+  try {
+    await withClient(async client => {
+      await client.query(
+        `
+          UPDATE users
+          SET deleted = TRUE, deleted_at = $1, deleted_by = 'privacy_delete_job'
+          WHERE user_uuid = $2
+        `,
+        [timestamp, userId],
+      );
+      await client.query(
+        `
+          UPDATE auth_identities
+          SET deleted = TRUE, deleted_at = $1
+          WHERE user_uuid = $2
+        `,
+        [timestamp, userId],
+      );
+    });
+    emitSpan(context, 'delete.postgres', { userId });
+  } catch (error: any) {
+    context.log('dsr.delete.postgres.error', { userId, message: error?.message });
+  }
+}
+
 export async function runDeleteJob(request: DsrRequest, context: InvocationContext): Promise<void> {
   const requestId = request.id;
   const now = new Date().toISOString();
@@ -82,6 +109,7 @@ export async function runDeleteJob(request: DsrRequest, context: InvocationConte
       return;
     }
 
+    await flagPostgresRecords(request.userId, now, context);
     emitSpan(context, 'delete.soft', { userId: request.userId });
 
     for (const bucket of CONTAINERS_TO_MARK) {

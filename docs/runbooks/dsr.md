@@ -5,13 +5,13 @@ Last Updated: 2025-11-15
 Owners: Privacy Engineering + Platform
 
 ## 1. Preconditions & Roles
-- **Role requirement:** All `/admin/dsr/*` and `/admin/legal-hold/*` calls require a decorated JWT with the `privacy_admin` role.
+- **Role requirement:** All `/admin/dsr/*` and `/admin/dsr/legal-holds*` calls require a decorated JWT with the `privacy_admin` role.
 - **Infrastructure:** Dedicated export storage account (see `docs/DSR_INFRASTRUCTURE_SETUP.md`) with container `dsr-exports`, lifecycle 30 days, TLS 1.2+, private networking, and RBAC granting `Storage Blob Data Contributor` to the function MI.
 - **Retention policy reminders:** inactive accounts ≥24 months, user-deleted content ≤30 days, operations logs 30 days, security/audit logs 12 months, moderation artifacts closed +90 days.
 
 ## 2. Submit Export or Delete
 - **Export (`/admin/dsr/export`):** Body `{ "userId": "<uuidv7>" }`. Creates `privacy_requests` document with `type: export` and status `queued`, enqueues `dsr-requests` message, emits `dsr.enqueue` span.
-- **Delete (`/admin/dsr/delete`):** Same body shape, `type: delete`. Worker marks content as `deleted: true` on Cosmos/postgres rows, enforcing legal holds.
+- **Delete (`/admin/dsr/delete`):** Same body shape, `type: delete`. Worker marks content as `deleted: true` on Cosmos rows and flags Postgres canonical tables (`users`, `auth_identities`) with `deleted`/`deletedAt` to keep identity records consistent while enforcing legal holds.
 - **Additional fields:** Include `note` for traceability (e.g., compliance ticket). `audit_logs` gets `event: enqueue.export` or `.delete` with `by` and `meta.requestId`.
 
 ## 3. Monitor Status & Progress
@@ -32,13 +32,13 @@ Owners: Privacy Engineering + Platform
 - Validate there are no active legal holds blocking the requested user (delete requests) before release.
 
 ## 6. Release Link Procedures
-- **Release (`/admin/dsr/{id}/release`):** Requires both reviewers recorded as `pass: true` and status `ready_to_release`. Response includes `downloadUrl` + `expiresAt`. The signed URL is built with user-delegation SAS TTL `DSR_EXPORT_SIGNED_URL_TTL_HOURS` (default 12h) and is never persisted.
-- **Download (`/admin/dsr/{id}/download`):** Regenerates a fresh SAS if status is `released`; fails if `completedAt` > 30 days ago (the retention window enforced by blob lifecycle).
+- **Release (`/admin/dsr/{id}/release`):** Requires both reviewers recorded as `pass: true` and status `ready_to_release`. Response includes `downloadUrl`, `signedUrl`, `expiresAt`, and the updated `status`. The signed URL is built with user-delegation SAS TTL `DSR_EXPORT_SIGNED_URL_TTL_HOURS` (default 12h) and is never persisted. Releases also respect `DSR_EXPORT_RETENTION_DAYS` (default 30) and reject exports that are older than that window instead of reissuing new links.
+- **Download (`/admin/dsr/{id}/download`):** Regenerates a fresh SAS if status is `released` and the export is still inside `DSR_EXPORT_RETENTION_DAYS`; fails if the export is older than the retention window (normally 30 days) or if the record was never released.
 - **Audit:** Release appends audit entry `event: 'release.sas'` with `meta.linkTTL: 12h` and writes to `audit_logs`.
 
 ## 7. Place & Clear Legal Holds
-- **Place (`/admin/legal-hold/place`):** Body `{ scope: user|post|case, scopeId, reason }`. Creates `legal_holds` document, `active: true`, `audit` entry, and prevents any delete job touching the scope.
-- **Clear (`/admin/legal-hold/clear`):** Body `{ id }`. Sets `active: false`, records `audit` entry `{ event: 'cleared' }`, and releases blocked delete jobs; if a delete job is queued, it can now proceed.
+- **Place (`/admin/dsr/legal-holds`):** Body `{ scope: user|post|case, scopeId, reason }`. Creates `legal_holds` document, `active: true`, `audit` entry, and prevents any delete job touching the scope.
+- **Clear (`/admin/dsr/legal-holds/{id}/clear`):** Clears the hold identified by `{id}`. Sets `active: false`, records `audit` entry `{ event: 'cleared' }`, and releases blocked delete jobs so queued work can resume.
 
 ## 8. Purge Window & Exceptions
 - Soft-deleted data stays flagged for `DSR_PURGE_WINDOW_DAYS` (default 30). A TTL job (`purgeJob`) runs nightly to permanently remove items where `deletedAt <= now - purgeWindow` and no matching active legal hold.

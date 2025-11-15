@@ -36,6 +36,7 @@ export interface DsrRequest {
   userId: string;
   requestedBy: string;
   requestedAt: string;
+  note?: string;
   startedAt?: string;
   completedAt?: string;
   status: DsrStatus;
