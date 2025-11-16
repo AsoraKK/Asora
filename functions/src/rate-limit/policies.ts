@@ -116,11 +116,15 @@ function createAnonymousPolicy(routeId: string, limit = ANON_IP_LIMIT.limit): Ra
   };
 }
 
-function createAuthenticatedPolicy(routeId: string): RateLimitPolicy {
+function createAuthenticatedPolicy(
+  routeId: string,
+  limit: number = GLOBAL_USER_LIMIT.limit,
+  windowSeconds: number = GLOBAL_USER_LIMIT.windowSeconds
+): RateLimitPolicy {
   return {
     name: `${routeId}-auth`,
     routeId,
-    limits: [createRouteUserRule(routeId, GLOBAL_USER_LIMIT.limit, GLOBAL_USER_LIMIT.windowSeconds), createGlobalUserRule(routeId), createGlobalIpRule(routeId)],
+    limits: [createRouteUserRule(routeId, limit, windowSeconds), createGlobalUserRule(routeId), createGlobalIpRule(routeId)],
     deriveUserId: deriveUserIdFromAuth,
   };
 }
