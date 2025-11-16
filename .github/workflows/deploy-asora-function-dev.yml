@@ -340,14 +340,38 @@ jobs:
           BASE="https://${FUNC_APP}.azurewebsites.net"
 
           # 1) Liveness must be 200
-          curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/health" | grep -qx 200
+          echo "🔍 Testing health endpoint: $BASE/api/health"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
+          echo "   Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed: expected 200, got $STATUS"
+            exit 1
+          fi
+          echo "✅ Health check passed"
 
           # 2) Bogus route must be 404
-          curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/__bogus__" | grep -qx 404
+          echo "🔍 Testing 404 route: $BASE/api/__bogus__"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/__bogus__")
+          echo "   Status: $STATUS"
+          if [ "$STATUS" != "404" ]; then
+            echo "❌ 404 check failed: expected 404, got $STATUS"
+            exit 1
+          fi
+          echo "✅ 404 check passed"
 
           # 3) Exactly one indexed 'health'
+          echo "🔍 Checking function registration"
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
-          curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY" | jq -r '.[].name' | grep -cx 'health' | grep -qx 1
+          FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")
+          echo "   Functions registered:"
+          echo "$FUNCTIONS" | jq -r '.[].name' | sed 's/^/     - /'
+          HEALTH_COUNT=$(echo "$FUNCTIONS" | jq -r '.[].name' | grep -cx 'health' || echo 0)
+          echo "   Health function count: $HEALTH_COUNT"
+          if [ "$HEALTH_COUNT" != "1" ]; then
+            echo "❌ Function registration check failed: expected 1 health function, got $HEALTH_COUNT"
+            exit 1
+          fi
+          echo "✅ Function registration passed"
 
       - name: Verify DSR export storage configuration (optional)
         continue-on-error: true
