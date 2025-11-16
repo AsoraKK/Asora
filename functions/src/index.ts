@@ -25,6 +25,7 @@ async function registerFeatureRoutes(): Promise<void> {
 	};
 
 	await Promise.all([
+		tryImport('analytics', () => import('./analytics')),
 		tryImport('auth', () => import('./auth')),
 		tryImport('feed', () => import('./feed')),
 		tryImport('moderation', () => import('./moderation')),

@@ -1,3 +1,42 @@
+# Asora Terraform (Root)
+
+This is the main Terraform root for Asora infrastructure.
+
+## Remote State and Locking
+
+- Backend: AzureRM (Storage Account container `tfstate`).
+
+Bootstrap once using `infra/terraform/bootstrap/` to create the tfstate RG, Storage Account, and Container.
+
+## Workspaces (Environments)
+
+- Supported workspaces: `dev`, `stage`, `prod`.
+
+### Initialize per environment
+```bash
+cd infrastructure
+
+### Plan/Apply examples
+```bash
+terraform workspace select dev
+
+terraform workspace select stage
+terraform plan
+
+terraform workspace select prod
+terraform plan
+
+## Tags and Naming
+
+Use `local.env_name` for any environment-dependent names and `local.common_tags` for consistent tagging (`application=Asora`, `env=<env>`).
+
+## Secrets Hygiene
+
+- Do not commit `terraform.tfvars`. Use `terraform.tfvars.example` as a guide.
+
+## CI Policy
+
+CI runs `fmt`, `validate`, `tflint`, and `tfsec` (see `.github/workflows/terraform-ci.yml`), with an optional `plan` step when backend authentication is available.
 # Cosmos validation Terraform module
 
 This directory contains a read-only Terraform configuration that validates the

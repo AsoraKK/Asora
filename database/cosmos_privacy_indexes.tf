@@ -52,4 +52,10 @@ resource "azurerm_cosmosdb_sql_container" "posts_v2" {
       }
     }
   }
+
+  # Note: azurerm_cosmosdb_sql_container does not support tags directly;
+  # tags should be applied at the account or database level.
+  lifecycle {
+    prevent_destroy = true  # Protect production data
+  }
 }

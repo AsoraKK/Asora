@@ -6,6 +6,8 @@ import { HttpError } from '@shared/utils/errors';
 import { withClient } from '@shared/clients/postgres';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import type { ChaosContext } from '@shared/chaos/chaosConfig';
+import { withCosmosChaos } from '@shared/chaos/chaosInjectors';
 import type { Principal } from '@shared/middleware/auth';
 import type { FeedCursor, FeedResult } from '@feed/types';
 
@@ -30,6 +32,7 @@ export interface GetFeedOptions {
   cursor?: string | null;
   limit?: string | number | null;
   authorId?: string | null;
+  chaosContext?: ChaosContext;
 }
 
 interface FeedModeResult {
@@ -52,6 +55,7 @@ export async function getFeed({
   cursor,
   limit,
   authorId,
+  chaosContext,
 }: GetFeedOptions): Promise<FeedResult> {
   const start = performance.now();
   context.log('feed.get.start', {
@@ -71,9 +75,14 @@ export async function getFeed({
 
   const container = getTargetDatabase().posts;
   const queryStart = performance.now();
-  const response = await container.items
-    .query({ query: queryDefinition.query, parameters: queryDefinition.parameters }, queryOptions)
-    .fetchNext();
+  const response = await withCosmosChaos(
+    chaosContext,
+    () =>
+      container.items
+        .query({ query: queryDefinition.query, parameters: queryDefinition.parameters }, queryOptions)
+        .fetchNext(),
+    { operation: 'read' }
+  );
   const { resources = [], continuationToken } = response;
   const ru = response.requestCharge;
   const queryMetrics = response.queryMetrics;

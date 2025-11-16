@@ -97,3 +97,51 @@ jobs:
             ${{ steps.read_feed.outputs.text || 'Not run (add run-load label to PR)' }}
             ```
             </details>
+
+  canary-k6-chaos:
+    needs: [canary-k6]
+    name: Run k6 chaos scenarios
+    runs-on: ubuntu-latest
+    env:
+      CHAOS_ENABLED: "true"
+      K6_BASE_URL: ${{ env.K6_BASE_URL }}
+      K6_SMOKE_TOKEN: ${{ env.K6_SMOKE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Verify environment and connectivity
+        run: |
+          echo "K6_BASE_URL=$K6_BASE_URL"
+          node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
+          sudo apt-get update -y && sudo apt-get install -y dnsutils curl
+          H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
+          echo "Resolving $H..."
+          dig +short "$H" || { echo "DNS resolution failed for $H"; exit 1; }
+          echo "Testing connectivity to $K6_BASE_URL/health..."
+          curl -f --max-time 10 "$K6_BASE_URL/health" || { echo "Health endpoint unreachable"; exit 1; }
+
+      - name: Run chaos scenarios
+        run: |
+          k6 run load/k6/chaos.js \
+            --summary-export=load/k6/chaos-raw.json
+
+      - name: Upload chaos artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-chaos-${{ github.run_id }}
+          path: |
+            load/k6/chaos-summary.json
+            load/k6/chaos-raw.json
+
+      - name: Read chaos summary
+        if: always()
+        run: |
+          {
+            echo "text<<EOF"
+            cat load/k6/chaos-summary.json
+            echo "EOF"
+          } >> $GITHUB_OUTPUT

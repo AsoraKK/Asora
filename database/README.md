@@ -1,3 +1,35 @@
+# Database Terraform Root
+
+Terraform configuration for Asora database resources (Cosmos DB containers, indexing policies).
+
+## Remote State and Workspaces
+
+- Backend: AzureRM (`database-${terraform.workspace}.tfstate`)
+- Workspaces: `dev`, `stage`, `prod` (default blocked)
+- Locking: Azure Blob leases
+
+## Usage
+
+```bash
+cd database
+terraform workspace select dev
+terraform init
+terraform plan
+```
+
+## Tags and Naming
+
+- Uses `local.env_name` for environment-aware logic
+- `local.common_tags` includes `application=Asora`, `env=<env>`, `managed_by=Terraform`
+- Note: Cosmos containers don't support direct tags; apply tags at account/database level
+
+## Safety
+
+- `prevent_destroy` lifecycle on production data containers
+- Coordinate with infrastructure/ root for cross-resource dependencies
+
+---
+
 Cosmos DB: Posts Container Indexing
 
 Current

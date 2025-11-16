@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
 import '../../auth/application/auth_providers.dart';
+import '../../../core/analytics/analytics_client.dart';
+import '../../../core/analytics/analytics_events.dart';
+import '../../../core/analytics/analytics_providers.dart';
 import '../../../core/logging/app_logger.dart';
 import '../services/privacy_api.dart';
 import '../services/privacy_repository.dart';
@@ -15,11 +18,13 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     required Ref ref,
     required PrivacyRepository repository,
     required AppLogger logger,
+    required AnalyticsClient analyticsClient,
     DateTime Function()? clock,
     Future<void> Function()? onSignOut,
   }) : _ref = ref,
        _repository = repository,
        _logger = logger,
+       _analyticsClient = analyticsClient,
        _now = clock ?? DateTime.now,
        _cooldownWindow = repository.cooldownWindow,
        _signOut =
@@ -34,6 +39,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
   final Ref _ref;
   final PrivacyRepository _repository;
   final AppLogger _logger;
+  final AnalyticsClient _analyticsClient;
   final DateTime Function() _now;
   final Duration _cooldownWindow;
   final Future<void> Function() _signOut;
@@ -79,6 +85,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     if (token == null) return;
 
     _logger.info('privacy_export_tapped');
+    await _analyticsClient.logEvent(AnalyticsEvents.privacyExportRequested);
     state = state.copyWith(
       exportStatus: ExportStatus.requesting,
       clearError: true,
@@ -103,6 +110,8 @@ class PrivacyController extends StateNotifier<PrivacyState> {
   Future<void> delete({bool hardDelete = true}) async {
     final token = await _requireAuthToken();
     if (token == null) return;
+
+    await _analyticsClient.logEvent(AnalyticsEvents.privacyDeleteRequested);
 
     state = state.copyWith(
       deleteStatus: DeleteStatus.deleting,
@@ -304,6 +313,7 @@ final privacyControllerProvider =
         ref: ref,
         repository: repository,
         logger: logger,
+        analyticsClient: ref.watch(analyticsClientProvider),
       );
       ref.onDispose(controller.dispose);
       return controller;

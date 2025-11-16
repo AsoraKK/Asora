@@ -224,6 +224,9 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createAnonymousPolicy('feed');
     case 'createPost':
       return createWritePolicy('post');
+    case 'analytics.ingest':
+      // Analytics: 60 requests/min per user (batch up to 50 events each)
+      return createAuthenticatedPolicy('analytics/ingest', 60, 60);
     case 'moderation-flag-content':
       return createWritePolicy('moderation/flag');
     case 'moderation-submit-appeal':

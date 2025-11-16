@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/analytics/analytics_client.dart';
+import '../core/analytics/analytics_events.dart';
+import '../core/analytics/analytics_providers.dart';
 import '../features/auth/application/auth_providers.dart';
 import '../features/auth/domain/user.dart';
 import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
 import '../features/privacy/privacy_settings_screen.dart';
-import '../features/moderation/presentation/screens/moderation_queue_screen.dart';
+import '../features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 
 /// ---------------------------------------------------------------------------
 ///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
@@ -185,10 +188,23 @@ class _FeedList extends ConsumerStatefulWidget {
 class _FeedListState extends ConsumerState<_FeedList> {
   final _scrollController = ScrollController();
   late List<domain.Post> _posts;
+  late final AnalyticsClient _analyticsClient;
+  final DateTime _sessionStart = DateTime.now();
+  DateTime _lastScrollEvent = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
     super.initState();
+    _analyticsClient = ref.read(analyticsClientProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _analyticsClient.logEvent(
+        AnalyticsEvents.screenView,
+        properties: {
+          AnalyticsEvents.propScreenName: 'feed',
+          AnalyticsEvents.propReferrer: 'auth_gate',
+        },
+      );
+    });
     // seed mock data
     _posts = List.generate(20, (i) {
       return domain.Post(
@@ -225,6 +241,20 @@ class _FeedListState extends ConsumerState<_FeedList> {
           }),
         );
       });
+    }
+
+    final now = DateTime.now();
+    if (now.difference(_lastScrollEvent) > const Duration(seconds: 8)) {
+      _analyticsClient.logEvent(
+        AnalyticsEvents.feedScrolled,
+        properties: {
+          AnalyticsEvents.propApproxItemsViewed:
+              (_scrollController.position.pixels / 200).ceil(),
+          AnalyticsEvents.propSessionDurationSeconds:
+              now.difference(_sessionStart).inSeconds,
+        },
+      );
+      _lastScrollEvent = now;
     }
   }
 
@@ -497,7 +527,7 @@ class _AsoraDrawer extends ConsumerWidget {
                   Navigator.pop(context);
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const ModerationQueueScreen(),
+                      builder: (context) => const ModerationConsoleScreen(),
                     ),
                   );
                 },

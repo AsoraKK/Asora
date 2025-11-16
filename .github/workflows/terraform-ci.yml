@@ -1,0 +1,84 @@
+name: Terraform CI
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '**/*.tf'
+      - '**/*.tfvars'
+  push:
+    branches: [ main ]
+    paths:
+      - 'infra/**'
+      - '**/*.tf'
+      - '**/*.tfvars'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    env:
+      TF_IN_AUTOMATION: true
+      TF_INPUT: false
+      PLAN: false   # set to 'true' to enable plan in CI when backend auth is available
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        if: env.PLAN == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: |
+          if [ "$PLAN" = "true" ]; then
+            terraform init -input=false
+          else
+            terraform init -backend=false -input=false
+          fi
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: TFLint
+        run: |
+          tflint --init
+          tflint -f compact
+
+      - name: tfsec Security Scan
+        uses: aquasecurity/tfsec-action@v1
+        with:
+          working_directory: infrastructure
+          config_file: .tfsec.yml
+        continue-on-error: false
+
+      - name: Optional plan (dev workspace)
+        if: env.PLAN == 'true' && github.event_name == 'pull_request'
+        run: |
+          terraform workspace list || true
+          terraform workspace select dev || terraform workspace new dev
+          terraform init -input=false
+          terraform plan -detailed-exitcode -input=false

@@ -98,3 +98,10 @@ export function trackAppEvent(event: AppEvent): void {
     properties: normalizeProperties(event.properties),
   });
 }
+
+/**
+ * Get telemetry client for advanced usage
+ */
+export function getTelemetryClient(): TelemetryClient | null {
+  return ensureClient();
+}

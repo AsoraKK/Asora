@@ -1,3 +1,4 @@
+import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/privacy/privacy_settings_screen.dart';
@@ -33,6 +34,15 @@ void main() {
     testWidgets('delete dialog requires typing DELETE', (tester) async {
       final harness = _buildHarness(state: const PrivacyState());
       await tester.pumpWidget(harness.widget);
+      await tester.pumpAndSettle();
+
+      // Scroll to find the delete button (it's now below AnalyticsSettingsCard)
+      await tester.dragUntilVisible(
+        find.text('Delete account'),
+        find.byType(ListView),
+        const Offset(0, -100),
+      );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Delete account'));
       await tester.pumpAndSettle();
@@ -149,6 +159,7 @@ _Harness _buildHarness({required PrivacyState state, DateTime? initialNow}) {
         ref: ref,
         repository: repository,
         logger: logger,
+        analyticsClient: NullAnalyticsClient(),
         clock: () => now.value,
       );
     }),

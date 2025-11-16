@@ -1,6 +1,7 @@
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/privacy/services/privacy_api.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/features/privacy/services/privacy_repository.dart';
 import 'package:asora/features/privacy/state/privacy_controller.dart';
 import 'package:asora/features/privacy/state/privacy_state.dart';
@@ -182,6 +183,7 @@ class _ControllerHarness {
             ref: ref,
             repository: repository,
             logger: logger,
+            analyticsClient: NullAnalyticsClient(),
             clock: () => now,
             onSignOut: () async {
               signOutCalls++;

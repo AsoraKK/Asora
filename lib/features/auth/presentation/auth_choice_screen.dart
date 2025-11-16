@@ -1,15 +1,90 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/scheduler.dart';
+
+import '../../../core/analytics/analytics_client.dart';
+import '../../../core/analytics/analytics_events.dart';
+import '../../../core/analytics/analytics_providers.dart';
 import '../../../core/security/device_integrity_guard.dart';
 import '../../../screens/security_debug_screen.dart';
 import '../application/auth_providers.dart';
 
-class AuthChoiceScreen extends ConsumerWidget {
+class AuthChoiceScreen extends ConsumerStatefulWidget {
   const AuthChoiceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthChoiceScreen> createState() => _AuthChoiceScreenState();
+}
+
+class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
+  late final AnalyticsClient _analyticsClient;
+  bool _screenViewLogged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _analyticsClient = ref.read(analyticsClientProvider);
+    SchedulerBinding.instance.addPostFrameCallback((_) => _logScreenView());
+  }
+
+  void _logScreenView() {
+    if (_screenViewLogged) return;
+    _analyticsClient.logEvent(
+      AnalyticsEvents.screenView,
+      properties: {
+        AnalyticsEvents.propScreenName: 'auth_choice',
+        AnalyticsEvents.propReferrer: 'app_entry',
+      },
+    );
+    _screenViewLogged = true;
+  }
+
+  Future<void> _handleSignIn(BuildContext context) async {
+    final analytics = _analyticsClient;
+    await analytics.logEvent(
+      AnalyticsEvents.authStarted,
+      properties: {AnalyticsEvents.propMethod: 'google'},
+    );
+    try {
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.signIn,
+        () => ref.read(authStateProvider.notifier).signInWithOAuth2(),
+      );
+      await analytics.logEvent(
+        AnalyticsEvents.authCompleted,
+        properties: {
+          AnalyticsEvents.propMethod: 'google',
+          AnalyticsEvents.propIsNewUser: false,
+        },
+      );
+    } catch (error) {
+      await analytics.logEvent(
+        AnalyticsEvents.errorEncountered,
+        properties: {
+          AnalyticsEvents.propErrorType: 'auth',
+          AnalyticsEvents.propRecoverable: true,
+        },
+      );
+      rethrow;
+    }
+  }
+
+  void _handleGuestContinue() {
+    _analyticsClient.logEvent(
+      AnalyticsEvents.authCompleted,
+      properties: {
+        AnalyticsEvents.propMethod: 'guest',
+        AnalyticsEvents.propIsNewUser: false,
+      },
+    );
+    ref.read(authStateProvider.notifier).signOut();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -39,21 +114,12 @@ class AuthChoiceScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
                   FilledButton(
-                    onPressed: () {
-                      ref.read(authStateProvider.notifier).signOut();
-                    },
+                    onPressed: _handleGuestContinue,
                     child: const Text('Continue as guest'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () async => runWithDeviceGuard(
-                      context,
-                      ref,
-                      IntegrityUseCase.signIn,
-                      () => ref
-                          .read(authStateProvider.notifier)
-                          .signInWithOAuth2(),
-                    ),
+                    onPressed: () => _handleSignIn(context),
                     icon: const Icon(Icons.login),
                     label: const Text('Sign in'),
                   ),

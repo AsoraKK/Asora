@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/device_integrity_guard.dart';
+import '../../../core/analytics/analytics_providers.dart';
+import '../../../core/analytics/analytics_events.dart';
 
 import '../auth/presentation/auth_gate.dart';
 import 'state/privacy_controller.dart';
 import 'state/privacy_state.dart';
 import 'utils/privacy_formatters.dart';
+import 'widgets/analytics_settings_card.dart';
 import 'widgets/cooldown_row.dart';
 import 'widgets/delete_confirmation_dialog.dart';
 import 'widgets/delete_section.dart';
@@ -30,6 +33,11 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(privacyControllerProvider.notifier).refreshStatus();
+
+        // Log screen view
+        ref
+            .read(analyticsClientProvider)
+            .logEvent(AnalyticsEvents.privacySettingsOpened);
       }
     });
   }
@@ -90,6 +98,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 const SizedBox(height: 12),
                 PrivacyErrorBanner(message: errorMessage),
               ],
+              const SizedBox(height: 24),
+              const AnalyticsSettingsCard(),
               const SizedBox(height: 24),
               PrivacyDeleteSection(
                 onDelete: () => _confirmDelete(controller),

@@ -12,6 +12,8 @@ import { z } from 'zod';
 import { createHiveClient, HiveAIClient } from '@shared/clients/hive';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator } from '@shared/utils/rateLimiter';
+import { getChaosContext } from '@shared/chaos/chaosConfig';
+import { ChaosError, withCosmosChaos, withHiveChaos } from '@shared/chaos/chaosInjectors';
 
 // Request validation schema
 const FlagContentSchema = z.object({
@@ -57,6 +59,7 @@ export async function flagContentHandler({
   userId,
 }: FlagContentParams): Promise<HttpResponseInit> {
   context.log('Content flag request received');
+  const chaosContext = getChaosContext(request);
 
   try {
     // 1. Authentication already handled upstream; ensure userId is present
@@ -116,9 +119,11 @@ export async function flagContentHandler({
       ],
     };
 
-    const { resources: existingFlags } = await flagsContainer.items
-      .query(existingFlagQuery)
-      .fetchAll();
+    const { resources: existingFlags } = await withCosmosChaos(
+      chaosContext,
+      () => flagsContainer.items.query(existingFlagQuery).fetchAll(),
+      { operation: 'read' }
+    );
 
     if (existingFlags.length > 0) {
       return {
@@ -139,7 +144,10 @@ export async function flagContentHandler({
 
         if (content && content.content) {
           const hiveClient = createHiveClient();
-          const hiveResponse = await hiveClient.moderateText(userId, content.content);
+          const hiveResponse = await withHiveChaos(
+            chaosContext,
+            () => hiveClient.moderateText(userId, content.content)
+          );
           aiAnalysis = HiveAIClient.parseModerationResult(hiveResponse);
         }
       }
@@ -186,14 +194,22 @@ export async function flagContentHandler({
       moderatorNotes: null,
     };
 
-    await flagsContainer.items.create(flagDocument);
+    await withCosmosChaos(
+      chaosContext,
+      () => flagsContainer.items.create(flagDocument),
+      { operation: 'write' }
+    );
 
     // 8. Update content flag count (for trending/priority)
     try {
       const contentContainer = database.container(
         contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users'
       );
-      const { resource: contentDoc } = await contentContainer.item(contentId, contentId).read();
+        const { resource: contentDoc } = await withCosmosChaos(
+          chaosContext,
+          () => contentContainer.item(contentId, contentId).read(),
+          { operation: 'read' }
+        );
 
       if (contentDoc) {
         contentDoc.flagCount = (contentDoc.flagCount || 0) + 1;
@@ -204,7 +220,11 @@ export async function flagContentHandler({
           contentDoc.status = 'hidden_pending_review';
         }
 
-        await contentContainer.item(contentId, contentId).replace(contentDoc);
+        await withCosmosChaos(
+          chaosContext,
+          () => contentContainer.item(contentId, contentId).replace(contentDoc),
+          { operation: 'write' }
+        );
       }
     } catch (error) {
       context.log('Failed to update content flag count:', error);
@@ -229,6 +249,20 @@ export async function flagContentHandler({
       },
     };
   } catch (error) {
+    context.log('Error flagging content:', error);
+    if (error instanceof ChaosError) {
+      return {
+        status: error.status,
+        jsonBody: {
+          error: {
+            code: error.code,
+            kind: error.kind,
+            message: error.message,
+          },
+        },
+      };
+    }
+
     context.log('Error flagging content:', error);
     return {
       status: 500,
