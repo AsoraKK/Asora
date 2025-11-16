@@ -104,8 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CHAOS_ENABLED: "true"
-      K6_BASE_URL: ${{ env.K6_BASE_URL }}
-      K6_SMOKE_TOKEN: ${{ env.K6_SMOKE_TOKEN }}
+      K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net' }}
+      K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
