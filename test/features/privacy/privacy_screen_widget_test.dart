@@ -159,7 +159,7 @@ _Harness _buildHarness({required PrivacyState state, DateTime? initialNow}) {
         ref: ref,
         repository: repository,
         logger: logger,
-        analyticsClient: NullAnalyticsClient(),
+        analyticsClient: const NullAnalyticsClient(),
         clock: () => now.value,
       );
     }),

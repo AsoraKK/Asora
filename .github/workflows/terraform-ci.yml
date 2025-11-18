@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: infrastructure
+        working-directory: infra
 
     env:
       TF_IN_AUTOMATION: true
@@ -69,9 +69,9 @@ jobs:
           tflint -f compact
 
       - name: tfsec Security Scan
-        uses: aquasecurity/tfsec-pr-commenter-action@v1.3.2
+        uses: aquasecurity/tfsec-pr-commenter-action@v1
         with:
-          working_directory: infrastructure
+          working_directory: infra
           tfsec_args: --config-file=.tfsec.yml
         continue-on-error: false
 

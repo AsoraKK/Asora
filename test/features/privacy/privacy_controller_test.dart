@@ -183,7 +183,7 @@ class _ControllerHarness {
             ref: ref,
             repository: repository,
             logger: logger,
-            analyticsClient: NullAnalyticsClient(),
+            analyticsClient: const NullAnalyticsClient(),
             clock: () => now,
             onSignOut: () async {
               signOutCalls++;
