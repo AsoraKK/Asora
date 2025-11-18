@@ -255,30 +255,36 @@ class ModerationCaseScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Escalate case'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(labelText: 'Reason'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: targetQueue,
-              items: _escalationQueues
-                  .map(
-                    (queue) =>
-                        DropdownMenuItem(value: queue, child: Text(queue)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  targetQueue = value;
-                }
-              },
-              decoration: const InputDecoration(labelText: 'Target queue'),
-            ),
-          ],
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: targetQueue,
+                items: _escalationQueues
+                    .map(
+                      (queue) => DropdownMenuItem(
+                        value: queue,
+                        child: Text(queue),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      targetQueue = value;
+                    });
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Target queue'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
