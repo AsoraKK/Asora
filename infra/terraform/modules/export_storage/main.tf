@@ -20,6 +20,16 @@ data "azurerm_role_definition" "blob_contributor" {
   scope = data.azurerm_subscription.primary.id
 }
 
+data "azurerm_role_definition" "queue_contributor" {
+  name  = "Storage Queue Data Contributor"
+  scope = data.azurerm_subscription.primary.id
+}
+
+data "azurerm_role_definition" "account_contributor" {
+  name  = "Storage Account Contributor"
+  scope = data.azurerm_subscription.primary.id
+}
+
 resource "random_id" "suffix" {
   byte_length = 4
 }
@@ -38,8 +48,6 @@ resource "azurerm_storage_account" "dsr" {
   account_replication_type = "LRS"
   account_kind             = "StorageV2"
   min_tls_version          = "TLS1_2"
-  allow_blob_public_access = false
-  enable_https_traffic_only = true
   public_network_access_enabled = false
 
   tags = merge(
@@ -67,6 +75,11 @@ resource "azurerm_storage_container" "exports" {
   container_access_type = "private"
 }
 
+resource "azurerm_storage_queue" "requests" {
+  name                 = "dsr-requests"
+  storage_account_name = azurerm_storage_account.dsr.name
+}
+
 resource "azurerm_storage_management_policy" "exports" {
   storage_account_id = azurerm_storage_account.dsr.id
 
@@ -79,7 +92,7 @@ resource "azurerm_storage_management_policy" "exports" {
       blob_types   = ["blockBlob"]
     }
 
-    action {
+    actions {
       base_blob {
         delete_after_days_since_modification_greater_than = 30
       }
@@ -108,5 +121,17 @@ resource "azurerm_private_endpoint" "blob" {
 resource "azurerm_role_assignment" "function_blob_contributor" {
   scope              = azurerm_storage_account.dsr.id
   role_definition_id = data.azurerm_role_definition.blob_contributor.id
+  principal_id       = var.function_principal_id
+}
+
+resource "azurerm_role_assignment" "function_queue_contributor" {
+  scope              = azurerm_storage_account.dsr.id
+  role_definition_id = data.azurerm_role_definition.queue_contributor.id
+  principal_id       = var.function_principal_id
+}
+
+resource "azurerm_role_assignment" "function_account_contributor" {
+  scope              = azurerm_storage_account.dsr.id
+  role_definition_id = data.azurerm_role_definition.account_contributor.id
   principal_id       = var.function_principal_id
 }

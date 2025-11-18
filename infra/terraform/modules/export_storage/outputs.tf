@@ -12,3 +12,8 @@ output "container_name" {
   description = "Export container name inside the DSR storage account."
   value       = azurerm_storage_container.exports.name
 }
+
+output "queue_name" {
+  description = "Request queue name inside the DSR storage account."
+  value       = azurerm_storage_queue.requests.name
+}
