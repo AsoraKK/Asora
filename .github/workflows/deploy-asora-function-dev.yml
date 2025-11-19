@@ -9,6 +9,7 @@ on:
       - ".github/workflows/deploy-asora-function-dev.yml"
 
 permissions:
+  contents: read
   id-token: write
 
 env:
