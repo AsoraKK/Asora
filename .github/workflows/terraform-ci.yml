@@ -69,10 +69,10 @@ jobs:
           tflint -f compact
 
       - name: tfsec Security Scan
-        uses: aquasecurity/tfsec-pr-commenter-action@v1
+        uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: infra
-          tfsec_args: --config-file=.tfsec.yml
+          additional_args: --config-file=.tfsec.yml
         continue-on-error: false
 
       - name: Optional plan (dev workspace)

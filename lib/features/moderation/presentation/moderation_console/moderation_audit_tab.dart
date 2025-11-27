@@ -105,7 +105,7 @@ class _ModerationAuditTabState extends ConsumerState<ModerationAuditTab> {
                   Expanded(
                     child: DropdownButtonFormField<ModerationAuditActionFilter>(
                       decoration: const InputDecoration(labelText: 'Action'),
-                      value: _action,
+                      initialValue: _action,
                       items: ModerationAuditActionFilter.values
                           .map(
                             (value) => DropdownMenuItem(
@@ -197,7 +197,7 @@ class _ModerationAuditTabState extends ConsumerState<ModerationAuditTab> {
                     leading: CircleAvatar(
                       backgroundColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.2),
+                      ).colorScheme.primary.withValues(alpha: 0.2),
                       child: Icon(
                         _iconForAction(entry.action),
                         color: Theme.of(context).colorScheme.primary,

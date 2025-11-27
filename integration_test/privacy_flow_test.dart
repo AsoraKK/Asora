@@ -1,6 +1,7 @@
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/features/privacy/services/privacy_api.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 

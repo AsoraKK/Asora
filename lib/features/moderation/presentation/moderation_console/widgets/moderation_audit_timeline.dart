@@ -21,8 +21,13 @@ class ModerationAuditTimeline extends StatelessWidget {
         final entry = entries[index];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-            child: Icon(_iconForAction(entry.action), color: Theme.of(context).colorScheme.primary),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.2),
+            child: Icon(
+              _iconForAction(entry.action),
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           title: Text('${_actionLabel(entry.action)} • ${entry.actorId}'),
           subtitle: Text(entry.details),

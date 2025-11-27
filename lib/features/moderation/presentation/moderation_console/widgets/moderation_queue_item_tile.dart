@@ -119,12 +119,15 @@ class ModerationQueueItemTile extends StatelessWidget {
     };
   }
 
-  Widget _buildChip(BuildContext context,
-      {required String label, required Color color}) {
+  Widget _buildChip(
+    BuildContext context, {
+    required String label,
+    required Color color,
+  }) {
     return Chip(
       label: Text(label),
-      backgroundColor: color.withOpacity(0.15),
-      side: BorderSide(color: color.withOpacity(0.4)),
+      backgroundColor: color.withValues(alpha: 0.15),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
     );
   }
 
@@ -143,8 +146,11 @@ class ModerationQueueItemTile extends StatelessWidget {
   String _titleCase(String value) {
     return value
         .split(RegExp(r'[-_\s]+'))
-        .map((word) =>
-            word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+        .map(
+          (word) => word.isEmpty
+              ? word
+              : '${word[0].toUpperCase()}${word.substring(1)}',
+        )
         .join(' ');
   }
 }

@@ -5,31 +5,42 @@ import 'package:asora/core/analytics/analytics_consent.dart';
 import 'package:asora/core/analytics/consent_aware_analytics_client.dart';
 
 /// Simple mock analytics client for testing
+/// Note: Mocks are inherently mutable for tracking calls, so we use a wrapper
 class MockAnalyticsClient implements AnalyticsClient {
-  final List<LoggedEvent> loggedEvents = [];
-  final List<String?> userIds = [];
-  final List<Map<String, Object?>> userProperties = [];
-  int resetCount = 0;
+  final MockAnalyticsState state = MockAnalyticsState();
+
+  List<LoggedEvent> get loggedEvents => state.loggedEvents;
+  List<String?> get userIds => state.userIds;
+  List<Map<String, Object?>> get userProperties => state.userProperties;
+  int get resetCount => state.resetCount;
 
   @override
   Future<void> logEvent(String name, {Map<String, Object?>? properties}) async {
-    loggedEvents.add(LoggedEvent(name, properties));
+    state.loggedEvents.add(LoggedEvent(name, properties));
   }
 
   @override
   Future<void> setUserId(String? userId) async {
-    userIds.add(userId);
+    state.userIds.add(userId);
   }
 
   @override
   Future<void> setUserProperties(Map<String, Object?> properties) async {
-    userProperties.add(properties);
+    state.userProperties.add(properties);
   }
 
   @override
   Future<void> reset() async {
-    resetCount++;
+    state.resetCount++;
   }
+}
+
+/// Mutable state holder for mock analytics client
+class MockAnalyticsState {
+  final List<LoggedEvent> loggedEvents = [];
+  final List<String?> userIds = [];
+  final List<Map<String, Object?>> userProperties = [];
+  int resetCount = 0;
 }
 
 class LoggedEvent {

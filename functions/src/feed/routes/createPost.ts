@@ -6,13 +6,82 @@ import { badRequest, created, serverError } from '@shared/utils/http';
 import { HttpError } from '@shared/utils/errors';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
+import { getTargetDatabase } from '@shared/clients/cosmos';
+import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 
-import type { CreatePostBody } from '@feed/types';
+import type { CreatePostBody, PostRecord, CreatePostResult } from '@feed/types';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
+const POST_TEXT_MIN_LENGTH = 1;
+const POST_TEXT_MAX_LENGTH = 5000;
+const STATUS_PUBLISHED = 'published';
+const VISIBILITY_PUBLIC = 'public';
+
+interface PostDocument {
+  id: string;
+  postId: string;
+  text: string;
+  mediaUrl: string | null;
+  authorId: string;
+  visibility: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+  stats: {
+    likes: number;
+    comments: number;
+    replies: number;
+  };
+}
+
+function validatePostPayload(
+  payload: CreatePostBody,
+  context: InvocationContext
+): { valid: true; text: string; mediaUrl: string | null } | { valid: false; error: string } {
+  const text = payload.text?.trim();
+
+  if (!text || text.length < POST_TEXT_MIN_LENGTH) {
+    context.log('posts.create.validation_failed', { reason: 'text_too_short' });
+    return { valid: false, error: 'Post text is required' };
+  }
+
+  if (text.length > POST_TEXT_MAX_LENGTH) {
+    context.log('posts.create.validation_failed', { reason: 'text_too_long', length: text.length });
+    return { valid: false, error: `Post text exceeds maximum length of ${POST_TEXT_MAX_LENGTH} characters` };
+  }
+
+  const mediaUrl = payload.mediaUrl?.trim() || null;
+  if (mediaUrl && !isValidMediaUrl(mediaUrl)) {
+    context.log('posts.create.validation_failed', { reason: 'invalid_media_url' });
+    return { valid: false, error: 'Invalid media URL format' };
+  }
+
+  return { valid: true, text, mediaUrl };
+}
+
+function isValidMediaUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Only allow HTTPS URLs from allowed domains
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    // Add allowed media domains here (Azure Blob Storage, etc.)
+    const allowedHosts = [
+      'asora.blob.core.windows.net',
+      'asoradev.blob.core.windows.net',
+      'localhost',
+    ];
+    return allowedHosts.some(host => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`));
+  } catch {
+    return false;
+  }
+}
+
 export const createPost = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
   const principal = req.principal;
+  const start = performance.now();
 
   const payload = (await req.json().catch(() => null)) as CreatePostBody | null;
   if (!payload || typeof payload !== 'object') {
@@ -20,15 +89,89 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
     return badRequest('Invalid JSON payload');
   }
 
+  const validation = validatePostPayload(payload, context);
+  if (!validation.valid) {
+    return badRequest(validation.error);
+  }
+
   try {
-    // Post creation logic moved inline since service function was removed during refactor
-    // TODO: Re-implement createPost service function if needed
-    context.log('posts.create.not_implemented');
-    return {
-      status: 501,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Post creation not yet implemented' }),
+    const now = Date.now();
+    const postId = crypto.randomUUID();
+
+    const postDocument: PostDocument = {
+      id: postId,
+      postId,
+      text: validation.text,
+      mediaUrl: validation.mediaUrl,
+      authorId: principal.sub,
+      visibility: VISIBILITY_PUBLIC,
+      status: STATUS_PUBLISHED,
+      createdAt: now,
+      updatedAt: now,
+      stats: {
+        likes: 0,
+        comments: 0,
+        replies: 0,
+      },
     };
+
+    const container = getTargetDatabase().posts;
+    const { resource, requestCharge } = await container.items.create<PostDocument>(postDocument, {
+      partitionKey: principal.sub,
+    });
+
+    const duration = performance.now() - start;
+
+    trackAppMetric({
+      name: 'cosmos_ru_post_create',
+      value: requestCharge ?? 0,
+      properties: {
+        authorId: principal.sub,
+        hasMedia: Boolean(validation.mediaUrl),
+      },
+    });
+
+    trackAppEvent({
+      name: 'post_created',
+      properties: {
+        postId,
+        authorId: principal.sub,
+        textLength: validation.text.length,
+        hasMedia: Boolean(validation.mediaUrl),
+        durationMs: duration,
+      },
+    });
+
+    context.log('posts.create.success', {
+      postId,
+      authorId: principal.sub,
+      durationMs: duration.toFixed(2),
+      ru: requestCharge?.toFixed(2) ?? '0',
+    });
+
+    const postRecord: PostRecord = {
+      postId: resource?.postId ?? postId,
+      text: resource?.text ?? validation.text,
+      mediaUrl: resource?.mediaUrl ?? validation.mediaUrl,
+      authorId: resource?.authorId ?? principal.sub,
+      createdAt: new Date(resource?.createdAt ?? now).toISOString(),
+      updatedAt: new Date(resource?.updatedAt ?? now).toISOString(),
+      stats: resource?.stats ?? { likes: 0, comments: 0, replies: 0 },
+    };
+
+    const result: CreatePostResult = {
+      body: {
+        status: 'success',
+        post: postRecord,
+      },
+      headers: {
+        'X-Post-Id': postId,
+        'X-Cosmos-RU': (requestCharge ?? 0).toFixed(2),
+        'X-Request-Duration': duration.toFixed(2),
+      },
+    };
+
+    return created(result.body);
   } catch (error) {
     if (error instanceof HttpError) {
       return {

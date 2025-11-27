@@ -54,6 +54,13 @@ dependencies:
   
   # OpenTelemetry for observability and tracing
   opentelemetry: ^0.18.10
+  permission_handler: ^12.0.1
+  
+  # Push notifications
+  firebase_messaging: ^15.1.3
+  firebase_core: ^3.8.1
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4  # For scheduled local notifications
 
 dev_dependencies:
   flutter_test:

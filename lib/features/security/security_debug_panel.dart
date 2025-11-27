@@ -91,7 +91,7 @@ class SecurityDebugPanel extends ConsumerWidget {
                   _buildKeyValue('Reason', overrides.overrideReason ?? 'n/a'),
                   _buildKeyValue(
                     'Expires in',
-                    overrides.timeRemaining?.inMinutes ?? 0 >= 0
+                    (overrides.timeRemaining?.inMinutes ?? 0) >= 0
                         ? '${overrides.timeRemaining?.inMinutes} min'
                         : 'none',
                   ),

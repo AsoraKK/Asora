@@ -38,13 +38,11 @@ void main() {
   ) async {
     final mockController = _FakeAuthController();
 
-    final provider = StateNotifierProvider<AuthController, AuthControllerState>(
-      (ref) => mockController,
-    );
-
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWithProvider(provider)],
+        overrides: [
+          authControllerProvider.overrideWith((ref) => mockController),
+        ],
         child: const MaterialApp(home: SignInPage()),
       ),
     );
@@ -70,13 +68,11 @@ void main() {
     final mockController = _FakeAuthController();
     mockController.state = const AuthControllerState(isLoading: true);
 
-    final provider = StateNotifierProvider<AuthController, AuthControllerState>(
-      (ref) => mockController as dynamic,
-    );
-
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWithProvider(provider)],
+        overrides: [
+          authControllerProvider.overrideWith((ref) => mockController),
+        ],
         child: const MaterialApp(home: SignInPage()),
       ),
     );
@@ -88,13 +84,11 @@ void main() {
     final mockController = _FakeAuthController();
     mockController.state = const AuthControllerState(error: 'Oops');
 
-    final provider = StateNotifierProvider<AuthController, AuthControllerState>(
-      (ref) => mockController as dynamic,
-    );
-
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authControllerProvider.overrideWithProvider(provider)],
+        overrides: [
+          authControllerProvider.overrideWith((ref) => mockController),
+        ],
         child: const MaterialApp(home: SignInPage()),
       ),
     );

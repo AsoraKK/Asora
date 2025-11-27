@@ -14,6 +14,8 @@ import 'auth_service.dart';
 import 'post_service.dart';
 import 'moderation_service.dart';
 import 'oauth2_service.dart';
+import 'push/push_notification_service.dart';
+import 'push/device_token_service.dart';
 
 /// Flutter secure storage provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -48,4 +50,19 @@ final postServiceProvider = Provider<PostService>((ref) {
 final moderationServiceProvider = Provider<ModerationClient>((ref) {
   final dio = ref.watch(secureDioProvider);
   return ModerationClient(dio);
+});
+
+/// Push notification service provider (singleton)
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
+  return PushNotificationService();
+});
+
+/// Device token service provider
+final deviceTokenServiceProvider = Provider<DeviceTokenService>((ref) {
+  final dio = ref.watch(secureDioProvider);
+  final pushService = ref.watch(pushNotificationServiceProvider);
+
+  return DeviceTokenService(dioClient: dio, pushService: pushService);
 });
