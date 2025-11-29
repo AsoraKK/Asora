@@ -41,13 +41,13 @@ locals {
 }
 
 resource "azurerm_storage_account" "dsr" {
-  name                     = local.account_name
-  resource_group_name      = var.resource_group
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  account_kind             = "StorageV2"
-  min_tls_version          = "TLS1_2"
+  name                          = local.account_name
+  resource_group_name           = var.resource_group
+  location                      = var.location
+  account_tier                  = "Standard"
+  account_replication_type      = "LRS"
+  account_kind                  = "StorageV2"
+  min_tls_version               = "TLS1_2"
   public_network_access_enabled = false
 
   tags = merge(
@@ -70,8 +70,8 @@ resource "azurerm_storage_account" "dsr" {
 }
 
 resource "azurerm_storage_container" "exports" {
-  name                 = "dsr-exports"
-  storage_account_name = azurerm_storage_account.dsr.name
+  name                  = "dsr-exports"
+  storage_account_name  = azurerm_storage_account.dsr.name
   container_access_type = "private"
 }
 
@@ -104,11 +104,11 @@ resource "azurerm_storage_management_policy" "exports" {
 }
 
 resource "azurerm_private_endpoint" "blob" {
-  count                 = length(local.subnet_ids)
-  name                  = "dsr-exports-pe-${var.env}"
-  location              = var.location
-  resource_group_name   = var.resource_group
-  subnet_id             = local.subnet_ids[count.index]
+  count               = length(local.subnet_ids)
+  name                = "dsr-exports-pe-${var.env}"
+  location            = var.location
+  resource_group_name = var.resource_group
+  subnet_id           = local.subnet_ids[count.index]
 
   private_service_connection {
     name                           = "privatelink-${azurerm_storage_account.dsr.name}"

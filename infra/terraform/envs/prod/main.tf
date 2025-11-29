@@ -74,21 +74,21 @@ module "cosmos_sql" {
       max_throughput = 4000
     },
     {
-      name          = "privacy_requests"
-      partition_key = "/id"
-      index_file    = "privacy_requests.index.json"
+      name           = "privacy_requests"
+      partition_key  = "/id"
+      index_file     = "privacy_requests.index.json"
       max_throughput = 2000
     },
     {
-      name          = "legal_holds"
-      partition_key = "/scopeId"
-      index_file    = "legal_holds.index.json"
+      name           = "legal_holds"
+      partition_key  = "/scopeId"
+      index_file     = "legal_holds.index.json"
       max_throughput = 1000
     },
     {
-      name          = "audit_logs"
-      partition_key = "/id"
-      index_file    = "audit_logs.index.json"
+      name           = "audit_logs"
+      partition_key  = "/id"
+      index_file     = "audit_logs.index.json"
       max_throughput = 1000
     }
   ]
