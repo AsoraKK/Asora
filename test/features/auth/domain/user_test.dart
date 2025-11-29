@@ -86,7 +86,10 @@ void main() {
 
       final user = User.fromJson(mixedJson);
       expect(user.id, 'preferred-id'); // 'id' takes priority over 'sub'
-      expect(user.reputationScore, 100); // reputation_score checked first per null-coalesce order
+      expect(
+        user.reputationScore,
+        100,
+      ); // reputation_score checked first per null-coalesce order
     });
 
     test('toJson with null tokenExpires', () {

@@ -74,9 +74,8 @@ class _PostCardState extends ConsumerState<PostCard> {
                         children: [
                           Text(
                             widget.post.author.displayName,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
                           // Author reputation badge
@@ -374,12 +373,16 @@ class Author {
   factory Author.fromJson(Map<String, dynamic> json) {
     return Author(
       id: json['id'] as String? ?? json['authorId'] as String,
-      displayName: json['displayName'] as String? ?? json['name'] as String? ?? 'Unknown',
+      displayName:
+          json['displayName'] as String? ??
+          json['name'] as String? ??
+          'Unknown',
       avatarUrl: json['avatarUrl'] as String?,
       // API sends reputation_score, cached data uses reputationScore
-      reputationScore: json['reputation_score'] as int? 
-          ?? json['reputationScore'] as int? 
-          ?? 0,
+      reputationScore:
+          json['reputation_score'] as int? ??
+          json['reputationScore'] as int? ??
+          0,
     );
   }
 }

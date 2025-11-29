@@ -52,7 +52,7 @@ const FIXED_NOW = 1_700_000_000_000;
 type Handler = (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>;
 
 function createHandler(response: HttpResponseInit): jest.MockedFunction<Handler> {
-  return jest.fn(async () => response);
+  return jest.fn(async (_req: HttpRequest, _context: InvocationContext) => response) as jest.MockedFunction<Handler>;
 }
 
 function createRequest(
@@ -149,7 +149,7 @@ describe('Rate limiting per IP', () => {
 
     expect(handler).toHaveBeenCalled();
     expect(response.status).toBe(200);
-    expect(response.headers?.['X-RateLimit-Remaining']).toBe('9');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Remaining']).toBe('9');
   });
 
   it('blocks requests when IP limit exceeded', async () => {
@@ -208,7 +208,7 @@ describe('Rate limiting per principal/user', () => {
 
     expect(handler).toHaveBeenCalled();
     expect(response.status).toBe(200);
-    expect(response.headers?.['X-RateLimit-Limit']).toBe('100');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Limit']).toBe('100');
   });
 
   it('blocks requests when user limit exceeded', async () => {
@@ -276,8 +276,8 @@ describe('Combined IP + user limits', () => {
     expect(handler).toHaveBeenCalled();
     expect(response.status).toBe(200);
     // Should report the tighter constraint (IP with 10 remaining)
-    expect(response.headers?.['X-RateLimit-Remaining']).toBe('10');
-    expect(response.headers?.['X-RateLimit-Limit']).toBe('60');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Remaining']).toBe('10');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Limit']).toBe('60');
   });
 
   it('blocks on first exceeded limit (IP)', async () => {
@@ -344,7 +344,7 @@ describe('Auth backoff behavior', () => {
 
   it('increments failure count on 401 response', async () => {
     applySlidingWindowLimitMock.mockResolvedValue(allowedResult(15, 20));
-    incrementAuthFailureMock.mockResolvedValue(undefined);
+    incrementAuthFailureMock.mockResolvedValue({ count: 1, lockoutSeconds: 0, lastFailureAt: new Date().toISOString() });
 
     const handler = createHandler({ status: 401, body: 'unauthorized' });
     const wrapped = withRateLimit(handler, authPolicy);
@@ -402,10 +402,10 @@ describe('Rate limit response format', () => {
     const response = await wrapped(createRequest(), createContext('trace123trace123trace123trace123'));
 
     expect(response.status).toBe(429);
-    expect(response.headers?.['Content-Type']).toBe('application/json');
-    expect(response.headers?.['Retry-After']).toBe('120');
-    expect(response.headers?.['X-RateLimit-Limit']).toBe('5');
-    expect(response.headers?.['X-RateLimit-Remaining']).toBe('0');
+    expect((response.headers as Record<string, string>)?.['Content-Type']).toBe('application/json');
+    expect((response.headers as Record<string, string>)?.['Retry-After']).toBe('120');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Limit']).toBe('5');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Remaining']).toBe('0');
 
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
@@ -426,9 +426,9 @@ describe('Rate limit response format', () => {
     const response = await wrapped(createRequest('POST'), createContext());
 
     expect(response.status).toBe(201);
-    expect(response.headers?.['X-RateLimit-Limit']).toBe('5');
-    expect(response.headers?.['X-RateLimit-Remaining']).toBe('3');
-    expect(response.headers?.['X-RateLimit-Reset']).toBeDefined();
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Limit']).toBe('5');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Remaining']).toBe('3');
+    expect((response.headers as Record<string, string>)?.['X-RateLimit-Reset']).toBeDefined();
   });
 });
 

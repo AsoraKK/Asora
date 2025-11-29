@@ -253,8 +253,9 @@ class _FeedListState extends ConsumerState<_FeedList> {
         properties: {
           AnalyticsEvents.propApproxItemsViewed:
               (_scrollController.position.pixels / 200).ceil(),
-          AnalyticsEvents.propSessionDurationSeconds:
-              now.difference(_sessionStart).inSeconds,
+          AnalyticsEvents.propSessionDurationSeconds: now
+              .difference(_sessionStart)
+              .inSeconds,
         },
       );
       _lastScrollEvent = now;

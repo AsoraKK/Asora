@@ -11,11 +11,7 @@ void main() {
     }) {
       return MaterialApp(
         home: Scaffold(
-          body: ReputationBadge(
-            score: score,
-            size: size,
-            showLabel: showLabel,
-          ),
+          body: ReputationBadge(score: score, size: size, showLabel: showLabel),
         ),
       );
     }
@@ -28,7 +24,9 @@ void main() {
         expect(find.text('Rep: 42'), findsNothing);
       });
 
-      testWidgets('displays score with label when showLabel is true', (tester) async {
+      testWidgets('displays score with label when showLabel is true', (
+        tester,
+      ) async {
         await tester.pumpWidget(createBadge(score: 150, showLabel: true));
 
         expect(find.text('Rep: 150'), findsOneWidget);
@@ -56,7 +54,9 @@ void main() {
         expect(iconFinder, findsOneWidget);
       });
 
-      testWidgets('renders platinum tier icon for score >= 1000', (tester) async {
+      testWidgets('renders platinum tier icon for score >= 1000', (
+        tester,
+      ) async {
         await tester.pumpWidget(createBadge(score: 1500));
 
         final iconFinder = find.byIcon(Icons.workspace_premium);
@@ -103,30 +103,29 @@ void main() {
 
     group('sizes', () {
       testWidgets('small size renders correctly', (tester) async {
-        await tester.pumpWidget(createBadge(
-          score: 100,
-          size: ReputationBadgeSize.small,
-        ));
+        await tester.pumpWidget(
+          createBadge(score: 100, size: ReputationBadgeSize.small),
+        );
 
-        final container = tester.widget<Container>(find.byType(Container).first);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
         final decoration = container.decoration as BoxDecoration;
         expect(decoration.borderRadius, BorderRadius.circular(12));
       });
 
       testWidgets('medium size renders correctly', (tester) async {
-        await tester.pumpWidget(createBadge(
-          score: 100,
-          size: ReputationBadgeSize.medium,
-        ));
+        await tester.pumpWidget(
+          createBadge(score: 100, size: ReputationBadgeSize.medium),
+        );
 
         expect(find.byType(ReputationBadge), findsOneWidget);
       });
 
       testWidgets('large size renders correctly', (tester) async {
-        await tester.pumpWidget(createBadge(
-          score: 100,
-          size: ReputationBadgeSize.large,
-        ));
+        await tester.pumpWidget(
+          createBadge(score: 100, size: ReputationBadgeSize.large),
+        );
 
         expect(find.byType(ReputationBadge), findsOneWidget);
       });

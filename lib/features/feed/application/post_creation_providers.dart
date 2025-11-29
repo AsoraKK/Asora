@@ -82,8 +82,8 @@ class PostCreationState {
   /// Get limit exceeded result
   CreatePostLimitExceeded? get limitExceededResult =>
       result is CreatePostLimitExceeded
-          ? result as CreatePostLimitExceeded
-          : null;
+      ? result as CreatePostLimitExceeded
+      : null;
 
   /// Get error result
   CreatePostError? get errorResult =>
@@ -109,8 +109,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     if (text.isEmpty) {
       validationError = null; // Don't show error for empty field
     } else if (text.length > postTextMaxLength) {
-      validationError =
-          'Post text cannot exceed $postTextMaxLength characters';
+      validationError = 'Post text cannot exceed $postTextMaxLength characters';
     }
 
     state = state.copyWith(
@@ -188,10 +187,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
         token: token,
       );
 
-      state = state.copyWith(
-        isSubmitting: false,
-        result: result,
-      );
+      state = state.copyWith(isSubmitting: false, result: result);
 
       // If successful, refresh feeds
       if (result is CreatePostSuccess) {
@@ -228,24 +224,18 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Clear any error state
   void clearError() {
-    state = state.copyWith(
-      clearResult: true,
-      clearValidationError: true,
-    );
+    state = state.copyWith(clearResult: true, clearValidationError: true);
   }
 }
 
 /// Provider for post creation state
 final postCreationProvider =
     StateNotifierProvider<PostCreationNotifier, PostCreationState>((ref) {
-  return PostCreationNotifier(ref);
-});
+      return PostCreationNotifier(ref);
+    });
 
 /// Provider that exposes whether user can create posts
 final canCreatePostProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);
-  return authState.maybeWhen(
-    data: (user) => user != null,
-    orElse: () => false,
-  );
+  return authState.maybeWhen(data: (user) => user != null, orElse: () => false);
 });

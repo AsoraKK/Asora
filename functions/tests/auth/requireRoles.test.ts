@@ -139,8 +139,8 @@ describe('requireRoles - authentication (401)', () => {
     const response = await protectedHandler(req, contextStub);
 
     expect(response.status).toBe(401);
-    expect(response.headers?.['WWW-Authenticate']).toContain('Bearer');
-    expect(response.headers?.['WWW-Authenticate']).toContain('invalid_token');
+    expect((response.headers as Record<string, string>)?.['WWW-Authenticate']).toContain('Bearer');
+    expect((response.headers as Record<string, string>)?.['WWW-Authenticate']).toContain('invalid_token');
   });
 });
 

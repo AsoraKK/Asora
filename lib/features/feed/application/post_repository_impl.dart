@@ -101,10 +101,7 @@ class PostRepositoryImpl implements PostRepository {
   }
 
   @override
-  Future<Post> getPost({
-    required String postId,
-    String? token,
-  }) async {
+  Future<Post> getPost({required String postId, String? token}) async {
     return AsoraTracer.traceOperation(
       'PostRepository.getPost',
       () async {
@@ -112,9 +109,7 @@ class PostRepositoryImpl implements PostRepository {
           final response = await _dio.get(
             '/api/posts/$postId',
             options: Options(
-              headers: {
-                if (token != null) 'Authorization': 'Bearer $token',
-              },
+              headers: {if (token != null) 'Authorization': 'Bearer $token'},
             ),
           );
 
@@ -135,13 +130,14 @@ class PostRepositoryImpl implements PostRepository {
           throw PostException(message, code: 'network_error', originalError: e);
         }
       },
-      attributes: AsoraTracer.httpRequestAttributes(
-        method: 'GET',
-        url: '/api/posts/$postId',
-      )..addAll({
-        'request.post_id': postId,
-        'request.authenticated': token != null,
-      }),
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'GET',
+            url: '/api/posts/$postId',
+          )..addAll({
+            'request.post_id': postId,
+            'request.authenticated': token != null,
+          }),
     );
   }
 
@@ -166,7 +162,8 @@ class PostRepositoryImpl implements PostRepository {
       if (code == 'content_blocked') {
         debugPrint('⚠️ Post blocked by content moderation');
         return CreatePostBlocked(
-          message: data['error'] as String? ??
+          message:
+              data['error'] as String? ??
               'Content violates community guidelines',
           categories: List<String>.from(data['categories'] ?? []),
           code: code ?? 'content_blocked',
@@ -180,7 +177,8 @@ class PostRepositoryImpl implements PostRepository {
       if (code == 'DAILY_LIMIT_EXCEEDED') {
         debugPrint('⚠️ Daily post limit exceeded');
         final retryAfterStr = response.headers.value('retry-after');
-        final retryAfterSeconds = int.tryParse(retryAfterStr ?? '86400') ?? 86400;
+        final retryAfterSeconds =
+            int.tryParse(retryAfterStr ?? '86400') ?? 86400;
 
         return CreatePostLimitExceeded(
           message: data['message'] as String? ?? 'Daily post limit reached',
@@ -252,19 +250,21 @@ class PostRepositoryImpl implements PostRepository {
       updatedAt: json['updatedAt'] != null
           ? _parseDateTime(json['updatedAt'])
           : null,
-      likeCount: (json['stats']?['likes'] as int?) ??
-          (json['likeCount'] as int?) ??
-          0,
-      dislikeCount: (json['stats']?['dislikes'] as int?) ??
+      likeCount:
+          (json['stats']?['likes'] as int?) ?? (json['likeCount'] as int?) ?? 0,
+      dislikeCount:
+          (json['stats']?['dislikes'] as int?) ??
           (json['dislikeCount'] as int?) ??
           0,
-      commentCount: (json['stats']?['comments'] as int?) ??
+      commentCount:
+          (json['stats']?['comments'] as int?) ??
           (json['commentCount'] as int?) ??
           0,
       mediaUrls: json['mediaUrl'] != null ? [json['mediaUrl'] as String] : null,
       moderation: json['moderation'] != null
           ? PostModerationData.fromJson(
-              json['moderation'] as Map<String, dynamic>)
+              json['moderation'] as Map<String, dynamic>,
+            )
           : null,
     );
   }

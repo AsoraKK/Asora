@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 enum ReputationBadgeSize {
   /// Small badge for inline use (e.g., post headers)
   small,
-  
+
   /// Medium badge for profile cards
   medium,
-  
+
   /// Large badge for profile pages
   large,
 }
@@ -30,10 +30,10 @@ enum ReputationBadgeSize {
 class ReputationBadge extends StatelessWidget {
   /// The user's reputation score
   final int score;
-  
+
   /// The size of the badge
   final ReputationBadgeSize size;
-  
+
   /// Whether to show the full label (e.g., "Rep: 42") or just the number
   final bool showLabel;
 
@@ -83,7 +83,12 @@ class ReputationBadge extends StatelessWidget {
     final icon = getTierIcon(score);
 
     // Size-specific dimensions
-    final (double iconSize, double fontSize, double paddingH, double paddingV) = switch (size) {
+    final (
+      double iconSize,
+      double fontSize,
+      double paddingH,
+      double paddingV,
+    ) = switch (size) {
       ReputationBadgeSize.small => (12.0, 11.0, 6.0, 2.0),
       ReputationBadgeSize.medium => (16.0, 13.0, 8.0, 4.0),
       ReputationBadgeSize.large => (20.0, 15.0, 12.0, 6.0),
@@ -96,19 +101,12 @@ class ReputationBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: tierColor.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          border: Border.all(color: tierColor.withValues(alpha: 0.3), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: iconSize,
-              color: tierColor,
-            ),
+            Icon(icon, size: iconSize, color: tierColor),
             const SizedBox(width: 4),
             Text(
               showLabel ? 'Rep: $score' : '$score',

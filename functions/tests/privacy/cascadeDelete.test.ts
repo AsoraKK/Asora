@@ -320,7 +320,7 @@ describe('cascadeDelete service', () => {
 
       // Should have error about legal hold
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].error).toContain('legal hold');
+      expect(result.errors[0]!.error).toContain('legal hold');
 
       // No deletions should have occurred
       expect(mockCosmosDelete).not.toHaveBeenCalled();

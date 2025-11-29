@@ -33,9 +33,10 @@ class User {
       role: UserRole.fromString(json['role'] as String),
       tier: UserTier.fromString(json['tier'] as String),
       // API sends reputation_score, cached data uses reputationScore
-      reputationScore: json['reputation_score'] as int? 
-          ?? json['reputationScore'] as int? 
-          ?? 0,
+      reputationScore:
+          json['reputation_score'] as int? ??
+          json['reputationScore'] as int? ??
+          0,
       createdAt: DateTime.parse(
         json['created_at'] as String? ?? json['createdAt'] as String,
       ),

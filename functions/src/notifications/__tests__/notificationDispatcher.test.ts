@@ -13,15 +13,15 @@ jest.mock('@shared/clients/cosmos', () => ({
       database: {
         container: jest.fn(() => ({
           items: {
-            create: jest.fn().mockResolvedValue({ resource: {} }),
+            create: jest.fn<() => Promise<{ resource: Record<string, unknown> }>>().mockResolvedValue({ resource: {} }),
             query: jest.fn().mockReturnValue({
-              fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
+              fetchAll: jest.fn<() => Promise<{ resources: unknown[] }>>().mockResolvedValue({ resources: [] }),
             }),
-            upsert: jest.fn().mockResolvedValue({ resource: {} }),
+            upsert: jest.fn<() => Promise<{ resource: Record<string, unknown> }>>().mockResolvedValue({ resource: {} }),
           },
           item: jest.fn(() => ({
-            read: jest.fn().mockResolvedValue({ resource: {} }),
-            replace: jest.fn().mockResolvedValue({ resource: {} }),
+            read: jest.fn<() => Promise<{ resource: Record<string, unknown> }>>().mockResolvedValue({ resource: {} }),
+            replace: jest.fn<() => Promise<{ resource: Record<string, unknown> }>>().mockResolvedValue({ resource: {} }),
           })),
         })),
       },
@@ -33,7 +33,7 @@ jest.mock('@shared/clients/cosmos', () => ({
 // Mock Notification Hub client
 jest.mock('../clients/notificationHubClient', () => ({
   getNotificationHubsClient: jest.fn(() => ({
-    sendPushToDevices: jest.fn().mockResolvedValue({ success: 1, failed: 0, errors: [] }),
+    sendPushToDevices: jest.fn<() => Promise<{ success: number; failed: number; errors: unknown[] }>>().mockResolvedValue({ success: 1, failed: 0, errors: [] }),
   })),
 }));
 

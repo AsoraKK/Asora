@@ -83,10 +83,12 @@ void main() {
   group('Post Creation Integration Tests', () {
     testWidgets('successful post creation flow - happy path', (tester) async {
       // Arrange: Setup mock to return success
-      when(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          )).thenAnswer((_) async => CreatePostSuccess(createdPost));
+      when(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer((_) async => CreatePostSuccess(createdPost));
 
       Post? returnedPost;
 
@@ -153,15 +155,17 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the repository was called with correct parameters
-      verify(() => mockRepository.createPost(
-            request: any(
-              named: 'request',
-              that: predicate<CreatePostRequest>(
-                (r) => r.text == 'My first post on Asora!' && r.mediaUrl == null,
-              ),
+      verify(
+        () => mockRepository.createPost(
+          request: any(
+            named: 'request',
+            that: predicate<CreatePostRequest>(
+              (r) => r.text == 'My first post on Asora!' && r.mediaUrl == null,
             ),
-            token: 'test-jwt-token',
-          )).called(1);
+          ),
+          token: 'test-jwt-token',
+        ),
+      ).called(1);
 
       // Verify we're back on the feed screen (dialog closed)
       expect(find.text('Feed Screen'), findsOneWidget);
@@ -174,13 +178,17 @@ void main() {
 
     testWidgets('content blocked flow - moderation rejection', (tester) async {
       // Arrange: Setup mock to return blocked
-      when(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          )).thenAnswer((_) async => const CreatePostBlocked(
-            message: 'Your post contains content that violates our guidelines',
-            categories: ['harassment', 'hate_speech'],
-          ));
+      when(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => const CreatePostBlocked(
+          message: 'Your post contains content that violates our guidelines',
+          categories: ['harassment', 'hate_speech'],
+        ),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -191,9 +199,7 @@ void main() {
             }),
             jwtProvider.overrideWith((ref) async => 'test-jwt-token'),
           ],
-          child: const MaterialApp(
-            home: CreatePostScreen(),
-          ),
+          child: const MaterialApp(home: CreatePostScreen()),
         ),
       );
 
@@ -227,16 +233,20 @@ void main() {
 
     testWidgets('daily limit exceeded flow', (tester) async {
       // Arrange: Setup mock to return limit exceeded
-      when(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          )).thenAnswer((_) async => const CreatePostLimitExceeded(
-            message: 'You have reached your daily post limit',
-            limit: 10,
-            currentCount: 10,
-            tier: 'free',
-            retryAfter: Duration(hours: 18, minutes: 30),
-          ));
+      when(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => const CreatePostLimitExceeded(
+          message: 'You have reached your daily post limit',
+          limit: 10,
+          currentCount: 10,
+          tier: 'free',
+          retryAfter: Duration(hours: 18, minutes: 30),
+        ),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -247,9 +257,7 @@ void main() {
             }),
             jwtProvider.overrideWith((ref) async => 'test-jwt-token'),
           ],
-          child: const MaterialApp(
-            home: CreatePostScreen(),
-          ),
+          child: const MaterialApp(home: CreatePostScreen()),
         ),
       );
 
@@ -279,10 +287,12 @@ void main() {
       int callCount = 0;
 
       // Arrange: First call fails, second succeeds
-      when(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          )).thenAnswer((_) async {
+      when(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer((_) async {
         callCount++;
         if (callCount == 1) {
           return const CreatePostError(
@@ -302,9 +312,7 @@ void main() {
             }),
             jwtProvider.overrideWith((ref) async => 'test-jwt-token'),
           ],
-          child: const MaterialApp(
-            home: CreatePostScreen(),
-          ),
+          child: const MaterialApp(home: CreatePostScreen()),
         ),
       );
 
@@ -321,7 +329,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify error is shown
-      expect(find.text('Network connection failed. Please try again.'), findsOneWidget);
+      expect(
+        find.text('Network connection failed. Please try again.'),
+        findsOneWidget,
+      );
       expect(callCount, 1);
 
       // Retry - should succeed
@@ -346,9 +357,7 @@ void main() {
             }),
             jwtProvider.overrideWith((ref) async => 'test-jwt-token'),
           ],
-          child: const MaterialApp(
-            home: CreatePostScreen(),
-          ),
+          child: const MaterialApp(home: CreatePostScreen()),
         ),
       );
 
@@ -377,20 +386,28 @@ void main() {
       expect(disabledButton.onPressed, isNull);
 
       // Verify the repository was never called since we never successfully submitted
-      verifyNever(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          ));
+      verifyNever(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      );
     });
 
-    testWidgets('preserves text when moderation blocks content', (tester) async {
-      when(() => mockRepository.createPost(
-            request: any(named: 'request'),
-            token: any(named: 'token'),
-          )).thenAnswer((_) async => const CreatePostBlocked(
-            message: 'Content blocked',
-            categories: ['spam'],
-          ));
+    testWidgets('preserves text when moderation blocks content', (
+      tester,
+    ) async {
+      when(
+        () => mockRepository.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => const CreatePostBlocked(
+          message: 'Content blocked',
+          categories: ['spam'],
+        ),
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -401,9 +418,7 @@ void main() {
             }),
             jwtProvider.overrideWith((ref) async => 'test-jwt-token'),
           ],
-          child: const MaterialApp(
-            home: CreatePostScreen(),
-          ),
+          child: const MaterialApp(home: CreatePostScreen()),
         ),
       );
 

@@ -30,29 +30,25 @@ void main() {
   late MockPostRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(
-      const CreatePostRequest(text: 'fallback'),
-    );
+    registerFallbackValue(const CreatePostRequest(text: 'fallback'));
   });
 
   setUp(() {
     mockRepository = MockPostRepository();
   });
 
-  Widget createTestWidget({
-    User? user,
-  }) {
+  Widget createTestWidget({User? user}) {
     return ProviderScope(
       overrides: [
         postRepositoryProvider.overrideWithValue(mockRepository),
         authStateProvider.overrideWith((ref) {
           return MockAuthStateNotifier(user);
         }),
-        jwtProvider.overrideWith((ref) async => user != null ? 'test-token' : null),
+        jwtProvider.overrideWith(
+          (ref) async => user != null ? 'test-token' : null,
+        ),
       ],
-      child: const MaterialApp(
-        home: CreatePostScreen(),
-      ),
+      child: const MaterialApp(home: CreatePostScreen()),
     );
   }
 
@@ -63,7 +59,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Initial state shows max characters
-        expect(find.textContaining('5000 characters remaining'), findsOneWidget);
+        expect(
+          find.textContaining('5000 characters remaining'),
+          findsOneWidget,
+        );
       });
 
       testWidgets('updates character count as user types', (tester) async {
@@ -76,7 +75,10 @@ void main() {
         await tester.pump();
 
         // Character count should update
-        expect(find.textContaining('4989 characters remaining'), findsOneWidget);
+        expect(
+          find.textContaining('4989 characters remaining'),
+          findsOneWidget,
+        );
       });
 
       testWidgets('Post button is disabled when text is empty', (tester) async {
@@ -91,7 +93,9 @@ void main() {
         expect(button.onPressed, isNull);
       });
 
-      testWidgets('Post button is enabled when text is entered', (tester) async {
+      testWidgets('Post button is enabled when text is entered', (
+        tester,
+      ) async {
         await tester.pumpWidget(createTestWidget(user: createTestUser()));
         await tester.pumpAndSettle();
 
@@ -108,7 +112,9 @@ void main() {
         expect(button.onPressed, isNotNull);
       });
 
-      testWidgets('shows warning when approaching character limit', (tester) async {
+      testWidgets('shows warning when approaching character limit', (
+        tester,
+      ) async {
         await tester.pumpWidget(createTestWidget(user: createTestUser()));
         await tester.pumpAndSettle();
 
@@ -124,7 +130,9 @@ void main() {
     });
 
     group('Authentication', () {
-      testWidgets('shows auth required message when not signed in', (tester) async {
+      testWidgets('shows auth required message when not signed in', (
+        tester,
+      ) async {
         await tester.pumpWidget(createTestWidget(user: null));
         await tester.pumpAndSettle();
 
@@ -154,10 +162,12 @@ void main() {
     group('Form Submission', () {
       testWidgets('shows loading indicator when submitting', (tester) async {
         // Setup mock to return immediately (no delay to avoid timer issues)
-        when(() => mockRepository.createPost(
-              request: any(named: 'request'),
-              token: any(named: 'token'),
-            )).thenAnswer((_) async {
+        when(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        ).thenAnswer((_) async {
           return CreatePostSuccess(
             Post(
               id: 'test-id',
@@ -193,11 +203,15 @@ void main() {
     });
 
     group('Error Handling', () {
-      testWidgets('shows content blocked banner when content is blocked', (tester) async {
-        when(() => mockRepository.createPost(
-              request: any(named: 'request'),
-              token: any(named: 'token'),
-            )).thenAnswer((_) async {
+      testWidgets('shows content blocked banner when content is blocked', (
+        tester,
+      ) async {
+        when(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        ).thenAnswer((_) async {
           return const CreatePostBlocked(
             message: 'Content violates community guidelines',
             categories: ['hate_speech', 'harassment'],
@@ -219,16 +233,23 @@ void main() {
 
         // Should show content blocked banner
         expect(find.text('Content Blocked'), findsOneWidget);
-        expect(find.text('Content violates community guidelines'), findsOneWidget);
+        expect(
+          find.text('Content violates community guidelines'),
+          findsOneWidget,
+        );
         expect(find.text('hate_speech'), findsOneWidget);
         expect(find.text('harassment'), findsOneWidget);
       });
 
-      testWidgets('shows limit exceeded banner when daily limit reached', (tester) async {
-        when(() => mockRepository.createPost(
-              request: any(named: 'request'),
-              token: any(named: 'token'),
-            )).thenAnswer((_) async {
+      testWidgets('shows limit exceeded banner when daily limit reached', (
+        tester,
+      ) async {
+        when(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        ).thenAnswer((_) async {
           return const CreatePostLimitExceeded(
             message: 'Daily post limit reached',
             limit: 10,
@@ -257,10 +278,12 @@ void main() {
       });
 
       testWidgets('shows error banner for generic errors', (tester) async {
-        when(() => mockRepository.createPost(
-              request: any(named: 'request'),
-              token: any(named: 'token'),
-            )).thenAnswer((_) async {
+        when(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        ).thenAnswer((_) async {
           return const CreatePostError(
             message: 'Network connection failed',
             code: 'network_error',
@@ -286,7 +309,9 @@ void main() {
     });
 
     group('Discard Confirmation', () {
-      testWidgets('shows discard dialog when closing with unsaved content', (tester) async {
+      testWidgets('shows discard dialog when closing with unsaved content', (
+        tester,
+      ) async {
         await tester.pumpWidget(createTestWidget(user: createTestUser()));
         await tester.pumpAndSettle();
 
@@ -302,7 +327,10 @@ void main() {
 
         // Should show discard dialog
         expect(find.text('Discard post?'), findsOneWidget);
-        expect(find.text('Your post will be lost if you close this screen.'), findsOneWidget);
+        expect(
+          find.text('Your post will be lost if you close this screen.'),
+          findsOneWidget,
+        );
         expect(find.text('Keep editing'), findsOneWidget);
         expect(find.text('Discard'), findsOneWidget);
       });
@@ -325,9 +353,7 @@ void main() {
   group('PostCreationNotifier Unit Tests', () {
     test('updateText updates state', () {
       final container = ProviderContainer(
-        overrides: [
-          postRepositoryProvider.overrideWithValue(mockRepository),
-        ],
+        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
       );
       addTearDown(container.dispose);
 
@@ -339,9 +365,7 @@ void main() {
 
     test('validate returns error for empty text', () {
       final container = ProviderContainer(
-        overrides: [
-          postRepositoryProvider.overrideWithValue(mockRepository),
-        ],
+        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
       );
       addTearDown(container.dispose);
 
@@ -353,9 +377,7 @@ void main() {
 
     test('validate returns error for text exceeding max length', () {
       final container = ProviderContainer(
-        overrides: [
-          postRepositoryProvider.overrideWithValue(mockRepository),
-        ],
+        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
       );
       addTearDown(container.dispose);
 
@@ -368,9 +390,7 @@ void main() {
 
     test('validate returns null for valid text', () {
       final container = ProviderContainer(
-        overrides: [
-          postRepositoryProvider.overrideWithValue(mockRepository),
-        ],
+        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
       );
       addTearDown(container.dispose);
 
@@ -383,9 +403,7 @@ void main() {
 
     test('reset clears state', () {
       final container = ProviderContainer(
-        overrides: [
-          postRepositoryProvider.overrideWithValue(mockRepository),
-        ],
+        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
       );
       addTearDown(container.dispose);
 
@@ -442,10 +460,7 @@ void main() {
 
     test('isBlocked returns true for CreatePostBlocked', () {
       const state = PostCreationState(
-        result: CreatePostBlocked(
-          message: 'Blocked',
-          categories: [],
-        ),
+        result: CreatePostBlocked(message: 'Blocked', categories: []),
       );
       expect(state.isBlocked, isTrue);
       expect(state.isSuccess, isFalse);

@@ -348,7 +348,7 @@ describe('Invite Store', () => {
       const invites = await listInvites({ unused: true });
 
       expect(invites.length).toBe(1);
-      expect(invites[0].usedAt).toBeNull();
+      expect(invites[0]!.usedAt).toBeNull();
     });
   });
 

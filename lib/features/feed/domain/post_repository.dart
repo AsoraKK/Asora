@@ -55,11 +55,7 @@ class CreatePostError extends CreatePostResult {
   final String? code;
   final dynamic originalError;
 
-  const CreatePostError({
-    required this.message,
-    this.code,
-    this.originalError,
-  });
+  const CreatePostError({required this.message, this.code, this.originalError});
 }
 
 /// Request model for creating a post
@@ -67,10 +63,7 @@ class CreatePostRequest {
   final String text;
   final String? mediaUrl;
 
-  const CreatePostRequest({
-    required this.text,
-    this.mediaUrl,
-  });
+  const CreatePostRequest({required this.text, this.mediaUrl});
 
   Map<String, dynamic> toJson() => {
     'text': text,
@@ -102,10 +95,7 @@ abstract class PostRepository {
   ///
   /// Returns true if deletion was successful
   /// Throws [PostException] on failure
-  Future<bool> deletePost({
-    required String postId,
-    required String token,
-  });
+  Future<bool> deletePost({required String postId, required String token});
 
   /// Get a single post by ID
   ///
@@ -114,10 +104,7 @@ abstract class PostRepository {
   ///
   /// Returns the post if found
   /// Throws [PostException] if not found or on failure
-  Future<Post> getPost({
-    required String postId,
-    String? token,
-  });
+  Future<Post> getPost({required String postId, String? token});
 }
 
 /// Domain exception for post operations

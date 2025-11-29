@@ -117,9 +117,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         style: GoogleFonts.sora(fontSize: 16),
                         decoration: InputDecoration(
                           hintText: "What's on your mind?",
-                          hintStyle: GoogleFonts.sora(
-                            color: theme.hintColor,
-                          ),
+                          hintStyle: GoogleFonts.sora(color: theme.hintColor),
                           border: InputBorder.none,
                           errorText: state.validationError,
                           counterText:
@@ -140,14 +138,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             // Bottom toolbar
             SafeArea(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(
-                      color: theme.dividerColor,
-                      width: 1,
-                    ),
+                    top: BorderSide(color: theme.dividerColor, width: 1),
                   ),
                 ),
                 child: Row(
@@ -225,18 +222,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   void _handleAddMedia() {
     // TODO: Implement media picker
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Media upload coming soon')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Media upload coming soon')));
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Post created successfully!',
-          style: GoogleFonts.sora(),
-        ),
+        content: Text('Post created successfully!', style: GoogleFonts.sora()),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
@@ -266,11 +260,7 @@ class _ContentBlockedBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.block,
-                color: theme.colorScheme.error,
-                size: 20,
-              ),
+              Icon(Icons.block, color: theme.colorScheme.error, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -284,10 +274,7 @@ class _ContentBlockedBanner extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            result.message,
-            style: GoogleFonts.sora(fontSize: 14),
-          ),
+          Text(result.message, style: GoogleFonts.sora(fontSize: 14)),
           if (result.categories.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -295,12 +282,11 @@ class _ContentBlockedBanner extends StatelessWidget {
               runSpacing: 4,
               children: result.categories.map((category) {
                 return Chip(
-                  label: Text(
-                    category,
-                    style: GoogleFonts.sora(fontSize: 12),
-                  ),
+                  label: Text(category, style: GoogleFonts.sora(fontSize: 12)),
                   visualDensity: VisualDensity.compact,
-                  backgroundColor: theme.colorScheme.error.withValues(alpha: 0.2),
+                  backgroundColor: theme.colorScheme.error.withValues(
+                    alpha: 0.2,
+                  ),
                 );
               }).toList(),
             ),
@@ -383,11 +369,7 @@ class _ErrorBanner extends StatelessWidget {
       color: theme.colorScheme.error.withValues(alpha: 0.1),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: theme.colorScheme.error,
-            size: 20,
-          ),
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -418,10 +400,7 @@ class _AuthRequiredCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(
-              Icons.lock_outline,
-              color: theme.colorScheme.primary,
-            ),
+            Icon(Icons.lock_outline, color: theme.colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
