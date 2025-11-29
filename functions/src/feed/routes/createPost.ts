@@ -116,9 +116,7 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
     };
 
     const container = getTargetDatabase().posts;
-    const { resource, requestCharge } = await container.items.create<PostDocument>(postDocument, {
-      partitionKey: principal.sub,
-    });
+    const { resource, requestCharge } = await container.items.create<PostDocument>(postDocument);
 
     const duration = performance.now() - start;
 
