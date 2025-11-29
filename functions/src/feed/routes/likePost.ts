@@ -8,6 +8,7 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import { awardPostLiked, revokePostLiked } from '@shared/services/reputationService';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -137,6 +138,19 @@ export const likePost = requireAuth(async (req: AuthenticatedRequest, context: I
       ru: totalRU.toFixed(2),
     });
 
+    // ─────────────────────────────────────────────────────────────
+    // Award Reputation - +2 to post author (fire and forget)
+    // ─────────────────────────────────────────────────────────────
+    const authorId = postResponse.resource.authorId;
+    awardPostLiked(authorId, postId, principal.sub).catch(err => {
+      context.log('posts.like.reputation_error', {
+        postId,
+        authorId,
+        likerId: principal.sub,
+        error: err.message,
+      });
+    });
+
     return ok({
       status: 'success',
       liked: true,
@@ -257,6 +271,19 @@ export const unlikePost = requireAuth(async (req: AuthenticatedRequest, context:
       likeCount: updatedPost?.stats?.likes ?? newLikes,
       durationMs: duration.toFixed(2),
       ru: totalRU.toFixed(2),
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Revoke Reputation - Remove the +2 from post author (fire and forget)
+    // ─────────────────────────────────────────────────────────────
+    const authorId = postResponse.resource.authorId;
+    revokePostLiked(authorId, postId, principal.sub).catch(err => {
+      context.log('posts.unlike.reputation_error', {
+        postId,
+        authorId,
+        unlikerId: principal.sub,
+        error: err.message,
+      });
     });
 
     return ok({

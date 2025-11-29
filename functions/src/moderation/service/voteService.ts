@@ -11,6 +11,7 @@ import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import type { JWTPayload } from 'jose';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { penalizeContentRemoval } from '@shared/services/reputationService';
 
 // Request validation schema - appealId is optional in body since it comes from route param
 const VoteOnAppealSchema = z.object({
@@ -321,11 +322,33 @@ async function updateContentBasedOnDecision(
       content.restoredAt = new Date().toISOString();
       context.log(`Content ${contentId} restored after successful appeal`);
     } else {
-      // Appeal rejected - keep content hidden
+      // Appeal rejected - keep content hidden and penalize author
       content.status = 'hidden_confirmed';
       content.appealStatus = 'rejected';
       content.confirmedHiddenAt = new Date().toISOString();
       context.log(`Content ${contentId} remains hidden after rejected appeal`);
+
+      // ─────────────────────────────────────────────────────────────
+      // Reputation Penalty - Deduct reputation for confirmed violation
+      // ─────────────────────────────────────────────────────────────
+      const authorId = content.authorId || content.userId;
+      if (authorId && (contentType === 'post' || contentType === 'comment')) {
+        // Use flagReason or moderationCategory if available for severity-based penalty
+        const violationType = content.flagReason || content.moderationCategory || content.moderation?.categories?.[0];
+        
+        penalizeContentRemoval(
+          authorId,
+          contentId,
+          contentType as 'post' | 'comment',
+          violationType
+        ).catch(err => {
+          context.log('moderation.reputation_penalty_error', {
+            contentId,
+            authorId,
+            error: err.message,
+          });
+        });
+      }
     }
 
     content.updatedAt = new Date().toISOString();

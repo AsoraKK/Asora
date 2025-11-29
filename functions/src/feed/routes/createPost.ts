@@ -8,6 +8,7 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import { awardPostCreated } from '@shared/services/reputationService';
 import {
   createHiveClient,
   ModerationAction,
@@ -332,6 +333,17 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
       moderationStatus: moderationMeta.status,
       durationMs: duration.toFixed(2),
       ru: requestCharge?.toFixed(2) ?? '0',
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // Award Reputation - Fire and forget (don't block response)
+    // ─────────────────────────────────────────────────────────────
+    awardPostCreated(principal.sub, postId).catch(err => {
+      context.log('posts.create.reputation_error', {
+        postId,
+        authorId: principal.sub,
+        error: err.message,
+      });
     });
 
     const postRecord: PostRecord = {
