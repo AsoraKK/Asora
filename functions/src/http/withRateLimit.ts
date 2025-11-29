@@ -141,14 +141,18 @@ function ensureHeaders(response: HttpResponseInit): Record<string, string> {
 
   if (response.headers instanceof Headers) {
     const record: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      record[key] = value;
+    response.headers.forEach((value, headerKey) => {
+      record[headerKey] = value;
     });
     response.headers = record;
   } else if (Array.isArray(response.headers)) {
     const record: Record<string, string> = {};
-    for (const [key, value] of response.headers) {
-      record[key] = value;
+    for (const entry of response.headers) {
+      const headerKey = entry[0];
+      const headerValue = entry[1];
+      if (headerKey !== undefined && headerValue !== undefined) {
+        record[headerKey] = headerValue;
+      }
     }
     response.headers = record;
   }

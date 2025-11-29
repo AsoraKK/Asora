@@ -440,9 +440,10 @@ function buildQuery(
   let requiresCrossPartition = false;
 
   if (authorIds && authorIds.length === 1) {
+    const authorId = authorIds[0]!; // Length checked
     clauses.push('c.authorId = @authorId');
-    parameters.push({ name: '@authorId', value: authorIds[0] });
-    partitionKey = authorIds[0];
+    parameters.push({ name: '@authorId', value: authorId });
+    partitionKey = authorId;
   } else if (authorIds && authorIds.length > 1) {
     clauses.push('ARRAY_CONTAINS(@authorIds, c.authorId)');
     parameters.push({ name: '@authorIds', value: authorIds });
@@ -473,7 +474,7 @@ function appendVisibilityClauses(
 
   if (unique.length === 1) {
     clauses.push('c.visibility = @visibility0');
-    parameters.push({ name: '@visibility0', value: unique[0] });
+    parameters.push({ name: '@visibility0', value: unique[0]! }); // Length checked
     return;
   }
 

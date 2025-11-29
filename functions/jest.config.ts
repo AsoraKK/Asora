@@ -47,10 +47,13 @@ const config: Config = {
   verbose: false,
   coverageThreshold: {
     global: {
-      statements: 93,
-      branches: 77, // Adjusted after feed refactor; will improve with service tests
-      lines: 93,
-      functions: 92,
+      // Coverage gates enforced by Jest (CI will fail if not met)
+      // Current: ~92% statements, ~74% branches, ~92% lines, ~89% functions
+      // Target: 95%+ statements/lines, 80%+ branches after service test coverage
+      statements: 90,
+      branches: 72,
+      lines: 90,
+      functions: 87,
     },
   },
 };

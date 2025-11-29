@@ -63,7 +63,7 @@ export async function validateRefreshToken(jti: string): Promise<RefreshTokenRec
     return null;
   }
 
-  const row = result.rows[0];
+  const row = result.rows[0]!; // Length checked above
   return {
     jti: row.jti,
     userId: row.user_uuid,

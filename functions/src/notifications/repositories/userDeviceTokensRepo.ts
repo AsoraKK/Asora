@@ -44,10 +44,13 @@ export class UserDeviceTokensRepository {
 
     if (activeDevices.length >= MAX_DEVICES_PER_USER) {
       // Evict oldest device (by lastSeenAt)
-      const oldest = activeDevices.sort(
+      const sorted = activeDevices.sort(
         (a, b) => new Date(a.lastSeenAt).getTime() - new Date(b.lastSeenAt).getTime()
-      )[0];
-      evicted = await this.revoke(userId, oldest.deviceId);
+      );
+      const oldest = sorted[0];
+      if (oldest) {
+        evicted = await this.revoke(userId, oldest.deviceId);
+      }
     }
 
     // Create new token

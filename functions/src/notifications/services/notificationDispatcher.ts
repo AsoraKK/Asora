@@ -284,7 +284,7 @@ export class NotificationDispatcher {
 
     if (recent.length > 0) {
       // Return the notification ID to update instead of creating new
-      return recent[0].id;
+      return recent[0]!.id; // Length checked above
     }
 
     return undefined;

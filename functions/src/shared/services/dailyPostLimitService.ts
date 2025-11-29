@@ -96,7 +96,10 @@ const COUNTER_TTL_SECONDS = 7 * 24 * 60 * 60;
  * Get current UTC date string (YYYY-MM-DD)
  */
 export function getUtcDateString(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0];
+  const isoString = date.toISOString();
+  const datePart = isoString.split('T')[0];
+  // ISO format guarantees YYYY-MM-DDTHH:mm:ss.sssZ, so split always has date
+  return datePart ?? isoString.slice(0, 10);
 }
 
 /**

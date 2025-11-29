@@ -42,6 +42,10 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      - name: TypeScript type-check
+        working-directory: functions
+        run: npm run typecheck
+
       - name: Run tests with coverage
         run: ./scripts/test-with-coverage.sh
 

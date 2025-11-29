@@ -231,6 +231,9 @@ jobs:
       - name: npm ci (strict)
         run: npm ci
 
+      - name: TypeScript type-check (fail fast)
+        run: npm run typecheck
+
       - name: Run tests (if present)
         run: |
           set -euo pipefail
