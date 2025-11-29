@@ -1,8 +1,7 @@
 import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
-import { requireAuth } from '@shared/middleware/auth';
+import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
-import { ensurePrivacyAdmin } from '../common/authz';
 import { clearLegalHold } from '../service/dsrStore';
 
 type Authed = HttpRequest & { principal: Principal };
@@ -11,7 +10,6 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
   const cors = handleCorsAndMethod(req.method ?? 'POST', ['POST']);
   if (cors.shouldReturn && cors.response) return cors.response;
   try {
-    ensurePrivacyAdmin(req.principal);
     const id = req.params?.id;
     if (!id) return createErrorResponse(400, 'missing_id');
     await clearLegalHold(id);
@@ -21,7 +19,7 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
   }
 }
 
-const protectedHandler = requireAuth(handler);
+const protectedHandler = requirePrivacyAdmin(handler);
 
 app.http('privacy-admin-dsr-clear-hold', {
   methods: ['POST', 'OPTIONS'],

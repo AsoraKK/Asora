@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { requireAuth } from '@shared/middleware/auth';
+import { requireModerator } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -8,7 +8,13 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
-const protectedVoteOnAppeal = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+/**
+ * Vote on Appeal - Requires moderator or admin role
+ *
+ * This endpoint allows moderators to vote on content appeals.
+ * Returns 401 if not authenticated, 403 if lacking moderator/admin role.
+ */
+const protectedVoteOnAppeal = requireModerator(async (req: AuthenticatedRequest, context: InvocationContext) => {
   try {
     const appealId = req.params.appealId as string | undefined;
     const { voteOnAppealHandler } = await import('@moderation/service/voteService');

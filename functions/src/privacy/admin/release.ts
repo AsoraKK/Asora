@@ -1,8 +1,7 @@
 import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
-import { requireAuth } from '@shared/middleware/auth';
+import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
-import { ensurePrivacyAdmin } from '../common/authz';
 import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { createAuditEntry } from '../common/models';
 import { isBeyondRetention } from '../common/retention';
@@ -16,7 +15,6 @@ export async function releaseHandler(req: Authed): Promise<HttpResponseInit> {
   const cors = handleCorsAndMethod(req.method ?? 'POST', ['POST']);
   if (cors.shouldReturn && cors.response) return cors.response;
   try {
-    ensurePrivacyAdmin(req.principal);
     const id = req.params?.id;
     if (!id) return createErrorResponse(400, 'missing_id');
     const existing = await getDsrRequest(id);
@@ -46,7 +44,7 @@ export async function releaseHandler(req: Authed): Promise<HttpResponseInit> {
   }
 }
 
-const protectedHandler = requireAuth(releaseHandler);
+const protectedHandler = requirePrivacyAdmin(releaseHandler);
 
 app.http('privacy-admin-dsr-release', {
   methods: ['POST', 'OPTIONS'],

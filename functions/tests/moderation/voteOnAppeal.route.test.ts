@@ -40,7 +40,8 @@ describe('voteOnAppeal route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { sub: 'moderator-2', raw: { roles: ['moderator'] } } as any;
+      // Principal must include roles at top level for requireModerator guard
+      return { sub: 'moderator-2', roles: ['moderator'], raw: { roles: ['moderator'] } } as any;
     });
   });
 
@@ -64,7 +65,8 @@ describe('voteOnAppeal route', () => {
     const response = await voteOnAppealRoute(httpReqMock({ method: 'POST' }), contextStub);
     expect(handler).not.toHaveBeenCalled();
     expect(response.status).toBe(401);
-    expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
+    // requireModerator returns detailed message on auth failure
+    expect(JSON.parse(response.body)).toMatchObject({ error: 'invalid_request' });
   });
 
   it('delegates to handler with parsed parameters', async () => {
