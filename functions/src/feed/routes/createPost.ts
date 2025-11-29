@@ -10,6 +10,10 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostCreated } from '@shared/services/reputationService';
 import {
+  checkAndIncrementPostCount,
+  DailyPostLimitExceededError,
+} from '@shared/services/dailyPostLimitService';
+import {
   createHiveClient,
   ModerationAction,
   HiveAPIError,
@@ -232,6 +236,49 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
   }
 
   try {
+    // ─────────────────────────────────────────────────────────────
+    // Daily Post Limit - Check tier-based limit before proceeding
+    // ─────────────────────────────────────────────────────────────
+    try {
+      const limitResult = await checkAndIncrementPostCount(principal.sub, principal.tier);
+      context.log('posts.create.limitCheck', {
+        userId: principal.sub.slice(0, 8),
+        tier: principal.tier ?? 'free',
+        newCount: limitResult.newCount,
+        remaining: limitResult.remaining,
+        limit: limitResult.limit,
+      });
+    } catch (limitError) {
+      if (limitError instanceof DailyPostLimitExceededError) {
+        context.log('posts.create.limitExceeded', {
+          userId: principal.sub.slice(0, 8),
+          tier: limitError.tier,
+          count: limitError.currentCount,
+          limit: limitError.limit,
+        });
+
+        trackAppEvent({
+          name: 'post_limit_exceeded',
+          properties: {
+            authorId: principal.sub,
+            tier: limitError.tier,
+            currentCount: limitError.currentCount,
+            limit: limitError.limit,
+          },
+        });
+
+        return {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': '86400', // 24 hours
+          },
+          body: JSON.stringify(limitError.toResponse()),
+        };
+      }
+      throw limitError;
+    }
+
     const now = Date.now();
     const postId = crypto.randomUUID();
 

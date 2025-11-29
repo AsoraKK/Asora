@@ -214,6 +214,7 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
       sub: payload.sub,
       name: typeof payload.name === 'string' ? payload.name : undefined,
       email: extractEmail(payload),
+      tier: typeof payload.tier === 'string' ? payload.tier : undefined,
       scp: extractScpClaim(payload),
       roles: extractRoles(payload),
       raw: payload,

@@ -34,6 +34,17 @@ jest.mock('@shared/clients/cosmos', () => ({
       },
     },
   })),
+  getCosmosDatabase: jest.fn(() => ({
+    container: jest.fn(() => ({
+      item: jest.fn(() => ({
+        read: jest.fn().mockRejectedValue(Object.assign(new Error('Not found'), { code: 404 })),
+        replace: jest.fn().mockResolvedValue({ resource: {} }),
+      })),
+      items: {
+        create: jest.fn().mockResolvedValue({ resource: {} }),
+      },
+    })),
+  })),
 }));
 
 jest.mock('@shared/appInsights', () => ({
