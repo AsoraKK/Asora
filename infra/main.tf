@@ -215,6 +215,30 @@ resource "azurerm_cosmosdb_sql_container" "posts" {
   partition_key_paths = ["/authorId"]
 }
 
+resource "azurerm_cosmosdb_sql_container" "flags" {
+  name                = "flags"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
+resource "azurerm_cosmosdb_sql_container" "appeals" {
+  name                = "appeals"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
+resource "azurerm_cosmosdb_sql_container" "moderation_decisions" {
+  name                = "moderation_decisions"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
 ############################################
 # REDIS CACHE (Optional - only when enable_redis_cache=true)
 ############################################

@@ -17,12 +17,12 @@ Standardise Cosmos SQL containers on the following partition keys and indexing m
 | `posts`                | `/authorId`      | Author timeline queries; composite indexes cover author/time and score ordering.      |
 | `comments`             | `/postId`        | Thread paging per post ordered by `createdAt`.                                       |
 | `likes`                | `/contentId`     | Point lookups and per-content aggregations.                                          |
-| `flags` (`content_flags` in code) | `/targetId`     | Moderation triage sorted by recency per target.                                       |
-| `appeals`              | `/id`            | Appeals are globally unique; moderation workflows page by `createdAt`.               |
+| `flags` (`content_flags` in code) | `/contentId`    | Moderation triage sorted by recency per content. Changed from `/targetId` to align with TS types. |
+| `appeals`              | `/contentId`     | Appeals grouped by content; moderation workflows page by `createdAt`. Changed from `/id` for query efficiency. |
 | `votes` (`appeal_votes` in code) | `/appealId`     | Votes roll up per appeal; chronological paging required.                              |
 | `users`                | `/id`            | User profile projections; point reads only.                                          |
 | `config`               | `/partitionKey`  | Single logical partition (`"moderation"`); all other paths excluded from indexing.   |
-| `moderation_decisions` | `/itemId`        | Stores decisions per moderated item; sorted by `decidedAt`.                          |
+| `moderation_decisions` | `/contentId`     | Stores decisions per moderated item; sorted by `decidedAt`. Changed from `/itemId` to align with TS types. |
 
 ### Indexing templates
 - Included paths default to `/*` except for `config`, which will exclude unused paths to reduce RU.
@@ -30,10 +30,10 @@ Standardise Cosmos SQL containers on the following partition keys and indexing m
 - Composite indexes:
   - `posts`: (`/authorId` ASC, `/createdAt` DESC), (`/createdAt` DESC, `/score` DESC), (`/visibility` ASC, `/createdAt` DESC).
   - `comments`: (`/postId` ASC, `/createdAt` ASC).
-  - `flags`: (`/targetId` ASC, `/createdAt` DESC).
-  - `appeals`: (`/createdAt` DESC, `/status` ASC).
+  - `flags`: (`/contentId` ASC, `/createdAt` DESC).
+  - `appeals`: (`/contentId` ASC, `/createdAt` DESC, `/status` ASC).
   - `votes`: (`/appealId` ASC, `/createdAt` ASC).
-  - `moderation_decisions`: (`/itemId` ASC, `/decidedAt` DESC).
+  - `moderation_decisions`: (`/contentId` ASC, `/decidedAt` DESC).
   - `likes`, `users`, `config`: no composites required.
 
 ### Throughput mode
