@@ -1,84 +1,8 @@
 import type { InvocationContext } from '@azure/functions';
-import type { SqlParameter } from '@azure/cosmos';
-import { getCosmosDatabase } from '@shared/clients/cosmos';
-import { withClient } from '@shared/clients/postgres';
 import { createAuditEntry, DsrRequest } from '../common/models';
 import { emitSpan } from '../common/telemetry';
 import { patchDsrRequest, hasLegalHold } from '../service/dsrStore';
-
-const CONTAINERS_TO_MARK: Array<{
-  name: string;
-  filter: string;
-  params: SqlParameter[];
-  holdScope?: string;
-}> = [
-  { name: 'users', filter: 'c.id = @userId', params: [{ name: '@userId', value: '' }], holdScope: 'user' },
-  { name: 'posts', filter: 'c.authorId = @userId', params: [{ name: '@userId', value: '' }], holdScope: 'post' },
-  { name: 'comments', filter: 'c.authorId = @userId', params: [{ name: '@userId', value: '' }] },
-  { name: 'likes', filter: 'c.userId = @userId', params: [{ name: '@userId', value: '' }] },
-  { name: 'content_flags', filter: 'c.authorId = @userId', params: [{ name: '@userId', value: '' }] },
-  { name: 'appeals', filter: 'c.userId = @userId', params: [{ name: '@userId', value: '' }] },
-  { name: 'appeal_votes', filter: 'c.userId = @userId', params: [{ name: '@userId', value: '' }] },
-];
-
-async function markDeletedRecords(
-  containerName: string,
-  filter: string,
-  params: SqlParameter[],
-  now: string,
-  holdScope?: string,
-) {
-  const db = getCosmosDatabase();
-  const container = db.container(containerName);
-  const iterator = container.items.query({
-    query: `SELECT * FROM c WHERE ${filter}`,
-    parameters: params,
-  });
-  const { resources } = await iterator.fetchAll();
-
-  for (const item of resources) {
-    if (holdScope && (await hasLegalHold(holdScope, item.id))) {
-      continue;
-    }
-
-    try {
-      await container.item(item.id, item.id).replace({
-        ...item,
-        deleted: true,
-        deletedAt: now,
-        deletedBy: 'privacy_delete_job',
-      });
-    } catch {
-      // continue on failure; best-effort
-    }
-  }
-}
-
-async function flagPostgresRecords(userId: string, timestamp: string, context: InvocationContext) {
-  try {
-    await withClient(async client => {
-      await client.query(
-        `
-          UPDATE users
-          SET deleted = TRUE, deleted_at = $1, deleted_by = 'privacy_delete_job'
-          WHERE user_uuid = $2
-        `,
-        [timestamp, userId],
-      );
-      await client.query(
-        `
-          UPDATE auth_identities
-          SET deleted = TRUE, deleted_at = $1
-          WHERE user_uuid = $2
-        `,
-        [timestamp, userId],
-      );
-    });
-    emitSpan(context, 'delete.postgres', { userId });
-  } catch (error: any) {
-    context.log('dsr.delete.postgres.error', { userId, message: error?.message });
-  }
-}
+import { executeCascadeDelete } from '../service/cascadeDelete';
 
 export async function runDeleteJob(request: DsrRequest, context: InvocationContext): Promise<void> {
   const requestId = request.id;
@@ -94,6 +18,7 @@ export async function runDeleteJob(request: DsrRequest, context: InvocationConte
   );
 
   try {
+    // Check for user-level legal hold before proceeding
     if (await hasLegalHold('user', request.userId)) {
       const message = 'Delete blocked: active legal hold';
       await patchDsrRequest(
@@ -109,15 +34,56 @@ export async function runDeleteJob(request: DsrRequest, context: InvocationConte
       return;
     }
 
-    await flagPostgresRecords(request.userId, now, context);
-    emitSpan(context, 'delete.soft', { userId: request.userId });
+    // Execute full cascade deletion/anonymization
+    emitSpan(context, 'delete.cascade.start', { userId: request.userId });
+    
+    const cascadeResult = await executeCascadeDelete({
+      userId: request.userId,
+      deletedBy: `dsr:${requestId}`,
+    });
 
-    for (const bucket of CONTAINERS_TO_MARK) {
-      const parameters = bucket.params.map(param =>
-        param.name === '@userId' ? { ...param, value: request.userId } : param,
+    // Log cascade results
+    context.log('dsr.delete.cascade.result', {
+      requestId,
+      userId: request.userId,
+      cosmos: cascadeResult.cosmos,
+      postgres: cascadeResult.postgres,
+      errorCount: cascadeResult.errors.length,
+    });
+
+    // Check if there were critical errors
+    if (cascadeResult.errors.length > 0) {
+      // Log each error
+      for (const error of cascadeResult.errors) {
+        context.log('dsr.delete.cascade.error', { requestId, ...error });
+      }
+
+      // Check if it's a complete failure (e.g., legal hold blocked everything)
+      const userHoldError = cascadeResult.errors.find(e => 
+        e.container === 'user' && e.error.includes('legal hold')
       );
-      await markDeletedRecords(bucket.name, bucket.filter, parameters, now, bucket.holdScope);
+      
+      if (userHoldError) {
+        await patchDsrRequest(
+          requestId,
+          {
+            status: 'failed',
+            failureReason: userHoldError.error,
+            completedAt: new Date().toISOString(),
+          },
+          createAuditEntry({ by: 'system', event: 'delete.hold', meta: { errors: cascadeResult.errors } }),
+        );
+        emitSpan(context, 'delete.hold', { requestId });
+        return;
+      }
     }
+
+    emitSpan(context, 'delete.cascade.complete', { 
+      requestId,
+      cosmosDeleted: Object.values(cascadeResult.cosmos.deleted).reduce((a, b) => a + b, 0),
+      cosmosAnonymized: Object.values(cascadeResult.cosmos.anonymized).reduce((a, b) => a + b, 0),
+      postgresDeleted: Object.values(cascadeResult.postgres.deleted).reduce((a, b) => a + b, 0),
+    });
 
     await patchDsrRequest(
       requestId,
@@ -126,7 +92,15 @@ export async function runDeleteJob(request: DsrRequest, context: InvocationConte
         completedAt: new Date().toISOString(),
         failureReason: undefined,
       },
-      createAuditEntry({ by: 'system', event: 'delete.succeeded' }),
+      createAuditEntry({ 
+        by: 'system', 
+        event: 'delete.succeeded',
+        meta: {
+          cosmos: cascadeResult.cosmos,
+          postgres: cascadeResult.postgres,
+          errorCount: cascadeResult.errors.length,
+        },
+      }),
     );
     emitSpan(context, 'delete.completed', { requestId });
   } catch (error: any) {
