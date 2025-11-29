@@ -12,10 +12,10 @@ import type { JWTPayload } from 'jose';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 
-// Request validation schema
+// Request validation schema - appealId is optional in body since it comes from route param
 const VoteOnAppealSchema = z.object({
-  appealId: z.string().min(1),
-  vote: z.enum(['approve', 'reject']),
+  appealId: z.string().min(1).optional(), // Optional: can come from route param instead
+  vote: z.enum(['approve', 'reject'] as const),
   reason: z.string().min(10).max(500),
   confidence: z.number().min(1).max(10).default(5),
   notes: z.string().max(1000).optional(),
@@ -85,8 +85,16 @@ export async function voteOnAppealHandler({
       };
     }
 
-    const { appealId, vote, reason, confidence, notes } = validationResult.data;
-    const targetAppealId = appealIdOverride ?? appealId;
+    const { appealId: bodyAppealId, vote, reason, confidence, notes } = validationResult.data;
+    // Route param takes precedence over body
+    const targetAppealId = appealIdOverride ?? bodyAppealId;
+
+    if (!targetAppealId) {
+      return {
+        status: 400,
+        jsonBody: { error: 'Appeal ID is required (provide in route or request body)' },
+      };
+    }
 
     // 4. Initialize Cosmos DB
     const database = getCosmosDatabase();
@@ -256,9 +264,9 @@ export async function voteOnAppealHandler({
       appealDoc.votingStatus = 'in_progress';
     }
 
-    await appealsContainer.item(appealId, appealId).replace(appealDoc);
+    await appealsContainer.item(targetAppealId, targetAppealId).replace(appealDoc);
 
-    context.log(`Vote cast on appeal ${appealId} by ${userId}: ${vote} (weight: ${voterWeight})`);
+    context.log(`Vote cast on appeal ${targetAppealId} by ${userId}: ${vote} (weight: ${voterWeight})`);
 
     return {
       status: 200,
