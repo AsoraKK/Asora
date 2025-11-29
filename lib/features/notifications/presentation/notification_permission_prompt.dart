@@ -63,108 +63,118 @@ class _NotificationPermissionPromptState
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom -
+                  48, // padding
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 32),
 
-              // Illustration
-              Icon(
-                Icons.notifications_active_outlined,
-                size: 120,
-                color: colorScheme.primary,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Title
-              Text(
-                'Stay Connected',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                // Illustration
+                Icon(
+                  Icons.notifications_active_outlined,
+                  size: 100,
+                  color: colorScheme.primary,
                 ),
-                textAlign: TextAlign.center,
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-              // Body text
-              Text(
-                'Get notified when people interact with your posts, when friends '
-                'post new content, and important updates about your account.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                // Title
+                Text(
+                  'Stay Connected',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 12),
 
-              // Benefits list
-              const _BenefitItem(
-                icon: Icons.people_outline,
-                title: 'Social Updates',
-                subtitle: 'Comments, likes, and new followers',
-              ),
-
-              const SizedBox(height: 16),
-
-              const _BenefitItem(
-                icon: Icons.security_outlined,
-                title: 'Security Alerts',
-                subtitle: 'Important account and safety notifications',
-              ),
-
-              const SizedBox(height: 16),
-
-              const _BenefitItem(
-                icon: Icons.tune_outlined,
-                title: 'Full Control',
-                subtitle: 'Customize categories and quiet hours anytime',
-              ),
-
-              const Spacer(),
-
-              // Enable button
-              FilledButton(
-                onPressed: _isRequesting ? null : _handleEnableNotifications,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                // Body text
+                Text(
+                  'Get notified when people interact with your posts, when friends '
+                  'post new content, and important updates about your account.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                child: _isRequesting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Enable Notifications'),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 24),
 
-              // Not now button
-              TextButton(
-                onPressed: _isRequesting ? null : _handleNotNow,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                // Benefits list
+                const _BenefitItem(
+                  icon: Icons.people_outline,
+                  title: 'Social Updates',
+                  subtitle: 'Comments, likes, and new followers',
                 ),
-                child: const Text('Not Now'),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-              // Privacy note
-              Text(
-                'You can change notification preferences in Settings at any time.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                const _BenefitItem(
+                  icon: Icons.security_outlined,
+                  title: 'Security Alerts',
+                  subtitle: 'Important account and safety notifications',
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+
+                const SizedBox(height: 12),
+
+                const _BenefitItem(
+                  icon: Icons.tune_outlined,
+                  title: 'Full Control',
+                  subtitle: 'Customize categories and quiet hours anytime',
+                ),
+
+                const SizedBox(height: 32),
+
+                // Enable button
+                FilledButton(
+                  onPressed: _isRequesting ? null : _handleEnableNotifications,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isRequesting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Enable Notifications'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Not now button
+                TextButton(
+                  onPressed: _isRequesting ? null : _handleNotNow,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Not Now'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Privacy note
+                Text(
+                  'You can change notification preferences in Settings at any time.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

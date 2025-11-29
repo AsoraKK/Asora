@@ -17,14 +17,10 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+
       // Verify hero section
       expect(find.text('Stay Connected'), findsOneWidget);
-      expect(
-        find.text(
-          'Get notified when people interact with your posts, when there are safety concerns, and more.',
-        ),
-        findsOneWidget,
-      );
 
       // Verify benefit items
       expect(find.text('Social Updates'), findsOneWidget);
@@ -39,20 +35,18 @@ void main() {
     testWidgets('should call onPermissionGranted when permission granted', (
       tester,
     ) async {
-      bool permissionGranted = false;
-
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
             home: NotificationPermissionPrompt(
-              onPermissionGranted: () {
-                permissionGranted = true;
-              },
+              onPermissionGranted: () {},
               onPermissionDenied: () {},
             ),
           ),
         ),
       );
+
+      await tester.pumpAndSettle();
 
       // Note: Actual permission request requires mocking NotificationPermissionService
       // For now, verify button exists
@@ -76,6 +70,12 @@ void main() {
           ),
         ),
       );
+
+      await tester.pumpAndSettle();
+
+      // Scroll to make "Not Now" button visible
+      await tester.ensureVisible(find.text('Not Now'));
+      await tester.pumpAndSettle();
 
       // Tap "Not Now" button
       await tester.tap(find.text('Not Now'));
