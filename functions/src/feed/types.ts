@@ -33,6 +33,29 @@ export interface PostStats {
   replies: number;
 }
 
+/**
+ * Moderation status for content
+ */
+export type ModerationStatus = 'clean' | 'warned' | 'blocked' | 'pending_review';
+
+/**
+ * Moderation metadata stored with content
+ */
+export interface ModerationMeta {
+  /** Current moderation status */
+  status: ModerationStatus;
+  /** Timestamp of moderation check */
+  checkedAt: number;
+  /** Confidence score from AI moderation (0-1) */
+  confidence?: number;
+  /** Categories flagged by moderation */
+  categories?: string[];
+  /** Human-readable reasons */
+  reasons?: string[];
+  /** Error message if moderation failed */
+  error?: string;
+}
+
 export interface PostRecord {
   postId: string;
   text: string;
@@ -41,6 +64,8 @@ export interface PostRecord {
   createdAt: string;
   updatedAt: string;
   stats: PostStats;
+  /** Moderation metadata (optional for backwards compatibility) */
+  moderation?: ModerationMeta;
 }
 
 export interface CreatePostResult {

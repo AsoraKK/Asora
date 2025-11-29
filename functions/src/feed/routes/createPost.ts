@@ -8,8 +8,14 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import {
+  createHiveClient,
+  ModerationAction,
+  HiveAPIError,
+  type ModerationResult,
+} from '@shared/clients/hive';
 
-import type { CreatePostBody, PostRecord, CreatePostResult } from '@feed/types';
+import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta, ModerationStatus } from '@feed/types';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -32,6 +38,136 @@ interface PostDocument {
     likes: number;
     comments: number;
     replies: number;
+  };
+  moderation?: ModerationMeta;
+}
+
+/**
+ * Content blocked error response
+ */
+interface ContentBlockedResponse {
+  error: string;
+  code: string;
+  categories?: string[];
+}
+
+/**
+ * Moderate content using Hive AI
+ * Returns moderation result or null if moderation should be skipped
+ */
+async function moderateContent(
+  text: string,
+  userId: string,
+  contentId: string,
+  context: InvocationContext
+): Promise<{ result: ModerationResult | null; error?: string }> {
+  // Skip moderation if HIVE_API_KEY is not configured (dev/test environments)
+  if (!process.env.HIVE_API_KEY) {
+    context.log('posts.create.moderation_skipped', { reason: 'no_api_key', contentId });
+    return { result: null };
+  }
+
+  try {
+    const hiveClient = createHiveClient();
+    const start = performance.now();
+
+    const result = await hiveClient.moderateTextContent({
+      text,
+      userId,
+      contentId,
+    });
+
+    const duration = performance.now() - start;
+
+    trackAppMetric({
+      name: 'hive_moderation_duration_ms',
+      value: duration,
+      properties: {
+        action: result.action,
+        contentId,
+      },
+    });
+
+    context.log('posts.create.moderation_complete', {
+      contentId,
+      action: result.action,
+      confidence: result.confidence.toFixed(3),
+      categories: result.categories,
+      durationMs: duration.toFixed(2),
+    });
+
+    return { result };
+  } catch (error) {
+    const isHiveError = error instanceof HiveAPIError;
+    const errorMessage = (error as Error).message;
+    const errorCode = isHiveError ? (error as HiveAPIError).code : 'UNKNOWN_ERROR';
+
+    context.log('posts.create.moderation_error', {
+      contentId,
+      errorCode,
+      message: errorMessage,
+      retryable: isHiveError ? (error as HiveAPIError).retryable : false,
+    });
+
+    trackAppEvent({
+      name: 'moderation_error',
+      properties: {
+        contentId,
+        errorCode,
+        message: errorMessage,
+      },
+    });
+
+    return { result: null, error: errorMessage };
+  }
+}
+
+/**
+ * Map moderation result to status and metadata
+ */
+function buildModerationMeta(
+  result: ModerationResult | null,
+  error?: string
+): ModerationMeta {
+  const now = Date.now();
+
+  if (error) {
+    // Moderation failed - route to pending review
+    return {
+      status: 'pending_review',
+      checkedAt: now,
+      error,
+    };
+  }
+
+  if (!result) {
+    // Moderation skipped - treat as clean
+    return {
+      status: 'clean',
+      checkedAt: now,
+    };
+  }
+
+  let status: ModerationStatus;
+  switch (result.action) {
+    case ModerationAction.BLOCK:
+      status = 'blocked';
+      break;
+    case ModerationAction.WARN:
+      status = 'warned';
+      break;
+    case ModerationAction.ALLOW:
+    default:
+      status = 'clean';
+      break;
+  }
+
+  return {
+    status,
+    checkedAt: now,
+    confidence: result.confidence,
+    categories: result.categories,
+    reasons: result.reasons,
   };
 }
 
@@ -98,6 +234,54 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
     const now = Date.now();
     const postId = crypto.randomUUID();
 
+    // ─────────────────────────────────────────────────────────────
+    // Content Moderation - Check before creating post
+    // ─────────────────────────────────────────────────────────────
+    const { result: moderationResult, error: moderationError } = await moderateContent(
+      validation.text,
+      principal.sub,
+      postId,
+      context
+    );
+
+    // Build moderation metadata
+    const moderationMeta = buildModerationMeta(moderationResult, moderationError);
+
+    // If content is blocked, reject the post immediately
+    if (moderationMeta.status === 'blocked') {
+      context.log('posts.create.blocked', {
+        postId,
+        authorId: principal.sub,
+        categories: moderationMeta.categories,
+        confidence: moderationMeta.confidence,
+      });
+
+      trackAppEvent({
+        name: 'post_blocked',
+        properties: {
+          postId,
+          authorId: principal.sub,
+          categories: moderationMeta.categories?.join(',') ?? '',
+          confidence: moderationMeta.confidence ?? 0,
+        },
+      });
+
+      const blockedResponse: ContentBlockedResponse = {
+        error: 'Content cannot be posted as it violates our community guidelines',
+        code: 'content_blocked',
+        categories: moderationMeta.categories,
+      };
+
+      return {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(blockedResponse),
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Create Post Document
+    // ─────────────────────────────────────────────────────────────
     const postDocument: PostDocument = {
       id: postId,
       postId,
@@ -113,6 +297,7 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
         comments: 0,
         replies: 0,
       },
+      moderation: moderationMeta,
     };
 
     const container = getTargetDatabase().posts;
@@ -136,6 +321,7 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
         authorId: principal.sub,
         textLength: validation.text.length,
         hasMedia: Boolean(validation.mediaUrl),
+        moderationStatus: moderationMeta.status,
         durationMs: duration,
       },
     });
@@ -143,6 +329,7 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
     context.log('posts.create.success', {
       postId,
       authorId: principal.sub,
+      moderationStatus: moderationMeta.status,
       durationMs: duration.toFixed(2),
       ru: requestCharge?.toFixed(2) ?? '0',
     });
@@ -155,6 +342,7 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
       createdAt: new Date(resource?.createdAt ?? now).toISOString(),
       updatedAt: new Date(resource?.updatedAt ?? now).toISOString(),
       stats: resource?.stats ?? { likes: 0, comments: 0, replies: 0 },
+      moderation: moderationMeta,
     };
 
     const result: CreatePostResult = {
