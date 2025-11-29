@@ -271,6 +271,7 @@ void main() {
       when(() => mockUser.id).thenReturn('user123');
       when(() => mockUser.email).thenReturn('test@example.com');
       when(() => mockUser.role).thenReturn(UserRole.user);
+      when(() => mockUser.reputationScore).thenReturn(100);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -303,6 +304,7 @@ void main() {
       final mockNotifier = MockAuthStateNotifier(AsyncValue.data(mockUser));
       when(() => mockUser.id).thenReturn('user123');
       when(() => mockUser.role).thenReturn(UserRole.user);
+      when(() => mockUser.reputationScore).thenReturn(100);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -335,6 +337,7 @@ void main() {
       final mockNotifier = MockAuthStateNotifier(AsyncValue.data(mockUser));
       when(() => mockUser.id).thenReturn('user123');
       when(() => mockUser.role).thenReturn(UserRole.user);
+      when(() => mockUser.reputationScore).thenReturn(100);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -371,6 +374,7 @@ void main() {
       final mockUser = MockUser();
       when(() => mockUser.id).thenReturn('mod123');
       when(() => mockUser.role).thenReturn(UserRole.moderator);
+      when(() => mockUser.reputationScore).thenReturn(500);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -402,6 +406,7 @@ void main() {
       final mockUser = MockUser();
       when(() => mockUser.id).thenReturn('user123');
       when(() => mockUser.role).thenReturn(UserRole.user);
+      when(() => mockUser.reputationScore).thenReturn(100);
 
       await tester.pumpWidget(
         ProviderScope(

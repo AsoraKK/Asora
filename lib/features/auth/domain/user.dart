@@ -25,15 +25,23 @@ class User {
   final DateTime? tokenExpires;
 
   /// Create User from JSON response
+  /// Handles both snake_case (from API) and camelCase (from cached data)
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? json['sub'] as String,
       email: json['email'] as String,
       role: UserRole.fromString(json['role'] as String),
       tier: UserTier.fromString(json['tier'] as String),
-      reputationScore: json['reputationScore'] as int? ?? 0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      lastLoginAt: DateTime.parse(json['lastLoginAt'] as String),
+      // API sends reputation_score, cached data uses reputationScore
+      reputationScore: json['reputation_score'] as int? 
+          ?? json['reputationScore'] as int? 
+          ?? 0,
+      createdAt: DateTime.parse(
+        json['created_at'] as String? ?? json['createdAt'] as String,
+      ),
+      lastLoginAt: DateTime.parse(
+        json['last_login_at'] as String? ?? json['lastLoginAt'] as String,
+      ),
       isTemporary: json['isTemporary'] as bool? ?? false,
       tokenExpires: json['tokenExpires'] != null
           ? DateTime.parse(json['tokenExpires'] as String)

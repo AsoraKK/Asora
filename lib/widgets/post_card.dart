@@ -4,6 +4,7 @@ import '../features/moderation/domain/appeal.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/moderation_badges.dart';
 import '../widgets/appeal_dialog.dart';
+import '../widgets/reputation_badge.dart';
 
 /// ASORA POST CARD WITH MODERATION INTEGRATION
 ///
@@ -69,11 +70,21 @@ class _PostCardState extends ConsumerState<PostCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.post.author.displayName,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            widget.post.author.displayName,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Author reputation badge
+                          ReputationBadge(
+                            score: widget.post.author.reputationScore,
+                            size: ReputationBadgeSize.small,
+                          ),
+                        ],
                       ),
                       Text(
                         _formatTimeAgo(widget.post.createdAt),
@@ -350,6 +361,25 @@ class Author {
   final String id;
   final String displayName;
   final String? avatarUrl;
+  final int reputationScore;
 
-  const Author({required this.id, required this.displayName, this.avatarUrl});
+  const Author({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+    this.reputationScore = 0,
+  });
+
+  /// Create Author from JSON response
+  factory Author.fromJson(Map<String, dynamic> json) {
+    return Author(
+      id: json['id'] as String? ?? json['authorId'] as String,
+      displayName: json['displayName'] as String? ?? json['name'] as String? ?? 'Unknown',
+      avatarUrl: json['avatarUrl'] as String?,
+      // API sends reputation_score, cached data uses reputationScore
+      reputationScore: json['reputation_score'] as int? 
+          ?? json['reputationScore'] as int? 
+          ?? 0,
+    );
+  }
 }

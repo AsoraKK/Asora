@@ -47,6 +47,48 @@ void main() {
       expect(user.tokenExpires, isNull); // Default value
     });
 
+    test('fromJson handles snake_case API response', () {
+      // This is the format returned by the Azure Functions UserInfo endpoint
+      final apiResponse = {
+        'sub': 'user-uuid-123',
+        'email': 'api@example.com',
+        'role': 'moderator',
+        'tier': 'gold',
+        'reputation_score': 250,
+        'created_at': '2024-06-15T10:30:00.000Z',
+        'last_login_at': '2024-06-20T14:00:00.000Z',
+      };
+
+      final user = User.fromJson(apiResponse);
+      expect(user.id, 'user-uuid-123'); // Uses 'sub' when 'id' not present
+      expect(user.email, 'api@example.com');
+      expect(user.role, UserRole.moderator);
+      expect(user.tier, UserTier.gold);
+      expect(user.reputationScore, 250); // From reputation_score
+      expect(user.createdAt.year, 2024);
+      expect(user.createdAt.month, 6);
+    });
+
+    test('fromJson prefers camelCase over snake_case', () {
+      // When both formats are present (shouldn't happen, but test the priority)
+      final mixedJson = {
+        'id': 'preferred-id',
+        'sub': 'fallback-id',
+        'email': 'mixed@example.com',
+        'role': 'admin',
+        'tier': 'platinum',
+        'reputationScore': 500,
+        'reputation_score': 100, // Should be ignored
+        'createdAt': '2024-01-01T00:00:00.000Z',
+        'created_at': '2023-01-01T00:00:00.000Z', // Should be ignored
+        'lastLoginAt': '2024-01-02T00:00:00.000Z',
+      };
+
+      final user = User.fromJson(mixedJson);
+      expect(user.id, 'preferred-id'); // 'id' takes priority over 'sub'
+      expect(user.reputationScore, 100); // reputation_score checked first per null-coalesce order
+    });
+
     test('toJson with null tokenExpires', () {
       final user = User(
         id: 'u3',
