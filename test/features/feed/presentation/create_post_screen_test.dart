@@ -1,0 +1,500 @@
+/// Widget tests for post creation form
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:asora/features/feed/presentation/create_post_screen.dart';
+import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/features/feed/domain/models.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
+
+// Mock classes
+class MockPostRepository extends Mock implements PostRepository {}
+
+/// Test user factory
+User createTestUser() {
+  return User(
+    id: 'test-user-id',
+    email: 'test@example.com',
+    role: UserRole.user,
+    tier: UserTier.bronze,
+    reputationScore: 100,
+    createdAt: DateTime.now(),
+    lastLoginAt: DateTime.now(),
+  );
+}
+
+void main() {
+  late MockPostRepository mockRepository;
+
+  setUpAll(() {
+    registerFallbackValue(
+      const CreatePostRequest(text: 'fallback'),
+    );
+  });
+
+  setUp(() {
+    mockRepository = MockPostRepository();
+  });
+
+  Widget createTestWidget({
+    User? user,
+  }) {
+    return ProviderScope(
+      overrides: [
+        postRepositoryProvider.overrideWithValue(mockRepository),
+        authStateProvider.overrideWith((ref) {
+          return MockAuthStateNotifier(user);
+        }),
+        jwtProvider.overrideWith((ref) async => user != null ? 'test-token' : null),
+      ],
+      child: const MaterialApp(
+        home: CreatePostScreen(),
+      ),
+    );
+  }
+
+  group('CreatePostScreen Widget Tests', () {
+    group('Validation', () {
+      testWidgets('shows character count', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Initial state shows max characters
+        expect(find.textContaining('5000 characters remaining'), findsOneWidget);
+      });
+
+      testWidgets('updates character count as user types', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Find the text field and enter some text
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Hello world');
+        await tester.pump();
+
+        // Character count should update
+        expect(find.textContaining('4989 characters remaining'), findsOneWidget);
+      });
+
+      testWidgets('Post button is disabled when text is empty', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Find the Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        final button = tester.widget<FilledButton>(postButton);
+
+        // Button should be disabled when text is empty
+        expect(button.onPressed, isNull);
+      });
+
+      testWidgets('Post button is enabled when text is entered', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter some text
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Hello world');
+        await tester.pump();
+
+        // Find the Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        final button = tester.widget<FilledButton>(postButton);
+
+        // Button should be enabled
+        expect(button.onPressed, isNotNull);
+      });
+
+      testWidgets('shows warning when approaching character limit', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text close to the limit (90% = 4500 chars)
+        final longText = 'A' * 4600;
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, longText);
+        await tester.pump();
+
+        // Character count should show remaining
+        expect(find.textContaining('400 characters remaining'), findsOneWidget);
+      });
+    });
+
+    group('Authentication', () {
+      testWidgets('shows auth required message when not signed in', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: null));
+        await tester.pumpAndSettle();
+
+        // Should show auth required card
+        expect(find.text('Please sign in to create a post.'), findsOneWidget);
+      });
+
+      testWidgets('text field is disabled when not signed in', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: null));
+        await tester.pumpAndSettle();
+
+        final textField = find.byType(TextField);
+        final widget = tester.widget<TextField>(textField);
+        expect(widget.enabled, isFalse);
+      });
+
+      testWidgets('text field is enabled when signed in', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        final textField = find.byType(TextField);
+        final widget = tester.widget<TextField>(textField);
+        expect(widget.enabled, isTrue);
+      });
+    });
+
+    group('Form Submission', () {
+      testWidgets('shows loading indicator when submitting', (tester) async {
+        // Setup mock to return immediately (no delay to avoid timer issues)
+        when(() => mockRepository.createPost(
+              request: any(named: 'request'),
+              token: any(named: 'token'),
+            )).thenAnswer((_) async {
+          return CreatePostSuccess(
+            Post(
+              id: 'test-id',
+              authorId: 'test-user-id',
+              authorUsername: 'testuser',
+              text: 'Test post',
+              createdAt: DateTime.now(),
+            ),
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text and submit
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Test post content');
+        await tester.pump();
+
+        // Tap Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        await tester.tap(postButton);
+        await tester.pump(); // One pump to start the request
+
+        // The state should be submitting - check the button is disabled
+        final button = tester.widget<FilledButton>(postButton);
+        // Button should be disabled during submission (onPressed is null)
+        expect(button.onPressed, isNull);
+
+        // Finish the async work
+        await tester.pumpAndSettle();
+      });
+    });
+
+    group('Error Handling', () {
+      testWidgets('shows content blocked banner when content is blocked', (tester) async {
+        when(() => mockRepository.createPost(
+              request: any(named: 'request'),
+              token: any(named: 'token'),
+            )).thenAnswer((_) async {
+          return const CreatePostBlocked(
+            message: 'Content violates community guidelines',
+            categories: ['hate_speech', 'harassment'],
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text and submit
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Inappropriate content');
+        await tester.pump();
+
+        // Tap Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        await tester.tap(postButton);
+        await tester.pumpAndSettle();
+
+        // Should show content blocked banner
+        expect(find.text('Content Blocked'), findsOneWidget);
+        expect(find.text('Content violates community guidelines'), findsOneWidget);
+        expect(find.text('hate_speech'), findsOneWidget);
+        expect(find.text('harassment'), findsOneWidget);
+      });
+
+      testWidgets('shows limit exceeded banner when daily limit reached', (tester) async {
+        when(() => mockRepository.createPost(
+              request: any(named: 'request'),
+              token: any(named: 'token'),
+            )).thenAnswer((_) async {
+          return const CreatePostLimitExceeded(
+            message: 'Daily post limit reached',
+            limit: 10,
+            currentCount: 10,
+            tier: 'free',
+            retryAfter: Duration(hours: 12),
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text and submit
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'New post');
+        await tester.pump();
+
+        // Tap Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        await tester.tap(postButton);
+        await tester.pumpAndSettle();
+
+        // Should show limit exceeded banner
+        expect(find.text('Daily Limit Reached'), findsOneWidget);
+        expect(find.textContaining('10 posts'), findsOneWidget);
+      });
+
+      testWidgets('shows error banner for generic errors', (tester) async {
+        when(() => mockRepository.createPost(
+              request: any(named: 'request'),
+              token: any(named: 'token'),
+            )).thenAnswer((_) async {
+          return const CreatePostError(
+            message: 'Network connection failed',
+            code: 'network_error',
+          );
+        });
+
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text and submit
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'New post');
+        await tester.pump();
+
+        // Tap Post button
+        final postButton = find.widgetWithText(FilledButton, 'Post');
+        await tester.tap(postButton);
+        await tester.pumpAndSettle();
+
+        // Should show error message
+        expect(find.text('Network connection failed'), findsOneWidget);
+      });
+    });
+
+    group('Discard Confirmation', () {
+      testWidgets('shows discard dialog when closing with unsaved content', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Enter text
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Unsaved post content');
+        await tester.pump();
+
+        // Tap close button
+        final closeButton = find.byIcon(Icons.close);
+        await tester.tap(closeButton);
+        await tester.pumpAndSettle();
+
+        // Should show discard dialog
+        expect(find.text('Discard post?'), findsOneWidget);
+        expect(find.text('Your post will be lost if you close this screen.'), findsOneWidget);
+        expect(find.text('Keep editing'), findsOneWidget);
+        expect(find.text('Discard'), findsOneWidget);
+      });
+
+      testWidgets('closes without dialog when text is empty', (tester) async {
+        await tester.pumpWidget(createTestWidget(user: createTestUser()));
+        await tester.pumpAndSettle();
+
+        // Tap close button without entering text
+        final closeButton = find.byIcon(Icons.close);
+        await tester.tap(closeButton);
+        await tester.pumpAndSettle();
+
+        // Should not show discard dialog (screen should close)
+        expect(find.text('Discard post?'), findsNothing);
+      });
+    });
+  });
+
+  group('PostCreationNotifier Unit Tests', () {
+    test('updateText updates state', () {
+      final container = ProviderContainer(
+        overrides: [
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(postCreationProvider.notifier);
+
+      notifier.updateText('Hello world');
+      expect(container.read(postCreationProvider).text, 'Hello world');
+    });
+
+    test('validate returns error for empty text', () {
+      final container = ProviderContainer(
+        overrides: [
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(postCreationProvider.notifier);
+
+      final error = notifier.validate();
+      expect(error, 'Please enter some text for your post');
+    });
+
+    test('validate returns error for text exceeding max length', () {
+      final container = ProviderContainer(
+        overrides: [
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(postCreationProvider.notifier);
+
+      notifier.updateText('A' * 5001);
+      final error = notifier.validate();
+      expect(error, 'Post text cannot exceed 5000 characters');
+    });
+
+    test('validate returns null for valid text', () {
+      final container = ProviderContainer(
+        overrides: [
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(postCreationProvider.notifier);
+
+      notifier.updateText('Valid post content');
+      final error = notifier.validate();
+      expect(error, isNull);
+    });
+
+    test('reset clears state', () {
+      final container = ProviderContainer(
+        overrides: [
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(postCreationProvider.notifier);
+
+      notifier.updateText('Some text');
+      notifier.updateMediaUrl('https://example.com/image.jpg');
+      notifier.reset();
+
+      final state = container.read(postCreationProvider);
+      expect(state.text, '');
+      expect(state.mediaUrl, isNull);
+      expect(state.result, isNull);
+    });
+  });
+
+  group('PostCreationState Tests', () {
+    test('isValid returns false for empty text', () {
+      const state = PostCreationState(text: '');
+      expect(state.isValid, isFalse);
+    });
+
+    test('isValid returns false for whitespace-only text', () {
+      const state = PostCreationState(text: '   ');
+      expect(state.isValid, isFalse);
+    });
+
+    test('isValid returns true for valid text', () {
+      const state = PostCreationState(text: 'Hello world');
+      expect(state.isValid, isTrue);
+    });
+
+    test('isValid returns false for text exceeding max length', () {
+      final state = PostCreationState(text: 'A' * 5001);
+      expect(state.isValid, isFalse);
+    });
+
+    test('isSuccess returns true for CreatePostSuccess', () {
+      final state = PostCreationState(
+        result: CreatePostSuccess(
+          Post(
+            id: 'test',
+            authorId: 'author',
+            authorUsername: 'user',
+            text: 'text',
+            createdAt: DateTime.now(),
+          ),
+        ),
+      );
+      expect(state.isSuccess, isTrue);
+      expect(state.isBlocked, isFalse);
+      expect(state.hasError, isFalse);
+    });
+
+    test('isBlocked returns true for CreatePostBlocked', () {
+      const state = PostCreationState(
+        result: CreatePostBlocked(
+          message: 'Blocked',
+          categories: [],
+        ),
+      );
+      expect(state.isBlocked, isTrue);
+      expect(state.isSuccess, isFalse);
+      expect(state.hasError, isFalse);
+    });
+
+    test('isLimitExceeded returns true for CreatePostLimitExceeded', () {
+      const state = PostCreationState(
+        result: CreatePostLimitExceeded(
+          message: 'Limit',
+          limit: 10,
+          currentCount: 10,
+          tier: 'free',
+          retryAfter: Duration(hours: 24),
+        ),
+      );
+      expect(state.isLimitExceeded, isTrue);
+      expect(state.isSuccess, isFalse);
+    });
+
+    test('hasError returns true for CreatePostError', () {
+      const state = PostCreationState(
+        result: CreatePostError(message: 'Error'),
+      );
+      expect(state.hasError, isTrue);
+      expect(state.isSuccess, isFalse);
+    });
+  });
+}
+
+/// Mock AuthStateNotifier for testing
+class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
+    implements AuthStateNotifier {
+  MockAuthStateNotifier(User? user) : super(AsyncValue.data(user));
+
+  @override
+  Future<void> refreshToken() async {}
+
+  @override
+  Future<void> signInWithEmail(String email, String password) async {}
+
+  @override
+  Future<void> signInWithOAuth2() async {}
+
+  @override
+  Future<void> signOut() async {
+    state = const AsyncValue.data(null);
+  }
+
+  @override
+  Future<void> validateToken() async {}
+}

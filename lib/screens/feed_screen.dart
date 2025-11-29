@@ -10,6 +10,7 @@ import '../features/feed/domain/models.dart' as domain;
 import '../widgets/security_widgets.dart';
 import '../widgets/reputation_badge.dart';
 import '../features/privacy/privacy_settings_screen.dart';
+import '../features/feed/presentation/create_post_screen.dart';
 import '../features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 
 /// ---------------------------------------------------------------------------
@@ -125,6 +126,7 @@ class FeedScreen extends ConsumerWidget {
         ],
       ),
       drawer: _AsoraDrawer(authState: authState),
+      floatingActionButton: const CreatePostFAB(),
       body: const Column(
         children: [
           DeviceSecurityBanner(),
