@@ -1,8 +1,23 @@
-import type { Container } from '@azure/cosmos';
+import type { Container, SqlParameter } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { AuditEntry, DsrRequest, LegalHold } from '../common/models';
+import type { AuditEntry, DsrRequest, DsrStatus, DsrType, LegalHold } from '../common/models';
+
+export interface ListDsrFilters {
+  type?: DsrType | null;
+  statuses?: DsrStatus[];
+  fromDate?: string | null;
+  toDate?: string | null;
+  userId?: string | null;
+  limit: number;
+  continuationToken?: string;
+}
+
+export interface ListDsrResult {
+  items: DsrRequest[];
+  continuationToken?: string;
+}
 
 const database = getCosmosDatabase();
 
@@ -28,6 +43,54 @@ export async function getDsrRequest(id: string): Promise<DsrRequest | null> {
 
 export async function createDsrRequest(request: DsrRequest): Promise<void> {
   await requestsContainer.items.create(request);
+}
+
+export async function listDsrRequests(filters: ListDsrFilters): Promise<ListDsrResult> {
+  const conditions: string[] = [];
+  const parameters: SqlParameter[] = [];
+
+  if (filters.type) {
+    conditions.push('c.type = @type');
+    parameters.push({ name: '@type', value: filters.type });
+  }
+
+  if (filters.statuses && filters.statuses.length > 0) {
+    // Use ARRAY_CONTAINS for multiple status values
+    conditions.push('ARRAY_CONTAINS(@statuses, c.status)');
+    parameters.push({ name: '@statuses', value: filters.statuses });
+  }
+
+  if (filters.fromDate) {
+    conditions.push('c.requestedAt >= @fromDate');
+    parameters.push({ name: '@fromDate', value: filters.fromDate });
+  }
+
+  if (filters.toDate) {
+    conditions.push('c.requestedAt <= @toDate');
+    parameters.push({ name: '@toDate', value: filters.toDate });
+  }
+
+  if (filters.userId) {
+    conditions.push('c.userId = @userId');
+    parameters.push({ name: '@userId', value: filters.userId });
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const query = `SELECT * FROM c ${whereClause} ORDER BY c.requestedAt DESC`;
+
+  const iterator = requestsContainer.items.query(
+    { query, parameters },
+    {
+      maxItemCount: filters.limit,
+      continuationToken: filters.continuationToken,
+    },
+  );
+
+  const { resources, continuationToken } = await iterator.fetchNext();
+  return {
+    items: resources as DsrRequest[],
+    continuationToken: continuationToken ?? undefined,
+  };
 }
 
 export async function patchDsrRequest(

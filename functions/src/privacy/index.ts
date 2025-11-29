@@ -4,6 +4,7 @@ import './routes/exportUser';
 import './admin/enqueueExport';
 import './admin/enqueueDelete';
 import './admin/getStatus';
+import './admin/listRequests';
 import './admin/retry';
 import './admin/cancel';
 import './admin/reviewA';
