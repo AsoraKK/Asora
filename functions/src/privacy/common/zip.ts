@@ -34,6 +34,11 @@ export interface PackageExportPayload {
   moderation: Array<Record<string, unknown>>;
   scoreCards: ScoreCard[];
   mediaLinks: ExportMediaLink[];
+  // New fields for D1: interactions & moderation data
+  flags?: Array<Record<string, unknown>>;
+  appeals?: Array<Record<string, unknown>>;
+  appealVotes?: Array<Record<string, unknown>>;
+  moderationDecisions?: Array<Record<string, unknown>>;
 }
 
 export async function packageExportZip(payload: PackageExportPayload): Promise<{
@@ -47,6 +52,7 @@ export async function packageExportZip(payload: PackageExportPayload): Promise<{
 
   archive.pipe(stream);
 
+  // Core data
   archive.append(JSON.stringify(payload.identity ?? {}, null, 2), { name: 'identity.json' });
   archive.append(toJsonLines(payload.posts), { name: 'posts.jsonl' });
   archive.append(toJsonLines(payload.comments), { name: 'comments.jsonl' });
@@ -54,6 +60,20 @@ export async function packageExportZip(payload: PackageExportPayload): Promise<{
   archive.append(toJsonLines(payload.moderation), { name: 'moderation.jsonl' });
   archive.append(toJsonLines(payload.scoreCards as unknown as Record<string, unknown>[]), { name: 'ai_scorecard.jsonl' });
   archive.append(toJsonLines(payload.mediaLinks as unknown as Record<string, unknown>[]), { name: 'media_links.jsonl' });
+
+  // Interactions & moderation data (D1 additions)
+  if (payload.flags?.length) {
+    archive.append(toJsonLines(payload.flags), { name: 'flags.jsonl' });
+  }
+  if (payload.appeals?.length) {
+    archive.append(toJsonLines(payload.appeals), { name: 'appeals.jsonl' });
+  }
+  if (payload.appealVotes?.length) {
+    archive.append(toJsonLines(payload.appealVotes), { name: 'appeal_votes.jsonl' });
+  }
+  if (payload.moderationDecisions?.length) {
+    archive.append(toJsonLines(payload.moderationDecisions), { name: 'moderation_decisions.jsonl' });
+  }
 
   await archive.finalize();
   const exportBytes = await uploadPromise;

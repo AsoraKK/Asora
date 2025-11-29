@@ -10,20 +10,34 @@ import { patchDsrRequest, getDsrRequest } from '../service/dsrStore';
 import { redactRecord } from '../common/redaction';
 
 const DSR_TTL_HOURS = Number(process.env.DSR_EXPORT_SIGNED_URL_TTL_HOURS ?? '12');
+const MAX_RECORDS_PER_CATEGORY = 10000; // Safety limit to prevent unbounded queries
 
-function makeQuery(filters: string, params: SqlParameter[]) {
+function makeQuery(filters: string, params: SqlParameter[], limit?: number) {
+  const topClause = limit ? `TOP ${limit}` : '';
   return {
-    query: `SELECT * FROM c WHERE ${filters}`,
+    query: `SELECT ${topClause} * FROM c WHERE ${filters} ORDER BY c.createdAt DESC`,
     parameters: params,
   };
 }
 
-async function fetchContainerRecords(containerName: string, filters: string, params: SqlParameter[]) {
+/**
+ * Fetch records from a container with a safety limit
+ * Uses TOP clause to limit results at the query level
+ */
+async function fetchContainerRecords(
+  containerName: string,
+  filters: string,
+  params: SqlParameter[],
+  maxRecords: number = MAX_RECORDS_PER_CATEGORY
+) {
   const db = getCosmosDatabase();
   const container = db.container(containerName);
-  const iterator = container.items.query(makeQuery(filters, params));
+  
+  const querySpec = makeQuery(filters, params, maxRecords);
+  const iterator = container.items.query(querySpec);
   const { resources } = await iterator.fetchAll();
-  return resources;
+
+  return resources ?? [];
 }
 
 async function fetchPosts(userId: string) {
@@ -40,6 +54,43 @@ async function fetchLikes(userId: string) {
 
 async function fetchModeration(userId: string) {
   return fetchContainerRecords('moderation_decisions', 'c.actorId = @userId OR c.userId = @userId', [
+    { name: '@userId', value: userId },
+  ]);
+}
+
+/**
+ * Fetch flags submitted by the user
+ */
+async function fetchFlags(userId: string) {
+  return fetchContainerRecords('content_flags', 'c.flaggedBy = @userId', [
+    { name: '@userId', value: userId },
+  ]);
+}
+
+/**
+ * Fetch appeals submitted by the user
+ */
+async function fetchAppeals(userId: string) {
+  return fetchContainerRecords('appeals', 'c.submitterId = @userId', [
+    { name: '@userId', value: userId },
+  ]);
+}
+
+/**
+ * Fetch votes on appeals cast by the user
+ */
+async function fetchAppealVotes(userId: string) {
+  return fetchContainerRecords('appeal_votes', 'c.voterId = @userId', [
+    { name: '@userId', value: userId },
+  ]);
+}
+
+/**
+ * Fetch moderation decisions affecting user's content
+ * This includes decisions on posts/comments authored by the user
+ */
+async function fetchModerationDecisionsOnUserContent(userId: string) {
+  return fetchContainerRecords('moderation_decisions', 'c.contentOwnerId = @userId', [
     { name: '@userId', value: userId },
   ]);
 }
@@ -165,19 +216,38 @@ export async function runExportJob(request: DsrRequest, context: InvocationConte
     emitSpan(context, 'export.fetch', { userId: request.userId });
     identityData = await fetchIdentity(request.userId);
 
-    const [posts, comments, likes, moderationRecords] = await Promise.all([
+    // Fetch all user data in parallel for performance
+    const [
+      posts,
+      comments,
+      likes,
+      moderationRecords,
+      flags,
+      appeals,
+      appealVotes,
+      moderationDecisionsOnContent,
+    ] = await Promise.all([
       fetchPosts(request.userId),
       fetchComments(request.userId),
       fetchLikes(request.userId),
       fetchModeration(request.userId),
+      fetchFlags(request.userId),
+      fetchAppeals(request.userId),
+      fetchAppealVotes(request.userId),
+      fetchModerationDecisionsOnUserContent(request.userId),
     ]);
 
+    // Sanitize all data (remove sensitive internal fields)
     const sanitizedIdentity = redactRecord(identityData.identity);
     const sanitizedProviders = identityData.providers.map(provider => redactRecord(provider));
     const sanitizedPosts = posts.map(post => redactRecord(post));
     const sanitizedComments = comments.map(comment => redactRecord(comment));
     const sanitizedLikes = likes.map(like => redactRecord(like));
     const sanitizedModeration = moderationRecords.map(entry => redactRecord(entry));
+    const sanitizedFlags = flags.map(flag => redactRecord(flag));
+    const sanitizedAppeals = appeals.map(appeal => redactRecord(appeal));
+    const sanitizedAppealVotes = appealVotes.map(vote => redactRecord(vote));
+    const sanitizedModerationDecisions = moderationDecisionsOnContent.map(d => redactRecord(d));
 
     const scoreCards = buildScoreCards(sanitizedModeration);
     const mediaLinks = await buildMediaLinks(extractMediaPaths(sanitizedPosts));
@@ -195,6 +265,11 @@ export async function runExportJob(request: DsrRequest, context: InvocationConte
       moderation: sanitizedModeration,
       scoreCards,
       mediaLinks,
+      // D1: Include interactions & moderation data
+      flags: sanitizedFlags,
+      appeals: sanitizedAppeals,
+      appealVotes: sanitizedAppealVotes,
+      moderationDecisions: sanitizedModerationDecisions,
     });
 
     await patchDsrRequest(
