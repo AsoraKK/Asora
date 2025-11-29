@@ -94,6 +94,11 @@ The auth module issues two types of tokens:
 | `/auth/token`                       | POST   | auth         | OAuth2 token exchange with PKCE         |
 | `/auth/authorize`                   | GET    | auth         | Authorization code issuance             |
 | `/auth/userinfo`                    | GET    | auth         | OIDC-compliant profile payload          |
+| `/auth/redeem-invite`               | POST   | auth         | Redeem invite code to activate account  |
+| `/admin/invites`                    | POST   | auth/admin   | Create invite code (admin only)         |
+| `/admin/invites`                    | GET    | auth/admin   | List invite codes (admin only)          |
+| `/admin/invites/{code}`             | GET    | auth/admin   | Get single invite (admin only)          |
+| `/admin/invites/{code}`             | DELETE | auth/admin   | Delete invite code (admin only)         |
 | `/feed`                             | GET    | feed         | Guest-friendly feed with Redis support  |
 | `/post`                             | POST   | feed         | Authenticated post creation w/ limits   |
 | `/moderation/flag`                  | POST   | moderation   | Authenticated content flagging          |
@@ -103,6 +108,74 @@ The auth module issues two types of tokens:
 | `/user/delete`                      | DELETE | privacy      | Irreversible account deletion workflow  |
 
 Each entry maps to a `src/<module>/routes/*.ts` file that delegates to `service/` for Cosmos/Hive/Redis orchestration.
+
+## Invite System (Alpha Gating)
+
+The invite system gates new user access during alpha. Users register but remain inactive until they redeem a valid invite code.
+
+### How It Works
+
+1. **Admin creates invite**: `POST /admin/invites` with optional `email` (restricts to specific email) and `expiresInDays` (default 30, max 365).
+
+2. **User redeems invite**: After OAuth registration, user calls `POST /auth/redeem-invite` with their invite code.
+
+3. **Account activation**: On successful redemption:
+   - Invite is marked as used with `usedAt` and `usedByUserId`
+   - User's `isActive` flag is set to `true`
+   - Fresh access and refresh tokens are issued
+
+### Invite Code Format
+
+Codes follow the pattern `XXXX-XXXX` (e.g., `A3K9-B7M2`) using alphanumeric characters excluding confusables (0/O, 1/I).
+
+### Admin Endpoints
+
+```bash
+# Create unrestricted invite (anyone can use)
+curl -X POST /admin/invites \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"expiresInDays": 14}'
+
+# Create email-restricted invite
+curl -X POST /admin/invites \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"email": "newuser@example.com", "expiresInDays": 7}'
+
+# List all invites
+curl /admin/invites \
+  -H "Authorization: Bearer <admin-token>"
+
+# List unused invites only
+curl "/admin/invites?unused=true" \
+  -H "Authorization: Bearer <admin-token>"
+
+# Delete an invite
+curl -X DELETE /admin/invites/A3K9-B7M2 \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+### User Redemption
+
+```bash
+# Redeem invite (user must be authenticated but inactive)
+curl -X POST /auth/redeem-invite \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{"inviteCode": "A3K9-B7M2"}'
+```
+
+### Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `not_found` | Invite code doesn't exist |
+| `expired` | Invite has passed expiration date |
+| `already_used` | Invite was redeemed by another user |
+| `email_mismatch` | Email-restricted invite used by wrong email |
+| `already_active` | User account is already activated |
+
+### Storage
+
+Invites are stored in Cosmos DB `invites` container, partitioned by `inviteCode`.
 
 ## Testing
 

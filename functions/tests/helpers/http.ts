@@ -10,9 +10,10 @@ interface MockRequestInit {
   query?: Record<string, string>;
   params?: Record<string, string>;
   body?: any;
+  principal?: { sub: string; roles?: string[]; role?: string; email?: string };
 }
 
-export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
+export function httpReqMock(init: MockRequestInit = {}): HttpRequest & { principal?: any } {
   const headers = new Headers();
 
   // Add headers from init
@@ -41,6 +42,7 @@ export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
     query: queryWithEntries as any,
     params: init.params ?? {},
     body: init.body ?? undefined,
+    principal: init.principal,
 
     // Required HttpRequest methods
     async json() {
@@ -56,5 +58,5 @@ export function httpReqMock(init: MockRequestInit = {}): HttpRequest {
     clone() {
       return this;
     },
-  } as unknown as HttpRequest;
+  } as unknown as HttpRequest & { principal?: any };
 }

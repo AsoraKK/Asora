@@ -62,6 +62,7 @@ export function getTargetDatabase(
     appealVotes: database.container('appeal_votes'),
     comments: database.container('comments'),
     messages: database.container('messages'),
+    invites: database.container('invites'),
   };
 }
 
