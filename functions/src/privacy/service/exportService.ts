@@ -17,6 +17,7 @@ import {
   userKeyGenerator,
 } from '@shared/utils/rateLimiter';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { getErrorDetails, getErrorMessage } from '@shared/errorUtils';
 
 interface UserDataExport {
   metadata: {
@@ -509,18 +510,14 @@ export async function exportUserHandler({
     if (isHttpError(err)) {
       return json(err.status, { error: err.message });
     }
-    // TypeScript fix: context.log('error', ...) and type err as any for property access
+    // Type-safe error logging
+    const errorDetails = getErrorDetails(err);
     context.log &&
-      context.log('error', 'exportUser error', {
-        name: (err as any)?.name,
-        code: (err as any)?.code,
-        message: (err as any)?.message,
-        stack: (err as any)?.stack,
-      });
+      context.log('error', 'exportUser error', errorDetails);
     const failure = {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: (err as any)?.message, exportId }),
+      body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: getErrorMessage(err), exportId }),
     };
     try {
       const auditDatabase = database ?? getCosmosDatabase();

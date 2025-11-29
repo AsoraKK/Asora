@@ -13,6 +13,7 @@
 import type { Container, ItemResponse } from '@azure/cosmos';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import { getAzureLogger } from '@shared/utils/logger';
+import { isNotFoundError, isConflictError, isPreconditionFailedError, getErrorMessage } from '@shared/errorUtils';
 
 const logger = getAzureLogger('shared/reputationService');
 
@@ -130,13 +131,13 @@ async function isAlreadyApplied(idempotencyKey: string): Promise<boolean> {
   try {
     const { resource } = await auditContainer.item(auditId, auditId).read();
     return !!resource;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 means not found = not applied yet
-    if (error.code === 404) {
+    if (isNotFoundError(error)) {
       return false;
     }
     // Log other errors but don't block - fail open for idempotency check
-    logger.warn('Error checking idempotency', { auditId, error: error.message });
+    logger.warn('Error checking idempotency', { auditId, error: getErrorMessage(error) });
     return false;
   }
 }
@@ -174,16 +175,16 @@ async function recordAudit(
       previousScore,
       newScore,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If audit record already exists (409), that's fine - idempotency protection worked
-    if (error.code === 409) {
+    if (isConflictError(error)) {
       logger.warn('Audit record already exists', { auditId });
       return;
     }
     // Log but don't fail the operation for audit failures
     logger.error('Failed to record reputation audit', {
       auditId,
-      error: error.message,
+      error: getErrorMessage(error),
     });
   }
 }
@@ -251,7 +252,7 @@ export async function adjustReputation(
   }
 
   // 2. Retry loop for ETag conflicts
-  let lastError: Error | null = null;
+  let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -274,11 +275,11 @@ export async function adjustReputation(
         previousScore,
         newScore,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
 
       // Check if it's a precondition failure (ETag mismatch)
-      if (error.code === 412 || error.message?.includes('Precondition Failed')) {
+      if (isPreconditionFailedError(error)) {
         logger.warn('ETag conflict, retrying', {
           userId,
           attempt,
@@ -293,7 +294,7 @@ export async function adjustReputation(
       }
 
       // For non-retriable errors, break immediately
-      if (error.code === 404) {
+      if (isNotFoundError(error)) {
         logger.warn('User not found for reputation update', { userId });
         return {
           success: false,
@@ -309,12 +310,12 @@ export async function adjustReputation(
     userId,
     delta,
     reason,
-    error: lastError?.message,
+    error: getErrorMessage(lastError),
   });
 
   return {
     success: false,
-    error: lastError?.message ?? 'Unknown error',
+    error: getErrorMessage(lastError),
   };
 }
 
@@ -435,8 +436,8 @@ export async function getReputationScore(userId: string): Promise<number | null>
       .read<UserDocument>();
     
     return user?.reputationScore ?? 0;
-  } catch (error: any) {
-    if (error.code === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return null;
     }
     throw error;
