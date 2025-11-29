@@ -8,9 +8,7 @@ import 'package:asora/features/notifications/application/notification_providers.
 /// Helper to create ProviderScope with mocked Dio to avoid UnimplementedError
 Widget createTestWidget({required Widget child}) {
   return ProviderScope(
-    overrides: [
-      dioProvider.overrideWithValue(Dio()),
-    ],
+    overrides: [dioProvider.overrideWithValue(Dio())],
     child: MaterialApp(home: child),
   );
 }

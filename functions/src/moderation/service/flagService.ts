@@ -8,31 +8,100 @@
  */
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import type { PatchOperation } from '@azure/cosmos';
 import { z } from 'zod';
 import { createHiveClient, HiveAIClient } from '@shared/clients/hive';
-import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { getTargetDatabase } from '@shared/clients/cosmos';
 import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator } from '@shared/utils/rateLimiter';
 import { getChaosContext } from '@shared/chaos/chaosConfig';
 import { ChaosError, withCosmosChaos, withHiveChaos } from '@shared/chaos/chaosInjectors';
+import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 
-// Request validation schema
+// ─────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────
+
+const FLAG_AUTO_HIDE_THRESHOLD = 5;
+const MAX_ADDITIONAL_DETAILS_LENGTH = 1000;
+
+// Priority scores by reason (higher = more urgent)
+const REASON_PRIORITY_SCORES: Record<string, number> = {
+  violence: 10,
+  hate_speech: 9,
+  harassment: 8,
+  adult_content: 7,
+  misinformation: 6,
+  spam: 5,
+  privacy: 4,
+  copyright: 3,
+  other: 2,
+};
+
+const URGENCY_MULTIPLIERS: Record<string, number> = {
+  high: 2,
+  medium: 1.5,
+  low: 1,
+};
+
+// ─────────────────────────────────────────────────────────────
+// Validation Schema
+// ─────────────────────────────────────────────────────────────
+
 const FlagContentSchema = z.object({
-  contentId: z.string().min(1),
-  contentType: z.enum(['post', 'comment', 'user', 'message']),
-  reason: z.enum([
-    'spam',
-    'harassment',
-    'hate_speech',
-    'violence',
-    'adult_content',
-    'misinformation',
-    'copyright',
-    'privacy',
-    'other',
-  ]),
-  additionalDetails: z.string().max(1000).optional(),
-  urgency: z.enum(['low', 'medium', 'high']).default('medium'),
+  contentId: z.string().min(1, 'Content ID is required'),
+  contentType: z.enum(['post', 'comment', 'user', 'message'] as const, {
+    message: 'Invalid content type',
+  }),
+  reason: z.enum(
+    [
+      'spam',
+      'harassment',
+      'hate_speech',
+      'violence',
+      'adult_content',
+      'misinformation',
+      'copyright',
+      'privacy',
+      'other',
+    ] as const,
+    { message: 'Invalid flag reason' }
+  ),
+  additionalDetails: z.string().max(MAX_ADDITIONAL_DETAILS_LENGTH).optional(),
+  urgency: z.enum(['low', 'medium', 'high'] as const).default('medium'),
 });
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+interface FlagContentParams {
+  request: HttpRequest;
+  context: InvocationContext;
+  userId: string;
+}
+
+interface FlagDocument {
+  id: string;
+  contentId: string;
+  contentType: string;
+  flaggedBy: string;
+  reason: string;
+  additionalDetails: string | null;
+  urgency: string;
+  priorityScore: number;
+  status: 'active' | 'resolved' | 'dismissed';
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  aiAnalysis: unknown | null;
+  moderatorNotes: string | null;
+  _partitionKey: string;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rate Limiter
+// ─────────────────────────────────────────────────────────────
 
 // Rate limiter: 5 flags per hour per user to prevent abuse
 const flagRateLimiter = createRateLimiter({
@@ -47,22 +116,43 @@ const flagRateLimiter = createRateLimiter({
   })(),
 });
 
-interface FlagContentParams {
-  request: HttpRequest;
-  context: InvocationContext;
-  userId: string;
+// ─────────────────────────────────────────────────────────────
+// Helper Functions
+// ─────────────────────────────────────────────────────────────
+
+function calculatePriorityScore(reason: string, urgency: string): number {
+  const baseScore = REASON_PRIORITY_SCORES[reason] ?? 2;
+  const multiplier = URGENCY_MULTIPLIERS[urgency] ?? 1;
+  return baseScore * multiplier;
 }
+
+function generateFlagId(): string {
+  return `flag_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+}
+
+function getContentContainerName(contentType: string): 'posts' | 'users' {
+  // Comments are stored in posts container with type='comment'
+  if (contentType === 'post' || contentType === 'comment') {
+    return 'posts';
+  }
+  return 'users';
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main Handler
+// ─────────────────────────────────────────────────────────────
 
 export async function flagContentHandler({
   request,
   context,
   userId,
 }: FlagContentParams): Promise<HttpResponseInit> {
-  context.log('Content flag request received');
+  const start = performance.now();
+  context.log('moderation.flag.start', { userId: userId ? 'present' : 'missing' });
   const chaosContext = getChaosContext(request);
 
   try {
-    // 1. Authentication already handled upstream; ensure userId is present
+    // 1. Validate userId (auth already handled upstream)
     if (!userId) {
       return {
         status: 401,
@@ -70,9 +160,10 @@ export async function flagContentHandler({
       };
     }
 
-    // 2. Rate limiting
+    // 2. Rate limiting check
     const rateLimitResult = await flagRateLimiter.checkRateLimit(request);
     if (rateLimitResult.blocked) {
+      context.log('moderation.flag.rate_limited', { userId });
       return {
         status: 429,
         headers: {
@@ -89,11 +180,14 @@ export async function flagContentHandler({
       };
     }
 
-    // 3. Request validation
+    // 3. Parse and validate request body
     const requestBody = await request.json();
     const validationResult = FlagContentSchema.safeParse(requestBody);
 
     if (!validationResult.success) {
+      context.log('moderation.flag.validation_failed', {
+        issues: validationResult.error.issues.length,
+      });
       return {
         status: 400,
         jsonBody: {
@@ -105,27 +199,48 @@ export async function flagContentHandler({
 
     const { contentId, contentType, reason, additionalDetails, urgency } = validationResult.data;
 
-    // 4. Initialize Cosmos DB
-    const database = getCosmosDatabase();
-    const flagsContainer = database.container('flags');
+    // 4. Get database containers
+    const db = getTargetDatabase();
+    const contentContainerName = getContentContainerName(contentType);
+    const contentContainer = db[contentContainerName];
 
-    // 5. Check for duplicate flags by the same user
+    // 5. Verify content exists BEFORE creating flag
+    const { resource: contentDoc, requestCharge: readRU } = await withCosmosChaos(
+      chaosContext,
+      () => contentContainer.item(contentId, contentId).read(),
+      { operation: 'read' }
+    );
+
+    if (!contentDoc) {
+      context.log('moderation.flag.content_not_found', { contentId, contentType });
+      return {
+        status: 404,
+        jsonBody: { error: 'Content not found' },
+      };
+    }
+
+    // 6. Check for duplicate flags by the same user on the same content
     const existingFlagQuery = {
-      query:
-        'SELECT * FROM c WHERE c.contentId = @contentId AND c.flaggedBy = @userId AND c.status = "active"',
+      query: `
+        SELECT c.id FROM c 
+        WHERE c.contentId = @contentId 
+          AND c.flaggedBy = @userId 
+          AND c.status = "active"
+      `,
       parameters: [
         { name: '@contentId', value: contentId },
         { name: '@userId', value: userId },
       ],
     };
 
-    const { resources: existingFlags } = await withCosmosChaos(
+    const { resources: existingFlags, requestCharge: queryRU } = await withCosmosChaos(
       chaosContext,
-      () => flagsContainer.items.query(existingFlagQuery).fetchAll(),
+      () => db.flags.items.query(existingFlagQuery).fetchAll(),
       { operation: 'read' }
     );
 
     if (existingFlags.length > 0) {
+      context.log('moderation.flag.duplicate', { contentId, userId });
       return {
         status: 409,
         jsonBody: {
@@ -135,54 +250,33 @@ export async function flagContentHandler({
       };
     }
 
-    // 6. Get the content for AI analysis (optional)
+    // 7. Optional: Run AI analysis on content text
     let aiAnalysis = null;
-    try {
-      if (contentType === 'post' || contentType === 'comment') {
-        const contentContainer = database.container(contentType === 'post' ? 'posts' : 'comments');
-        const { resource: content } = await contentContainer.item(contentId, contentId).read();
-
-        if (content && content.content) {
-          const hiveClient = createHiveClient();
-          const hiveResponse = await withHiveChaos(
-            chaosContext,
-            () => hiveClient.moderateText(userId, content.content)
-          );
-          aiAnalysis = HiveAIClient.parseModerationResult(hiveResponse);
-        }
+    if ((contentType === 'post' || contentType === 'comment') && contentDoc.text) {
+      try {
+        const hiveClient = createHiveClient();
+        const hiveResponse = await withHiveChaos(chaosContext, () =>
+          hiveClient.moderateText(userId, contentDoc.text)
+        );
+        aiAnalysis = HiveAIClient.parseModerationResult(hiveResponse);
+      } catch (error) {
+        context.log('moderation.flag.ai_analysis_failed', { error: (error as Error).message });
+        // Continue without AI analysis - not critical
       }
-    } catch (error) {
-      context.log('AI analysis failed for flag:', error);
-      // Continue without AI analysis
     }
 
-    // 7. Create flag record
-    const flagId = `flag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // 8. Create flag document
     const now = new Date().toISOString();
+    const flagId = generateFlagId();
+    const priorityScore = calculatePriorityScore(reason, urgency);
 
-    // Calculate priority score based on reason and urgency
-    const priorityScores: Record<string, number> = {
-      violence: 10,
-      hate_speech: 9,
-      harassment: 8,
-      adult_content: 7,
-      misinformation: 6,
-      spam: 5,
-      privacy: 4,
-      copyright: 3,
-      other: 2,
-    };
-
-    const urgencyMultiplier: Record<string, number> = { high: 2, medium: 1.5, low: 1 };
-    const priorityScore = (priorityScores[reason] || 2) * (urgencyMultiplier[urgency] || 1);
-
-    const flagDocument = {
+    const flagDocument: FlagDocument = {
       id: flagId,
       contentId,
       contentType,
       flaggedBy: userId,
       reason,
-      additionalDetails: additionalDetails || null,
+      additionalDetails: additionalDetails ?? null,
       urgency,
       priorityScore,
       status: 'active',
@@ -190,48 +284,76 @@ export async function flagContentHandler({
       updatedAt: now,
       resolvedAt: null,
       resolvedBy: null,
-      aiAnalysis: aiAnalysis || null,
+      aiAnalysis,
       moderatorNotes: null,
+      _partitionKey: contentId, // Partition by content for efficient queries
     };
 
-    await withCosmosChaos(
+    const { requestCharge: createRU } = await withCosmosChaos(
       chaosContext,
-      () => flagsContainer.items.create(flagDocument),
+      () => db.flags.items.create(flagDocument),
       { operation: 'write' }
     );
 
-    // 8. Update content flag count (for trending/priority)
-    try {
-      const contentContainer = database.container(
-        contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users'
-      );
-        const { resource: contentDoc } = await withCosmosChaos(
-          chaosContext,
-          () => contentContainer.item(contentId, contentId).read(),
-          { operation: 'read' }
-        );
+    // 9. Update content with flag count and flagged status (atomic patch)
+    const currentFlagCount = (contentDoc.flagCount ?? 0) + 1;
+    const shouldAutoHide = currentFlagCount >= FLAG_AUTO_HIDE_THRESHOLD;
 
-      if (contentDoc) {
-        contentDoc.flagCount = (contentDoc.flagCount || 0) + 1;
-        contentDoc.lastFlaggedAt = now;
+    const patchOperations: PatchOperation[] = [
+      { op: 'set', path: '/flagCount', value: currentFlagCount },
+      { op: 'set', path: '/flagged', value: true },
+      { op: 'set', path: '/lastFlaggedAt', value: now },
+    ];
 
-        // Auto-hide content if it reaches threshold
-        if (contentDoc.flagCount >= 5) {
-          contentDoc.status = 'hidden_pending_review';
-        }
-
-        await withCosmosChaos(
-          chaosContext,
-          () => contentContainer.item(contentId, contentId).replace(contentDoc),
-          { operation: 'write' }
-        );
-      }
-    } catch (error) {
-      context.log('Failed to update content flag count:', error);
-      // Don't fail the request if this fails
+    if (shouldAutoHide && contentDoc.status !== 'hidden_pending_review') {
+      patchOperations.push({ op: 'set', path: '/status', value: 'hidden_pending_review' });
+      context.log('moderation.flag.auto_hidden', { contentId, flagCount: currentFlagCount });
     }
 
-    context.log(`Content ${contentId} flagged by ${userId} for ${reason}`);
+    try {
+      const { requestCharge: patchRU } = await withCosmosChaos(
+        chaosContext,
+        () => contentContainer.item(contentId, contentId).patch(patchOperations),
+        { operation: 'write' }
+      );
+
+      trackAppMetric({
+        name: 'cosmos_ru_flag_content',
+        value: (readRU ?? 0) + (queryRU ?? 0) + (createRU ?? 0) + (patchRU ?? 0),
+        properties: { contentType, reason },
+      });
+    } catch (patchError) {
+      // Log but don't fail - flag was created successfully
+      context.log('moderation.flag.patch_failed', { contentId, error: (patchError as Error).message });
+    }
+
+    // 10. Track event and return success
+    const duration = performance.now() - start;
+
+    trackAppEvent({
+      name: 'content_flagged',
+      properties: {
+        flagId,
+        contentId,
+        contentType,
+        reason,
+        urgency,
+        priorityScore,
+        hasAiAnalysis: Boolean(aiAnalysis),
+        autoHidden: shouldAutoHide,
+        durationMs: duration,
+      },
+    });
+
+    context.log('moderation.flag.success', {
+      flagId,
+      contentId,
+      contentType,
+      reason,
+      flagCount: currentFlagCount,
+      autoHidden: shouldAutoHide,
+      durationMs: duration.toFixed(2),
+    });
 
     return {
       status: 201,
@@ -239,6 +361,8 @@ export async function flagContentHandler({
         flagId,
         message: 'Content flagged successfully',
         priorityScore,
+        flagCount: currentFlagCount,
+        autoHidden: shouldAutoHide,
         aiAnalysis: aiAnalysis
           ? {
               confidence: aiAnalysis.confidence,
@@ -249,7 +373,6 @@ export async function flagContentHandler({
       },
     };
   } catch (error) {
-    context.log('Error flagging content:', error);
     if (error instanceof ChaosError) {
       return {
         status: error.status,
@@ -263,7 +386,7 @@ export async function flagContentHandler({
       };
     }
 
-    context.log('Error flagging content:', error);
+    context.log('moderation.flag.error', { message: (error as Error).message });
     return {
       status: 500,
       jsonBody: {
