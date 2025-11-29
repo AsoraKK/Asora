@@ -77,36 +77,9 @@ variable "client_ip" {
   # Set via: export TF_VAR_client_ip="your-client-ip"
 }
 
-# Secrets for Key Vault
-variable "jwt_secret" {
-  type        = string
-  sensitive   = true
-  description = "JWT secret for token signing"
-}
-
-variable "email_hash_salt" {
-  type        = string
-  sensitive   = true
-  description = "Salt for email hashing"
-}
-
-variable "hive_text_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI Text Classification API key"
-}
-
-variable "hive_image_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI Image Classification API key"
-}
-
-variable "hive_deepfake_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI AI-Generated & Deepfake Detection API key"
-}
+# Note: Key Vault secrets (jwt_secret, email_hash_salt, hive_*_key) are managed
+# via Azure Portal / CLI until Key Vault Terraform module is implemented.
+# See: AZURE_FUNCTIONS_KEYVAULT_NOTES.md for current secret management approach.
 
 variable "enable_redis_cache" {
   description = "Enable Redis cache for feed caching (use only if FEED_CACHE_BACKEND=redis)"
@@ -119,28 +92,8 @@ variable "enable_redis_cache" {
   }
 }
 
-variable "feed_cache_backend" {
-  description = "Feed caching backend to use (edge, redis, or none)"
-  type        = string
-  default     = "edge"
-
-  validation {
-    condition     = contains(["edge", "redis", "none"], var.feed_cache_backend)
-    error_message = "feed_cache_backend must be one of: edge, redis, none."
-  }
-}
-
-variable "edge_telemetry_secret" {
-  description = "Shared secret for edge telemetry authentication"
-  type        = string
-  sensitive   = true
-}
-
-variable "alert_email_address" {
-  description = "Email address for receiving alerts from Application Insights"
-  type        = string
-  default     = null
-}
+# Note: feed_cache_backend, edge_telemetry_secret, and alert_email_address
+# are reserved for future edge caching and alerting implementation.
 
 ############################################
 # RESOURCE GROUP
