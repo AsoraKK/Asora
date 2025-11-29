@@ -10,6 +10,12 @@ import type { ChaosContext } from '@shared/chaos/chaosConfig';
 import { withCosmosChaos } from '@shared/chaos/chaosInjectors';
 import type { Principal } from '@shared/middleware/auth';
 import type { FeedCursor, FeedResult } from '@feed/types';
+import { getBatchReputationScores } from '@shared/services/reputationService';
+import {
+  getRankingConfig,
+  calculateRankingScore,
+  type RankingConfig,
+} from '@feed/ranking/rankingConfig';
 
 type FeedMode = 'home' | 'public' | 'profile';
 
@@ -96,10 +102,43 @@ export async function getFeed({
   const ru = response.requestCharge;
   const queryMetrics = response.queryMetrics;
   const queryDuration = performance.now() - queryStart;
-  const totalDuration = performance.now() - start;
 
-  // Sort items: newest first (DESC by createdAt, then by id for tie-breaking)
-  const sortedItems = [...(resources as Record<string, unknown>[])].sort(sortDocuments);
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Reputation-Based Ranking
+  // ─────────────────────────────────────────────────────────────────────────────
+  const rankingConfig = getRankingConfig();
+  const posts = resources as Record<string, unknown>[];
+  
+  let sortedItems: Record<string, unknown>[];
+  let reputationLookup: Map<string, number> | null = null;
+
+  if (rankingConfig.enabled && posts.length > 0) {
+    // Batch fetch author reputations for ranking
+    const authorIds = posts
+      .map(p => String(p['authorId'] ?? ''))
+      .filter(id => id.length > 0);
+    
+    const reputationStart = performance.now();
+    reputationLookup = await getBatchReputationScores(authorIds, rankingConfig.defaultReputation);
+    const reputationDuration = performance.now() - reputationStart;
+
+    context.log('feed.ranking.reputations_fetched', {
+      authorCount: authorIds.length,
+      uniqueAuthors: reputationLookup.size,
+      durationMs: reputationDuration.toFixed(2),
+    });
+
+    // Sort by combined ranking score (higher score = more visible)
+    const now = Date.now();
+    sortedItems = [...posts].sort((a, b) => 
+      sortByRankingScore(a, b, reputationLookup!, now, rankingConfig)
+    );
+  } else {
+    // Ranking disabled: fall back to pure recency sort
+    sortedItems = [...posts].sort(sortDocuments);
+  }
+
+  const totalDuration = performance.now() - start;
   
   // For backward pagination (older items): lastItem gives nextCursor
   const lastItem = sortedItems[sortedItems.length - 1];
@@ -131,6 +170,9 @@ export async function getFeed({
     'feed.authorSetSize': authorCount,
     'cosmos.continuation.present': Boolean(continuationToken),
     'feed.limit': resolvedLimit,
+    'feed.ranking.enabled': rankingConfig.enabled,
+    'feed.ranking.recencyWeight': rankingConfig.recencyWeight,
+    'feed.ranking.reputationWeight': rankingConfig.reputationWeight,
   };
 
   trackAppMetric({
@@ -489,4 +531,48 @@ function extractTimestamp(value: unknown): number {
   }
 
   return 0;
+}
+
+/**
+ * Sort posts by combined ranking score (reputation + recency).
+ *
+ * Algorithm:
+ *   score = (recencyWeight * recencyScore) + (reputationWeight * reputationScore)
+ *
+ * Higher scores appear first. On tie, newer post wins. On same timestamp, higher ID wins.
+ */
+function sortByRankingScore(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+  reputationLookup: Map<string, number>,
+  now: number,
+  config: RankingConfig
+): number {
+  const aTs = extractTimestamp(a['createdAt']);
+  const bTs = extractTimestamp(b['createdAt']);
+  const aAuthorId = String(a['authorId'] ?? '');
+  const bAuthorId = String(b['authorId'] ?? '');
+  const aRep = reputationLookup.get(aAuthorId) ?? config.defaultReputation;
+  const bRep = reputationLookup.get(bAuthorId) ?? config.defaultReputation;
+
+  const aScore = calculateRankingScore(aTs, aRep, now, config);
+  const bScore = calculateRankingScore(bTs, bRep, now, config);
+
+  // Higher score first
+  if (aScore !== bScore) {
+    return bScore - aScore;
+  }
+
+  // Tie-breaker 1: Newer post first
+  if (aTs !== bTs) {
+    return bTs - aTs;
+  }
+
+  // Tie-breaker 2: ID comparison (deterministic ordering)
+  const aId = String(a['id'] ?? '');
+  const bId = String(b['id'] ?? '');
+  if (aId === bId) {
+    return 0;
+  }
+  return aId < bId ? 1 : -1;
 }

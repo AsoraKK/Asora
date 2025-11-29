@@ -444,6 +444,61 @@ export async function getReputationScore(userId: string): Promise<number | null>
 }
 
 /**
+ * Batch get reputation scores for multiple users.
+ * Returns a Map of userId -> reputationScore.
+ * Users not found return defaultReputation.
+ */
+export async function getBatchReputationScores(
+  userIds: string[],
+  defaultReputation = 0
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  
+  if (!userIds.length) {
+    return result;
+  }
+
+  // Deduplicate userIds
+  const uniqueIds = [...new Set(userIds)];
+  
+  // Initialize all with default
+  for (const id of uniqueIds) {
+    result.set(id, defaultReputation);
+  }
+
+  const usersContainer = getUsersContainer();
+
+  try {
+    // Use IN query to batch fetch users
+    const placeholders = uniqueIds.map((_, i) => `@id${i}`).join(', ');
+    const parameters = uniqueIds.map((id, i) => ({ name: `@id${i}`, value: id }));
+
+    const query = {
+      query: `SELECT c.id, c.reputationScore FROM c WHERE c.id IN (${placeholders})`,
+      parameters,
+    };
+
+    const { resources } = await usersContainer.items
+      .query<{ id: string; reputationScore?: number }>(query)
+      .fetchAll();
+
+    for (const user of resources) {
+      if (user.id && typeof user.reputationScore === 'number') {
+        result.set(user.id, user.reputationScore);
+      }
+    }
+  } catch (error) {
+    logger.warn('getBatchReputationScores failed, using defaults', {
+      error: (error as Error).message,
+      userCount: uniqueIds.length,
+    });
+    // Keep defaults on error
+  }
+
+  return result;
+}
+
+/**
  * Get reputation history for a user.
  */
 export async function getReputationHistory(
