@@ -233,6 +233,10 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createWritePolicy('post/like');
     case 'getLikeStatus':
       return createAuthenticatedPolicy('post/like', 120, 60);
+    case 'createComment':
+      return createWritePolicy('post/comment');
+    case 'listComments':
+      return createAnonymousPolicy('post/comments');
     case 'analytics.ingest':
       // Analytics: 60 requests/min per user (batch up to 50 events each)
       return createAuthenticatedPolicy('analytics/ingest', 60, 60);
