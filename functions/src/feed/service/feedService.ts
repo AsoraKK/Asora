@@ -30,6 +30,7 @@ export interface GetFeedOptions {
   principal: Principal | null;
   context: InvocationContext;
   cursor?: string | null;
+  since?: string | null;  // For forward pagination (fetch newer items)
   limit?: string | number | null;
   authorId?: string | null;
   chaosContext?: ChaosContext;
@@ -53,6 +54,7 @@ export async function getFeed({
   principal,
   context,
   cursor,
+  since,
   limit,
   authorId,
   chaosContext,
@@ -61,13 +63,20 @@ export async function getFeed({
   context.log('feed.get.start', {
     principal: principal ? 'user' : 'guest',
     cursor: Boolean(cursor),
+    since: Boolean(since),
     requestedAuthor: authorId ?? 'none',
   });
 
+  // Validate mutually exclusive parameters
+  if (cursor && since) {
+    throw new HttpError(400, 'Cannot use both cursor and since parameters');
+  }
+
   const resolvedLimit = resolveLimit(limit);
-  const cursorValue = parseCursor(cursor);
+  const cursorValue = cursor ? parseCursor(cursor) : null;
+  const sinceValue = since ? parseSince(since) : null;
   const modeResult = await resolveFeedMode(principal, authorId, context);
-  const queryDefinition = buildQuery(cursorValue, modeResult.authorIds, modeResult.visibility);
+  const queryDefinition = buildQuery(cursorValue, sinceValue, modeResult.authorIds, modeResult.visibility);
   const queryOptions = buildQueryOptions(
     resolvedLimit,
     queryDefinition.partitionKey
@@ -89,12 +98,27 @@ export async function getFeed({
   const queryDuration = performance.now() - queryStart;
   const totalDuration = performance.now() - start;
 
+  // Sort items: newest first (DESC by createdAt, then by id for tie-breaking)
   const sortedItems = [...(resources as Record<string, unknown>[])].sort(sortDocuments);
+  
+  // For backward pagination (older items): lastItem gives nextCursor
   const lastItem = sortedItems[sortedItems.length - 1];
+  const firstItem = sortedItems[0];
+  
+  // nextCursor: use to fetch older items (continue scrolling down)
   const nextCursor = lastItem
     ? encodeCursor({
         ts: extractTimestamp(lastItem['createdAt']),
         id: String(lastItem['id'] ?? ''),
+      })
+    : null;
+  
+  // sinceCursor: use to fetch newer items (refresh / pull-to-refresh)
+  // Only provide if we have items and this isn't already a "since" query
+  const sinceCursor = firstItem && !sinceValue
+    ? encodeCursor({
+        ts: extractTimestamp(firstItem['createdAt']),
+        id: String(firstItem['id'] ?? ''),
       })
     : null;
 
@@ -103,6 +127,7 @@ export async function getFeed({
   const telemetryProps = {
     'feed.type': modeResult.mode,
     'feed.cursor.present': Boolean(cursor),
+    'feed.since.present': Boolean(since),
     'feed.authorSetSize': authorCount,
     'cosmos.continuation.present': Boolean(continuationToken),
     'feed.limit': resolvedLimit,
@@ -119,7 +144,7 @@ export async function getFeed({
     properties: {
       ...telemetryProps,
       count: sortedItems.length,
-      hasMore: Boolean(continuationToken),
+      hasMore: Boolean(continuationToken) || Boolean(nextCursor),
     },
   });
 
@@ -139,6 +164,7 @@ export async function getFeed({
       meta: {
         count: sortedItems.length,
         nextCursor,
+        sinceCursor,  // For forward pagination (fetch newer)
         timingsMs: {
           query: Number(queryDuration.toFixed(2)),
           total: Number(totalDuration.toFixed(2)),
@@ -174,9 +200,9 @@ function resolveLimit(value?: string | number | null): number {
   return Math.min(parsed, MAX_LIMIT);
 }
 
-export function parseCursor(cursor?: string | null): FeedCursor {
+export function parseCursor(cursor?: string | null): FeedCursor | null {
   if (!cursor) {
-    return DEFAULT_CURSOR;
+    return null;
   }
 
   try {
@@ -191,6 +217,26 @@ export function parseCursor(cursor?: string | null): FeedCursor {
     return { ts, id };
   } catch (error) {
     throw new HttpError(400, 'Invalid cursor');
+  }
+}
+
+export function parseSince(since?: string | null): FeedCursor | null {
+  if (!since) {
+    return null;
+  }
+
+  try {
+    const decoded = Buffer.from(since, 'base64url').toString('utf-8');
+    const parsed = JSON.parse(decoded);
+    const ts = Number(parsed?.ts);
+    const id = typeof parsed?.id === 'string' ? parsed.id : '';
+    if (!Number.isFinite(ts) || !id) {
+      throw new Error('malformed since');
+    }
+
+    return { ts, id };
+  } catch (error) {
+    throw new HttpError(400, 'Invalid since parameter');
   }
 }
 
@@ -314,20 +360,37 @@ async function isFollowing(followerId: string, followeeId: string): Promise<bool
 }
 
 function buildQuery(
-  cursor: FeedCursor,
+  cursor: FeedCursor | null,
+  since: FeedCursor | null,
   authorIds: string[] | null,
   visibility: string[]
 ): QueryDefinition {
   const parameters: SqlParameter[] = [
-    { name: '@cursorTs', value: cursor.ts },
-    { name: '@cursorId', value: cursor.id },
     { name: '@status', value: STATUS_PUBLISHED },
   ];
 
-  const clauses = [
-    '(c.createdAt < @cursorTs OR (c.createdAt = @cursorTs AND c.id < @cursorId))',
+  const clauses: string[] = [
     'c.status = @status',
+    // Filter out comments (they have type='comment', posts have no type or type='post')
+    '(NOT IS_DEFINED(c.type) OR c.type = "post")',
   ];
+
+  // Cursor-based pagination (backward: fetch older items)
+  if (cursor) {
+    parameters.push(
+      { name: '@cursorTs', value: cursor.ts },
+      { name: '@cursorId', value: cursor.id }
+    );
+    clauses.push('(c.createdAt < @cursorTs OR (c.createdAt = @cursorTs AND c.id < @cursorId))');
+  } else if (since) {
+    // "Since" pagination (forward: fetch newer items)
+    parameters.push(
+      { name: '@sinceTs', value: since.ts },
+      { name: '@sinceId', value: since.id }
+    );
+    clauses.push('(c.createdAt > @sinceTs OR (c.createdAt = @sinceTs AND c.id > @sinceId))');
+  }
+  // If neither cursor nor since, fetch from newest (no time constraint needed)
 
   appendVisibilityClauses(visibility, parameters, clauses);
 

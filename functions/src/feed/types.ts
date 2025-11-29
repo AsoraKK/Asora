@@ -6,6 +6,7 @@ export interface FeedCursor {
 export interface FeedMeta {
   count: number;
   nextCursor: string | null;
+  sinceCursor?: string | null;  // For forward pagination (fetch newer items)
   timingsMs?: Record<string, number>;
   applied?: Record<string, unknown>;
 }

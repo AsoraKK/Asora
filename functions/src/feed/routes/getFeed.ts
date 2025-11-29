@@ -12,6 +12,7 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
   try {
     const principal = await parseAuth(req);
     const cursor = typeof req.query?.get === 'function' ? req.query.get('cursor') ?? null : null;
+    const since = typeof req.query?.get === 'function' ? req.query.get('since') ?? null : null;
     const limit = typeof req.query?.get === 'function' ? req.query.get('limit') ?? null : null;
     const authorId = typeof req.query?.get === 'function' ? req.query.get('authorId') ?? null : null;
     const chaosContext = getChaosContext(req);
@@ -22,6 +23,7 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
       principal: principal ?? null,
       context,
       cursor,
+      since,
       limit,
       authorId,
       chaosContext,
@@ -30,7 +32,7 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
     return createSuccessResponse(result.body, {
       ...result.headers,
       Vary: 'Authorization',
-      'Cache-Control': principal ? 'private, no-store' : 'public, max-age=60',
+      'Cache-Control': principal ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30',
     });
   } catch (error) {
     if (error instanceof HttpError) {
