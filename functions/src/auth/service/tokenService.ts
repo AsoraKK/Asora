@@ -8,6 +8,11 @@ import * as jwt from 'jsonwebtoken';
 import { getCosmosClient } from '@shared/clients/cosmos';
 
 import type { AuthSession, TokenPayload, TokenRequest, UserDocument } from '@auth/types';
+import {
+  storeRefreshToken,
+  validateRefreshToken,
+  rotateRefreshToken,
+} from './refreshTokenStore';
 
 const logger = getAzureLogger('auth/token');
 
@@ -264,10 +269,20 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     jwtid: crypto.randomUUID(),
   });
 
-  const refreshToken = jwt.sign({ sub: user.id, iss: JWT_ISSUER, type: 'refresh' }, getJwtSecret(), {
-    expiresIn: REFRESH_TOKEN_EXPIRY,
-    jwtid: crypto.randomUUID(),
-  });
+  const refreshJti = crypto.randomUUID();
+  const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  const refreshToken = jwt.sign(
+    { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
+    getJwtSecret(),
+    {
+      expiresIn: REFRESH_TOKEN_EXPIRY,
+      jwtid: refreshJti,
+    }
+  );
+
+  // Store refresh token for rotation tracking
+  await storeRefreshToken(refreshJti, user.id, refreshExpiresAt);
 
   logAuthAttempt(logger, true, user.id, 'Token exchange successful', requestId);
 
@@ -305,9 +320,31 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       throw new Error('Invalid token type');
     }
 
+    // Validate token exists in store (rotation check)
+    const oldJti = decoded.jti;
+    if (!oldJti) {
+      throw new Error('Refresh token missing jti claim');
+    }
+
+    const storedToken = await validateRefreshToken(oldJti);
+    if (!storedToken) {
+      // Token not found - either already rotated (reuse attempt) or never stored
+      logger.warn('Refresh token reuse or invalid token detected', {
+        requestId,
+        jti: oldJti.slice(0, 8),
+        userId: decoded.sub?.slice(0, 8),
+      });
+      throw new Error('Refresh token has been revoked or is invalid');
+    }
+
+    // Verify the token belongs to the claimed user
+    if (storedToken.userId !== decoded.sub) {
+      throw new Error('Token user mismatch');
+    }
+
     // Get user information
-  const { users } = ensureContainers();
-  const userDoc = await users.item(decoded.sub, decoded.sub).read();
+    const { users } = ensureContainers();
+    const userDoc = await users.item(decoded.sub, decoded.sub).read();
     if (!userDoc.resource) {
       throw new Error('User not found');
     }
@@ -319,7 +356,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
     }
 
     // Generate new access token
-  const tokenPayload: TokenPayload = {
+    const tokenPayload: TokenPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
@@ -334,15 +371,34 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       jwtid: crypto.randomUUID(),
     });
 
-    logAuthAttempt(logger, true, user.id, 'Token refresh successful', requestId);
+    // Rotate refresh token: revoke old, issue new
+    const newRefreshJti = crypto.randomUUID();
+    const newRefreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const newRefreshToken = jwt.sign(
+      { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
+      getJwtSecret(),
+      {
+        expiresIn: REFRESH_TOKEN_EXPIRY,
+        jwtid: newRefreshJti,
+      }
+    );
+
+    await rotateRefreshToken(oldJti, newRefreshJti, user.id, newRefreshExpiresAt);
+
+    logAuthAttempt(logger, true, user.id, 'Token refresh with rotation successful', requestId);
 
     return {
       access_token: accessToken,
+      refresh_token: newRefreshToken,
       token_type: 'Bearer',
       expires_in: 15 * 60, // 15 minutes in seconds
       scope: 'read write',
     };
   } catch (jwtError) {
+    if (jwtError instanceof Error && jwtError.message.includes('revoked')) {
+      throw jwtError; // Preserve specific error message
+    }
     throw new Error('Invalid or expired refresh token');
   }
 }

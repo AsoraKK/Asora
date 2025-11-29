@@ -58,6 +58,35 @@ Create `local.settings.json` with at least `JWT_SECRET`, `COSMOS_CONNECTION_STRI
 - `authRequired(principal)` remains available for legacy code paths that already pulled a principal via `parseAuth`.
 - `@shared/utils/http` exposes typed helpers (`ok`, `created`, `badRequest`, `serverError`, …) so routes always return a serialised JSON body with consistent headers.
 
+## Token Lifecycle & Refresh Rotation
+
+The auth module issues two types of tokens:
+
+| Token Type     | Lifetime | Storage                     | Notes                                       |
+| -------------- | -------- | --------------------------- | ------------------------------------------- |
+| Access token   | 15 min   | Client only                 | Short-lived, stateless JWT                  |
+| Refresh token  | 7 days   | Postgres `refresh_tokens`   | Long-lived, tracked by `jti` for rotation   |
+
+**Refresh Token Rotation** (implemented in `src/auth/service/tokenService.ts`):
+
+1. **Initial Issue**: When a user completes OAuth2 authorization code exchange, both tokens are issued. The refresh token's `jti` is stored in Postgres.
+
+2. **On Refresh**: When the client exchanges a refresh token for a new access token:
+   - The `jti` is validated against the Postgres store
+   - The old refresh token is revoked (deleted from store)
+   - A new refresh token with a new `jti` is issued and stored
+   - Both new access and refresh tokens are returned
+
+3. **Reuse Detection**: If a client attempts to reuse an already-rotated refresh token:
+   - The `jti` won't exist in the store (already deleted)
+   - The request fails with a 500 error
+   - This indicates potential token theft—consider revoking all user tokens
+
+**Related Services**:
+- `src/auth/service/refreshTokenStore.ts` - Postgres-backed `jti` tracking
+- `revokeAllUserTokens(userId)` - Logout-all functionality
+- `cleanupExpiredTokens()` - Periodic cleanup (call from timer trigger)
+
 ## HTTP Surface
 
 | Route                               | Method | Module       | Notes                                  |

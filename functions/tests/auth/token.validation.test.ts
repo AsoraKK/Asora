@@ -6,6 +6,9 @@ import * as jwt from 'jsonwebtoken';
 // Mutable stub the Cosmos mock can read at call-time
 const dbStub: { sessions: any[]; user: any } = { sessions: [], user: null };
 
+// In-memory refresh token store for mocking
+const refreshTokenStore = new Map<string, { userId: string; expiresAt: Date; createdAt: Date }>();
+
 // Mock the cosmos client factory instead of the CosmosClient class
 jest.mock('@shared/clients/cosmos', () => ({
   getCosmosClient: jest.fn(() => ({
@@ -35,6 +38,55 @@ jest.mock('@shared/clients/cosmos', () => ({
   })),
 }));
 
+// Mock Postgres pool for refresh token store
+jest.mock('@shared/clients/postgres', () => ({
+  getPool: jest.fn(() => ({
+    query: jest.fn(async (sql: string, params: any[]) => {
+      if (sql.includes('INSERT INTO refresh_tokens')) {
+        const [jti, userId, expiresAt] = params;
+        refreshTokenStore.set(jti, { userId, expiresAt, createdAt: new Date() });
+        return { rowCount: 1 };
+      }
+      if (sql.includes('SELECT') && sql.includes('refresh_tokens')) {
+        const jti = params[0];
+        const token = refreshTokenStore.get(jti);
+        if (token && token.expiresAt > new Date()) {
+          return {
+            rows: [{
+              jti,
+              user_uuid: token.userId,
+              expires_at: token.expiresAt,
+              created_at: token.createdAt,
+            }],
+          };
+        }
+        return { rows: [] };
+      }
+      if (sql.includes('DELETE FROM refresh_tokens')) {
+        const jti = params[0];
+        refreshTokenStore.delete(jti);
+        return { rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    }),
+    connect: jest.fn(async () => ({
+      query: jest.fn(async (sql: string, params?: any[]) => {
+        if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return {};
+        if (sql.includes('DELETE') && params) {
+          refreshTokenStore.delete(params[0]);
+          return { rowCount: 1 };
+        }
+        if (sql.includes('INSERT') && params) {
+          refreshTokenStore.set(params[0], { userId: params[1], expiresAt: params[2], createdAt: new Date() });
+          return { rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+      release: jest.fn(),
+    })),
+  })),
+}));
+
 import { InvocationContext } from '@azure/functions';
 
 import { tokenHandler } from '@auth/service/tokenService';
@@ -52,6 +104,7 @@ describe('auth/token validation and method handling', () => {
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
+    refreshTokenStore.clear();
     jest.restoreAllMocks();
     logFn.mockClear();
   });
@@ -422,11 +475,17 @@ describe('auth/token validation and method handling', () => {
       reputationScore: 1,
       isActive: true,
     };
-    // Use the same secret as configured in beforeAll
+    // Create refresh token WITH jti and pre-populate store
+    const jti = crypto.randomUUID();
+    refreshTokenStore.set(jti, {
+      userId: 'u1',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    });
     const refresh = jwt.sign(
       { sub: 'u1', iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
+      { expiresIn: '7d', jwtid: jti }
     );
     const req = httpReqMock({
       method: 'POST',
@@ -437,6 +496,7 @@ describe('auth/token validation and method handling', () => {
     const body = JSON.parse(res.body as string);
     expect(body.success).toBe(true);
     expect(body.data).toHaveProperty('access_token');
+    expect(body.data).toHaveProperty('refresh_token'); // Now returns new refresh token
   });
 
   it('refresh_token: user not found', async () => {
