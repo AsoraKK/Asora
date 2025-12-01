@@ -47,8 +47,10 @@ Asora implements a **dual-store architecture** with PostgreSQL as the canonical 
 ### 5. counters
 - **Partition Key**: `/subjectId`
 - **Purpose**: Aggregated counts (likes, follows, etc.)
+- **Role in rate limiting**: Also stores per-user daily post counters (`userId:post:YYYY-MM-DD`) so the Free/Premium/Black quotas (5/20/50) hit this container on every post.
 - **TTL**: 90 days for cache invalidation
 - **Idempotent IDs**: `${postId}:likes`, `${userId}:followers`
+- **RU guidance**: Because counters increment on every post, watch autoscale → 4000 RU to keep increments cheap (most writes are single-item upserts, but the throughput must comfortably handle spikes when premium/black users post near their new limits).
 
 ### 6. publicProfiles
 - **Partition Key**: `/userId`

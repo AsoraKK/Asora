@@ -32,4 +32,25 @@ The `canary-k6` workflow now includes an additional `canary-k6-chaos` job that i
    - `chaos_feed_cosmos_reads`: reads `/api/feed` while Cosmos read errors are simulated.
    - `chaos_post_cosmos_writes`: exercises the flag endpoint under Cosmos write failures.
 
-The chaos job enforces looser thresholds (higher tolerances for failures) while still requiring structured JSON responses, bounded latency, and error rates below the configured limits. Failures block the workflow just like the standard k6 job.
+   The chaos job enforces looser thresholds (higher tolerances for failures) while still requiring structured JSON responses, bounded latency, and error rates below the configured limits. Failures block the workflow just like the standard k6 job.
+
+### Optional chaos knobs
+
+Chaos middleware respects three environment variables:
+
+- `CHAOS_ENABLED=true` unlocks the latency/error injection paths. The middleware logs a warning and refuses to activate when `APP_ENV=prod` or `NODE_ENV=production`, so only non-prod environments should flip this flag.
+- `CHAOS_LATENCY_MS` (integer) adds that many milliseconds of delay before handing the request to the handler.
+- `CHAOS_ERROR_RATE` (float 0–1) deterministically configures the probability of returning a `503` with `{ code: "CHAOS_INJECTED" }`.
+
+To exercise the optional knobs when running locally, export the desired values before invoking the chaos script (or the function locally). Example:
+
+```bash
+CHAOS_ENABLED=true \
+CHAOS_LATENCY_MS=250 \
+CHAOS_ERROR_RATE=0.25 \
+K6_BASE_URL=... \
+K6_SMOKE_TOKEN=... \
+k6 run load/k6/chaos.js
+```
+
+Remember: never set `CHAOS_ENABLED` to true in production — the guard is conservative but avoid accidental flips via env propagation.

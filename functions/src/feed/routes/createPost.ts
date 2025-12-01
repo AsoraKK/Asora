@@ -220,7 +220,7 @@ function isValidMediaUrl(url: string): boolean {
   }
 }
 
-async function handleCreatePost(req: AuthenticatedRequest, context: InvocationContext): Promise<HttpResponseInit> {
+async function handleCreatePost(req: AuthenticatedRequest, context: InvocationContext): Promise<import('@azure/functions').HttpResponseInit> {
   const principal = req.principal;
   const start = performance.now();
 

@@ -23,7 +23,7 @@ export function withDailyPostLimit(handler: AuthenticatedHandler): Authenticated
       const limitResult = await checkAndIncrementPostCount(req.principal.sub, req.principal.tier);
       context.log('posts.create.limitCheck', {
         userId: req.principal.sub.slice(0, 8),
-        tier: limitResult.tier,
+        tier: req.principal.tier,
         newCount: limitResult.newCount,
         remaining: limitResult.remaining,
         limit: limitResult.limit,

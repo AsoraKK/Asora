@@ -29,12 +29,12 @@ if (chaosAllowed) {
   });
 }
 
-export type ChaosHandler = (
-  req: HttpRequest,
+export type ChaosHandler<T extends HttpRequest = HttpRequest> = (
+  req: T,
   context: InvocationContext
 ) => Promise<HttpResponseInit>;
 
-export function withChaos(handler: ChaosHandler): ChaosHandler {
+export function withChaos<T extends HttpRequest = HttpRequest>(handler: ChaosHandler<T>): ChaosHandler<T> {
   return async (req, context) => {
     if (!chaosAllowed) {
       return handler(req, context);
