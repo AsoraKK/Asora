@@ -55,6 +55,10 @@ describe('Tier Limits', () => {
       expect(normalizeTier('admin')).toBe('admin');
     });
 
+    it('should return black tier correctly', () => {
+      expect(normalizeTier('black')).toBe('black');
+    });
+
     it('should be case insensitive', () => {
       expect(normalizeTier('FREE')).toBe('free');
       expect(normalizeTier('Premium')).toBe('premium');
@@ -81,27 +85,31 @@ describe('Tier Limits', () => {
     });
 
     it('should return 10 for free tier by default', () => {
-      expect(getDailyPostLimit('free')).toBe(10);
+      expect(getDailyPostLimit('free')).toBe(5);
     });
 
     it('should return 100 for premium tier by default', () => {
-      expect(getDailyPostLimit('premium')).toBe(100);
+      expect(getDailyPostLimit('premium')).toBe(20);
     });
 
     it('should return 10000 for admin tier', () => {
       expect(getDailyPostLimit('admin')).toBe(10000);
     });
 
+    it('should return 50 for black tier by default', () => {
+      expect(getDailyPostLimit('black')).toBe(50);
+    });
+
     it('should return free limit for undefined tier', () => {
-      expect(getDailyPostLimit(undefined)).toBe(10);
+      expect(getDailyPostLimit(undefined)).toBe(5);
     });
 
     it('should return free limit for null tier', () => {
-      expect(getDailyPostLimit(null)).toBe(10);
+      expect(getDailyPostLimit(null)).toBe(5);
     });
 
     it('should normalize freemium to free', () => {
-      expect(getDailyPostLimit('freemium')).toBe(10);
+      expect(getDailyPostLimit('freemium')).toBe(5);
     });
   });
 
@@ -116,6 +124,12 @@ describe('Tier Limits', () => {
       process.env.TIER_PREMIUM_DAILY_POSTS = '200';
       const { getDailyPostLimit } = await import('@shared/services/tierLimits');
       expect(getDailyPostLimit('premium')).toBe(200);
+    });
+
+    it('should allow overriding black daily posts via env', async () => {
+      process.env.TIER_BLACK_DAILY_POSTS = '75';
+      const { getDailyPostLimit } = await import('@shared/services/tierLimits');
+      expect(getDailyPostLimit('black')).toBe(75);
     });
   });
 

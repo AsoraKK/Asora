@@ -9,7 +9,7 @@
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type UserTier = 'free' | 'premium' | 'admin';
+export type UserTier = 'free' | 'premium' | 'black' | 'admin';
 
 export interface TierLimits {
   /** Maximum posts per day */
@@ -30,14 +30,19 @@ export interface TierLimits {
  */
 export const TIER_LIMITS: Record<UserTier, TierLimits> = {
   free: {
-    dailyPosts: parseInt(process.env.TIER_FREE_DAILY_POSTS ?? '10', 10),
+    dailyPosts: parseInt(process.env.TIER_FREE_DAILY_POSTS ?? '5', 10),
     dailyComments: parseInt(process.env.TIER_FREE_DAILY_COMMENTS ?? '50', 10),
     dailyLikes: parseInt(process.env.TIER_FREE_DAILY_LIKES ?? '100', 10),
   },
   premium: {
-    dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '100', 10),
+    dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '20', 10),
     dailyComments: parseInt(process.env.TIER_PREMIUM_DAILY_COMMENTS ?? '500', 10),
     dailyLikes: parseInt(process.env.TIER_PREMIUM_DAILY_LIKES ?? '1000', 10),
+  },
+  black: {
+    dailyPosts: parseInt(process.env.TIER_BLACK_DAILY_POSTS ?? '50', 10),
+    dailyComments: parseInt(process.env.TIER_BLACK_DAILY_COMMENTS ?? '750', 10),
+    dailyLikes: parseInt(process.env.TIER_BLACK_DAILY_LIKES ?? '1500', 10),
   },
   admin: {
     // Admins have effectively unlimited (very high) limits
@@ -72,7 +77,16 @@ export function normalizeTier(tier: string | undefined | null): UserTier {
     return 'free';
   }
 
-  if (normalized === 'free' || normalized === 'premium' || normalized === 'admin') {
+  // Legacy mobile tier names mapped to new limits
+  if (['bronze', 'herald', 'iron'].includes(normalized)) {
+    return 'free';
+  }
+
+  if (['silver', 'gold', 'platinum'].includes(normalized)) {
+    return 'premium';
+  }
+
+  if (['free', 'premium', 'black', 'admin'].includes(normalized)) {
     return normalized as UserTier;
   }
 

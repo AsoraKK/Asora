@@ -161,6 +161,27 @@ describe('likePost route', () => {
       expect(response.status).toBe(500);
       expect(contextStub.log).toHaveBeenCalledWith('posts.like.error', expect.any(Object));
     });
+
+    it('returns 500 when post patch fails', async () => {
+      mockPostPatch.mockRejectedValueOnce(new Error('Patch failed'));
+      
+      const response = await likePost(userRequest('POST', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when initial reaction read fails (non-404 error)', async () => {
+      mockReactionRead.mockRejectedValueOnce({ code: 500, message: 'Database error' });
+      
+      const response = await likePost(userRequest('POST', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when post read fails', async () => {
+      mockPostRead.mockRejectedValueOnce(new Error('Read failed'));
+      
+      const response = await likePost(userRequest('POST', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
   });
 
   describe('DELETE /posts/{postId}/like (unlike)', () => {
@@ -250,6 +271,30 @@ describe('likePost route', () => {
       const response = await unlikePost(userRequest('DELETE', 'post-123'), contextStub);
       expect(response.status).toBe(500);
     });
+
+    it('returns 500 when post patch fails during unlike', async () => {
+      mockReactionRead.mockResolvedValueOnce({
+        resource: { id: 'post-123:user-123' },
+      });
+      mockPostPatch.mockRejectedValueOnce(new Error('Patch failed'));
+      
+      const response = await unlikePost(userRequest('DELETE', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when reaction read fails (non-404 error)', async () => {
+      mockReactionRead.mockRejectedValueOnce({ code: 500, message: 'Database error' });
+      
+      const response = await unlikePost(userRequest('DELETE', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when post read fails during unlike', async () => {
+      mockPostRead.mockRejectedValueOnce(new Error('Read failed'));
+      
+      const response = await unlikePost(userRequest('DELETE', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
   });
 
   describe('GET /posts/{postId}/like (status)', () => {
@@ -287,6 +332,25 @@ describe('likePost route', () => {
       const body = JSON.parse(response.body as string);
       expect(body.liked).toBe(false);
       expect(body.likeCount).toBe(5);
+    });
+
+    it('returns 400 when postId is missing', async () => {
+      const response = await getLikeStatus(userRequest('GET', ''), contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 500 when post read fails', async () => {
+      mockPostRead.mockRejectedValueOnce(new Error('Read failed'));
+      
+      const response = await getLikeStatus(userRequest('GET', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when reaction read fails (non-404 error)', async () => {
+      mockReactionRead.mockRejectedValueOnce({ code: 500, message: 'Database error' });
+      
+      const response = await getLikeStatus(userRequest('GET', 'post-123'), contextStub);
+      expect(response.status).toBe(500);
     });
   });
 });

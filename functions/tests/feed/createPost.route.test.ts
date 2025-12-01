@@ -55,8 +55,12 @@ jest.mock('@shared/appInsights', () => ({
 jest.mock('@shared/services/dailyPostLimitService', () => {
   const actual = jest.requireActual('@shared/services/dailyPostLimitService');
   return {
-    ...actual,
+    DailyPostLimitExceededError: actual.DailyPostLimitExceededError,
     checkAndIncrementPostCount: jest.fn(),
+    incrementDailyPostCount: actual.incrementDailyPostCount,
+    enforceDailyPostLimit: actual.enforceDailyPostLimit,
+    getCurrentPostCount: actual.getCurrentPostCount,
+    getRemainingPostsToday: actual.getRemainingPostsToday,
   };
 });
 
@@ -218,10 +222,10 @@ describe('createPost route', () => {
   it('returns 429 when the daily post limit is exceeded', async () => {
     const limitPayload = {
       allowed: false,
-      currentCount: 10,
-      limit: 10,
+      currentCount: 5,
+      limit: 5,
       remaining: 0,
-      tier: 'premium',
+      tier: 'free',
       resetDate: '2025-01-01T00:00:00.000Z',
     };
     mockCheckAndIncrementPostCount.mockRejectedValue(new DailyPostLimitExceededError(limitPayload));
@@ -233,7 +237,6 @@ describe('createPost route', () => {
       'Retry-After': '86400',
     });
     expect(getTargetDatabase).not.toHaveBeenCalled();
-    expect(contextStub.log).toHaveBeenCalledWith('posts.create.limitExceeded', expect.any(Object));
     expect(trackAppEvent).toHaveBeenCalledWith(expect.objectContaining({
       name: 'post_limit_exceeded',
       properties: expect.objectContaining({
@@ -243,12 +246,11 @@ describe('createPost route', () => {
 
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
-      code: 'daily_post_limit_reached',
-      message: 'Daily post limit reached. Try again tomorrow.',
-      resetTime: limitPayload.resetDate,
-      limit: limitPayload.limit,
-      remaining: 0,
+      code: 'DAILY_POST_LIMIT_EXCEEDED',
       tier: limitPayload.tier,
+      limit: limitPayload.limit,
+      resetAt: limitPayload.resetDate,
+      message: 'Daily post limit reached. Try again tomorrow.',
     });
   });
 

@@ -10,15 +10,13 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostCreated } from '@shared/services/reputationService';
 import {
-  checkAndIncrementPostCount,
-  DailyPostLimitExceededError,
-} from '@shared/services/dailyPostLimitService';
-import {
   createHiveClient,
   ModerationAction,
   HiveAPIError,
   type ModerationResult,
 } from '@shared/clients/hive';
+import { withChaos } from '@shared/middleware/chaos';
+import { withDailyPostLimit } from '@shared/middleware/dailyPostLimit';
 
 import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta, ModerationStatus } from '@feed/types';
 
@@ -222,7 +220,7 @@ function isValidMediaUrl(url: string): boolean {
   }
 }
 
-export const createPost = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+async function handleCreatePost(req: AuthenticatedRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const principal = req.principal;
   const start = performance.now();
 
@@ -238,59 +236,6 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
   }
 
   try {
-    // ─────────────────────────────────────────────────────────────
-    // Daily Post Limit - Check tier-based limit before proceeding
-    // ─────────────────────────────────────────────────────────────
-    try {
-      const limitResult = await checkAndIncrementPostCount(principal.sub, principal.tier);
-      context.log('posts.create.limitCheck', {
-        userId: principal.sub.slice(0, 8),
-        tier: principal.tier ?? 'free',
-        newCount: limitResult.newCount,
-        remaining: limitResult.remaining,
-        limit: limitResult.limit,
-      });
-    } catch (limitError) {
-      if (limitError instanceof DailyPostLimitExceededError) {
-        context.log('posts.create.limitExceeded', {
-          userId: principal.sub.slice(0, 8),
-          tier: limitError.tier,
-          count: limitError.currentCount,
-          limit: limitError.limit,
-        });
-
-        trackAppEvent({
-          name: 'post_limit_exceeded',
-          properties: {
-            authorId: principal.sub,
-            tier: limitError.tier,
-            currentCount: limitError.currentCount,
-            limit: limitError.limit,
-          },
-        });
-
-        const remaining = Math.max(0, limitError.limit - limitError.currentCount);
-        const rateLimitBody = {
-          code: limitError.code,
-          message: 'Daily post limit reached. Try again tomorrow.',
-          resetTime: limitError.resetDate,
-          limit: limitError.limit,
-          remaining,
-          tier: limitError.tier,
-        };
-
-        return {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': '86400', // 24 hours
-          },
-          body: JSON.stringify(rateLimitBody),
-        };
-      }
-      throw limitError;
-    }
-
     const now = Date.now();
     const postId = crypto.randomUUID();
 
@@ -449,7 +394,9 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
     context.log('posts.create.error', { message: (error as Error).message });
     return serverError();
   }
-});
+}
+
+export const createPost = requireAuth(withChaos(withDailyPostLimit(handleCreatePost)));
 
 /* istanbul ignore next */
 const rateLimitedCreatePost = withRateLimit(createPost, (req, context) => getPolicyForFunction('createPost'));

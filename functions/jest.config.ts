@@ -48,10 +48,10 @@ const config: Config = {
   coverageThreshold: {
     global: {
       // Coverage gates enforced by Jest (CI will fail if not met)
-      // Current: ~90.85% statements, ~71.36% branches, ~91.23% lines, ~89.67% functions
-      // Set to 85%+ for statements/lines/functions, 70% for branches (harder to achieve)
+      // Current: ~93.38% statements, ~78.42% branches, ~93.48% lines, ~92.9% functions
+      // Set to 85%+ for most metrics, 72% for branches (achievable after test improvements)
       statements: 85,
-      branches: 70,
+      branches: 72,
       lines: 85,
       functions: 85,
     },
