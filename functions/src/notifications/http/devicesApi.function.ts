@@ -18,22 +18,32 @@ export async function registerDevice(
   try {
     const principal = await getPrincipalOrThrow(request);
 
-    const body = (await request.json()) as any;
-    if (!body?.deviceId || !body?.pushToken || !body?.platform) {
+    const body = (await request.json()) as Record<string, unknown>;
+    if (
+      typeof body?.deviceId !== 'string' ||
+      typeof body?.pushToken !== 'string' ||
+      typeof body?.platform !== 'string'
+    ) {
       return {
         status: 400,
         jsonBody: { error: 'Missing required fields: deviceId, pushToken, platform' },
       };
     }
 
-    const { deviceId, pushToken, platform, label } = body;
+    const deviceId = body.deviceId;
+    const pushToken = body.pushToken;
+    const apiPlatform = body.platform;
+    const label = typeof body.label === 'string' ? body.label : undefined;
 
-    if (platform !== 'fcm' && platform !== 'apns') {
+    if (apiPlatform !== 'fcm' && apiPlatform !== 'apns') {
       return {
         status: 400,
         jsonBody: { error: 'Invalid platform. Must be "fcm" or "apns"' },
       };
     }
+
+    // Map API platform (fcm/apns) to internal platform type (android/ios)
+    const platform = apiPlatform === 'fcm' ? 'android' : 'ios';
 
     // Register in repository (enforces 3-device cap)
     const result = await userDeviceTokensRepo.register(principal.sub, {
@@ -46,7 +56,7 @@ export async function registerDevice(
     // Register with Notification Hubs
     try {
       const hubClient = getNotificationHubsClient();
-      await hubClient.registerInstallation(deviceId, pushToken, platform, principal.sub);
+      await hubClient.registerInstallation(deviceId, pushToken, apiPlatform, principal.sub);
     } catch (hubError) {
       context.warn('Failed to register with Notification Hubs', hubError);
       // Continue - device is still registered in DB

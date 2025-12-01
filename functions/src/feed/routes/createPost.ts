@@ -51,9 +51,11 @@ interface PostDocument {
  * Content blocked error response
  */
 interface ContentBlockedResponse {
-  error: string;
   code: string;
+  message: string;
+  error?: string;
   categories?: string[];
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -267,13 +269,23 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
           },
         });
 
+        const remaining = Math.max(0, limitError.limit - limitError.currentCount);
+        const rateLimitBody = {
+          code: limitError.code,
+          message: 'Daily post limit reached. Try again tomorrow.',
+          resetTime: limitError.resetDate,
+          limit: limitError.limit,
+          remaining,
+          tier: limitError.tier,
+        };
+
         return {
           status: 429,
           headers: {
             'Content-Type': 'application/json',
             'Retry-After': '86400', // 24 hours
           },
-          body: JSON.stringify(limitError.toResponse()),
+          body: JSON.stringify(rateLimitBody),
         };
       }
       throw limitError;
@@ -315,9 +327,14 @@ export const createPost = requireAuth(async (req: AuthenticatedRequest, context:
       });
 
       const blockedResponse: ContentBlockedResponse = {
-        error: 'Content cannot be posted as it violates our community guidelines',
         code: 'content_blocked',
+        message: 'Content cannot be posted as it violates our community guidelines',
+        error: 'Content cannot be posted as it violates our community guidelines',
         categories: moderationMeta.categories,
+        details: {
+          confidence: moderationMeta.confidence ?? undefined,
+          reasons: moderationMeta.reasons ?? undefined,
+        },
       };
 
       return {

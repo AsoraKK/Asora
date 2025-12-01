@@ -24,7 +24,7 @@ export async function moderateTextWithACS(
       text,
       categories,
       outputType: 'FourSeverityLevels',
-    } as any;
+    };
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -33,17 +33,21 @@ export async function moderateTextWithACS(
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
-    } as any);
+    });
     if (!res.ok) {
       throw new Error(`ACS error: ${res.status}`);
     }
-    const data: any = await res.json();
+    const data: unknown = await res.json();
     // Map categories to scores (0..1). ACS returns severity 0..3; normalize to 0..1.
     const categoryScores: Record<string, number> = {};
     let max = 0;
-    for (const c of data?.categoriesAnalysis || []) {
-      const name = c?.category || 'Unknown';
-      const sev = typeof c?.severity === 'number' ? c.severity : 0; // 0..3
+    const categoriesAnalysis =
+      (typeof data === 'object' && data !== null && Array.isArray((data as Record<string, unknown>).categoriesAnalysis)
+        ? ((data as Record<string, unknown>).categoriesAnalysis as Array<Record<string, unknown>>)
+        : []) as Array<Record<string, unknown>>;
+    for (const c of categoriesAnalysis) {
+      const name = (typeof c.category === 'string' ? c.category : 'Unknown') as string;
+      const sev = typeof c.severity === 'number' ? (c.severity as number) : 0; // 0..3
       const score = Math.max(0, Math.min(1, sev / 3));
       categoryScores[name] = score;
       if (score > max) max = score;

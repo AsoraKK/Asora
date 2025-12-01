@@ -9,6 +9,7 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostLiked, revokePostLiked } from '@shared/services/reputationService';
+import { isNotFoundError } from '@shared/errorUtils';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -82,9 +83,9 @@ export const likePost = requireAuth(async (req: AuthenticatedRequest, context: I
           message: 'Already liked',
         });
       }
-    } catch (readError: any) {
+    } catch (readError: unknown) {
       // 404 is expected if not liked yet
-      if (readError.code !== 404) {
+      if (!isNotFoundError(readError)) {
         throw readError;
       }
     }
@@ -203,8 +204,8 @@ export const unlikePost = requireAuth(async (req: AuthenticatedRequest, context:
     try {
       const likeResponse = await reactionsContainer.item(likeId, postId).read<LikeDocument>();
       existingLike = likeResponse.resource;
-    } catch (readError: any) {
-      if (readError.code === 404) {
+    } catch (readError: unknown) {
+      if (isNotFoundError(readError)) {
         // Not liked - return current state (idempotent success)
         context.log('posts.unlike.not_liked', { postId, userId: principal.sub });
         
@@ -335,8 +336,8 @@ export const getLikeStatus = requireAuth(async (req: AuthenticatedRequest, conte
     try {
       const likeResponse = await reactionsContainer.item(likeId, postId).read<LikeDocument>();
       liked = !!likeResponse.resource;
-    } catch (readError: any) {
-      if (readError.code !== 404) {
+    } catch (readError: unknown) {
+      if (!isNotFoundError(readError)) {
         throw readError;
       }
     }

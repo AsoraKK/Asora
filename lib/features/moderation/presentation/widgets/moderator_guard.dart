@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/application/auth_providers.dart';
 import '../../../auth/domain/user.dart';
 
-const bool _kEnableModerationConsole =
-    bool.fromEnvironment('ENABLE_MODERATION_CONSOLE', defaultValue: false);
+const bool _kEnableModerationConsole = bool.fromEnvironment(
+  'ENABLE_MODERATION_CONSOLE',
+  defaultValue: false,
+);
 
 class ModeratorGuard extends ConsumerWidget {
   const ModeratorGuard({
@@ -51,11 +53,17 @@ class ModeratorGuard extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.block_outlined, size: 64, color: theme.colorScheme.error),
+              Icon(
+                Icons.block_outlined,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Moderator access required',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),

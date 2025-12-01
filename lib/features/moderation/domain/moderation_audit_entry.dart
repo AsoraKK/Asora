@@ -30,7 +30,8 @@ class ModerationAuditEntry {
   final String details;
 
   factory ModerationAuditEntry.fromJson(Map<String, dynamic> json) {
-    final timestampValue = json['timestamp']?.toString() ??
+    final timestampValue =
+        json['timestamp']?.toString() ??
         json['createdAt']?.toString() ??
         DateTime.now().toIso8601String();
     DateTime parsed;
@@ -46,9 +47,11 @@ class ModerationAuditEntry {
       timestamp: parsed,
       actorId: json['actorId']?.toString() ?? 'system',
       actorRole: json['actorRole']?.toString() ?? 'system',
-      action:
-          _parseAction(json['action']?.toString() ?? json['type']?.toString()),
-      details: json['details']?.toString() ??
+      action: _parseAction(
+        json['action']?.toString() ?? json['type']?.toString(),
+      ),
+      details:
+          json['details']?.toString() ??
           json['message']?.toString() ??
           'No details provided',
     );
@@ -110,15 +113,20 @@ class ModerationAuditResponse {
   final ModerationAuditPagination pagination;
 
   factory ModerationAuditResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['entries'] as List? ??
+    final data =
+        json['entries'] as List? ??
         json['data'] as List? ??
         json['items'] as List? ??
         [];
-    final pagination =
-        ModerationAuditPagination.fromJson(json['pagination'] as Map<String, dynamic>?);
+    final pagination = ModerationAuditPagination.fromJson(
+      json['pagination'] as Map<String, dynamic>?,
+    );
     return ModerationAuditResponse(
       entries: data
-          .map((item) => ModerationAuditEntry.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) =>
+                ModerationAuditEntry.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       pagination: pagination,
     );

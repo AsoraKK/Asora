@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
 import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { getErrorMessage } from '@shared/errorUtils';
 import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { createAuditEntry } from '../common/models';
 import { isBeyondRetention } from '../common/retention';
@@ -39,8 +40,8 @@ export async function releaseHandler(req: Authed): Promise<HttpResponseInit> {
       signedUrl: url,
       expiresAt,
     });
-  } catch (error: any) {
-    return createErrorResponse(500, 'internal_error', error?.message);
+  } catch (error: unknown) {
+    return createErrorResponse(500, 'internal_error', getErrorMessage(error));
   }
 }
 

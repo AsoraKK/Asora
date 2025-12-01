@@ -65,11 +65,14 @@ function decodeAccessToken(authHeader: string | null): { sub: string; email?: st
 
   try {
     const token = authHeader.slice(7);
-    const decoded = jwt.verify(token, getJwtSecret()) as any;
-    return {
-      sub: decoded.sub,
-      email: decoded.email,
-    };
+    const decoded = jwt.verify(token, getJwtSecret());
+    if (typeof decoded === 'object' && decoded !== null && 'sub' in decoded) {
+      return {
+        sub: String(decoded.sub),
+        email: 'email' in decoded ? String(decoded.email) : undefined,
+      };
+    }
+    return null;
   } catch {
     return null;
   }

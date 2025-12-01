@@ -34,11 +34,11 @@ export async function createInviteHandler(req: Authed, context: InvocationContex
   if (cors.shouldReturn && cors.response) return cors.response;
 
   try {
-    const body = await req.json().catch(() => ({})) as any;
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>;
 
     // Optional email restriction
     let email: string | undefined;
-    if (body.email) {
+    if (body.email && typeof body.email === 'string') {
       const emailValidation = validateEmail(body.email);
       if (!emailValidation.valid) {
         return createErrorResponse(400, 'invalid_email', 'Invalid email format');

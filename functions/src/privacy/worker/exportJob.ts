@@ -8,6 +8,7 @@ import { packageExportZip } from '../common/zip';
 import { createUserDelegationUrl } from '../common/storage';
 import { patchDsrRequest, getDsrRequest } from '../service/dsrStore';
 import { redactRecord } from '../common/redaction';
+import { getErrorMessage } from '@shared/errorUtils';
 
 const DSR_TTL_HOURS = Number(process.env.DSR_EXPORT_SIGNED_URL_TTL_HOURS ?? '12');
 const MAX_RECORDS_PER_CATEGORY = 10000; // Safety limit to prevent unbounded queries
@@ -284,8 +285,8 @@ export async function runExportJob(request: DsrRequest, context: InvocationConte
       createAuditEntry({ by: 'system', event: 'export.uploaded' }),
     );
     emitSpan(context, 'export.upload', { blobPath: packageResult.blobPath, bytes: packageResult.exportBytes });
-  } catch (error: any) {
-    const failureReason = error?.message ?? 'export failed';
+  } catch (error: unknown) {
+    const failureReason = getErrorMessage(error);
     await patchDsrRequest(
       requestId,
       {

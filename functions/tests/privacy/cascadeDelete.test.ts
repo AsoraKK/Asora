@@ -137,6 +137,18 @@ function createSeedData(): SeedData {
         createdAt: '2024-01-09T00:00:00Z',
       },
     ],
+    moderation_decisions: [
+      {
+        id: 'decision-1',
+        contentId: 'post-1',
+        contentOwnerId: TEST_USER_ID,
+        userId: TEST_USER_ID,
+        actorId: 'mod-1',
+        action: 'approved',
+        decidedAt: '2024-01-10T00:00:00Z',
+        source: 'appeal_vote',
+      },
+    ],
   };
 }
 
@@ -279,6 +291,26 @@ describe('cascadeDelete service', () => {
       const doc = appealReplaceCalls[0][2] as Record<string, unknown>;
       expect(doc.submitterId).toBe(ANONYMIZATION_MARKER);
       expect(doc.submitterEmail).toBe(ANONYMIZED_EMAIL);
+    });
+
+    it('anonymizes moderation decision records', async () => {
+      const result = await executeCascadeDelete({
+        userId: TEST_USER_ID,
+        deletedBy: 'test',
+        skipHoldCheck: true,
+      });
+
+      expect(result.cosmos.anonymized['moderation_decisions']).toBe(1);
+
+      const decisionReplaceCalls = mockCosmosReplace.mock.calls.filter(
+        (call: unknown[]) => call[0] === 'moderation_decisions'
+      );
+      expect(decisionReplaceCalls.length).toBe(1);
+
+      const doc = decisionReplaceCalls[0][2] as Record<string, unknown>;
+      expect(doc.contentOwnerId).toBe(ANONYMIZATION_MARKER);
+      expect(doc.userId).toBe(ANONYMIZATION_MARKER);
+      expect(doc.actorId).toBe(ANONYMIZATION_MARKER);
     });
 
     it('deletes Postgres records (users, profiles, auth_identities, follows)', async () => {

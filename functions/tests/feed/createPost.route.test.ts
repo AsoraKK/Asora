@@ -52,6 +52,14 @@ jest.mock('@shared/appInsights', () => ({
   trackAppMetric: jest.fn(),
 }));
 
+jest.mock('@shared/services/dailyPostLimitService', () => {
+  const actual = jest.requireActual('@shared/services/dailyPostLimitService');
+  return {
+    ...actual,
+    checkAndIncrementPostCount: jest.fn(),
+  };
+});
+
 // Mock Hive client
 const mockModerateTextContent = jest.fn();
 jest.mock('@shared/clients/hive', () => {
@@ -68,6 +76,11 @@ const { AuthError } = jest.requireActual('@auth/verifyJwt');
 const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
 const { getTargetDatabase } = require('@shared/clients/cosmos');
 const { trackAppEvent } = require('@shared/appInsights');
+const dailyPostLimitModule = require('@shared/services/dailyPostLimitService');
+const mockCheckAndIncrementPostCount = jest.mocked(
+  dailyPostLimitModule.checkAndIncrementPostCount
+);
+const { DailyPostLimitExceededError } = dailyPostLimitModule;
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 
 // Store original HIVE_API_KEY
@@ -106,6 +119,12 @@ describe('createPost route', () => {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
       return { sub: 'user-123', raw: {} } as any;
+    });
+    mockCheckAndIncrementPostCount.mockResolvedValue({
+      success: true,
+      newCount: 1,
+      limit: 100,
+      remaining: 99,
     });
   });
 
@@ -194,6 +213,43 @@ describe('createPost route', () => {
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
     expect(response.status).toBe(500);
     expect(contextStub.log).toHaveBeenCalledWith('posts.create.error', expect.any(Object));
+  });
+
+  it('returns 429 when the daily post limit is exceeded', async () => {
+    const limitPayload = {
+      allowed: false,
+      currentCount: 10,
+      limit: 10,
+      remaining: 0,
+      tier: 'premium',
+      resetDate: '2025-01-01T00:00:00.000Z',
+    };
+    mockCheckAndIncrementPostCount.mockRejectedValue(new DailyPostLimitExceededError(limitPayload));
+
+    const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
+    expect(response.status).toBe(429);
+    expect(response.headers).toMatchObject({
+      'Content-Type': 'application/json',
+      'Retry-After': '86400',
+    });
+    expect(getTargetDatabase).not.toHaveBeenCalled();
+    expect(contextStub.log).toHaveBeenCalledWith('posts.create.limitExceeded', expect.any(Object));
+    expect(trackAppEvent).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'post_limit_exceeded',
+      properties: expect.objectContaining({
+        authorId: 'user-123',
+      }),
+    }));
+
+    const body = JSON.parse(response.body as string);
+    expect(body).toEqual({
+      code: 'daily_post_limit_reached',
+      message: 'Daily post limit reached. Try again tomorrow.',
+      resetTime: limitPayload.resetDate,
+      limit: limitPayload.limit,
+      remaining: 0,
+      tier: limitPayload.tier,
+    });
   });
 
   // ─────────────────────────────────────────────────────────────

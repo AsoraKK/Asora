@@ -240,7 +240,7 @@ export async function voteOnAppealHandler({
     const requiredVotes = appealDoc.requiredVotes || 5;
     const hasQuorum = appealDoc.totalVotes >= requiredVotes;
 
-    let finalDecision = null;
+    let finalDecision: 'approved' | 'rejected' | null = null;
     if (hasQuorum) {
       appealDoc.hasReachedQuorum = true;
       appealDoc.votingStatus = 'completed';
@@ -258,9 +258,16 @@ export async function voteOnAppealHandler({
         database,
         appealDoc.contentId,
         appealDoc.contentType,
-        finalDecision as 'approved' | 'rejected',
+        finalDecision!,
         context
       );
+
+      await persistModerationDecision({
+        database,
+        appealDoc,
+        finalDecision,
+        context,
+      });
     } else {
       appealDoc.votingStatus = 'in_progress';
     }
@@ -297,6 +304,16 @@ export async function voteOnAppealHandler({
   }
 }
 
+function getContentContainerName(contentType: string): 'posts' | 'comments' | 'users' {
+  if (contentType === 'post') {
+    return 'posts';
+  }
+  if (contentType === 'comment') {
+    return 'comments';
+  }
+  return 'users';
+}
+
 /**
  * Update content based on appeal decision
  */
@@ -308,8 +325,7 @@ async function updateContentBasedOnDecision(
   context: InvocationContext
 ): Promise<void> {
   try {
-    const containerName =
-      contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users';
+    const containerName = getContentContainerName(contentType);
     const container = database.container(containerName);
 
     const { resource: content } = await container.item(contentId, contentId).read();
@@ -355,5 +371,67 @@ async function updateContentBasedOnDecision(
     await container.item(contentId, contentId).replace(content);
   } catch (error) {
     context.log('Error updating content after appeal decision:', error);
+  }
+}
+
+interface PersistDecisionOptions {
+  database: any;
+  appealDoc: Record<string, any>;
+  finalDecision: 'approved' | 'rejected';
+  context: InvocationContext;
+}
+
+async function persistModerationDecision({
+  database,
+  appealDoc,
+  finalDecision,
+  context,
+}: PersistDecisionOptions): Promise<void> {
+  try {
+    const decisionsContainer = database.container('moderation_decisions');
+    const contentContainerName = getContentContainerName(String(appealDoc.contentType));
+    const contentContainer = database.container(contentContainerName);
+    const { resource: content } = await contentContainer
+      .item(String(appealDoc.contentId), String(appealDoc.contentId))
+      .read();
+
+    const contentOwnerId =
+      (content?.authorId as string | undefined) ??
+      (content?.userId as string | undefined) ??
+      (content?.contentOwnerId as string | undefined) ??
+      null;
+
+    const decisionId = `decision_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    const decidedAt = String(appealDoc.resolvedAt ?? new Date().toISOString());
+
+    const record = {
+      id: decisionId,
+      itemId: appealDoc.contentId,
+      contentId: appealDoc.contentId,
+      contentType: appealDoc.contentType,
+      contentOwnerId,
+      userId: contentOwnerId,
+      actorId: appealDoc.resolvedBy ?? appealDoc.submitterId ?? 'community_vote',
+      action: finalDecision,
+      appealId: appealDoc.id,
+      appealStatus: appealDoc.status,
+      votesFor: appealDoc.votesFor ?? 0,
+      votesAgainst: appealDoc.votesAgainst ?? 0,
+      totalVotes: appealDoc.totalVotes ?? 0,
+      requiredVotes: appealDoc.requiredVotes ?? 0,
+      reason: appealDoc.appealReason ?? appealDoc.reason ?? null,
+      decidedAt,
+      createdAt: new Date().toISOString(),
+      source: 'appeal_vote',
+      metadata: {
+        urgencyScore: appealDoc.urgencyScore ?? null,
+        flagCount: appealDoc.flagCount ?? null,
+      },
+      _partitionKey: appealDoc.contentId,
+    };
+
+    await decisionsContainer.items.create(record);
+  } catch (error) {
+    context.log('moderation.decision.record.error', { message: (error as Error).message });
   }
 }

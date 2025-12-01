@@ -210,6 +210,9 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Refresh all feed providers to show the new post
   void _refreshFeeds() {
+    // Invalidate general feed (all active instances via family)
+    _ref.invalidate(feedProvider);
+
     // Invalidate trending feed
     _ref.invalidate(trendingFeedProvider);
 

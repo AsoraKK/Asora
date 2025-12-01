@@ -44,10 +44,7 @@ class ModerationEscalationInput {
   final String targetQueue;
 
   Map<String, dynamic> toJson() {
-    return {
-      'reason': reason,
-      'targetQueue': targetQueue,
-    };
+    return {'reason': reason, 'targetQueue': targetQueue};
   }
 }
 

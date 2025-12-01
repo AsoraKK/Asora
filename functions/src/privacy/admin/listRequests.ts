@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
 import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { getErrorMessage } from '@shared/errorUtils';
 import { listDsrRequests } from '../service/dsrStore';
 import type { DsrType, DsrStatus } from '../common/models';
 
@@ -84,8 +85,8 @@ export async function listRequestsHandler(req: Authed): Promise<HttpResponseInit
       continuationToken: result.continuationToken,
       hasMore: !!result.continuationToken,
     });
-  } catch (error: any) {
-    return createErrorResponse(500, 'internal_error', error?.message);
+  } catch (error: unknown) {
+    return createErrorResponse(500, 'internal_error', getErrorMessage(error));
   }
 }
 

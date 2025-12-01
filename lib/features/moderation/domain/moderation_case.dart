@@ -46,10 +46,12 @@ class ModerationCase {
   final ModerationAppealDetails? appealDetails;
 
   factory ModerationCase.fromJson(Map<String, dynamic> json) {
-    final createdAtValue = json['createdAt']?.toString() ??
+    final createdAtValue =
+        json['createdAt']?.toString() ??
         json['created_at']?.toString() ??
         DateTime.now().toIso8601String();
-    final updatedAtValue = json['updatedAt']?.toString() ??
+    final updatedAtValue =
+        json['updatedAt']?.toString() ??
         json['updated_at']?.toString() ??
         createdAtValue;
 
@@ -66,14 +68,16 @@ class ModerationCase {
       parsedUpdated = parsedCreated;
     }
 
-    final auditData = (json['auditTrail'] as List? ??
-            json['audit'] as List? ??
-            json['timeline'] as List? ??
-            [])
-        .cast<Map<String, dynamic>>();
+    final auditData =
+        (json['auditTrail'] as List? ??
+                json['audit'] as List? ??
+                json['timeline'] as List? ??
+                [])
+            .cast<Map<String, dynamic>>();
 
     return ModerationCase(
-      id: json['id']?.toString() ??
+      id:
+          json['id']?.toString() ??
           json['caseId']?.toString() ??
           json['targetId']?.toString() ??
           '',
@@ -81,28 +85,26 @@ class ModerationCase {
       contentId: json['contentId']?.toString() ?? '',
       contentType: json['contentType']?.toString() ?? 'post',
       contentTitle: json['contentTitle']?.toString(),
-      contentText: json['contentText']?.toString() ??
+      contentText:
+          json['contentText']?.toString() ??
           json['text']?.toString() ??
           json['body']?.toString() ??
           '',
       status: json['status']?.toString() ?? 'open',
       queue: json['queue']?.toString() ?? 'default',
-      severity: ModerationQueueItem.parseSeverity(
-        json['severity']?.toString(),
-      ),
+      severity: ModerationQueueItem.parseSeverity(json['severity']?.toString()),
       createdAt: parsedCreated,
       updatedAt: parsedUpdated,
       reports: (json['reports'] as List? ?? [])
           .cast<Map<String, dynamic>>()
           .map((entry) => ModerationReport.fromJson(entry))
           .toList(),
-      aiSignals: ((json['aiSignals'] as List?) ??
-              json['aiSummary'] as List? ??
-              [])
-          .cast<dynamic>()
-          .map((e) => e?.toString() ?? '')
-          .where((value) => value.isNotEmpty)
-          .toList(),
+      aiSignals:
+          ((json['aiSignals'] as List?) ?? json['aiSummary'] as List? ?? [])
+              .cast<dynamic>()
+              .map((e) => e?.toString() ?? '')
+              .where((value) => value.isNotEmpty)
+              .toList(),
       auditTrail: auditData
           .map((entry) => ModerationAuditEntry.fromJson(entry))
           .toList(),
@@ -114,11 +116,13 @@ class ModerationCase {
       authorHandle: json['authorHandle']?.toString(),
       escalation: json['escalation'] != null
           ? ModerationEscalationInfo.fromJson(
-              (json['escalation'] as Map<String, dynamic>))
+              (json['escalation'] as Map<String, dynamic>),
+            )
           : null,
       appealDetails: json['appeal'] != null
           ? ModerationAppealDetails.fromJson(
-              (json['appeal'] as Map<String, dynamic>))
+              (json['appeal'] as Map<String, dynamic>),
+            )
           : null,
     );
   }
@@ -164,7 +168,8 @@ class ModerationAppealDetails {
   factory ModerationAppealDetails.fromJson(Map<String, dynamic> json) {
     return ModerationAppealDetails(
       appealId: json['appealId']?.toString() ?? '',
-      summary: json['appealText']?.toString() ??
+      summary:
+          json['appealText']?.toString() ??
           json['userStatement']?.toString() ??
           '',
       overturnVotes: (json['overturnVotes'] as int?) ?? 0,
@@ -185,7 +190,8 @@ class ModerationEscalationInfo {
   final DateTime escalatedAt;
 
   factory ModerationEscalationInfo.fromJson(Map<String, dynamic> json) {
-    final escalatedAtValue = json['escalatedAt']?.toString() ??
+    final escalatedAtValue =
+        json['escalatedAt']?.toString() ??
         json['timestamp']?.toString() ??
         DateTime.now().toIso8601String();
     final parsed = DateTime.tryParse(escalatedAtValue) ?? DateTime.now();
@@ -212,7 +218,8 @@ class ModerationDecisionHistory {
   final String rationale;
 
   factory ModerationDecisionHistory.fromJson(Map<String, dynamic> json) {
-    final timestampValue = json['timestamp']?.toString() ??
+    final timestampValue =
+        json['timestamp']?.toString() ??
         json['createdAt']?.toString() ??
         DateTime.now().toIso8601String();
     final parsed = DateTime.tryParse(timestampValue) ?? DateTime.now();

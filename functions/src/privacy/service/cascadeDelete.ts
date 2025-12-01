@@ -14,6 +14,7 @@ import type { SqlParameter, Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { withClient } from '@shared/clients/postgres';
 import { hasLegalHold } from './dsrStore';
+import { getErrorMessage } from '@shared/errorUtils';
 
 const DELETED_USER_MARKER = '[deleted]';
 const DELETED_EMAIL_MARKER = 'deleted@anonymized.local';
@@ -45,14 +46,25 @@ export interface CascadeDeleteOptions {
  */
 interface ContainerConfig {
   name: string;
-  /** Field name containing the user ID to match */
-  userIdField: string;
+  /** Field names containing the user ID to match */
+  userIdField?: string;
+  userIdFields?: string[];
   /** Operation: 'delete' removes entirely, 'anonymize' replaces PII */
   operation: 'delete' | 'anonymize';
   /** Fields to anonymize (only for operation='anonymize') */
   fieldsToAnonymize?: string[];
   /** Legal hold scope if applicable */
   holdScope?: string;
+}
+
+function getUserIdFields(config: ContainerConfig): string[] {
+  if (config.userIdFields && config.userIdFields.length) {
+    return config.userIdFields;
+  }
+  if (config.userIdField) {
+    return [config.userIdField];
+  }
+  return [];
 }
 
 const COSMOS_CONTAINERS: ContainerConfig[] = [
@@ -86,6 +98,12 @@ const COSMOS_CONTAINERS: ContainerConfig[] = [
     operation: 'anonymize',
     fieldsToAnonymize: ['submitterId', 'submitterName', 'submitterEmail'],
   },
+  {
+    name: 'moderation_decisions',
+    userIdFields: ['contentOwnerId', 'actorId', 'userId'],
+    operation: 'anonymize',
+    fieldsToAnonymize: ['contentOwnerId', 'actorId', 'userId'],
+  },
 
   // User record - hard delete
   { name: 'users', userIdField: 'id', operation: 'delete', holdScope: 'user' },
@@ -96,10 +114,15 @@ const COSMOS_CONTAINERS: ContainerConfig[] = [
  */
 async function fetchUserRecords(
   container: Container,
-  userIdField: string,
+  userIdFields: string[],
   userId: string,
 ): Promise<Array<Record<string, unknown>>> {
-  const query = `SELECT * FROM c WHERE c.${userIdField} = @userId`;
+  if (!userIdFields.length) {
+    return [];
+  }
+
+  const filters = userIdFields.map(field => `c.${field} = @userId`).join(' OR ');
+  const query = `SELECT * FROM c WHERE ${filters}`;
   const parameters: SqlParameter[] = [{ name: '@userId', value: userId }];
 
   const iterator = container.items.query({ query, parameters });
@@ -166,7 +189,8 @@ async function processCosmosContainer(
   const container = db.container(config.name);
 
   try {
-    const records = await fetchUserRecords(container, config.userIdField, options.userId);
+    const userIdFields = getUserIdFields(config);
+    const records = await fetchUserRecords(container, userIdFields, options.userId);
 
     let deleted = 0;
     let anonymized = 0;
@@ -196,10 +220,10 @@ async function processCosmosContainer(
           );
           anonymized++;
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.errors.push({
           container: config.name,
-          error: `Failed to process item ${item.id}: ${error?.message}`,
+          error: `Failed to process item ${item.id}: ${getErrorMessage(error)}`,
         });
       }
     }
@@ -213,10 +237,10 @@ async function processCosmosContainer(
     if (skipped > 0) {
       result.cosmos.skippedDueToHold[config.name] = skipped;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     result.errors.push({
       container: config.name,
-      error: `Failed to query container: ${error?.message}`,
+      error: `Failed to query container: ${getErrorMessage(error)}`,
     });
   }
 }
@@ -259,10 +283,10 @@ async function processPostgres(
       );
       result.postgres.deleted['users'] = userResult.rowCount ?? 0;
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     result.errors.push({
       container: 'postgres',
-      error: `Postgres deletion failed: ${error?.message}`,
+      error: `Postgres deletion failed: ${getErrorMessage(error)}`,
     });
   }
 }
@@ -328,12 +352,12 @@ export async function verifyUserDataPurged(userId: string): Promise<{
   for (const config of COSMOS_CONTAINERS) {
     try {
       const container = db.container(config.name);
-      const records = await fetchUserRecords(container, config.userIdField, userId);
+      const userIdFields = getUserIdFields(config);
+      const records = await fetchUserRecords(container, userIdFields, userId);
 
       // For anonymized containers, check if any records still have the original userId
       const matchingRecords = records.filter(r => {
-        const fieldValue = r[config.userIdField];
-        return fieldValue === userId;
+        return userIdFields.some(field => r[field] === userId);
       });
 
       if (matchingRecords.length > 0) {

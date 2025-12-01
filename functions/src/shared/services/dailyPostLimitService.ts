@@ -11,6 +11,7 @@ import type { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { getAzureLogger } from '@shared/utils/logger';
 import { getDailyPostLimit, normalizeTier, type UserTier } from './tierLimits';
+import { isNotFoundError, getErrorMessage } from '@shared/errorUtils';
 
 const logger = getAzureLogger('shared/dailyPostLimitService');
 
@@ -143,12 +144,12 @@ export async function getDailyPostCount(
   try {
     const { resource } = await container.item(counterId, userId).read<DailyCounterDocument>();
     return resource?.count ?? 0;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 means no posts today
-    if (error.code === 404) {
+    if (isNotFoundError(error)) {
       return 0;
     }
-    logger.error('getDailyPostCount.error', { userId, date, error: error.message });
+    logger.error('getDailyPostCount.error', { userId, date, error: getErrorMessage(error) });
     throw error;
   }
 }
@@ -217,10 +218,10 @@ export async function incrementDailyPostCount(
         remaining: Math.max(0, limit - newCount),
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 is expected if counter doesn't exist yet
-    if (error.code !== 404) {
-      logger.error('incrementDailyPostCount.readError', { userId, error: error.message });
+    if (!isNotFoundError(error)) {
+      logger.error('incrementDailyPostCount.readError', { userId, error: getErrorMessage(error) });
       throw error;
     }
   }

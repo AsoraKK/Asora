@@ -17,6 +17,7 @@ import {
   userKeyGenerator,
   defaultKeyGenerator,
 } from '@shared/utils/rateLimiter';
+import { getErrorMessage, isNotFoundError, getErrorStatusCode } from '@shared/errorUtils';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
@@ -119,8 +120,8 @@ export async function deleteUserHandler({
     try {
       const { resource: existingUser } = await usersContainer.item(userId, userId).read();
       userExists = !!existingUser;
-    } catch (error: any) {
-      if (error.code === 404) {
+    } catch (error: unknown) {
+      if (isNotFoundError(error)) {
         context.log(`User ${userId} already deleted or never existed`);
         // Return success for idempotent behavior
         return {
@@ -134,8 +135,8 @@ export async function deleteUserHandler({
           },
         };
       }
-      context.log(`Error checking user existence: ${error.message}`);
-      warnings.push(`Could not verify user existence: ${error.message}`);
+      context.log(`Error checking user existence: ${getErrorMessage(error)}`);
+      warnings.push(`Could not verify user existence: ${getErrorMessage(error)}`);
     }
 
     // 6. Anonymize/mark user's posts as deleted (preserve for forum integrity)
@@ -163,15 +164,15 @@ export async function deleteUserHandler({
 
           await postsContainer.item(post.id, post.id).replace(updatedPost);
           contentMarking.postsAnonymized++;
-        } catch (error: any) {
-          warnings.push(`Failed to anonymize post ${post.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to anonymize post ${post.id}: ${getErrorMessage(error)}`);
         }
       }
 
       itemsProcessed.posts = userPosts.length;
       context.log(`Processed ${userPosts.length} posts for anonymization`);
-    } catch (error: any) {
-      warnings.push(`Error processing posts: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error processing posts: ${getErrorMessage(error)}`);
     }
 
     // 7. Anonymize/mark user's comments as deleted
@@ -201,15 +202,15 @@ export async function deleteUserHandler({
 
           await commentsContainer.item(comment.id, comment.id).replace(updatedComment);
           contentMarking.commentsAnonymized++;
-        } catch (error: any) {
-          warnings.push(`Failed to anonymize comment ${comment.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to anonymize comment ${comment.id}: ${getErrorMessage(error)}`);
         }
       }
 
       itemsProcessed.comments = userComments.length;
       context.log(`Processed ${userComments.length} comments for anonymization`);
-    } catch (error: any) {
-      warnings.push(`Error processing comments: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error processing comments: ${getErrorMessage(error)}`);
     }
 
     // 8. Delete user's likes/interactions
@@ -224,14 +225,14 @@ export async function deleteUserHandler({
         try {
           await likesContainer.item(like.id, like.userId).delete();
           itemsProcessed.likes++;
-        } catch (error: any) {
-          warnings.push(`Failed to delete like ${like.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to delete like ${like.id}: ${getErrorMessage(error)}`);
         }
       }
 
       context.log(`Deleted ${itemsProcessed.likes} likes`);
-    } catch (error: any) {
-      warnings.push(`Error deleting likes: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error deleting likes: ${getErrorMessage(error)}`);
     }
 
     // 9. Delete user's flags/reports
@@ -246,14 +247,14 @@ export async function deleteUserHandler({
         try {
           await flagsContainer.item(flag.id, flag.id).delete();
           itemsProcessed.flags++;
-        } catch (error: any) {
-          warnings.push(`Failed to delete flag ${flag.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to delete flag ${flag.id}: ${getErrorMessage(error)}`);
         }
       }
 
       context.log(`Deleted ${itemsProcessed.flags} flags`);
-    } catch (error: any) {
-      warnings.push(`Error deleting flags: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error deleting flags: ${getErrorMessage(error)}`);
     }
 
     // 10. Delete user's appeals
@@ -270,14 +271,14 @@ export async function deleteUserHandler({
         try {
           await appealsContainer.item(appeal.id, appeal.id).delete();
           itemsProcessed.appeals++;
-        } catch (error: any) {
-          warnings.push(`Failed to delete appeal ${appeal.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to delete appeal ${appeal.id}: ${getErrorMessage(error)}`);
         }
       }
 
       context.log(`Deleted ${itemsProcessed.appeals} appeals`);
-    } catch (error: any) {
-      warnings.push(`Error deleting appeals: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error deleting appeals: ${getErrorMessage(error)}`);
     }
 
     // 11. Delete user's votes on appeals
@@ -292,14 +293,14 @@ export async function deleteUserHandler({
         try {
           await votesContainer.item(vote.id, vote.appealId).delete();
           itemsProcessed.votes++;
-        } catch (error: any) {
-          warnings.push(`Failed to delete vote ${vote.id}: ${error.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to delete vote ${vote.id}: ${getErrorMessage(error)}`);
         }
       }
 
       context.log(`Deleted ${itemsProcessed.votes} votes`);
-    } catch (error: any) {
-      warnings.push(`Error deleting votes: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Error deleting votes: ${getErrorMessage(error)}`);
     }
 
     // 12. Finally, delete the user profile (main record)
@@ -308,9 +309,9 @@ export async function deleteUserHandler({
         await usersContainer.item(userId, userId).delete();
         itemsProcessed.userProfile = true;
         context.log(`Deleted user profile for ${userId}`);
-      } catch (error: any) {
-        if (error.code !== 404) {
-          warnings.push(`Failed to delete user profile: ${error.message}`);
+      } catch (error: unknown) {
+        if (!isNotFoundError(error)) {
+          warnings.push(`Failed to delete user profile: ${getErrorMessage(error)}`);
         } else {
           // Already deleted, which is fine for idempotent operation
           itemsProcessed.userProfile = true;

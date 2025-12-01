@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
 import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { getErrorMessage } from '@shared/errorUtils';
 import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { enqueueDsrMessage } from '../common/storage';
 import { createAuditEntry } from '../common/models';
@@ -26,8 +27,8 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
     );
     await enqueueDsrMessage({ id, type: existing.type, submittedAt: new Date().toISOString() });
     return createSuccessResponse({ id: updated.id, status: updated.status });
-  } catch (error: any) {
-    return createErrorResponse(500, 'internal_error', error?.message);
+  } catch (error: unknown) {
+    return createErrorResponse(500, 'internal_error', getErrorMessage(error));
   }
 }
 

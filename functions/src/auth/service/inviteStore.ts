@@ -19,6 +19,7 @@
 import type { Container } from '@azure/cosmos';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import { getAzureLogger } from '@shared/utils/logger';
+import { isNotFoundError, getErrorMessage } from '@shared/errorUtils';
 import * as crypto from 'crypto';
 
 const logger = getAzureLogger('auth/inviteStore');
@@ -121,8 +122,8 @@ export async function getInvite(inviteCode: string): Promise<InviteDocument | nu
   try {
     const { resource } = await container.item(normalizedCode, normalizedCode).read<InviteDocument>();
     return resource ?? null;
-  } catch (error: any) {
-    if (error.code === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return null;
     }
     throw error;
@@ -246,8 +247,8 @@ export async function deleteInvite(inviteCode: string): Promise<boolean> {
     await container.item(normalizedCode, normalizedCode).delete();
     logger.info('Invite deleted', { inviteCode: normalizedCode });
     return true;
-  } catch (error: any) {
-    if (error.code === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return false;
     }
     throw error;

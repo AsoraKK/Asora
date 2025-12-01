@@ -1,5 +1,6 @@
 import type { Container, SqlParameter } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { isNotFoundError } from '@shared/errorUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { AuditEntry, DsrRequest, DsrStatus, DsrType, LegalHold } from '../common/models';
@@ -33,8 +34,8 @@ export async function getDsrRequest(id: string): Promise<DsrRequest | null> {
   try {
     const { resource } = await requestsContainer.item(id, id).read();
     return resource ?? null;
-  } catch (error: any) {
-    if (error?.code === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return null;
     }
     throw error;

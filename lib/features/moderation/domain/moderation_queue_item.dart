@@ -49,7 +49,8 @@ class ModerationQueueItem {
   bool get hasHighSeverity => severity == ModerationSeverityLevel.high;
 
   factory ModerationQueueItem.fromJson(Map<String, dynamic> json) {
-    final createdAtValue = json['createdAt'] as String? ?? json['created_at'] as String? ?? '';
+    final createdAtValue =
+        json['createdAt'] as String? ?? json['created_at'] as String? ?? '';
     DateTime parsedCreatedAt;
     try {
       parsedCreatedAt = DateTime.parse(createdAtValue);
@@ -62,7 +63,8 @@ class ModerationQueueItem {
       type: parseItemType(json['type']?.toString()),
       contentId: json['contentId']?.toString() ?? '',
       contentType: json['contentType']?.toString() ?? 'unknown',
-      contentPreview: json['contentPreview']?.toString() ??
+      contentPreview:
+          json['contentPreview']?.toString() ??
           json['snippet']?.toString() ??
           '',
       contentTitle: json['contentTitle']?.toString(),
@@ -71,11 +73,13 @@ class ModerationQueueItem {
       severity: parseSeverity(json['severity']?.toString()),
       status: json['status']?.toString() ?? 'unknown',
       queue: json['queue']?.toString() ?? 'default',
-      reportCount: (json['reportCount'] as int?) ??
+      reportCount:
+          (json['reportCount'] as int?) ??
           (json['flags'] as int?) ??
           (json['reports'] as int?) ??
           0,
-      communityVotes: (json['communityVotes'] as int?) ??
+      communityVotes:
+          (json['communityVotes'] as int?) ??
           (json['appealVotes'] as int?) ??
           0,
       isEscalated: json['isEscalated'] == true || json['escalated'] == true,
@@ -167,11 +171,15 @@ class ModerationQueueResponse {
 
   factory ModerationQueueResponse.fromJson(Map<String, dynamic> json) {
     final data = json['items'] as List? ?? json['data'] as List? ?? [];
-    final pagination =
-        ModerationQueuePagination.fromJson(json['pagination'] as Map<String, dynamic>?);
+    final pagination = ModerationQueuePagination.fromJson(
+      json['pagination'] as Map<String, dynamic>?,
+    );
     return ModerationQueueResponse(
       items: data
-          .map((item) => ModerationQueueItem.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) =>
+                ModerationQueueItem.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       pagination: pagination,
     );

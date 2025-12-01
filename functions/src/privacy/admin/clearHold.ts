@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
 import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { getErrorMessage } from '@shared/errorUtils';
 import { clearLegalHold } from '../service/dsrStore';
 
 type Authed = HttpRequest & { principal: Principal };
@@ -14,8 +15,8 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
     if (!id) return createErrorResponse(400, 'missing_id');
     await clearLegalHold(id);
     return createSuccessResponse({ id, cleared: true });
-  } catch (error: any) {
-    return createErrorResponse(500, 'internal_error', error?.message);
+  } catch (error: unknown) {
+    return createErrorResponse(500, 'internal_error', getErrorMessage(error));
   }
 }
 

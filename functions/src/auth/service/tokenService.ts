@@ -314,14 +314,19 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
 
   try {
     // Verify and decode refresh token
-    const decoded = jwt.verify(body.refresh_token, getJwtSecret()) as any;
+    const decoded = jwt.verify(body.refresh_token, getJwtSecret());
+
+    // Type guard for decoded token
+    if (typeof decoded !== 'object' || decoded === null || !('sub' in decoded) || !('type' in decoded) || !('jti' in decoded)) {
+      throw new Error('Invalid token structure');
+    }
 
     if (decoded.type !== 'refresh') {
       throw new Error('Invalid token type');
     }
 
     // Validate token exists in store (rotation check)
-    const oldJti = decoded.jti;
+    const oldJti = decoded.jti as string;
     if (!oldJti) {
       throw new Error('Refresh token missing jti claim');
     }
@@ -332,19 +337,20 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       logger.warn('Refresh token reuse or invalid token detected', {
         requestId,
         jti: oldJti.slice(0, 8),
-        userId: decoded.sub?.slice(0, 8),
+        userId: String(decoded.sub).slice(0, 8),
       });
       throw new Error('Refresh token has been revoked or is invalid');
     }
 
     // Verify the token belongs to the claimed user
-    if (storedToken.userId !== decoded.sub) {
+    const decodedSub = String(decoded.sub);
+    if (storedToken.userId !== decodedSub) {
       throw new Error('Token user mismatch');
     }
 
     // Get user information
     const { users } = ensureContainers();
-    const userDoc = await users.item(decoded.sub, decoded.sub).read();
+    const userDoc = await users.item(decodedSub, decodedSub).read();
     if (!userDoc.resource) {
       throw new Error('User not found');
     }

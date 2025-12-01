@@ -1,5 +1,6 @@
 import type { Container, PatchOperation, Resource } from '@azure/cosmos';
 import { getCosmosClient } from '@shared/clients/cosmos';
+import { getErrorStatusCode, isNotFoundError, isConflictError, isPreconditionFailedError } from '@shared/errorUtils';
 
 import {
   applyTokenBucket,
@@ -98,8 +99,8 @@ async function incrementSlidingWindowBucket(
         throw new Error('Failed to update sliding window bucket');
       }
       return resource;
-    } catch (error: any) {
-      const statusCode = error?.code || error?.statusCode;
+    } catch (error: unknown) {
+      const statusCode = getErrorStatusCode(error);
       if (statusCode === 404) {
         const document: SlidingWindowDocument = {
           id,
@@ -122,8 +123,8 @@ async function incrementSlidingWindowBucket(
             throw new Error('Failed to create sliding window bucket');
           }
           return resource;
-        } catch (createError: any) {
-          const createStatus = createError?.code || createError?.statusCode;
+        } catch (createError: unknown) {
+          const createStatus = getErrorStatusCode(createError);
           if (createStatus === 409) {
             continue;
           }
@@ -223,9 +224,8 @@ async function readTokenBucketDocument(
   try {
     const response = await container.item(id, key).read<TokenBucketDocument>();
     return response.resource ?? null;
-  } catch (error: any) {
-    const statusCode = error?.code || error?.statusCode;
-    if (statusCode === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return null;
     }
     throw error;
@@ -332,9 +332,8 @@ export async function incrementAuthFailure(key: string, nowMs: number = Date.now
   try {
     const response = await container.item(id, key).read<AuthFailureDocument>();
     document = response.resource ?? null;
-  } catch (error: any) {
-    const statusCode = error?.code || error?.statusCode;
-    if (statusCode !== 404) {
+  } catch (error: unknown) {
+    if (!isNotFoundError(error)) {
       throw error;
     }
   }
@@ -378,9 +377,8 @@ export async function resetAuthFailures(key: string): Promise<void> {
 
   try {
     await container.item(id, key).delete();
-  } catch (error: any) {
-    const statusCode = error?.code || error?.statusCode;
-    if (statusCode !== 404) {
+  } catch (error: unknown) {
+    if (!isNotFoundError(error)) {
       throw error;
     }
   }
@@ -420,9 +418,8 @@ export async function getAuthFailureState(
       remainingLockoutSeconds,
       lockedUntilMs,
     };
-  } catch (error: any) {
-    const statusCode = error?.code || error?.statusCode;
-    if (statusCode === 404) {
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
       return {
         count: 0,
         lastFailureAt: null,

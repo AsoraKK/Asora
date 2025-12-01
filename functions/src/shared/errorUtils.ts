@@ -17,10 +17,20 @@ export function isError(err: unknown): err is Error {
  */
 export interface CosmosError extends Error {
   code: number | string;
+  statusCode?: number;
 }
 
 export function isCosmosError(err: unknown): err is CosmosError {
-  return isError(err) && 'code' in err;
+  return isError(err) && ('code' in err || 'statusCode' in err);
+}
+
+/**
+ * Get the status code from an error (handles both code and statusCode properties)
+ */
+export function getErrorStatusCode(err: unknown): number | string | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const e = err as Record<string, unknown>;
+  return (e.code as number | string | undefined) ?? (e.statusCode as number | undefined);
 }
 
 /**
@@ -73,21 +83,30 @@ export function getErrorDetails(err: unknown): {
  * Check if error is a "not found" error (Cosmos 404)
  */
 export function isNotFoundError(err: unknown): boolean {
-  return isCosmosError(err) && (err.code === 404 || err.code === '404');
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  const code = e.code ?? e.statusCode;
+  return code === 404 || code === '404';
 }
 
 /**
  * Check if error is a conflict error (Cosmos 409)
  */
 export function isConflictError(err: unknown): boolean {
-  return isCosmosError(err) && (err.code === 409 || err.code === '409');
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  const code = e.code ?? e.statusCode;
+  return code === 409 || code === '409';
 }
 
 /**
  * Check if error is a precondition failed error (Cosmos 412 / ETag mismatch)
  */
 export function isPreconditionFailedError(err: unknown): boolean {
-  if (isCosmosError(err) && (err.code === 412 || err.code === '412')) {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as Record<string, unknown>;
+  const code = e.code ?? e.statusCode;
+  if (code === 412 || code === '412') {
     return true;
   }
   if (isError(err) && err.message?.includes('Precondition Failed')) {

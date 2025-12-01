@@ -17,19 +17,20 @@ const mockCreate = jest.fn();
 const mockRead = jest.fn();
 const mockReplace = jest.fn();
 
-const mockContainer = (_name: string) => ({
+const mockContainer = (name: string) => ({
   item: jest.fn().mockReturnValue({ read: mockRead, replace: mockReplace }),
   items: {
     query: jest.fn().mockReturnValue({ fetchAll: mockQuery }),
-    create: mockCreate,
+    create: (doc: unknown) => mockCreate(name, doc),
   },
 });
 
-beforeEach(() => {
-  jest.clearAllMocks();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreate.mockResolvedValue({ resource: {} });
 
-  (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
-    () =>
+    (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
+      () =>
       ({
         database: () => ({
           container: mockContainer,
@@ -180,5 +181,49 @@ describe('voteService - successful voting', () => {
     });
     expect(response.status).toBe(201);
     expect(mockCreate).toHaveBeenCalled();
+  });
+
+  it('records a moderation decision when quorum is reached', async () => {
+    const appealDoc = {
+      id: 'appeal-1',
+      status: 'pending',
+      votesFor: 0,
+      votesAgainst: 0,
+      requiredVotes: 1,
+      contentId: 'post-1',
+      contentType: 'post',
+      appealReason: 'Content should be restored',
+      submitterId: 'user-123',
+      urgencyScore: 7,
+      flagCount: 3,
+    };
+    const contentDoc = { id: 'post-1', authorId: 'user-123', status: 'hidden_pending_review' };
+
+    mockRead
+      .mockResolvedValueOnce({ resource: appealDoc })
+      .mockResolvedValueOnce({ resource: contentDoc })
+      .mockResolvedValueOnce({ resource: contentDoc });
+    mockQuery.mockResolvedValueOnce({ resources: [] });
+
+    const response = await voteOnAppealHandler({
+      request: httpReqMock({
+        method: 'POST',
+        body: { vote: 'approve', reason: 'Restore it' },
+      }),
+      context: contextStub,
+      userId: 'moderator-1',
+      claims: { roles: ['moderator'] },
+      appealId: 'appeal-1',
+    });
+
+    expect(response.status).toBe(200);
+    const decisionCalls = mockCreate.mock.calls.filter(call => call[0] === 'moderation_decisions');
+    expect(decisionCalls).toHaveLength(1);
+    expect(decisionCalls[0][1]).toMatchObject({
+      action: 'approved',
+      appealId: 'appeal-1',
+      appealStatus: 'resolved',
+      source: 'appeal_vote',
+    });
   });
 });

@@ -3,6 +3,7 @@ import { createAuditEntry, DsrRequest } from '../common/models';
 import { emitSpan } from '../common/telemetry';
 import { patchDsrRequest, hasLegalHold } from '../service/dsrStore';
 import { executeCascadeDelete } from '../service/cascadeDelete';
+import { getErrorMessage } from '@shared/errorUtils';
 
 export async function runDeleteJob(request: DsrRequest, context: InvocationContext): Promise<void> {
   const requestId = request.id;
@@ -103,8 +104,8 @@ export async function runDeleteJob(request: DsrRequest, context: InvocationConte
       }),
     );
     emitSpan(context, 'delete.completed', { requestId });
-  } catch (error: any) {
-    const reason = error?.message ?? 'delete job failed';
+  } catch (error: unknown) {
+    const reason = getErrorMessage(error);
     await patchDsrRequest(
       requestId,
       {

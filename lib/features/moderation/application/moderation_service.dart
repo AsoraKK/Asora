@@ -431,7 +431,8 @@ class ModerationService implements ModerationRepository {
         'request.page_size': filters.pageSize,
       };
       for (final entry in queryParams.entries) {
-        attributes['request.audit_filter.${entry.key}'] = entry.value.toString();
+        attributes['request.audit_filter.${entry.key}'] = entry.value
+            .toString();
       }
 
       return await AsoraTracer.traceOperation(

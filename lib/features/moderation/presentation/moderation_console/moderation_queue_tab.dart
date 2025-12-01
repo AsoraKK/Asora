@@ -58,7 +58,9 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
                     values: ModerationItemFilter.values,
                     selected: state.filters.itemType,
                     onSelected: (value) {
-                      notifier.updateFilters(state.filters.copyWith(itemType: value));
+                      notifier.updateFilters(
+                        state.filters.copyWith(itemType: value),
+                      );
                     },
                     labelBuilder: (value) => _formatItemType(value),
                   ),
@@ -69,7 +71,9 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
                     values: ModerationSeverityFilter.values,
                     selected: state.filters.severity,
                     onSelected: (value) {
-                      notifier.updateFilters(state.filters.copyWith(severity: value));
+                      notifier.updateFilters(
+                        state.filters.copyWith(severity: value),
+                      );
                     },
                     labelBuilder: (value) => _formatSeverity(value),
                   ),
@@ -80,7 +84,9 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
                     values: ModerationAgeFilter.values,
                     selected: state.filters.age,
                     onSelected: (value) {
-                      notifier.updateFilters(state.filters.copyWith(age: value));
+                      notifier.updateFilters(
+                        state.filters.copyWith(age: value),
+                      );
                     },
                     labelBuilder: (value) => _formatAge(value),
                   ),
@@ -91,7 +97,9 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
                     values: ModerationQueueFilter.values,
                     selected: state.filters.queue,
                     onSelected: (value) {
-                      notifier.updateFilters(state.filters.copyWith(queue: value));
+                      notifier.updateFilters(
+                        state.filters.copyWith(queue: value),
+                      );
                     },
                     labelBuilder: (value) => _formatQueue(value),
                   ),
@@ -116,23 +124,23 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
             )
           else
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = state.items[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: ModerationQueueItemTile(
-                      item: item,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ModerationCaseScreen(caseId: item.id),
-                        ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final item = state.items[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: ModerationQueueItemTile(
+                    item: item,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ModerationCaseScreen(caseId: item.id),
                       ),
                     ),
-                  );
-                },
-                childCount: state.items.length,
-              ),
+                  ),
+                );
+              }, childCount: state.items.length),
             ),
           if (state.isLoadingMore)
             const SliverToBoxAdapter(
@@ -238,10 +246,7 @@ class _ErrorMessage extends StatelessWidget {
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+          FilledButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );

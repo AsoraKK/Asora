@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { requirePrivacyAdmin } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { getErrorMessage } from '@shared/errorUtils';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import { createDsrRequest } from '../service/dsrStore';
@@ -48,9 +49,9 @@ async function handler(req: Authed, context: InvocationContext): Promise<HttpRes
     await enqueueDsrMessage({ id, type: 'delete', submittedAt: now });
     context.log('dsr.delete.enqueued', { id, userId });
     return createSuccessResponse({ id, status: request.status });
-  } catch (error: any) {
-    context.log('dsr.delete.enqueue.error', { message: error?.message });
-    return createErrorResponse(500, 'internal_error', error?.message);
+  } catch (error: unknown) {
+    context.log('dsr.delete.enqueue.error', { message: getErrorMessage(error) });
+    return createErrorResponse(500, 'internal_error', getErrorMessage(error));
   }
 }
 

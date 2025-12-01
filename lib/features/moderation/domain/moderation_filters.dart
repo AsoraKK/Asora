@@ -9,13 +9,7 @@ enum ModerationAgeFilter { all, underHour, underDay, underWeek }
 
 enum ModerationQueueFilter { all, defaultQueue, escalated, policyTest }
 
-enum ModerationAuditActionFilter {
-  all,
-  decision,
-  escalation,
-  appeal,
-  aiSignal,
-}
+enum ModerationAuditActionFilter { all, decision, escalation, appeal, aiSignal }
 
 class ModerationFilters {
   const ModerationFilters({
@@ -126,10 +120,7 @@ class ModerationAuditSearchFilters {
   }
 
   Map<String, dynamic> toQueryParams() {
-    final params = <String, dynamic>{
-      'page': page,
-      'pageSize': pageSize,
-    };
+    final params = <String, dynamic>{'page': page, 'pageSize': pageSize};
 
     if (contentId != null && contentId!.isNotEmpty) {
       params['contentId'] = contentId;

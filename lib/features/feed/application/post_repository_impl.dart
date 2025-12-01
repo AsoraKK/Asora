@@ -174,7 +174,7 @@ class PostRepositoryImpl implements PostRepository {
     // Handle daily limit exceeded (429)
     if (statusCode == 429 && data is Map<String, dynamic>) {
       final code = data['code'] as String?;
-      if (code == 'DAILY_LIMIT_EXCEEDED') {
+      if (code == 'daily_post_limit_reached') {
         debugPrint('⚠️ Daily post limit exceeded');
         final retryAfterStr = response.headers.value('retry-after');
         final retryAfterSeconds =
@@ -183,7 +183,7 @@ class PostRepositoryImpl implements PostRepository {
         return CreatePostLimitExceeded(
           message: data['message'] as String? ?? 'Daily post limit reached',
           limit: data['limit'] as int? ?? 10,
-          currentCount: data['currentCount'] as int? ?? 10,
+          currentCount: data['current'] as int? ?? 10,
           tier: data['tier'] as String? ?? 'free',
           retryAfter: Duration(seconds: retryAfterSeconds),
         );

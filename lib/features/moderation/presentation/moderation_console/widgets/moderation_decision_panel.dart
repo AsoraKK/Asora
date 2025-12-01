@@ -13,7 +13,8 @@ class ModerationDecisionPanel extends StatefulWidget {
   final bool isSubmitting;
 
   @override
-  State<ModerationDecisionPanel> createState() => _ModerationDecisionPanelState();
+  State<ModerationDecisionPanel> createState() =>
+      _ModerationDecisionPanelState();
 }
 
 class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
@@ -48,18 +49,23 @@ class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Moderator decision', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Moderator decision',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             ...ModerationDecisionAction.values.map((action) {
               return RadioListTile<ModerationDecisionAction>(
                 value: action,
                 groupValue: _selectedAction,
                 title: Text(action.label),
-                onChanged: widget.isSubmitting ? null : (value) {
-                  if (value != null) {
-                    setState(() => _selectedAction = value);
-                  }
-                },
+                onChanged: widget.isSubmitting
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => _selectedAction = value);
+                        }
+                      },
               );
             }),
             const SizedBox(height: 12),
@@ -89,9 +95,11 @@ class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
                 const Text('Mark as policy test'),
                 Switch.adaptive(
                   value: _policyTest,
-                  onChanged: widget.isSubmitting ? null : (value) {
-                    setState(() => _policyTest = value);
-                  },
+                  onChanged: widget.isSubmitting
+                      ? null
+                      : (value) {
+                          setState(() => _policyTest = value);
+                        },
                 ),
               ],
             ),

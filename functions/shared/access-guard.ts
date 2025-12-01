@@ -21,18 +21,20 @@ export function withAccessGuard(handler: Handler, opts: AccessGuardOptions = {})
     // 1) JWT (throws 401 on failure)
     const user = await requireUser(ctx, req);
 
-    // 2) Active check
-    if ((user as any).isActive === false) {
+    // 2) Active check (optional claim)
+    const isActiveClaim = (user as Record<string, unknown>).isActive;
+    if (isActiveClaim === false) {
       throw new HttpError(403, { code: 'inactive_user', message: 'User is not active' });
     }
 
     // 3) Role
-    if (opts.role && !hasRole(user as any, opts.role)) {
+    if (opts.role && !hasRole(user, opts.role)) {
       throw new HttpError(403, { code: 'forbidden', message: 'Insufficient role' });
     }
 
-    // 4) Tier
-    if (opts.tier && (user as any).tier && (user as any).tier !== opts.tier) {
+    // 4) Tier (optional claim)
+    const tierClaim = (user as Record<string, unknown>).tier;
+    if (opts.tier && typeof tierClaim === 'string' && tierClaim !== opts.tier) {
       throw new HttpError(403, { code: 'forbidden', message: 'Insufficient tier' });
     }
 

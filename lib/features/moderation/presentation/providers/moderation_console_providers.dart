@@ -68,8 +68,8 @@ class ModerationQueueState {
 
 class ModerationQueueNotifier extends StateNotifier<ModerationQueueState> {
   ModerationQueueNotifier(this._ref)
-      : _repository = _ref.read(moderationRepositoryProvider),
-        super(const ModerationQueueState()) {
+    : _repository = _ref.read(moderationRepositoryProvider),
+      super(const ModerationQueueState()) {
     Future.microtask(refresh);
   }
 
@@ -145,8 +145,8 @@ class ModerationQueueNotifier extends StateNotifier<ModerationQueueState> {
 
 final moderationQueueProvider =
     StateNotifierProvider<ModerationQueueNotifier, ModerationQueueState>(
-  (ref) => ModerationQueueNotifier(ref),
-);
+      (ref) => ModerationQueueNotifier(ref),
+    );
 
 class ModerationCaseState {
   const ModerationCaseState({
@@ -182,8 +182,8 @@ class ModerationCaseState {
 
 class ModerationCaseNotifier extends StateNotifier<ModerationCaseState> {
   ModerationCaseNotifier(this._ref, this._caseId)
-      : _repository = _ref.read(moderationRepositoryProvider),
-        super(const ModerationCaseState()) {
+    : _repository = _ref.read(moderationRepositoryProvider),
+      super(const ModerationCaseState()) {
     Future.microtask(loadCase);
   }
 
@@ -206,10 +206,7 @@ class ModerationCaseNotifier extends StateNotifier<ModerationCaseState> {
       );
       state = state.copyWith(caseDetail: moderationCase, isLoading: false);
     } on ModerationException catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: error.message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.message);
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
@@ -220,10 +217,7 @@ class ModerationCaseNotifier extends StateNotifier<ModerationCaseState> {
 
   Future<void> submitDecision(ModerationDecisionInput input) async {
     if (state.decisionSubmitting) return;
-    state = state.copyWith(
-      decisionSubmitting: true,
-      errorMessage: null,
-    );
+    state = state.copyWith(decisionSubmitting: true, errorMessage: null);
     try {
       final token = await _requireJwtToken(_ref);
       await _repository.submitModerationDecision(
@@ -261,10 +255,7 @@ class ModerationCaseNotifier extends StateNotifier<ModerationCaseState> {
       await loadCase();
       state = state.copyWith(escalating: false);
     } on ModerationException catch (error) {
-      state = state.copyWith(
-        escalating: false,
-        errorMessage: error.message,
-      );
+      state = state.copyWith(escalating: false, errorMessage: error.message);
     } catch (_) {
       state = state.copyWith(
         escalating: false,
@@ -274,13 +265,12 @@ class ModerationCaseNotifier extends StateNotifier<ModerationCaseState> {
   }
 }
 
-final moderationCaseProvider = StateNotifierProvider.family<
-  ModerationCaseNotifier,
-  ModerationCaseState,
-  String
->(
-  (ref, caseId) => ModerationCaseNotifier(ref, caseId),
-);
+final moderationCaseProvider =
+    StateNotifierProvider.family<
+      ModerationCaseNotifier,
+      ModerationCaseState,
+      String
+    >((ref, caseId) => ModerationCaseNotifier(ref, caseId));
 
 class ModerationAuditState {
   const ModerationAuditState({
@@ -328,8 +318,8 @@ class ModerationAuditState {
 
 class ModerationAuditNotifier extends StateNotifier<ModerationAuditState> {
   ModerationAuditNotifier(this._ref)
-      : _repository = _ref.read(moderationRepositoryProvider),
-        super(const ModerationAuditState()) {
+    : _repository = _ref.read(moderationRepositoryProvider),
+      super(const ModerationAuditState()) {
     Future.microtask(() => search(state.filters));
   }
 
@@ -372,8 +362,9 @@ class ModerationAuditNotifier extends StateNotifier<ModerationAuditState> {
       if (!append) {
         ModerationTelemetry.auditSearch(filters);
       }
-      final mergedEntries =
-          append ? [...state.entries, ...response.entries] : response.entries;
+      final mergedEntries = append
+          ? [...state.entries, ...response.entries]
+          : response.entries;
       state = state.copyWith(
         entries: mergedEntries,
         page: response.pagination.page,
@@ -399,5 +390,5 @@ class ModerationAuditNotifier extends StateNotifier<ModerationAuditState> {
 
 final moderationAuditProvider =
     StateNotifierProvider<ModerationAuditNotifier, ModerationAuditState>(
-  (ref) => ModerationAuditNotifier(ref),
-);
+      (ref) => ModerationAuditNotifier(ref),
+    );

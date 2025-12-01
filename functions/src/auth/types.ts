@@ -84,5 +84,5 @@ export interface TokenPayload {
  * Type guard for TokenPayload
  */
 export function isTokenPayload(x: unknown): x is TokenPayload {
-  return !!x && typeof (x as any).sub === 'string';
+  return !!x && typeof x === 'object' && 'sub' in x && typeof (x as TokenPayload).sub === 'string';
 }

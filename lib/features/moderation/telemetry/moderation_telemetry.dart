@@ -31,7 +31,10 @@ class ModerationTelemetry {
     });
   }
 
-  static void decisionSubmitted(String caseId, ModerationDecisionAction action) {
+  static void decisionSubmitted(
+    String caseId,
+    ModerationDecisionAction action,
+  ) {
     _log('moderation.case.decision_submitted', {
       'case_id': caseId,
       'decision': action.name,
