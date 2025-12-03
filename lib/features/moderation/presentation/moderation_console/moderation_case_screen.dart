@@ -265,7 +265,7 @@ class ModerationCaseScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: targetQueue,
+                value: targetQueue,
                 items: _escalationQueues
                     .map(
                       (queue) =>
