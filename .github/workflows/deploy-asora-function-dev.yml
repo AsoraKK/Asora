@@ -172,6 +172,26 @@ jobs:
 
           curl -fsSL -u "$USER:$PASS" -H "Content-Type: application/json" -X POST -d "{\"type\":\"zip\",\"packageUri\":\"$PKG_URI\"}" "$SCM_URL"
 
+          # Copy versioned blob to functionapp.zip for cold-start persistence
+          echo "Copying $VERSIONED_BLOB to functionapp.zip for cold-start persistence..."
+          az storage blob copy start --auth-mode login \
+            --account-name "$STG" \
+            --destination-container "$CONT" \
+            --destination-blob functionapp.zip \
+            --source-container "$CONT" \
+            --source-blob "$VERSIONED_BLOB"
+          
+          # Wait for copy to complete
+          for i in $(seq 1 10); do
+            STATUS=$(az storage blob show --auth-mode login --account-name "$STG" --container-name "$CONT" --name functionapp.zip --query "properties.copy.status" -o tsv)
+            if [ "$STATUS" = "success" ]; then
+              echo "✅ Blob copy completed"
+              break
+            fi
+            echo "Blob copy status: $STATUS (attempt $i/10)"
+            sleep 2
+          done
+
           # Trigger reindex and give the host longer warmup for Flex
           echo "Triggering function sync and restarting host"
           az rest --method post --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" --verbose
