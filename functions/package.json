@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "build": "rimraf dist && tsc && tsc-alias && node scripts/write-dist-entry.cjs",
     "test": "jest --config jest.config.ts --runInBand",
-    "test:coverage": "jest --config jest.config.ts --runInBand --coverage"
+    "test:coverage": "jest --config jest.config.ts --runInBand --coverage",
+    "verify:dist": "node scripts/verify-dist-structure.cjs ../functions-dist.zip"
   },
   "dependencies": {
     "@azure/app-configuration": "^1.6.0",
@@ -18,13 +19,13 @@
     "@azure/functions": "^4.9.0",
     "@azure/identity": "^4.13.0",
     "@azure/keyvault-secrets": "^4.10.0",
-    "@azure/notification-hubs": "^2.0.2",
     "@azure/storage-blob": "^12.29.1",
     "@azure/storage-queue": "^12.28.1",
     "applicationinsights": "^2.9.2",
     "archiver": "^7.0.1",
     "axios": "1.12.2",
     "fast-json-stable-stringify": "^2.1.0",
+    "google-auth-library": "^9.15.1",
     "ioredis": "^5.3.0",
     "joi": "^17.12.1",
     "jose": "^5.2.0",

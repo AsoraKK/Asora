@@ -1,8 +1,8 @@
 /**
  * ASORA NOTIFICATIONS - PREFERENCES API
  * 
- * GET /api/notification-preferences - Get user preferences
- * PUT /api/notification-preferences - Update user preferences
+ * GET /api/notifications/preferences - Get user preferences
+ * PUT /api/notifications/preferences - Update user preferences
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
@@ -53,16 +53,16 @@ export async function updatePreferences(
 }
 
 // Register routes
-app.http('getNotificationPreferences', {
+app.http('notifications-getPreferences', {
   methods: ['GET'],
-  route: 'notification-preferences',
+  route: 'notifications/preferences',
   authLevel: 'anonymous',
   handler: getPreferences,
 });
 
-app.http('updateNotificationPreferences', {
+app.http('notifications-updatePreferences', {
   methods: ['PUT'],
-  route: 'notification-preferences',
+  route: 'notifications/preferences',
   authLevel: 'anonymous',
   handler: updatePreferences,
 });

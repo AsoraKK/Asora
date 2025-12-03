@@ -1,8 +1,11 @@
 # Notifications Deployment Checklist
 
-## Quick Reference for Completing Firebase + Azure Setup
+## Quick Reference for Completing Firebase + FCM HTTP v1 Setup
 
 Use this checklist to track progress through the deployment steps outlined in `NOTIFICATIONS_DEPLOYMENT_GUIDE.md`.
+
+> **Note**: As of December 2025, we use direct FCM HTTP v1 API instead of Azure Notification Hubs.
+> See `FCM_MIGRATION_COMPLETE.md` for details.
 
 ---
 
@@ -27,6 +30,13 @@ Use this checklist to track progress through the deployment steps outlined in `N
 - [ ] Upload APNs credentials to Firebase Console
 - [ ] Test iOS build: `flutter build ios --debug`
 
+### Firebase Service Account (for FCM HTTP v1)
+- [ ] Firebase Console → Project Settings → Service Accounts
+- [ ] Generate new private key (download JSON)
+- [ ] Extract `project_id` → `FCM_PROJECT_ID`
+- [ ] Extract `client_email` → `FCM_CLIENT_EMAIL`
+- [ ] Extract `private_key` → `FCM_PRIVATE_KEY`
+
 **Next Action**: Download iOS config from [Firebase Console](https://console.firebase.google.com/) → asora-dev → Add iOS app
 
 ---
@@ -50,43 +60,30 @@ Use this checklist to track progress through the deployment steps outlined in `N
 
 ---
 
-## ⏳ Phase 3: Azure Notification Hub Setup (PENDING)
+## ⏳ Phase 3: Function App Configuration (PENDING)
 
-### Development Environment
-- [ ] Ensure Azure CLI logged in: `az login`
-- [ ] Create notification hub: `./scripts/setup-azure-notification-hub.sh dev rg-asora-dev eastus`
-- [ ] Save connection string from output
-- [ ] Configure FCM credentials in Azure Portal:
-  - [ ] Upload Firebase service account JSON (from Firebase Console → Service Accounts)
-- [ ] Configure APNs credentials in Azure Portal:
-  - [ ] Upload APNs key (.p8) OR certificate (.p12)
+### FCM Environment Variables
+- [ ] Set FCM credentials in Function App:
+  ```bash
+  az functionapp config appsettings set \
+    --name asora-function-dev \
+    --resource-group rg-asora-dev \
+    --settings \
+      FCM_PROJECT_ID="asora-dev" \
+      FCM_CLIENT_EMAIL="firebase-adminsdk-xxxxx@asora-dev.iam.gserviceaccount.com" \
+      FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+  ```
+- [ ] Verify settings: 
+  ```bash
+  az functionapp config appsettings list -g rg-asora-dev -n asora-function-dev --query "[?name=='FCM_PROJECT_ID']"
+  ```
+- [ ] Verify health endpoint shows FCM configured
 
-### Production Environment (Later)
-- [ ] Create notification hub: `./scripts/setup-azure-notification-hub.sh prod rg-asora-prod eastus`
-- [ ] Save connection string
-- [ ] Configure FCM credentials
-- [ ] Configure APNs credentials (production certificate)
-
-**Next Action**: Run `./scripts/setup-azure-notification-hub.sh dev rg-asora-dev eastus`
-
----
-
-## ⏳ Phase 4: Function App Configuration (PENDING)
-
-### Environment Variables
-- [ ] Run interactive setup: `./scripts/set-function-app-env-vars.sh asora-function-dev dev`
-- [ ] Enter when prompted:
-  - [ ] `NOTIFICATION_HUB_CONNECTION_STRING` (from Phase 3)
-  - [ ] `NOTIFICATION_HUB_NAME` (e.g., `asora-notifications-dev`)
-  - [ ] `COSMOS_CONNECTION_STRING` (existing value)
-  - [ ] `COSMOS_DATABASE_NAME` (`users`)
-- [ ] Verify settings: `az functionapp config appsettings list -g rg-asora-dev -n asora-function-dev --query "[?name=='NOTIFICATION_HUB_NAME']"`
-
-**Next Action**: Run `./scripts/set-function-app-env-vars.sh asora-function-dev dev`
+**Next Action**: Run the `az functionapp config appsettings set` command with your Firebase service account credentials
 
 ---
 
-## ⏳ Phase 5: Cosmos DB Containers (PENDING)
+## ⏳ Phase 4: Cosmos DB Containers (PENDING)
 
 ### Create Notification Containers
 - [ ] `user_device_tokens` (Partition key: `/userId`)
@@ -113,7 +110,7 @@ az cosmosdb sql container create \
 
 ---
 
-## ⏳ Phase 6: End-to-End Test (PENDING)
+## ⏳ Phase 5: End-to-End Test (PENDING)
 
 ### Test Notification Pipeline
 - [ ] Export Cosmos connection string: `export COSMOS_CONNECTION_STRING="..."`
@@ -122,13 +119,13 @@ az cosmosdb sql container create \
 - [ ] Verify push notification on device:
   - [ ] Android device receives notification
   - [ ] iOS device receives notification (if configured)
-- [ ] Check Function App logs: `az monitor activity-log list --resource-group rg-asora-dev`
+- [ ] Check Function App logs for `[FCM] Push sent successfully`
 
 ### Troubleshooting Failed Tests
 - [ ] Verify Function App logs: `scripts/diagnostics-v4.sh logs asora-function-dev`
 - [ ] Check Cosmos DB for event: Query `notification_events` container
 - [ ] Verify device token exists: Query `user_device_tokens` container
-- [ ] Test direct notification hub send (see `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` Step 9)
+- [ ] Check for FCM configuration errors in logs
 
 **Next Action**: Run `./scripts/run-e2e-notification-test.sh user-123 POST_LIKE`
 
@@ -140,20 +137,22 @@ az cosmosdb sql container create \
 - Android Firebase SDK configured
 - Android `google-services.json` placed
 - Firebase Analytics disabled (manifest)
+- FCM HTTP v1 client implemented (replaces Azure Notification Hubs)
 - Deployment automation scripts created
 - Comprehensive documentation written
+- All tests pass (798 tests)
 
 ### Pending ⏳
 - iOS Firebase configuration
 - Build verification (Android + iOS)
-- Azure Notification Hub creation
-- Function App environment variables
+- Function App FCM environment variables
 - Cosmos DB containers
 - End-to-end test
 
-### Blocked 🚫
-- **iOS config download** (requires manual Firebase Console access)
-- **Azure resources** (requires Azure CLI login, already logged in ✅)
+### No Longer Required ❌
+- ~~Azure Notification Hub creation~~ (replaced by direct FCM)
+- ~~Notification Hub connection string~~ (replaced by FCM credentials)
+- ~~Notification Hub credential configuration~~ (replaced by FCM service account)
 
 ---
 
@@ -163,11 +162,10 @@ az cosmosdb sql container create \
 |-------|----------------|---------------|
 | iOS Firebase Setup | 10 min | Firebase Console access, Apple Developer account |
 | Build Verification | 5 min | Flutter SDK, Android Studio/Xcode |
-| Azure Hub Creation | 10 min | Azure CLI logged in ✅ |
-| Function App Config | 5 min | Hub connection string |
+| FCM Credentials Setup | 3 min | Firebase service account JSON |
 | Cosmos Containers | 5 min | Azure Portal access |
 | E2E Test | 5 min | All previous steps complete |
-| **Total** | **40 min** | Assumes no blockers |
+| **Total** | **28 min** | Assumes no blockers |
 
 ---
 
@@ -175,13 +173,13 @@ az cosmosdb sql container create \
 
 1. **CRITICAL** (Blocks Everything):
    - [ ] Download iOS `GoogleService-Info.plist` from Firebase Console
+   - [ ] Generate Firebase service account JSON for FCM
 
 2. **HIGH** (Validates Config):
    - [ ] Test Android build (`flutter build apk`)
-   - [ ] Create Azure Notification Hub
+   - [ ] Set FCM environment variables in Function App
 
 3. **MEDIUM** (Deployment):
-   - [ ] Set Function App environment variables
    - [ ] Create Cosmos DB containers
 
 4. **LOW** (Validation):
@@ -208,6 +206,9 @@ az functionapp list -g rg-asora-dev --query "[].name" -o table
 
 # Check Cosmos DB databases
 az cosmosdb sql database list --account-name asora-cosmos-dev --query "[].id" -o table
+
+# Verify FCM configuration
+curl https://asora-function-dev.azurewebsites.net/api/health | jq '.fcmConfigured'
 ```
 
 ### Debug Commands
@@ -226,9 +227,10 @@ az cosmosdb show --name asora-cosmos-dev -g rg-asora-dev --query "documentEndpoi
 
 ## Documentation References
 
+- **FCM Migration**: `FCM_MIGRATION_COMPLETE.md` (migration from Notification Hubs)
 - **Android Setup**: `docs/firebase_fcm_setup.md` (section 1-4)
 - **iOS Setup**: `docs/firebase_ios_setup.md` (complete guide)
-- **Azure Deployment**: `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` (10-step guide)
+- **Azure Deployment**: `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` (deployment guide)
 - **Quick Start**: `NOTIFICATIONS_DEPLOYMENT_QUICKSTART.md` (TL;DR version)
 - **Privacy Analysis**: `docs/ADR_001_ADDENDUM_PUSH_NOTIFICATIONS_PRIVACY.md`
 - **Cosmos Schema**: `docs/notifications_cosmos_schema.md`
@@ -242,10 +244,8 @@ az cosmosdb show --name asora-cosmos-dev -g rg-asora-dev --query "documentEndpoi
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Select project: `asora-dev`
-3. Project Settings → Add app → iOS
-4. Bundle ID: `com.asora.app`
-5. Download `GoogleService-Info.plist`
-6. Run: `cp ~/Downloads/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist`
+3. **For iOS**: Project Settings → Add app → iOS → Bundle ID: `com.asora.app` → Download `GoogleService-Info.plist`
+4. **For FCM**: Project Settings → Service Accounts → Generate new private key
 
 **Then run**:
 ```bash
@@ -253,9 +253,15 @@ cd /home/kylee/asora
 flutter clean && flutter pub get && flutter build apk --debug
 ```
 
-**If build succeeds**, proceed to Azure Notification Hub setup:
+**If build succeeds**, set FCM environment variables:
 ```bash
-./scripts/setup-azure-notification-hub.sh dev rg-asora-dev eastus
+az functionapp config appsettings set \
+  --name asora-function-dev \
+  --resource-group rg-asora-dev \
+  --settings \
+    FCM_PROJECT_ID="asora-dev" \
+    FCM_CLIENT_EMAIL="<from-service-account-json>" \
+    FCM_PRIVATE_KEY="<from-service-account-json>"
 ```
 
 ---
@@ -264,6 +270,6 @@ flutter clean && flutter pub get && flutter build apk --debug
 
 - For Android build issues: See `docs/firebase_fcm_setup.md` → Troubleshooting
 - For iOS build issues: See `docs/firebase_ios_setup.md` → Troubleshooting
-- For Azure deployment issues: See `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` → Step 9 (Troubleshooting)
-- For E2E test failures: See `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` → Step 8
+- For FCM configuration issues: See `FCM_MIGRATION_COMPLETE.md`
+- For E2E test failures: See `NOTIFICATIONS_DEPLOYMENT_GUIDE.md`
 - For runtime errors: Run `./scripts/diagnostics-v4.sh logs asora-function-dev`

@@ -1,15 +1,17 @@
 /**
  * ASORA NOTIFICATIONS - DEVICE TOKEN API
  * 
- * POST /api/devices/register - Register push token (enforces 3-device cap)
- * GET /api/devices - List user devices
- * POST /api/devices/:id/revoke - Revoke a device token
+ * POST /api/notifications/devices - Register or update a push token (3-device cap)
+ * GET /api/notifications/devices - List user devices
+ * POST /api/notifications/devices/:id/revoke - Revoke a device token
+ * 
+ * Device registration stores tokens in Cosmos DB for FCM delivery.
+ * No external installation management needed - FCM uses direct token addressing.
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getPrincipalOrThrow } from '../../shared/middleware/auth';
 import { userDeviceTokensRepo } from '../repositories/userDeviceTokensRepo';
-import { getNotificationHubsClient } from '../clients/notificationHubClient';
 
 export async function registerDevice(
   request: HttpRequest,
@@ -53,14 +55,8 @@ export async function registerDevice(
       label,
     });
 
-    // Register with Notification Hubs
-    try {
-      const hubClient = getNotificationHubsClient();
-      await hubClient.registerInstallation(deviceId, pushToken, apiPlatform, principal.sub);
-    } catch (hubError) {
-      context.warn('Failed to register with Notification Hubs', hubError);
-      // Continue - device is still registered in DB
-    }
+    // No external installation registration needed - FCM uses direct token addressing
+    // Tokens are stored in Cosmos DB and used directly when sending notifications
 
     return {
       status: 201,
@@ -113,14 +109,8 @@ export async function revokeDevice(
 
     await userDeviceTokensRepo.revoke(deviceId, principal.sub);
 
-    // Remove from Notification Hubs
-    try {
-      const hubClient = getNotificationHubsClient();
-      await hubClient.deleteInstallation(deviceId);
-    } catch (hubError) {
-      context.warn('Failed to delete from Notification Hubs', hubError);
-      // Continue - device is revoked in DB
-    }
+    // No external cleanup needed - FCM tokens are just strings stored in our DB
+    // Revoked tokens simply won't be used for future sends
 
     return {
       status: 200,
@@ -133,23 +123,23 @@ export async function revokeDevice(
 }
 
 // Register routes
-app.http('registerDevice', {
+app.http('notifications-registerDevice', {
   methods: ['POST'],
-  route: 'devices/register',
+  route: 'notifications/devices',
   authLevel: 'anonymous',
   handler: registerDevice,
 });
 
-app.http('listDevices', {
+app.http('notifications-listDevices', {
   methods: ['GET'],
-  route: 'devices',
+  route: 'notifications/devices',
   authLevel: 'anonymous',
   handler: listDevices,
 });
 
-app.http('revokeDevice', {
+app.http('notifications-revokeDevice', {
   methods: ['POST'],
-  route: 'devices/{id}/revoke',
+  route: 'notifications/devices/{id}/revoke',
   authLevel: 'anonymous',
   handler: revokeDevice,
 });

@@ -1,4 +1,26 @@
 #!/usr/bin/env node
+/**
+ * write-dist-entry.cjs
+ * 
+ * V4 PROGRAMMATIC MODEL entrypoint generator.
+ * 
+ * This script prepares functions/dist for deployment with the Azure Functions v4
+ * programmatic model, where all functions are registered via app.http(), app.timer(), etc.
+ * 
+ * Key behaviors:
+ * - Preserves src/ and shared/ directories (required for programmatic handlers)
+ * - Creates index.js that requires ./src/index.js (the compiled entrypoint)
+ * - Removes only test artifacts (__tests__, *.test.js, etc.)
+ * - NO file-based function.json files are created
+ * 
+ * Canonical deployment path (Flex Consumption):
+ *   1. npm run build
+ *   2. cd functions/dist && zip -r /tmp/functions-dist.zip .
+ *   3. az storage blob upload ... functionapp.zip
+ *   4. curl -X POST .../api/publish (Kudu with SAS URL)
+ *   5. az rest --method post .../syncfunctiontriggers
+ *   6. az functionapp restart
+ */
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -7,40 +29,25 @@ const distDir = path.join(rootDir, 'dist');
 const srcEntry = path.join(distDir, 'src', 'index.js');
 const destEntry = path.join(distDir, 'index.js');
 
+// Validate build output exists
 if (!fs.existsSync(srcEntry)) {
-  console.error('Expected build output missing at', srcEntry);
+  console.error('[write-dist-entry] ERROR: Expected build output missing at', srcEntry);
+  console.error('[write-dist-entry] Run `npm run build` first (tsc + tsc-alias)');
   process.exit(1);
 }
+
 fs.mkdirSync(distDir, { recursive: true });
 
-// 1) Classic /api/health (zero-dependency; no imports)
-const healthDir = path.join(distDir, 'health');
-fs.mkdirSync(healthDir, { recursive: true });
-
-fs.writeFileSync(
-  path.join(healthDir, 'function.json'),
-  JSON.stringify({
-    bindings: [
-      { authLevel: 'anonymous', type: 'httpTrigger', direction: 'in', name: 'req', methods: ['get'], route: 'health' },
-      { type: 'http', direction: 'out', name: 'res' }
-    ]
-  }, null, 2)
-);
-
-fs.writeFileSync(
-  path.join(healthDir, 'index.js'),
-  `const H={"Content-Type":"application/json","Cache-Control":"no-store, no-cache, must-revalidate"};
-module.exports=async function(context){
-  let commit="unknown";
-  try{ const raw=process.env.GIT_SHA||""; commit=(raw.trim()||"unknown"); }catch{}
-  const payload={status:"ok",commit,service:"asora-functions",timestamp:new Date().toISOString()};
-  context.res={status:200,headers:H,body:JSON.stringify(payload)};
-};
-`
-);
-
-// 2) Copy root metadata into dist
+// 1) Copy root metadata into dist
+console.log('[write-dist-entry] Copying host.json, package.json, and package-lock.json...');
 fs.copyFileSync(path.join(rootDir, 'host.json'), path.join(distDir, 'host.json'));
+
+// Copy package-lock.json for npm ci
+const lockPath = path.join(rootDir, 'package-lock.json');
+if (fs.existsSync(lockPath)) {
+  fs.copyFileSync(lockPath, path.join(distDir, 'package-lock.json'));
+}
+
 const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
 fs.writeFileSync(
   path.join(distDir, 'package.json'),
@@ -55,31 +62,89 @@ fs.writeFileSync(
   }, null, 2)
 );
 
-// 3) Prune tests/specs AND src/shared directories from dist (minimal health-only deployment)
-//    For full-feature deployment, comment out the src/shared removal lines
-(function prune(dir){
-  for (const e of fs.readdirSync(dir, { withFileTypes:true })) {
+// 2) Copy node_modules (production dependencies only)
+console.log('[write-dist-entry] Installing production dependencies...');
+const { execSync } = require('node:child_process');
+try {
+  // Install only production deps into dist
+  // Use --omit=dev to skip devDependencies
+  execSync('npm install --omit=dev --ignore-scripts', { 
+    cwd: distDir, 
+    stdio: 'inherit',
+    env: { ...process.env, NODE_ENV: 'production' }
+  });
+  console.log('[write-dist-entry] Production dependencies installed');
+} catch (err) {
+  console.error('[write-dist-entry] ERROR: npm install failed:', err.message);
+  process.exit(1);
+}
+
+// 3) Prune test artifacts only (keep src/ and shared/ for programmatic model)
+console.log('[write-dist-entry] Pruning test artifacts...');
+(function prune(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
-        if (e.isDirectory()){
-          // Remove test directories, src/, and shared/ for minimal health-only package
-          if (/^(?:__tests__|tests|probe|deploy|coverage|src|shared)$/.test(e.name)) { 
-            console.log('[write-dist-entry] Removing directory:', path.relative(distDir, p));
-            fs.rmSync(p, { recursive:true, force:true }); 
-            continue; 
-          }
-      prune(p); continue;
+    if (e.isDirectory()) {
+      // Remove only test directories - keep src/ and shared/ for v4 programmatic model
+      if (/^(?:__tests__|tests|probe|deploy|coverage)$/.test(e.name)) {
+        console.log('[write-dist-entry] Removing test directory:', path.relative(distDir, p));
+        fs.rmSync(p, { recursive: true, force: true });
+        continue;
+      }
+      prune(p);
+      continue;
     }
-    if (/\.(test|spec)\.[cm]?js$/.test(e.name) || /\.test\.d\.ts$/.test(e.name)) fs.rmSync(p, { force:true });
+    // Remove test files and source maps
+    if (/\.(test|spec)\.[cm]?js$/.test(e.name) || /\.test\.d\.ts$/.test(e.name) || /\.js\.map$/.test(e.name)) {
+      fs.rmSync(p, { force: true });
+    }
   }
 })(distDir);
 
-// 4) EMPTY entrypoint for v4 file-based (classic) function discovery
-//    Runtime scans for function.json files automatically
-//    Do NOT require or import anything here (breaks file-based discovery)
+// 4) V4 PROGRAMMATIC MODEL entrypoint
+//    This requires the compiled TypeScript entry point which imports all function handlers
+//    registered via app.http(), app.timer(), etc.
+console.log('[write-dist-entry] Writing v4 programmatic entrypoint...');
 fs.writeFileSync(destEntry,
 `// Auto-generated by scripts/write-dist-entry.cjs
-// Empty entrypoint for v4 file-based (classic) function discovery
-// Runtime scans for function.json files automatically - do NOT load handlers here
+// V4 PROGRAMMATIC MODEL entrypoint
+// 
+// This file is the main entry point for Azure Functions v4.
+// It imports the compiled TypeScript handlers from src/index.js,
+// which registers all functions via app.http(), app.timer(), etc.
+//
+// DO NOT use file-based function.json discovery with this model.
+// All function definitions must be programmatic.
+
+require('./src/index.js');
 `
 );
-console.log('[write-dist-entry] Wrote empty v4 file-based entrypoint to', destEntry);
+
+// 5) Verify critical files exist
+const requiredFiles = [
+  'host.json',
+  'package.json',
+  'index.js',
+  'src/index.js',
+  'shared/configService.js',
+  'node_modules/@azure/functions/package.json'
+];
+
+let missingFiles = [];
+for (const f of requiredFiles) {
+  if (!fs.existsSync(path.join(distDir, f))) {
+    missingFiles.push(f);
+  }
+}
+
+if (missingFiles.length > 0) {
+  console.error('[write-dist-entry] ERROR: Missing required files:', missingFiles.join(', '));
+  process.exit(1);
+}
+
+console.log('[write-dist-entry] ✅ V4 programmatic entrypoint ready at', destEntry);
+console.log('[write-dist-entry] Package structure:');
+console.log('  - index.js (programmatic entrypoint)');
+console.log('  - src/index.js (compiled handlers)');
+console.log('  - shared/ (config, services)');
+console.log('  - host.json, package.json');

@@ -9,6 +9,7 @@
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { configService } from '../../shared/configService';
+import { getFcmConfigStatus } from '../notifications/clients/fcmClient';
 
 /**
  * Health Check Handler
@@ -37,20 +38,44 @@ async function healthCheck(
   try {
     // Get config summary (no secrets)
     const configSummary = configService.getHealthSummary();
-
-    // Determine overall health status
-    // System is "healthy" if Cosmos is configured (critical dependency)
-    // Notification Hub is optional (can be disabled in dev/test)
     const cosmosInfo = configSummary.cosmos as { configured: boolean; databaseName: string };
-    const isHealthy = cosmosInfo.configured;
-    const status = isHealthy ? 'healthy' : 'degraded';
-    const httpStatus = isHealthy ? 200 : 503;
+    const notificationsInfo = configSummary.notifications as {
+      enabled: boolean;
+      fcmConfigured: boolean;
+      fcmProjectId?: string;
+    };
+    const fcmStatus = getFcmConfigStatus();
 
-    // Response body
+    // Determine dependency health
+    const cosmosHealthy = cosmosInfo.configured;
+    const notificationsHealthy = fcmStatus.configured;
+
+    let status: 'healthy' | 'degraded' = 'healthy';
+    let httpStatus = 200;
+    const degradations: string[] = [];
+
+    if (!cosmosHealthy) {
+      status = 'degraded';
+      httpStatus = 503; // Cosmos is critical
+      degradations.push('cosmos_not_configured');
+    }
+
+    if (!notificationsHealthy) {
+      status = 'degraded';
+      degradations.push('fcm_not_configured');
+    }
+
     const response = {
       status,
       timestamp: new Date().toISOString(),
-      config: configSummary
+      degradations,
+      config: configSummary,
+      notifications: {
+        enabled: notificationsInfo.enabled,
+        fcmConfigured: fcmStatus.configured,
+        projectId: fcmStatus.projectId || notificationsInfo.fcmProjectId || null,
+        error: fcmStatus.error ?? null,
+      },
     };
 
     context.log(`[Health Check] Status: ${status}`);

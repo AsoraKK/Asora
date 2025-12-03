@@ -2,6 +2,9 @@
 
 **TL;DR**: Follow these steps in order. Full details in `NOTIFICATIONS_DEPLOYMENT_GUIDE.md`.
 
+> **IMPORTANT**: As of December 2025, we use direct FCM HTTP v1 API instead of Azure Notification Hubs.
+> See `FCM_MIGRATION_COMPLETE.md` for migration details.
+
 ---
 
 ## ☑️ Pre-Deployment Checklist
@@ -26,37 +29,24 @@
 # Download config files:
 # - Android: google-services.json → android/app/
 # - iOS: GoogleService-Info.plist → ios/Runner/
-# - Service account JSON (save securely, don't commit)
+# - Service account JSON → extract for FCM env vars (save securely, don't commit)
 
 # Verify Analytics disabled
 grep "firebase_analytics_collection_enabled" android/app/src/main/AndroidManifest.xml
 grep "FirebaseAnalyticsCollectionEnabled" ios/Runner/Info.plist
 ```
 
-**Templates created**:
-- `android/app/google-services.json.example`
-- `ios/Runner/GoogleService-Info.plist.example`
+**Firebase Service Account Setup** (for FCM HTTP v1):
+1. Firebase Console → Project Settings → Service Accounts
+2. Click "Generate new private key" → Download JSON
+3. Extract these values:
+   - `project_id` → `FCM_PROJECT_ID`
+   - `client_email` → `FCM_CLIENT_EMAIL`
+   - `private_key` → `FCM_PRIVATE_KEY`
 
 ---
 
-### 2. Azure Notification Hub (5 minutes)
-
-```bash
-# Create hub for dev environment
-./scripts/setup-azure-notification-hub.sh dev rg-asora-dev eastus
-
-# Save the connection string printed at the end!
-```
-
-**Then configure credentials in Azure Portal**:
-1. Notification Hub → Settings → Google (FCM V1)
-2. Upload Firebase service account JSON
-3. Notification Hub → Settings → Apple (APNS)
-4. Upload APNs key/certificate
-
----
-
-### 3. Cosmos DB Containers (2 minutes)
+### 2. Cosmos DB Containers (2 minutes)
 
 ```bash
 COSMOS_ACCOUNT="<your-cosmos-account>"
@@ -71,19 +61,17 @@ DATABASE_NAME="users"
 
 ---
 
-### 4. Function App Environment Variables (3 minutes)
+### 3. Function App Environment Variables (3 minutes)
 
 ```bash
-# Interactive script
-./scripts/set-function-app-env-vars.sh asora-function-dev dev
-
-# Or manual:
+# Set FCM credentials (replaces old Notification Hub vars)
 az functionapp config appsettings set \
   --name asora-function-dev \
   --resource-group rg-asora-dev \
   --settings \
-    NOTIFICATION_HUB_CONNECTION_STRING="..." \
-    NOTIFICATION_HUB_NAME="asora-notifications-dev" \
+    FCM_PROJECT_ID="asora-dev" \
+    FCM_CLIENT_EMAIL="firebase-adminsdk-xxxxx@asora-dev.iam.gserviceaccount.com" \
+    FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..." \
     COSMOS_CONNECTION_STRING="..." \
     COSMOS_DATABASE_NAME="users" \
     ENVIRONMENT="dev"
@@ -93,7 +81,7 @@ az functionapp config appsettings set \
 
 ---
 
-### 5. Deploy Backend (5 minutes)
+### 4. Deploy Backend (5 minutes)
 
 ```bash
 cd functions
@@ -110,7 +98,7 @@ func azure functionapp publish asora-function-dev
 
 ---
 
-### 6. Flutter App Setup (5 minutes)
+### 5. Flutter App Setup (5 minutes)
 
 ```bash
 # Ensure Firebase config files exist
@@ -126,7 +114,7 @@ flutter run --release
 
 ---
 
-### 7. E2E Test (2 minutes)
+### 6. E2E Test (2 minutes)
 
 ```bash
 # Set Cosmos connection string
@@ -147,13 +135,13 @@ export COSMOS_CONNECTION_STRING="..."
 ### Health Check
 ```bash
 curl https://asora-function-dev.azurewebsites.net/api/health
-# Should return: {"status": "healthy", "config": {...}}
+# Should return: {"status": "healthy", "fcmConfigured": true, "fcmProjectId": "asora-dev", ...}
 ```
 
 ### Function Logs
 ```bash
 az functionapp log tail --name asora-function-dev --resource-group rg-asora-dev
-# Look for: [CONFIG] Notifications Enabled: true
+# Look for: [FCM] Configuration loaded for project: asora-dev
 ```
 
 ### Device Token Registration
@@ -166,8 +154,10 @@ az cosmosdb sql query \
   --query-text "SELECT * FROM c WHERE c.userId = '<user-id>'"
 ```
 
-### Notification Hub Metrics
-Azure Portal → Notification Hub → Monitoring → Metrics → "Successful Sends"
+### FCM Send Verification
+Check Function App logs for:
+- `[FCM] Push sent successfully: <messageId> (Xms)`
+- `[NotificationDispatcher] Processed event: <eventId>`
 
 ---
 
@@ -175,17 +165,20 @@ Azure Portal → Notification Hub → Monitoring → Metrics → "Successful Sen
 
 | Issue | Solution |
 |-------|----------|
-| **Health check returns 503** | Check env vars are set: `COSMOS_CONNECTION_STRING`, `NOTIFICATION_HUB_CONNECTION_STRING` |
+| **Health check returns 503** | Check env vars are set: `COSMOS_CONNECTION_STRING`, `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY` |
+| **"FCM configuration missing"** | Verify all 3 FCM env vars are set correctly, check private key format |
 | **Event stays PENDING** | Check timer-trigger logs, verify Cosmos connection |
-| **Push not received** | Verify device token in Cosmos, check Notification Hub credentials (FCM/APNS) |
+| **Push not received** | Verify device token in Cosmos, check FCM project ID matches Firebase project |
 | **In-app notification missing** | Check Cosmos `notifications` container, verify event processed successfully |
 | **"No device tokens found"** | Register device by opening app and granting permission |
+| **"error:1E08010C:DECODER routines"** | Private key format issue - ensure PEM format with proper newlines |
 
 ---
 
 ## 📚 Full Documentation
 
-- **Complete Guide**: `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` (10 detailed steps)
+- **FCM Migration**: `FCM_MIGRATION_COMPLETE.md` (migration from Notification Hubs)
+- **Complete Guide**: `NOTIFICATIONS_DEPLOYMENT_GUIDE.md` (detailed steps)
 - **Architecture**: `docs/ADR_001_ADDENDUM_PUSH_NOTIFICATIONS_PRIVACY.md`
 - **Backend**: `NOTIFICATIONS_BACKEND_COMPLETE.md`
 - **E2E Testing**: `NOTIFICATIONS_SUBSYSTEM_COMPLETE.md` → Testing Guide
@@ -206,13 +199,13 @@ Azure Portal → Notification Hub → Monitoring → Metrics → "Successful Sen
 ## 🔐 Security Reminders
 
 - ❌ **DO NOT** commit Firebase config files to git (`.gitignore` entries added)
-- ❌ **DO NOT** hardcode connection strings in code
+- ❌ **DO NOT** hardcode FCM credentials or connection strings in code
 - ✅ **DO** store secrets in Azure Key Vault
 - ✅ **DO** use managed identity for production
 - ✅ **DO** verify Firebase Analytics is disabled
 
 ---
 
-**Deployment Time**: ~30 minutes for first environment  
-**Support**: Check function logs, Notification Hub metrics, Cosmos Data Explorer  
-**Questions**: See full deployment guide or ADR privacy addendum
+**Deployment Time**: ~25 minutes for first environment (faster without Notification Hub setup)
+**Support**: Check function logs, Cosmos Data Explorer
+**Questions**: See FCM migration doc or deployment guide

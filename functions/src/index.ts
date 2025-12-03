@@ -1,13 +1,13 @@
-// Entrypoint for the Azure Functions v4 runtime.
-// We must ensure the health endpoint is always available, even if other
-// feature modules fail to load due to missing environment configuration.
+// Entrypoint for the Azure Functions v4 runtime (PROGRAMMATIC MODEL).
+// 
+// All functions are registered via app.http(), app.timer(), etc.
+// No file-based function.json discovery is used.
 //
-// 1) Health is handled by classic endpoint (zero-dependency, unconditional).
-// 2) Import ready synchronously - it does env checks but doesn't require services at load time.
-// 3) Attempt to import the rest of the routes asynchronously and defensively.
-//    Any failure will be logged but won't prevent the host from serving /api/health.
+// Health is imported synchronously to ensure it's always available.
+// Other feature modules are imported async/defensively to isolate failures.
 
-// import './shared/routes/health'; // Handled by classic health endpoint
+// Health endpoint - must load synchronously for reliability
+import './health/health.function';
 import './shared/routes/ready';
 
 // Best-effort async registration for non-health routes
@@ -30,6 +30,14 @@ async function registerFeatureRoutes(): Promise<void> {
 		tryImport('feed', () => import('./feed')),
 		tryImport('moderation', () => import('./moderation')),
 		tryImport('privacy', () => import('./privacy')),
+		// Notifications - FCM-enabled push notification handlers
+		tryImport('notifications/devices', () => import('./notifications/http/devicesApi.function')),
+		tryImport('notifications/preferences', () => import('./notifications/http/preferencesApi.function')),
+		tryImport('notifications/api', () => import('./notifications/http/notificationsApi.function')),
+		tryImport(
+			'notifications/processPendingNotifications',
+			() => import('./notifications/timers/processPendingNotifications.function')
+		),
 	]);
 }
 

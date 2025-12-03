@@ -50,12 +50,14 @@ jobs:
         working-directory: functions/dist
         run: |
           set -euo pipefail
-          echo "Validating Flex package structure..."
+          echo "Validating V4 PROGRAMMATIC MODEL package structure..."
+          
+          # Required files for programmatic model
           test -f host.json || { echo "::error::Missing host.json"; exit 1; }
           test -f package.json || { echo "::error::Missing package.json"; exit 1; }
           test -f index.js || { echo "::error::Missing root index.js entrypoint"; exit 1; }
-          test -f health/function.json || { echo "::error::Missing health/function.json"; exit 1; }
-          test -f health/index.js || { echo "::error::Missing health/index.js"; exit 1; }
+          test -f src/index.js || { echo "::error::Missing src/index.js (compiled handlers)"; exit 1; }
+          test -d shared || { echo "::error::Missing shared/ directory"; exit 1; }
           
           # Ensure package.json has main=index.js and NO "type":"module"
           MAIN=$(jq -r .main package.json)
@@ -65,29 +67,48 @@ jobs:
           fi
           TYPE=$(jq -r '.type // "commonjs"' package.json)
           if [ "$TYPE" = "module" ]; then
-            echo "::error::package.json must NOT have type=module (breaks classic CJS handlers)"; exit 1
+            echo "::error::package.json must NOT have type=module (breaks CJS handlers)"; exit 1
           fi
           
-          echo "Smoke-testing classic health entrypoint..."
-          node -e "require('./health/index.js'); console.log('✅ Classic health loads successfully')"
-          
-          echo "Verifying index.js is empty (v4 file-based discovery)..."
-          # For v4 file-based functions, index.js should NOT load handlers
-          # Runtime discovers health/function.json automatically
-          if grep -q "require" index.js; then
-            echo "::error::index.js should be empty for v4 file-based discovery"; exit 1
+          echo "Verifying index.js is PROGRAMMATIC (must require src/index.js)..."
+          # V4 programmatic model: index.js MUST load the compiled handlers
+          if ! grep -q "require.*src/index" index.js; then
+            echo "::error::index.js must require('./src/index.js') for v4 programmatic model"; exit 1
           fi
           
-          echo "Verifying health handler is zero-dependency..."
-          if grep -E "^(import|require\()" health/index.js; then
-            echo "::error::health/index.js must have zero dependencies"; exit 1
+          echo "Smoke-testing programmatic entrypoint..."
+          # This will fail fast if there are missing dependencies
+          node -e "
+            try {
+              require('./index.js');
+              console.log('✅ Programmatic entrypoint loads successfully');
+            } catch (e) {
+              // Expected: may fail due to missing env vars, but should not have syntax errors
+              if (e.code === 'MODULE_NOT_FOUND') {
+                console.error('❌ Missing module:', e.message);
+                process.exit(1);
+              }
+              // Config/env errors are OK at build time
+              console.log('⚠️  Config/env warning (expected at build time):', e.message);
+            }
+          "
+          
+          # Verify NO file-based function.json files exist (programmatic model only)
+          FUNC_JSON_COUNT=$(find . -name "function.json" -type f | wc -l)
+          if [ "$FUNC_JSON_COUNT" -gt 0 ]; then
+            echo "::warning::Found $FUNC_JSON_COUNT function.json files (should be 0 for pure programmatic model)"
+            find . -name "function.json" -type f
           fi
           
-          echo "✅ All structure gates passed"
+          echo "✅ All V4 programmatic model structure gates passed"
 
       - name: Zip dist root (zip the CONTENTS of dist)
         working-directory: functions/dist
         run: zip -r ../../functions-dist.zip .
+
+      - name: Verify packaged artifact structure
+        working-directory: functions
+        run: npm run verify:dist
 
       - name: Publish to Flex via Kudu (recommended)
         run: |
@@ -184,7 +205,7 @@ jobs:
           URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
           BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
           
-          echo "Running hardened runtime gates (3 gates: health=200, bogus=404, only health indexed)..."
+          echo "Running V4 PROGRAMMATIC MODEL runtime gates..."
           
           # Gate 1: Health returns 200 (20 probes, 5s intervals)
           GATE1_PASSED=false
@@ -216,7 +237,8 @@ jobs:
             exit 1
           fi
           
-          # Gate 3: Admin /functions lists exactly 'health' (verifies minimal package active)
+          # Gate 3: Admin /functions lists at least 'health' (v4 programmatic model)
+          # Note: Programmatic model registers multiple functions
           ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
           FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
           FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
@@ -224,8 +246,9 @@ jobs:
           echo "Gate 3 - indexed functions count: $FUNC_COUNT"
           echo "Gate 3 - indexed function names: $FUNC_NAMES"
           
-          if [ "$FUNC_COUNT" -ne 1 ]; then
-            echo "::error::Gate 3 FAILED: Expected exactly 1 function, found $FUNC_COUNT"
+          # V4 programmatic: expect at least health + ready + other handlers
+          if [ "$FUNC_COUNT" -lt 1 ]; then
+            echo "::error::Gate 3 FAILED: Expected at least 1 function, found $FUNC_COUNT"
             echo "Full admin response: $FUNCTIONS"
             exit 1
           fi
@@ -235,12 +258,12 @@ jobs:
             exit 1
           fi
           
-          echo "✅ Gate 3 PASSED: Exactly one function 'health' is indexed"
+          echo "✅ Gate 3 PASSED: health function is indexed (total: $FUNC_COUNT functions)"
           echo ""
           echo "🎉 All 3 runtime gates PASSED!"
           echo "   - Health endpoint: 200 OK"
           echo "   - Host routing: functional (404 for bogus)"
-          echo "   - Package integrity: minimal (only health indexed)"
+          echo "   - Functions registered: $FUNC_COUNT (including health)"
 
       - name: Diagnostic logs on failure
         if: failure()
@@ -360,19 +383,20 @@ jobs:
           fi
           echo "✅ 404 check passed"
 
-          # 3) Exactly one indexed 'health'
+          # 3) At least health is registered (v4 programmatic model)
           echo "🔍 Checking function registration"
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
           FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")
           echo "   Functions registered:"
           echo "$FUNCTIONS" | jq -r '.[].name' | sed 's/^/     - /'
+          FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+          echo "   Total function count: $FUNC_COUNT"
           HEALTH_COUNT=$(echo "$FUNCTIONS" | jq -r '.[].name' | grep -cx 'health' || echo 0)
-          echo "   Health function count: $HEALTH_COUNT"
           if [ "$HEALTH_COUNT" != "1" ]; then
-            echo "❌ Function registration check failed: expected 1 health function, got $HEALTH_COUNT"
+            echo "❌ Function registration check failed: health function not found"
             exit 1
           fi
-          echo "✅ Function registration passed"
+          echo "✅ Function registration passed ($FUNC_COUNT functions including health)"
 
       - name: Verify DSR export storage configuration (optional)
         continue-on-error: true

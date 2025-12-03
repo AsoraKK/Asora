@@ -6,6 +6,8 @@
 /// 3. User taps submit
 /// 4. Post is created successfully
 /// 5. User sees success message and is returned to feed
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

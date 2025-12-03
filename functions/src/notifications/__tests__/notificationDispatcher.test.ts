@@ -30,10 +30,15 @@ jest.mock('@shared/clients/cosmos', () => ({
   getCosmos: jest.fn(),
 }));
 
-// Mock Notification Hub client
-jest.mock('../clients/notificationHubClient', () => ({
-  getNotificationHubsClient: jest.fn(() => ({
-    sendPushToDevices: jest.fn<() => Promise<{ success: number; failed: number; errors: unknown[] }>>().mockResolvedValue({ success: 1, failed: 0, errors: [] }),
+// Mock FCM client (replaces Notification Hub client)
+jest.mock('../clients/fcmClient', () => ({
+  getFcmClient: jest.fn(() => ({
+    sendPushToDevices: jest.fn<() => Promise<{ success: number; failed: number; invalidTokens: string[]; errors: unknown[] }>>().mockResolvedValue({ 
+      success: 1, 
+      failed: 0, 
+      invalidTokens: [],
+      errors: [] 
+    }),
   })),
 }));
 

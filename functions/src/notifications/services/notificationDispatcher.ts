@@ -5,9 +5,10 @@
  * - Event enqueueing
  * - User preference evaluation (categories, quiet hours, rate limits)
  * - Deduplication and aggregation
- * - Push delivery via Notification Hubs
+ * - Push delivery via FCM (Firebase Cloud Messaging)
  * - In-app notification persistence
  * - Retry with exponential backoff
+ * - Invalid token cleanup
  */
 
 import { DateTime } from 'luxon';
@@ -15,7 +16,7 @@ import { notificationEventsRepo } from '../repositories/notificationEventsRepo';
 import { notificationsRepo } from '../repositories/notificationsRepo';
 import { userNotificationPreferencesRepo } from '../repositories/userNotificationPreferencesRepo';
 import { userDeviceTokensRepo } from '../repositories/userDeviceTokensRepo';
-import { getNotificationHubsClient } from '../clients/notificationHubClient';
+import { getFcmClient } from '../clients/fcmClient';
 import {
   NotificationEvent,
   NotificationEventInput,
@@ -120,7 +121,7 @@ export class NotificationDispatcher {
         targetType: event.payload.targetType,
       });
 
-      // 8. Send push notification
+      // 8. Send push notification via FCM
       const devices = await userDeviceTokensRepo.listActive(event.userId);
       if (devices.length > 0) {
         const payload: PushPayload = {
@@ -133,8 +134,8 @@ export class NotificationDispatcher {
           },
         };
 
-        const hubClient = getNotificationHubsClient();
-        const result = await hubClient.sendPushToDevices(devices, payload);
+        const fcmClient = getFcmClient();
+        const result = await fcmClient.sendPushToDevices(devices, payload, event.category);
 
         trackAppMetric({
           name: 'notification_push_sent',
@@ -147,6 +148,26 @@ export class NotificationDispatcher {
             failed: result.failed,
           },
         });
+
+        // Handle invalid tokens - remove from database to avoid repeated failures
+        if (result.invalidTokens.length > 0) {
+          console.log(`[Dispatcher] Revoking ${result.invalidTokens.length} invalid device tokens`);
+          for (const deviceId of result.invalidTokens) {
+            try {
+              await userDeviceTokensRepo.revoke(event.userId, deviceId);
+              trackAppEvent({
+                name: 'device_token_revoked_invalid',
+                properties: {
+                  userId: event.userId.slice(0, 8),
+                  deviceId: deviceId.slice(0, 8),
+                  reason: 'FCM_INVALID_TOKEN',
+                },
+              });
+            } catch (revokeError) {
+              console.warn(`[Dispatcher] Failed to revoke invalid token ${deviceId}`, revokeError);
+            }
+          }
+        }
 
         if (result.failed > 0) {
           console.warn(`[Dispatcher] Push send failed for ${result.failed} devices`, result.errors);

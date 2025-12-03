@@ -5,9 +5,14 @@
  * All required environment variables are checked at startup.
  */
 
+interface FcmConfig {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+}
+
 interface NotificationConfig {
-  hubConnectionString: string;
-  hubName: string;
+  fcm: FcmConfig;
   enabled: boolean;
 }
 
@@ -35,15 +40,23 @@ class ConfigService {
   private loadConfig(): AppConfig {
     const env = (process.env.ENVIRONMENT || 'local') as AppConfig['environment'];
 
-    // Notification Hubs configuration
-    const hubConnectionString = process.env.NOTIFICATION_HUB_CONNECTION_STRING;
-    const hubName = process.env.NOTIFICATION_HUB_NAME;
-    const notificationsEnabled = !!(hubConnectionString && hubName);
+    // FCM (Firebase Cloud Messaging) configuration
+    // Replaces Azure Notification Hubs - direct FCM HTTP v1 integration
+    const fcmProjectId = process.env.FCM_PROJECT_ID;
+    const fcmClientEmail = process.env.FCM_CLIENT_EMAIL;
+    let fcmPrivateKey = process.env.FCM_PRIVATE_KEY;
+    
+    // Handle escaped newlines in private key (common in env vars)
+    if (fcmPrivateKey && fcmPrivateKey.includes('\\n')) {
+      fcmPrivateKey = fcmPrivateKey.replace(/\\n/g, '\n');
+    }
+    
+    const notificationsEnabled = !!(fcmProjectId && fcmClientEmail && fcmPrivateKey);
 
     if (!notificationsEnabled && env !== 'local') {
       console.warn(
-        '[CONFIG] Notification Hubs not configured. Push notifications will be disabled. ' +
-        'Set NOTIFICATION_HUB_CONNECTION_STRING and NOTIFICATION_HUB_NAME to enable.'
+        '[CONFIG] FCM not configured. Push notifications will be disabled. ' +
+        'Set FCM_PROJECT_ID, FCM_CLIENT_EMAIL, and FCM_PRIVATE_KEY to enable.'
       );
     }
 
@@ -53,18 +66,25 @@ class ConfigService {
     const cosmosKey = process.env.COSMOS_KEY;
     const cosmosDatabaseName = process.env.COSMOS_DATABASE_NAME || 'asora';
 
-    if (!cosmosConnectionString && !(cosmosEndpoint && cosmosKey)) {
-      throw new Error(
-        '[CONFIG] FATAL: Cosmos DB not configured. ' +
-        'Provide either COSMOS_CONNECTION_STRING or both COSMOS_ENDPOINT and COSMOS_KEY.'
+    const cosmosConfigured = !!(cosmosConnectionString || (cosmosEndpoint && cosmosKey));
+    
+    // Warn but don't throw - let health endpoint still work for diagnostics
+    if (!cosmosConfigured) {
+      console.error(
+        '[CONFIG] WARNING: Cosmos DB not configured. ' +
+        'Provide either COSMOS_CONNECTION_STRING or both COSMOS_ENDPOINT and COSMOS_KEY. ' +
+        'Functions requiring Cosmos will fail at runtime.'
       );
     }
 
     return {
       environment: env,
       notifications: {
-        hubConnectionString: hubConnectionString || '',
-        hubName: hubName || 'asora-notifications',
+        fcm: {
+          projectId: fcmProjectId || '',
+          clientEmail: fcmClientEmail || '',
+          privateKey: fcmPrivateKey || '',
+        },
         enabled: notificationsEnabled,
       },
       cosmos: {
@@ -85,13 +105,13 @@ class ConfigService {
       return;
     }
 
-    console.log('[CONFIG] Initializing application configuration...');
+    console.log(`[CONFIG] Initializing application configuration...`);
     console.log(`[CONFIG] Environment: ${this.config.environment}`);
     console.log(`[CONFIG] Cosmos Database: ${this.config.cosmos.databaseName}`);
     console.log(`[CONFIG] Notifications Enabled: ${this.config.notifications.enabled}`);
     
     if (this.config.notifications.enabled) {
-      console.log(`[CONFIG] Notification Hub: ${this.config.notifications.hubName}`);
+      console.log(`[CONFIG] FCM Project: ${this.config.notifications.fcm.projectId}`);
     }
 
     this.initialized = true;
@@ -99,6 +119,10 @@ class ConfigService {
 
   getNotificationConfig(): NotificationConfig {
     return this.config.notifications;
+  }
+
+  getFcmConfig(): FcmConfig {
+    return this.config.notifications.fcm;
   }
 
   getCosmosConfig(): CosmosConfig {
@@ -121,8 +145,10 @@ class ConfigService {
       environment: this.config.environment,
       notifications: {
         enabled: this.config.notifications.enabled,
-        hubName: this.config.notifications.hubName,
-        hubConfigured: !!this.config.notifications.hubConnectionString,
+        fcmProjectId: this.config.notifications.fcm.projectId,
+        fcmConfigured: !!(this.config.notifications.fcm.projectId && 
+                         this.config.notifications.fcm.clientEmail &&
+                         this.config.notifications.fcm.privateKey),
       },
       cosmos: {
         databaseName: this.config.cosmos.databaseName,
