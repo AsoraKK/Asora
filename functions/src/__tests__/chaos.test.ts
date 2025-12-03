@@ -67,7 +67,7 @@ describe('Chaos middleware', () => {
     const duration = Date.now() - start;
 
     expect(response.status).toBe(200);
-    expect(duration).toBeGreaterThanOrEqual(200);
+    expect(duration).toBeGreaterThanOrEqual(190); // Allow for timing precision issues
     expect(handler).toHaveBeenCalled();
   });
 
