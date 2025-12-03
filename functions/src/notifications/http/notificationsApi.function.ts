@@ -9,10 +9,15 @@
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { getPrincipalOrThrow, requireAdmin } from '../../shared/middleware/auth';
+import { parseAuth, requireAdmin } from '../../shared/middleware/auth';
 import { notificationsRepo } from '../repositories/notificationsRepo';
 import { notificationDispatcher } from '../services/notificationDispatcher';
 import { NotificationEventType } from '../types';
+import {
+  handleNotificationError,
+  unauthorizedResponse,
+  badRequestResponse,
+} from '../shared/errorHandler';
 
 const VALID_EVENT_TYPES = new Set<string>(Object.values(NotificationEventType));
 
@@ -20,8 +25,14 @@ export async function getNotifications(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const url = new URL(request.url);
     const continuationToken = url.searchParams.get('continuationToken') || undefined;
@@ -40,8 +51,7 @@ export async function getNotifications(
       },
     };
   } catch (error) {
-    context.error('Error fetching notifications', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications', error, userId);
   }
 }
 
@@ -49,8 +59,14 @@ export async function getUnreadCount(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const count = await notificationsRepo.getUnreadCount(principal.sub);
 
@@ -59,8 +75,7 @@ export async function getUnreadCount(
       jsonBody: { unreadCount: count },
     };
   } catch (error) {
-    context.error('Error fetching unread count', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/unread-count', error, userId);
   }
 }
 
@@ -68,12 +83,18 @@ export async function markNotificationAsRead(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const notificationId = request.params.id;
     if (!notificationId) {
-      return { status: 400, jsonBody: { error: 'Missing notification ID' } };
+      return badRequestResponse('Missing notification ID');
     }
 
     await notificationsRepo.markAsRead(notificationId, principal.sub);
@@ -83,8 +104,7 @@ export async function markNotificationAsRead(
       jsonBody: { success: true },
     };
   } catch (error) {
-    context.error('Error marking notification as read', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/{id}/read', error, userId);
   }
 }
 
@@ -92,12 +112,18 @@ export async function dismissNotification(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const notificationId = request.params.id;
     if (!notificationId) {
-      return { status: 400, jsonBody: { error: 'Missing notification ID' } };
+      return badRequestResponse('Missing notification ID');
     }
 
     await notificationsRepo.markAsDismissed(notificationId, principal.sub);
@@ -107,8 +133,7 @@ export async function dismissNotification(
       jsonBody: { success: true },
     };
   } catch (error) {
-    context.error('Error dismissing notification', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/{id}/dismiss', error, userId);
   }
 }
 
@@ -155,31 +180,28 @@ export async function queueNotificationSend(
   try {
     const body = (await req.json().catch(() => null)) as SendNotificationRequestBody | null;
     if (!body || !isPlainObject(body)) {
-      return { status: 400, jsonBody: { error: 'Invalid JSON body' } };
+      return badRequestResponse('Invalid JSON body');
     }
 
     const recipients = normalizeRecipients(body);
     if (recipients.length === 0) {
-      return { status: 400, jsonBody: { error: 'Provide userId or non-empty userIds[]' } };
+      return badRequestResponse('Provide userId or non-empty userIds[]');
     }
 
     const eventTypeValue = body.eventType;
     if (typeof eventTypeValue !== 'string' || !VALID_EVENT_TYPES.has(eventTypeValue)) {
-      return {
-        status: 400,
-        jsonBody: { error: 'eventType is required and must be a supported value' },
-      };
+      return badRequestResponse('eventType is required and must be a supported value');
     }
 
     if (!isPlainObject(body.payload)) {
-      return { status: 400, jsonBody: { error: 'payload must be an object' } };
+      return badRequestResponse('payload must be an object');
     }
     const payload = body.payload as Record<string, unknown>;
 
     let scheduledAt: string | undefined;
     if (typeof body.scheduledAt === 'string') {
       if (Number.isNaN(Date.parse(body.scheduledAt))) {
-        return { status: 400, jsonBody: { error: 'scheduledAt must be ISO 8601' } };
+        return badRequestResponse('scheduledAt must be ISO 8601');
       }
       scheduledAt = body.scheduledAt;
     }
@@ -217,8 +239,7 @@ export async function queueNotificationSend(
       },
     };
   } catch (error) {
-    context.error('notifications.send.failed', error);
-    return { status: 500, jsonBody: { error: 'Failed to enqueue notification(s)' } };
+    return handleNotificationError(context, '/api/notifications/send', error);
   }
 }
 

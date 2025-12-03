@@ -403,7 +403,38 @@ jobs:
           fi
           echo "✅ 404 check passed"
 
-          # 3) At least health is registered (v4 programmatic model)
+          # 3) Unauthenticated notification endpoints must return 401/403 (not 500)
+          echo "🔍 Testing unauthenticated notification endpoints"
+          
+          # Test /api/notifications/devices (GET without auth)
+          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/devices")
+          echo "   /api/notifications/devices (no auth): $DEVICES_STATUS"
+          if [ "$DEVICES_STATUS" = "500" ]; then
+            echo "❌ Notifications devices returned 500 (should be 401/403)"
+            exit 1
+          fi
+          if [ "$DEVICES_STATUS" != "401" ] && [ "$DEVICES_STATUS" != "403" ]; then
+            echo "⚠️  Expected 401/403 for unauthenticated request, got $DEVICES_STATUS"
+          else
+            echo "✅ Notifications devices auth check passed ($DEVICES_STATUS)"
+          fi
+
+          # Test /api/notifications/preferences (GET without auth)
+          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/preferences")
+          echo "   /api/notifications/preferences (no auth): $PREFS_STATUS"
+          if [ "$PREFS_STATUS" = "500" ]; then
+            echo "❌ Notifications preferences returned 500 (should be 401/403)"
+            exit 1
+          fi
+          if [ "$PREFS_STATUS" != "401" ] && [ "$PREFS_STATUS" != "403" ]; then
+            echo "⚠️  Expected 401/403 for unauthenticated request, got $PREFS_STATUS"
+          else
+            echo "✅ Notifications preferences auth check passed ($PREFS_STATUS)"
+          fi
+
+          echo "✅ Notification endpoints properly reject unauthenticated requests"
+
+          # 4) At least health is registered (v4 programmatic model)
           echo "🔍 Checking function registration"
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
           FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")

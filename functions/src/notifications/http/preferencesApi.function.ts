@@ -6,15 +6,26 @@
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { getPrincipalOrThrow } from '../../shared/middleware/auth';
+import { parseAuth } from '../../shared/middleware/auth';
 import { userNotificationPreferencesRepo } from '../repositories/userNotificationPreferencesRepo';
+import {
+  handleNotificationError,
+  unauthorizedResponse,
+  badRequestResponse,
+} from '../shared/errorHandler';
 
 export async function getPreferences(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const prefs = await userNotificationPreferencesRepo.getOrCreate(principal.sub);
 
@@ -23,8 +34,7 @@ export async function getPreferences(
       jsonBody: prefs,
     };
   } catch (error) {
-    context.error('Error fetching preferences', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/preferences', error, userId);
   }
 }
 
@@ -32,12 +42,18 @@ export async function updatePreferences(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const body = await request.json();
     if (!body || typeof body !== 'object') {
-      return { status: 400, jsonBody: { error: 'Invalid request body' } };
+      return badRequestResponse('Invalid request body');
     }
 
     const updated = await userNotificationPreferencesRepo.update(principal.sub, body);
@@ -47,8 +63,7 @@ export async function updatePreferences(
       jsonBody: updated,
     };
   } catch (error) {
-    context.error('Error updating preferences', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/preferences', error, userId);
   }
 }
 

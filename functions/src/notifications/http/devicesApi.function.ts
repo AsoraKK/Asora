@@ -10,15 +10,26 @@
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { getPrincipalOrThrow } from '../../shared/middleware/auth';
+import { parseAuth } from '../../shared/middleware/auth';
 import { userDeviceTokensRepo } from '../repositories/userDeviceTokensRepo';
+import {
+  handleNotificationError,
+  unauthorizedResponse,
+  badRequestResponse,
+} from '../shared/errorHandler';
 
 export async function registerDevice(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const body = (await request.json()) as Record<string, unknown>;
     if (
@@ -26,10 +37,7 @@ export async function registerDevice(
       typeof body?.pushToken !== 'string' ||
       typeof body?.platform !== 'string'
     ) {
-      return {
-        status: 400,
-        jsonBody: { error: 'Missing required fields: deviceId, pushToken, platform' },
-      };
+      return badRequestResponse('Missing required fields: deviceId, pushToken, platform');
     }
 
     const deviceId = body.deviceId;
@@ -38,10 +46,7 @@ export async function registerDevice(
     const label = typeof body.label === 'string' ? body.label : undefined;
 
     if (apiPlatform !== 'fcm' && apiPlatform !== 'apns') {
-      return {
-        status: 400,
-        jsonBody: { error: 'Invalid platform. Must be "fcm" or "apns"' },
-      };
+      return badRequestResponse('Invalid platform. Must be "fcm" or "apns"');
     }
 
     // Map API platform (fcm/apns) to internal platform type (android/ios)
@@ -66,8 +71,7 @@ export async function registerDevice(
       },
     };
   } catch (error) {
-    context.error('Error registering device', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/devices', error, userId);
   }
 }
 
@@ -75,8 +79,14 @@ export async function listDevices(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const url = new URL(request.url);
     const activeOnly = url.searchParams.get('activeOnly') === 'true';
@@ -90,8 +100,7 @@ export async function listDevices(
       jsonBody: { devices },
     };
   } catch (error) {
-    context.error('Error listing devices', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/devices', error, userId);
   }
 }
 
@@ -99,12 +108,18 @@ export async function revokeDevice(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  let userId: string | undefined;
   try {
-    const principal = await getPrincipalOrThrow(request);
+    // Auth check first - return 401 before any external calls
+    const principal = await parseAuth(request);
+    if (!principal) {
+      return unauthorizedResponse();
+    }
+    userId = principal.sub;
 
     const deviceId = request.params.id;
     if (!deviceId) {
-      return { status: 400, jsonBody: { error: 'Missing device ID' } };
+      return badRequestResponse('Missing device ID');
     }
 
     await userDeviceTokensRepo.revoke(deviceId, principal.sub);
@@ -117,8 +132,7 @@ export async function revokeDevice(
       jsonBody: { success: true },
     };
   } catch (error) {
-    context.error('Error revoking device', error);
-    return { status: 500, jsonBody: { error: 'Internal server error' } };
+    return handleNotificationError(context, '/api/notifications/devices/{id}/revoke', error, userId);
   }
 }
 

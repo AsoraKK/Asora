@@ -10,6 +10,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { configService } from '../../shared/configService';
 import { getFcmConfigStatus } from '../notifications/clients/fcmClient';
+import { getNotificationsDegradationStatus } from '../notifications/shared/errorHandler';
 
 /**
  * Health Check Handler
@@ -45,6 +46,7 @@ async function healthCheck(
       fcmProjectId?: string;
     };
     const fcmStatus = getFcmConfigStatus();
+    const notificationsDegradation = getNotificationsDegradationStatus();
 
     // Determine dependency health
     const cosmosHealthy = cosmosInfo.configured;
@@ -75,6 +77,10 @@ async function healthCheck(
         fcmConfigured: fcmStatus.configured,
         projectId: fcmStatus.projectId || notificationsInfo.fcmProjectId || null,
         error: fcmStatus.error ?? null,
+        // Runtime degradation tracking
+        degraded: notificationsDegradation.degraded,
+        lastErrorCode: notificationsDegradation.lastErrorCode,
+        recentErrorCount: notificationsDegradation.recentErrorCount,
       },
     };
 

@@ -11,11 +11,16 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { Notification, NotificationInput } from '../types';
 
 export class NotificationsRepository {
-  private container: Container;
+  private _container: Container | null = null;
 
-  constructor() {
-    // Use existing 'notifications' container
-    this.container = getTargetDatabase().notifications;
+  /**
+   * Lazy container initialization to avoid synchronous throws at module load
+   */
+  private get container(): Container {
+    if (!this._container) {
+      this._container = getTargetDatabase().notifications;
+    }
+    return this._container;
   }
 
   async create(input: NotificationInput): Promise<Notification> {

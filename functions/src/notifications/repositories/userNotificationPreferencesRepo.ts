@@ -15,11 +15,17 @@ import {
 } from '../types';
 
 export class UserNotificationPreferencesRepository {
-  private container: Container;
+  private _container: Container | null = null;
 
-  constructor() {
-    const database = getTargetDatabase();
-    this.container = database.users.database.container('notification_preferences');
+  /**
+   * Lazy container initialization to avoid synchronous throws at module load
+   */
+  private get container(): Container {
+    if (!this._container) {
+      const database = getTargetDatabase();
+      this._container = database.users.database.container('notification_preferences');
+    }
+    return this._container;
   }
 
   async getOrCreate(userId: string, timezone = 'UTC'): Promise<UserNotificationPreferences> {

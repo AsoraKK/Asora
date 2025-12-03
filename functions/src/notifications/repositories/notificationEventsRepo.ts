@@ -17,12 +17,17 @@ import {
 } from '../types';
 
 export class NotificationEventsRepository {
-  private container: Container;
+  private _container: Container | null = null;
 
-  constructor() {
-    const database = getTargetDatabase();
-    // Use a dedicated container for events (processing queue)
-    this.container = database.users.database.container('notification_events');
+  /**
+   * Lazy container initialization to avoid synchronous throws at module load
+   */
+  private get container(): Container {
+    if (!this._container) {
+      const database = getTargetDatabase();
+      this._container = database.users.database.container('notification_events');
+    }
+    return this._container;
   }
 
   async create(input: NotificationEventInput): Promise<NotificationEvent> {

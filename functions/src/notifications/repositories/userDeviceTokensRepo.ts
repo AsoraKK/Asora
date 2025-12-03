@@ -13,11 +13,17 @@ import { UserDeviceToken, UserDeviceTokenInput } from '../types';
 const MAX_DEVICES_PER_USER = 3;
 
 export class UserDeviceTokensRepository {
-  private container: Container;
+  private _container: Container | null = null;
 
-  constructor() {
-    const database = getTargetDatabase();
-    this.container = database.users.database.container('device_tokens');
+  /**
+   * Lazy container initialization to avoid synchronous throws at module load
+   */
+  private get container(): Container {
+    if (!this._container) {
+      const database = getTargetDatabase();
+      this._container = database.users.database.container('device_tokens');
+    }
+    return this._container;
   }
 
   async register(
