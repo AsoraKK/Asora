@@ -2,19 +2,55 @@ import type { InvocationContext } from '@azure/functions';
 
 import { withDailyPostLimit, AuthenticatedRequest } from '@shared/middleware/dailyPostLimit';
 
+jest.mock('@shared/clients/cosmos', () => {
+  const mockContainer = {
+    items: {
+      query: jest.fn().mockReturnValue({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [],
+        }),
+      }),
+      create: jest.fn().mockResolvedValue({}),
+    },
+    item: jest.fn().mockReturnValue({
+      delete: jest.fn().mockResolvedValue({}),
+      replace: jest.fn().mockResolvedValue({}),
+      read: jest.fn().mockResolvedValue({ resource: {} }),
+    }),
+  };
+
+  const mockDatabase = {
+    container: jest.fn().mockReturnValue(mockContainer),
+  };
+
+  return {
+    getCosmos: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    getCosmosClient: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    createCosmosClient: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    getCosmosDatabase: jest.fn().mockReturnValue(mockDatabase),
+    getTargetDatabase: jest.fn().mockReturnValue(mockDatabase),
+    resetCosmosClient: jest.fn(),
+  };
+});
+
 jest.mock('@shared/services/dailyPostLimitService', () => {
   const actual = jest.requireActual('@shared/services/dailyPostLimitService');
   return {
     ...actual,
-    checkAndIncrementPostCount: jest.fn(),
+    checkAndIncrementDailyActionCount: jest.fn(),
   };
 });
 
 const dailyLimitModule = require('@shared/services/dailyPostLimitService');
-const mockCheckAndIncrementPostCount = jest.mocked(
-  dailyLimitModule.checkAndIncrementPostCount
+const mockCheckAndIncrementDailyActionCount = jest.mocked(
+  dailyLimitModule.checkAndIncrementDailyActionCount
 );
-const { DailyPostLimitExceededError } = dailyLimitModule;
 
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
 const baseHandler = jest.fn(async () => ({
@@ -28,12 +64,17 @@ const request = {
 } as AuthenticatedRequest;
 
 describe('withDailyPostLimit', () => {
+  beforeAll(() => {
+    process.env.COSMOS_CONNECTION_STRING =
+      'AccountEndpoint=https://localhost:8081/;AccountKey=key;';
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('lets requests through when under the tier limit', async () => {
-    mockCheckAndIncrementPostCount.mockResolvedValue({
+    mockCheckAndIncrementDailyActionCount.mockResolvedValue({
       success: true,
       newCount: 1,
       limit: 5,
@@ -46,7 +87,7 @@ describe('withDailyPostLimit', () => {
 
     expect(baseHandler).toHaveBeenCalledWith(request, contextStub);
     expect(response.status).toBe(201);
-    expect(mockCheckAndIncrementPostCount).toHaveBeenCalledWith('user-123', 'free');
+    expect(mockCheckAndIncrementDailyActionCount).toHaveBeenCalledWith('user-123', 'free', 'post');
   });
 
   it('returns the new 429 body when the daily limit is exceeded', async () => {
@@ -55,10 +96,30 @@ describe('withDailyPostLimit', () => {
       currentCount: 5,
       limit: 5,
       remaining: 0,
-      tier: 'free',
+      tier: 'free' as const,
       resetDate: '2025-01-01T00:00:00.000Z',
+      action: 'post' as const,
     };
-    mockCheckAndIncrementPostCount.mockRejectedValue(new DailyPostLimitExceededError(limitPayload));
+
+    // Create a mock error that matches the DailyActionLimitExceededError interface
+    const mockError = {
+      action: 'post' as const,
+      code: 'DAILY_ACTION_LIMIT_EXCEEDED',
+      statusCode: 429,
+      tier: 'free' as const,
+      currentCount: 5,
+      toResponse: () => ({
+        code: 'DAILY_ACTION_LIMIT_EXCEEDED',
+        tier: 'free',
+        action: 'post',
+        limit: 5,
+        current: 5,
+        resetAt: '2025-01-01T00:00:00.000Z',
+        message: 'Daily limit reached for this action. Try again tomorrow.',
+      }),
+    } as unknown as Error;
+
+    mockCheckAndIncrementDailyActionCount.mockRejectedValue(mockError);
 
     const handler = withDailyPostLimit(baseHandler);
     const response = await handler(request, contextStub);
@@ -72,11 +133,13 @@ describe('withDailyPostLimit', () => {
 
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
-      code: 'DAILY_POST_LIMIT_EXCEEDED',
-      tier: limitPayload.tier,
-      limit: limitPayload.limit,
-      resetAt: limitPayload.resetDate,
-      message: 'Daily post limit reached. Try again tomorrow.',
+      code: 'DAILY_ACTION_LIMIT_EXCEEDED',
+      tier: 'free',
+      action: 'post',
+      limit: 5,
+      current: 5,
+      resetAt: '2025-01-01T00:00:00.000Z',
+      message: 'Daily limit reached for this action. Try again tomorrow.',
     });
   });
 });

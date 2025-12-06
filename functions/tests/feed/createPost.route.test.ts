@@ -56,6 +56,7 @@ jest.mock('@shared/services/dailyPostLimitService', () => {
   const actual = jest.requireActual('@shared/services/dailyPostLimitService');
   return {
     DailyPostLimitExceededError: actual.DailyPostLimitExceededError,
+    checkAndIncrementDailyActionCount: jest.fn(),
     checkAndIncrementPostCount: jest.fn(),
     incrementDailyPostCount: actual.incrementDailyPostCount,
     enforceDailyPostLimit: actual.enforceDailyPostLimit,
@@ -81,8 +82,8 @@ const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHea
 const { getTargetDatabase } = require('@shared/clients/cosmos');
 const { trackAppEvent } = require('@shared/appInsights');
 const dailyPostLimitModule = require('@shared/services/dailyPostLimitService');
-const mockCheckAndIncrementPostCount = jest.mocked(
-  dailyPostLimitModule.checkAndIncrementPostCount
+const mockCheckAndIncrementDailyActionCount = jest.mocked(
+  dailyPostLimitModule.checkAndIncrementDailyActionCount
 );
 const { DailyPostLimitExceededError } = dailyPostLimitModule;
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
@@ -124,7 +125,7 @@ describe('createPost route', () => {
       }
       return { sub: 'user-123', raw: {} } as any;
     });
-    mockCheckAndIncrementPostCount.mockResolvedValue({
+    mockCheckAndIncrementDailyActionCount.mockResolvedValue({
       success: true,
       newCount: 1,
       limit: 100,
@@ -228,7 +229,7 @@ describe('createPost route', () => {
       tier: 'free',
       resetDate: '2025-01-01T00:00:00.000Z',
     };
-    mockCheckAndIncrementPostCount.mockRejectedValue(new DailyPostLimitExceededError(limitPayload));
+    mockCheckAndIncrementDailyActionCount.mockRejectedValue(new DailyPostLimitExceededError(limitPayload));
 
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
     expect(response.status).toBe(429);
@@ -249,6 +250,7 @@ describe('createPost route', () => {
       code: 'DAILY_POST_LIMIT_EXCEEDED',
       tier: limitPayload.tier,
       limit: limitPayload.limit,
+      current: limitPayload.currentCount,
       resetAt: limitPayload.resetDate,
       message: 'Daily post limit reached. Try again tomorrow.',
     });

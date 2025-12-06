@@ -12,6 +12,23 @@ const logger = getAzureLogger('shared/dailyPostLimit');
 const DAILY_RETRY_AFTER_SECONDS = 86400;
 
 /**
+ * Type guard to check if an error is a DailyActionLimitExceededError.
+ * Uses property checking instead of instanceof to avoid issues with class inheritance in CommonJS.
+ */
+function isDailyActionLimitExceededError(error: unknown): error is DailyActionLimitExceededError {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'action' in error &&
+    'code' in error &&
+    'statusCode' in error &&
+    'tier' in error &&
+    'currentCount' in error &&
+    'toResponse' in error
+  );
+}
+
+/**
  * Assumes the authenticated request already exposes JWT claims via `req.principal`.
  * Tier normalization and defaulting to `free` happens inside the shared service.
  */
@@ -56,7 +73,7 @@ function createDailyLimitMiddleware(
         limit: limitResult.limit,
       });
     } catch (error) {
-      if (error instanceof DailyActionLimitExceededError && error.action === action) {
+      if (isDailyActionLimitExceededError(error) && error.action === action) {
         logger.warn(`${logPrefix}.limitExceeded`, {
           userId: req.principal.sub.slice(0, 8),
           tier: error.tier,
@@ -91,5 +108,5 @@ export function withDailyCommentLimit(handler: AuthenticatedHandler): Authentica
 }
 
 export function withDailyAppealLimit(handler: AuthenticatedHandler): AuthenticatedHandler {
-  return createDailyLimitMiddleware('appeals.submit', handler, 'appeals.create', 'appeal_limit_exceeded');
+  return createDailyLimitMiddleware('appeal', handler, 'appeals.create', 'appeal_limit_exceeded');
 }

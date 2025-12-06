@@ -1,4 +1,4 @@
-import { app, HttpRequest, InvocationContext } from '@azure/functions';
+import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
@@ -331,7 +331,10 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
 
 /* istanbul ignore next */
 const commentWithTierLimit = withDailyCommentLimit(createComment);
-const rateLimitedCreateComment = withRateLimit(commentWithTierLimit, () => getPolicyForFunction('createComment'));
+const rateLimitedCreateComment = withRateLimit(
+  commentWithTierLimit as (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>,
+  () => getPolicyForFunction('createComment')
+);
 
 /* istanbul ignore next */
 const rateLimitedListComments = withRateLimit(listComments, () => getPolicyForFunction('listComments'));

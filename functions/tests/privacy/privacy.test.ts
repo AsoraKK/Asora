@@ -116,6 +116,58 @@ jest.mock('../../shared/rate-limiter', () => ({
   })),
 }));
 
+jest.mock('@shared/clients/cosmos', () => {
+  const mockContainer = {
+    items: {
+      query: jest.fn().mockReturnValue({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [],
+        }),
+      }),
+      create: jest.fn().mockResolvedValue({}),
+    },
+    item: jest.fn().mockReturnValue({
+      delete: jest.fn().mockResolvedValue({}),
+      replace: jest.fn().mockResolvedValue({}),
+      read: jest.fn().mockResolvedValue({}),
+    }),
+  };
+
+  const mockDatabase = {
+    container: jest.fn().mockReturnValue(mockContainer),
+  };
+
+  return {
+    getCosmos: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    getCosmosClient: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    createCosmosClient: jest.fn().mockReturnValue({
+      database: jest.fn().mockReturnValue(mockDatabase),
+    }),
+    getCosmosDatabase: jest.fn().mockReturnValue(mockDatabase),
+    getTargetDatabase: jest.fn().mockReturnValue(mockDatabase),
+    resetCosmosClient: jest.fn(),
+  };
+});
+
+jest.mock('@shared/appInsights', () => ({
+  trackAppEvent: jest.fn(),
+  trackAppMetric: jest.fn(),
+}));
+
+jest.mock('@shared/services/tierLimits', () => ({
+  getExportCooldownDays: jest.fn(() => 0),
+}));
+
+jest.mock('@shared/services/exportCooldownService', () => ({
+  enforceExportCooldown: jest.fn(),
+  recordExportTimestamp: jest.fn(),
+  ExportCooldownActiveError: Error,
+}));
+
 // Test context helper
 function createMockContext(): InvocationContext {
   return {
