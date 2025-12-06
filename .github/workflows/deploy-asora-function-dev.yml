@@ -46,6 +46,15 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: npm ci --no-audit --no-fund && npm run build
 
+      - name: Run Notifications E2E Tests
+        working-directory: functions
+        env:
+          NODE_ENV: test
+          AZURE_FUNCTIONS_UNIT_TEST: '1'
+          AI_TELEMETRY: 'off'
+          LOG_LEVEL: debug
+        run: npm test -- tests/notifications --runInBand --verbose
+
       - name: Gate artifact structure
         working-directory: functions/dist
         run: |

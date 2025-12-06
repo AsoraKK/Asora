@@ -50,6 +50,18 @@ export function getNotificationsDegradationStatus(): {
 }
 
 /**
+ * Reset error tracker to clean state (for testing only)
+ *
+ * @internal For testing purposes only
+ */
+export function __resetErrorTracker(): void {
+  errorTracker.lastErrorCode = null;
+  errorTracker.lastErrorTime = null;
+  errorTracker.recentErrorCount = 0;
+  errorTracker.lastResetTime = Date.now();
+}
+
+/**
  * Record an error for degradation tracking
  */
 function recordError(errorCode: string): void {
