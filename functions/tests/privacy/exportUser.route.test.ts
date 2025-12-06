@@ -38,7 +38,7 @@ describe('exportUser route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { sub: 'user-321', raw: {} } as any;
+      return { sub: 'user-321', tier: 'free', raw: {} } as any;
     });
   });
 
@@ -75,6 +75,7 @@ describe('exportUser route', () => {
       request,
       context: contextStub,
       userId: 'user-321',
+      tier: 'free',
     });
     expect(response.status).toBe(200);
     expect(response.jsonBody).toEqual({ link: 'https://download' });

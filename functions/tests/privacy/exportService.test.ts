@@ -13,6 +13,14 @@ jest.mock('@shared/utils/rateLimiter', () => ({
   userKeyGenerator: jest.fn(),
   defaultKeyGenerator: jest.fn(),
 }));
+jest.mock('@shared/services/exportCooldownService', () => {
+  const actual = jest.requireActual('@shared/services/exportCooldownService');
+  return {
+    ...actual,
+    enforceExportCooldown: jest.fn(),
+    recordExportTimestamp: jest.fn(),
+  };
+});
 
 import { CosmosClient } from '@azure/cosmos';
 import { exportUserHandler } from '../../src/privacy/service/exportService';
@@ -32,8 +40,16 @@ const mockContainer = (_name: string) => ({
   },
 });
 
+const exportCooldownModule = require('@shared/services/exportCooldownService');
+const mockEnforceExportCooldown = jest.mocked(exportCooldownModule.enforceExportCooldown);
+const mockRecordExportTimestamp = jest.mocked(exportCooldownModule.recordExportTimestamp);
+const { ExportCooldownActiveError } = exportCooldownModule;
+
 beforeEach(() => {
   jest.clearAllMocks();
+
+  mockEnforceExportCooldown.mockResolvedValue(undefined);
+  mockRecordExportTimestamp.mockResolvedValue(undefined);
 
   (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
     () =>
@@ -50,7 +66,7 @@ beforeEach(() => {
 describe('exportService - authentication', () => {
   it('returns 401 when userId is missing', async () => {
     const req = httpReqMock({ method: 'GET' });
-    const response = await exportUserHandler({ request: req, context: contextStub, userId: '' });
+    const response = await exportUserHandler({ request: req, context: contextStub, userId: '', tier: 'free' });
     expect(response.status).toBe(401);
   });
 });
@@ -64,6 +80,7 @@ describe('exportService - user verification', () => {
       request: req,
       context: contextStub,
       userId: 'missing-user',
+      tier: 'free',
     });
     expect(response.status).toBe(404);
   });
@@ -97,6 +114,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -105,6 +123,8 @@ describe('exportService - successful export', () => {
     expect(body).toHaveProperty('userProfile');
     expect(body).toHaveProperty('content');
     expect(mockCreate).toHaveBeenCalled(); // Logs the export
+    expect(mockEnforceExportCooldown).toHaveBeenCalledWith('user-1', 'free', 30);
+    expect(mockRecordExportTimestamp).toHaveBeenCalledWith('user-1');
   });
 
   it('handles missing content gracefully', async () => {
@@ -134,6 +154,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-2',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -150,6 +171,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(500);
@@ -189,6 +211,7 @@ describe('exportService - interactions section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -239,6 +262,7 @@ describe('exportService - interactions section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -295,6 +319,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -345,6 +370,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -388,6 +414,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'premium',
     });
 
     expect(response.status).toBe(200);
@@ -418,5 +445,57 @@ describe('exportService - moderation section', () => {
     expect(body.userProfile.statistics.totalComments).toBe(1);
     expect(body.userProfile.statistics.totalLikes).toBe(1);
     expect(body.userProfile.statistics.totalFlags).toBe(1);
+  });
+});
+
+describe('exportService - cooldown window', () => {
+  it('returns cooldown error while export is still on cooldown', async () => {
+    const nextAvailableAt = new Date(Date.now() + 60 * 60 * 1000);
+    const cooldownError = new ExportCooldownActiveError(nextAvailableAt, 'free');
+    mockEnforceExportCooldown.mockRejectedValueOnce(cooldownError);
+
+    const req = httpReqMock({ method: 'GET' });
+    const response = await exportUserHandler({
+      request: req,
+      context: contextStub,
+      userId: 'user-cooldown',
+      tier: 'free',
+    });
+
+    expect(response.status).toBe(429);
+    const body = JSON.parse(response.body || '{}');
+    expect(body).toMatchObject({
+      code: 'EXPORT_COOLDOWN_ACTIVE',
+      tier: 'free',
+      nextAvailableAt: nextAvailableAt.toISOString(),
+    });
+    expect(mockRecordExportTimestamp).not.toHaveBeenCalled();
+    expect(mockEnforceExportCooldown).toHaveBeenCalledWith('user-cooldown', 'free', 30);
+  });
+
+  it('records export timestamp for premium-tier exports', async () => {
+    mockRead.mockResolvedValueOnce({
+      resource: {
+        id: 'user-2',
+        username: 'premium-user',
+        tier: 'premium',
+        created_at: '2024-12-01T00:00:00Z',
+      },
+    });
+
+    mockQuery.mockResolvedValue({ resources: [] });
+    mockCreate.mockResolvedValue({});
+
+    const req = httpReqMock({ method: 'GET' });
+    const response = await exportUserHandler({
+      request: req,
+      context: contextStub,
+      userId: 'user-2',
+      tier: 'premium',
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockEnforceExportCooldown).toHaveBeenCalledWith('user-2', 'premium', 7);
+    expect(mockRecordExportTimestamp).toHaveBeenCalledWith('user-2');
   });
 });

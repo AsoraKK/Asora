@@ -18,6 +18,12 @@ import {
 } from '@shared/utils/rateLimiter';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { getErrorDetails, getErrorMessage } from '@shared/errorUtils';
+import { getExportCooldownDays } from '@shared/services/tierLimits';
+import {
+  enforceExportCooldown,
+  recordExportTimestamp,
+  ExportCooldownActiveError,
+} from '@shared/services/exportCooldownService';
 
 interface UserDataExport {
   metadata: {
@@ -140,12 +146,14 @@ interface ExportUserParams {
   request: HttpRequest;
   context: InvocationContext;
   userId: string;
+  tier?: string | null;
 }
 
 export async function exportUserHandler({
   request,
   context,
   userId,
+  tier,
 }: ExportUserParams): Promise<HttpResponseInit> {
   let database: Database | null = null;
   const exportId = `exp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -168,7 +176,22 @@ export async function exportUserHandler({
       });
     }
 
-    // 3. Initialize Cosmos DB
+    // 3. Export cooldown
+    try {
+      await enforceExportCooldown(userId, tier, getExportCooldownDays(tier));
+    } catch (error) {
+      if (error instanceof ExportCooldownActiveError) {
+        context.log('privacy.export.cooldown', {
+          userId,
+          tier: error.tier,
+          nextAvailableAt: error.nextAvailableAt.toISOString(),
+        });
+        return json(error.statusCode, error.toResponse());
+      }
+      throw error;
+    }
+
+    // 4. Initialize Cosmos DB
     let activeDatabase: Database;
     try {
       activeDatabase = getCosmosDatabase();
@@ -495,6 +518,8 @@ export async function exportUserHandler({
     } catch {
       // TODO: Handle export metadata update failure
     }
+
+    await recordExportTimestamp(userId);
 
     return {
       status: 200,

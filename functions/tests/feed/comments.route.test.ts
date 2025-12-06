@@ -1,7 +1,13 @@
 import type { HttpRequest, InvocationContext } from '@azure/functions';
+import type { Principal } from '@shared/middleware/auth';
 
 import { createComment, listComments } from '@feed/routes/comments';
 import { httpReqMock } from '../helpers/http';
+import {
+  AuthenticatedHandler,
+  AuthenticatedRequest,
+  withDailyCommentLimit,
+} from '@shared/middleware/dailyPostLimit';
 
 // Mock auth
 jest.mock('@auth/verifyJwt', () => {
@@ -44,6 +50,13 @@ jest.mock('@shared/appInsights', () => ({
 const { AuthError } = jest.requireActual('@auth/verifyJwt');
 const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+const { trackAppEvent } = require('@shared/appInsights');
+const dailyLimitModule = require('@shared/services/dailyPostLimitService');
+const mockCheckAndIncrementDailyActionCount = jest.spyOn(
+  dailyLimitModule,
+  'checkAndIncrementDailyActionCount'
+);
+const { DailyCommentLimitExceededError } = dailyLimitModule;
 
 function guestRequest(method: string, postId: string, body?: object): HttpRequest {
   return httpReqMock({
@@ -89,6 +102,12 @@ const testComment = {
 describe('comments route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCheckAndIncrementDailyActionCount.mockResolvedValue({
+      success: true,
+      newCount: 1,
+      limit: 20,
+      remaining: 19,
+    });
     contextStub.log = jest.fn();
 
     verifyMock.mockImplementation(async (header: string | undefined) => {
@@ -98,7 +117,7 @@ describe('comments route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { sub: 'user-123', raw: {} } as any;
+      return { sub: 'user-123', tier: 'free', raw: {} } as any;
     });
 
     // Default mock responses
@@ -225,6 +244,59 @@ describe('comments route', () => {
       expect(response.status).toBe(500);
       expect(contextStub.log).toHaveBeenCalledWith('comments.create.error', expect.any(Object));
     });
+
+  it('returns 429 when the daily comment limit is exceeded', async () => {
+    const limitPayload = {
+      allowed: false,
+      currentCount: 20,
+      limit: 20,
+      remaining: 0,
+      tier: 'free',
+      resetDate: '2025-12-01T00:00:00.000Z',
+    };
+    mockCheckAndIncrementDailyActionCount.mockRejectedValueOnce(
+      new DailyCommentLimitExceededError(limitPayload)
+    );
+
+    const request = userRequest('POST', 'post-123', { text: 'Hello again' }) as AuthenticatedRequest;
+    request.principal = {
+      sub: 'user-123',
+      tier: 'free',
+      raw: {},
+    } as Principal;
+
+    const limitHandler = withDailyCommentLimit(async () => ({
+      status: 200,
+      body: JSON.stringify({ status: 'ok' }),
+      headers: { 'Content-Type': 'application/json' },
+    }));
+
+    const response = await limitHandler(request, contextStub);
+    expect(response.status).toBe(429);
+    expect(response.headers).toMatchObject({
+      'Content-Type': 'application/json',
+      'Retry-After': '86400',
+    });
+
+    const body = JSON.parse(response.body as string);
+    expect(body).toEqual({
+      code: 'DAILY_COMMENT_LIMIT_EXCEEDED',
+      tier: limitPayload.tier,
+      limit: limitPayload.limit,
+      current: limitPayload.currentCount,
+      resetAt: limitPayload.resetDate,
+      message: 'Daily comment limit reached. Try again tomorrow.',
+    });
+    expect(trackAppEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'comment_limit_exceeded',
+        properties: expect.objectContaining({
+          authorId: 'user-123',
+          tier: 'free',
+        }),
+      })
+    );
+  });
   });
 
   // ─────────────────────────────────────────────────────────────

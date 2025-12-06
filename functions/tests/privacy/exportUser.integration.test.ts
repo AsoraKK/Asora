@@ -13,6 +13,14 @@ jest.mock('@shared/utils/rateLimiter', () => ({
   userKeyGenerator: jest.fn(),
   defaultKeyGenerator: jest.fn(),
 }));
+jest.mock('@shared/services/exportCooldownService', () => {
+  const actual = jest.requireActual('@shared/services/exportCooldownService');
+  return {
+    ...actual,
+    enforceExportCooldown: jest.fn().mockResolvedValue(undefined),
+    recordExportTimestamp: jest.fn(),
+  };
+});
 
 import { CosmosClient } from '@azure/cosmos';
 import { exportUserHandler } from '../../src/privacy/service/exportService';
@@ -50,7 +58,7 @@ beforeEach(() => {
 describe('exportService - authentication', () => {
   it('returns 401 when userId is missing', async () => {
     const req = httpReqMock({ method: 'GET' });
-    const response = await exportUserHandler({ request: req, context: contextStub, userId: '' });
+    const response = await exportUserHandler({ request: req, context: contextStub, userId: '', tier: 'free' });
     expect(response.status).toBe(401);
   });
 });
@@ -76,6 +84,7 @@ describe('exportService - user verification', () => {
       request: req,
       context: contextStub,
       userId: 'missing-user',
+      tier: 'free',
     });
 
     // Service handles gracefully with 200
@@ -113,6 +122,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -150,6 +160,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-2',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -173,6 +184,7 @@ describe('exportService - successful export', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     // Service handles gracefully - returns 200 with minimal user data
@@ -213,6 +225,7 @@ describe('exportService - interactions section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -263,6 +276,7 @@ describe('exportService - interactions section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -319,6 +333,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -369,6 +384,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);
@@ -412,6 +428,7 @@ describe('exportService - moderation section', () => {
       request: req,
       context: contextStub,
       userId: 'user-1',
+      tier: 'free',
     });
 
     expect(response.status).toBe(200);

@@ -18,6 +18,10 @@ export interface TierLimits {
   dailyComments: number;
   /** Maximum likes per day */
   dailyLikes: number;
+  /** Maximum appeals per day */
+  dailyAppeals: number;
+  /** Minimum cooldown between exports, in days */
+  exportCooldownDays: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,32 +29,45 @@ export interface TierLimits {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Tier limit configuration
- * Can be overridden via environment variables for operational flexibility
+ * Per-tier limits serve as the single source of truth for entitlements.
+ * Increasing any of these values (posts, comments, appeals, export cooldown) weakens tier separation and should be approved via a product + security review.
  */
 export const TIER_LIMITS: Record<UserTier, TierLimits> = {
   free: {
     dailyPosts: parseInt(process.env.TIER_FREE_DAILY_POSTS ?? '5', 10),
-    dailyComments: parseInt(process.env.TIER_FREE_DAILY_COMMENTS ?? '50', 10),
+    dailyComments: parseInt(process.env.TIER_FREE_DAILY_COMMENTS ?? '20', 10),
     dailyLikes: parseInt(process.env.TIER_FREE_DAILY_LIKES ?? '100', 10),
+    dailyAppeals: parseInt(process.env.TIER_FREE_DAILY_APPEALS ?? '1', 10),
+    exportCooldownDays: parseInt(process.env.TIER_FREE_EXPORT_COOLDOWN_DAYS ?? '30', 10),
   },
   premium: {
     dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '20', 10),
-    dailyComments: parseInt(process.env.TIER_PREMIUM_DAILY_COMMENTS ?? '500', 10),
+    dailyComments: parseInt(process.env.TIER_PREMIUM_DAILY_COMMENTS ?? '100', 10),
     dailyLikes: parseInt(process.env.TIER_PREMIUM_DAILY_LIKES ?? '1000', 10),
+    dailyAppeals: parseInt(process.env.TIER_PREMIUM_DAILY_APPEALS ?? '3', 10),
+    exportCooldownDays: parseInt(process.env.TIER_PREMIUM_EXPORT_COOLDOWN_DAYS ?? '7', 10),
   },
   black: {
     dailyPosts: parseInt(process.env.TIER_BLACK_DAILY_POSTS ?? '50', 10),
-    dailyComments: parseInt(process.env.TIER_BLACK_DAILY_COMMENTS ?? '750', 10),
+    dailyComments: parseInt(process.env.TIER_BLACK_DAILY_COMMENTS ?? '300', 10),
     dailyLikes: parseInt(process.env.TIER_BLACK_DAILY_LIKES ?? '1500', 10),
+    dailyAppeals: parseInt(process.env.TIER_BLACK_DAILY_APPEALS ?? '10', 10),
+    exportCooldownDays: parseInt(process.env.TIER_BLACK_EXPORT_COOLDOWN_DAYS ?? '1', 10),
   },
   admin: {
     // Admins have effectively unlimited (very high) limits
     dailyPosts: 10000,
     dailyComments: 10000,
     dailyLikes: 10000,
+    dailyAppeals: 10000,
+    exportCooldownDays: 0,
   },
 };
+
+/**
+ * The tier defaults above define entitlements for
+ * posts, comments, appeals, and export cooldown intervals.
+ */
 
 /**
  * Default tier for users without an explicit tier claim
@@ -122,4 +139,20 @@ export function getDailyCommentLimit(tier: string | undefined | null): number {
 export function getDailyLikeLimit(tier: string | undefined | null): number {
   const normalizedTier = normalizeTier(tier);
   return TIER_LIMITS[normalizedTier].dailyLikes;
+}
+
+/**
+ * Get the daily appeal limit for a user tier
+ */
+export function getDailyAppealLimit(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].dailyAppeals;
+}
+
+/**
+ * Get the export cooldown interval in days for a tier
+ */
+export function getExportCooldownDays(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].exportCooldownDays;
 }

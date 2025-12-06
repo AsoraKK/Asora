@@ -17,6 +17,8 @@ import * as crypto from 'crypto';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { getAzureLogger } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 import { redeemInvite, validateInvite } from './inviteStore';
 import { storeRefreshToken } from './refreshTokenStore';
 import type { TokenPayload, UserDocument } from '../types';
@@ -211,11 +213,16 @@ export async function redeemInviteHandler(
 }
 
 // Route registration
+const rateLimitedRedeemInvite = withRateLimit(
+  redeemInviteHandler,
+  (req, context) => getPolicyForFunction('auth-redeem-invite')
+);
+
 app.http('auth-redeem-invite', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'auth/redeem-invite',
-  handler: redeemInviteHandler,
+  handler: rateLimitedRedeemInvite,
 });
 
 // For testing

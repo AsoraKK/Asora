@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../core/utils/daily_limit_message.dart';
 import '../features/auth/application/auth_providers.dart';
 import '../features/moderation/application/moderation_providers.dart';
 import '../features/moderation/domain/appeal.dart';
@@ -436,13 +437,20 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       if (mounted) {
         String errorMessage = 'Failed to submit appeal';
         if (error is DioException) {
-          if (error.response?.statusCode == 401) {
+          final data = error.response?.data;
+          if (data is Map<String, dynamic> &&
+              data['code'] == 'DAILY_APPEAL_LIMIT_EXCEEDED') {
+            errorMessage = dailyLimitMessage(
+              payload: data,
+              actionLabel: 'appeals',
+            );
+          } else if (error.response?.statusCode == 401) {
             errorMessage = 'Please log in to submit an appeal';
           } else if (error.response?.statusCode == 409) {
             errorMessage =
                 'You have already submitted an appeal for this content';
-          } else if (error.response?.data?['error'] != null) {
-            errorMessage = error.response!.data['error'];
+          } else if (data is Map<String, dynamic> && data['error'] != null) {
+            errorMessage = data['error'] as String;
           }
         } else if (error is ModerationException) {
           errorMessage = error.message;

@@ -65,7 +65,10 @@ import {
   incrementDailyPostCount,
   enforceDailyPostLimit,
   checkAndIncrementPostCount,
+  checkAndIncrementDailyActionCount,
   DailyPostLimitExceededError,
+  DailyCommentLimitExceededError,
+  DailyAppealLimitExceededError,
   getUtcDateString,
   getNextUtcDateString,
 } from '@shared/services/dailyPostLimitService';
@@ -337,8 +340,8 @@ describe('Daily Post Limit Service', () => {
       const error = new DailyPostLimitExceededError(result);
       const response = error.toResponse();
       
-      expect(response.error).toContain('Daily post limit reached');
-      expect(response.code).toBe('daily_post_limit_reached');
+      expect(response.message).toContain('Daily post limit reached');
+      expect(response.code).toBe('DAILY_POST_LIMIT_EXCEEDED');
       expect(response.limit).toBe(5);
       expect(response.current).toBe(5);
       expect(response.tier).toBe('free');
@@ -468,6 +471,118 @@ describe('Daily Post Limit Service', () => {
       const result = await checkAndIncrementPostCount(userId, 'admin');
       expect(result.success).toBe(true);
       expect(result.newCount).toBe(10000);
+    });
+  });
+
+  describe('DailyCommentLimitExceededError', () => {
+    it('exposes the comment-specific codes', () => {
+      const result = {
+        allowed: false,
+        currentCount: 20,
+        limit: 20,
+        remaining: 0,
+        tier: 'free' as const,
+        resetDate: '2024-03-16T00:00:00.000Z',
+      };
+
+      const error = new DailyCommentLimitExceededError(result);
+      expect(error.code).toBe('daily_comment_limit_exceeded');
+      expect(error.payloadCode).toBe('DAILY_COMMENT_LIMIT_EXCEEDED');
+      expect(error.tier).toBe('free');
+    });
+
+    it('serializes a payload with the payloadCode and counts', () => {
+      const result = {
+        allowed: false,
+        currentCount: 20,
+        limit: 20,
+        remaining: 0,
+        tier: 'free' as const,
+        resetDate: '2024-03-16T00:00:00.000Z',
+      };
+
+      const error = new DailyCommentLimitExceededError(result);
+      const response = error.toResponse();
+      expect(response.code).toBe('DAILY_COMMENT_LIMIT_EXCEEDED');
+      expect(response.current).toBe(result.currentCount);
+      expect(response.limit).toBe(result.limit);
+      expect(response.tier).toBe('free');
+      expect(response.resetAt).toBe(result.resetDate);
+    });
+  });
+
+  describe('DailyAppealLimitExceededError', () => {
+    it('exposes the appeal-specific payload', () => {
+      const result = {
+        allowed: false,
+        currentCount: 1,
+        limit: 1,
+        remaining: 0,
+        tier: 'free' as const,
+        resetDate: '2024-03-16T00:00:00.000Z',
+      };
+
+      const error = new DailyAppealLimitExceededError(result);
+      expect(error.code).toBe('daily_appeal_limit_exceeded');
+      expect(error.payloadCode).toBe('DAILY_APPEAL_LIMIT_EXCEEDED');
+      expect(error.tier).toBe('free');
+    });
+
+    it('serializes the expected error response', () => {
+      const result = {
+        allowed: false,
+        currentCount: 1,
+        limit: 1,
+        remaining: 0,
+        tier: 'free' as const,
+        resetDate: '2024-03-16T00:00:00.000Z',
+      };
+
+      const error = new DailyAppealLimitExceededError(result);
+      const response = error.toResponse();
+      expect(response.code).toBe('DAILY_APPEAL_LIMIT_EXCEEDED');
+      expect(response.current).toBe(result.currentCount);
+      expect(response.limit).toBe(result.limit);
+      expect(response.tier).toBe('free');
+      expect(response.resetAt).toBe(result.resetDate);
+    });
+  });
+
+  describe('checkAndIncrementDailyActionCount for comment and appeal', () => {
+    it('throws a DailyCommentLimitExceededError when the counter is full', async () => {
+      const userId = 'comment-failure';
+      const date = getUtcDateString();
+      counterStore.set(`${userId}:comment:${date}`, {
+        id: `${userId}:comment:${date}`,
+        userId,
+        counterType: 'comment',
+        date,
+        count: 20,
+        updatedAt: Date.now(),
+        ttl: 604800,
+      });
+
+      await expect(checkAndIncrementDailyActionCount(userId, 'free', 'comment'))
+        .rejects
+        .toThrow(DailyCommentLimitExceededError);
+    });
+
+    it('throws a DailyAppealLimitExceededError when appeals are exhausted', async () => {
+      const userId = 'appeal-failure';
+      const date = getUtcDateString();
+      counterStore.set(`${userId}:appeal:${date}`, {
+        id: `${userId}:appeal:${date}`,
+        userId,
+        counterType: 'appeal',
+        date,
+        count: 1,
+        updatedAt: Date.now(),
+        ttl: 604800,
+      });
+
+      await expect(checkAndIncrementDailyActionCount(userId, 'free', 'appeal'))
+        .rejects
+        .toThrow(DailyAppealLimitExceededError);
     });
   });
 });

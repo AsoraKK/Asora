@@ -111,6 +111,14 @@ describe('getPolicyForRoute', () => {
       expect(policy.name).toBe('auth/authorize-auth-endpoint');
       expect(policy.authBackoff).toBeDefined();
     });
+
+    it('returns auth endpoint policy for redeem invite route', () => {
+      const req = createRequest('POST', 'auth/redeem-invite');
+      const policy = getPolicyForRoute(req);
+
+      expect(policy.name).toBe('auth/redeem-invite-auth-endpoint');
+      expect(policy.authBackoff).toBeDefined();
+    });
   });
 
   describe('authenticated routes', () => {
@@ -155,6 +163,7 @@ describe('getPolicyForFunction', () => {
       { fn: 'privacy-delete-user', expectedName: 'user/delete-write', hasBackoff: false },
       { fn: 'auth-token', expectedName: 'auth-token-auth-endpoint', hasBackoff: true },
       { fn: 'auth-authorize', expectedName: 'auth-authorize-auth-endpoint', hasBackoff: true },
+      { fn: 'auth-redeem-invite', expectedName: 'auth-redeem-invite-auth-endpoint', hasBackoff: true },
       { fn: 'auth-userinfo', expectedName: 'auth/userinfo-auth', hasBackoff: false },
     ];
 
@@ -179,6 +188,7 @@ describe('policy structure validation', () => {
       'health',
       'auth/token',
       'auth/userinfo',
+      'auth/redeem-invite',
       'user/export',
       'moderation/flag',
     ];

@@ -165,3 +165,7 @@ env:
 ---
 
 **⚠️ IMPORTANT**: After implementing these changes, immediately rotate all existing secrets and API keys to ensure complete security hardening.
+
+## 9. 🛡️ Authentication Rate Limiting
+
+Authentication-critical endpoints reuse a shared policy that limits anonymous attempts to 20 requests per IP per minute while still relying on the global IP (120 req/min) and user (240 req/min) guards. Failed responses (`400`, `401`, `403`) trigger an auth-specific backoff that locks out the offending IP and known principal for 30 minutes, and the backoff clears on successful authentications. Any decision to relax these thresholds or extend the backoff window must go through a documented security review.

@@ -5,6 +5,7 @@ import type { Principal } from '@shared/middleware/auth';
 import { ok, badRequest, notFound, created, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
+import { withDailyCommentLimit } from '@shared/middleware/dailyPostLimit';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 
@@ -329,7 +330,8 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
 // ─────────────────────────────────────────────────────────────
 
 /* istanbul ignore next */
-const rateLimitedCreateComment = withRateLimit(createComment, () => getPolicyForFunction('createComment'));
+const commentWithTierLimit = withDailyCommentLimit(createComment);
+const rateLimitedCreateComment = withRateLimit(commentWithTierLimit, () => getPolicyForFunction('createComment'));
 
 /* istanbul ignore next */
 const rateLimitedListComments = withRateLimit(listComments, () => getPolicyForFunction('listComments'));

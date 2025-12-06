@@ -5,18 +5,21 @@ import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
+import { withDailyAppealLimit } from '@shared/middleware/dailyPostLimit';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
-const protectedSubmitAppeal = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
-  try {
-    const { submitAppealHandler } = await import('@moderation/service/appealService');
-    return await submitAppealHandler({ request: req, context, userId: req.principal.sub });
-  } catch (error) {
-    context.log('moderation.appeal.submit.error', { message: (error as Error).message });
-    return serverError();
-  }
-});
+const tierLimitedSubmitAppeal = requireAuth(
+  withDailyAppealLimit(async (req: AuthenticatedRequest, context: InvocationContext) => {
+    try {
+      const { submitAppealHandler } = await import('@moderation/service/appealService');
+      return await submitAppealHandler({ request: req, context, userId: req.principal.sub });
+    } catch (error) {
+      context.log('moderation.appeal.submit.error', { message: (error as Error).message });
+      return serverError();
+    }
+  })
+);
 
 export async function submitAppealRoute(
   req: HttpRequest,
@@ -27,7 +30,7 @@ export async function submitAppealRoute(
     return cors.response;
   }
 
-  return protectedSubmitAppeal(req, context);
+  return tierLimitedSubmitAppeal(req, context);
 }
 
 /* istanbul ignore next */

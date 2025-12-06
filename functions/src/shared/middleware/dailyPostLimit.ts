@@ -1,10 +1,15 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { Principal } from '@shared/middleware/auth';
-import { checkAndIncrementPostCount, DailyPostLimitExceededError } from '@shared/services/dailyPostLimitService';
+import {
+  checkAndIncrementDailyActionCount,
+  DailyActionLimitExceededError,
+  DailyActionType,
+} from '@shared/services/dailyPostLimitService';
 import { trackAppEvent } from '@shared/appInsights';
 import { getAzureLogger } from '@shared/utils/logger';
 
 const logger = getAzureLogger('shared/dailyPostLimit');
+const DAILY_RETRY_AFTER_SECONDS = 86400;
 
 /**
  * Assumes the authenticated request already exposes JWT claims via `req.principal`.
@@ -17,11 +22,33 @@ export type AuthenticatedHandler = (
   context: InvocationContext
 ) => Promise<HttpResponseInit>;
 
-export function withDailyPostLimit(handler: AuthenticatedHandler): AuthenticatedHandler {
+function buildLimitResponse(error: DailyActionLimitExceededError): HttpResponseInit {
+  const payload = error.toResponse();
+  return {
+    status: error.statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Retry-After': DAILY_RETRY_AFTER_SECONDS.toString(),
+    },
+    body: JSON.stringify(payload),
+  };
+}
+
+function createDailyLimitMiddleware(
+  action: DailyActionType,
+  handler: AuthenticatedHandler,
+  logPrefix: string,
+  trackEventName: string
+): AuthenticatedHandler {
   return async (req, context) => {
     try {
-      const limitResult = await checkAndIncrementPostCount(req.principal.sub, req.principal.tier);
-      context.log('posts.create.limitCheck', {
+      const limitResult = await checkAndIncrementDailyActionCount(
+        req.principal.sub,
+        req.principal.tier,
+        action
+      );
+
+      context.log(`${logPrefix}.limitCheck`, {
         userId: req.principal.sub.slice(0, 8),
         tier: req.principal.tier,
         newCount: limitResult.newCount,
@@ -29,15 +56,15 @@ export function withDailyPostLimit(handler: AuthenticatedHandler): Authenticated
         limit: limitResult.limit,
       });
     } catch (error) {
-      if (error instanceof DailyPostLimitExceededError) {
-        logger.warn('posts.create.limitExceeded', {
+      if (error instanceof DailyActionLimitExceededError && error.action === action) {
+        logger.warn(`${logPrefix}.limitExceeded`, {
           userId: req.principal.sub.slice(0, 8),
           tier: error.tier,
           currentCount: error.currentCount,
         });
 
         trackAppEvent({
-          name: 'post_limit_exceeded',
+          name: trackEventName,
           properties: {
             authorId: req.principal.sub,
             tier: error.tier,
@@ -46,26 +73,23 @@ export function withDailyPostLimit(handler: AuthenticatedHandler): Authenticated
           },
         });
 
-        const payload = {
-          code: 'DAILY_POST_LIMIT_EXCEEDED',
-          tier: error.tier,
-          limit: error.limit,
-          resetAt: error.resetDate,
-          message: 'Daily post limit reached. Try again tomorrow.',
-        };
-
-        return {
-          status: error.statusCode,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': '86400',
-          },
-          body: JSON.stringify(payload),
-        };
+        return buildLimitResponse(error);
       }
       throw error;
     }
 
     return handler(req, context);
   };
+}
+
+export function withDailyPostLimit(handler: AuthenticatedHandler): AuthenticatedHandler {
+  return createDailyLimitMiddleware('post', handler, 'posts.create', 'post_limit_exceeded');
+}
+
+export function withDailyCommentLimit(handler: AuthenticatedHandler): AuthenticatedHandler {
+  return createDailyLimitMiddleware('comment', handler, 'comments.create', 'comment_limit_exceeded');
+}
+
+export function withDailyAppealLimit(handler: AuthenticatedHandler): AuthenticatedHandler {
+  return createDailyLimitMiddleware('appeals.submit', handler, 'appeals.create', 'appeal_limit_exceeded');
 }

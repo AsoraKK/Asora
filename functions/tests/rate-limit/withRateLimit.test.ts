@@ -7,6 +7,7 @@ import {
   getAuthFailureState,
   incrementAuthFailure,
   resetAuthFailures,
+  type AuthFailureState,
   type SlidingWindowLimitResult,
   type TokenBucketEvaluation,
 } from '@rate-limit/store';
@@ -51,6 +52,7 @@ const incrementAuthFailureMock = incrementAuthFailure as jest.MockedFunction<typ
 const resetAuthFailuresMock = resetAuthFailures as jest.MockedFunction<typeof resetAuthFailures>;
 
 const FIXED_NOW = 1_700_000_000_000;
+const AUTH_FAILURE_WINDOW_SECONDS = 30 * 60;
 
 type Handler = (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>;
 
@@ -98,7 +100,8 @@ function createPolicy(): RateLimitPolicy {
   };
 }
 
-function createAuthPolicy(): RateLimitPolicy {
+function createAuthPolicy(options?: { deriveUserId?: () => string | null }): RateLimitPolicy {
+  const deriveUserId = options?.deriveUserId ?? (() => 'user-ctx');
   return {
     name: 'auth-policy',
     routeId: 'auth/login',
@@ -110,13 +113,13 @@ function createAuthPolicy(): RateLimitPolicy {
         slidingWindow: { limit: 20, windowSeconds: 60 },
       },
     ],
-    deriveUserId: () => 'user-ctx',
+    deriveUserId,
     authBackoff: {
       limit: 20,
-      windowSeconds: 30 * 60,
+      windowSeconds: AUTH_FAILURE_WINDOW_SECONDS,
       ipKeyResolver: () => 'authfail:ip',
-      userKeyResolver: () => 'authfail:user',
-      failureStatusCodes: [401],
+      userKeyResolver: () => 'authfail_user:user-ctx',
+      failureStatusCodes: [400, 401, 403],
       resetOnSuccess: true,
     },
   };
@@ -281,8 +284,178 @@ describe('withRateLimit middleware', () => {
     expect(resetAuthFailuresMock.mock.calls).toEqual(
       expect.arrayContaining([
         ['authfail:ip'],
-        ['authfail:user'],
+        ['authfail_user:user-ctx'],
       ])
     );
+  });
+
+  it('enforces auth backoff keyed by IP when the user is unknown', async () => {
+    const slidingAllowed: SlidingWindowLimitResult = {
+      total: 1,
+      limit: 20,
+      windowSeconds: 60,
+      remaining: 19,
+      blocked: false,
+      retryAfterSeconds: 0,
+      resetAt: FIXED_NOW + 60_000,
+      buckets: [],
+    };
+
+    applySlidingWindowLimitMock.mockResolvedValue(slidingAllowed);
+
+    const unlockedState: AuthFailureState = {
+      count: 0,
+      lastFailureAt: null,
+      lockoutSeconds: 0,
+      remainingLockoutSeconds: 0,
+      lockedUntilMs: null,
+    };
+
+    const lockedState: AuthFailureState = {
+      count: 4,
+      lastFailureAt: new Date(FIXED_NOW).toISOString(),
+      lockoutSeconds: 60,
+      remainingLockoutSeconds: 30,
+      lockedUntilMs: FIXED_NOW + 30_000,
+    };
+
+    getAuthFailureStateMock
+      .mockResolvedValueOnce(unlockedState)
+      .mockResolvedValueOnce(unlockedState)
+      .mockResolvedValueOnce(unlockedState)
+      .mockResolvedValueOnce(lockedState);
+
+    const handler = createHandler({ status: 401, headers: {}, body: 'denied' });
+    const wrapped = withRateLimit(handler, createAuthPolicy({ deriveUserId: () => null }));
+    const req = createRequest('POST');
+    const ctx = createContext();
+
+    for (let i = 0; i < 3; i++) {
+      const res = await wrapped(req, ctx);
+      expect(res.status).not.toBe(429);
+    }
+
+    const blocked = await wrapped(req, ctx);
+    expect(blocked.status).toBe(429);
+    expect(handler).toHaveBeenCalledTimes(3);
+    const payload = JSON.parse(blocked.body as string);
+    expect(payload.scope).toBe('auth_backoff');
+    expect(payload.reason).toBe('auth_backoff');
+    expect(payload.retry_after_seconds).toBe(30);
+
+    const failureKeys = incrementAuthFailureMock.mock.calls.map(([key]) => key);
+    expect(failureKeys).toHaveLength(3);
+    expect(failureKeys.every((key) => key.startsWith('authfail:'))).toBe(true);
+    expect(failureKeys.some((key) => key.startsWith('authfail_user:'))).toBe(false);
+  });
+
+  it('tracks auth failures per user once a principal is known', async () => {
+    const slidingAllowed: SlidingWindowLimitResult = {
+      total: 1,
+      limit: 20,
+      windowSeconds: 60,
+      remaining: 19,
+      blocked: false,
+      retryAfterSeconds: 0,
+      resetAt: FIXED_NOW + 60_000,
+      buckets: [],
+    };
+
+    applySlidingWindowLimitMock.mockResolvedValue(slidingAllowed);
+    getAuthFailureStateMock.mockResolvedValue({
+      count: 0,
+      lastFailureAt: null,
+      lockoutSeconds: 0,
+      remainingLockoutSeconds: 0,
+      lockedUntilMs: null,
+    });
+
+    const handler = createHandler({ status: 401, headers: {}, body: 'denied' });
+    const wrapped = withRateLimit(handler, createAuthPolicy());
+    await wrapped(createRequest('POST'), createContext());
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(incrementAuthFailureMock).toHaveBeenCalledTimes(2);
+    expect(
+      incrementAuthFailureMock.mock.calls.some(([key]) => key.startsWith('authfail_user:'))
+    ).toBe(true);
+
+    const authFailureKeys = getAuthFailureStateMock.mock.calls.map(([key]) => key);
+    expect(authFailureKeys).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^authfail:/),
+        expect.stringMatching(/^authfail_user:/),
+      ])
+    );
+  });
+
+  it('allows auth requests again once the failure window expires', async () => {
+    const slidingAllowed: SlidingWindowLimitResult = {
+      total: 1,
+      limit: 20,
+      windowSeconds: 60,
+      remaining: 19,
+      blocked: false,
+      retryAfterSeconds: 0,
+      resetAt: FIXED_NOW + 60_000,
+      buckets: [],
+    };
+
+    applySlidingWindowLimitMock.mockResolvedValue(slidingAllowed);
+
+    const lockedState: AuthFailureState = {
+      count: 5,
+      lastFailureAt: new Date(FIXED_NOW).toISOString(),
+      lockoutSeconds: 60,
+      remainingLockoutSeconds: 30,
+      lockedUntilMs: FIXED_NOW + 30_000,
+    };
+
+    const unlockedState: AuthFailureState = {
+      count: 0,
+      lastFailureAt: null,
+      lockoutSeconds: 0,
+      remainingLockoutSeconds: 0,
+      lockedUntilMs: null,
+    };
+
+    getAuthFailureStateMock.mockResolvedValueOnce(lockedState).mockResolvedValueOnce(unlockedState);
+
+    const handler = createHandler({ status: 200, headers: {}, body: 'ok' });
+    const wrapped = withRateLimit(handler, createAuthPolicy());
+
+    const blocked = await wrapped(createRequest('POST'), createContext());
+    expect(blocked.status).toBe(429);
+
+    const futureNow = FIXED_NOW + AUTH_FAILURE_WINDOW_SECONDS * 1000 + 1_000;
+    (Date.now as jest.Mock).mockReturnValue(futureNow);
+
+    const allowed = await wrapped(createRequest('POST'), createContext());
+    expect(allowed.status).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not trigger auth backoff for non-auth policies', async () => {
+    const slidingAllowed: SlidingWindowLimitResult = {
+      total: 1,
+      limit: 20,
+      windowSeconds: 60,
+      remaining: 19,
+      blocked: false,
+      retryAfterSeconds: 0,
+      resetAt: FIXED_NOW + 60_000,
+      buckets: [],
+    };
+
+    applySlidingWindowLimitMock.mockResolvedValue(slidingAllowed);
+
+    const handler = createHandler({ status: 401, headers: {}, body: 'denied' });
+    const wrapped = withRateLimit(handler, createPolicy());
+    const response = await wrapped(createRequest('POST'), createContext());
+
+    expect(response.status).toBe(401);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(getAuthFailureStateMock).not.toHaveBeenCalled();
+    expect(incrementAuthFailureMock).not.toHaveBeenCalled();
   });
 });

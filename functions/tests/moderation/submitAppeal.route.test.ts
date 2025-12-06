@@ -1,4 +1,9 @@
 import type { InvocationContext } from '@azure/functions';
+import type { Principal } from '@shared/middleware/auth';
+import {
+  AuthenticatedRequest,
+  withDailyAppealLimit,
+} from '@shared/middleware/dailyPostLimit';
 
 import { submitAppealRoute } from '@moderation/routes/submitAppeal';
 import { submitAppealHandler } from '@moderation/service/appealService';
@@ -16,9 +21,22 @@ jest.mock('@auth/verifyJwt', () => {
   };
 });
 
+jest.mock('@shared/appInsights', () => ({
+  trackAppEvent: jest.fn(),
+  trackAppMetric: jest.fn(),
+}));
+
+const dailyLimitModule = require('@shared/services/dailyPostLimitService');
+const mockCheckAndIncrementDailyActionCount = jest.spyOn(
+  dailyLimitModule,
+  'checkAndIncrementDailyActionCount'
+);
+const { DailyAppealLimitExceededError } = dailyLimitModule;
+
 const { AuthError } = jest.requireActual('@auth/verifyJwt');
 const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+const { trackAppEvent } = require('@shared/appInsights');
 
 function authorizedRequest(body?: unknown) {
   return httpReqMock({
@@ -31,6 +49,12 @@ function authorizedRequest(body?: unknown) {
 describe('submitAppeal route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCheckAndIncrementDailyActionCount.mockResolvedValue({
+      success: true,
+      newCount: 1,
+      limit: 5,
+      remaining: 4,
+    });
     contextStub.log = jest.fn();
     verifyMock.mockImplementation(async header => {
       if (!header) {
@@ -39,7 +63,7 @@ describe('submitAppeal route', () => {
       if (header.includes('invalid')) {
         throw new AuthError('invalid_token', 'Unable to validate token');
       }
-      return { sub: 'moderator-1', raw: {} } as any;
+      return { sub: 'moderator-1', tier: 'free', raw: {} } as any;
     });
   });
 
@@ -93,4 +117,5 @@ describe('submitAppeal route', () => {
     expect(response.status).toBe(500);
     expect(response.body).toBe(JSON.stringify({ error: 'internal' }));
   });
+
 });
