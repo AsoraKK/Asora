@@ -53,8 +53,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            moderationRepositoryProvider.overrideWithValue(mockRepository),
-            jwtProvider.overrideWithValue(const AsyncValue.data('jwt-token')),
+            moderationClientProvider.overrideWithValue(mockRepository),
+            jwtProvider.overrideWith((_) async => 'jwt-token'),
           ],
           child: MaterialApp(
             home: Scaffold(

@@ -3,7 +3,7 @@ import 'package:asora/core/utils/daily_limit_message.dart';
 
 void main() {
   group('dailyLimitMessage', () {
-    const baseTime = DateTime(2025, 1, 1, 10, 0, 0);
+    final baseTime = DateTime(2025, 1, 1, 10, 0, 0);
 
     test('formats a comment limit notice with duration', () {
       final payload = {
