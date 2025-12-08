@@ -56,7 +56,7 @@ void main() {
             moderationClientProvider.overrideWithValue(mockRepository),
             jwtProvider.overrideWith((_) async => 'jwt-token'),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: AppealDialog(
                 contentId: 'post-123',

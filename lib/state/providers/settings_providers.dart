@@ -1,0 +1,35 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../data/mock/mock_settings.dart';
+import '../models/settings.dart';
+
+class SettingsController extends StateNotifier<SettingsState> {
+  SettingsController() : super(defaultSettings);
+
+  void toggleLeftHanded() {
+    state = state.copyWith(leftHandedMode: !state.leftHandedMode);
+  }
+
+  void toggleSwipeEnabled() {
+    state = state.copyWith(
+      horizontalSwipeEnabled: !state.horizontalSwipeEnabled,
+    );
+  }
+
+  void toggleHaptics() {
+    state = state.copyWith(hapticsEnabled: !state.hapticsEnabled);
+  }
+}
+
+final settingsProvider =
+    StateNotifierProvider<SettingsController, SettingsState>(
+      (ref) => SettingsController(),
+    );
+
+final leftHandedModeProvider = Provider<bool>(
+  (ref) => ref.watch(settingsProvider).leftHandedMode,
+);
+
+final horizontalSwipeEnabledProvider = Provider<bool>(
+  (ref) => ref.watch(settingsProvider).horizontalSwipeEnabled,
+);
