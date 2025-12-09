@@ -361,7 +361,7 @@ void main() {
           authorUsername: 'u',
           text: 't',
           createdAt: now,
-          metadata: PostMetadata(tags: ['tag1']),
+          metadata: const PostMetadata(tags: ['tag1']),
         );
         final noMetadata = Post(
           id: '2',
@@ -394,7 +394,7 @@ void main() {
         // Should not throw with null checks
         expect(post.mediaUrls ?? [], isEmpty);
         expect(post.moderation?.score ?? 0.0, equals(0.0));
-        expect(post.metadata ?? null, isNull);
+        expect(post.metadata, isNull);
       });
 
       test('should handle null coalescing', () {

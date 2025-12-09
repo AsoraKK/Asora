@@ -10,21 +10,84 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
-import type { AuthTokenRequest, AuthTokenResponse } from '@shared/types/openapi';
+import type { AuthTokenRequest, AuthTokenResponse, UserProfile } from '@shared/types/openapi';
+import { usersService } from '@auth/service/usersService';
+import { profileService } from '@users/service/profileService';
+import { jwtService } from '@auth/service/jwtService';
 
 export const auth_token_exchange = httpHandler<AuthTokenRequest, AuthTokenResponse>(async (ctx) => {
   ctx.context.log(`[auth_token_exchange] Processing token exchange request [${ctx.correlationId}]`);
 
-  // TODO: Implement token exchange logic
-  // - Validate grant_type
-  // - Exchange provider code with OAuth provider (Google, Apple)
-  // - Or validate email magic link
-  // - Create/update user in PostgreSQL users table
-  // - Create/update user profile in Cosmos users container
-  // - Generate JWT access + refresh tokens
-  // - Return AuthTokenResponse with user profile
+  if (!ctx.body) {
+    return ctx.badRequest('Request body is required', 'INVALID_REQUEST');
+  }
 
-  return ctx.notImplemented('auth_token_exchange');
+  const { grant_type, code, provider, redirect_uri } = ctx.body;
+
+  // Validate required fields
+  if (!grant_type) {
+    return ctx.badRequest('grant_type is required', 'INVALID_GRANT_TYPE');
+  }
+
+  if (grant_type === 'authorization_code') {
+    if (!code || !provider) {
+      return ctx.badRequest('code and provider are required for authorization_code grant', 'INVALID_REQUEST');
+    }
+
+    // TODO: Implement provider OAuth verification
+    // For now, we'll use the code and provider as provider_sub
+    // In production, verify with the OAuth provider (Google, Apple, etc.)
+    const provider_sub = code;
+
+    try {
+      // Get or create user via provider
+      const [pgUser, isNewUser] = await usersService.getOrCreateUserByProvider(
+        provider,
+        provider_sub,
+        `${provider}-${provider_sub}@asora.local`, // Placeholder email
+        `${provider} User` // Placeholder display name
+      );
+
+      // Ensure profile exists in Cosmos
+      const profile = await profileService.ensureProfile(
+        pgUser.id,
+        pgUser.display_name,
+        pgUser.avatar_url
+      );
+
+      // Generate token pair
+      const { access_token, refresh_token, expires_in } = await jwtService.generateTokenPair(
+        pgUser.id,
+        pgUser.roles,
+        pgUser.tier
+      );
+
+      const userResponse: UserProfile = {
+        id: pgUser.id,
+        displayName: pgUser.display_name,
+        bio: profile.bio,
+        avatarUrl: profile.avatarUrl,
+        tier: pgUser.tier,
+        roles: pgUser.roles,
+        reputation: 0,
+        createdAt: pgUser.created_at,
+        updatedAt: pgUser.updated_at,
+      };
+
+      return ctx.ok({
+        access_token,
+        refresh_token,
+        token_type: 'Bearer',
+        expires_in,
+        user: userResponse,
+      });
+    } catch (error) {
+      ctx.context.error(`[auth_token_exchange] Error during token exchange: ${error}`, { correlationId: ctx.correlationId });
+      return ctx.internalError(error as Error);
+    }
+  }
+
+  return ctx.badRequest(`Unsupported grant_type: ${grant_type}`, 'UNSUPPORTED_GRANT_TYPE');
 });
 
 // Register HTTP trigger
