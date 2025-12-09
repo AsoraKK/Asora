@@ -132,7 +132,7 @@ class MockFcmClient {
           `Recorded calls: ${JSON.stringify(this.calls)}`
       );
     }
-    return found[0];
+    return found[0]!;
   }
 }
 

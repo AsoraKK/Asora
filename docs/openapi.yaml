@@ -145,7 +145,10 @@ paths:
       tags:
       - users
       summary: Return the current user profile with PG identity merged with Cosmos preferences.
+      description: Fetch the authenticated user's full profile including identity from PostgreSQL and preferences from Cosmos DB.
       operationId: users_me_get
+      security:
+      - bearerAuth: []
       responses:
         '200':
           description: Identity plus profile/settings.
@@ -183,7 +186,10 @@ paths:
       tags:
       - users
       summary: Update the authenticated user profile (bio, avatar, topic preferences).
+      description: Update the current user's profile fields including bio, avatar URL, and topic preferences stored in Cosmos DB.
       operationId: users_me_update
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -228,7 +234,10 @@ paths:
       tags:
       - users
       summary: Public profile view without sensitive fields.
+      description: Retrieve public profile information for any user by ID, excluding sensitive fields like email and auth tokens.
       operationId: users_get_by_id
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -273,7 +282,10 @@ paths:
       tags:
       - posts
       summary: Create a post stored in the Cosmos posts container.
+      description: Create a new post with text content, optional media, and automatic moderation checks before storage in Cosmos DB.
       operationId: posts_create
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -318,7 +330,10 @@ paths:
       tags:
       - posts
       summary: Retrieve a single post with enriched author metadata.
+      description: Fetch a single post by ID with engagement statistics and enriched author profile information.
       operationId: posts_get_by_id
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -362,7 +377,10 @@ paths:
       tags:
       - posts
       summary: Delete your own post.
+      description: Permanently delete a post owned by the authenticated user from the Cosmos posts container.
       operationId: posts_delete
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -403,7 +421,10 @@ paths:
       tags:
       - posts
       summary: List posts authored by a specific user.
+      description: Retrieve cursor-paginated posts authored by the specified user, with optional reply inclusion.
       operationId: posts_list_by_user
+      security:
+      - bearerAuth: []
       parameters:
       - name: userId
         in: path
@@ -453,6 +474,8 @@ paths:
       summary: Discover feed for guests or new users.
       description: Personalised ranking that can mix journalists and community contributors.
       operationId: feed_discover_get
+      security:
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/cursor'
       - $ref: '#/components/parameters/limit'
@@ -484,7 +507,10 @@ paths:
       tags:
       - feed
       summary: Hybrid News feed combining journalists and high-reputation users.
+      description: Curated news feed filtering posts with `isNews=true` from verified journalists and high-reputation community contributors.
       operationId: feed_news_get
+      security:
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/cursor'
       - $ref: '#/components/parameters/limit'
@@ -517,7 +543,10 @@ paths:
       tags:
       - feed
       summary: User timeline.
+      description: Retrieve cursor-paginated posts for a specific user's timeline, including posts from followed accounts.
       operationId: feed_user_get
+      security:
+      - bearerAuth: []
       parameters:
       - name: userId
         in: path
@@ -560,6 +589,9 @@ paths:
       - custom-feeds
       summary: List the authenticated user’s custom feeds within tier limits.
       operationId: customFeeds_list
+      description: Retrieve all custom feed definitions owned by the authenticated user, respecting tier-based limits on feed count.
+      security:
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/cursor'
       - $ref: '#/components/parameters/limit'
@@ -594,7 +626,10 @@ paths:
       tags:
       - custom-feeds
       summary: Create a custom feed definition.
+      description: Create a new custom feed with 3-layer filters (content type, keywords, accounts) validated against tier limits.
       operationId: customFeeds_create
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -633,7 +668,10 @@ paths:
       tags:
       - custom-feeds
       summary: Retrieve a custom feed definition.
+      description: Fetch a single custom feed definition by ID, including filter configuration and metadata.
       operationId: customFeeds_getById
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -671,7 +709,10 @@ paths:
       tags:
       - custom-feeds
       summary: Update filters or home flag.
+      description: Update an existing custom feed's filters, name, or home screen visibility flag with ownership verification.
       operationId: customFeeds_update
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -721,7 +762,10 @@ paths:
       tags:
       - custom-feeds
       summary: Delete a custom feed.
+      description: Permanently delete a custom feed definition owned by the authenticated user from Cosmos DB.
       operationId: customFeeds_delete
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -757,7 +801,10 @@ paths:
       tags:
       - custom-feeds
       summary: Read posts that match the custom feed filters.
+      description: Query posts that satisfy the custom feed's 3-layer filter criteria with cursor pagination and author enrichment.
       operationId: customFeeds_getItems
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -798,7 +845,10 @@ paths:
       tags:
       - moderation
       summary: Moderation queue filtered for the authenticated reviewer.
+      description: Retrieve pending moderation cases filtered by status and reviewer permissions, with cursor pagination.
       operationId: moderation_queue_list
+      security:
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/cursor'
       - $ref: '#/components/parameters/limit'
@@ -834,7 +884,10 @@ paths:
       tags:
       - moderation
       summary: Details of a single moderation case.
+      description: Fetch full details of a moderation case including decision history and target content metadata.
       operationId: moderation_cases_getById
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -879,7 +932,10 @@ paths:
       tags:
       - moderation
       summary: Submit an approval, rejection, or escalation decision.
+      description: Record a moderation decision (approve/reject/escalate) with optional notes and apply moderation actions to content.
       operationId: moderation_cases_decide
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -930,7 +986,10 @@ paths:
       tags:
       - appeals
       summary: File an appeal against a moderation decision.
+      description: Submit an appeal challenging a moderation decision with justification text for community voting.
       operationId: appeals_create
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -969,7 +1028,10 @@ paths:
       tags:
       - appeals
       summary: View appeal details and community votes.
+      description: Retrieve appeal details including original moderation case, user justification, and aggregated community vote tallies.
       operationId: appeals_getById
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -1014,7 +1076,10 @@ paths:
       tags:
       - appeals
       summary: Cast a weighted vote on an appeal.
+      description: Submit a reputation-weighted vote (uphold/deny) on an appeal with one vote per user per appeal.
       operationId: appeals_vote
+      security:
+      - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -1067,6 +1132,8 @@ paths:
       summary: v2/future - XP totals, current tier, and breakdown.
       operationId: reputation_me_get
       description: Marked v2/future and driven by PostgreSQL snapshots.
+      security:
+      - bearerAuth: []
       responses:
         '200':
           description: Reputation overview.
@@ -1101,6 +1168,8 @@ paths:
       summary: v2/future - Paginated XP event history.
       operationId: reputation_history_get
       description: Cursor-based listing that feeds client leaderboards.
+      security:
+      - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/cursor'
       - $ref: '#/components/parameters/limit'
@@ -1138,6 +1207,8 @@ paths:
       summary: v2/future - Internal ingestion for XP events.
       operationId: reputation_events_ingest
       description: Internal-only endpoint that records XP deltas for later batching.
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1176,7 +1247,10 @@ paths:
       tags:
       - search
       summary: v2/future - Global search across posts and users.
+      description: Full-text search across posts and user profiles with optional type filtering and timeframe constraints.
       operationId: search_global_get
+      security:
+      - bearerAuth: []
       parameters:
       - name: query
         in: query
@@ -1236,7 +1310,10 @@ paths:
       tags:
       - trending
       summary: v2/future - Trending posts for the requested timeframe.
+      description: Retrieve engagement-ranked trending posts within a specified timeframe (24h/7d/30d) with optional category filtering.
       operationId: trending_posts_get
+      security:
+      - bearerAuth: []
       parameters:
       - name: timeframe
         in: query
@@ -1288,7 +1365,10 @@ paths:
       tags:
       - trending
       summary: v2/future - Trending topic list.
+      description: List trending topics ranked by mention frequency within a timeframe with top post preview.
       operationId: trending_topics_get
+      security:
+      - bearerAuth: []
       parameters:
       - name: timeframe
         in: query
@@ -1342,6 +1422,8 @@ paths:
       summary: v2/future external discover feed for partners.
       operationId: integrations_feed_discover_get
       description: Requires partnerId query and X-Partner-ApiKey header.
+      security:
+      - bearerAuth: []
       parameters:
       - name: partnerId
         in: query
@@ -1387,7 +1469,10 @@ paths:
       tags:
       - integrations
       summary: v2/future external news feed for partners.
+      description: Partner-authenticated news feed endpoint requiring partner ID and API key for external integrations.
       operationId: integrations_feed_news_get
+      security:
+      - bearerAuth: []
       parameters:
       - name: partnerId
         in: query
@@ -1433,7 +1518,10 @@ paths:
       tags:
       - onboarding
       summary: v2/future - Validate invite codes and surface tier grants.
+      description: Validate an invite code and return tier metadata including expiration and assigned user tier level.
       operationId: onboarding_invite_validate
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1472,7 +1560,10 @@ paths:
       tags:
       - onboarding
       summary: v2/future - Submit journalist application data.
+      description: Submit journalist verification application with portfolio URL and credentials for admin review.
       operationId: onboarding_journalist_apply
+      security:
+      - bearerAuth: []
       requestBody:
         required: true
         content:

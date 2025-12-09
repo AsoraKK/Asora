@@ -27,7 +27,7 @@ rules:
       function: truthy
   operation-success-response-has-json-schema:
     description: Successful responses must define application/json schema
-    given: $.paths[*][*].responses[?(@property.match(/^(2|20|201|202|204)$/))]
+    given: $.paths[*][*].responses[?(@property.match(/^(2|20|201|202|203)$/))]
     then:
       field: content.application/json.schema
       function: truthy

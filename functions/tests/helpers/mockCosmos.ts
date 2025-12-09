@@ -7,7 +7,6 @@
  * **DO NOT USE IN PRODUCTION**
  */
 
-import { Container, FeedResponse } from '@azure/cosmos';
 
 /**
  * In-memory document store for mock Cosmos
@@ -161,7 +160,7 @@ class MockCosmosItems {
 /**
  * Mock Cosmos Container implementation
  */
-export class MockContainer implements Partial<Container> {
+export class MockContainer {
   private internalContainer: MockCosmosContainer;
 
   constructor() {
