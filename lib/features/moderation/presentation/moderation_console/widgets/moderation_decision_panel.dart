@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import '../../../domain/moderation_decision.dart';
@@ -55,17 +57,31 @@ class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
             ),
             const SizedBox(height: 12),
             ...ModerationDecisionAction.values.map((action) {
-              return RadioListTile<ModerationDecisionAction>(
-                value: action,
-                groupValue: _selectedAction,
-                title: Text(action.label),
-                onChanged: widget.isSubmitting
+              return InkWell(
+                onTap: widget.isSubmitting
                     ? null
-                    : (value) {
-                        if (value != null) {
-                          setState(() => _selectedAction = value);
-                        }
+                    : () {
+                        setState(() => _selectedAction = action);
                       },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Radio<ModerationDecisionAction>(
+                        value: action,
+                        groupValue: _selectedAction,
+                        onChanged: widget.isSubmitting
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setState(() => _selectedAction = value);
+                                }
+                              },
+                      ),
+                      Expanded(child: Text(action.label)),
+                    ],
+                  ),
+                ),
               );
             }),
             const SizedBox(height: 12),

@@ -28,6 +28,13 @@ trySyncImport('auth', () => require('./auth'));
 trySyncImport('feed', () => require('./feed'));
 trySyncImport('moderation', () => require('./moderation'));
 trySyncImport('privacy', () => require('./privacy'));
+
+// OpenAPI v1 handlers (generated from docs/openapi.yaml)
+trySyncImport('users', () => require('./users'));
+trySyncImport('posts', () => require('./posts'));
+trySyncImport('custom-feeds', () => require('./custom-feeds'));
+trySyncImport('appeals', () => require('./appeals'));
+
 // Notifications - FCM-enabled push notification handlers
 trySyncImport('notifications/devices', () => require('./notifications/http/devicesApi.function'));
 trySyncImport('notifications/preferences', () => require('./notifications/http/preferencesApi.function'));

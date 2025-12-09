@@ -1,676 +1,2394 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  title: Asora API (P1)
+  title: Asora Backend API Contract
   version: 1.0.0
-  description: Minimal specification for P1 endpoints exposed by the Functions app.
+  description: 'Authenticity-first Asora backend contract covering Phase 1 domains (auth, users, posts, feeds, custom feeds,
+    moderation, appeals) plus Phase 2 / future domains for reputation, search, trending, integrations, and onboarding. All
+    list operations follow cursor-based pagination and every error uses a single shape with correlation identifiers.
+
+    '
+  license:
+    name: Proprietary
+    url: https://asora.example.com/legal/api-license
 servers:
-  - url: https://asora-function-dev.azurewebsites.net
-    description: Flex Consumption (prod)
-security:
-  - bearerAuth: []
+- url: https://api.asora.app
+  description: Production
+- url: https://api.staging.asora.app
+  description: Staging
 tags:
-  - name: system
-    description: System and health check endpoints
-  - name: auth
-    description: Authentication and user identity
-  - name: feed
-    description: Content feed operations
-  - name: posts
-    description: Post creation and management
-  - name: moderation
-    description: Content moderation and appeals
-  - name: privacy
-    description: Privacy and data management
-  - name: privacy-admin
-    description: Admin-only Data Subject Request and legal hold flows
+- name: auth
+  description: Token issuance, refresh, and onboarding helpers.
+- name: users
+  description: Public and private profile data.
+- name: posts
+  description: Post creation, retrieval, and removal.
+- name: feed
+  description: Feed reads, including hybrid news and timelines.
+- name: custom-feeds
+  description: Custom feed lifecycle and reads.
+- name: moderation
+  description: Moderation queue, cases, and decisions.
+- name: appeals
+  description: Appeals and appeal voting.
+- name: reputation
+  description: Reputation, XP, and tier data (v2/future).
+- name: search
+  description: Global search (v2/future).
+- name: trending
+  description: Trending posts and topics (v2/future).
+- name: integrations
+  description: Partner/external feed interfaces (v2/future).
+- name: onboarding
+  description: Invite codes and journalist applications (v2/future).
+security:
+- bearerAuth: []
+paths:
+  /api/auth/token:
+    post:
+      tags:
+      - auth
+      summary: Exchange provider code or email magic link for JWT access.
+      description: Unauthenticated, rate-limited entry point that returns access/refresh tokens and the merged identity/profile
+        projection.
+      security: []
+      operationId: auth_token_exchange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenRequest'
+      responses:
+        '200':
+          description: Access token pair plus profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Rotate an access token pair using a refresh token.
+      description: Refresh endpoint that hard-rotates refresh tokens; requires only the refresh token.
+      security: []
+      operationId: auth_token_refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRefreshRequest'
+      responses:
+        '200':
+          description: New access/refresh tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/users/me:
+    get:
+      tags:
+      - users
+      summary: Return the current user profile with PG identity merged with Cosmos preferences.
+      operationId: users_me_get
+      responses:
+        '200':
+          description: Identity plus profile/settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      tags:
+      - users
+      summary: Update the authenticated user profile (bio, avatar, topic preferences).
+      operationId: users_me_update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Updated identity/profile projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/users/{id}:
+    get:
+      tags:
+      - users
+      summary: Public profile view without sensitive fields.
+      operationId: users_get_by_id
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Public user data only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUserResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/posts:
+    post:
+      tags:
+      - posts
+      summary: Create a post stored in the Cosmos posts container.
+      operationId: posts_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '200':
+          description: Post view used by feeds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/posts/{id}:
+    get:
+      tags:
+      - posts
+      summary: Retrieve a single post with enriched author metadata.
+      operationId: posts_get_by_id
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Post view with stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags:
+      - posts
+      summary: Delete your own post.
+      operationId: posts_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Post deleted.
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/users/{userId}/posts:
+    get:
+      tags:
+      - posts
+      summary: List posts authored by a specific user.
+      operationId: posts_list_by_user
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/includeReplies'
+      responses:
+        '200':
+          description: Cursor-based user posts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedPostView'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/feed/discover:
+    get:
+      tags:
+      - feed
+      summary: Discover feed for guests or new users.
+      description: Personalised ranking that can mix journalists and community contributors.
+      operationId: feed_discover_get
+      parameters:
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/includeTopics'
+      - $ref: '#/components/parameters/excludeTopics'
+      responses:
+        '200':
+          description: Discover feed posts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedPostView'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/feed/news:
+    get:
+      tags:
+      - feed
+      summary: Hybrid News feed combining journalists and high-reputation users.
+      operationId: feed_news_get
+      parameters:
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/region'
+      - $ref: '#/components/parameters/includeHighReputation'
+      - $ref: '#/components/parameters/includeTopics'
+      responses:
+        '200':
+          description: News feed with `isNews` flags for UI rendering.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedPostView'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/feed/user/{userId}:
+    get:
+      tags:
+      - feed
+      summary: User timeline.
+      operationId: feed_user_get
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/includeReplies'
+      responses:
+        '200':
+          description: Timeline posts for the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedPostView'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/custom-feeds:
+    get:
+      tags:
+      - custom-feeds
+      summary: List the authenticated user’s custom feeds within tier limits.
+      operationId: customFeeds_list
+      parameters:
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Cursor list of custom feed definitions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFeedListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400': &id001
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - custom-feeds
+      summary: Create a custom feed definition.
+      operationId: customFeeds_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomFeedRequest'
+      responses:
+        '201':
+          description: New custom feed metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFeedDefinition'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/custom-feeds/{id}:
+    get:
+      tags:
+      - custom-feeds
+      summary: Retrieve a custom feed definition.
+      operationId: customFeeds_getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Custom feed definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFeedDefinition'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      tags:
+      - custom-feeds
+      summary: Update filters or home flag.
+      operationId: customFeeds_update
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomFeedRequest'
+      responses:
+        '200':
+          description: Updated feed definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFeedDefinition'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags:
+      - custom-feeds
+      summary: Delete a custom feed.
+      operationId: customFeeds_delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Feed removed.
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+        '400': *id001
+  /api/custom-feeds/{id}/items:
+    get:
+      tags:
+      - custom-feeds
+      summary: Read posts that match the custom feed filters.
+      operationId: customFeeds_getItems
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Posts that satisfy the custom feed definition.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedPostView'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/moderation/queue:
+    get:
+      tags:
+      - moderation
+      summary: Moderation queue filtered for the authenticated reviewer.
+      operationId: moderation_queue_list
+      parameters:
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Pending moderation cases.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationCaseListResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/moderation/cases/{id}:
+    get:
+      tags:
+      - moderation
+      summary: Details of a single moderation case.
+      operationId: moderation_cases_getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Case plus decision history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationCaseResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/moderation/cases/{id}/decision:
+    post:
+      tags:
+      - moderation
+      summary: Submit an approval, rejection, or escalation decision.
+      operationId: moderation_cases_decide
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationDecisionRequest'
+      responses:
+        '200':
+          description: Recorded decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationDecision'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/appeals:
+    post:
+      tags:
+      - appeals
+      summary: File an appeal against a moderation decision.
+      operationId: appeals_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileAppealRequest'
+      responses:
+        '201':
+          description: Submitted appeal record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/appeals/{id}:
+    get:
+      tags:
+      - appeals
+      summary: View appeal details and community votes.
+      operationId: appeals_getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Appeal plus votes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealDetailsResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/appeals/{id}/votes:
+    post:
+      tags:
+      - appeals
+      summary: Cast a weighted vote on an appeal.
+      operationId: appeals_vote
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteOnAppealRequest'
+      responses:
+        '200':
+          description: Recorded vote metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteOnAppealResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/reputation/me:
+    get:
+      tags:
+      - reputation
+      summary: v2/future - XP totals, current tier, and breakdown.
+      operationId: reputation_me_get
+      description: Marked v2/future and driven by PostgreSQL snapshots.
+      responses:
+        '200':
+          description: Reputation overview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationOverview'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/reputation/history:
+    get:
+      tags:
+      - reputation
+      summary: v2/future - Paginated XP event history.
+      operationId: reputation_history_get
+      description: Cursor-based listing that feeds client leaderboards.
+      parameters:
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Reputation events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationHistoryResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/reputation/events:
+    post:
+      tags:
+      - reputation
+      summary: v2/future - Internal ingestion for XP events.
+      operationId: reputation_events_ingest
+      description: Internal-only endpoint that records XP deltas for later batching.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReputationEventRequest'
+      responses:
+        '202':
+          description: XP event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReputationEvent'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/search:
+    get:
+      tags:
+      - search
+      summary: v2/future - Global search across posts and users.
+      operationId: search_global_get
+      parameters:
+      - name: query
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: types
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - post
+            - user
+        style: form
+        explode: true
+      - name: timeframe
+        in: query
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          - 30d
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Ranked search results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/trending/posts:
+    get:
+      tags:
+      - trending
+      summary: v2/future - Trending posts for the requested timeframe.
+      operationId: trending_posts_get
+      parameters:
+      - name: timeframe
+        in: query
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          - 30d
+      - name: categories
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+        style: form
+        explode: true
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Trending posts and topic metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/trending/topics:
+    get:
+      tags:
+      - trending
+      summary: v2/future - Trending topic list.
+      operationId: trending_topics_get
+      parameters:
+      - name: timeframe
+        in: query
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          - 30d
+      - name: categories
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+        style: form
+        explode: true
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Trending topics summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/integrations/feed/discover:
+    get:
+      tags:
+      - integrations
+      summary: v2/future external discover feed for partners.
+      operationId: integrations_feed_discover_get
+      description: Requires partnerId query and X-Partner-ApiKey header.
+      parameters:
+      - name: partnerId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: X-Partner-ApiKey
+        in: header
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Partner discover feed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerFeedResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/integrations/feed/news:
+    get:
+      tags:
+      - integrations
+      summary: v2/future external news feed for partners.
+      operationId: integrations_feed_news_get
+      parameters:
+      - name: partnerId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: X-Partner-ApiKey
+        in: header
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Partner news feed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerFeedResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/auth/onboarding/invite:
+    post:
+      tags:
+      - onboarding
+      summary: v2/future - Validate invite codes and surface tier grants.
+      operationId: onboarding_invite_validate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteCodeRequest'
+      responses:
+        '200':
+          description: Invite metadata and tier exposure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteCodeResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/auth/onboarding/journalist-application:
+    post:
+      tags:
+      - onboarding
+      summary: v2/future - Submit journalist application data.
+      operationId: onboarding_journalist_apply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalistApplicationRequest'
+      responses:
+        '202':
+          description: Application received for review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalistApplicationResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor returned from the previous page.
+      schema:
+        type: string
+    limit:
+      name: limit
+      in: query
+      description: Page size (1-100, default 25).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    includeReplies:
+      name: includeReplies
+      in: query
+      description: Include replies alongside top-level posts.
+      schema:
+        type: boolean
+        default: false
+    includeTopics:
+      name: includeTopics
+      in: query
+      description: Topic identifiers to boost.
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+    excludeTopics:
+      name: excludeTopics
+      in: query
+      description: Topic identifiers to filter out.
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+    region:
+      name: region
+      in: query
+      description: Geographic region code for News feed locality.
+      schema:
+        type: string
+    includeHighReputation:
+      name: includeHighReputation
+      in: query
+      description: Include posts from high-reputation contributors.
+      schema:
+        type: boolean
+        default: true
+  responses:
+    ErrorResponse:
+      description: Standard error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    Health:
+    ErrorResponse:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ApiError'
+    ApiError:
+      type: object
+      required:
+      - code
+      - message
+      - correlationId
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        correlationId:
+          type: string
+          format: uuid
+    AuthTokenRequest:
+      type: object
+      required:
+      - provider
+      - credential
+      properties:
+        provider:
+          type: string
+          enum:
+          - google
+          - apple
+          - microsoft
+          - email
+        credential:
+          type: string
+        redirectUri:
+          type: string
+        deviceId:
+          type: string
+    AuthTokenResponse:
       type: object
       properties:
-        ok: { type: boolean, example: true }
-        timestamp: { type: string, format: date-time }
-        service: { type: string, example: asora-functions }
-    UserInfo:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        tokenType:
+          type: string
+          enum:
+          - Bearer
+        user:
+          $ref: '#/components/schemas/CurrentUserResponse'
+    AuthRefreshRequest:
+      type: object
+      required:
+      - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    UserIdentity:
       type: object
       properties:
-        sub: { type: string }
-        email: { type: string, format: email }
-        name: { type: string }
-        picture: { type: string }
-        profile: { type: string }
-        locale: { type: string }
-    FeedItem:
-      type: object
-      properties:
-        id: { type: string }
-        authorId: { type: string }
-        text: { type: string }
-        createdAt: { type: string, format: date-time }
-        likeCount: { type: integer }
-        commentCount: { type: integer }
-    FeedResponse:
-      type: object
-      properties:
-        posts:
+        id:
+          type: string
+        primaryEmail:
+          type: string
+          format: email
+        secondaryEmails:
           type: array
-          items: { $ref: '#/components/schemas/FeedItem' }
-        totalCount: { type: integer }
-        hasMore: { type: boolean }
-        page: { type: integer }
-        pageSize: { type: integer }
-    PostCreateRequest:
+          items:
+            type: string
+            format: email
+        roles:
+          type: array
+          items:
+            type: string
+            enum:
+            - user
+            - moderator
+            - journalist
+            - contributor
+            - admin
+        tier:
+          type: string
+          enum:
+          - free
+          - creator
+          - premium
+          - enterprise
+        reputationScore:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserPreferences:
       type: object
-      required: [ text ]
       properties:
-        text: { type: string, maxLength: 500 }
-        mediaUrls: { type: array, items: { type: string } }
+        language:
+          type: string
+        timezone:
+          type: string
+        allowPersonalizedNews:
+          type: boolean
+        shareAnalytics:
+          type: boolean
+        notificationChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - push
+            - sms
+    UserProfile:
+      type: object
+      properties:
+        displayName:
+          type: string
+        handle:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        location:
+          type: string
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        badges:
+          type: array
+          items:
+            type: string
+    CosmosUserSettings:
+      type: object
+      additionalProperties: true
+    CurrentUserResponse:
+      type: object
+      properties:
+        identity:
+          $ref: '#/components/schemas/UserIdentity'
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        settings:
+          $ref: '#/components/schemas/CosmosUserSettings'
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        preferences:
+          type: object
+          additionalProperties: true
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        handle:
+          type: string
+        avatarUrl:
+          type: string
+        tier:
+          type: string
+          enum:
+          - free
+          - creator
+          - premium
+          - enterprise
+        reputationScore:
+          type: integer
+        journalistVerified:
+          type: boolean
+        badges:
+          type: array
+          items:
+            type: string
+    PublicUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/PublicUser'
+    PostContent:
+      type: object
+      properties:
+        text:
+          type: string
+        mediaUrls:
+          type: array
+          items:
+            type: string
+        attachments:
+          type: object
+          additionalProperties: true
+    PostView:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        content:
+          $ref: '#/components/schemas/PostContent'
+        visibility:
+          type: string
+          enum:
+          - public
+          - followers
+          - private
+        contentType:
+          type: string
+          enum:
+          - text
+          - image
+          - video
+          - mixed
+        topicIds:
+          type: array
+          items:
+            type: string
+        replyToPostId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        score:
+          type: number
+        likeCount:
+          type: integer
+        commentCount:
+          type: integer
+        shareCount:
+          type: integer
+        clusterId:
+          type: string
+        author:
+          $ref: '#/components/schemas/PublicUser'
+        isNews:
+          type: boolean
+        authorRole:
+          type: string
+          enum:
+          - journalist
+          - contributor
+          - user
+        promotedForTopic:
+          type: string
+    CreatePostRequest:
+      type: object
+      required:
+      - content
+      - contentType
+      properties:
+        content:
+          $ref: '#/components/schemas/PostContent'
+        contentType:
+          type: string
+          enum:
+          - text
+          - image
+          - video
+          - mixed
+        visibility:
+          type: string
+          enum:
+          - public
+          - followers
+          - private
+        topicIds:
+          type: array
+          items:
+            type: string
+        replyToPostId:
+          type: string
+        locale:
+          type: string
     PostResponse:
-      allOf:
-        - $ref: '#/components/schemas/FeedItem'
-    FlagRequest:
       type: object
-      required: [ contentId, contentType, reason ]
       properties:
-        contentId: { type: string }
-        contentType: { type: string, enum: [ post, comment, user, message ] }
-        reason: { type: string, enum: [ spam, harassment, hate_speech, violence, adult_content, misinformation, copyright, privacy, other ] }
-        additionalDetails: { type: string }
-    AppealRequest:
+        post:
+          $ref: '#/components/schemas/PostView'
+    CursorPaginatedPostView:
       type: object
-      required: [ contentId, reason ]
       properties:
-        contentId: { type: string }
-        reason: { type: string }
-        details: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostView'
+        nextCursor:
+          type: string
+          nullable: true
+    CustomFeedDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+        ownerId:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+          enum:
+          - text
+          - image
+          - video
+          - mixed
+        sorting:
+          type: string
+          enum:
+          - hot
+          - new
+          - relevant
+          - following
+          - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateCustomFeedRequest:
+      type: object
+      required:
+      - name
+      - contentType
+      - sorting
+      properties:
+        name:
+          type: string
+        contentType:
+          type: string
+          enum:
+          - text
+          - image
+          - video
+          - mixed
+        sorting:
+          type: string
+          enum:
+          - hot
+          - new
+          - relevant
+          - following
+          - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+    UpdateCustomFeedRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        sorting:
+          type: string
+          enum:
+          - hot
+          - new
+          - relevant
+          - following
+          - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+    CustomFeedListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFeedDefinition'
+        nextCursor:
+          type: string
+          nullable: true
+    ModerationCase:
+      type: object
+      properties:
+        id:
+          type: string
+        targetId:
+          type: string
+        contentId:
+          type: string
+        reporterId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        severity:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        aiConfidence:
+          type: number
+        status:
+          type: string
+          enum:
+          - pending
+          - escalated
+          - resolved
+        assignedTo:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    ModerationDecision:
+      type: object
+      properties:
+        caseId:
+          type: string
+        reviewerId:
+          type: string
+        action:
+          type: string
+          enum:
+          - remove
+          - keep
+          - escalate
+        rationale:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    ModerationCaseListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModerationCase'
+        nextCursor:
+          type: string
+          nullable: true
+    ModerationCaseResponse:
+      type: object
+      properties:
+        moderationCase:
+          $ref: '#/components/schemas/ModerationCase'
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModerationDecision'
+    ModerationDecisionRequest:
+      type: object
+      required:
+      - action
+      - rationale
+      properties:
+        action:
+          type: string
+          enum:
+          - remove
+          - keep
+          - escalate
+        rationale:
+          type: string
+        severityOverride:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+    FileAppealRequest:
+      type: object
+      required:
+      - caseId
+      - statement
+      properties:
+        caseId:
+          type: string
+        statement:
+          type: string
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+    Appeal:
+      type: object
+      properties:
+        id:
+          type: string
+        caseId:
+          type: string
+        contentId:
+          type: string
+        authorId:
+          type: string
+        statement:
+          type: string
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum:
+          - pending
+          - in_review
+          - upheld
+          - overturned
+          - dismissed
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        resolutionNotes:
+          type: string
     AppealResponse:
       type: object
       properties:
-        appealId: { type: string }
-        status: { type: string, enum: [ pending, approved, rejected ] }
-        submittedAt: { type: string, format: date-time }
-    VoteRequest:
-      type: object
-      required: [ vote ]
-      properties:
-        vote: { type: string, enum: [ approve, reject ] }
-    ExportResponse:
+        appeal:
+          $ref: '#/components/schemas/Appeal'
+    AppealDetailsResponse:
       type: object
       properties:
-        metadata:
-          type: object
-          properties:
-            exportId: { type: string }
-            exportedAt: { type: string, format: date-time }
-        userProfile: { type: object }
-        content: { type: object }
-        interactions: { type: object }
-        moderation: { type: object }
-        privacy: { type: object }
-    DsrType:
-      type: string
-      enum: [ export, delete ]
-    DsrStatus:
-      type: string
-      enum: [ queued, running, awaiting_review, ready_to_release, released, succeeded, failed, canceled ]
-    DsrReviewerRecord:
-      type: object
-      properties:
-        by: { type: string }
-        at: { type: string, format: date-time }
-        notes: { type: string }
-        pass: { type: boolean }
-    DsrReviewState:
-      type: object
-      properties:
-        reviewerA:
-          $ref: '#/components/schemas/DsrReviewerRecord'
-        reviewerB:
-          $ref: '#/components/schemas/DsrReviewerRecord'
-        approver:
-          type: object
-          properties:
-            by: { type: string }
-            at: { type: string, format: date-time }
-    AuditEntry:
-      type: object
-      properties:
-        at: { type: string, format: date-time }
-        by: { type: string }
-        event: { type: string }
-        meta:
-          type: object
-          additionalProperties: true
-    DsrRequest:
-      type: object
-      properties:
-        id: { type: string }
-        type:
-          $ref: '#/components/schemas/DsrType'
-        userId: { type: string }
-        requestedBy: { type: string }
-        requestedAt: { type: string, format: date-time }
-        startedAt: { type: string, format: date-time }
-        completedAt: { type: string, format: date-time }
-        status:
-          $ref: '#/components/schemas/DsrStatus'
-        attempt: { type: integer }
-        exportBlobPath: { type: string }
-        exportBytes:
-          type: integer
-          format: int64
-        failureReason: { type: string }
-        signedUrl: { type: string }
-        review:
-          $ref: '#/components/schemas/DsrReviewState'
-        audit:
+        appeal:
+          $ref: '#/components/schemas/Appeal'
+        votes:
           type: array
           items:
-            $ref: '#/components/schemas/AuditEntry'
-    DsrRequestInput:
+            $ref: '#/components/schemas/AppealVote'
+    AppealVote:
       type: object
-      required: [ userId ]
+      properties:
+        id:
+          type: string
+        appealId:
+          type: string
+        userId:
+          type: string
+        vote:
+          type: string
+          enum:
+          - approve
+          - reject
+        weight:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    VoteOnAppealRequest:
+      type: object
+      required:
+      - vote
+      properties:
+        vote:
+          type: string
+          enum:
+          - approve
+          - reject
+        weight:
+          type: number
+        rationale:
+          type: string
+    VoteOnAppealResponse:
+      type: object
+      properties:
+        vote:
+          $ref: '#/components/schemas/AppealVote'
+    ReputationTier:
+      type: object
+      properties:
+        name:
+          type: string
+        minXP:
+          type: integer
+        privileges:
+          type: array
+          items:
+            type: string
+    ReputationEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        action:
+          type: string
+        xpDelta:
+          type: integer
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ReputationOverview:
+      type: object
       properties:
         userId:
           type: string
-          description: UUID v7 of the subject
-        note:
-          type: string
-          description: Optional operator note
-    DsrActionResponse:
+        totalXP:
+          type: integer
+        tier:
+          $ref: '#/components/schemas/ReputationTier'
+        breakdown:
+          type: object
+          additionalProperties:
+            type: integer
+    ReputationHistoryResponse:
       type: object
       properties:
-        id: { type: string }
-        status:
-          $ref: '#/components/schemas/DsrStatus'
-        message: { type: string }
-    DsrReleaseResponse:
-      type: object
-      properties:
-        downloadUrl: { type: string }
-        expiresAt: { type: string, format: date-time }
-        status:
-          $ref: '#/components/schemas/DsrStatus'
-        signedUrl: { type: string }
-    LegalHoldInput:
-      type: object
-      required: [ scope, scopeId, reason ]
-      properties:
-        scope:
-          type: string
-          enum: [ user, post, case ]
-        scopeId: { type: string }
-        reason: { type: string }
-    LegalHoldRecord:
-      type: object
-      properties:
-        id: { type: string }
-        scope: { type: string }
-        scopeId: { type: string }
-        reason: { type: string }
-        requestedBy: { type: string }
-        startedAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time }
-        active: { type: boolean }
-        audit:
+        items:
           type: array
           items:
-            type: object
-            properties:
-              at: { type: string, format: date-time }
-              by: { type: string }
-              event:
-                type: string
-                enum: [ placed, cleared ]
-              note: { type: string }
-    LegalHoldClear:
+            $ref: '#/components/schemas/ReputationEvent'
+        nextCursor:
+          type: string
+          nullable: true
+    ReputationEventRequest:
       type: object
-      required: [ id ]
+      required:
+      - userId
+      - action
+      - xpDelta
+      - source
       properties:
-        id: { type: string }
-paths:
-  /api/health:
-    get:
-      operationId: getHealth
-      summary: Health check
-      tags: [system]
-      description: Returns system health status
-      security: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Health' }
-  /api/auth/userinfo:
-    get:
-      operationId: getUserInfo
-      summary: OIDC user info
-      tags: [auth]
-      description: Returns authenticated user information
-      security: [ { bearerAuth: [] } ]
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/UserInfo' }
-        '401': { description: Unauthorized }
-  /api/feed:
-    get:
-      operationId: getFeed
-      summary: Get feed
-      tags: [feed]
-      description: Returns paginated feed content
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: query
-          name: page
-          schema: { type: integer, default: 1 }
-        - in: query
-          name: pageSize
-          schema: { type: integer, default: 20 }
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/FeedResponse' }
-  /api/posts:
-    post:
-      operationId: createPost
-      summary: Create a post
-      tags: [posts]
-      description: Creates a new post with content moderation
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PostCreateRequest' }
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PostResponse' }
-        '400': { description: Bad request }
-        '401': { description: Unauthorized }
-  /api/posts/{postId}:
-    delete:
-      operationId: deletePost
-      summary: Delete a post
-      tags: [posts]
-      description: Deletes a specific post by ID
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: postId
-          required: true
-          schema: { type: string }
-      responses:
-        '200': { description: Deleted }
-        '404': { description: Not found }
-  /api/moderation/flag:
-    post:
-      operationId: flagContent
-      summary: Flag content for review
-      tags: [moderation]
-      description: Reports content for moderation review
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/FlagRequest' }
-      responses:
-        '200': { description: Accepted }
-        '409': { description: Already flagged }
-  /api/moderation/appeals:
-    post:
-      operationId: submitAppeal
-      summary: Submit an appeal
-      tags: [moderation]
-      description: Appeals a moderation decision
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AppealRequest' }
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/AppealResponse' }
-  /api/moderation/appeals/{appealId}/vote:
-    post:
-      operationId: voteOnAppeal
-      summary: Vote on an appeal
-      tags: [moderation]
-      description: Casts a vote on a moderation appeal
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: appealId
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/VoteRequest' }
-      responses:
-        '200': { description: OK }
-  /api/user/export:
-    get:
-      operationId: exportUser
-      summary: Export user data
-      tags: [privacy]
-      description: Exports all user data for GDPR compliance
-      security: [ { bearerAuth: [] } ]
-      responses:
-        '200':
-          description: JSON export
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ExportResponse' }
-        '401': { description: Unauthorized }
-  /api/user/delete:
-    delete:
-      operationId: deleteUser
-      summary: Delete user account
-      tags: [privacy]
-      description: Permanently deletes user account and data
-      security: [ { bearerAuth: [] } ]
-      responses:
-        '200': { description: Deleted }
-        '401': { description: Unauthorized }
-
-  /admin/dsr/export:
-    post:
-      operationId: enqueueDsrExport
-      summary: Enqueue a DSR export
-      tags: [privacy-admin]
-      description: Creates a new export request controlled by privacy_admin role
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DsrRequestInput' }
-      responses:
-        '202':
-          description: Export request queued
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrActionResponse'
-  /admin/dsr/delete:
-    post:
-      operationId: enqueueDsrDelete
-      summary: Enqueue a DSR delete
-      tags: [privacy-admin]
-      description: Creates a delete request that is soft-deleted and audited
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DsrRequestInput' }
-      responses:
-        '202':
-          description: Delete request queued
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrActionResponse'
-  /admin/dsr/{id}:
-    get:
-      operationId: getDsrStatus
-      summary: Retrieve the DSR request state
-      tags: [privacy-admin]
-      description: Returns the request with reviewer states and audit log
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: DSR request snapshot
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrRequest'
-        '404': { description: Not found }
-  /admin/dsr/{id}/retry:
-    post:
-      operationId: retryDsrRequest
-      summary: Retry a failed DSR request
-      tags: [privacy-admin]
-      description: Increments attempt counter and reschedules the worker
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        description: Optional progress note
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                note: { type: string }
-      responses:
-        '202':
-          description: Retry accepted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrActionResponse'
-        '409': { description: Cannot retry }
-  /admin/dsr/{id}/cancel:
-    post:
-      operationId: cancelDsrRequest
-      summary: Cancel a queued DSR request
-      tags: [privacy-admin]
-      description: Moves a running request to canceled status and logs the event
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '202':
-          description: Cancellation scheduled
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrActionResponse'
-        '409': { description: Cannot cancel }
-  /admin/dsr/{id}/reviewA:
-    post:
-      operationId: reviewADsr
-      summary: Reviewer A decision
-      tags: [privacy-admin]
-      description: Captures checklist A (private export) results
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ pass ]
-              properties:
-                pass: { type: boolean }
-                notes: { type: string }
-      responses:
-        '200':
-          description: Review recorded
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string }
-        '400': { description: Invalid input }
-  /admin/dsr/{id}/reviewB:
-    post:
-      operationId: reviewBDsr
-      summary: Reviewer B decision
-      tags: [privacy-admin]
-      description: Captures checklist B (operational) results
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ pass ]
-              properties:
-                pass: { type: boolean }
-                notes: { type: string }
-      responses:
-        '200':
-          description: Review recorded
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string }
-        '400': { description: Invalid input }
-  /admin/legal-hold/place:
-    post:
-      operationId: placeLegalHold
-      summary: Place a legal hold
-      tags: [privacy-admin]
-      description: Records an active hold on user/post/case scope
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/LegalHoldInput' }
-      responses:
-        '201':
-          description: Legal hold recorded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LegalHoldRecord'
-  /admin/legal-hold/clear:
-    post:
-      operationId: clearLegalHold
-      summary: Clear a legal hold
-      tags: [privacy-admin]
-      description: Marks a hold inactive and records the audit
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/LegalHoldClear' }
-      responses:
-        '200':
-          description: Hold cleared
-        '404': { description: Hold not found }
-  /admin/dsr/{id}/release:
-    post:
-      operationId: releaseDsrExport
-      summary: Release signed ZIP link
-      tags: [privacy-admin]
-      description: Validates reviewers, generates 12h SAS, and transitions to released
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Download link returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrReleaseResponse'
-        '409': { description: Awaiting reviewers }
-  /admin/dsr/{id}/download:
-    get:
-      operationId: downloadDsrExport
-      summary: Regenerate the signed ZIP link
-      tags: [privacy-admin]
-      description: Re-issues a 12h SAS for released exports
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: SAS link for the ZIP
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DsrReleaseResponse'
-        '404': { description: Not found }
-  /admin/dsr/legal-holds:
-    post:
-      operationId: placeLegalHoldLegacy
-      summary: Place a legal hold
-      tags: [privacy-admin]
-      description: Records an active hold on user/post/case scope
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/LegalHoldInput' }
-      responses:
-        '201':
-          description: Legal hold recorded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LegalHoldRecord'
-  /admin/dsr/legal-holds/{id}/clear:
-    post:
-      operationId: clearLegalHoldLegacy
-      summary: Clear a legal hold
-      tags: [privacy-admin]
-      description: Marks a hold inactive and records the audit
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Hold cleared
-        '404': { description: Hold not found }
+        userId:
+          type: string
+        action:
+          type: string
+        xpDelta:
+          type: integer
+        source:
+          type: string
+    SearchResult:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - post
+          - user
+        score:
+          type: number
+        post:
+          $ref: '#/components/schemas/PostView'
+        user:
+          $ref: '#/components/schemas/PublicUser'
+    SearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        nextCursor:
+          type: string
+          nullable: true
+    TrendingTopic:
+      type: object
+      properties:
+        name:
+          type: string
+        mentions:
+          type: integer
+        topPostId:
+          type: string
+    TrendingResponse:
+      type: object
+      properties:
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendingTopic'
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostView'
+    PartnerFeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostView'
+        nextCursor:
+          type: string
+          nullable: true
+    InviteCodeRequest:
+      type: object
+      required:
+      - code
+      - deviceId
+      properties:
+        code:
+          type: string
+        deviceId:
+          type: string
+    InviteCodeResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        tier:
+          type: string
+          enum:
+          - free
+          - creator
+          - premium
+          - enterprise
+        expiresAt:
+          type: string
+          format: date-time
+    JournalistApplicationRequest:
+      type: object
+      required:
+      - userId
+      - portfolioUrl
+      - statement
+      properties:
+        userId:
+          type: string
+        portfolioUrl:
+          type: string
+        organization:
+          type: string
+        statement:
+          type: string
+    JournalistApplicationResponse:
+      type: object
+      properties:
+        applicationId:
+          type: string
+        status:
+          type: string
+          enum:
+          - submitted
+          - under_review
+          - approved
+          - rejected
+        submittedAt:
+          type: string
+          format: date-time

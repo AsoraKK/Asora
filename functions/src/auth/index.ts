@@ -4,6 +4,10 @@ import './routes/ping';
 import './routes/token';
 import './routes/userinfo';
 
+// OpenAPI v1 handlers
+import './routes/auth_token_exchange.function';
+import './routes/auth_token_refresh.function';
+
 // Admin endpoints
 import './admin/invites';
 

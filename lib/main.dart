@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'ui/screens/app_shell.dart';
+import 'features/auth/presentation/auth_gate.dart';
 import 'ui/theme/asora_theme.dart';
 
 void main() {
@@ -19,7 +19,7 @@ class AsoraApp extends StatelessWidget {
       theme: AsoraTheme.light(),
       darkTheme: AsoraTheme.dark(),
       themeMode: ThemeMode.dark,
-      home: const AsoraAppShell(),
+      home: const AuthGate(),
     );
   }
 }

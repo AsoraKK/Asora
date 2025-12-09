@@ -29,6 +29,24 @@ final trendingFeedProvider =
       () => TrendingFeedNotifier(),
     );
 
+/// Provider for searching feeds by keyword/tag
+final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
+  ref,
+  query,
+) async {
+  final feedService = ref.read(socialFeedServiceProvider);
+  final token = await ref.read(jwtProvider.future);
+  return feedService.getFeed(
+    params: FeedParams(
+      type: FeedType.trending,
+      page: 1,
+      pageSize: 20,
+      tags: [query],
+    ),
+    token: token,
+  );
+});
+
 /// Provider for local feed
 final localFeedProvider =
     AsyncNotifierProvider.family<
@@ -121,13 +139,9 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
   @override
   Future<FeedResponse> build(FeedParams arg) async {
     final feedService = ref.read(socialFeedServiceProvider);
+    final token = await ref.read(jwtProvider.future);
 
-    return feedService.getFeed(
-      params: arg,
-      token: await ref.read(
-        authTokenProvider.future,
-      ), // Use token from auth provider
-    );
+    return feedService.getFeed(params: arg, token: token);
   }
 
   /// Load more pages (pagination)
@@ -149,11 +163,11 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
 
     state = await AsyncValue.guard(() async {
       final feedService = ref.read(socialFeedServiceProvider);
+      final token = await ref.read(jwtProvider.future);
 
       final nextPage = await feedService.getFeed(
         params: nextParams,
-        token:
-            null, // NOTE(asora-auth): inject access token once auth wiring lands
+        token: token,
       );
 
       return FeedResponse(
@@ -182,12 +196,12 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
   Future<FeedResponse> build() async {
     _currentPage = 1;
     final feedService = ref.read(socialFeedServiceProvider);
+    final token = await ref.read(jwtProvider.future);
 
     return feedService.getTrendingFeed(
       page: _currentPage,
       pageSize: _pageSize,
-      token:
-          null, // NOTE(asora-auth): inject access token once auth wiring lands
+      token: token,
     );
   }
 
@@ -202,12 +216,12 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
 
     state = await AsyncValue.guard(() async {
       final feedService = ref.read(socialFeedServiceProvider);
+      final token = await ref.read(jwtProvider.future);
 
       final nextPage = await feedService.getTrendingFeed(
         page: _currentPage + 1,
         pageSize: _pageSize,
-        token:
-            null, // NOTE(asora-auth): inject access token once auth wiring lands
+        token: token,
       );
 
       _currentPage++;

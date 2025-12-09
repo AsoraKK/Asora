@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +55,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
         IntegrityUseCase.signIn,
         () => ref.read(authStateProvider.notifier).signInWithOAuth2(),
       );
+      if (!mounted) return;
       await analytics.logEvent(
         AnalyticsEvents.authCompleted,
         properties: {
@@ -61,6 +64,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
         },
       );
     } catch (error) {
+      if (!mounted) return;
       await analytics.logEvent(
         AnalyticsEvents.errorEncountered,
         properties: {

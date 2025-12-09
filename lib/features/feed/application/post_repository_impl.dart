@@ -61,6 +61,8 @@ class PostRepositoryImpl implements PostRepository {
             ..addAll({
               'request.text_length': request.text.length,
               'request.has_media': request.mediaUrl != null,
+              'request.is_news': request.isNews,
+              'request.content_type': request.contentType,
             }),
     );
   }

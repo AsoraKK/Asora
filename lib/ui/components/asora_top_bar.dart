@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/spacing.dart';
 import '../utils/motion.dart';
@@ -47,10 +48,19 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
                 color: theme.colorScheme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.blur_on,
-                size: 18,
-                color: theme.colorScheme.primary,
+              child: SvgPicture.asset(
+                'assets/brand/asora_mark.svg',
+                height: 20,
+                width: 20,
+                colorFilter: ColorFilter.mode(
+                  theme.colorScheme.primary,
+                  BlendMode.srcIn,
+                ),
+                placeholderBuilder: (context) => Icon(
+                  Icons.blur_on,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
           ),

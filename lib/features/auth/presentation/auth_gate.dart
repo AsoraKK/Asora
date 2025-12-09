@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../../core/analytics/analytics_events.dart';
 import '../../../core/analytics/analytics_providers.dart';
-import '../../../screens/feed_screen.dart';
+import '../../../ui/screens/app_shell.dart';
 import 'auth_choice_screen.dart';
 
 class AuthGate extends ConsumerStatefulWidget {
@@ -33,7 +33,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
 
     return authState.when(
       data: (user) {
-        return user != null ? const FeedScreen() : const AuthChoiceScreen();
+        return user != null ? const AsoraAppShell() : const AuthChoiceScreen();
       },
       loading: () => const AuthChoiceScreen(),
       error: (error, stack) => const AuthChoiceScreen(),

@@ -10,10 +10,14 @@ class FeedControlPanel extends ConsumerWidget {
     super.key,
     required this.onSelect,
     required this.onCreateCustom,
+    this.onOpenModerationHub,
+    this.onOpenAppeals,
   });
 
   final ValueChanged<FeedModel> onSelect;
   final VoidCallback onCreateCustom;
+  final VoidCallback? onOpenModerationHub;
+  final VoidCallback? onOpenAppeals;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,6 +57,19 @@ class FeedControlPanel extends ConsumerWidget {
             icon: const Icon(Icons.tune_rounded),
             label: const Text('Build custom feed'),
           ),
+          const Divider(height: Spacing.xl),
+          if (onOpenModerationHub != null)
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Moderation hub'),
+              onTap: onOpenModerationHub,
+            ),
+          if (onOpenAppeals != null)
+            ListTile(
+              leading: const Icon(Icons.how_to_vote_outlined),
+              title: const Text('Appeals queue'),
+              onTap: onOpenAppeals,
+            ),
         ],
       ),
     );

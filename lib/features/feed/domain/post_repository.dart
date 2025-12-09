@@ -62,12 +62,21 @@ class CreatePostError extends CreatePostResult {
 class CreatePostRequest {
   final String text;
   final String? mediaUrl;
+  final bool isNews;
+  final String contentType;
 
-  const CreatePostRequest({required this.text, this.mediaUrl});
+  const CreatePostRequest({
+    required this.text,
+    this.mediaUrl,
+    this.isNews = false,
+    this.contentType = 'text',
+  });
 
   Map<String, dynamic> toJson() => {
     'text': text,
     if (mediaUrl != null) 'mediaUrl': mediaUrl,
+    'isNews': isNews,
+    'contentType': contentType,
   };
 }
 

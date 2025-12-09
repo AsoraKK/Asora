@@ -12,7 +12,12 @@ import '../../utils/motion.dart';
 import 'custom_feed.dart';
 import 'custom_feed_creation_flow.dart';
 import 'discover_feed.dart';
+import '../../../state/providers/moderation_providers.dart';
+import '../mod/appeal_case.dart';
+import '../mod/moderation_hub.dart';
 import 'news_feed.dart';
+import 'feed_search_screen.dart';
+import 'trending_feed_screen.dart';
 
 class HomeFeedNavigator extends ConsumerStatefulWidget {
   const HomeFeedNavigator({super.key});
@@ -58,8 +63,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               title: activeFeed.name,
               onLogoTap: _openFeedControl,
               onTitleTap: _openFeedControl,
-              onSearchTap: () {},
-              onTrendingTap: () {},
+              onSearchTap: _openSearch,
+              onTrendingTap: _openTrending,
             ),
             const SizedBox(height: Spacing.xs),
             FeedCarouselIndicator(
@@ -129,7 +134,41 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
             MaterialPageRoute(builder: (_) => const CustomFeedCreationFlow()),
           );
         },
+        onOpenModerationHub: () {
+          Navigator.of(context).maybePop();
+          _openModerationHub();
+        },
+        onOpenAppeals: () {
+          Navigator.of(context).maybePop();
+          _openAppeals();
+        },
       ),
+    );
+  }
+
+  void _openModerationHub() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ModerationHubScreen()));
+  }
+
+  void _openTrending() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const TrendingFeedScreen()));
+  }
+
+  void _openSearch() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const FeedSearchScreen()));
+  }
+
+  void _openAppeals() {
+    final appeals = ref.read(appealsProvider);
+    final first = appeals.isNotEmpty ? appeals.first.id : null;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AppealCaseScreen(appealId: first)),
     );
   }
 }
@@ -141,7 +180,18 @@ class _FeedPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(feedItemsProvider(feed.id));
+    final asyncItems = ref.watch(liveFeedItemsProvider(feed));
+    return asyncItems.when(
+      data: (items) => _buildFeed(items),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) {
+        final fallback = ref.read(feedItemsProvider(feed.id));
+        return _buildFeed(fallback);
+      },
+    );
+  }
+
+  Widget _buildFeed(List<FeedItem> items) {
     switch (feed.type) {
       case FeedType.discover:
         return DiscoverFeed(feed: feed, items: items);

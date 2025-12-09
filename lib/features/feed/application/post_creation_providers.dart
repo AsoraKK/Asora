@@ -26,6 +26,8 @@ class PostCreationState {
   final bool isSubmitting;
   final CreatePostResult? result;
   final String? validationError;
+  final bool isNews;
+  final String contentType;
 
   const PostCreationState({
     this.text = '',
@@ -33,6 +35,8 @@ class PostCreationState {
     this.isSubmitting = false,
     this.result,
     this.validationError,
+    this.isNews = false,
+    this.contentType = 'text',
   });
 
   PostCreationState copyWith({
@@ -41,6 +45,8 @@ class PostCreationState {
     bool? isSubmitting,
     CreatePostResult? result,
     String? validationError,
+    bool? isNews,
+    String? contentType,
     bool clearMediaUrl = false,
     bool clearResult = false,
     bool clearValidationError = false,
@@ -53,6 +59,8 @@ class PostCreationState {
       validationError: clearValidationError
           ? null
           : (validationError ?? this.validationError),
+      isNews: isNews ?? this.isNews,
+      contentType: contentType ?? this.contentType,
     );
   }
 
@@ -120,6 +128,14 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     );
   }
 
+  void setIsNews(bool value) {
+    state = state.copyWith(isNews: value, clearResult: true);
+  }
+
+  void setContentType(String value) {
+    state = state.copyWith(contentType: value, clearResult: true);
+  }
+
   /// Update the media URL
   void updateMediaUrl(String? url) {
     state = state.copyWith(
@@ -183,6 +199,8 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
         request: CreatePostRequest(
           text: state.text.trim(),
           mediaUrl: state.mediaUrl,
+          isNews: state.isNews,
+          contentType: state.contentType,
         ),
         token: token,
       );

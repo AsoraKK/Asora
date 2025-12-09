@@ -67,12 +67,6 @@ class ModerationCaseScreen extends ConsumerWidget {
                   isSubmitting: state.decisionSubmitting,
                   onSubmit: (input) async {
                     await notifier.submitDecision(input);
-                    final latest = ref.read(moderationCaseProvider(caseId));
-                    if (latest.errorMessage == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Decision submitted')),
-                      );
-                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -89,14 +83,6 @@ class ModerationCaseScreen extends ConsumerWidget {
                           final result = await _showEscalationDialog(context);
                           if (result != null) {
                             await notifier.escalate(result);
-                            final latest = ref.read(
-                              moderationCaseProvider(caseId),
-                            );
-                            if (latest.errorMessage == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Case escalated')),
-                              );
-                            }
                           }
                         },
                 ),
