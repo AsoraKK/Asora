@@ -132,6 +132,7 @@ class MockFcmClient {
           `Recorded calls: ${JSON.stringify(this.calls)}`
       );
     }
+    // TypeScript now knows found[0] is defined after the empty-check
     return found[0]!;
   }
 }
