@@ -251,13 +251,14 @@ class ModerationCaseScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: targetQueue,
+                value: targetQueue,
                 items: _escalationQueues
                     .map(
                       (queue) =>
                           DropdownMenuItem(value: queue, child: Text(queue)),
                     )
                     .toList(),
+                decoration: const InputDecoration(labelText: 'Target queue'),
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
@@ -265,7 +266,6 @@ class ModerationCaseScreen extends ConsumerWidget {
                     });
                   }
                 },
-                decoration: const InputDecoration(labelText: 'Target queue'),
               ),
             ],
           ),
