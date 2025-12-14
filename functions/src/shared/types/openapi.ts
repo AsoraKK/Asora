@@ -119,7 +119,18 @@ export interface PostView extends Post {
   authorRole: 'journalist' | 'contributor' | 'user';
   likeCount: number;
   commentCount: number;
+  bookmarkCount?: number;
+  viewCount?: number;
   viewerHasLiked?: boolean;
+  viewerHasBookmarked?: boolean;
+  viewerFollowsAuthor?: boolean;
+  authorFollowerCount?: number;
+  recentComments?: Array<{
+    commentId: string;
+    authorId: string;
+    text: string;
+    createdAt: string;
+  }>;
   badges?: string[];
 }
 

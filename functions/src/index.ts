@@ -28,6 +28,7 @@ trySyncImport('auth', () => require('./auth'));
 trySyncImport('feed', () => require('./feed'));
 trySyncImport('moderation', () => require('./moderation'));
 trySyncImport('privacy', () => require('./privacy'));
+trySyncImport('social', () => require('./social'));
 
 // OpenAPI v1 handlers (generated from docs/openapi.yaml)
 trySyncImport('users', () => require('./users'));

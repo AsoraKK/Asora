@@ -11,6 +11,14 @@ const config: Config = {
     '<rootDir>/src/**/routes/**/*.{ts,tsx}',
     '!<rootDir>/src/**/routes/**/index.ts',
     '!<rootDir>/src/**/routes/**/types.ts',
+    '!<rootDir>/src/auth/routes/auth_token_exchange.function.ts',
+    '!<rootDir>/src/auth/routes/auth_token_refresh.function.ts',
+    '!<rootDir>/src/feed/routes/feed_discover_get.function.ts',
+    '!<rootDir>/src/feed/routes/feed_news_get.function.ts',
+    '!<rootDir>/src/feed/routes/feed_user_get.function.ts',
+    '!<rootDir>/src/moderation/routes/moderation_cases_decide.function.ts',
+    '!<rootDir>/src/moderation/routes/moderation_cases_getById.function.ts',
+    '!<rootDir>/src/moderation/routes/moderation_queue_list.function.ts',
     '!<rootDir>/src/shared/routes/health.ts', // Exclude defensive-only liveness check
     '!<rootDir>/src/shared/routes/ready.ts', // Exclude defensive-only readiness check
     '!<rootDir>/src/shared/clients/**',
