@@ -11,6 +11,9 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
+import { getFeed } from '@feed/service/feedService';
+import { postsService } from '@posts/service/postsService';
+import { extractAuthContext } from '@shared/http/authContext';
 
 export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
   const cursor = ctx.query.cursor;
@@ -22,15 +25,59 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
     `[feed_discover_get] Fetching discover feed [cursor=${cursor}, limit=${limit}] [${ctx.correlationId}]`
   );
 
-  // TODO: Implement discover feed logic
-  // - Query Cosmos posts container for recent public posts
-  // - Apply topic filters (includeTopics, excludeTopics)
-  // - Mix journalists and community contributors
-  // - Apply ranking algorithm (hot, new, relevant)
-  // - Enrich with author profiles and engagement metrics
-  // - Return CursorPaginatedPostView with nextCursor
+  try {
+    // Get viewer ID if authenticated (optional for public feed)
+    let principal = null;
+    let viewerId: string | undefined;
+    try {
+      const auth = await extractAuthContext(ctx);
+      principal = { sub: auth.userId, roles: auth.roles };
+      viewerId = auth.userId;
+    } catch {
+      // Anonymous viewer, no problem
+    }
 
-  return ctx.notImplemented('feed_discover_get');
+    // Fetch public discovery feed
+    const feedResult = await getFeed({
+      principal,
+      context: ctx.context,
+      cursor,
+      limit: limit.toString(),
+      authorId: null, // Public feed, not user-specific
+    });
+
+    // Filter by topics if provided
+    let items = feedResult.body.items;
+    
+    if (includeTopics && includeTopics.length > 0) {
+      const topicSet = new Set(includeTopics);
+      items = items.filter((item: any) => {
+        const postTopics = item.topics || [];
+        return postTopics.some((topic: string) => topicSet.has(topic));
+      });
+    }
+    
+    if (excludeTopics && excludeTopics.length > 0) {
+      const excludeSet = new Set(excludeTopics);
+      items = items.filter((item: any) => {
+        const postTopics = item.topics || [];
+        return !postTopics.some((topic: string) => excludeSet.has(topic));
+      });
+    }
+
+    // Enrich posts with author details
+    const enrichedPosts = await Promise.all(
+      items.map((item: any) => postsService.enrichPost(item, viewerId))
+    );
+
+    return ctx.ok({
+      items: enrichedPosts,
+      nextCursor: feedResult.body.meta.nextCursor || undefined,
+    });
+  } catch (error) {
+    ctx.context.error(`[feed_discover_get] Error fetching discovery feed: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

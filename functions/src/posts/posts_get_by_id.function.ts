@@ -11,23 +11,46 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { PostView } from '@shared/types/openapi';
+import { postsService } from '@posts/service/postsService';
+import { extractAuthContext } from '@shared/http/authContext';
 
 export const posts_get_by_id = httpHandler<void, PostView>(async (ctx) => {
   const postId = ctx.params.id;
   ctx.context.log(`[posts_get_by_id] Fetching post ${postId} [${ctx.correlationId}]`);
 
   if (!postId) {
-    return ctx.badRequest('Post ID is required');
+    return ctx.badRequest('Post ID is required', 'INVALID_REQUEST');
   }
 
-  // TODO: Implement get post by ID logic
-  // - Fetch post from Cosmos posts container
-  // - Fetch author profile from Cosmos users container
-  // - Enrich with like/comment counts, viewerHasLiked
-  // - Return PostView
-  // - Return 404 if post not found or not visible to current user
+  try {
+    // Get viewer ID if authenticated (optional)
+    let viewerId: string | undefined;
+    try {
+      const auth = await extractAuthContext(ctx);
+      viewerId = auth.userId;
+    } catch {
+      // Anonymous viewer, no problem
+    }
 
-  return ctx.notImplemented('posts_get_by_id');
+    // Fetch post
+    const postDoc = await postsService.getPostById(postId);
+    if (!postDoc) {
+      return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+    }
+
+    // Check if post is deleted
+    if (postDoc.status === 'deleted') {
+      return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+    }
+
+    // Enrich post with author details
+    const postView = await postsService.enrichPost(postDoc, viewerId);
+
+    return ctx.ok(postView);
+  } catch (error) {
+    ctx.context.error(`[posts_get_by_id] Error fetching post: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

@@ -104,7 +104,7 @@ class _ModerationAuditTabState extends ConsumerState<ModerationAuditTab> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<ModerationAuditActionFilter>(
-                      value: _action,
+                      initialValue: _action,
                       decoration: const InputDecoration(labelText: 'Action'),
                       items: ModerationAuditActionFilter.values
                           .map(

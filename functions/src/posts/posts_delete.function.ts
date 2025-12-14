@@ -10,31 +10,54 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { extractAuthContext } from '@shared/http/authContext';
+import { postsService } from '@posts/service/postsService';
 
 export const posts_delete = httpHandler<void, void>(async (ctx) => {
   const postId = ctx.params.id;
   ctx.context.log(`[posts_delete] Deleting post ${postId} [${ctx.correlationId}]`);
 
   if (!postId) {
-    return ctx.badRequest('Post ID is required');
+    return ctx.badRequest('Post ID is required', 'INVALID_REQUEST');
   }
 
-  // TODO: Implement delete post logic
-  // - Extract user ID from JWT
-  // - Fetch post from Cosmos posts container
-  // - Verify current user is the author
-  // - Delete post document
-  // - Return 204 No Content
-  // - Return 404 if post not found
-  // - Return 403 if user is not the author
+  try {
+    // Extract and verify JWT
+    const auth = await extractAuthContext(ctx);
 
-  return ctx.notImplemented('posts_delete');
+    // Fetch post to verify ownership
+    const postDoc = await postsService.getPostById(postId);
+    if (!postDoc) {
+      return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+    }
+
+    // Check ownership (or moderator role)
+    const isModerator = auth.roles.includes('moderator') || auth.roles.includes('admin');
+    if (postDoc.authorId !== auth.userId && !isModerator) {
+      return ctx.forbidden('You do not have permission to delete this post', 'FORBIDDEN');
+    }
+
+    // Delete post
+    await postsService.deletePost(postId);
+
+    return ctx.noContent();
+  } catch (error) {
+    ctx.context.error(`[posts_delete] Error deleting post: ${error}`, { correlationId: ctx.correlationId });
+
+    if (error instanceof Error) {
+      if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
+        return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+      }
+    }
+
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger
 app.http('posts_delete', {
   methods: ['DELETE'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
+  authLevel: 'anonymous', // Auth verified in handler via JWT
   route: 'posts/{id}',
   handler: posts_delete,
 });

@@ -11,6 +11,9 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
+import { getFeed } from '@feed/service/feedService';
+import { postsService } from '@posts/service/postsService';
+import { extractAuthContext } from '@shared/http/authContext';
 
 export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
   const cursor = ctx.query.cursor;
@@ -23,16 +26,60 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
     `[feed_news_get] Fetching news feed [region=${region}, cursor=${cursor}, limit=${limit}] [${ctx.correlationId}]`
   );
 
-  // TODO: Implement news feed logic
-  // - Query Cosmos posts container for posts where isNews = true
-  // - Filter by journalist role or high-reputation contributors
-  // - Apply region filter if provided
-  // - Apply topic filters
-  // - Return posts with isNews flag and authorRole
-  // - Include optional clusterId for story clustering
-  // - Return CursorPaginatedPostView with nextCursor
+  try {
+    // Get viewer ID if authenticated (optional)
+    let principal = null;
+    let viewerId: string | undefined;
+    try {
+      const auth = await extractAuthContext(ctx);
+      principal = { sub: auth.userId, roles: auth.roles };
+      viewerId = auth.userId;
+    } catch {
+      // Anonymous viewer, no problem
+    }
 
-  return ctx.notImplemented('feed_news_get');
+    // Fetch public feed
+    const feedResult = await getFeed({
+      principal,
+      context: ctx.context,
+      cursor,
+      limit: limit.toString(),
+      authorId: null,
+    });
+
+    // Filter for news posts (isNews=true)
+    let items = feedResult.body.items.filter((item: any) => item.isNews === true);
+
+    // Optional: Filter by region
+    if (region && items.length > 0) {
+      items = items.filter((item: any) => {
+        const postRegion = item.region || 'global';
+        return postRegion === region || postRegion === 'global';
+      });
+    }
+
+    // Optional: Filter by topics
+    if (includeTopics && includeTopics.length > 0 && items.length > 0) {
+      const topicSet = new Set(includeTopics);
+      items = items.filter((item: any) => {
+        const postTopics = item.topics || [];
+        return postTopics.some((topic: string) => topicSet.has(topic));
+      });
+    }
+
+    // Enrich posts with author details
+    const enrichedPosts = await Promise.all(
+      items.map((item: any) => postsService.enrichPost(item, viewerId))
+    );
+
+    return ctx.ok({
+      items: enrichedPosts,
+      nextCursor: items.length > 0 ? feedResult.body.meta.nextCursor || undefined : undefined,
+    });
+  } catch (error) {
+    ctx.context.error(`[feed_news_get] Error fetching news feed: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

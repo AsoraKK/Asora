@@ -10,6 +10,7 @@
       "@shared/*": ["src/shared/*"],
       "@auth/*": ["src/auth/*"],
       "@users/*": ["src/users/*"],
+      "@posts/*": ["src/posts/*"],
       "@feed/*": ["src/feed/*"],
       "@moderation/*": ["src/moderation/*"],
       "@privacy/*": ["src/privacy/*"],
