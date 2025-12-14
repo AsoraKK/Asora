@@ -8,7 +8,7 @@ interface FollowStatus {
   followerCount: number;
 }
 
-function badTarget(userId: string, targetId: string): boolean {
+function badTarget(userId: string, targetId?: string): boolean {
   return !targetId || userId === targetId;
 }
 
@@ -27,7 +27,7 @@ export const follow_create = httpHandler<void, FollowStatus>(async (ctx) => {
   const targetId = ctx.params.id;
   const auth = await extractAuthContext(ctx);
 
-  if (badTarget(auth.userId, targetId)) {
+  if (!targetId || badTarget(auth.userId, targetId)) {
     return ctx.badRequest('Invalid follow target', 'INVALID_TARGET');
   }
 
@@ -46,7 +46,7 @@ export const follow_delete = httpHandler<void, FollowStatus>(async (ctx) => {
   const targetId = ctx.params.id;
   const auth = await extractAuthContext(ctx);
 
-  if (badTarget(auth.userId, targetId)) {
+  if (!targetId || badTarget(auth.userId, targetId)) {
     return ctx.badRequest('Invalid follow target', 'INVALID_TARGET');
   }
 
