@@ -1,6 +1,7 @@
 import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import type { CreatePostRequest, Post, PostView, PublicUserProfile } from '@shared/types/openapi';
+import type { ModerationMeta } from '@feed/types';
 import { profileService } from '@users/service/profileService';
 import { usersService } from '@auth/service/usersService';
 
@@ -23,26 +24,32 @@ interface PostDocument {
     comments: number;
     replies: number;
   };
-  moderation?: {
+  moderation: {
     status: string;
     checkedAt: number;
+    confidence?: number;
+    categories?: string[];
+    reasons?: string[];
+    error?: string;
   };
 }
 
 class PostsService {
   /**
-   * Create a new post
+   * Create a new post with moderation metadata
    */
   async createPost(
     authorId: string,
-    request: CreatePostRequest
+    request: CreatePostRequest,
+    postId?: string,
+    moderationMeta?: ModerationMeta
   ): Promise<Post> {
     const now = Date.now();
-    const postId = uuidv7();
+    const id = postId || uuidv7();
 
     const postDocument: PostDocument = {
-      id: postId,
-      postId,
+      id,
+      postId: id,
       authorId,
       content: request.content,
       contentType: request.contentType,
@@ -58,10 +65,19 @@ class PostsService {
         comments: 0,
         replies: 0,
       },
-      moderation: {
-        status: 'clean',
-        checkedAt: now,
-      },
+      moderation: moderationMeta
+        ? {
+            status: moderationMeta.status,
+            checkedAt: moderationMeta.checkedAt,
+            confidence: moderationMeta.confidence,
+            categories: moderationMeta.categories,
+            reasons: moderationMeta.reasons,
+            error: moderationMeta.error,
+          }
+        : {
+            status: 'clean',
+            checkedAt: now,
+          },
     };
 
     const container = getTargetDatabase().posts;
@@ -195,6 +211,25 @@ class PostsService {
       authorRole = 'contributor';
     }
 
+    // Check if viewer has liked the post
+    let viewerHasLiked = false;
+    if (viewerId) {
+      try {
+        const db = getTargetDatabase();
+        const likesContainer = db.reactions;
+        const likeId = `${post.postId}:${viewerId}`;
+        
+        const { resource: likeDoc } = await likesContainer.item(likeId, post.postId).read();
+        viewerHasLiked = !!likeDoc;
+      } catch (error: unknown) {
+        const err = error as any;
+        // Ignore 404 (not found) errors
+        if (err?.code !== 404 && err?.statusCode !== 404) {
+          throw error;
+        }
+      }
+    }
+
     return {
       id: post.postId,
       authorId: post.authorId,
@@ -211,7 +246,7 @@ class PostsService {
       authorRole,
       likeCount: post.stats?.likes || 0,
       commentCount: post.stats?.comments || 0,
-      viewerHasLiked: false, // TODO: Check if viewer has liked
+      viewerHasLiked,
       badges: [],
     };
   }

@@ -3,7 +3,7 @@
  * 
  * POST /api/posts
  * 
- * Create a new post.
+ * Create a new post with Hive AI content moderation.
  * 
  * OpenAPI: posts_create
  */
@@ -13,6 +13,7 @@ import { httpHandler } from '@shared/http/handler';
 import type { CreatePostRequest, Post } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
+import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
 
 export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => {
   ctx.context.log(`[posts_create] Creating new post [${ctx.correlationId}]`);
@@ -37,8 +38,35 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       return ctx.badRequest('Content type is required', 'INVALID_CONTENT_TYPE');
     }
 
-    // Create post using service
-    const post = await postsService.createPost(auth.userId, ctx.body);
+    // Generate post ID for moderation tracking
+    const postId = crypto.randomUUID();
+
+    // ─────────────────────────────────────────────────────────────
+    // Content Moderation - Check before creating post
+    // ─────────────────────────────────────────────────────────────
+    const { result: moderationResult, error: moderationError } = await moderatePostContent(
+      content,
+      auth.userId,
+      postId,
+      ctx.context
+    );
+
+    const moderationMeta = buildModerationMeta(moderationResult, moderationError);
+
+    // Block content that violates policy
+    if (moderationMeta.status === 'blocked') {
+      ctx.context.log('[posts_create] Content blocked by moderation', {
+        postId,
+        categories: moderationMeta.categories,
+      });
+      return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        categories: moderationMeta.categories,
+        confidence: moderationMeta.confidence,
+      });
+    }
+
+    // Create post using service with moderation metadata
+    const post = await postsService.createPost(auth.userId, ctx.body, postId, moderationMeta);
 
     return ctx.created(post);
   } catch (error) {
