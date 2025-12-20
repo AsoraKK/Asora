@@ -44,15 +44,14 @@ export const auth_token_exchange = httpHandler<AuthTokenRequest, AuthTokenRespon
       const [pgUser, isNewUser] = await usersService.getOrCreateUserByProvider(
         provider,
         provider_sub,
-        `${provider}-${provider_sub}@asora.local`, // Placeholder email
-        `${provider} User` // Placeholder display name
+        `${provider}-${provider_sub}@asora.local` // Placeholder email
       );
 
-      // Ensure profile exists in Cosmos
+      // Ensure profile exists in Cosmos (displayName/avatarUrl come from profile, not PG)
       const profile = await profileService.ensureProfile(
         pgUser.id,
-        pgUser.display_name,
-        pgUser.avatar_url
+        `${provider} User`, // Placeholder display name
+        undefined // No avatar by default
       );
 
       // Generate token pair
@@ -64,12 +63,12 @@ export const auth_token_exchange = httpHandler<AuthTokenRequest, AuthTokenRespon
 
       const userResponse: UserProfile = {
         id: pgUser.id,
-        displayName: pgUser.display_name,
+        displayName: profile.displayName,
         bio: profile.bio,
         avatarUrl: profile.avatarUrl,
         tier: pgUser.tier,
         roles: pgUser.roles,
-        reputation: 0,
+        reputation: pgUser.reputation_score,
         createdAt: pgUser.created_at,
         updatedAt: pgUser.updated_at,
       };

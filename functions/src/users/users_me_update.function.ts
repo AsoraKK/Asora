@@ -55,35 +55,28 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
       // Create profile if it doesn't exist
       cosmosProfile = await profileService.createProfile(
         auth.userId,
-        updates.displayName || pgUser.display_name,
-        updates.avatarUrl || pgUser.avatar_url
+        updates.displayName || 'User',
+        updates.avatarUrl
       );
     } else if (Object.keys(profileUpdates).length > 0) {
       // Update existing profile
       cosmosProfile = await profileService.updateProfile(auth.userId, profileUpdates);
     }
 
-    // Optionally update PostgreSQL if displayName or avatarUrl changed
-    let updatedPgUser = pgUser;
-    if (updates.displayName !== undefined || updates.avatarUrl !== undefined) {
-      updatedPgUser = await usersService.updateUser(
-        auth.userId,
-        updates.displayName,
-        updates.avatarUrl
-      ) || pgUser;
-    }
+    // PostgreSQL doesn't store display/avatar, only Cosmos does
+    // No need to update PG for these fields
 
     // Return merged UserProfile
     const userProfile: UserProfile = {
-      id: updatedPgUser.id,
+      id: pgUser.id,
       displayName: cosmosProfile.displayName,
       bio: cosmosProfile.bio,
       avatarUrl: cosmosProfile.avatarUrl,
-      tier: updatedPgUser.tier,
-      roles: updatedPgUser.roles,
-      reputation: 0,
-      createdAt: updatedPgUser.created_at,
-      updatedAt: updatedPgUser.updated_at,
+      tier: pgUser.tier,
+      roles: pgUser.roles,
+      reputation: pgUser.reputation_score,
+      createdAt: pgUser.created_at,
+      updatedAt: pgUser.updated_at,
     };
 
     return ctx.ok(userProfile);

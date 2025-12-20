@@ -200,11 +200,11 @@ class PostsService {
 
     const author: PublicUserProfile = {
       id: post.authorId,
-      displayName: cosmosProfile?.displayName || pgUser?.display_name || 'Unknown',
+      displayName: cosmosProfile?.displayName || 'Unknown',
       bio: cosmosProfile?.bio,
-      avatarUrl: cosmosProfile?.avatarUrl || pgUser?.avatar_url,
+      avatarUrl: cosmosProfile?.avatarUrl,
       tier: pgUser?.tier || 'free',
-      reputation: 0, // TODO: Fetch from reputation service
+      reputation: pgUser?.reputation_score || 0,
       badges: [],
     };
 

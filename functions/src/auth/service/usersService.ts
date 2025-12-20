@@ -4,11 +4,10 @@ import { withClient } from '@shared/clients/postgres';
 
 export interface PGUser {
   id: string;
-  email: string;
-  display_name: string;
-  avatar_url?: string;
+  primary_email: string;
   roles: string[];
   tier: string;
+  reputation_score: number;
   created_at: string;
   updated_at: string;
 }
@@ -27,7 +26,7 @@ class UsersService {
   async getUserById(userId: string): Promise<PGUser | null> {
     return withClient(async (client) => {
       const result = await client.query(
-        `SELECT id, email, display_name, avatar_url, roles, tier, created_at, updated_at
+        `SELECT id, primary_email, roles, tier, reputation_score, created_at, updated_at
          FROM users WHERE id = $1`,
         [userId]
       );
@@ -41,8 +40,8 @@ class UsersService {
   async getUserByEmail(email: string): Promise<PGUser | null> {
     return withClient(async (client) => {
       const result = await client.query(
-        `SELECT id, email, display_name, avatar_url, roles, tier, created_at, updated_at
-         FROM users WHERE email = $1`,
+        `SELECT id, primary_email, roles, tier, reputation_score, created_at, updated_at
+         FROM users WHERE primary_email = $1`,
         [email]
       );
       return result.rows[0] || null;
@@ -54,7 +53,6 @@ class UsersService {
    */
   async createUser(
     email: string,
-    displayName: string,
     tier: string = 'free'
   ): Promise<PGUser> {
     const userId = uuidv7();
@@ -62,54 +60,31 @@ class UsersService {
 
     return withClient(async (client) => {
       const result = await client.query(
-        `INSERT INTO users (id, email, display_name, roles, tier, created_at, updated_at)
+        `INSERT INTO users (id, primary_email, roles, tier, reputation_score, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, email, display_name, avatar_url, roles, tier, created_at, updated_at`,
-        [userId, email, displayName, ['user'], tier, now, now]
+         RETURNING id, primary_email, roles, tier, reputation_score, created_at, updated_at`,
+        [userId, email, ['user'], tier, 0, now, now]
       );
       return result.rows[0];
     });
   }
 
   /**
-   * Update user display_name and/or avatar_url
+   * Update user tier
    */
-  async updateUser(
+  async updateUserTier(
     userId: string,
-    displayName?: string,
-    avatarUrl?: string
+    tier: string
   ): Promise<PGUser | null> {
-    const updates: string[] = [];
-    const values: unknown[] = [];
-    let paramIndex = 1;
-
-    if (displayName !== undefined) {
-      updates.push(`display_name = $${paramIndex++}`);
-      values.push(displayName);
-    }
-
-    if (avatarUrl !== undefined) {
-      updates.push(`avatar_url = $${paramIndex++}`);
-      values.push(avatarUrl);
-    }
-
-    updates.push(`updated_at = $${paramIndex++}`);
-    values.push(new Date().toISOString());
-
-    values.push(userId);
-
-    if (updates.length === 1) {
-      // Only updated_at is being set, which means nothing else changed
-      return this.getUserById(userId);
-    }
+    const now = new Date().toISOString();
 
     return withClient(async (client) => {
       const result = await client.query(
         `UPDATE users
-         SET ${updates.join(', ')}
-         WHERE id = $${paramIndex}
-         RETURNING id, email, display_name, avatar_url, roles, tier, created_at, updated_at`,
-        values
+         SET tier = $1, updated_at = $2
+         WHERE id = $3
+         RETURNING id, primary_email, roles, tier, reputation_score, created_at, updated_at`,
+        [tier, now, userId]
       );
       return result.rows[0] || null;
     });
@@ -161,8 +136,7 @@ class UsersService {
   async getOrCreateUserByProvider(
     provider: string,
     providerSub: string,
-    email: string,
-    displayName: string
+    email: string
   ): Promise<[PGUser, boolean]> {
     // Check if provider link exists
     const existingLink = await this.getProviderLink(provider, providerSub);
@@ -179,7 +153,7 @@ class UsersService {
 
     if (!user) {
       // Create new user
-      user = await this.createUser(email, displayName);
+      user = await this.createUser(email);
       isNewUser = true;
     }
 

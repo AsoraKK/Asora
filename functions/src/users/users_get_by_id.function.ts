@@ -60,7 +60,7 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
       bio: cosmosProfile.bio,
       avatarUrl: cosmosProfile.avatarUrl,
       tier: pgUser.tier,
-      reputation: 0, // TODO: Fetch from reputation service if available
+      reputation: pgUser.reputation_score,
       badges: [], // TODO: Fetch from badges service if available
     };
 
