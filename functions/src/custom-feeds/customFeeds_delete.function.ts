@@ -10,6 +10,9 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { extractAuthContext } from '@shared/http/authContext';
+import { deleteCustomFeed } from './customFeedsService';
+import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 
 export const customFeeds_delete = httpHandler<void, void>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -19,16 +22,29 @@ export const customFeeds_delete = httpHandler<void, void>(async (ctx) => {
     return ctx.badRequest('Feed ID is required');
   }
 
-  // TODO: Implement delete custom feed logic
-  // - Extract user ID from JWT
-  // - Fetch feed from Cosmos custom_feeds container
-  // - Verify current user is the owner
-  // - Delete Cosmos document
-  // - Return 204 No Content
-  // - Return 404 if feed not found
-  // - Return 403 if user is not the owner
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
-  return ctx.notImplemented('customFeeds_delete');
+  try {
+    const deleted = await deleteCustomFeed(auth.userId, feedId);
+    if (!deleted) {
+      return ctx.notFound('Custom feed not found', 'CUSTOM_FEED_NOT_FOUND');
+    }
+    return ctx.noContent();
+  } catch (error) {
+    const mapped = mapHttpErrorToResponse(ctx, error);
+    if (mapped) {
+      return mapped;
+    }
+    ctx.context.error(`[customFeeds_delete] Error deleting custom feed: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

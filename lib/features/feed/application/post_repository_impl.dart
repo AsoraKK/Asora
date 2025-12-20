@@ -29,7 +29,7 @@ class PostRepositoryImpl implements PostRepository {
       () async {
         try {
           final response = await _dio.post(
-            '/api/post',
+            '/api/posts',
             data: request.toJson(),
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
@@ -37,8 +37,7 @@ class PostRepositoryImpl implements PostRepository {
           if (response.statusCode == 201) {
             debugPrint('✅ Post created successfully');
             final data = response.data as Map<String, dynamic>;
-            final postData = data['post'] as Map<String, dynamic>;
-            return CreatePostSuccess(_parsePost(postData));
+            return CreatePostSuccess(_parsePost(data));
           }
 
           // Shouldn't reach here normally, but handle unexpected success codes
@@ -57,7 +56,7 @@ class PostRepositoryImpl implements PostRepository {
         }
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/post')
+          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
             ..addAll({
               'request.text_length': request.text.length,
               'request.has_media': request.mediaUrl != null,
@@ -156,53 +155,51 @@ class PostRepositoryImpl implements PostRepository {
     }
 
     final statusCode = response.statusCode;
-    final data = response.data;
+    final payload = _errorPayload(e);
+    final code = payload?['code'] as String?;
+    final message =
+        payload?['message'] as String? ??
+        payload?['error'] as String? ??
+        'Request failed';
+    final details = payload?['details'] as Map<String, dynamic>?;
 
-    // Handle content blocked (422)
-    if (statusCode == 422 && data is Map<String, dynamic>) {
-      final code = data['code'] as String?;
-      if (code == 'content_blocked') {
-        debugPrint('⚠️ Post blocked by content moderation');
-        return CreatePostBlocked(
-          message:
-              data['error'] as String? ??
-              'Content violates community guidelines',
-          categories: List<String>.from(data['categories'] ?? []),
-          code: code ?? 'content_blocked',
-        );
-      }
+    if ((statusCode == 400 || statusCode == 422) &&
+        (code == 'CONTENT_BLOCKED' || code == 'content_blocked')) {
+      final categories =
+          (details?['categories'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          [];
+      debugPrint('⚠️ Post blocked by content moderation');
+      return CreatePostBlocked(
+        message: message,
+        categories: categories,
+        code: code ?? 'content_blocked',
+      );
     }
 
-    // Handle daily limit exceeded (429)
-    if (statusCode == 429 && data is Map<String, dynamic>) {
-      final code = data['code'] as String?;
-      if (code == 'daily_post_limit_reached') {
-        debugPrint('⚠️ Daily post limit exceeded');
-        final retryAfterStr = response.headers.value('retry-after');
-        final retryAfterSeconds =
-            int.tryParse(retryAfterStr ?? '86400') ?? 86400;
-
-        return CreatePostLimitExceeded(
-          message: data['message'] as String? ?? 'Daily post limit reached',
-          limit: data['limit'] as int? ?? 10,
-          currentCount: data['current'] as int? ?? 10,
-          tier: data['tier'] as String? ?? 'free',
-          retryAfter: Duration(seconds: retryAfterSeconds),
-        );
-      }
+    if (statusCode == 429 && code == 'daily_post_limit_reached') {
+      debugPrint('⚠️ Daily post limit exceeded');
+      final retryAfterSeconds =
+          int.tryParse(response.headers.value('retry-after') ?? '86400') ??
+          86400;
+      return CreatePostLimitExceeded(
+        message: message,
+        limit: details?['limit'] as int? ?? 10,
+        currentCount: details?['current'] as int? ?? 0,
+        tier: details?['tier'] as String? ?? 'free',
+        retryAfter: Duration(seconds: retryAfterSeconds),
+      );
     }
 
-    // Handle validation errors (400)
-    if (statusCode == 400 && data is Map<String, dynamic>) {
-      final error = data['error'] as String? ?? 'Invalid request';
+    if (statusCode == 400) {
       return CreatePostError(
-        message: error,
-        code: 'validation_error',
+        message: message,
+        code: code ?? 'validation_error',
         originalError: e,
       );
     }
 
-    // Handle auth errors (401)
     if (statusCode == 401) {
       return CreatePostError(
         message: 'Authentication required',
@@ -211,7 +208,6 @@ class PostRepositoryImpl implements PostRepository {
       );
     }
 
-    // Handle forbidden (403)
     if (statusCode == 403) {
       return CreatePostError(
         message: 'You are not allowed to create posts',
@@ -220,7 +216,14 @@ class PostRepositoryImpl implements PostRepository {
       );
     }
 
-    // Generic error
+    if (statusCode == 404) {
+      return CreatePostError(
+        message: 'User not found',
+        code: 'not_found',
+        originalError: e,
+      );
+    }
+
     final errorMessage = _extractErrorMessage(e);
     return CreatePostError(
       message: errorMessage,
@@ -231,53 +234,27 @@ class PostRepositoryImpl implements PostRepository {
 
   /// Extract error message from DioException
   String _extractErrorMessage(DioException e) {
+    final payload = _errorPayload(e);
+    return payload?['message'] as String? ??
+        payload?['error'] as String? ??
+        e.message ??
+        'Request failed';
+  }
+
+  Map<String, dynamic>? _errorPayload(DioException e) {
     final data = e.response?.data;
     if (data is Map<String, dynamic>) {
-      return data['error'] as String? ??
-          data['message'] as String? ??
-          'Request failed';
+      final errorSection = data['error'];
+      if (errorSection is Map<String, dynamic>) {
+        return errorSection;
+      }
+      return data;
     }
-    return e.message ?? 'Request failed';
+    return null;
   }
 
   /// Parse post from JSON response
   Post _parsePost(Map<String, dynamic> json) {
-    // Handle response format from createPost endpoint
-    return Post(
-      id: json['postId'] as String? ?? json['id'] as String,
-      authorId: json['authorId'] as String,
-      authorUsername: json['authorUsername'] as String? ?? 'Unknown',
-      text: json['text'] as String,
-      createdAt: _parseDateTime(json['createdAt']),
-      updatedAt: json['updatedAt'] != null
-          ? _parseDateTime(json['updatedAt'])
-          : null,
-      likeCount:
-          (json['stats']?['likes'] as int?) ?? (json['likeCount'] as int?) ?? 0,
-      dislikeCount:
-          (json['stats']?['dislikes'] as int?) ??
-          (json['dislikeCount'] as int?) ??
-          0,
-      commentCount:
-          (json['stats']?['comments'] as int?) ??
-          (json['commentCount'] as int?) ??
-          0,
-      mediaUrls: json['mediaUrl'] != null ? [json['mediaUrl'] as String] : null,
-      moderation: json['moderation'] != null
-          ? PostModerationData.fromJson(
-              json['moderation'] as Map<String, dynamic>,
-            )
-          : null,
-    );
-  }
-
-  DateTime _parseDateTime(dynamic value) {
-    if (value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value);
-    }
-    if (value is String) {
-      return DateTime.parse(value);
-    }
-    return DateTime.now();
+    return Post.fromJson(json);
   }
 }

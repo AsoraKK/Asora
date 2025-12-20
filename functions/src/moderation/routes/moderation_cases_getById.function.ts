@@ -11,6 +11,8 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { ModerationCaseResponse } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { getModerationCaseById, hasModeratorRole } from '@moderation/moderationService';
 
 export const moderation_cases_getById = httpHandler<void, ModerationCaseResponse>(async (ctx) => {
   const caseId = ctx.params.id;
@@ -20,17 +22,27 @@ export const moderation_cases_getById = httpHandler<void, ModerationCaseResponse
     return ctx.badRequest('Case ID is required');
   }
 
-  // TODO: Implement get moderation case by ID logic
-  // - Extract user ID from JWT
-  // - Verify user has moderation permissions
-  // - Fetch case from Cosmos flags or moderation_decisions container
-  // - Fetch decision history for the case
-  // - Optionally fetch target content (post, comment, user) for context
-  // - Return ModerationCaseResponse
-  // - Return 404 if case not found
-  // - Return 403 if user lacks permissions
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
-  return ctx.notImplemented('moderation_cases_getById');
+  if (!hasModeratorRole(auth.roles)) {
+    return ctx.forbidden('Moderator role required', 'FORBIDDEN');
+  }
+
+  try {
+    const result = await getModerationCaseById(caseId);
+    if (!result) {
+      return ctx.notFound('Moderation case not found', 'CASE_NOT_FOUND');
+    }
+    return ctx.ok(result);
+  } catch (error) {
+    ctx.context.error(`[moderation_cases_getById] Error: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

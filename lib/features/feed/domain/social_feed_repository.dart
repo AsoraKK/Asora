@@ -25,6 +25,29 @@ abstract class SocialFeedRepository {
   /// Throws [SocialFeedException] on request failure
   Future<FeedResponse> getFeed({required FeedParams params, String? token});
 
+  /// Fetch discover feed (public) with cursor pagination.
+  Future<FeedResponse> getDiscoverFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  });
+
+  /// Fetch news feed (public) with cursor pagination.
+  Future<FeedResponse> getNewsFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  });
+
+  /// Fetch a user's timeline feed.
+  Future<FeedResponse> getUserFeed({
+    required String userId,
+    String? cursor,
+    int limit = 25,
+    String? token,
+    bool includeReplies = false,
+  });
+
   /// Get trending posts feed
   ///
   /// [page] - Page number for pagination (defaults to 1)

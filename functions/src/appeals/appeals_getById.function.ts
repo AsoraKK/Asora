@@ -11,6 +11,8 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { AppealDetailsResponse } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { getAppealById } from './appealsService';
 
 export const appeals_getById = httpHandler<void, AppealDetailsResponse>(async (ctx) => {
   const appealId = ctx.params.id;
@@ -20,14 +22,22 @@ export const appeals_getById = httpHandler<void, AppealDetailsResponse>(async (c
     return ctx.badRequest('Appeal ID is required');
   }
 
-  // TODO: Implement get appeal by ID logic
-  // - Fetch appeal from Cosmos appeals container
-  // - Fetch votes from Cosmos votes container with partition key /appealId
-  // - Calculate totalUpholdWeight and totalDenyWeight
-  // - Return AppealDetailsResponse
-  // - Return 404 if appeal not found
+  try {
+    await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
-  return ctx.notImplemented('appeals_getById');
+  try {
+    const details = await getAppealById(appealId);
+    if (!details) {
+      return ctx.notFound('Appeal not found', 'APPEAL_NOT_FOUND');
+    }
+    return ctx.ok(details);
+  } catch (error) {
+    ctx.context.error(`[appeals_getById] Error fetching appeal: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

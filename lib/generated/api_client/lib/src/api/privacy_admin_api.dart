@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
 import 'package:asora_api_client/src/model/dsr_request_summary.dart';
+import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/legal_hold_clear.dart';
 import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';

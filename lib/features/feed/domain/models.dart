@@ -43,11 +43,20 @@ class Post {
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
+    final author = json['author'] as Map<String, dynamic>?;
+    final textValue = _extractText(json);
+    final metadata = _extractMetadata(json);
+    final username =
+        json['authorUsername'] as String? ??
+        author?['username'] as String? ??
+        author?['displayName'] as String? ??
+        json['authorId'] as String;
+
     return Post(
       id: json['id'] as String,
       authorId: json['authorId'] as String,
-      authorUsername: json['authorUsername'] as String,
-      text: json['text'] as String,
+      authorUsername: username,
+      text: textValue,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
@@ -61,11 +70,15 @@ class Post {
       moderation: json['moderation'] != null
           ? PostModerationData.fromJson(json['moderation'])
           : null,
-      metadata: json['metadata'] != null
-          ? PostMetadata.fromJson(json['metadata'])
-          : null,
-      userLiked: json['userLiked'] as bool? ?? false,
-      userDisliked: json['userDisliked'] as bool? ?? false,
+      metadata: metadata,
+      userLiked:
+          json['userLiked'] as bool? ??
+          json['viewerHasLiked'] as bool? ??
+          false,
+      userDisliked:
+          json['userDisliked'] as bool? ??
+          json['viewerHasDisliked'] as bool? ??
+          false,
     );
   }
 
@@ -86,6 +99,27 @@ class Post {
       'userLiked': userLiked,
       'userDisliked': userDisliked,
     };
+  }
+
+  static String _extractText(Map<String, dynamic> json) {
+    return (json['text'] ?? json['content'] ?? '') as String;
+  }
+
+  static PostMetadata? _extractMetadata(Map<String, dynamic> json) {
+    final metadataJson = json['metadata'] as Map<String, dynamic>?;
+    if (metadataJson != null) {
+      return PostMetadata.fromJson(metadataJson);
+    }
+    final topics = json['topics'];
+    final tags = topics is List ? List<String>.from(topics) : null;
+    final location = json['location'] as String?;
+    final category = json['category'] as String?;
+    if (location != null ||
+        (tags != null && tags.isNotEmpty) ||
+        category != null) {
+      return PostMetadata(location: location, tags: tags, category: category);
+    }
+    return null;
   }
 }
 
@@ -232,6 +266,21 @@ class FeedResponse {
     required this.page,
     required this.pageSize,
   });
+
+  factory FeedResponse.fromCursor({
+    required List<Post> posts,
+    String? nextCursor,
+    int limit = 20,
+  }) {
+    return FeedResponse(
+      posts: posts,
+      totalCount: posts.length,
+      hasMore: nextCursor != null,
+      nextCursor: nextCursor,
+      page: 1,
+      pageSize: limit,
+    );
+  }
 
   factory FeedResponse.fromJson(Map<String, dynamic> json) {
     return FeedResponse(

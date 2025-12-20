@@ -10,25 +10,46 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { extractAuthContext } from '@shared/http/authContext';
+import { hasModeratorRole } from '@moderation/moderationService';
+import { getReviewQueueHandler } from '@moderation/service/reviewQueueService';
 import type { ModerationCaseListResponse } from '@shared/types/openapi';
+
+const MAX_LIMIT = 50;
+
+function clampLimit(value?: number): number {
+  if (!value || Number.isNaN(value)) {
+    return 25;
+  }
+  return Math.max(1, Math.min(MAX_LIMIT, value));
+}
 
 export const moderation_queue_list = httpHandler<void, ModerationCaseListResponse>(async (ctx) => {
   const cursor = ctx.query.cursor;
-  const limit = parseInt(ctx.query.limit || '25', 10);
+  const requestedLimit = Number.parseInt(ctx.query.limit || '25', 10);
+  const limit = clampLimit(requestedLimit);
 
   ctx.context.log(
     `[moderation_queue_list] Fetching moderation queue [cursor=${cursor}, limit=${limit}] [${ctx.correlationId}]`
   );
 
-  // TODO: Implement moderation queue list logic
-  // - Extract user ID from JWT
-  // - Verify user has moderation permissions (role or minimum reputation)
-  // - Query Cosmos flags or moderation_decisions container for pending cases
-  // - Filter by status = 'pending'
-  // - Apply cursor-based pagination
-  // - Return ModerationCaseListResponse with nextCursor
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
-  return ctx.notImplemented('moderation_queue_list');
+  if (!hasModeratorRole(auth.roles)) {
+    return ctx.forbidden('Moderator role required', 'FORBIDDEN');
+  }
+
+  const response = await getReviewQueueHandler({
+    context: ctx.context,
+    limit,
+    continuationToken: cursor,
+  });
+  return response;
 });
 
 // Register HTTP trigger

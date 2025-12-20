@@ -73,8 +73,8 @@ class CreatePostRequest {
   });
 
   Map<String, dynamic> toJson() => {
-    'text': text,
-    if (mediaUrl != null) 'mediaUrl': mediaUrl,
+    'content': text,
+    if (mediaUrl != null) 'mediaUrls': [mediaUrl],
     'isNews': isNews,
     'contentType': contentType,
   };

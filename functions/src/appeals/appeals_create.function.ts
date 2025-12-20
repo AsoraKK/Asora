@@ -11,21 +11,44 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { FileAppealRequest, AppealResponse } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { createAppeal } from './appealsService';
+import { HttpError } from '@shared/utils/errors';
 
 export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(async (ctx) => {
   ctx.context.log(`[appeals_create] Filing new appeal [${ctx.correlationId}]`);
 
-  // TODO: Implement create appeal logic
-  // - Extract user ID from JWT
-  // - Validate FileAppealRequest (caseId, statement, evidence)
-  // - Verify case exists and user was affected by the decision
-  // - Check appeal eligibility (not already appealed, within time window)
-  // - Generate UUID v7 for appeal ID
-  // - Create Appeal document in Cosmos appeals container with partition key /id
-  // - Set initial status = 'pending'
-  // - Return AppealResponse with 201 Created
+  if (!ctx.body || !ctx.body.caseId || !ctx.body.statement) {
+    return ctx.badRequest('caseId and statement are required', 'INVALID_REQUEST');
+  }
 
-  return ctx.notImplemented('appeals_create');
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  try {
+    const appeal = await createAppeal(auth.userId, ctx.body);
+    return ctx.created({ appeal });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      switch (error.status) {
+        case 400:
+          return ctx.badRequest(error.message, error.message);
+        case 401:
+          return ctx.unauthorized(error.message);
+        case 404:
+          return ctx.notFound(error.message);
+      }
+    }
+
+    ctx.context.error(`[appeals_create] Error creating appeal: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

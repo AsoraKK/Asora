@@ -11,6 +11,10 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { ModerationDecisionRequest, ModerationDecision } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { createModerationDecision, hasModeratorRole } from '@moderation/moderationService';
+
+const VALID_ACTIONS: ModerationDecisionRequest['action'][] = ['approve', 'reject', 'escalate'];
 
 export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, ModerationDecision>(async (ctx) => {
   const caseId = ctx.params.id;
@@ -20,21 +24,29 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
     return ctx.badRequest('Case ID is required');
   }
 
-  // TODO: Implement moderation decision logic
-  // - Extract user ID from JWT
-  // - Verify user has moderation permissions
-  // - Validate ModerationDecisionRequest (action: approve/reject/escalate, rationale)
-  // - Fetch case from Cosmos flags or moderation_decisions container
-  // - Create ModerationDecision document in moderation_decisions container
-  // - Update case status based on decision
-  // - If approved: remove flag, restore content
-  // - If rejected: apply content moderation action (hide, delete, ban)
-  // - If escalated: notify senior moderators
-  // - Return ModerationDecision with 200 OK
-  // - Return 404 if case not found
-  // - Return 403 if user lacks permissions
+  const request = ctx.body;
+  if (!request || !request.action || !VALID_ACTIONS.includes(request.action)) {
+    return ctx.badRequest('Invalid decision action', 'INVALID_ACTION');
+  }
 
-  return ctx.notImplemented('moderation_cases_decide');
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  if (!hasModeratorRole(auth.roles)) {
+    return ctx.forbidden('Moderator role required', 'FORBIDDEN');
+  }
+
+  try {
+    const decision = await createModerationDecision(caseId, auth.userId, request.action, request.rationale);
+    return ctx.ok(decision);
+  } catch (error) {
+    ctx.context.error(`[moderation_cases_decide] Error: ${error}`, { correlationId: ctx.correlationId });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

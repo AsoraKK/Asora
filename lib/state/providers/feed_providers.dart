@@ -22,18 +22,26 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
   try {
     final service = ref.read(socialFeedServiceProvider);
     final token = await ref.read(jwtProvider.future);
-    final params = domain.FeedParams(
-      type: _mapFeedType(feed),
-      page: 1,
-      pageSize: 20,
-      category: feed.name,
-    );
-    final response = await service.getFeed(
-      params: params,
-      token: token?.isNotEmpty == true ? token : null,
-    );
+    final authToken = token?.isNotEmpty == true ? token : null;
+    List<domain.Post> posts;
 
-    return response.posts.map(_mapPostToFeedItem).toList();
+    switch (feed.type) {
+      case FeedType.discover:
+        posts = (await service.getDiscoverFeed(
+          limit: 25,
+          token: authToken,
+        )).posts;
+        break;
+      case FeedType.news:
+        posts = (await service.getNewsFeed(limit: 25, token: authToken)).posts;
+        break;
+      case FeedType.custom:
+        return feedItemsFor(feed.id);
+      case FeedType.moderation:
+        return const [];
+    }
+
+    return posts.map(_mapPostToFeedItem).toList();
   } catch (_) {
     return feedItemsFor(feed.id);
   }
@@ -88,25 +96,6 @@ final customFeedDraftProvider =
     StateNotifierProvider<CustomFeedDraftNotifier, CustomFeedDraft>(
       (ref) => CustomFeedDraftNotifier(),
     );
-
-domain.FeedType _mapFeedType(FeedModel feed) {
-  switch (feed.type) {
-    case FeedType.discover:
-      return domain.FeedType.trending;
-    case FeedType.news:
-      return domain.FeedType.newest;
-    case FeedType.custom:
-      return switch (feed.sorting) {
-        SortingRule.following => domain.FeedType.following,
-        SortingRule.newest => domain.FeedType.newest,
-        SortingRule.hot => domain.FeedType.trending,
-        SortingRule.relevant => domain.FeedType.trending,
-        SortingRule.local => domain.FeedType.local,
-      };
-    case FeedType.moderation:
-      return domain.FeedType.trending;
-  }
-}
 
 FeedItem _mapPostToFeedItem(domain.Post post) {
   final type = (post.mediaUrls?.isNotEmpty ?? false)

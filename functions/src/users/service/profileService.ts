@@ -17,7 +17,7 @@ class ProfileService {
    */
   async getProfile(userId: string): Promise<CosmosUserProfile | null> {
     try {
-      const container = getTargetDatabase().users;
+        const container = getTargetDatabase().profiles;
       const { resource } = await container.item(userId, userId).read();
       return resource || null;
     } catch (error) {

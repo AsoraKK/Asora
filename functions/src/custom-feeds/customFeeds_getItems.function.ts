@@ -11,11 +11,25 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { getCustomFeedItems } from './customFeedsService';
+import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+
+function clampLimit(value?: number): number {
+  if (!value || Number.isNaN(value)) {
+    return DEFAULT_LIMIT;
+  }
+  return Math.max(1, Math.min(value, MAX_LIMIT));
+}
 
 export const customFeeds_getItems = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
   const feedId = ctx.params.id;
+  const requestedLimit = Number.parseInt(ctx.query.limit || String(DEFAULT_LIMIT), 10);
+  const limit = clampLimit(requestedLimit);
   const cursor = ctx.query.cursor;
-  const limit = parseInt(ctx.query.limit || '25', 10);
 
   ctx.context.log(
     `[customFeeds_getItems] Fetching items for custom feed ${feedId} [cursor=${cursor}, limit=${limit}] [${ctx.correlationId}]`
@@ -25,20 +39,33 @@ export const customFeeds_getItems = httpHandler<void, CursorPaginatedPostView>(a
     return ctx.badRequest('Feed ID is required');
   }
 
-  // TODO: Implement get custom feed items logic
-  // - Extract user ID from JWT (optional, for viewer context)
-  // - Fetch feed definition from Cosmos custom_feeds container
-  // - Apply 3-layer filter system:
-  //   1. Content type filter (text, image, video, mixed)
-  //   2. Keyword filters (includeKeywords, excludeKeywords)
-  //   3. Account filters (includeAccounts, excludeAccounts)
-  // - Apply sorting rule (hot, new, relevant, following, local)
-  // - Query Cosmos posts container with filters
-  // - Enrich with author profiles and engagement metrics
-  // - Return CursorPaginatedPostView with nextCursor
-  // - Return 404 if feed not found
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
-  return ctx.notImplemented('customFeeds_getItems');
+  try {
+    const feedItems = await getCustomFeedItems(
+      auth.userId,
+      feedId,
+      cursor,
+      limit,
+      auth.userId
+    );
+    return ctx.ok(feedItems);
+  } catch (error) {
+    const mapped = mapHttpErrorToResponse(ctx, error);
+    if (mapped) {
+      return mapped;
+    }
+
+    ctx.context.error(`[customFeeds_getItems] Error fetching custom feed items: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger

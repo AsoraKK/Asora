@@ -26,6 +26,121 @@ class SocialFeedService implements SocialFeedRepository {
   SocialFeedService(this._dio, {String baseUrl = 'http://localhost:7072/api'})
     : _baseUrl = baseUrl;
 
+  Future<FeedResponse> _fetchCursorFeed({
+    required String operation,
+    required String urlPath,
+    int limit = 25,
+    String? cursor,
+    String? token,
+    Map<String, dynamic>? extraQuery,
+  }) async {
+    return AsoraTracer.traceOperation(
+      'SocialFeedService.$operation',
+      () async {
+        final queryParameters = <String, dynamic>{
+          'limit': limit,
+          if (cursor != null) 'cursor': cursor,
+          if (extraQuery != null) ...extraQuery,
+        };
+
+        final response = await _dio.get(
+          '$_baseUrl$urlPath',
+          queryParameters: queryParameters,
+          options: Options(
+            headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+          ),
+        );
+
+        final data = response.data;
+        if (data == null || data is! Map<String, dynamic>) {
+          throw const SocialFeedException(
+            'Invalid feed response',
+            code: 'INVALID_RESPONSE',
+          );
+        }
+
+        final rawItems = data['items'];
+        final posts =
+            (rawItems as List<dynamic>?)
+                ?.whereType<Map<String, dynamic>>()
+                .map(Post.fromJson)
+                .toList() ??
+            [];
+
+        return FeedResponse.fromCursor(
+          posts: posts,
+          nextCursor: data['nextCursor'] as String?,
+          limit: limit,
+        );
+      },
+      attributes: () {
+        final attrs =
+            AsoraTracer.httpRequestAttributes(
+              method: 'GET',
+              url: '/api$urlPath',
+            )..addAll({
+              'request.limit': limit,
+              'request.cursor_present': cursor != null,
+              'request.has_token': token != null,
+            });
+        if (extraQuery != null && extraQuery.isNotEmpty) {
+          attrs['request.extra_params'] = extraQuery.keys.join(',');
+        }
+        return attrs;
+      }(),
+      onError: (error) => _handleError(error),
+    );
+  }
+
+  @override
+  Future<FeedResponse> getDiscoverFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  }) {
+    return _fetchCursorFeed(
+      operation: 'getDiscoverFeed',
+      urlPath: '/feed/discover',
+      cursor: cursor,
+      limit: limit,
+      token: token,
+    );
+  }
+
+  @override
+  Future<FeedResponse> getNewsFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  }) {
+    return _fetchCursorFeed(
+      operation: 'getNewsFeed',
+      urlPath: '/feed/news',
+      cursor: cursor,
+      limit: limit,
+      token: token,
+    );
+  }
+
+  @override
+  Future<FeedResponse> getUserFeed({
+    required String userId,
+    String? cursor,
+    int limit = 25,
+    String? token,
+    bool includeReplies = false,
+  }) {
+    final extra = includeReplies ? {'includeReplies': 'true'} : null;
+    return _fetchCursorFeed(
+      operation: 'getUserFeed',
+      urlPath: '/feed/user/$userId',
+      cursor: cursor,
+      limit: limit,
+      token: token,
+      extraQuery: extra,
+    );
+  }
+
   @override
   Future<FeedResponse> getFeed({
     required FeedParams params,

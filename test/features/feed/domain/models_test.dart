@@ -161,6 +161,29 @@ void main() {
       expect(post.userDisliked, false);
     });
 
+    test('fromJson with enriched view data', () {
+      final json = {
+        'id': 'post2',
+        'authorId': 'user2',
+        'author': {'displayName': 'Anna Reader', 'username': 'annareader'},
+        'content': 'Hello from content field',
+        'createdAt': '2023-01-01T12:00:00.000Z',
+        'topics': ['policy', 'safety'],
+        'location': 'Global',
+        'category': 'analysis',
+        'viewerHasLiked': true,
+      };
+
+      final post = Post.fromJson(json);
+
+      expect(post.authorUsername, 'annareader');
+      expect(post.text, 'Hello from content field');
+      expect(post.metadata?.tags, ['policy', 'safety']);
+      expect(post.metadata?.location, 'Global');
+      expect(post.metadata?.category, 'analysis');
+      expect(post.userLiked, true);
+    });
+
     test('toJson with minimal data', () {
       final post = Post(
         id: 'post1',
@@ -638,6 +661,31 @@ void main() {
       expect(response.page, 1);
       expect(response.pageSize, 20);
       expect(response.nextCursor, isNull);
+    });
+
+    test('fromCursor factory builds response metadata', () {
+      final posts = [
+        Post(
+          id: 'post2',
+          authorId: 'user2',
+          authorUsername: 'testuser',
+          text: 'Hello again',
+          createdAt: testDate,
+        ),
+      ];
+
+      final response = FeedResponse.fromCursor(
+        posts: posts,
+        nextCursor: 'cursorXY',
+        limit: 30,
+      );
+
+      expect(response.posts, posts);
+      expect(response.totalCount, 1);
+      expect(response.hasMore, true);
+      expect(response.nextCursor, 'cursorXY');
+      expect(response.page, 1);
+      expect(response.pageSize, 30);
     });
   });
 

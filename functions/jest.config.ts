@@ -46,6 +46,7 @@ const config: Config = {
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^@auth/(.*)$': '<rootDir>/src/auth/$1',
     '^@feed/(.*)$': '<rootDir>/src/feed/$1',
+    '^@posts/(.*)$': '<rootDir>/src/posts/$1',
     '^@moderation/(.*)$': '<rootDir>/src/moderation/$1',
     '^@privacy/(.*)$': '<rootDir>/src/privacy/$1',
     '^@rate-limit/(.*)$': '<rootDir>/src/rate-limit/$1',

@@ -11,6 +11,9 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { UpdateCustomFeedRequest, CustomFeedDefinition } from '@shared/types/openapi';
+import { extractAuthContext } from '@shared/http/authContext';
+import { updateCustomFeed } from './customFeedsService';
+import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 
 export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -20,17 +23,33 @@ export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFee
     return ctx.badRequest('Feed ID is required');
   }
 
-  // TODO: Implement update custom feed logic
-  // - Extract user ID from JWT
-  // - Fetch feed from Cosmos custom_feeds container
-  // - Verify current user is the owner
-  // - Apply updates (name, contentType, sorting, filters, isHome)
-  // - Update Cosmos document
-  // - Return updated CustomFeedDefinition
-  // - Return 404 if feed not found
-  // - Return 403 if user is not the owner
+  if (!ctx.body) {
+    return ctx.badRequest('Request body is required');
+  }
 
-  return ctx.notImplemented('customFeeds_update');
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  try {
+    const updated = await updateCustomFeed(auth.userId, feedId, ctx.body);
+    if (!updated) {
+      return ctx.notFound('Custom feed not found', 'CUSTOM_FEED_NOT_FOUND');
+    }
+    return ctx.ok(updated);
+  } catch (error) {
+    const mapped = mapHttpErrorToResponse(ctx, error);
+    if (mapped) {
+      return mapped;
+    }
+    ctx.context.error(`[customFeeds_update] Error updating custom feed: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
+    return ctx.internalError(error as Error);
+  }
 });
 
 // Register HTTP trigger
