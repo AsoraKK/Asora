@@ -24,13 +24,31 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
 
   try {
     // Fetch user from PostgreSQL (for tier and public information)
-    const pgUser = await usersService.getUserById(userId);
+    ctx.context.log(`[users_get_by_id] Fetching from PostgreSQL for userId=${userId}`);
+    let pgUser;
+    try {
+      pgUser = await usersService.getUserById(userId);
+      ctx.context.log(`[users_get_by_id] PostgreSQL result: ${pgUser ? 'found' : 'not found'}`);
+    } catch (pgError) {
+      ctx.context.error(`[users_get_by_id] PostgreSQL error: ${pgError}`, { userId, correlationId: ctx.correlationId });
+      throw pgError;
+    }
+
     if (!pgUser) {
       return ctx.notFound('User not found', 'USER_NOT_FOUND');
     }
 
     // Fetch profile from Cosmos (for displayName, avatar, bio)
-    const cosmosProfile = await profileService.getProfile(userId);
+    ctx.context.log(`[users_get_by_id] Fetching from Cosmos profiles for userId=${userId}`);
+    let cosmosProfile;
+    try {
+      cosmosProfile = await profileService.getProfile(userId);
+      ctx.context.log(`[users_get_by_id] Cosmos result: ${cosmosProfile ? 'found' : 'not found'}`);
+    } catch (cosmosError) {
+      ctx.context.error(`[users_get_by_id] Cosmos error: ${cosmosError}`, { userId, correlationId: ctx.correlationId });
+      throw cosmosError;
+    }
+
     if (!cosmosProfile) {
       return ctx.notFound('User profile not found', 'PROFILE_NOT_FOUND');
     }
@@ -46,9 +64,10 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
       badges: [], // TODO: Fetch from badges service if available
     };
 
+    ctx.context.log(`[users_get_by_id] Successfully built profile for ${userId}`);
     return ctx.ok(publicProfile);
   } catch (error) {
-    ctx.context.error(`[users_get_by_id] Error fetching user profile: ${error}`, { correlationId: ctx.correlationId });
+    ctx.context.error(`[users_get_by_id] Unhandled error: ${error}`, { userId, correlationId: ctx.correlationId, stack: (error as Error).stack });
     return ctx.internalError(error as Error);
   }
 });
