@@ -17,11 +17,15 @@ class ProfileService {
    */
   async getProfile(userId: string): Promise<CosmosUserProfile | null> {
     try {
-        const container = getTargetDatabase().profiles;
+      const container = getTargetDatabase().profiles;
       const { resource } = await container.item(userId, userId).read();
       return resource || null;
     } catch (error) {
       // Handle 404 gracefully
+      const err = error as any;
+      if (err?.code === 404 || err?.statusCode === 404) {
+        return null;
+      }
       if (error instanceof Error && error.message.includes('404')) {
         return null;
       }
@@ -49,7 +53,7 @@ class ProfileService {
       updatedAt: now,
     };
 
-    const container = getTargetDatabase().users;
+    const container = getTargetDatabase().profiles;
     await container.items.create(profile);
     return profile;
   }
@@ -73,7 +77,7 @@ class ProfileService {
       updatedAt: new Date().toISOString(),
     };
 
-    const container = getTargetDatabase().users;
+    const container = getTargetDatabase().profiles;
     await container.item(userId, userId).replace(updated);
     return updated;
   }
@@ -98,11 +102,15 @@ class ProfileService {
    * Delete user profile from Cosmos
    */
   async deleteProfile(userId: string): Promise<void> {
-    const container = getTargetDatabase().users;
+    const container = getTargetDatabase().profiles;
     try {
       await container.item(userId, userId).delete();
     } catch (error) {
       // Ignore 404 errors on delete
+      const err = error as any;
+      if (err?.code === 404 || err?.statusCode === 404) {
+        return;
+      }
       if (error instanceof Error && !error.message.includes('404')) {
         throw error;
       }
