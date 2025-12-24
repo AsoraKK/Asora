@@ -29,9 +29,9 @@ class ProfileScreen extends ConsumerWidget {
     final profileState = ref.watch(publicUserProvider(currentUser.id));
     return profileState.when(
       data: (profile) => _buildProfile(context, ref, profile),
-      loading: () => const Scaffold(
-        appBar: AppBar(title: Text('Profile')),
-        body: Center(child: CircularProgressIndicator()),
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
         appBar: AppBar(title: const Text('Profile')),
