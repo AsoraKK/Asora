@@ -15,7 +15,8 @@
       "@moderation/*": ["src/moderation/*"],
       "@privacy/*": ["src/privacy/*"],
       "@rate-limit/*": ["src/rate-limit/*"],
-      "@http/*": ["src/http/*"]
+      "@http/*": ["src/http/*"],
+      "@admin/*": ["src/admin/*"]
     },
     "lib": ["ES2020"],
     "strict": true,

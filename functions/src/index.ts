@@ -41,3 +41,6 @@ trySyncImport('notifications/devices', () => require('./notifications/http/devic
 trySyncImport('notifications/preferences', () => require('./notifications/http/preferencesApi.function'));
 trySyncImport('notifications/api', () => require('./notifications/http/notificationsApi.function'));
 trySyncImport('notifications/processPendingNotifications', () => require('./notifications/timers/processPendingNotifications.function'));
+
+// Admin API - configuration and audit endpoints (Cloudflare Access protected)
+trySyncImport('admin', () => require('./admin'));
