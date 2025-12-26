@@ -4,14 +4,46 @@
  * Tests for JWT verification and actor extraction.
  */
 
-import { verifyCloudflareAccess, AccessAuthOutcome } from '../accessAuth';
+// Mock jose errors for instanceof checks - define before jest.mock
+const createMockErrors = () => {
+  class MockJWTExpired extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'JWTExpired';
+    }
+  }
+
+  class MockJWTClaimValidationFailed extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'JWTClaimValidationFailed';
+    }
+  }
+
+  class MockJWSSignatureVerificationFailed extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'JWSSignatureVerificationFailed';
+    }
+  }
+
+  return { MockJWTExpired, MockJWTClaimValidationFailed, MockJWSSignatureVerificationFailed };
+};
+
+const mockErrors = createMockErrors();
 
 // Mock jose module
 jest.mock('jose', () => ({
   createRemoteJWKSet: jest.fn(() => jest.fn()),
   jwtVerify: jest.fn(),
+  errors: {
+    JWTExpired: mockErrors.MockJWTExpired,
+    JWTClaimValidationFailed: mockErrors.MockJWTClaimValidationFailed,
+    JWSSignatureVerificationFailed: mockErrors.MockJWSSignatureVerificationFailed,
+  },
 }));
 
+import { verifyCloudflareAccess, AccessAuthOutcome } from '../accessAuth';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 
 const mockJwtVerify = jwtVerify as jest.MockedFunction<typeof jwtVerify>;
@@ -91,7 +123,7 @@ describe('verifyCloudflareAccess', () => {
       expect(result.authenticated).toBe(false);
       if (!result.authenticated) {
         expect(result.code).toBe('CONFIG_ERROR');
-        expect(result.error).toContain('CF_ACCESS_AUD');
+        expect(result.error).toContain('CF_ACCESS_AUDIENCE');
       }
     });
   });
@@ -182,7 +214,7 @@ describe('verifyCloudflareAccess', () => {
 
   describe('invalid token', () => {
     it('returns EXPIRED_TOKEN for expired JWT', async () => {
-      mockJwtVerify.mockRejectedValueOnce(new Error('JWT expired'));
+      mockJwtVerify.mockRejectedValueOnce(new mockErrors.MockJWTExpired('JWT expired'));
 
       const headers = {
         get: jest.fn().mockReturnValue('expired-jwt-token'),
@@ -197,7 +229,7 @@ describe('verifyCloudflareAccess', () => {
     });
 
     it('returns INVALID_TOKEN for signature verification failure', async () => {
-      mockJwtVerify.mockRejectedValueOnce(new Error('signature verification failed'));
+      mockJwtVerify.mockRejectedValueOnce(new mockErrors.MockJWSSignatureVerificationFailed('signature verification failed'));
 
       const headers = {
         get: jest.fn().mockReturnValue('tampered-jwt-token'),

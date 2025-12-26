@@ -137,15 +137,65 @@ Returns audit log entries (newest first).
 4. Copy the Application Audience (AUD) Tag
 5. Set environment variables:
    ```bash
+   # Option 1: Full issuer URL (recommended)
+   CF_ACCESS_ISSUER=https://asorateam.cloudflareaccess.com
+   CF_ACCESS_AUDIENCE=a8403633724230f721a6a22b518131b4da071a7d57bf07a640f27ceb93c1ab01
+   CF_ACCESS_OWNER_EMAIL=owner@asora.co.za
+
+   # Option 2: Legacy team domain (also works)
    CF_ACCESS_TEAM_DOMAIN=asorateam
    CF_ACCESS_AUD=a8403633724230f721a6a22b518131b4da071a7d57bf07a640f27ceb93c1ab01
+
+   # Optional: Custom JWKS URL (auto-derived from issuer if not set)
+   CF_ACCESS_JWKS_URL=https://asorateam.cloudflareaccess.com/cdn-cgi/access/certs
    ```
+
+## Security Features
+
+The Cloudflare Access JWT verification provides defense-in-depth:
+
+1. **RS256 Algorithm Only** - Rejects `alg:none` and other algorithms
+2. **Cryptographic Signature Verification** - Uses JWKS with caching (10min TTL)
+3. **Issuer Validation** - Must match `CF_ACCESS_ISSUER` exactly
+4. **Audience Validation** - Must match `CF_ACCESS_AUDIENCE`
+5. **Expiration Checking** - With 60s clock skew tolerance
+6. **Owner Email Enforcement** - Config/audit endpoints require `CF_ACCESS_OWNER_EMAIL` match
+
+### Error Codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | MISSING_TOKEN | No Cf-Access-Jwt-Assertion header |
+| 401 | INVALID_TOKEN | Signature, iss, or aud validation failed |
+| 401 | EXPIRED_TOKEN | Token has expired |
+| 403 | FORBIDDEN | Email doesn't match owner email |
+| 500 | CONFIG_ERROR | Missing environment configuration |
 
 ## Testing
 
 ```bash
 # From functions directory
 npm test -- --testPathPattern=admin
+
+# Run cryptographic JWT verification tests
+npm test -- --testPathPattern=accessAuth.crypto
+```
+
+## Smoke Test Commands
+
+```bash
+# Test 1: No header -> 401
+curl -s https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+# Expected: {"error":{"code":"UNAUTHORIZED","message":"Missing Cf-Access-Jwt-Assertion header",...}}
+
+# Test 2: Bogus token -> 401 (proves signature verification)
+curl -s -H "Cf-Access-Jwt-Assertion: eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJmYWtlIn0.invalid" \
+  https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+# Expected: {"error":{"code":"INVALID_TOKEN",...}}
+
+# Test 3: Firebase auth endpoint still works (invites)
+curl -s -X POST https://asora-function-dev.azurewebsites.net/admin/invites | jq .
+# Expected: {"error":"Authorization header missing"}
 ```
 
 ## Curl Examples (with Access Session)
@@ -155,29 +205,22 @@ npm test -- --testPathPattern=admin
 
 # Get config
 curl -H "Cf-Access-Jwt-Assertion: $JWT" \
-  https://admin-api.asora.co.za/api/admin/config
+  https://admin-api.asora.co.za/api/_admin/config
 
 # Update config
 curl -X PUT \
   -H "Cf-Access-Jwt-Assertion: $JWT" \
   -H "Content-Type: application/json" \
   -d '{"schemaVersion": 1, "payload": {"threshold": 0.9}}' \
-  https://admin-api.asora.co.za/api/admin/config
+  https://admin-api.asora.co.za/api/_admin/config
 
 # Get audit log
 curl -H "Cf-Access-Jwt-Assertion: $JWT" \
-  "https://admin-api.asora.co.za/api/admin/audit?limit=20"
+  "https://admin-api.asora.co.za/api/_admin/audit?limit=20"
 ```
 
 ## Integration with Moderation
 
-The moderation module currently reads thresholds from environment variables
-(`HIVE_REJECT_THRESHOLD`, `HIVE_REVIEW_THRESHOLD`, etc. in `moderationConfig.ts`).
-
-To integrate with admin config:
-
-1. **Option A**: Update `getModerationConfig()` to check admin_config first
-2. **Option B**: Sync admin_config changes to Cosmos config container
-3. **Option C**: Use admin_config as override, fall back to env vars
-
-Recommended: Option A with caching (TTL-based refresh from DB).
+The moderation module reads thresholds from admin_config table via
+`moderationConfigProvider.ts` with 60s cache TTL. Changes to admin config
+will be picked up by moderation within 60 seconds.

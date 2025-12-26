@@ -1,30 +1,26 @@
 /**
- * Admin Audit Log GET Endpoint
+ * Admin Config GET Endpoint
  * 
- * GET /api/admin/audit
+ * GET /api/admin/config
  * 
- * Returns audit log entries for admin configuration changes.
+ * Returns current admin configuration with version and metadata.
  * Protected by Cloudflare Access JWT validation.
- * 
- * Query parameters:
- * - limit: Number of entries to return (default: 50, max: 200)
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import { requireCloudflareAccess } from '../accessAuth';
-import { getAuditLog } from '../adminService';
-import { parseAuditLimit } from '../validation';
+import { getAdminConfig } from '../adminService';
 import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
 
-async function adminAuditGetHandler(
+async function adminConfigGetHandler(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const correlationId = request.headers.get('X-Correlation-ID') || uuidv4();
   const origin = request.headers.get('Origin');
 
-  context.log(`[admin/audit GET] Request received [${correlationId}]`);
+  context.log(`[admin/config GET] Request received [${correlationId}]`);
 
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
@@ -35,7 +31,7 @@ async function adminAuditGetHandler(
   const authResult = await requireCloudflareAccess(request.headers, { requireOwner: true });
 
   if ('error' in authResult) {
-    context.warn(`[admin/audit GET] Auth failed: ${authResult.error} [${correlationId}]`);
+    context.warn(`[admin/config GET] Auth failed: ${authResult.error} [${correlationId}]`);
     return withCorsHeaders(
       {
         status: authResult.status,
@@ -56,21 +52,35 @@ async function adminAuditGetHandler(
   }
 
   try {
-    // Parse and validate limit parameter
-    const limitStr = request.query.get('limit');
-    const limit = parseAuditLimit(limitStr);
+    const config = await getAdminConfig();
 
-    const entries = await getAuditLog(limit);
+    if (!config) {
+      context.warn(`[admin/config GET] Config not found [${correlationId}]`);
+      return withCorsHeaders(
+        {
+          status: 404,
+          jsonBody: {
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Admin configuration not initialized',
+              correlationId,
+            },
+          },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Correlation-ID': correlationId,
+          },
+        },
+        origin
+      );
+    }
 
-    context.log(`[admin/audit GET] Returning ${entries.length} entries [${correlationId}]`);
+    context.log(`[admin/config GET] Returning config v${config.version} [${correlationId}]`);
 
     return withCorsHeaders(
       {
         status: 200,
-        jsonBody: {
-          entries,
-          limit,
-        },
+        jsonBody: config,
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
@@ -80,7 +90,7 @@ async function adminAuditGetHandler(
       origin
     );
   } catch (err) {
-    context.error(`[admin/audit GET] Error: ${err instanceof Error ? err.message : err} [${correlationId}]`);
+    context.error(`[admin/config GET] Error: ${err instanceof Error ? err.message : err} [${correlationId}]`);
 
     return withCorsHeaders(
       {
@@ -88,7 +98,7 @@ async function adminAuditGetHandler(
         jsonBody: {
           error: {
             code: 'INTERNAL_ERROR',
-            message: 'Failed to retrieve audit log',
+            message: 'Failed to retrieve configuration',
             correlationId,
           },
         },
@@ -103,12 +113,11 @@ async function adminAuditGetHandler(
 }
 
 // Register HTTP trigger
-// NOTE: Using '_admin' prefix because Azure Functions reserves '/admin/' for runtime APIs
-app.http('admin_audit_get', {
+app.http('admin_config_get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: '_admin/audit',
-  handler: adminAuditGetHandler,
+  route: 'admin/config',
+  handler: adminConfigGetHandler,
 });
 
-export { adminAuditGetHandler };
+export { adminConfigGetHandler };
