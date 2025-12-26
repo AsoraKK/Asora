@@ -224,3 +224,42 @@ curl -H "Cf-Access-Jwt-Assertion: $JWT" \
 The moderation module reads thresholds from admin_config table via
 `moderationConfigProvider.ts` with 60s cache TTL. Changes to admin config
 will be picked up by moderation within 60 seconds.
+## CORS Configuration
+
+### Browser Preflight Behavior
+
+Due to Azure Functions Flex Consumption limitations:
+
+1. **GET/PUT requests** - CORS headers are returned correctly by our handlers
+2. **OPTIONS preflight** - Azure runtime auto-handles OPTIONS before reaching our handler
+
+### Workaround Options
+
+**Option A: Azure Portal CORS** (Recommended)
+1. Go to Azure Portal → Function App → Settings → CORS
+2. Add allowed origins:
+   - `https://control.asora.co.za`
+   - `http://localhost:8080` (dev)
+   - `http://localhost:4200` (dev)
+
+**Option B: Cloudflare Transform Rules**
+Add a Response Header rule to inject CORS headers on OPTIONS responses.
+
+### Why CLI Doesn't Work
+
+The `az functionapp cors add` command fails on Flex Consumption plans due to
+a `FunctionAppScaleLimit` validation bug. This is a known Azure issue.
+
+### Verification Commands
+
+```bash
+# Test 1: GET without tokens (should get 302 with CORS headers)
+curl -sI -H "Origin: https://control.asora.co.za" \
+  "https://admin-api.asora.co.za/api/_admin/config"
+# Expected: 302 redirect with Access-Control-Allow-Origin header
+
+# Test 2: GET to origin directly (401 with CORS headers)
+curl -sI -H "Origin: https://control.asora.co.za" \
+  "https://asora-function-dev.azurewebsites.net/api/_admin/config"
+# Expected: 401 with Access-Control-Allow-Origin: https://control.asora.co.za
+```
