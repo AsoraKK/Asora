@@ -10,6 +10,7 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { getModerationConfig } from '../config/moderationConfigProvider';
 
 // Request validation schema
 const SubmitAppealSchema = z.object({
@@ -180,7 +181,7 @@ export async function submitAppealHandler({
       votesFor: 0,
       votesAgainst: 0,
       totalVotes: 0,
-      requiredVotes: 5, // Configurable threshold
+      requiredVotes: (await getModerationConfig()).appealRequiredVotes,
       hasReachedQuorum: false,
 
       // Timestamps

@@ -16,16 +16,22 @@ import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator } from '@s
 import { getChaosContext } from '@shared/chaos/chaosConfig';
 import { ChaosError, withCosmosChaos, withHiveChaos } from '@shared/chaos/chaosInjectors';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import { 
+  getFlagAutoHideThreshold, 
+  getReasonPriorityScore, 
+  getUrgencyMultiplier 
+} from '../config/moderationConfigProvider';
 
 // ─────────────────────────────────────────────────────────────
-// Constants
+// Constants (legacy - kept for fallback, dynamic values from admin_config preferred)
 // ─────────────────────────────────────────────────────────────
 
-const FLAG_AUTO_HIDE_THRESHOLD = 5;
+const FALLBACK_FLAG_AUTO_HIDE_THRESHOLD = 5;
 const MAX_ADDITIONAL_DETAILS_LENGTH = 1000;
 
-// Priority scores by reason (higher = more urgent)
-const REASON_PRIORITY_SCORES: Record<string, number> = {
+// Priority scores by reason - now loaded from admin_config
+// Fallback values kept for backwards compatibility
+const FALLBACK_REASON_PRIORITY_SCORES: Record<string, number> = {
   violence: 10,
   hate_speech: 9,
   harassment: 8,
@@ -37,7 +43,8 @@ const REASON_PRIORITY_SCORES: Record<string, number> = {
   other: 2,
 };
 
-const URGENCY_MULTIPLIERS: Record<string, number> = {
+// Fallback urgency multipliers
+const FALLBACK_URGENCY_MULTIPLIERS: Record<string, number> = {
   high: 2,
   medium: 1.5,
   low: 1,
@@ -120,9 +127,19 @@ const flagRateLimiter = createRateLimiter({
 // Helper Functions
 // ─────────────────────────────────────────────────────────────
 
-function calculatePriorityScore(reason: string, urgency: string): number {
-  const baseScore = REASON_PRIORITY_SCORES[reason] ?? 2;
-  const multiplier = URGENCY_MULTIPLIERS[urgency] ?? 1;
+async function calculatePriorityScore(reason: string, urgency: string): Promise<number> {
+  // Get dynamic scores from admin config (or use fallback)
+  let baseScore: number;
+  let multiplier: number;
+  
+  try {
+    baseScore = await getReasonPriorityScore(reason);
+    multiplier = await getUrgencyMultiplier(urgency);
+  } catch {
+    baseScore = FALLBACK_REASON_PRIORITY_SCORES[reason] ?? 2;
+    multiplier = FALLBACK_URGENCY_MULTIPLIERS[urgency] ?? 1;
+  }
+  
   return baseScore * multiplier;
 }
 
@@ -268,7 +285,7 @@ export async function flagContentHandler({
     // 8. Create flag document
     const now = new Date().toISOString();
     const flagId = generateFlagId();
-    const priorityScore = calculatePriorityScore(reason, urgency);
+    const priorityScore = await calculatePriorityScore(reason, urgency);
 
     const flagDocument: FlagDocument = {
       id: flagId,
@@ -297,7 +314,15 @@ export async function flagContentHandler({
 
     // 9. Update content with flag count and flagged status (atomic patch)
     const currentFlagCount = (contentDoc.flagCount ?? 0) + 1;
-    const shouldAutoHide = currentFlagCount >= FLAG_AUTO_HIDE_THRESHOLD;
+    
+    // Get dynamic threshold from admin config (or use fallback)
+    let flagAutoHideThreshold: number;
+    try {
+      flagAutoHideThreshold = await getFlagAutoHideThreshold();
+    } catch {
+      flagAutoHideThreshold = FALLBACK_FLAG_AUTO_HIDE_THRESHOLD;
+    }
+    const shouldAutoHide = currentFlagCount >= flagAutoHideThreshold;
 
     const patchOperations: PatchOperation[] = [
       { op: 'set', path: '/flagCount', value: currentFlagCount },
@@ -307,7 +332,7 @@ export async function flagContentHandler({
 
     if (shouldAutoHide && contentDoc.status !== 'hidden_pending_review') {
       patchOperations.push({ op: 'set', path: '/status', value: 'hidden_pending_review' });
-      context.log('moderation.flag.auto_hidden', { contentId, flagCount: currentFlagCount });
+      context.log('moderation.flag.auto_hidden', { contentId, flagCount: currentFlagCount, threshold: flagAutoHideThreshold });
     }
 
     try {
