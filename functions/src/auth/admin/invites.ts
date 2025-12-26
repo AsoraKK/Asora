@@ -195,18 +195,22 @@ export async function deleteInviteHandler(req: Authed, context: InvocationContex
 }
 
 // Route registration with admin auth guard
-app.http('admin-invites-create', {
-  methods: ['POST', 'OPTIONS'],
+// Combined handler for POST/GET on same route (Azure Functions v4 has issues with separate handlers)
+app.http('admin-invites', {
+  methods: ['GET', 'POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/invites',
-  handler: requireAdmin(createInviteHandler),
-});
-
-app.http('admin-invites-list', {
-  methods: ['GET', 'OPTIONS'],
-  authLevel: 'anonymous',
-  route: '_admin/invites',
-  handler: requireAdmin(listInvitesHandler),
+  handler: requireAdmin(async (req: Authed, context: InvocationContext): Promise<HttpResponseInit> => {
+    const method = req.method?.toUpperCase();
+    if (method === 'POST') {
+      return createInviteHandler(req, context);
+    } else if (method === 'GET') {
+      return listInvitesHandler(req, context);
+    } else if (method === 'OPTIONS') {
+      return handleCorsAndMethod('OPTIONS', ['GET', 'POST']).response!;
+    }
+    return createErrorResponse(405, 'method_not_allowed', `Method ${method} not allowed`);
+  }),
 });
 
 app.http('admin-invites-get', {
