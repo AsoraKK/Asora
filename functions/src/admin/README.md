@@ -224,42 +224,53 @@ curl -H "Cf-Access-Jwt-Assertion: $JWT" \
 The moderation module reads thresholds from admin_config table via
 `moderationConfigProvider.ts` with 60s cache TTL. Changes to admin config
 will be picked up by moderation within 60 seconds.
+
 ## CORS Configuration
 
-### Browser Preflight Behavior
+CORS is configured at the Azure level via REST API. The `az functionapp cors add`
+command fails on Flex Consumption plans due to a `FunctionAppScaleLimit` validation
+bug, so we use the ARM REST API directly.
 
-Due to Azure Functions Flex Consumption limitations:
+### Current Configuration
 
-1. **GET/PUT requests** - CORS headers are returned correctly by our handlers
-2. **OPTIONS preflight** - Azure runtime auto-handles OPTIONS before reaching our handler
+```bash
+# View current CORS settings
+az rest --method get \
+  --uri "https://management.azure.com/subscriptions/{sub}/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/web?api-version=2023-01-01" \
+  --query "properties.cors"
 
-### Workaround Options
-
-**Option A: Azure Portal CORS** (Recommended)
-1. Go to Azure Portal → Function App → Settings → CORS
-2. Add allowed origins:
-   - `https://control.asora.co.za`
-   - `http://localhost:8080` (dev)
-   - `http://localhost:4200` (dev)
-
-**Option B: Cloudflare Transform Rules**
-Add a Response Header rule to inject CORS headers on OPTIONS responses.
-
-### Why CLI Doesn't Work
-
-The `az functionapp cors add` command fails on Flex Consumption plans due to
-a `FunctionAppScaleLimit` validation bug. This is a known Azure issue.
+# Allowed origins:
+# - https://control.asora.co.za
+# - http://localhost:8080
+# - http://localhost:4200
+```
 
 ### Verification Commands
 
 ```bash
-# Test 1: GET without tokens (should get 302 with CORS headers)
-curl -sI -H "Origin: https://control.asora.co.za" \
-  "https://admin-api.asora.co.za/api/_admin/config"
-# Expected: 302 redirect with Access-Control-Allow-Origin header
-
-# Test 2: GET to origin directly (401 with CORS headers)
-curl -sI -H "Origin: https://control.asora.co.za" \
+# Test 1: OPTIONS preflight (should return CORS headers)
+curl -sI -X OPTIONS \
+  -H "Origin: https://control.asora.co.za" \
+  -H "Access-Control-Request-Method: GET" \
   "https://asora-function-dev.azurewebsites.net/api/_admin/config"
+# Expected: 204 with Access-Control-Allow-Origin header
+
+# Test 2: GET without tokens (should return 401 with CORS headers)
+curl -si -H "Origin: https://control.asora.co.za" \
+  "https://asora-function-dev.azurewebsites.net/api/_admin/config" | head -10
 # Expected: 401 with Access-Control-Allow-Origin: https://control.asora.co.za
+
+# Test 3: GET via Cloudflare (302 redirect with CORS)
+curl -si -H "Origin: https://control.asora.co.za" \
+  "https://admin-api.asora.co.za/api/_admin/config" | head -10
+# Expected: 302 with access-control-allow-origin header
+```
+
+### Updating CORS (if needed)
+
+```bash
+SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+az rest --method patch \
+  --uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/web?api-version=2023-01-01" \
+  --body '{"properties":{"cors":{"allowedOrigins":["https://control.asora.co.za","http://localhost:8080","http://localhost:4200"],"supportCredentials":true}}}'
 ```
