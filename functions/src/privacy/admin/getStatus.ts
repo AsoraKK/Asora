@@ -28,6 +28,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-status', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}',
+  route: '_admin/dsr/{id}',
   handler: protectedHandler,
 });

@@ -50,6 +50,6 @@ const protectedHandler = requirePrivacyAdmin(releaseHandler);
 app.http('privacy-admin-dsr-release', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}/release',
+  route: '_admin/dsr/{id}/release',
   handler: protectedHandler,
 });

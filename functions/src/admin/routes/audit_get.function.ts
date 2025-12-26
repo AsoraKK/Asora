@@ -103,10 +103,11 @@ async function adminAuditGetHandler(
 }
 
 // Register HTTP trigger
+// NOTE: Using '_admin' prefix because Azure Functions reserves '/admin/' for runtime APIs
 app.http('admin_audit_get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/audit',
+  route: '_admin/audit',
   handler: adminAuditGetHandler,
 });
 

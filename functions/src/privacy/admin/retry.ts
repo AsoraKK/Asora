@@ -37,6 +37,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-retry', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}/retry',
+  route: '_admin/dsr/{id}/retry',
   handler: protectedHandler,
 });

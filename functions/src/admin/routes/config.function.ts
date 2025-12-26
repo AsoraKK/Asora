@@ -300,10 +300,11 @@ async function handlePut(
 }
 
 // Register single HTTP trigger for all methods
+// NOTE: Using '_admin' prefix because Azure Functions reserves '/admin/' for runtime APIs
 app.http('admin_config', {
   methods: ['GET', 'PUT', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/config',
+  route: '_admin/config',
   handler: adminConfigHandler,
 });
 

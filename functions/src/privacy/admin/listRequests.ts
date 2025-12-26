@@ -95,6 +95,6 @@ const protectedHandler = requirePrivacyAdmin(listRequestsHandler);
 app.http('privacy-admin-dsr-list', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr',
+  route: '_admin/dsr',
   handler: protectedHandler,
 });

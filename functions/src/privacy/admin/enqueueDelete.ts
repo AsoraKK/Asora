@@ -60,6 +60,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-enqueue-delete', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/delete',
+  route: '_admin/dsr/delete',
   handler: protectedHandler,
 });

@@ -35,6 +35,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-cancel', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}/cancel',
+  route: '_admin/dsr/{id}/cancel',
   handler: protectedHandler,
 });

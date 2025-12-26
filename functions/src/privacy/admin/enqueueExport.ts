@@ -60,6 +60,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-enqueue-export', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/export',
+  route: '_admin/dsr/export',
   handler: protectedHandler,
 });

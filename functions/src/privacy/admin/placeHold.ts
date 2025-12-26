@@ -55,6 +55,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-place-hold', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/legal-holds',
+  route: '_admin/dsr/legal-holds',
   handler: protectedHandler,
 });

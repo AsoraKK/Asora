@@ -198,27 +198,27 @@ export async function deleteInviteHandler(req: Authed, context: InvocationContex
 app.http('admin-invites-create', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/invites',
+  route: '_admin/invites',
   handler: requireAdmin(createInviteHandler),
 });
 
 app.http('admin-invites-list', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/invites',
+  route: '_admin/invites',
   handler: requireAdmin(listInvitesHandler),
 });
 
 app.http('admin-invites-get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/invites/{code}',
+  route: '_admin/invites/{code}',
   handler: requireAdmin(getInviteHandler),
 });
 
 app.http('admin-invites-delete', {
   methods: ['DELETE', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/invites/{code}',
+  route: '_admin/invites/{code}',
   handler: requireAdmin(deleteInviteHandler),
 });

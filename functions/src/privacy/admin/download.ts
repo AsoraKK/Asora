@@ -47,6 +47,6 @@ const protectedHandler = requirePrivacyAdmin(downloadHandler);
 app.http('privacy-admin-dsr-download', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}/download',
+  route: '_admin/dsr/{id}/download',
   handler: protectedHandler,
 });

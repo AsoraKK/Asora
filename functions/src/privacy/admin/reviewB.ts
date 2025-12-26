@@ -47,6 +47,6 @@ const protectedHandler = requirePrivacyAdmin(handler);
 app.http('privacy-admin-dsr-reviewB', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'admin/dsr/{id}/reviewB',
+  route: '_admin/dsr/{id}/reviewB',
   handler: protectedHandler,
 });
