@@ -1,39 +1,41 @@
 /**
- * Admin Config PUT Endpoint
+ * Admin Config Endpoints (Combined Handler)
  * 
- * PUT /api/admin/config
+ * GET /api/admin/config - Returns current admin configuration
+ * PUT /api/admin/config - Updates configuration with validation and audit
+ * OPTIONS /api/admin/config - CORS preflight
  * 
- * Updates admin configuration with validation, version bumping, and audit logging.
  * Protected by Cloudflare Access JWT validation.
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import { requireCloudflareAccess } from '../accessAuth';
-import { updateAdminConfig } from '../adminService';
+import { getAdminConfig, updateAdminConfig } from '../adminService';
 import { validateAdminConfigRequest, validatePayloadSize } from '../validation';
 import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
 import type { AdminConfigPayload } from '../types';
 
-async function adminConfigPutHandler(
+async function adminConfigHandler(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const correlationId = request.headers.get('X-Correlation-ID') || uuidv4();
   const origin = request.headers.get('Origin');
+  const method = request.method.toUpperCase();
 
-  context.log(`[admin/config PUT] Request received [${correlationId}]`);
+  context.log(`[admin/config ${method}] Request received [${correlationId}]`);
 
   // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
+  if (method === 'OPTIONS') {
     return createCorsPreflightResponse(origin);
   }
 
-  // Verify Cloudflare Access
+  // Verify Cloudflare Access for all methods
   const authResult = await requireCloudflareAccess(request.headers);
 
   if ('error' in authResult) {
-    context.warn(`[admin/config PUT] Auth failed: ${authResult.error} [${correlationId}]`);
+    context.warn(`[admin/config ${method}] Auth failed: ${authResult.error} [${correlationId}]`);
     return withCorsHeaders(
       {
         status: authResult.status,
@@ -53,8 +55,105 @@ async function adminConfigPutHandler(
     );
   }
 
-  const actor = authResult.actor;
+  // Route to appropriate handler
+  if (method === 'GET') {
+    return handleGet(context, correlationId, origin);
+  } else if (method === 'PUT') {
+    return handlePut(request, context, correlationId, origin, authResult.actor);
+  } else {
+    return withCorsHeaders(
+      {
+        status: 405,
+        jsonBody: {
+          error: {
+            code: 'METHOD_NOT_ALLOWED',
+            message: `Method ${method} not allowed`,
+            correlationId,
+          },
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': correlationId,
+        },
+      },
+      origin
+    );
+  }
+}
 
+async function handleGet(
+  context: InvocationContext,
+  correlationId: string,
+  origin: string | null
+): Promise<HttpResponseInit> {
+  try {
+    const config = await getAdminConfig();
+
+    if (!config) {
+      context.warn(`[admin/config GET] Config not found [${correlationId}]`);
+      return withCorsHeaders(
+        {
+          status: 404,
+          jsonBody: {
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Admin configuration not initialized',
+              correlationId,
+            },
+          },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Correlation-ID': correlationId,
+          },
+        },
+        origin
+      );
+    }
+
+    context.log(`[admin/config GET] Returning config v${config.version} [${correlationId}]`);
+
+    return withCorsHeaders(
+      {
+        status: 200,
+        jsonBody: config,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'X-Correlation-ID': correlationId,
+        },
+      },
+      origin
+    );
+  } catch (err) {
+    context.error(`[admin/config GET] Error: ${err instanceof Error ? err.message : err} [${correlationId}]`);
+
+    return withCorsHeaders(
+      {
+        status: 500,
+        jsonBody: {
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to retrieve configuration',
+            correlationId,
+          },
+        },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': correlationId,
+        },
+      },
+      origin
+    );
+  }
+}
+
+async function handlePut(
+  request: HttpRequest,
+  context: InvocationContext,
+  correlationId: string,
+  origin: string | null,
+  actor: string
+): Promise<HttpResponseInit> {
   // Parse request body
   let body: unknown;
   try {
@@ -200,12 +299,12 @@ async function adminConfigPutHandler(
   }
 }
 
-// Register HTTP trigger
-app.http('admin_config_put', {
-  methods: ['PUT', 'OPTIONS'],
+// Register single HTTP trigger for all methods
+app.http('admin_config', {
+  methods: ['GET', 'PUT', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'admin/config',
-  handler: adminConfigPutHandler,
+  handler: adminConfigHandler,
 });
 
-export { adminConfigPutHandler };
+export { adminConfigHandler };
