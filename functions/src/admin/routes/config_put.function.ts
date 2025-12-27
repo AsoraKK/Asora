@@ -132,12 +132,37 @@ async function adminConfigPutHandler(
     schemaVersion: validation.data.schemaVersion,
     ...validation.data.payload,
   };
+  
+  // Extract expectedVersion for optimistic locking (optional)
+  const expectedVersion = validation.data.expectedVersion;
 
   try {
     // Update config (transactional with audit logging)
-    const result = await updateAdminConfig(actor, newPayload);
+    const result = await updateAdminConfig(actor, newPayload, expectedVersion);
 
     if (!result.success) {
+      // Check for version conflict (optimistic locking)
+      if (result.code === 'VERSION_CONFLICT') {
+        context.warn(`[admin/config PUT] Version conflict: ${result.error} [${correlationId}]`);
+        return withCorsHeaders(
+          {
+            status: 409,
+            jsonBody: {
+              error: {
+                code: 'VERSION_CONFLICT',
+                message: result.error,
+                correlationId,
+              },
+            },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Correlation-ID': correlationId,
+            },
+          },
+          origin
+        );
+      }
+      
       context.error(`[admin/config PUT] Update failed: ${result.error} [${correlationId}]`);
       return withCorsHeaders(
         {

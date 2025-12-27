@@ -43,17 +43,20 @@ export async function getAdminConfig(): Promise<AdminConfigResponse | null> {
  * 
  * Implements:
  * 1. Row-level lock (SELECT FOR UPDATE) to prevent concurrent writes
- * 2. Version bump (monotonically increasing)
- * 3. Append-only audit log entry
+ * 2. Optimistic locking via expectedVersion (returns 409 on mismatch)
+ * 3. Version bump (monotonically increasing)
+ * 4. Append-only audit log entry
  * 
  * @param actor - Email/identifier of the user making the change
  * @param newPayload - New configuration payload
+ * @param expectedVersion - Optional: expected current version for optimistic locking
  * @returns Updated config or error
  */
 export async function updateAdminConfig(
   actor: string,
-  newPayload: AdminConfigPayload
-): Promise<{ success: true; version: number; updatedAt: string } | { success: false; error: string }> {
+  newPayload: AdminConfigPayload,
+  expectedVersion?: number
+): Promise<{ success: true; version: number; updatedAt: string } | { success: false; error: string; code?: string }> {
   return withClient(async (client: PoolClient) => {
     try {
       // Start transaction
@@ -70,6 +73,17 @@ export async function updateAdminConfig(
       }
 
       const currentRow = lockResult.rows[0]!;
+      
+      // Optimistic locking check
+      if (expectedVersion !== undefined && currentRow.version !== expectedVersion) {
+        await client.query('ROLLBACK');
+        return { 
+          success: false, 
+          error: `Version conflict: expected ${expectedVersion}, server has ${currentRow.version}`,
+          code: 'VERSION_CONFLICT'
+        };
+      }
+
       const beforePayload = currentRow.payload_json;
       const newVersion = currentRow.version + 1;
       const now = new Date();

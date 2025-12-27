@@ -62,6 +62,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4  # For scheduled local notifications
   flutter_svg: ^2.0.9
+  intl: ^0.19.0             # Date/time formatting
+  uuid: ^4.4.0              # UUID generation for request IDs
 
 dev_dependencies:
   flutter_test:

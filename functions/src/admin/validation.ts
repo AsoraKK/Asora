@@ -19,6 +19,7 @@ export const MAX_PAYLOAD_SIZE_BYTES = 64 * 1024;
  * Rules:
  * - schemaVersion is required integer >= 1
  * - payload is a JSON object (not array/null)
+ * - expectedVersion is optional for optimistic locking (if provided, must match server version)
  * - Flexible enough to evolve without defining all fields upfront
  */
 export const AdminConfigEnvelopeSchema = z.object({
@@ -31,6 +32,11 @@ export const AdminConfigEnvelopeSchema = z.object({
     .refine((obj) => obj !== null && typeof obj === 'object' && !Array.isArray(obj), {
       message: 'payload must be a JSON object',
     }),
+  expectedVersion: z
+    .number()
+    .int()
+    .min(1)
+    .optional(),
 });
 
 export type AdminConfigEnvelope = z.infer<typeof AdminConfigEnvelopeSchema>;

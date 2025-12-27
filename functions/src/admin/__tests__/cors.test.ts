@@ -36,9 +36,13 @@ describe('handleCors', () => {
   it('returns 204 for OPTIONS preflight from allowed origin', () => {
     const result = handleCors('OPTIONS', 'https://control.asora.co.za');
 
+    if (!result || !result.headers) {
+      throw new Error('Expected CORS preflight response');
+    }
+    const headers = result.headers as Record<string, string>;
+
     expect(result.status).toBe(204);
-    expect(result.headers).toBeDefined();
-    expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
   });
 
   it('returns null for non-OPTIONS requests (let handler proceed)', () => {
