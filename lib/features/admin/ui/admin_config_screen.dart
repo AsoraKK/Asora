@@ -464,9 +464,6 @@ class AdminConfigScreen extends ConsumerWidget {
       subtitle: Text(subtitle),
       value: value,
       onChanged: onChanged,
-      activeThumbColor: isDestructive
-          ? Theme.of(context).colorScheme.error
-          : null,
     );
   }
 
