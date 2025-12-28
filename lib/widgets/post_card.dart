@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/moderation/domain/appeal.dart';
+import '../features/feed/presentation/post_insights_panel.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/moderation_badges.dart';
 import '../widgets/appeal_dialog.dart';
@@ -189,6 +190,10 @@ class _PostCardState extends ConsumerState<PostCard> {
               onComment: () => _handleComment(),
               onShare: () => _handleShare(),
             ),
+
+          // Insights panel (only visible to post author or admin)
+          // The panel itself handles authorization - returns empty if not allowed
+          if (widget.isOwnPost) PostInsightsPanel(postId: widget.post.id),
 
           const SizedBox(height: 8),
         ],
