@@ -9,14 +9,10 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostCreated } from '@shared/services/reputationService';
-import {
-  createHiveClient,
-  ModerationAction,
-  HiveAPIError,
-  type ModerationResult,
-} from '@shared/clients/hive';
+import { ModerationAction } from '@shared/clients/hive';
 import { withChaos } from '@shared/middleware/chaos';
 import { withDailyPostLimit } from '@shared/middleware/dailyPostLimit';
+import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
 
 import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta, ModerationStatus } from '@feed/types';
 
@@ -56,125 +52,8 @@ interface ContentBlockedResponse {
   details?: Record<string, unknown>;
 }
 
-/**
- * Moderate content using Hive AI
- * Returns moderation result or null if moderation should be skipped
- */
-async function moderateContent(
-  text: string,
-  userId: string,
-  contentId: string,
-  context: InvocationContext
-): Promise<{ result: ModerationResult | null; error?: string }> {
-  // Skip moderation if HIVE_API_KEY is not configured (dev/test environments)
-  if (!process.env.HIVE_API_KEY) {
-    context.log('posts.create.moderation_skipped', { reason: 'no_api_key', contentId });
-    return { result: null };
-  }
-
-  try {
-    const hiveClient = createHiveClient();
-    const start = performance.now();
-
-    const result = await hiveClient.moderateTextContent({
-      text,
-      userId,
-      contentId,
-    });
-
-    const duration = performance.now() - start;
-
-    trackAppMetric({
-      name: 'hive_moderation_duration_ms',
-      value: duration,
-      properties: {
-        action: result.action,
-        contentId,
-      },
-    });
-
-    context.log('posts.create.moderation_complete', {
-      contentId,
-      action: result.action,
-      confidence: result.confidence.toFixed(3),
-      categories: result.categories,
-      durationMs: duration.toFixed(2),
-    });
-
-    return { result };
-  } catch (error) {
-    const isHiveError = error instanceof HiveAPIError;
-    const errorMessage = (error as Error).message;
-    const errorCode = isHiveError ? (error as HiveAPIError).code : 'UNKNOWN_ERROR';
-
-    context.log('posts.create.moderation_error', {
-      contentId,
-      errorCode,
-      message: errorMessage,
-      retryable: isHiveError ? (error as HiveAPIError).retryable : false,
-    });
-
-    trackAppEvent({
-      name: 'moderation_error',
-      properties: {
-        contentId,
-        errorCode,
-        message: errorMessage,
-      },
-    });
-
-    return { result: null, error: errorMessage };
-  }
-}
-
-/**
- * Map moderation result to status and metadata
- */
-function buildModerationMeta(
-  result: ModerationResult | null,
-  error?: string
-): ModerationMeta {
-  const now = Date.now();
-
-  if (error) {
-    // Moderation failed - route to pending review
-    return {
-      status: 'pending_review',
-      checkedAt: now,
-      error,
-    };
-  }
-
-  if (!result) {
-    // Moderation skipped - treat as clean
-    return {
-      status: 'clean',
-      checkedAt: now,
-    };
-  }
-
-  let status: ModerationStatus;
-  switch (result.action) {
-    case ModerationAction.BLOCK:
-      status = 'blocked';
-      break;
-    case ModerationAction.WARN:
-      status = 'warned';
-      break;
-    case ModerationAction.ALLOW:
-    default:
-      status = 'clean';
-      break;
-  }
-
-  return {
-    status,
-    checkedAt: now,
-    confidence: result.confidence,
-    categories: result.categories,
-    reasons: result.reasons,
-  };
-}
+// Note: moderatePostContent and buildModerationMeta are now imported from @posts/service/moderationUtil
+// to ensure dynamic config loading, decision logging, and consistent threshold handling across all entrypoints.
 
 function validatePostPayload(
   payload: CreatePostBody,
@@ -240,13 +119,17 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     const postId = crypto.randomUUID();
 
     // ─────────────────────────────────────────────────────────────
-    // Content Moderation - Check before creating post
+    // Content Moderation - Check before creating post (uses shared util)
     // ─────────────────────────────────────────────────────────────
-    const { result: moderationResult, error: moderationError } = await moderateContent(
+    // Generate a correlation ID for this request
+    const correlationId = req.headers.get('x-correlation-id') ?? crypto.randomUUID();
+    
+    const { result: moderationResult, error: moderationError } = await moderatePostContent(
       validation.text,
       principal.sub,
       postId,
-      context
+      context,
+      correlationId
     );
 
     // Build moderation metadata

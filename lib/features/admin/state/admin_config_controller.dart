@@ -249,14 +249,15 @@ class AdminConfigEditorNotifier extends StateNotifier<AdminConfigEditorState> {
     if (serverMod.temperature != draftMod.temperature) {
       diff['moderation.temperature'] = draftMod.temperature;
     }
-    if (serverMod.toxicityThreshold != draftMod.toxicityThreshold) {
-      diff['moderation.toxicityThreshold'] = draftMod.toxicityThreshold;
+    if (serverMod.hiveAutoFlagThreshold != draftMod.hiveAutoFlagThreshold) {
+      diff['moderation.hiveAutoFlagThreshold'] = draftMod.hiveAutoFlagThreshold;
     }
-    if (serverMod.autoRejectThreshold != draftMod.autoRejectThreshold) {
-      diff['moderation.autoRejectThreshold'] = draftMod.autoRejectThreshold;
+    if (serverMod.hiveAutoRemoveThreshold != draftMod.hiveAutoRemoveThreshold) {
+      diff['moderation.hiveAutoRemoveThreshold'] =
+          draftMod.hiveAutoRemoveThreshold;
     }
-    if (serverMod.enableHiveAi != draftMod.enableHiveAi) {
-      diff['moderation.enableHiveAi'] = draftMod.enableHiveAi;
+    if (serverMod.enableAutoModeration != draftMod.enableAutoModeration) {
+      diff['moderation.enableAutoModeration'] = draftMod.enableAutoModeration;
     }
     if (serverMod.enableAzureContentSafety !=
         draftMod.enableAzureContentSafety) {
@@ -312,33 +313,33 @@ class AdminConfigEditorNotifier extends StateNotifier<AdminConfigEditorState> {
         ),
       );
     }
-    if (serverMod.toxicityThreshold != draftMod.toxicityThreshold) {
+    if (serverMod.hiveAutoFlagThreshold != draftMod.hiveAutoFlagThreshold) {
       changes.add(
         ConfigChange(
-          path: 'moderation.toxicityThreshold',
-          label: 'Toxicity Threshold',
-          before: serverMod.toxicityThreshold,
-          after: draftMod.toxicityThreshold,
+          path: 'moderation.hiveAutoFlagThreshold',
+          label: 'Flag Threshold (Hive)',
+          before: serverMod.hiveAutoFlagThreshold,
+          after: draftMod.hiveAutoFlagThreshold,
         ),
       );
     }
-    if (serverMod.autoRejectThreshold != draftMod.autoRejectThreshold) {
+    if (serverMod.hiveAutoRemoveThreshold != draftMod.hiveAutoRemoveThreshold) {
       changes.add(
         ConfigChange(
-          path: 'moderation.autoRejectThreshold',
-          label: 'Auto-Reject Threshold',
-          before: serverMod.autoRejectThreshold,
-          after: draftMod.autoRejectThreshold,
+          path: 'moderation.hiveAutoRemoveThreshold',
+          label: 'Auto-Block Threshold',
+          before: serverMod.hiveAutoRemoveThreshold,
+          after: draftMod.hiveAutoRemoveThreshold,
         ),
       );
     }
-    if (serverMod.enableHiveAi != draftMod.enableHiveAi) {
+    if (serverMod.enableAutoModeration != draftMod.enableAutoModeration) {
       changes.add(
         ConfigChange(
-          path: 'moderation.enableHiveAi',
-          label: 'Hive AI Enabled',
-          before: serverMod.enableHiveAi,
-          after: draftMod.enableHiveAi,
+          path: 'moderation.enableAutoModeration',
+          label: 'Auto-Moderation Enabled',
+          before: serverMod.enableAutoModeration,
+          after: draftMod.enableAutoModeration,
         ),
       );
     }

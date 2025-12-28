@@ -51,6 +51,19 @@ export async function moderatePostContent(
   // Check if auto-moderation is enabled
   if (!config.enableAutoModeration) {
     context.log('[moderation] Auto-moderation disabled by config', { contentId });
+    
+    // Log decision even when auto-moderation is disabled
+    await recordModerationDecision({
+      itemId: contentId,
+      contentType: 'post',
+      provider: 'hive_v2',
+      signals: { confidence: 0, categories: [] },
+      configEnvelope,
+      decision: 'allow',
+      reasonCodes: ['AUTO_MODERATION_DISABLED'],
+      correlationId,
+    });
+    
     return { result: null };
   }
 

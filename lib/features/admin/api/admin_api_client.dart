@@ -207,18 +207,24 @@ class AdminApiClient {
               temperature: (value as num).toDouble(),
             );
             break;
-          case 'toxicityThreshold':
+          // New field names aligned with backend
+          case 'hiveAutoFlagThreshold':
+          case 'toxicityThreshold': // Legacy support
             moderation = moderation.copyWith(
-              toxicityThreshold: (value as num).toDouble(),
+              hiveAutoFlagThreshold: (value as num).toDouble(),
             );
             break;
-          case 'autoRejectThreshold':
+          case 'hiveAutoRemoveThreshold':
+          case 'autoRejectThreshold': // Legacy support
             moderation = moderation.copyWith(
-              autoRejectThreshold: (value as num).toDouble(),
+              hiveAutoRemoveThreshold: (value as num).toDouble(),
             );
             break;
-          case 'enableHiveAi':
-            moderation = moderation.copyWith(enableHiveAi: value as bool);
+          case 'enableAutoModeration':
+          case 'enableHiveAi': // Legacy support
+            moderation = moderation.copyWith(
+              enableAutoModeration: value as bool,
+            );
             break;
           case 'enableAzureContentSafety':
             moderation = moderation.copyWith(

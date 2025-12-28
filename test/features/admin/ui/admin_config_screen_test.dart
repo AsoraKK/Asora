@@ -29,7 +29,7 @@ void main() {
           schemaVersion: 1,
           moderation: ModerationConfig(
             temperature: 0.2,
-            toxicityThreshold: 0.85,
+            hiveAutoFlagThreshold: 0.8,
           ),
           featureFlags: FeatureFlagsConfig(
             appealsEnabled: true,
@@ -152,8 +152,8 @@ void main() {
       );
 
       expect(find.text('AI Temperature'), findsOneWidget);
-      expect(find.text('Toxicity Threshold'), findsOneWidget);
-      expect(find.text('Auto-Reject Threshold'), findsOneWidget);
+      expect(find.text('Flag Threshold (Hive)'), findsOneWidget);
+      expect(find.text('Auto-Block Threshold'), findsOneWidget);
     });
 
     testWidgets('displays feature flag switches', (tester) async {

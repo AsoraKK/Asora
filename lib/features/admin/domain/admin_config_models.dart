@@ -60,27 +60,35 @@ class UpdatedBy {
 }
 
 /// Moderation configuration settings
+///
+/// Field names aligned with backend (moderationConfigProvider.ts):
+/// - hiveAutoFlagThreshold (was toxicityThreshold): threshold for flagging content
+/// - hiveAutoRemoveThreshold (was autoRejectThreshold): threshold for auto-blocking
+/// - enableAutoModeration (was enableHiveAi): master toggle for AI moderation
 @immutable
 class ModerationConfig {
   const ModerationConfig({
     this.temperature = 0.2,
-    this.toxicityThreshold = 0.85,
-    this.autoRejectThreshold = 0.95,
-    this.enableHiveAi = true,
+    this.hiveAutoFlagThreshold = 0.8,
+    this.hiveAutoRemoveThreshold = 0.95,
+    this.enableAutoModeration = true,
     this.enableAzureContentSafety = true,
   });
 
   /// AI temperature for moderation decisions (0.0 - 1.0)
   final double temperature;
 
-  /// Toxicity threshold for flagging content (0.0 - 1.0)
-  final double toxicityThreshold;
+  /// Threshold for flagging content for review (0.0 - 1.0)
+  /// Backend field: hiveAutoFlagThreshold
+  final double hiveAutoFlagThreshold;
 
-  /// Threshold above which content is auto-rejected (0.0 - 1.0)
-  final double autoRejectThreshold;
+  /// Threshold above which content is auto-blocked (0.0 - 1.0)
+  /// Backend field: hiveAutoRemoveThreshold
+  final double hiveAutoRemoveThreshold;
 
-  /// Whether Hive AI moderation is enabled
-  final bool enableHiveAi;
+  /// Whether AI auto-moderation is enabled (master toggle)
+  /// Backend field: enableAutoModeration
+  final bool enableAutoModeration;
 
   /// Whether Azure Content Safety fallback is enabled
   final bool enableAzureContentSafety;
@@ -88,11 +96,19 @@ class ModerationConfig {
   factory ModerationConfig.fromJson(Map<String, dynamic> json) {
     return ModerationConfig(
       temperature: (json['temperature'] as num?)?.toDouble() ?? 0.2,
-      toxicityThreshold:
-          (json['toxicityThreshold'] as num?)?.toDouble() ?? 0.85,
-      autoRejectThreshold:
-          (json['autoRejectThreshold'] as num?)?.toDouble() ?? 0.95,
-      enableHiveAi: json['enableHiveAi'] as bool? ?? true,
+      // Support both new and legacy field names for backward compatibility
+      hiveAutoFlagThreshold:
+          (json['hiveAutoFlagThreshold'] as num?)?.toDouble() ??
+          (json['toxicityThreshold'] as num?)?.toDouble() ??
+          0.8,
+      hiveAutoRemoveThreshold:
+          (json['hiveAutoRemoveThreshold'] as num?)?.toDouble() ??
+          (json['autoRejectThreshold'] as num?)?.toDouble() ??
+          0.95,
+      enableAutoModeration:
+          json['enableAutoModeration'] as bool? ??
+          json['enableHiveAi'] as bool? ??
+          true,
       enableAzureContentSafety:
           json['enableAzureContentSafety'] as bool? ?? true,
     );
@@ -100,24 +116,26 @@ class ModerationConfig {
 
   Map<String, dynamic> toJson() => {
     'temperature': temperature,
-    'toxicityThreshold': toxicityThreshold,
-    'autoRejectThreshold': autoRejectThreshold,
-    'enableHiveAi': enableHiveAi,
+    'hiveAutoFlagThreshold': hiveAutoFlagThreshold,
+    'hiveAutoRemoveThreshold': hiveAutoRemoveThreshold,
+    'enableAutoModeration': enableAutoModeration,
     'enableAzureContentSafety': enableAzureContentSafety,
   };
 
   ModerationConfig copyWith({
     double? temperature,
-    double? toxicityThreshold,
-    double? autoRejectThreshold,
-    bool? enableHiveAi,
+    double? hiveAutoFlagThreshold,
+    double? hiveAutoRemoveThreshold,
+    bool? enableAutoModeration,
     bool? enableAzureContentSafety,
   }) {
     return ModerationConfig(
       temperature: temperature ?? this.temperature,
-      toxicityThreshold: toxicityThreshold ?? this.toxicityThreshold,
-      autoRejectThreshold: autoRejectThreshold ?? this.autoRejectThreshold,
-      enableHiveAi: enableHiveAi ?? this.enableHiveAi,
+      hiveAutoFlagThreshold:
+          hiveAutoFlagThreshold ?? this.hiveAutoFlagThreshold,
+      hiveAutoRemoveThreshold:
+          hiveAutoRemoveThreshold ?? this.hiveAutoRemoveThreshold,
+      enableAutoModeration: enableAutoModeration ?? this.enableAutoModeration,
       enableAzureContentSafety:
           enableAzureContentSafety ?? this.enableAzureContentSafety,
     );
@@ -129,17 +147,17 @@ class ModerationConfig {
       other is ModerationConfig &&
           runtimeType == other.runtimeType &&
           temperature == other.temperature &&
-          toxicityThreshold == other.toxicityThreshold &&
-          autoRejectThreshold == other.autoRejectThreshold &&
-          enableHiveAi == other.enableHiveAi &&
+          hiveAutoFlagThreshold == other.hiveAutoFlagThreshold &&
+          hiveAutoRemoveThreshold == other.hiveAutoRemoveThreshold &&
+          enableAutoModeration == other.enableAutoModeration &&
           enableAzureContentSafety == other.enableAzureContentSafety;
 
   @override
   int get hashCode =>
       temperature.hashCode ^
-      toxicityThreshold.hashCode ^
-      autoRejectThreshold.hashCode ^
-      enableHiveAi.hashCode ^
+      hiveAutoFlagThreshold.hashCode ^
+      hiveAutoRemoveThreshold.hashCode ^
+      enableAutoModeration.hashCode ^
       enableAzureContentSafety.hashCode;
 }
 

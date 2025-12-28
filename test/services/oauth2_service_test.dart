@@ -189,17 +189,17 @@ void main() {
       final service = OAuth2Service(dio: mockDio, secureStorage: mockStorage);
 
       // Test various error codes
-      final cancelException = service.testing_mapAppAuthException(
+      final cancelException = service.testingMapAppAuthException(
         PlatformException(code: 'USER_CANCEL'),
       );
       expect(cancelException.error, AuthError.cancelled);
 
-      final networkException = service.testing_mapAppAuthException(
+      final networkException = service.testingMapAppAuthException(
         PlatformException(code: 'NETWORK_ERROR'),
       );
       expect(networkException.error, AuthError.network);
 
-      final policyException = service.testing_mapAppAuthException(
+      final policyException = service.testingMapAppAuthException(
         PlatformException(code: 'AUTH_ERROR', message: 'AADB2C90118'),
       );
       expect(policyException.error, AuthError.policyNotFound);
@@ -224,7 +224,7 @@ void main() {
         ),
       ).thenAnswer((_) async => {});
 
-      await service.testing_cacheToken(result);
+      await service.testingCacheToken(result);
 
       verify(
         () => mockStorage.write(key: 'access_token', value: 'test_token'),
@@ -268,8 +268,8 @@ void main() {
       service.authState.listen(states.add);
 
       // Simulate state changes
-      service.testing_updateState(AuthState.authenticating);
-      service.testing_updateState(AuthState.authenticated);
+      service.testingUpdateState(AuthState.authenticating);
+      service.testingUpdateState(AuthState.authenticated);
 
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -325,10 +325,10 @@ void main() {
 
 /// Extension to expose private methods for testing
 extension OAuth2ServiceTesting on OAuth2Service {
-  Future<void> testing_cacheToken(AuthResult result) => cacheToken(result);
+  Future<void> testingCacheToken(AuthResult result) => cacheToken(result);
 
-  void testing_updateState(AuthState newState) => updateState(newState);
+  void testingUpdateState(AuthState newState) => updateState(newState);
 
-  AuthException testing_mapAppAuthException(PlatformException e) =>
+  AuthException testingMapAppAuthException(PlatformException e) =>
       mapAppAuthException(e);
 }

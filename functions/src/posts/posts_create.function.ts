@@ -48,7 +48,8 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       content,
       auth.userId,
       postId,
-      ctx.context
+      ctx.context,
+      ctx.correlationId
     );
 
     const moderationMeta = buildModerationMeta(moderationResult, moderationError);

@@ -27,9 +27,9 @@ void main() {
         schemaVersion: 1,
         moderation: ModerationConfig(
           temperature: 0.2,
-          toxicityThreshold: 0.85,
-          autoRejectThreshold: 0.95,
-          enableHiveAi: true,
+          hiveAutoFlagThreshold: 0.8,
+          hiveAutoRemoveThreshold: 0.95,
+          enableAutoModeration: true,
           enableAzureContentSafety: true,
         ),
         featureFlags: FeatureFlagsConfig(
@@ -78,7 +78,7 @@ void main() {
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(
           temperature: 0.3,
-          toxicityThreshold: 0.9,
+          hiveAutoFlagThreshold: 0.9,
         ),
       );
 
@@ -86,7 +86,7 @@ void main() {
 
       expect(diff, {
         'moderation.temperature': 0.3,
-        'moderation.toxicityThreshold': 0.9,
+        'moderation.hiveAutoFlagThreshold': 0.9,
       });
     });
 
@@ -134,9 +134,9 @@ void main() {
       notifier.updateModeration(
         const ModerationConfig(
           temperature: 0.5,
-          toxicityThreshold: 0.7,
-          autoRejectThreshold: 0.8,
-          enableHiveAi: false,
+          hiveAutoFlagThreshold: 0.7,
+          hiveAutoRemoveThreshold: 0.8,
+          enableAutoModeration: false,
           enableAzureContentSafety: false,
         ),
       );
@@ -145,9 +145,9 @@ void main() {
 
       expect(diff, {
         'moderation.temperature': 0.5,
-        'moderation.toxicityThreshold': 0.7,
-        'moderation.autoRejectThreshold': 0.8,
-        'moderation.enableHiveAi': false,
+        'moderation.hiveAutoFlagThreshold': 0.7,
+        'moderation.hiveAutoRemoveThreshold': 0.8,
+        'moderation.enableAutoModeration': false,
         'moderation.enableAzureContentSafety': false,
       });
     });

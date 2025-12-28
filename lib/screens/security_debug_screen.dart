@@ -341,7 +341,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
       results[useCase.name] = decision;
     }
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     showDialog(
       context: context,

@@ -51,44 +51,61 @@ void main() {
   });
 
   group('ModerationConfig', () {
-    test('parses from JSON with all fields', () {
+    test('parses from JSON with new field names', () {
       final json = {
         'temperature': 0.3,
-        'toxicityThreshold': 0.9,
-        'autoRejectThreshold': 0.98,
-        'enableHiveAi': false,
+        'hiveAutoFlagThreshold': 0.9,
+        'hiveAutoRemoveThreshold': 0.98,
+        'enableAutoModeration': false,
         'enableAzureContentSafety': true,
       };
 
       final result = ModerationConfig.fromJson(json);
 
       expect(result.temperature, 0.3);
-      expect(result.toxicityThreshold, 0.9);
-      expect(result.autoRejectThreshold, 0.98);
-      expect(result.enableHiveAi, false);
+      expect(result.hiveAutoFlagThreshold, 0.9);
+      expect(result.hiveAutoRemoveThreshold, 0.98);
+      expect(result.enableAutoModeration, false);
       expect(result.enableAzureContentSafety, true);
+    });
+
+    test('parses from JSON with legacy field names (backward compat)', () {
+      final json = {
+        'temperature': 0.3,
+        'toxicityThreshold': 0.85,
+        'autoRejectThreshold': 0.99,
+        'enableHiveAi': false,
+        'enableAzureContentSafety': true,
+      };
+
+      final result = ModerationConfig.fromJson(json);
+
+      // Legacy fields should map to new fields
+      expect(result.hiveAutoFlagThreshold, 0.85);
+      expect(result.hiveAutoRemoveThreshold, 0.99);
+      expect(result.enableAutoModeration, false);
     });
 
     test('uses defaults for missing fields', () {
       final result = ModerationConfig.fromJson(const {});
 
       expect(result.temperature, 0.2);
-      expect(result.toxicityThreshold, 0.85);
-      expect(result.autoRejectThreshold, 0.95);
-      expect(result.enableHiveAi, true);
+      expect(result.hiveAutoFlagThreshold, 0.8);
+      expect(result.hiveAutoRemoveThreshold, 0.95);
+      expect(result.enableAutoModeration, true);
       expect(result.enableAzureContentSafety, true);
     });
 
     test('copyWith preserves unchanged fields', () {
       const original = ModerationConfig(
         temperature: 0.5,
-        toxicityThreshold: 0.7,
+        hiveAutoFlagThreshold: 0.7,
       );
 
       final modified = original.copyWith(temperature: 0.6);
 
       expect(modified.temperature, 0.6);
-      expect(modified.toxicityThreshold, 0.7);
+      expect(modified.hiveAutoFlagThreshold, 0.7);
     });
 
     test('equality works correctly', () {
@@ -182,7 +199,7 @@ void main() {
         'updatedBy': 'admin@example.com',
         'payload': {
           'schemaVersion': 1,
-          'moderation': {'temperature': 0.2, 'toxicityThreshold': 0.85},
+          'moderation': {'temperature': 0.2, 'hiveAutoFlagThreshold': 0.8},
           'featureFlags': {'appealsEnabled': true},
         },
       };
@@ -227,8 +244,9 @@ void main() {
       expect(result.lastUpdatedBy.id, 'system');
     });
 
-    test('golden JSON test - real API response', () {
-      // This matches the actual server response format
+    test('golden JSON test - real API response (legacy fields)', () {
+      // This matches the actual server response format (legacy field names)
+      // The ModerationConfig.fromJson provides backward compat mapping
       final goldenJson = {
         'version': 42,
         'updatedAt': '2025-12-27T08:30:00.000Z',
@@ -253,7 +271,7 @@ void main() {
 
       final result = AdminConfigEnvelope.fromJson(goldenJson);
 
-      // Verify all fields parsed correctly
+      // Verify all fields parsed correctly (legacy mapped to new names)
       expect(result.version, 42);
       expect(
         result.lastUpdatedAt.toUtc().toIso8601String(),
@@ -262,9 +280,10 @@ void main() {
       expect(result.lastUpdatedBy.id, 'kyle.kern@asora.co.za');
       expect(result.config.schemaVersion, 1);
       expect(result.config.moderation.temperature, 0.2);
-      expect(result.config.moderation.toxicityThreshold, 0.85);
-      expect(result.config.moderation.autoRejectThreshold, 0.95);
-      expect(result.config.moderation.enableHiveAi, true);
+      // Legacy fields map to new names
+      expect(result.config.moderation.hiveAutoFlagThreshold, 0.85);
+      expect(result.config.moderation.hiveAutoRemoveThreshold, 0.95);
+      expect(result.config.moderation.enableAutoModeration, true);
       expect(result.config.moderation.enableAzureContentSafety, true);
       expect(result.config.featureFlags.appealsEnabled, true);
       expect(result.config.featureFlags.communityVotingEnabled, true);

@@ -317,33 +317,34 @@ class AdminConfigScreen extends ConsumerWidget {
         ),
         _buildSlider(
           context: context,
-          label: 'Toxicity Threshold',
-          value: moderation.toxicityThreshold,
+          label: 'Flag Threshold (Hive)',
+          value: moderation.hiveAutoFlagThreshold,
           min: 0.0,
           max: 1.0,
           divisions: 20,
           onChanged: (v) => notifier.updateModeration(
-            moderation.copyWith(toxicityThreshold: v),
+            moderation.copyWith(hiveAutoFlagThreshold: v),
           ),
         ),
         _buildSlider(
           context: context,
-          label: 'Auto-Reject Threshold',
-          value: moderation.autoRejectThreshold,
+          label: 'Auto-Block Threshold',
+          value: moderation.hiveAutoRemoveThreshold,
           min: 0.0,
           max: 1.0,
           divisions: 20,
           onChanged: (v) => notifier.updateModeration(
-            moderation.copyWith(autoRejectThreshold: v),
+            moderation.copyWith(hiveAutoRemoveThreshold: v),
           ),
         ),
         _buildSwitch(
           context: context,
-          label: 'Hive AI Enabled',
-          subtitle: 'Primary content moderation service',
-          value: moderation.enableHiveAi,
-          onChanged: (v) =>
-              notifier.updateModeration(moderation.copyWith(enableHiveAi: v)),
+          label: 'Auto-Moderation Enabled',
+          subtitle: 'AI content moderation (Hive primary)',
+          value: moderation.enableAutoModeration,
+          onChanged: (v) => notifier.updateModeration(
+            moderation.copyWith(enableAutoModeration: v),
+          ),
         ),
         _buildSwitch(
           context: context,

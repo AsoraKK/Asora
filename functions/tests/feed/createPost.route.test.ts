@@ -33,6 +33,12 @@ jest.mock('@shared/clients/cosmos', () => ({
         }),
       },
     },
+    // Mock moderation decisions container for decision logging
+    moderationDecisions: {
+      items: {
+        create: jest.fn().mockResolvedValue({ resource: {} }),
+      },
+    },
   })),
   getCosmosDatabase: jest.fn(() => ({
     container: jest.fn(() => ({
@@ -50,6 +56,13 @@ jest.mock('@shared/clients/cosmos', () => ({
 jest.mock('@shared/appInsights', () => ({
   trackAppEvent: jest.fn(),
   trackAppMetric: jest.fn(),
+}));
+
+// Mock PostgreSQL for moderation config
+jest.mock('@shared/clients/postgres', () => ({
+  getPool: jest.fn(() => ({
+    query: jest.fn().mockResolvedValue({ rows: [] }),
+  })),
 }));
 
 jest.mock('@shared/services/dailyPostLimitService', () => {
@@ -207,13 +220,23 @@ describe('createPost route', () => {
   });
 
   it('handles Cosmos create error gracefully', async () => {
-    getTargetDatabase.mockReturnValueOnce({
-      posts: {
-        items: {
-          create: jest.fn().mockRejectedValue(new Error('Cosmos connection failed')),
+    // First call is for decision logging (moderationUtil), second is for posts.create
+    // Mock both calls - decision logging succeeds, posts.create fails
+    getTargetDatabase
+      .mockReturnValueOnce({
+        moderationDecisions: {
+          items: {
+            create: jest.fn().mockResolvedValue({ resource: {} }),
+          },
         },
-      },
-    });
+      })
+      .mockReturnValueOnce({
+        posts: {
+          items: {
+            create: jest.fn().mockRejectedValue(new Error('Cosmos connection failed')),
+          },
+        },
+      });
 
     const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
     expect(response.status).toBe(500);
@@ -367,7 +390,8 @@ describe('createPost route', () => {
 
       await createPostRoute(userRequest({ text: 'hello' }), contextStub);
 
-      expect(contextStub.log).toHaveBeenCalledWith('posts.create.moderation_error', expect.objectContaining({
+      // Now uses shared moderationUtil which logs with different format
+      expect(contextStub.log).toHaveBeenCalledWith('[moderation] Moderation check failed', expect.objectContaining({
         errorCode: 'API_ERROR',
       }));
 
@@ -384,8 +408,9 @@ describe('createPost route', () => {
       const body = JSON.parse(response.body as string);
       expect(body.post.moderation.status).toBe('clean');
 
-      expect(contextStub.log).toHaveBeenCalledWith('posts.create.moderation_skipped', expect.objectContaining({
-        reason: 'no_api_key',
+      // Now uses shared moderationUtil which logs with different format
+      expect(contextStub.log).toHaveBeenCalledWith('[moderation] Moderation skipped - no API key configured', expect.objectContaining({
+        contentId: expect.any(String),
       }));
 
       // Hive client should not have been called
