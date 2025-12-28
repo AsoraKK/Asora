@@ -83,6 +83,10 @@ export interface HiveClientConfig {
   retries?: number;
   /** Retry delay in milliseconds (default: 1000) */
   retryDelayMs?: number;
+  /** Dynamic threshold for BLOCK action (overrides default 0.85) */
+  blockThreshold?: number;
+  /** Dynamic threshold for WARN action (overrides default 0.5) */
+  warnThreshold?: number;
 }
 
 /**
@@ -138,10 +142,10 @@ const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
 
-/** Confidence threshold for BLOCK action (>= 0.85) */
-const BLOCK_THRESHOLD = 0.85;
-/** Confidence threshold for WARN action (>= 0.5) */
-const WARN_THRESHOLD = 0.5;
+/** Default confidence threshold for BLOCK action (>= 0.85) */
+const DEFAULT_BLOCK_THRESHOLD = 0.85;
+/** Default confidence threshold for WARN action (>= 0.5) */
+const DEFAULT_WARN_THRESHOLD = 0.5;
 
 /** Map Hive class names to internal categories */
 const CLASS_TO_CATEGORY: Record<string, ModerationCategory> = {
@@ -173,6 +177,8 @@ export class HiveAIClient {
   private readonly timeoutMs: number;
   private readonly retries: number;
   private readonly retryDelayMs: number;
+  private readonly blockThreshold: number;
+  private readonly warnThreshold: number;
   private readonly defaultModels = [
     'general_text_classification',
     'hate_speech_detection_text',
@@ -187,12 +193,16 @@ export class HiveAIClient {
       this.timeoutMs = DEFAULT_TIMEOUT_MS;
       this.retries = DEFAULT_RETRIES;
       this.retryDelayMs = DEFAULT_RETRY_DELAY_MS;
+      this.blockThreshold = DEFAULT_BLOCK_THRESHOLD;
+      this.warnThreshold = DEFAULT_WARN_THRESHOLD;
     } else {
       this.apiKey = config.apiKey;
       this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
       this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
       this.retries = config.retries ?? DEFAULT_RETRIES;
       this.retryDelayMs = config.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+      this.blockThreshold = config.blockThreshold ?? DEFAULT_BLOCK_THRESHOLD;
+      this.warnThreshold = config.warnThreshold ?? DEFAULT_WARN_THRESHOLD;
     }
   }
 
@@ -425,23 +435,23 @@ export class HiveAIClient {
         }
       }
 
-      // Collect flagged categories
+      // Collect flagged categories using dynamic thresholds
       for (const cls of classes) {
-        if (cls.score > WARN_THRESHOLD) {
+        if (cls.score > this.warnThreshold) {
           const category = this.mapClassToCategory(cls.class);
           categories.add(category);
-          if (cls.score > BLOCK_THRESHOLD) {
+          if (cls.score > this.blockThreshold) {
             reasons.push(`High ${cls.class} score: ${(cls.score * 100).toFixed(1)}%`);
           }
         }
       }
     }
 
-    // Map Hive action to internal ModerationAction
+    // Map Hive action to internal ModerationAction using dynamic thresholds
     let action: ModerationAction;
-    if (worstAction === 'reject' || highestScore >= BLOCK_THRESHOLD) {
+    if (worstAction === 'reject' || highestScore >= this.blockThreshold) {
       action = ModerationAction.BLOCK;
-    } else if (worstAction === 'review' || highestScore >= WARN_THRESHOLD) {
+    } else if (worstAction === 'review' || highestScore >= this.warnThreshold) {
       action = ModerationAction.WARN;
     } else {
       action = ModerationAction.ALLOW;
@@ -543,5 +553,7 @@ export function createHiveClient(config?: Partial<HiveClientConfig>): HiveAIClie
     timeoutMs: config?.timeoutMs,
     retries: config?.retries,
     retryDelayMs: config?.retryDelayMs,
+    blockThreshold: config?.blockThreshold,
+    warnThreshold: config?.warnThreshold,
   });
 }
