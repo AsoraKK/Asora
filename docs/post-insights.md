@@ -2,6 +2,8 @@
 
 **Feature Summary**: Author-only transparency into moderation decisions, without exposing raw signals or thresholds.
 
+**Product Model**: Posts are either **Published** (ALLOW) or **Blocked** (BLOCK). If blocked, the user can Dispute → Appeal. The API uses a **binary decision model** - internal QUEUE states are collapsed to BLOCK.
+
 ---
 
 ## API Endpoint
@@ -46,8 +48,8 @@ Returns sanitized moderation insights for a specific post.
 | Field | Type | Description |
 |-------|------|-------------|
 | `postId` | string | The post ID |
-| `riskBand` | `LOW` \| `MEDIUM` \| `HIGH` | Aggregated risk level |
-| `decision` | `ALLOW` \| `QUEUE` \| `BLOCK` | Moderation decision made |
+| `riskBand` | `LOW` \| `MEDIUM` \| `HIGH` | Aggregated risk level (appeal-aware) |
+| `decision` | `ALLOW` \| `BLOCK` | **Binary** moderation decision (no QUEUE exposed) |
 | `reasonCodes` | string[] | Category-level reason codes (sanitized) |
 | `configVersion` | number | Moderation config version used |
 | `decidedAt` | ISO 8601 string | When the decision was made |
@@ -55,14 +57,23 @@ Returns sanitized moderation insights for a specific post.
 | `appeal.status` | `NONE` \| `PENDING` \| `APPROVED` \| `REJECTED` | Current appeal state |
 | `appeal.updatedAt` | ISO 8601 string? | When appeal was last updated |
 
-#### Risk Band Mapping
+#### Risk Band Mapping (Appeal-Aware)
 
-| Moderation Decision | Risk Band |
-|--------------------|-----------|
-| `BLOCK` | `HIGH` |
-| `QUEUE` | `MEDIUM` |
-| `ALLOW` | `LOW` |
-| Unknown/null | `MEDIUM` (default) |
+The risk band is derived from **both** the decision and appeal status:
+
+| Decision | Appeal Status | Risk Band | Meaning |
+|----------|---------------|-----------|---------|
+| `ALLOW` | any | `LOW` | Content is published |
+| `BLOCK` | `PENDING` | `MEDIUM` | **Under review** (appeal pending) |
+| `BLOCK` | `NONE`/`REJECTED`/`APPROVED` | `HIGH` | Blocked with no pending appeal |
+
+**Important**: `MEDIUM` means "appeal pending / under review", NOT "queued by model".
+
+#### QUEUE Handling
+
+Internal moderation logic may use a `QUEUE` state, but **this is never exposed** to users:
+- Backend collapses `QUEUE` → `BLOCK` before sending the response
+- Risk band for collapsed QUEUE follows the same appeal-aware mapping
 
 ---
 
@@ -77,6 +88,7 @@ The following fields are **explicitly excluded** to prevent gaming the moderatio
 - `severity` - Severity ratings
 - `rawResponse` - Upstream provider responses
 - `hiveScore` / `azureScore` - Provider-specific scores
+- `QUEUE` - Internal queue state (collapsed to `BLOCK`)
 
 Only category-level reason codes (e.g., `HIVE_SCORE_UNDER_THRESHOLD`) are returned.
 
@@ -102,11 +114,11 @@ Location: `lib/features/feed/presentation/post_insights_panel.dart`
 
 #### Risk Band Styling
 
-| Band | Color |
-|------|-------|
-| LOW | Green (`Colors.green`) |
-| MEDIUM | Orange (`Colors.orange`) |
-| HIGH | Red (`Colors.red`) |
+| Band | Color | Display Label |
+|------|-------|---------------|
+| LOW | Green (`Colors.green`) | "Low" |
+| MEDIUM | Orange (`Colors.orange`) | "Under review" |
+| HIGH | Red (`Colors.red`) | "High" |
 
 ### Provider: `postInsightsProvider`
 
@@ -134,7 +146,7 @@ final postInsightsProvider = FutureProvider.autoDispose.family<InsightsResult, S
 cd functions && npm test -- --testPathPattern="posts/(insights|posts_get_insights)"
 ```
 
-Expected: 32 tests passing (18 unit + 14 route tests)
+Expected: 42 tests passing (including QUEUE→BLOCK collapse tests)
 
 ### Flutter Tests
 
@@ -153,6 +165,8 @@ Expected: 21 domain tests + 9 widget tests passing
 2. **As admin**: View any post → Insights panel should appear
 3. **As other user**: View someone else's post → No Insights panel visible
 4. **Unauthenticated**: API returns 401
+5. **Blocked post with pending appeal**: Band shows MEDIUM ("Under review") and appeal status PENDING
+6. **Blocked post without appeal**: Band shows HIGH
 
 ### Check no forbidden fields leak
 
@@ -163,7 +177,16 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 Expected keys: `postId`, `riskBand`, `decision`, `reasonCodes`, `configVersion`, `decidedAt`, `appeal`
 
-Should NOT contain: `score`, `threshold`, `probability`, `confidence`, `severity`
+Should NOT contain: `score`, `threshold`, `probability`, `confidence`, `severity`, `queue`
+
+### Verify binary decision
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.example.com/api/posts/{postId}/insights | jq '.decision'
+```
+
+Expected: `"ALLOW"` or `"BLOCK"` only. Never `"QUEUE"`.
 
 ---
 

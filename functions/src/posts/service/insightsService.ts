@@ -18,7 +18,11 @@ export type RiskBand = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type AppealStatus = 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
-export type InsightDecision = 'ALLOW' | 'BLOCK' | 'QUEUE';
+/**
+ * Binary decision for product-facing insights.
+ * QUEUE is collapsed to BLOCK internally - users only see ALLOW or BLOCK.
+ */
+export type InsightDecision = 'ALLOW' | 'BLOCK';
 
 /**
  * Appeal information for insights response
@@ -55,6 +59,8 @@ export const FORBIDDEN_INSIGHT_FIELDS = [
   'categoryScores',
   'flagThreshold',
   'removeThreshold',
+  'rawResponse',
+  'queue',  // QUEUE must not be exposed to users as a decision
 ] as const;
 
 // ─────────────────────────────────────────────────────────────
@@ -62,42 +68,51 @@ export const FORBIDDEN_INSIGHT_FIELDS = [
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Map internal decision outcome to risk band
+ * Map decision + appeal status to risk band
  *
- * This is the ONLY way to derive bands - never from raw scores.
+ * Risk band mapping (appeal-aware):
+ *   ALLOW → LOW
+ *   BLOCK + appeal PENDING → MEDIUM (under review)
+ *   BLOCK + appeal NOT PENDING → HIGH
  *
- * Mapping:
- *   BLOCK -> HIGH
- *   QUEUE -> MEDIUM
- *   ALLOW -> LOW
+ * This ensures MEDIUM means "under review" not "queued by model".
  */
-export function mapDecisionToRiskBand(decision: ModerationDecisionOutcome): RiskBand {
-  switch (decision) {
-    case 'block':
-      return 'HIGH';
-    case 'queue':
-      return 'MEDIUM';
-    case 'allow':
-      return 'LOW';
-    default:
-      // Conservative default for unknown outcomes
-      return 'MEDIUM';
+export function mapDecisionToRiskBand(
+  decision: ModerationDecisionOutcome,
+  appealStatus: AppealStatus = 'NONE'
+): RiskBand {
+  // Map internal decision to binary first
+  const binaryDecision = mapDecisionToInsightDecision(decision);
+
+  if (binaryDecision === 'ALLOW') {
+    return 'LOW';
   }
+
+  // BLOCK case - check appeal status
+  if (appealStatus === 'PENDING') {
+    return 'MEDIUM'; // Under review
+  }
+
+  return 'HIGH';
 }
 
 /**
- * Map internal decision to display decision
+ * Map internal decision to binary display decision
+ *
+ * Product rule: Users only see ALLOW or BLOCK.
+ * QUEUE is collapsed to BLOCK (conservative/safe default).
  */
 export function mapDecisionToInsightDecision(decision: ModerationDecisionOutcome): InsightDecision {
   switch (decision) {
-    case 'block':
-      return 'BLOCK';
-    case 'queue':
-      return 'QUEUE';
     case 'allow':
       return 'ALLOW';
+    case 'block':
+    case 'queue':
+      // QUEUE is collapsed to BLOCK for binary product model
+      return 'BLOCK';
     default:
-      return 'QUEUE';
+      // Unknown outcomes default to BLOCK (safe)
+      return 'BLOCK';
   }
 }
 
@@ -117,6 +132,8 @@ export function sanitizeReasonCodes(reasonCodes: string[]): string[] {
       'AUTO_MODERATION_DISABLED',
       'EMPTY_CONTENT',
       'NO_API_KEY',
+      'REVIEW_REQUIRED',  // Used when QUEUE is collapsed to BLOCK
+      'PENDING_REVIEW',
     ];
     return allowed.includes(code);
   });
@@ -218,6 +235,8 @@ export async function getAppealForPost(postId: string): Promise<InsightAppeal> {
  *
  * Transforms internal moderation data into a safe response format
  * that doesn't expose raw scores, thresholds, or sensitive metadata.
+ *
+ * Uses binary decision model (ALLOW/BLOCK) and appeal-aware risk bands.
  */
 export function buildInsightsResponse(
   postId: string,
@@ -225,6 +244,7 @@ export function buildInsightsResponse(
   appeal: InsightAppeal
 ): PostInsightsResponse {
   // If no decision exists, return conservative defaults
+  // No decision = published/allowed
   if (!decision) {
     return {
       postId,
@@ -239,7 +259,7 @@ export function buildInsightsResponse(
 
   return {
     postId,
-    riskBand: mapDecisionToRiskBand(decision.decision),
+    riskBand: mapDecisionToRiskBand(decision.decision, appeal.status),
     decision: mapDecisionToInsightDecision(decision.decision),
     reasonCodes: sanitizeReasonCodes(decision.reasonCodes),
     configVersion: decision.thresholdsUsed?.configVersion ?? 0,

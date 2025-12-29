@@ -1,4 +1,6 @@
 /// Widget tests for PostInsightsPanel
+library;
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -78,13 +80,14 @@ void main() {
       expect(find.text('Config v10'), findsOneWidget);
     });
 
-    testWidgets('shows MEDIUM risk band correctly', (
+    testWidgets('shows MEDIUM risk band (under review) correctly', (
       WidgetTester tester,
     ) async {
       final mockInsights = PostInsights(
         postId: 'post-123',
         riskBand: RiskBand.medium,
-        decision: InsightDecision.queue,
+        decision:
+            InsightDecision.block, // Binary: BLOCK with pending appeal = MEDIUM
         reasonCodes: ['HIVE_SCORE_OVER_FLAG_THRESHOLD'],
         configVersion: 7,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
@@ -106,7 +109,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Medium'), findsOneWidget);
+      expect(
+        find.text('Under review'),
+        findsOneWidget,
+      ); // MEDIUM = under review
       expect(find.text('Appeal: Pending'), findsOneWidget);
     });
 
@@ -248,8 +254,8 @@ void main() {
     ) async {
       final mockInsights = PostInsights(
         postId: 'post-123',
-        riskBand: RiskBand.medium,
-        decision: InsightDecision.queue,
+        riskBand: RiskBand.high, // BLOCK + rejected appeal = HIGH
+        decision: InsightDecision.block,
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
