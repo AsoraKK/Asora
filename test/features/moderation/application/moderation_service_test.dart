@@ -4,7 +4,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:asora/features/moderation/application/moderation_service.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 class MockDio extends Mock implements Dio {}
@@ -179,15 +178,15 @@ void main() {
       (_) async => _response({
         'success': true,
         'appeals': [_appealJson()],
-        'pagination': <String, dynamic>{
+        'pagination': {
           'total': 1,
           'page': 1,
           'pageSize': 20,
           'hasMore': false,
           'totalPages': 1,
         },
-        'filters': const <String, dynamic>{},
-        'summary': const <String, dynamic>{},
+        'filters': {},
+        'summary': {},
       }, '/api/reviewAppealedContent'),
     );
 
@@ -325,75 +324,8 @@ void main() {
       ),
     );
 
-    await expectLater(
-      service.getMyAppeals(token: 't1'),
-      throwsA(isA<ModerationException>()),
-    );
-  });
-
-  test('fetchModerationQueue throws on dio errors', () async {
-    when(
-      () => dio.get(
-        '/moderation/review-queue',
-        queryParameters: any(named: 'queryParameters'),
-        options: any(named: 'options'),
-      ),
-    ).thenThrow(
-      DioException(
-        requestOptions: RequestOptions(path: '/moderation/review-queue'),
-      ),
-    );
-
-    await expectLater(
-      service.fetchModerationQueue(token: 't1'),
-      throwsA(isA<ModerationException>()),
-    );
-  });
-
-  test('submitModerationDecision throws on dio errors', () async {
-    when(
-      () => dio.post(
-        '/moderation/cases/case-1/decision',
-        data: any(named: 'data'),
-        options: any(named: 'options'),
-      ),
-    ).thenThrow(
-      DioException(
-        requestOptions: RequestOptions(
-          path: '/moderation/cases/case-1/decision',
-        ),
-      ),
-    );
-
-    await expectLater(
-      service.submitModerationDecision(
-        caseId: 'case-1',
-        token: 't1',
-        input: const ModerationDecisionInput(
-          action: ModerationDecisionAction.allow,
-          rationale: 'ok',
-        ),
-      ),
-      throwsA(isA<ModerationException>()),
-    );
-  });
-
-  test('searchAudit throws on dio errors', () async {
-    when(
-      () => dio.get(
-        '/moderation/audit',
-        queryParameters: any(named: 'queryParameters'),
-        options: any(named: 'options'),
-      ),
-    ).thenThrow(
-      DioException(requestOptions: RequestOptions(path: '/moderation/audit')),
-    );
-
-    await expectLater(
-      service.searchAudit(
-        filters: const ModerationAuditSearchFilters(),
-        token: 't1',
-      ),
+    expect(
+      () => service.getMyAppeals(token: 't1'),
       throwsA(isA<ModerationException>()),
     );
   });

@@ -78,7 +78,19 @@ Returns current configuration.
   "updatedBy": "kyle.kern@asora.co.za",
   "payload": {
     "schemaVersion": 1,
-    "moderationThreshold": 0.8
+    "moderation": {
+      "temperature": 0.2,
+      "hiveAutoFlagThreshold": 0.8,
+      "hiveAutoRemoveThreshold": 0.95,
+      "enableAutoModeration": true,
+      "enableAzureContentSafety": true
+    },
+    "featureFlags": {
+      "appealsEnabled": true,
+      "communityVotingEnabled": true,
+      "pushNotificationsEnabled": true,
+      "maintenanceMode": false
+    }
   }
 }
 ```
@@ -92,8 +104,19 @@ Updates configuration (transactional with audit).
 {
   "schemaVersion": 1,
   "payload": {
-    "moderationThreshold": 0.85,
-    "enableFeatureX": true
+    "moderation": {
+      "temperature": 0.25,
+      "hiveAutoFlagThreshold": 0.85,
+      "hiveAutoRemoveThreshold": 0.95,
+      "enableAutoModeration": true,
+      "enableAzureContentSafety": true
+    },
+    "featureFlags": {
+      "appealsEnabled": true,
+      "communityVotingEnabled": true,
+      "pushNotificationsEnabled": true,
+      "maintenanceMode": false
+    }
   }
 }
 ```
@@ -121,8 +144,14 @@ Returns audit log entries (newest first).
       "actor": "kyle.kern@asora.co.za",
       "action": "update",
       "resource": "admin_config",
-      "before": { "schemaVersion": 1, "moderationThreshold": 0.8 },
-      "after": { "schemaVersion": 1, "moderationThreshold": 0.85 }
+      "before": {
+        "schemaVersion": 1,
+        "moderation": { "temperature": 0.2 }
+      },
+      "after": {
+        "schemaVersion": 1,
+        "moderation": { "temperature": 0.25 }
+      }
     }
   ],
   "limit": 50
@@ -221,9 +250,11 @@ curl -H "Cf-Access-Jwt-Assertion: $JWT" \
 
 ## Integration with Moderation
 
-The moderation module reads thresholds from admin_config table via
-`moderationConfigProvider.ts` with 60s cache TTL. Changes to admin config
-will be picked up by moderation within 60 seconds.
+The moderation module reads thresholds from the Cosmos `config` container
+(partitionKey `moderation`) via `moderationConfigProvider.ts` with a short
+cache TTL (default 30s, configurable via `MODERATION_CONFIG_CACHE_TTL_MS`).
+Admin config updates upsert the Cosmos config document so moderation picks up
+changes within the TTL window.
 
 ## CORS Configuration
 

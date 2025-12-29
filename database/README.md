@@ -4,7 +4,7 @@ Terraform configuration for Asora database resources (Cosmos DB containers, inde
 
 ## Remote State and Workspaces
 
-- Backend: AzureRM (`database-${terraform.workspace}.tfstate`)
+- Backend: AzureRM (key passed via `-backend-config`)
 - Workspaces: `dev`, `stage`, `prod` (default blocked)
 - Locking: Azure Blob leases
 
@@ -13,7 +13,7 @@ Terraform configuration for Asora database resources (Cosmos DB containers, inde
 ```bash
 cd database
 terraform workspace select dev
-terraform init
+terraform init -backend-config="key=database-dev.tfstate"
 terraform plan
 ```
 
