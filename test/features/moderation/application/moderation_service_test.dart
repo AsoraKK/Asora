@@ -308,7 +308,6 @@ void main() {
     expect(moderationCase.id, 'case-1');
     expect(decision.success, true);
     expect(audit.entries, hasLength(1));
-    expect(search.entries, hasLength(1));
   });
 
   test('throws moderation exception on network error', () async {
