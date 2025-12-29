@@ -16,6 +16,44 @@ permissions:
   pull-requests: write
 
 jobs:
+  docs_placement:
+    name: Check new markdown file placement
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check new markdown files are in docs/ directory
+        run: |
+          set -euo pipefail
+          # Only check ADDED markdown files (not modified)
+          ADDED_MD=$(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD -- '*.md' || true)
+          ALLOWED_ROOT="^(README\.md|CONTRIBUTING\.md|CHANGELOG\.md|LICENSE\.md|CODE_OF_CONDUCT\.md|SECURITY\.md|AGENTS\.md)$"
+          VIOLATIONS=""
+          for file in $ADDED_MD; do
+            # Allow docs tree
+            if [[ "$file" =~ ^docs/ ]]; then
+              continue
+            fi
+            # Allow README.md anywhere (module docs)
+            if [[ "$(basename "$file")" == "README.md" ]]; then
+              continue
+            fi
+            # Allow root-level standard files
+            if [[ "$(basename "$file")" =~ $ALLOWED_ROOT ]]; then
+              continue
+            fi
+            VIOLATIONS="$VIOLATIONS $file"
+          done
+          if [[ -n "$VIOLATIONS" ]]; then
+            echo "❌ New markdown files must be in docs/ directory:$VIOLATIONS"
+            echo "📁 Use: docs/specs/, docs/guides/, docs/runbooks/, docs/adr/"
+            exit 1
+          fi
+          echo "✅ New markdown file placement OK"
+
   workflow_lint:
     name: Lint workflows (actionlint + shellcheck)
     runs-on: ubuntu-latest
@@ -162,24 +200,23 @@ jobs:
       - name: Test with coverage
         run: flutter test --coverage
 
-      - name: Enforce P1 coverage gate (if script present)
-        id: p1_coverage
+      - name: Enforce coverage gates (P1, P2, Total baseline)
+        id: coverage_gates
         continue-on-error: true
         run: |
           set -euo pipefail
-          if [ -x ./check_p1_coverage.sh ]; then
-            ./check_p1_coverage.sh | tee p1_coverage_output.txt
-          else
-            echo "check_p1_coverage.sh not present; skipping gate" | tee p1_coverage_output.txt
-          fi
+          chmod +x scripts/check_coverage_gates.sh
+          bash scripts/check_coverage_gates.sh 2>&1 | tee coverage_gates_output.txt
 
       - name: Prepare coverage summary
         run: |
           set -euo pipefail
           {
-            echo "### P1 Coverage Report"
+            echo "### Coverage Gates Report"
             echo
-            cat p1_coverage_output.txt 2>/dev/null || echo "Coverage summary unavailable"
+            echo '```'
+            cat coverage_gates_output.txt 2>/dev/null || echo "Coverage summary unavailable"
+            echo '```'
           } > code-coverage-results.md
 
       - name: Comment coverage on PR
@@ -210,10 +247,10 @@ jobs:
             echo "Coverage summary unavailable" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Fail if coverage gate failed
-        if: ${{ steps.p1_coverage.outcome == 'failure' }}
+      - name: Fail if coverage gates failed
+        if: ${{ steps.coverage_gates.outcome == 'failure' }}
         run: |
-          echo "Coverage gate enforcement failed earlier; marking job as failed."
+          echo "Coverage gates failed; see output above for details."
           exit 1
 
   functions_build:
