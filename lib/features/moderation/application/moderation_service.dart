@@ -197,11 +197,12 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true) {
-        return AppealResponse.fromJson(response.data);
+      final responseData = (response.data as Map<String, dynamic>?) ?? {};
+      if (responseData['success'] == true) {
+        return AppealResponse.fromJson(responseData);
       } else {
         throw ModerationException(
-          response.data['message'] ?? 'Failed to load voting feed',
+          responseData['message'] ?? 'Failed to load voting feed',
           code: 'LOAD_FEED_FAILED',
         );
       }
