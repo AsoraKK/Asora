@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final Dio _dio = Dio();
-  final _storage = const FlutterSecureStorage();
+  final Dio _dio;
+  final FlutterSecureStorage _storage;
 
   // Your Azure Functions local development URL (Android emulator compatible)
   // SECURITY: Environment-based URL configuration
@@ -21,7 +21,9 @@ class AuthService {
     return isDevelopment ? _devUrl : _prodUrl;
   }
 
-  AuthService() {
+  AuthService({Dio? dio, FlutterSecureStorage? storage})
+    : _dio = dio ?? Dio(),
+      _storage = storage ?? const FlutterSecureStorage() {
     // Configure Dio with default options
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);
