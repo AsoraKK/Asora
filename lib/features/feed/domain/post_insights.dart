@@ -6,7 +6,12 @@
 /// 📱 Platform: Flutter
 library;
 
-/// Risk band for moderation decision - derived from decision, not raw scores
+/// Risk band for moderation decision - derived from decision + appeal status
+///
+/// Mapping:
+///   - LOW: Content is allowed/published
+///   - MEDIUM: Content is blocked but appeal is pending (under review)
+///   - HIGH: Content is blocked with no pending appeal
 enum RiskBand {
   low,
   medium,
@@ -17,7 +22,7 @@ enum RiskBand {
       case RiskBand.low:
         return 'Low';
       case RiskBand.medium:
-        return 'Medium';
+        return 'Under review'; // MEDIUM = appeal pending
       case RiskBand.high:
         return 'High';
     }
@@ -37,18 +42,18 @@ enum RiskBand {
   }
 }
 
-/// Moderation decision outcome
+/// Binary moderation decision - ALLOW or BLOCK only
+///
+/// Product model: Posts are either Published (ALLOW) or Blocked (BLOCK).
+/// Internal QUEUE decisions are collapsed to BLOCK by the backend.
 enum InsightDecision {
   allow,
-  queue,
   block;
 
   String get displayLabel {
     switch (this) {
       case InsightDecision.allow:
-        return 'Allowed';
-      case InsightDecision.queue:
-        return 'Queued';
+        return 'Published';
       case InsightDecision.block:
         return 'Blocked';
     }
@@ -58,12 +63,11 @@ enum InsightDecision {
     switch (value.toUpperCase()) {
       case 'ALLOW':
         return InsightDecision.allow;
-      case 'QUEUE':
-        return InsightDecision.queue;
       case 'BLOCK':
         return InsightDecision.block;
       default:
-        return InsightDecision.queue;
+        // Unknown values default to BLOCK (safe)
+        return InsightDecision.block;
     }
   }
 }
@@ -159,7 +163,7 @@ class PostInsights {
       postId: json['postId'] as String,
       riskBand: RiskBand.fromString(json['riskBand'] as String? ?? 'MEDIUM'),
       decision: InsightDecision.fromString(
-        json['decision'] as String? ?? 'QUEUE',
+        json['decision'] as String? ?? 'BLOCK',
       ),
       reasonCodes:
           (json['reasonCodes'] as List<dynamic>?)

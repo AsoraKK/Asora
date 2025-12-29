@@ -138,13 +138,27 @@ This document enumerates the Cosmos containers that back Asora's social, moderat
 
 ```jsonc
 {
-  "id": "moderation-settings",
+  "id": "moderation",
   "partitionKey": "moderation",
-  "value": {
-    "queueBatchSize": 10,
-    "reputationGate": 1500
-  },
-  "etag": "*"
+  "version": 12,
+  "updatedAt": "2025-12-27T10:15:30.123Z",
+  "updatedBy": "admin@asora.co.za",
+  "payload": {
+    "schemaVersion": 1,
+    "moderation": {
+      "temperature": 0.2,
+      "hiveAutoFlagThreshold": 0.85,
+      "hiveAutoRemoveThreshold": 0.95,
+      "enableAutoModeration": true,
+      "enableAzureContentSafety": true
+    },
+    "featureFlags": {
+      "appealsEnabled": true,
+      "communityVotingEnabled": true,
+      "pushNotificationsEnabled": true,
+      "maintenanceMode": false
+    }
+  }
 }
 ```
 

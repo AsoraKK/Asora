@@ -272,7 +272,7 @@ describe('posts_get_insights route handler', () => {
       expect(body.decision).toBe('BLOCK');
     });
 
-    it('should return correct risk band for queued post', async () => {
+    it('should collapse QUEUE to BLOCK in response (binary model)', async () => {
       const req = httpReqMock({
         method: 'GET',
         params: { id: 'post-123' },
@@ -289,13 +289,49 @@ describe('posts_get_insights route handler', () => {
         ...mockDecision,
         decision: 'queue',
       });
+      // No pending appeal
+      mockedInsights.getAppealForPost.mockResolvedValue({ status: 'NONE' });
 
       const response = await posts_get_insights(req as unknown as HttpRequest, context);
 
       expect(response.status).toBe(200);
       const body = response.jsonBody as any;
-      expect(body.riskBand).toBe('MEDIUM');
-      expect(body.decision).toBe('QUEUE');
+      // QUEUE is collapsed to BLOCK, and without pending appeal = HIGH
+      expect(body.decision).toBe('BLOCK');
+      expect(body.riskBand).toBe('HIGH');
+    });
+
+    it('should return MEDIUM band when blocked with pending appeal', async () => {
+      const req = httpReqMock({
+        method: 'GET',
+        params: { id: 'post-123' },
+        headers: { authorization: 'Bearer valid-token' },
+      });
+
+      mockedJwtService.verifyToken.mockResolvedValue({
+        sub: 'author-user',
+        roles: ['user'],
+        tier: 'free',
+      });
+      mockedPostsService.getPostById.mockResolvedValue(mockPost as any);
+      mockedInsights.getLatestModerationDecision.mockResolvedValue({
+        ...mockDecision,
+        decision: 'block',
+        reasonCodes: ['HIVE_SCORE_OVER_THRESHOLD'],
+      });
+      // PENDING appeal
+      mockedInsights.getAppealForPost.mockResolvedValue({
+        status: 'PENDING',
+        updatedAt: '2025-12-28T11:00:00.000Z',
+      });
+
+      const response = await posts_get_insights(req as unknown as HttpRequest, context);
+
+      expect(response.status).toBe(200);
+      const body = response.jsonBody as any;
+      expect(body.decision).toBe('BLOCK');
+      expect(body.riskBand).toBe('MEDIUM'); // Under review
+      expect(body.appeal.status).toBe('PENDING');
     });
 
     it('should include config version from decision', async () => {

@@ -1,4 +1,6 @@
 /// Tests for PostInsights domain model JSON parsing
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/feed/domain/post_insights.dart';
 
@@ -26,33 +28,42 @@ void main() {
 
     test('displayLabel returns correct labels', () {
       expect(RiskBand.low.displayLabel, 'Low');
-      expect(RiskBand.medium.displayLabel, 'Medium');
+      expect(
+        RiskBand.medium.displayLabel,
+        'Under review',
+      ); // MEDIUM = appeal pending
       expect(RiskBand.high.displayLabel, 'High');
     });
   });
 
-  group('InsightDecision', () {
+  group('InsightDecision (binary)', () {
     test('fromString parses ALLOW correctly', () {
       expect(InsightDecision.fromString('ALLOW'), InsightDecision.allow);
       expect(InsightDecision.fromString('allow'), InsightDecision.allow);
     });
 
-    test('fromString parses QUEUE correctly', () {
-      expect(InsightDecision.fromString('QUEUE'), InsightDecision.queue);
-    });
-
     test('fromString parses BLOCK correctly', () {
       expect(InsightDecision.fromString('BLOCK'), InsightDecision.block);
+      expect(InsightDecision.fromString('block'), InsightDecision.block);
     });
 
-    test('fromString defaults to queue for unknown values', () {
-      expect(InsightDecision.fromString('unknown'), InsightDecision.queue);
+    test('fromString defaults to block for unknown values (safe default)', () {
+      expect(InsightDecision.fromString('unknown'), InsightDecision.block);
+      expect(
+        InsightDecision.fromString('QUEUE'),
+        InsightDecision.block,
+      ); // QUEUE collapses to BLOCK
     });
 
     test('displayLabel returns correct labels', () {
-      expect(InsightDecision.allow.displayLabel, 'Allowed');
-      expect(InsightDecision.queue.displayLabel, 'Queued');
+      expect(InsightDecision.allow.displayLabel, 'Published');
       expect(InsightDecision.block.displayLabel, 'Blocked');
+    });
+
+    test('only has two values (ALLOW and BLOCK)', () {
+      expect(InsightDecision.values.length, 2);
+      expect(InsightDecision.values, contains(InsightDecision.allow));
+      expect(InsightDecision.values, contains(InsightDecision.block));
     });
   });
 
@@ -173,7 +184,7 @@ void main() {
 
       expect(insights.postId, 'post-789');
       expect(insights.riskBand, RiskBand.medium);
-      expect(insights.decision, InsightDecision.queue);
+      expect(insights.decision, InsightDecision.block); // Safe default
       expect(insights.configVersion, 0);
     });
 
