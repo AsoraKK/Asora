@@ -5,7 +5,7 @@ import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/feed/application/social_feed_providers.dart';
 import 'package:asora/features/feed/domain/models.dart';
 import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/state/models/feed_models.dart' as state;
 import 'package:asora/state/providers/feed_providers.dart';
 
 class FakeOAuth2Service extends OAuth2Service {
@@ -260,6 +260,58 @@ void main() {
     expect(commentsState.value?.length, 2);
   });
 
+  test('post notifier requires auth for dislike and flag actions', () async {
+    final repo = FakeSocialFeedRepository();
+    final container = ProviderContainer(
+      overrides: [
+        socialFeedServiceProvider.overrideWithValue(repo),
+        jwtProvider.overrideWith((ref) async => 'token'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(postProvider('post-2').future);
+
+    await expectLater(
+      container.read(postProvider('post-2').notifier).toggleDislike(),
+      throwsA(isA<SocialFeedException>()),
+    );
+
+    await expectLater(
+      container.read(postProvider('post-2').notifier).flagPost(reason: 'spam'),
+      throwsA(isA<SocialFeedException>()),
+    );
+  });
+
+  test('refresh methods rebuild feed providers', () async {
+    final repo = FakeSocialFeedRepository();
+    final container = ProviderContainer(
+      overrides: [
+        socialFeedServiceProvider.overrideWithValue(repo),
+        jwtProvider.overrideWith((ref) async => 'token'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    const params = FeedParams(type: FeedType.trending, page: 1);
+    await container.read(feedProvider(params).future);
+    await container.read(feedProvider(params).notifier).refresh();
+
+    await container.read(trendingFeedProvider.future);
+    await container.read(trendingFeedProvider.notifier).refresh();
+
+    const localParams = LocalFeedParams(location: 'Johannesburg');
+    await container.read(localFeedProvider(localParams).future);
+    await container.read(localFeedProvider(localParams).notifier).refresh();
+
+    await container.read(newCreatorsFeedProvider.future);
+    await container.read(newCreatorsFeedProvider.notifier).refresh();
+
+    const commentParams = CommentsParams(postId: 'post-2');
+    await container.read(commentsProvider(commentParams).future);
+    await container.read(commentsProvider(commentParams).notifier).refresh();
+  });
+
   test('feed search and auth token providers resolve', () async {
     final repo = FakeSocialFeedRepository();
     final container = ProviderContainer(
@@ -280,13 +332,15 @@ void main() {
 
   test('live feed provider maps posts and home feed index', () async {
     final repo = FakeSocialFeedRepository();
-    final feed = FeedModel(
+    final feed = state.FeedModel(
       id: 'discover',
       name: 'Discover',
-      type: FeedType.discover,
-      contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
-      sorting: SortingRule.hot,
-      refinements: const FeedRefinements(),
+      type: state.FeedType.discover,
+      contentFilters: const state.ContentFilters(
+        allowedTypes: {state.ContentType.mixed},
+      ),
+      sorting: state.SortingRule.hot,
+      refinements: const state.FeedRefinements(),
       subscriptionLevelRequired: 0,
       isHome: true,
     );

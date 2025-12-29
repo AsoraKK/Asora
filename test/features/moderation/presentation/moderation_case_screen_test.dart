@@ -55,7 +55,7 @@ void main() {
           details: 'approved',
         ),
       ],
-      decisionHistory: const [
+      decisionHistory: [
         ModerationDecisionHistory(
           action: 'allow',
           actor: 'mod-1',
@@ -110,10 +110,12 @@ void main() {
     expect(find.text('Content'), findsOneWidget);
     expect(find.text('Appeal & Community vote'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Escalate Case'));
+    final escalateCase = find.text('Escalate Case');
+    await tester.ensureVisible(escalateCase);
+    await tester.tap(escalateCase);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, 'needs review');
+    await tester.enterText(find.byType(TextField).last, 'needs review');
     await tester.tap(find.text('Escalate'));
     await tester.pumpAndSettle();
 
