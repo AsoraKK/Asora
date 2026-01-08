@@ -54,7 +54,7 @@ void main() {
 
       // Verify app bar has person outline icon (used as menu button)
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
-      expect(find.text('Asora'), findsOneWidget);
+      expect(find.text('Lythaus'), findsOneWidget);
     });
 
     testWidgets('can open and interact with drawer', (tester) async {

@@ -43,7 +43,7 @@ void main() {
       final dio = container.read(secureDioProvider);
       expect(dio.options.headers['Content-Type'], equals('application/json'));
       expect(dio.options.headers['Accept'], equals('application/json'));
-      expect(dio.options.headers['User-Agent'], contains('Asora-Flutter'));
+      expect(dio.options.headers['User-Agent'], contains('Lythaus-Flutter'));
     });
 
     test('includes device integrity interceptor', () {
