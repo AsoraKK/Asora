@@ -24,9 +24,6 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-  AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
-  AZURE_FUNCTIONAPP_CANARY_NAME: ${{ vars.AZURE_FUNCTIONAPP_CANARY_NAME }}
 
 jobs:
   guard:
@@ -42,6 +39,9 @@ jobs:
       - name: Evaluate canary failure rate
         shell: bash
         env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+          AZURE_FUNCTIONAPP_CANARY_NAME: ${{ vars.AZURE_FUNCTIONAPP_CANARY_NAME }}
           LOOKBACK_MINUTES: ${{ inputs.lookback_minutes }}
           MIN_REQUESTS: ${{ inputs.min_requests }}
           FAILURE_THRESHOLD: ${{ inputs.failure_threshold }}
