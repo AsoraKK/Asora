@@ -1,11 +1,10 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Asora API
   version: v1
   description: HTTP contract for Asora Functions v1.
   license:
     name: MIT
-    identifier: MIT
 servers:
   - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
     description: Azure Functions staging edge endpoint
