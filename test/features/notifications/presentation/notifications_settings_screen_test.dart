@@ -1,79 +1,191 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:asora/features/notifications/application/notification_api_service.dart';
 import 'package:asora/features/notifications/application/notification_providers.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
-/// Helper to create ProviderScope with mocked Dio to avoid UnimplementedError
-Widget createTestWidget({required Widget child}) {
+class MockNotificationApiService extends Mock
+    implements NotificationApiService {}
+
+Widget _buildTestWidget({required NotificationApiService api}) {
   return ProviderScope(
-    overrides: [dioProvider.overrideWithValue(Dio())],
-    child: MaterialApp(home: child),
+    overrides: [notificationApiServiceProvider.overrideWithValue(api)],
+    child: const MaterialApp(home: NotificationsSettingsScreen()),
+  );
+}
+
+Future<void> _scrollToDevices(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.text('Devices'),
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
+UserNotificationPreferences _samplePreferences() {
+  return UserNotificationPreferences(
+    userId: 'u1',
+    timezone: 'UTC',
+    quietHours: QuietHours.defaultQuietHours,
+    categories: const CategoryPreferences(
+      social: true,
+      news: false,
+      marketing: false,
+    ),
+    updatedAt: DateTime.utc(2024, 1, 1),
+  );
+}
+
+UserDeviceToken _sampleDevice() {
+  return UserDeviceToken(
+    id: 'd1',
+    userId: 'u1',
+    deviceId: 'device-1',
+    pushToken: 'token',
+    platform: 'fcm',
+    label: 'Pixel',
+    createdAt: DateTime.utc(2024, 1, 1),
+    lastSeenAt: DateTime.utc(2024, 1, 1, 1),
   );
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(_samplePreferences());
+  });
+
   group('NotificationsSettingsScreen', () {
-    testWidgets('should display category toggles', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsSettingsScreen()),
-      );
+    testWidgets('renders sections and device card', (tester) async {
+      final api = MockNotificationApiService();
+      when(
+        () => api.getPreferences(),
+      ).thenAnswer((_) async => _samplePreferences());
+      when(
+        () => api.getDevices(activeOnly: true),
+      ).thenAnswer((_) async => [_sampleDevice()]);
 
-      // Pump to allow async loading, but don't wait for settle (network may fail)
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
 
-      // Verify screen is rendered (may show loading or error state)
-      expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+      expect(find.text('Categories'), findsOneWidget);
+      expect(find.text('Quiet Hours'), findsOneWidget);
+
+      await _scrollToDevices(tester);
+
+      expect(find.text('Devices'), findsOneWidget);
+      expect(find.text('Pixel'), findsOneWidget);
     });
 
-    testWidgets('should display 24-hour quiet hours grid', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsSettingsScreen()),
+    testWidgets('toggles category and shows success snackbar', (tester) async {
+      final api = MockNotificationApiService();
+      final prefs = _samplePreferences();
+      final updated = prefs.copyWith(
+        categories: prefs.categories.copyWith(marketing: true),
       );
 
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      when(() => api.getPreferences()).thenAnswer((_) async => prefs);
+      when(
+        () => api.getDevices(activeOnly: true),
+      ).thenAnswer((_) async => [_sampleDevice()]);
+      when(() => api.updatePreferences(any())).thenAnswer((_) async => updated);
 
-      // Verify screen is rendered
-      expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Marketing'));
+      await tester.pumpAndSettle();
+
+      verify(() => api.updatePreferences(any())).called(1);
+      expect(find.text('Preferences updated'), findsOneWidget);
     });
 
-    testWidgets('should toggle quiet hour when cell tapped', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsSettingsScreen()),
+    testWidgets('quiet hours toggle updates preferences', (tester) async {
+      final api = MockNotificationApiService();
+      final prefs = _samplePreferences();
+
+      when(() => api.getPreferences()).thenAnswer((_) async => prefs);
+      when(
+        () => api.getDevices(activeOnly: true),
+      ).thenAnswer((_) async => [_sampleDevice()]);
+      when(() => api.updatePreferences(any())).thenAnswer((_) async => prefs);
+
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('01'),
+        200,
+        scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
 
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('01'));
+      await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify screen renders - actual toggle requires mocked data provider
-      expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+      verify(() => api.updatePreferences(any())).called(1);
     });
 
-    testWidgets('should display devices section', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsSettingsScreen()),
-      );
+    testWidgets('removes device and shows snackbar', (tester) async {
+      final api = MockNotificationApiService();
+      var deviceCalls = 0;
 
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      when(
+        () => api.getPreferences(),
+      ).thenAnswer((_) async => _samplePreferences());
+      when(() => api.getDevices(activeOnly: true)).thenAnswer((_) async {
+        deviceCalls++;
+        if (deviceCalls == 1) {
+          return [_sampleDevice()];
+        }
+        return [];
+      });
+      when(() => api.revokeDevice('d1')).thenAnswer((_) async {});
 
-      // Verify screen renders
-      expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
+
+      await _scrollToDevices(tester);
+
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+
+      verify(() => api.revokeDevice('d1')).called(1);
+      expect(find.text('Device removed'), findsOneWidget);
     });
 
-    testWidgets('should show 3-device cap message', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsSettingsScreen()),
-      );
+    testWidgets('shows retry when preferences fail to load', (tester) async {
+      final api = MockNotificationApiService();
+      when(() => api.getPreferences()).thenThrow(Exception('boom'));
+      when(
+        () => api.getDevices(activeOnly: true),
+      ).thenAnswer((_) async => [_sampleDevice()]);
 
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
 
-      // Verify screen renders - subtitle text only appears when data loaded
-      expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      verify(() => api.getPreferences()).called(greaterThan(1));
+    });
+
+    testWidgets('shows empty devices message', (tester) async {
+      final api = MockNotificationApiService();
+      when(
+        () => api.getPreferences(),
+      ).thenAnswer((_) async => _samplePreferences());
+      when(() => api.getDevices(activeOnly: true)).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
+
+      await _scrollToDevices(tester);
+
+      expect(find.text('No devices registered'), findsOneWidget);
     });
   });
 }

@@ -1,0 +1,150 @@
+name: Canary Guard
+
+on:
+  workflow_dispatch:
+    inputs:
+      lookback_minutes:
+        description: "Lookback window in minutes"
+        required: false
+        default: "10"
+      min_requests:
+        description: "Minimum request count to evaluate"
+        required: false
+        default: "50"
+      failure_threshold:
+        description: "Failure rate percent to trigger rollback"
+        required: false
+        default: "1"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+  AZURE_FUNCTIONAPP_CANARY_NAME: ${{ vars.AZURE_FUNCTIONAPP_CANARY_NAME }}
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Evaluate canary failure rate
+        shell: bash
+        env:
+          LOOKBACK_MINUTES: ${{ inputs.lookback_minutes }}
+          MIN_REQUESTS: ${{ inputs.min_requests }}
+          FAILURE_THRESHOLD: ${{ inputs.failure_threshold }}
+        run: |
+          set -euo pipefail
+
+          LOOKBACK_MINUTES="${LOOKBACK_MINUTES:-10}"
+          MIN_REQUESTS="${MIN_REQUESTS:-50}"
+          FAILURE_THRESHOLD="${FAILURE_THRESHOLD:-1}"
+
+          missing=()
+          if [ -z "${AZURE_RESOURCE_GROUP:-}" ]; then
+            missing+=("AZURE_RESOURCE_GROUP")
+          fi
+          if [ -z "${AZURE_APPINSIGHTS_NAME:-}" ]; then
+            missing+=("AZURE_APPINSIGHTS_NAME")
+          fi
+          if [ -z "${AZURE_FUNCTIONAPP_CANARY_NAME:-}" ]; then
+            missing+=("AZURE_FUNCTIONAPP_CANARY_NAME")
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required variables: ${missing[*]}"
+            exit 1
+          fi
+
+          QUERY=$(cat <<EOF
+          let app = '${AZURE_FUNCTIONAPP_CANARY_NAME}';
+          let lookback = ${LOOKBACK_MINUTES}m;
+          let minRequests = ${MIN_REQUESTS};
+          requests
+          | where timestamp > ago(lookback)
+          | where cloud_RoleName == app
+          | summarize total = count(), failed = countif(tolong(resultCode) >= 500)
+          | extend failureRate = iff(total == 0, 0.0, todouble(failed)/todouble(total)*100.0)
+          | extend minRequests = minRequests, hasMinRequests = total >= minRequests
+          EOF
+          )
+
+          az monitor app-insights query \
+            --app "$AZURE_APPINSIGHTS_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --analytics-query "$QUERY" \
+            -o json > canary-query.json
+
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import sys
+
+          with open("canary-query.json", "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+
+          table = (data.get("tables") or [{}])[0]
+          columns = {col["name"]: i for i, col in enumerate(table.get("columns", []))}
+          rows = table.get("rows") or []
+
+          def get_value(name, default):
+              if not rows or name not in columns:
+                  return default
+              return rows[0][columns[name]]
+
+          total = int(get_value("total", 0))
+          failed = int(get_value("failed", 0))
+          failure_rate = float(get_value("failureRate", 0.0))
+
+          min_requests = int(os.environ.get("MIN_REQUESTS", "0"))
+          threshold = float(os.environ.get("FAILURE_THRESHOLD", "1"))
+          has_min = total >= min_requests
+          should_rollback = has_min and failure_rate > threshold
+
+          report = {
+              "app": os.environ.get("AZURE_FUNCTIONAPP_CANARY_NAME", ""),
+              "lookbackMinutes": int(os.environ.get("LOOKBACK_MINUTES", "0")),
+              "minRequests": min_requests,
+              "total": total,
+              "failed": failed,
+              "failureRate": round(failure_rate, 2),
+              "failureThreshold": threshold,
+              "hasMinRequests": has_min,
+              "shouldRollback": should_rollback,
+              "timestampUtc": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+          }
+
+          with open("canary-report.json", "w", encoding="utf-8") as handle:
+              json.dump(report, handle, indent=2)
+
+          print(json.dumps(report, indent=2))
+
+          if not has_min:
+              print(f"::warning::Insufficient canary traffic: {total} < minRequests {min_requests}")
+
+          if should_rollback:
+              print(
+                  f"::error::Canary failure rate {failure_rate:.2f}% exceeds threshold {threshold}%"
+              )
+              sys.exit(1)
+          PY
+
+      - name: Upload canary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-report-${{ github.run_id }}
+          path: canary-report.json
+          if-no-files-found: warn

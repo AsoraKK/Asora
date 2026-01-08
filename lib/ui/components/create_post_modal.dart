@@ -61,7 +61,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     if (success) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Posted to Asora')));
+      ).showSnackBar(const SnackBar(content: Text('Posted to Lythaus')));
       notifier.reset();
       Navigator.of(context).maybePop();
     }

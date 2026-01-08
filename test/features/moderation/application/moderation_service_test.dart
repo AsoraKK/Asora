@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:asora/features/moderation/application/moderation_service.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/domain/moderation_decision.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
@@ -175,19 +174,23 @@ void main() {
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async => _response({
-        'success': true,
-        'appeals': [_appealJson()],
-        'pagination': {
-          'total': 1,
-          'page': 1,
-          'pageSize': 20,
-          'hasMore': false,
-          'totalPages': 1,
+      (_) async => Response<Map<String, dynamic>>(
+        data: <String, dynamic>{
+          'success': true,
+          'appeals': [_appealJson()],
+          'pagination': {
+            'total': 1,
+            'page': 1,
+            'pageSize': 20,
+            'hasMore': false,
+            'totalPages': 1,
+          },
+          'filters': <String, dynamic>{},
+          'summary': <String, dynamic>{},
         },
-        'filters': {},
-        'summary': {},
-      }, '/api/reviewAppealedContent'),
+        requestOptions: RequestOptions(path: '/api/reviewAppealedContent'),
+        statusCode: 200,
+      ),
     );
 
     when(

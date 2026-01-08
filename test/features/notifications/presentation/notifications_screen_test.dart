@@ -1,87 +1,115 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:asora/features/notifications/presentation/notifications_screen.dart';
+import 'package:asora/features/notifications/application/notification_api_service.dart';
 import 'package:asora/features/notifications/application/notification_providers.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart'
+    as models;
+import 'package:asora/features/notifications/presentation/notifications_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
-/// Helper to create ProviderScope with mocked Dio to avoid UnimplementedError
-Widget createTestWidget({required Widget child}) {
+class MockNotificationApiService extends Mock
+    implements NotificationApiService {}
+
+Widget _buildTestWidget({
+  required NotificationApiService api,
+  required Widget child,
+}) {
   return ProviderScope(
-    overrides: [dioProvider.overrideWithValue(Dio())],
+    overrides: [notificationApiServiceProvider.overrideWithValue(api)],
     child: MaterialApp(home: child),
+  );
+}
+
+models.Notification _notification({required String id, bool read = false}) {
+  return models.Notification(
+    id: id,
+    userId: 'u1',
+    category: models.NotificationCategory.social,
+    eventType: models.NotificationEventType.commentCreated,
+    title: 'Title $id',
+    body: 'Body $id',
+    read: read,
+    createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
   );
 }
 
 void main() {
   group('NotificationsScreen', () {
-    testWidgets('should display empty state when no notifications', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createTestWidget(child: const NotificationsScreen()),
+    testWidgets('shows empty state when no notifications', (tester) async {
+      final api = MockNotificationApiService();
+      when(
+        () => api.getNotifications(
+          limit: any(named: 'limit'),
+          continuationToken: any(named: 'continuationToken'),
+        ),
+      ).thenAnswer(
+        (_) async => const NotificationsListResponse(
+          notifications: [],
+          continuationToken: null,
+          totalUnread: 0,
+        ),
       );
 
-      // Pump a few frames to allow async loading
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      // Widget should render (may show loading or empty)
-      expect(find.byType(NotificationsScreen), findsOneWidget);
-    });
-
-    testWidgets('should display notification list when notifications exist', (
-      tester,
-    ) async {
-      // Note: This test requires mocking the notification service
-      // For now, we verify the widget structure
       await tester.pumpWidget(
-        createTestWidget(child: const NotificationsScreen()),
+        _buildTestWidget(api: api, child: const NotificationsScreen()),
       );
-
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify screen is rendered
-      expect(find.byType(NotificationsScreen), findsOneWidget);
+      expect(find.text('No Notifications'), findsOneWidget);
+      expect(find.text('Refresh'), findsOneWidget);
     });
 
-    testWidgets('should support pull-to-refresh', (tester) async {
+    testWidgets('shows error state on failure', (tester) async {
+      final api = MockNotificationApiService();
+      when(
+        () => api.getNotifications(
+          limit: any(named: 'limit'),
+          continuationToken: any(named: 'continuationToken'),
+        ),
+      ).thenThrow(Exception('network down'));
+
       await tester.pumpWidget(
-        createTestWidget(child: const NotificationsScreen()),
+        _buildTestWidget(api: api, child: const NotificationsScreen()),
       );
-
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify the screen renders
-      expect(find.byType(NotificationsScreen), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Try Again'), findsOneWidget);
     });
 
-    testWidgets('should display unread indicator on unread notifications', (
-      tester,
-    ) async {
-      // This test would require injecting mock notifications via provider overrides
-      // Placeholder for future implementation
-      expect(true, isTrue);
-    });
+    testWidgets('renders list and marks read on tap', (tester) async {
+      final api = MockNotificationApiService();
+      when(
+        () => api.getNotifications(
+          limit: any(named: 'limit'),
+          continuationToken: any(named: 'continuationToken'),
+        ),
+      ).thenAnswer(
+        (_) async => NotificationsListResponse(
+          notifications: [_notification(id: 'n1')],
+          continuationToken: 'next',
+          totalUnread: 1,
+        ),
+      );
+      when(() => api.markAsRead(any())).thenAnswer((_) async {});
 
-    testWidgets('should support swipe-to-dismiss', (tester) async {
-      // This test would require injecting mock notifications and testing Dismissible
-      // Placeholder for future implementation
-      expect(true, isTrue);
-    });
+      await tester.pumpWidget(
+        _buildTestWidget(api: api, child: const NotificationsScreen()),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-    testWidgets('should navigate on notification tap', (tester) async {
-      // This test would require mocking navigation and testing tap handler
-      // Placeholder for future implementation
-      expect(true, isTrue);
-    });
+      expect(find.text('Title n1'), findsOneWidget);
+      expect(find.text('Mark all read'), findsOneWidget);
 
-    testWidgets('should load more notifications on scroll', (tester) async {
-      // This test would require mocking pagination and scrolling to 80%
-      // Placeholder for future implementation
-      expect(true, isTrue);
+      await tester.tap(find.text('Title n1'));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      verify(() => api.markAsRead('n1')).called(1);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
   });
 }

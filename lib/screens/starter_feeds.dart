@@ -20,7 +20,7 @@ class _StarterFeedsState extends State<StarterFeeds>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Asora"),
+        title: const Text("Lythaus"),
         bottom: TabBar(
           controller: _tc,
           tabs: const [

@@ -1,5 +1,12 @@
 # Copilot Instructions
 
+## Branding (IMPORTANT)
+- **User-facing product name = Lythaus** (UI labels, store listings, marketing copy, emails).
+- **Internal/infra name = Asora** (repo, Azure resources, Terraform, package IDs).
+- When generating code, use "Lythaus" for UI strings and user-visible text.
+- Do **not** rename Azure resources (`asora-*`), package identifiers (`com.asora.app`), or internal imports without explicit instruction.
+- Full branding guide: `docs/branding/lythaus-transition.md`
+
 ## What to know first
 - Start with `docs/ADR_001_TLDR.md` for the product vision, target KPIs, and how the Flutter front end aligns with Azure Functions + Cosmos.
 - The repo is split: Flutter app in `lib/` (Riverpod-based clean architecture) and Node.js 20 Azure Functions in `functions/` (TypeScript → CJS build output under `dist/`).

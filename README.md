@@ -1,7 +1,16 @@
-Asora Backend – quick reference
-===============================
+Lythaus (formerly Asora) – Quick Reference
+==========================================
 
-This repo contains the Asora Flutter app and Azure Functions backend. For the full backend docs, see `functions/README.md`.
+> **Branding note:** The user-facing product is now **Lythaus**. Internal services, Azure resources, and this repository retain the **Asora** name. See [docs/branding/lythaus-transition.md](docs/branding/lythaus-transition.md) for the full naming guide.
+
+This repo contains the **Lythaus** Flutter app and Azure Functions backend (internally codenamed Asora). For backend details, see `functions/README.md`.
+
+## Domains
+
+| Domain | Purpose |
+|--------|---------|
+| **lythaus.co** | Marketing site, waitlist, invite links |
+| **asora.co.za** | Platform base (API, admin, Azure Functions) |
 
 Runbooks
 --------

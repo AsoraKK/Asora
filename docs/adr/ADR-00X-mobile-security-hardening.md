@@ -3,9 +3,11 @@
 ## Status
 **Accepted** | 2024-01-15
 
+> **Branding note:** User-facing product = **Lythaus**; internal/infra = **Asora**. See [branding guide](../branding/lythaus-transition.md).
+
 ## Context
 
-ASORA's mobile application handles sensitive user data including posts, reactions, and personally identifiable information. As per OWASP Mobile Top 10, mobile apps face unique security challenges:
+The Lythaus mobile application (internally codenamed Asora) handles sensitive user data including posts, reactions, and personally identifiable information. As per OWASP Mobile Top 10, mobile apps face unique security challenges:
 
 - **M3: Insecure Communication** - Man-in-the-middle attacks, certificate authority compromises
 - **M8: Security Misconfiguration** - Rooted/jailbroken devices with reduced security controls

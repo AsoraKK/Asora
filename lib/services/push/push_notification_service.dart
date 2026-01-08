@@ -90,9 +90,9 @@ class PushNotificationService {
     // Create Android notification channel for high-priority notifications
     if (Platform.isAndroid) {
       const androidChannel = AndroidNotificationChannel(
-        'asora_notifications', // id
-        'Asora Notifications', // title
-        description: 'Notifications from Asora social platform',
+        'lythaus_notifications', // id
+        'Lythaus Notifications', // title
+        description: 'Notifications from Lythaus',
         importance: Importance.high,
         enableVibration: true,
       );
@@ -143,7 +143,7 @@ class PushNotificationService {
     if (notification != null) {
       // Display local notification for foreground messages
       _showLocalNotification(
-        title: notification.title ?? 'Asora',
+        title: notification.title ?? 'Lythaus',
         body: notification.body ?? '',
         payload: data,
       );
@@ -176,9 +176,9 @@ class PushNotificationService {
     Map<String, dynamic>? payload,
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      'asora_notifications',
-      'Asora Notifications',
-      channelDescription: 'Notifications from Asora social platform',
+      'lythaus_notifications',
+      'Lythaus Notifications',
+      channelDescription: 'Notifications from Lythaus',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,

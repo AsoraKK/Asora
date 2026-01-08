@@ -15,7 +15,7 @@ class AsoraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Asora',
+      title: 'Lythaus',
       theme: AsoraTheme.light(),
       darkTheme: AsoraTheme.dark(),
       themeMode: ThemeMode.dark,
