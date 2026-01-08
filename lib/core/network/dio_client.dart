@@ -42,7 +42,7 @@ final secureDioProvider = Provider<Dio>((ref) {
   dio.options.headers.addAll({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'User-Agent': 'Asora-Flutter/${_getAppVersion()}',
+    'User-Agent': 'Lythaus-Flutter/${_getAppVersion()}',
   });
 
   // Add device integrity interceptor

@@ -117,7 +117,7 @@ final List<FeedItem> mockFeedItems = [
   FeedItem(
     id: 'f3',
     feedId: 'news',
-    author: 'Asora Newsdesk',
+    author: 'Lythaus Newsdesk',
     contentType: ContentType.text,
     title: 'Hybrid model explainer',
     body: 'Verified journalists pair with high-rep locals for layered context.',

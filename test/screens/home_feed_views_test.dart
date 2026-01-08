@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,13 +55,13 @@ domain.FeedResponse _feedResponse({
 
 void main() {
   testWidgets('custom feed view renders filters and items', (tester) async {
-    final feed = FeedModel(
+    const feed = FeedModel(
       id: 'custom-1',
       name: 'Custom',
       type: FeedType.custom,
       contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
       sorting: SortingRule.relevant,
-      refinements: const FeedRefinements(
+      refinements: FeedRefinements(
         includeKeywords: ['local'],
         excludeKeywords: ['spam'],
       ),

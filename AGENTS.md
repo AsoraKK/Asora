@@ -1,7 +1,13 @@
 # Codex Agent Guide (AGENTS.md)
 
 Authoritative, concise instructions for agents working in this repository via Codex CLI.
+## Branding (Read First)
 
+- **User-facing product = Lythaus** (UI labels, store text, marketing copy)
+- **Internal/infra = Asora** (repo name, Azure resources, Terraform, package IDs)
+- When generating code, use "Lythaus" for user-visible strings.
+- Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
+- Full guide: `docs/branding/lythaus-transition.md`
 ## Quick Start
 
 1. Read the repo structure with `rg --files` and open relevant files in small chunks (≤250 lines each).

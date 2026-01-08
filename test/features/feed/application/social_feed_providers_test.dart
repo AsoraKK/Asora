@@ -252,7 +252,7 @@ void main() {
       throwsA(isA<SocialFeedException>()),
     );
 
-    final params = const CommentsParams(postId: 'post-1');
+    const params = CommentsParams(postId: 'post-1');
     await container.read(commentsProvider(params).future);
     await container.read(commentsProvider(params).notifier).loadMore();
 
@@ -332,15 +332,15 @@ void main() {
 
   test('live feed provider maps posts and home feed index', () async {
     final repo = FakeSocialFeedRepository();
-    final feed = state.FeedModel(
+    const feed = state.FeedModel(
       id: 'discover',
       name: 'Discover',
       type: state.FeedType.discover,
-      contentFilters: const state.ContentFilters(
+      contentFilters: state.ContentFilters(
         allowedTypes: {state.ContentType.mixed},
       ),
       sorting: state.SortingRule.hot,
-      refinements: const state.FeedRefinements(),
+      refinements: state.FeedRefinements(),
       subscriptionLevelRequired: 0,
       isHome: true,
     );

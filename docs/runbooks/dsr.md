@@ -1,5 +1,7 @@
 # Data Subject Request (DSR) Runbook
 
+> **Branding note:** User-facing product = **Lythaus**; internal/infra = **Asora**. See [branding guide](../branding/lythaus-transition.md).
+
 Version: 1.1
 Last Updated: 2025-11-15
 Owners: Privacy Engineering + Platform

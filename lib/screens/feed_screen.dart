@@ -117,7 +117,7 @@ class FeedScreen extends ConsumerWidget {
           ),
         ),
         title: Text(
-          'Asora',
+          'Lythaus',
           style: GoogleFonts.sora(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
@@ -667,7 +667,7 @@ class _AsoraDrawer extends ConsumerWidget {
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: 'Asora',
+      applicationName: 'Lythaus',
       applicationVersion: '1.0.0',
       applicationIcon: Container(
         width: 48,

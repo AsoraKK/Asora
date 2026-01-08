@@ -1,5 +1,7 @@
 # Runbook: Handle Rooted Device Complaints
 
+> **Branding note:** User-facing product = **Lythaus**; internal/infra = **Asora**. See [branding guide](../branding/lythaus-transition.md). Use "Lythaus" when communicating with users.
+
 ## Overview
 
 Support runbook for addressing user complaints related to device integrity enforcement (rooted/jailbroken devices blocked from high-risk operations).
@@ -150,9 +152,9 @@ Date: YYYY-MM-DD HH:MM UTC
 
 ## FAQ Responses
 
-### "Why does ASORA block rooted devices?"
+### "Why does Lythaus block rooted devices?"
 
-> "Rooted and jailbroken devices have reduced security controls, which can allow malicious apps to access your account credentials and private data. To protect all users, ASORA restricts certain actions on modified devices. You can still browse the feed and view content—only sensitive operations like sign-in and posting are affected."
+> "Rooted and jailbroken devices have reduced security controls, which can allow malicious apps to access your account credentials and private data. To protect all users, Lythaus restricts certain actions on modified devices. You can still browse the feed and view content—only sensitive operations like sign-in and posting are affected."
 
 ### "My device isn't rooted, this is a false positive"
 

@@ -34,14 +34,14 @@ void main() {
       createdAt: DateTime(2024, 1, 1),
       lastLoginAt: DateTime(2024, 1, 2),
     );
-    final profile = PublicUser(
+    const profile = PublicUser(
       id: 'user-1',
       displayName: 'Ada Lovelace',
       handle: '@ada',
       tier: 'gold',
       reputationScore: 120,
       journalistVerified: true,
-      badges: const ['Founding member'],
+      badges: ['Founding member'],
     );
 
     await tester.pumpWidget(
