@@ -238,14 +238,14 @@ export async function redeemInvite(
     const usageCount = resolveUsageCount(validation.invite);
     const nextUsageCount = usageCount + 1;
 
-    const patchOps = [
-      { op: 'set', path: '/usageCount', value: nextUsageCount },
-      { op: 'set', path: '/lastUsedAt', value: nowIso },
-      { op: 'set', path: '/usedByUserId', value: options.userId },
+    const patchOps: import('@azure/cosmos').PatchOperation[] = [
+      { op: 'set' as const, path: '/usageCount', value: nextUsageCount },
+      { op: 'set' as const, path: '/lastUsedAt', value: nowIso },
+      { op: 'set' as const, path: '/usedByUserId', value: options.userId },
     ];
 
     if (nextUsageCount >= maxUses) {
-      patchOps.push({ op: 'set', path: '/usedAt', value: nowIso });
+      patchOps.push({ op: 'set' as const, path: '/usedAt', value: nowIso });
     }
 
     const { resource: updated } = await container.item(normalizedCode, normalizedCode).patch<InviteDocument>(patchOps);

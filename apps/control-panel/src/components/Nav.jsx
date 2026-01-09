@@ -2,7 +2,10 @@ import { NavLink } from 'react-router-dom';
 
 const links = [
   { to: '/', label: 'Dashboard', end: true },
-  { to: '/moderation', label: 'Moderation' },
+  { to: '/flags', label: 'Flags' },
+  { to: '/appeals', label: 'Appeals' },
+  { to: '/users', label: 'Users' },
+  { to: '/invites', label: 'Invites' },
   { to: '/audit', label: 'Audit' }
 ];
 
@@ -10,7 +13,7 @@ function Nav() {
   return (
     <header className="nav">
       <div className="brand">
-        <span className="brand-mark">Asora</span>
+        <span className="brand-mark">Lythaus</span>
         <span className="brand-sub">Control Panel</span>
       </div>
       <nav className="nav-links">
@@ -27,7 +30,7 @@ function Nav() {
           </NavLink>
         ))}
       </nav>
-      <div className="nav-meta">Ops Preview</div>
+      <div className="nav-meta">Beta Ops</div>
     </header>
   );
 }

@@ -62,25 +62,25 @@ async function handleContentAction(
     const beforeState = mapContentState(document.status as string | undefined);
     const updatedAtValue = typeof document.updatedAt === 'number' ? now : nowIso;
 
-    const patchOps = [
-      { op: 'set', path: '/status', value: ACTION_TO_STATUS[action] },
-      { op: 'set', path: '/updatedAt', value: updatedAtValue },
+    const patchOps: import('@azure/cosmos').PatchOperation[] = [
+      { op: 'set' as const, path: '/status', value: ACTION_TO_STATUS[action] },
+      { op: 'set' as const, path: '/updatedAt', value: updatedAtValue },
     ];
 
     if (document.moderation) {
       patchOps.push({
-        op: 'set',
+        op: 'set' as const,
         path: '/moderation/status',
         value: ACTION_TO_STATUS[action] === 'blocked' ? 'blocked' : 'clean',
       });
       patchOps.push({
-        op: 'set',
+        op: 'set' as const,
         path: '/moderation/checkedAt',
         value: now,
       });
     } else {
       patchOps.push({
-        op: 'set',
+        op: 'set' as const,
         path: '/moderation',
         value: {
           status: ACTION_TO_STATUS[action] === 'blocked' ? 'blocked' : 'clean',
