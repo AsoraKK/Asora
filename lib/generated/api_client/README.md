@@ -47,15 +47,15 @@ Please follow the [installation procedure](#installation--usage) and then run th
 import 'package:asora_api_client/asora_api_client.dart';
 
 
-final api = AsoraApiClient().getFeedApi();
-final String cursor = cursor_example; // String | Cursor for pagination
-final int limit = 56; // int | Number of items to return (1-50)
+final api = AsoraApiClient().getAdminApi();
+final String appealId = appealId_example; // String | Appeal identifier
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
 
 try {
-    final response = await api.getFeed(cursor, limit);
+    final response = await api.adminAppealsApprove(appealId, adminAppealDecisionRequest);
     print(response);
 } catch on DioException (e) {
-    print("Exception when calling FeedApi->getFeed: $e\n");
+    print("Exception when calling AdminApi->adminAppealsApprove: $e\n");
 }
 
 ```
@@ -66,6 +66,23 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+[*AdminApi*](doc/AdminApi.md) | [**adminAppealsApprove**](doc/AdminApi.md#adminappealsapprove) | **POST** /_admin/appeals/{appealId}/approve | Approve an appeal
+[*AdminApi*](doc/AdminApi.md) | [**adminAppealsGet**](doc/AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
+[*AdminApi*](doc/AdminApi.md) | [**adminAppealsList**](doc/AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
+[*AdminApi*](doc/AdminApi.md) | [**adminAppealsReject**](doc/AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
+[*AdminApi*](doc/AdminApi.md) | [**adminContentBlock**](doc/AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
+[*AdminApi*](doc/AdminApi.md) | [**adminContentPublish**](doc/AdminApi.md#admincontentpublish) | **POST** /_admin/content/{contentId}/publish | Publish content
+[*AdminApi*](doc/AdminApi.md) | [**adminFlagsGet**](doc/AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
+[*AdminApi*](doc/AdminApi.md) | [**adminFlagsList**](doc/AdminApi.md#adminflagslist) | **GET** /_admin/flags | List flagged content queue
+[*AdminApi*](doc/AdminApi.md) | [**adminFlagsResolve**](doc/AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesBatch**](doc/AdminApi.md#admininvitesbatch) | **POST** /_admin/invites/batch | Batch create invite codes
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesCreate**](doc/AdminApi.md#admininvitescreate) | **POST** /_admin/invites | Create an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesGet**](doc/AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesList**](doc/AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminUsersDisable**](doc/AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
+[*AdminApi*](doc/AdminApi.md) | [**adminUsersEnable**](doc/AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
+[*AdminApi*](doc/AdminApi.md) | [**adminUsersSearch**](doc/AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
 [*FeedApi*](doc/FeedApi.md) | [**getFeed**](doc/FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
@@ -78,6 +95,52 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AdminAppealContent](doc/AdminAppealContent.md)
+ - [AdminAppealDecisionRequest](doc/AdminAppealDecisionRequest.md)
+ - [AdminAppealDecisionResponse](doc/AdminAppealDecisionResponse.md)
+ - [AdminAppealDetail](doc/AdminAppealDetail.md)
+ - [AdminAppealDetailResponse](doc/AdminAppealDetailResponse.md)
+ - [AdminAppealOriginalDecision](doc/AdminAppealOriginalDecision.md)
+ - [AdminAppealQueueItem](doc/AdminAppealQueueItem.md)
+ - [AdminAppealQueueResponse](doc/AdminAppealQueueResponse.md)
+ - [AdminAppealStatus](doc/AdminAppealStatus.md)
+ - [AdminContentActionRequest](doc/AdminContentActionRequest.md)
+ - [AdminContentActionResponse](doc/AdminContentActionResponse.md)
+ - [AdminContentState](doc/AdminContentState.md)
+ - [AdminContentType](doc/AdminContentType.md)
+ - [AdminFlagDetailAppeal](doc/AdminFlagDetailAppeal.md)
+ - [AdminFlagDetailContent](doc/AdminFlagDetailContent.md)
+ - [AdminFlagDetailFlags](doc/AdminFlagDetailFlags.md)
+ - [AdminFlagDetailReason](doc/AdminFlagDetailReason.md)
+ - [AdminFlagDetailResponse](doc/AdminFlagDetailResponse.md)
+ - [AdminFlagHistory](doc/AdminFlagHistory.md)
+ - [AdminFlagHistoryAdminAction](doc/AdminFlagHistoryAdminAction.md)
+ - [AdminFlagHistoryAppeal](doc/AdminFlagHistoryAppeal.md)
+ - [AdminFlagHistoryFlag](doc/AdminFlagHistoryFlag.md)
+ - [AdminFlagQueueAuthor](doc/AdminFlagQueueAuthor.md)
+ - [AdminFlagQueueContent](doc/AdminFlagQueueContent.md)
+ - [AdminFlagQueueFlags](doc/AdminFlagQueueFlags.md)
+ - [AdminFlagQueueItem](doc/AdminFlagQueueItem.md)
+ - [AdminFlagQueueResponse](doc/AdminFlagQueueResponse.md)
+ - [AdminFlagResolveRequest](doc/AdminFlagResolveRequest.md)
+ - [AdminInvite](doc/AdminInvite.md)
+ - [AdminInviteBatchRequest](doc/AdminInviteBatchRequest.md)
+ - [AdminInviteBatchResponse](doc/AdminInviteBatchResponse.md)
+ - [AdminInviteCreateRequest](doc/AdminInviteCreateRequest.md)
+ - [AdminInviteListResponse](doc/AdminInviteListResponse.md)
+ - [AdminInviteResponse](doc/AdminInviteResponse.md)
+ - [AdminInviteRevokeRequest](doc/AdminInviteRevokeRequest.md)
+ - [AdminInviteRevokeResponse](doc/AdminInviteRevokeResponse.md)
+ - [AdminInviteStatus](doc/AdminInviteStatus.md)
+ - [AdminModerationSummary](doc/AdminModerationSummary.md)
+ - [AdminQueueStatus](doc/AdminQueueStatus.md)
+ - [AdminResolveResponse](doc/AdminResolveResponse.md)
+ - [AdminUserActionResponse](doc/AdminUserActionResponse.md)
+ - [AdminUserDisableRequest](doc/AdminUserDisableRequest.md)
+ - [AdminUserEnableRequest](doc/AdminUserEnableRequest.md)
+ - [AdminUserSearchResponse](doc/AdminUserSearchResponse.md)
+ - [AdminUserStatus](doc/AdminUserStatus.md)
+ - [AdminUserSummary](doc/AdminUserSummary.md)
  - [CreatePost201Response](doc/CreatePost201Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)

@@ -1,7 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
-import { profileService } from '@users/service/profileService';
+import { profileService } from '../../users/service/profileService';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { extractPreview, fetchContentById, getLatestDecisionSummary, mapContentState } from '../moderationAdminUtils';
 
