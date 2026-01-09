@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { requireAuth } from '@shared/middleware/auth';
+import { requireActiveUser } from '@shared/middleware/activeUser';
 import type { Principal } from '@shared/middleware/auth';
 import { ok, badRequest, notFound, created, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -19,6 +19,7 @@ const COMMENT_MIN_LENGTH = 1;
 const COMMENT_MAX_LENGTH = 2000;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const STATUS_PUBLISHED = 'published';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -30,6 +31,7 @@ interface CommentDocument {
   postId: string;
   authorId: string;
   text: string;
+  status: string;
   createdAt: number;
   updatedAt: number;
   _partitionKey: string;
@@ -112,7 +114,7 @@ function validateCommentText(
 // POST /posts/{postId}/comments - Create a comment
 // ─────────────────────────────────────────────────────────────
 
-export const createComment = requireAuth(async (req: AuthenticatedRequest, context: InvocationContext) => {
+export const createComment = requireActiveUser(async (req: AuthenticatedRequest, context: InvocationContext) => {
   const principal = req.principal;
   const postId = req.params?.postId;
   const start = performance.now();
@@ -140,7 +142,7 @@ export const createComment = requireAuth(async (req: AuthenticatedRequest, conte
 
     // Verify post exists
     const { resource: post } = await db.posts.item(postId, postId).read();
-    if (!post) {
+    if (!post || post.status === 'blocked' || post.status === 'hidden_pending_review' || post.status === 'hidden_confirmed' || post.status === 'deleted') {
       context.log('comments.create.post_not_found', { postId });
       return notFound();
     }
@@ -155,6 +157,7 @@ export const createComment = requireAuth(async (req: AuthenticatedRequest, conte
       postId,
       authorId: principal.sub,
       text: validation.text,
+      status: STATUS_PUBLISHED,
       createdAt: now,
       updatedAt: now,
       _partitionKey: postId,
@@ -250,6 +253,7 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
       FROM c
       WHERE c._partitionKey = @postId
         AND c.type = "comment"
+        AND (NOT IS_DEFINED(c.status) OR c.status = @status)
         AND (c.createdAt < @ts OR (c.createdAt = @ts AND c.id < @id))
       ORDER BY c.createdAt DESC, c.id DESC
       OFFSET 0 LIMIT @limit
@@ -270,6 +274,7 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
             { name: '@postId', value: postId },
             { name: '@ts', value: cursorValue.ts },
             { name: '@id', value: cursorValue.id },
+            { name: '@status', value: STATUS_PUBLISHED },
             { name: '@limit', value: limit + 1 }, // Fetch one extra to check hasMore
           ],
         },

@@ -33,8 +33,11 @@ jest.mock('@shared/clients/cosmos', () => ({
                     results = results.filter(inv => inv.createdBy === createdByParam.value);
                   }
 
-                  if (querySpec.query.includes('usedAt = null')) {
-                    results = results.filter(inv => inv.usedAt === null);
+                  if (querySpec.query.includes('usageCount') || querySpec.query.includes('usedAt = null')) {
+                    results = results.filter(inv => {
+                      const usageCount = typeof inv.usageCount === 'number' ? inv.usageCount : (inv.usedAt ? 1 : 0);
+                      return usageCount === 0 && inv.usedAt === null;
+                    });
                   }
 
                   // Handle expired cleanup query
@@ -66,7 +69,7 @@ jest.mock('@shared/clients/cosmos', () => ({
                   throw error;
                 }
                 for (const op of operations) {
-                  if (op.op === 'add' || op.op === 'replace') {
+                  if (op.op === 'add' || op.op === 'replace' || op.op === 'set') {
                     const pathParts = op.path.split('/').filter(Boolean);
                     let target = doc;
                     for (let i = 0; i < pathParts.length - 1; i++) {
@@ -122,6 +125,9 @@ describe('Invite Store', () => {
       expect(invite.inviteCode).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
       expect(invite.email).toBeNull();
       expect(invite.createdBy).toBe('admin-123');
+      expect(invite.maxUses).toBe(1);
+      expect(invite.usageCount).toBe(0);
+      expect(invite.lastUsedAt).toBeNull();
       expect(invite.usedAt).toBeNull();
       expect(invite.usedByUserId).toBeNull();
 
@@ -266,12 +272,16 @@ describe('Invite Store', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.invite.usedAt).not.toBeNull();
+        expect(result.invite.usageCount).toBe(1);
+        expect(result.invite.lastUsedAt).not.toBeNull();
         expect(result.invite.usedByUserId).toBe('user-789');
       }
 
       // Verify store was updated
       const stored = inviteStore.get(invite.inviteCode);
       expect(stored.usedAt).not.toBeNull();
+      expect(stored.usageCount).toBe(1);
+      expect(stored.lastUsedAt).not.toBeNull();
       expect(stored.usedByUserId).toBe('user-789');
     });
 

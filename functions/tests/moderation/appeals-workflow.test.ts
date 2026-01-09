@@ -5,7 +5,7 @@
  * - Creating appeals
  * - Voting on appeals (approve/reject)
  * - Double voting prevention
- * - State transitions (pending -> resolved)
+ * - State transitions (pending -> approved/rejected)
  * - Content status updates based on decision
  */
 import type { InvocationContext } from '@azure/functions';
@@ -217,7 +217,7 @@ describe('appealService - creating appeals', () => {
       .mockResolvedValueOnce({
         resource: {
           id: 'post-123',
-          status: 'hidden_pending_review',
+          status: 'blocked',
           title: 'My Post',
           content: 'Post content here',
           flagCount: 3,
@@ -356,11 +356,11 @@ describe('voteService - voting on appeals', () => {
     expect(response.jsonBody).toMatchObject({ error: 'Appeal not found' });
   });
 
-  it('returns 409 when appeal is already resolved', async () => {
+  it('returns 409 when appeal is already decided', async () => {
     mockRead.mockResolvedValueOnce({
       resource: {
         id: 'appeal-123',
-        status: 'resolved',
+        status: 'approved',
         resolvedAt: '2025-11-28T12:00:00Z',
       },
     });
@@ -381,7 +381,7 @@ describe('voteService - voting on appeals', () => {
     });
 
     expect(response.status).toBe(409);
-    expect(response.jsonBody).toMatchObject({ error: 'Appeal has already been resolved' });
+    expect(response.jsonBody).toMatchObject({ error: 'Appeal has already been approved' });
   });
 
   it('returns 409 when voter has already voted', async () => {
@@ -531,7 +531,7 @@ describe('voteService - quorum and state transitions', () => {
         },
       }) // Appeal at threshold - 1
       .mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } }) // Voter info
-      .mockResolvedValueOnce({ resource: { id: 'post-123', status: 'hidden_pending_review' } }); // Content for update
+      .mockResolvedValueOnce({ resource: { id: 'post-123', status: 'blocked' } }); // Content for update
     mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing votes
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-5' } });
     mockReplace
@@ -557,7 +557,7 @@ describe('voteService - quorum and state transitions', () => {
     expect(response.jsonBody).toMatchObject({
       message: 'Vote recorded successfully',
       finalDecision: 'approved',
-      status: 'resolved',
+      status: 'approved',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
       votesFor: 4,
@@ -587,7 +587,7 @@ describe('voteService - quorum and state transitions', () => {
         },
       })
       .mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } })
-      .mockResolvedValueOnce({ resource: { id: 'post-456', status: 'hidden_pending_review' } });
+      .mockResolvedValueOnce({ resource: { id: 'post-456', status: 'blocked' } });
     mockQuery.mockResolvedValueOnce({ resources: [] });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-5' } });
     mockReplace
@@ -612,7 +612,7 @@ describe('voteService - quorum and state transitions', () => {
     expect(response.status).toBe(200);
     expect(response.jsonBody).toMatchObject({
       finalDecision: 'rejected',
-      status: 'resolved',
+      status: 'rejected',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
       votesFor: 1,
@@ -654,7 +654,7 @@ describe('voteService - quorum and state transitions', () => {
       error: 'Appeal has expired',
     });
 
-    // Verify appeal was marked as expired
+    // Verify appeal was marked as rejected
     expect(mockReplace).toHaveBeenCalled();
   });
 
@@ -723,7 +723,7 @@ describe('appeals workflow - end-to-end flow', () => {
       .mockResolvedValueOnce({
         resource: {
           id: 'post-flow',
-          status: 'hidden_pending_review',
+          status: 'blocked',
           content: 'Test content',
           flagCount: 2,
         },

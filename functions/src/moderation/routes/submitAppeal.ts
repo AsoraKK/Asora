@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
-import { requireAuth } from '@shared/middleware/auth';
+import { requireActiveUser } from '@shared/middleware/activeUser';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -9,7 +9,7 @@ import { withDailyAppealLimit } from '@shared/middleware/dailyPostLimit';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
-const tierLimitedSubmitAppeal = requireAuth(
+const tierLimitedSubmitAppeal = requireActiveUser(
   withDailyAppealLimit(async (req: AuthenticatedRequest, context: InvocationContext) => {
     try {
       const { submitAppealHandler } = await import('@moderation/service/appealService');

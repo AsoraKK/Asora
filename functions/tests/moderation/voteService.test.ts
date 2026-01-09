@@ -114,9 +114,9 @@ describe('voteService - appeal lookup', () => {
     expect(response.status).toBe(404);
   });
 
-  it('returns 409 when appeal is already resolved', async () => {
+  it('returns 409 when appeal is already decided', async () => {
     mockRead.mockResolvedValueOnce({
-      resource: { id: 'appeal-1', status: 'resolved', resolution: 'approved' },
+      resource: { id: 'appeal-1', status: 'approved', finalDecision: 'approved' },
     });
 
     const req = httpReqMock({
@@ -197,7 +197,7 @@ describe('voteService - successful voting', () => {
       urgencyScore: 7,
       flagCount: 3,
     };
-    const contentDoc = { id: 'post-1', authorId: 'user-123', status: 'hidden_pending_review' };
+    const contentDoc = { id: 'post-1', authorId: 'user-123', status: 'blocked' };
 
     mockRead
       .mockResolvedValueOnce({ resource: appealDoc })
@@ -222,7 +222,7 @@ describe('voteService - successful voting', () => {
     expect(decisionCalls[0][1]).toMatchObject({
       action: 'approved',
       appealId: 'appeal-1',
-      appealStatus: 'resolved',
+      appealStatus: 'approved',
       source: 'appeal_vote',
     });
   });

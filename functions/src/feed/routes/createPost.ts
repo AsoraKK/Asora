@@ -1,6 +1,6 @@
 import { app, HttpRequest, InvocationContext } from '@azure/functions';
 
-import { requireAuth } from '@shared/middleware/auth';
+import { requireActiveUser } from '@shared/middleware/activeUser';
 import type { Principal } from '@shared/middleware/auth';
 import { badRequest, created, serverError } from '@shared/utils/http';
 import { HttpError } from '@shared/utils/errors';
@@ -279,7 +279,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
   }
 }
 
-export const createPost = requireAuth(withChaos(withDailyPostLimit(handleCreatePost)));
+export const createPost = requireActiveUser(withChaos(withDailyPostLimit(handleCreatePost)));
 
 /* istanbul ignore next */
 const rateLimitedCreatePost = withRateLimit(createPost, (req, context) => getPolicyForFunction('createPost'));

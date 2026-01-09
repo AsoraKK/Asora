@@ -18,6 +18,25 @@ jest.mock('../../src/appeals/appealsService', () => ({
   voteOnAppeal: jest.fn(),
 }));
 
+jest.mock('../../src/shared/clients/cosmos', () => ({
+  getCosmosDatabase: jest.fn(() => ({
+    container: jest.fn((name: string) => {
+      if (name === 'users') {
+        return {
+          item: jest.fn(() => ({
+            read: jest.fn().mockResolvedValue({ resource: { id: 'user-appeal', isActive: true } }),
+          })),
+        };
+      }
+      return {
+        item: jest.fn(() => ({
+          read: jest.fn().mockResolvedValue({ resource: {} }),
+        })),
+      };
+    }),
+  })),
+}));
+
 const mockedAuth = jest.mocked(extractAuthContext);
 const mockedService = {
   createAppeal: jest.mocked(createAppeal),

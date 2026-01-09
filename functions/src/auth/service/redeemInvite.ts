@@ -133,6 +133,8 @@ export async function redeemInviteHandler(
         not_found: 'Invite code not found',
         expired: 'Invite code has expired',
         already_used: 'Invite code has already been used',
+        exhausted: 'Invite code has reached its maximum uses',
+        revoked: 'Invite code has been revoked',
         email_mismatch: 'This invite code is not valid for your email address',
       };
       return createErrorResponse(400, validation.reason, errorMessages[validation.reason] || 'Invalid invite code');

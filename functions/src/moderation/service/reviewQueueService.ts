@@ -205,7 +205,7 @@ export async function getReviewQueueHandler({
           SELECT c.id, c.contentId, c.contentType, c.status, c.appealType, 
                  c.urgencyScore, c.createdAt, c.flagCount, c.contentPreview
           FROM c
-          WHERE c.status IN ("pending", "under_review")
+      WHERE c.status = "pending"
           ORDER BY c.createdAt DESC
         `,
         parameters: [],

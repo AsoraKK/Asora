@@ -206,6 +206,18 @@ export async function getAppealForPost(postId: string): Promise<InsightAppeal> {
       case 'pending':
         status = 'PENDING';
         break;
+      case 'resolved':
+        if (appeal.finalDecision === 'approved') {
+          status = 'APPROVED';
+        } else if (appeal.finalDecision === 'rejected') {
+          status = 'REJECTED';
+        } else {
+          status = 'NONE';
+        }
+        break;
+      case 'expired':
+        status = 'REJECTED';
+        break;
       case 'upheld':
       case 'approved':
         status = 'APPROVED';

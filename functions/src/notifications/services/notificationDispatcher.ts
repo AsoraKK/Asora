@@ -389,7 +389,7 @@ export class NotificationDispatcher {
       case NotificationEventType.MODERATION_CONTENT_BLOCKED:
         return {
           title: 'Content Moderation Update',
-          body: 'One of your posts or comments was flagged and is under review',
+          body: 'One of your posts or comments was blocked for policy violations',
           deeplink: `asora://moderation/${event.payload.targetId}`,
         };
 

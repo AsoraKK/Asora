@@ -63,10 +63,52 @@ void main() {
     expect(status, NotificationPermissionStatus.authorized);
   });
 
+  test('checkPermissionStatus maps denied to denied', () async {
+    fakePlatform.status = PermissionStatus.denied;
+    final status = await service.checkPermissionStatus();
+    expect(status, NotificationPermissionStatus.denied);
+  });
+
+  test('checkPermissionStatus maps restricted to restricted', () async {
+    fakePlatform.status = PermissionStatus.restricted;
+    final status = await service.checkPermissionStatus();
+    expect(status, NotificationPermissionStatus.restricted);
+  });
+
+  test('checkPermissionStatus maps limited to provisional', () async {
+    fakePlatform.status = PermissionStatus.limited;
+    final status = await service.checkPermissionStatus();
+    expect(status, NotificationPermissionStatus.provisional);
+  });
+
+  test('checkPermissionStatus maps provisional to provisional', () async {
+    fakePlatform.status = PermissionStatus.provisional;
+    final status = await service.checkPermissionStatus();
+    expect(status, NotificationPermissionStatus.provisional);
+  });
+
+  test('checkPermissionStatus maps permanentlyDenied to denied', () async {
+    fakePlatform.status = PermissionStatus.permanentlyDenied;
+    final status = await service.checkPermissionStatus();
+    expect(status, NotificationPermissionStatus.denied);
+  });
+
+  test('requestPermission maps granted to authorized', () async {
+    fakePlatform.requestStatus = PermissionStatus.granted;
+    final status = await service.requestPermission();
+    expect(status, NotificationPermissionStatus.authorized);
+  });
+
   test('requestPermission maps limited to provisional', () async {
     fakePlatform.requestStatus = PermissionStatus.limited;
     final status = await service.requestPermission();
     expect(status, NotificationPermissionStatus.provisional);
+  });
+
+  test('requestPermission maps denied to denied', () async {
+    fakePlatform.requestStatus = PermissionStatus.denied;
+    final status = await service.requestPermission();
+    expect(status, NotificationPermissionStatus.denied);
   });
 
   test('shouldShowPrePrompt returns true for denied', () async {
@@ -77,6 +119,12 @@ void main() {
 
   test('shouldShowPrePrompt returns false for authorized', () async {
     fakePlatform.status = PermissionStatus.granted;
+    final result = await service.shouldShowPrePrompt();
+    expect(result, isFalse);
+  });
+
+  test('shouldShowPrePrompt returns false for restricted', () async {
+    fakePlatform.status = PermissionStatus.restricted;
     final result = await service.shouldShowPrePrompt();
     expect(result, isFalse);
   });

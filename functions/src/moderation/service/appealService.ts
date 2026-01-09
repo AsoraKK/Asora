@@ -9,6 +9,7 @@
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { z } from 'zod';
+import type { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { getModerationConfig } from '../config/moderationConfigProvider';
 
@@ -32,6 +33,57 @@ interface SubmitAppealParams {
   request: HttpRequest;
   context: InvocationContext;
   userId: string;
+}
+
+interface ContentLookup {
+  container: Container;
+  document: Record<string, any>;
+  partitionKey: string;
+}
+
+function isBlockedStatus(status: string | undefined): boolean {
+  return status === 'blocked' || status === 'hidden_pending_review' || status === 'hidden_confirmed';
+}
+
+async function fetchContentForAppeal(
+  database: ReturnType<typeof getCosmosDatabase>,
+  contentType: 'post' | 'comment' | 'user',
+  contentId: string
+): Promise<ContentLookup | null> {
+  if (contentType === 'post') {
+    const container = database.container('posts');
+    const { resource } = await container.item(contentId, contentId).read();
+    if (!resource) {
+      return null;
+    }
+    return { container, document: resource, partitionKey: contentId };
+  }
+
+  if (contentType === 'comment') {
+    const container = database.container('posts');
+    const { resources } = await container.items
+      .query(
+        {
+          query: 'SELECT TOP 1 * FROM c WHERE c.id = @id AND c.type = "comment"',
+          parameters: [{ name: '@id', value: contentId }],
+        },
+        { maxItemCount: 1 }
+      )
+      .fetchAll();
+    const document = resources[0] as Record<string, any> | undefined;
+    if (!document) {
+      return null;
+    }
+    const partitionKey = String(document._partitionKey ?? document.postId ?? contentId);
+    return { container, document, partitionKey };
+  }
+
+  const container = database.container('users');
+  const { resource } = await container.item(contentId, contentId).read();
+  if (!resource) {
+    return null;
+  }
+  return { container, document: resource, partitionKey: contentId };
 }
 
 export async function submitAppealHandler({
@@ -73,7 +125,7 @@ export async function submitAppealHandler({
     // 4. Check for existing appeals by the same user for the same content
     const existingAppealQuery = {
       query:
-        'SELECT * FROM c WHERE c.contentId = @contentId AND c.submitterId = @userId AND c.status != "resolved"',
+        'SELECT * FROM c WHERE c.contentId = @contentId AND c.submitterId = @userId AND c.status = "pending"',
       parameters: [
         { name: '@contentId', value: contentId },
         { name: '@userId', value: userId },
@@ -96,14 +148,14 @@ export async function submitAppealHandler({
     }
 
     // 5. Verify the content exists and is actually flagged/moderated
-    const contentContainer = database.container(
-      contentType === 'post' ? 'posts' : contentType === 'comment' ? 'comments' : 'users'
-    );
-    let contentDoc;
+    let contentLookup: ContentLookup | null = null;
     try {
-      const { resource } = await contentContainer.item(contentId, contentId).read();
-      contentDoc = resource;
+      contentLookup = await fetchContentForAppeal(database, contentType, contentId);
     } catch (error) {
+      context.log('moderation.appeal.content_lookup_failed', { contentId, message: (error as Error).message });
+    }
+
+    if (!contentLookup) {
       return {
         status: 404,
         jsonBody: { error: 'Content not found' },
@@ -111,7 +163,7 @@ export async function submitAppealHandler({
     }
 
     // Check if content is actually moderated/flagged
-    if (!contentDoc || !contentDoc.status || contentDoc.status === 'published') {
+    if (!isBlockedStatus(contentLookup.document.status)) {
       return {
         status: 400,
         jsonBody: {
@@ -119,6 +171,8 @@ export async function submitAppealHandler({
         },
       };
     }
+
+    const contentDoc = contentLookup.document;
 
     // 6. Get user information for the appeal
     const usersContainer = database.container('users');
@@ -155,7 +209,7 @@ export async function submitAppealHandler({
       contentId,
       contentType,
       contentTitle: contentDoc.title || null,
-      contentPreview: (contentDoc.content || '').substring(0, 200),
+      contentPreview: ((contentDoc.text as string | undefined) || (contentDoc.content as string | undefined) || '').substring(0, 200),
       appealType,
       appealReason,
       userStatement,
@@ -195,10 +249,13 @@ export async function submitAppealHandler({
 
     // 9. Update content document to reference the appeal
     try {
-      contentDoc.appealId = appealId;
-      contentDoc.appealStatus = 'pending';
-      contentDoc.updatedAt = now.toISOString();
-      await contentContainer.item(contentId, contentId).replace(contentDoc);
+      const nowIso = now.toISOString();
+      const updatedAtValue = typeof contentDoc.updatedAt === 'number' ? now.getTime() : nowIso;
+      await contentLookup.container.item(contentId, contentLookup.partitionKey).patch([
+        { op: 'set', path: '/appealId', value: appealId },
+        { op: 'set', path: '/appealStatus', value: 'pending' },
+        { op: 'set', path: '/updatedAt', value: updatedAtValue },
+      ]);
     } catch (error) {
       context.log('Failed to update content with appeal reference:', error);
     }

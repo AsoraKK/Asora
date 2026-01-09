@@ -26,6 +26,25 @@ jest.mock('@shared/appInsights', () => ({
   trackAppMetric: jest.fn(),
 }));
 
+jest.mock('@shared/clients/cosmos', () => ({
+  getCosmosDatabase: jest.fn(() => ({
+    container: jest.fn((name: string) => {
+      if (name === 'users') {
+        return {
+          item: jest.fn(() => ({
+            read: jest.fn().mockResolvedValue({ resource: { id: 'moderator-1', isActive: true } }),
+          })),
+        };
+      }
+      return {
+        item: jest.fn(() => ({
+          read: jest.fn().mockResolvedValue({ resource: {} }),
+        })),
+      };
+    }),
+  })),
+}));
+
 const dailyLimitModule = require('@shared/services/dailyPostLimitService');
 const mockCheckAndIncrementDailyActionCount = jest.spyOn(
   dailyLimitModule,

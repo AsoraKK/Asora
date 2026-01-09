@@ -122,7 +122,7 @@ export async function voteOnAppealHandler({
     }
 
     // 6. Check if appeal is still active
-    if (appealDoc.status === 'resolved' || appealDoc.status === 'expired') {
+    if (appealDoc.status !== 'pending') {
       return {
         status: 409,
         jsonBody: {
@@ -137,9 +137,11 @@ export async function voteOnAppealHandler({
     const now = new Date();
     const expiresAt = new Date(appealDoc.expiresAt);
     if (now > expiresAt) {
-      // Mark as expired
-      appealDoc.status = 'expired';
+      // Mark as rejected due to expiry
+      appealDoc.status = 'rejected';
       appealDoc.resolvedAt = now.toISOString();
+      appealDoc.resolvedBy = 'system_expiry';
+      appealDoc.finalDecision = 'rejected';
       await appealsContainer.item(targetAppealId, targetAppealId).replace(appealDoc);
 
       return {
@@ -244,7 +246,6 @@ export async function voteOnAppealHandler({
     if (hasQuorum) {
       appealDoc.hasReachedQuorum = true;
       appealDoc.votingStatus = 'completed';
-      appealDoc.status = 'resolved';
       appealDoc.resolvedAt = now.toISOString();
       appealDoc.resolvedBy = 'community_vote';
 
@@ -252,6 +253,7 @@ export async function voteOnAppealHandler({
       const decidedApproval = (appealDoc.votesFor || 0) > (appealDoc.votesAgainst || 0);
       finalDecision = decidedApproval ? 'approved' : 'rejected';
       appealDoc.finalDecision = finalDecision;
+      appealDoc.status = finalDecision;
 
       // Update the original content based on decision
       await updateContentBasedOnDecision(
@@ -304,14 +306,51 @@ export async function voteOnAppealHandler({
   }
 }
 
-function getContentContainerName(contentType: string): 'posts' | 'comments' | 'users' {
+interface ContentLookup {
+  container: any;
+  document: Record<string, any>;
+  partitionKey: string;
+}
+
+async function fetchContentForDecision(
+  database: any,
+  contentType: string,
+  contentId: string
+): Promise<ContentLookup | null> {
   if (contentType === 'post') {
-    return 'posts';
+    const container = database.container('posts');
+    const { resource } = await container.item(contentId, contentId).read();
+    if (!resource) {
+      return null;
+    }
+    return { container, document: resource, partitionKey: contentId };
   }
+
   if (contentType === 'comment') {
-    return 'comments';
+    const container = database.container('posts');
+    const { resources } = await container.items
+      .query(
+        {
+          query: 'SELECT TOP 1 * FROM c WHERE c.id = @id AND c.type = "comment"',
+          parameters: [{ name: '@id', value: contentId }],
+        },
+        { maxItemCount: 1 }
+      )
+      .fetchAll();
+    const document = resources[0] as Record<string, any> | undefined;
+    if (!document) {
+      return null;
+    }
+    const partitionKey = String(document._partitionKey ?? document.postId ?? contentId);
+    return { container, document, partitionKey };
   }
-  return 'users';
+
+  const container = database.container('users');
+  const { resource } = await container.item(contentId, contentId).read();
+  if (!resource) {
+    return null;
+  }
+  return { container, document: resource, partitionKey: contentId };
 }
 
 /**
@@ -325,24 +364,27 @@ async function updateContentBasedOnDecision(
   context: InvocationContext
 ): Promise<void> {
   try {
-    const containerName = getContentContainerName(contentType);
-    const container = database.container(containerName);
+    const contentLookup = await fetchContentForDecision(database, contentType, contentId);
+    if (!contentLookup) {
+      return;
+    }
 
-    const { resource: content } = await container.item(contentId, contentId).read();
-    if (!content) return;
+    const { container, document: content, partitionKey } = contentLookup;
+    const nowIso = new Date().toISOString();
+    const updatedAtValue = typeof content.updatedAt === 'number' ? Date.now() : nowIso;
 
     if (decision === 'approved') {
       // Appeal approved - restore content
       content.status = 'published';
       content.appealStatus = 'approved';
-      content.restoredAt = new Date().toISOString();
+      content.restoredAt = nowIso;
       context.log(`Content ${contentId} restored after successful appeal`);
     } else {
-      // Appeal rejected - keep content hidden and penalize author
-      content.status = 'hidden_confirmed';
+      // Appeal rejected - keep content blocked and penalize author
+      content.status = 'blocked';
       content.appealStatus = 'rejected';
-      content.confirmedHiddenAt = new Date().toISOString();
-      context.log(`Content ${contentId} remains hidden after rejected appeal`);
+      content.blockedAt = nowIso;
+      context.log(`Content ${contentId} remains blocked after rejected appeal`);
 
       // ─────────────────────────────────────────────────────────────
       // Reputation Penalty - Deduct reputation for confirmed violation
@@ -367,8 +409,13 @@ async function updateContentBasedOnDecision(
       }
     }
 
-    content.updatedAt = new Date().toISOString();
-    await container.item(contentId, contentId).replace(content);
+    if (content.moderation) {
+      content.moderation.status = decision === 'approved' ? 'clean' : 'blocked';
+      content.moderation.checkedAt = Date.now();
+    }
+
+    content.updatedAt = updatedAtValue;
+    await container.item(contentId, partitionKey).replace(content);
   } catch (error) {
     context.log('Error updating content after appeal decision:', error);
   }
@@ -389,11 +436,12 @@ async function persistModerationDecision({
 }: PersistDecisionOptions): Promise<void> {
   try {
     const decisionsContainer = database.container('moderation_decisions');
-    const contentContainerName = getContentContainerName(String(appealDoc.contentType));
-    const contentContainer = database.container(contentContainerName);
-    const { resource: content } = await contentContainer
-      .item(String(appealDoc.contentId), String(appealDoc.contentId))
-      .read();
+    const contentLookup = await fetchContentForDecision(
+      database,
+      String(appealDoc.contentType),
+      String(appealDoc.contentId)
+    );
+    const content = contentLookup?.document ?? null;
 
     const contentOwnerId =
       (content?.authorId as string | undefined) ??

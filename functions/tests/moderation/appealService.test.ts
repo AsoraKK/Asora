@@ -152,7 +152,7 @@ describe('appealService - content verification', () => {
   it('creates appeal successfully when all validations pass', async () => {
     mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing appeals
     mockRead.mockResolvedValueOnce({
-      resource: { id: 'post-123', moderationStatus: 'flagged' },
+      resource: { id: 'post-123', status: 'blocked' },
     }); // Content exists
     mockCreate.mockResolvedValueOnce({ resource: { id: 'appeal-new' } });
 
