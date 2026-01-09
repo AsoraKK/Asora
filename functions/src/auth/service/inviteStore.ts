@@ -11,8 +11,14 @@
  *   createdBy: string (admin userId who created it)
  *   createdAt: string (ISO timestamp)
  *   expiresAt: string (ISO timestamp)
- *   usedAt: string | null (ISO timestamp when redeemed)
- *   usedByUserId: string | null (userId who redeemed)
+ *   maxUses: number
+ *   usageCount: number
+ *   lastUsedAt: string | null
+ *   usedAt: string | null (legacy single-use)
+ *   usedByUserId: string | null (legacy single-use)
+ *   revokedAt: string | null
+ *   revokedBy: string | null
+ *   label: string | null
  *   _partitionKey: string (same as inviteCode)
  */
 
@@ -31,8 +37,14 @@ export interface InviteDocument {
   createdBy: string;
   createdAt: string;
   expiresAt: string;
+  maxUses: number;
+  usageCount: number;
+  lastUsedAt: string | null;
   usedAt: string | null;
   usedByUserId: string | null;
+  revokedAt: string | null;
+  revokedBy?: string | null;
+  label?: string | null;
   _partitionKey: string;
 }
 
@@ -40,6 +52,8 @@ export interface CreateInviteOptions {
   email?: string;
   createdBy: string;
   expiresInDays?: number;
+  maxUses?: number;
+  label?: string;
 }
 
 export interface RedeemInviteOptions {
@@ -50,7 +64,7 @@ export interface RedeemInviteOptions {
 
 export type InviteValidationResult =
   | { valid: true; invite: InviteDocument }
-  | { valid: false; reason: 'not_found' | 'expired' | 'already_used' | 'email_mismatch' };
+  | { valid: false; reason: 'not_found' | 'expired' | 'already_used' | 'email_mismatch' | 'revoked' | 'exhausted' };
 
 let cachedContainer: Container | null = null;
 
@@ -78,6 +92,27 @@ function generateInviteCode(): string {
   return `${part1}-${part2}`;
 }
 
+function resolveMaxUses(invite: InviteDocument): number {
+  if (typeof invite.maxUses === 'number' && Number.isFinite(invite.maxUses)) {
+    return Math.max(1, Math.floor(invite.maxUses));
+  }
+  return 1;
+}
+
+function resolveUsageCount(invite: InviteDocument): number {
+  if (typeof invite.usageCount === 'number' && Number.isFinite(invite.usageCount)) {
+    const normalized = Math.max(0, Math.floor(invite.usageCount));
+    return Math.max(normalized, invite.usedAt ? 1 : 0);
+  }
+  return invite.usedAt ? 1 : 0;
+}
+
+function isInviteExhausted(invite: InviteDocument): boolean {
+  const maxUses = resolveMaxUses(invite);
+  const usageCount = resolveUsageCount(invite);
+  return usageCount >= maxUses;
+}
+
 /**
  * Create a new invite code.
  */
@@ -87,6 +122,7 @@ export async function createInvite(options: CreateInviteOptions): Promise<Invite
   const inviteCode = generateInviteCode();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + (options.expiresInDays ?? 30) * 24 * 60 * 60 * 1000);
+  const maxUses = Number.isFinite(options.maxUses) ? Math.max(1, Math.floor(options.maxUses as number)) : 1;
 
   const invite: InviteDocument = {
     id: inviteCode,
@@ -95,8 +131,14 @@ export async function createInvite(options: CreateInviteOptions): Promise<Invite
     createdBy: options.createdBy,
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
+    maxUses,
+    usageCount: 0,
+    lastUsedAt: null,
     usedAt: null,
     usedByUserId: null,
+    revokedAt: null,
+    revokedBy: null,
+    label: options.label?.trim() || null,
     _partitionKey: inviteCode,
   };
 
@@ -144,14 +186,21 @@ export async function validateInvite(
     return { valid: false, reason: 'not_found' };
   }
 
-  if (invite.usedAt) {
-    logger.warn('Invite validation failed: already used', { inviteCode, usedByUserId: invite.usedByUserId });
-    return { valid: false, reason: 'already_used' };
+  if (invite.revokedAt) {
+    logger.warn('Invite validation failed: revoked', { inviteCode, revokedAt: invite.revokedAt });
+    return { valid: false, reason: 'revoked' };
   }
 
   if (new Date(invite.expiresAt) < new Date()) {
     logger.warn('Invite validation failed: expired', { inviteCode, expiresAt: invite.expiresAt });
     return { valid: false, reason: 'expired' };
+  }
+
+  if (isInviteExhausted(invite)) {
+    const maxUses = resolveMaxUses(invite);
+    const reason = maxUses === 1 ? 'already_used' : 'exhausted';
+    logger.warn('Invite validation failed: exhausted', { inviteCode, usageCount: invite.usageCount, maxUses });
+    return { valid: false, reason };
   }
 
   // Check email restriction if set
@@ -184,11 +233,22 @@ export async function redeemInvite(
   const normalizedCode = options.inviteCode.toUpperCase().trim();
 
   try {
-    // Mark invite as used
-    const { resource: updated } = await container.item(normalizedCode, normalizedCode).patch<InviteDocument>([
-      { op: 'add', path: '/usedAt', value: new Date().toISOString() },
-      { op: 'add', path: '/usedByUserId', value: options.userId },
-    ]);
+    const nowIso = new Date().toISOString();
+    const maxUses = resolveMaxUses(validation.invite);
+    const usageCount = resolveUsageCount(validation.invite);
+    const nextUsageCount = usageCount + 1;
+
+    const patchOps = [
+      { op: 'set', path: '/usageCount', value: nextUsageCount },
+      { op: 'set', path: '/lastUsedAt', value: nowIso },
+      { op: 'set', path: '/usedByUserId', value: options.userId },
+    ];
+
+    if (nextUsageCount >= maxUses) {
+      patchOps.push({ op: 'set', path: '/usedAt', value: nowIso });
+    }
+
+    const { resource: updated } = await container.item(normalizedCode, normalizedCode).patch<InviteDocument>(patchOps);
 
     logger.info('Invite redeemed', {
       inviteCode: normalizedCode,
@@ -222,7 +282,7 @@ export async function listInvites(options?: {
   }
 
   if (options?.unused) {
-    query += ' AND c.usedAt = null';
+    query += ' AND (NOT IS_DEFINED(c.usageCount) OR c.usageCount = 0) AND (NOT IS_DEFINED(c.usedAt) OR c.usedAt = null)';
   }
 
   query += ' ORDER BY c.createdAt DESC';
@@ -234,6 +294,60 @@ export async function listInvites(options?: {
     .fetchAll();
 
   return resources;
+}
+
+export async function listInvitesPage(options?: {
+  createdBy?: string;
+  unused?: boolean;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ items: InviteDocument[]; continuationToken: string | null }> {
+  const container = getInvitesContainer();
+
+  let query = 'SELECT * FROM c WHERE 1=1';
+  const parameters: { name: string; value: any }[] = [];
+
+  if (options?.createdBy) {
+    query += ' AND c.createdBy = @createdBy';
+    parameters.push({ name: '@createdBy', value: options.createdBy });
+  }
+
+  if (options?.unused) {
+    query += ' AND (NOT IS_DEFINED(c.usageCount) OR c.usageCount = 0) AND (NOT IS_DEFINED(c.usedAt) OR c.usedAt = null)';
+  }
+
+  query += ' ORDER BY c.createdAt DESC';
+
+  const limit = Math.min(options?.limit ?? 100, 1000);
+
+  const response = await container.items.query<InviteDocument>(
+    { query, parameters },
+    { maxItemCount: limit, continuationToken: options?.cursor }
+  ).fetchNext();
+
+  return {
+    items: response.resources,
+    continuationToken: response.continuationToken ?? null,
+  };
+}
+
+export async function revokeInvite(inviteCode: string, revokedBy: string): Promise<boolean> {
+  const container = getInvitesContainer();
+  const normalizedCode = inviteCode.toUpperCase().trim();
+
+  try {
+    await container.item(normalizedCode, normalizedCode).patch([
+      { op: 'set', path: '/revokedAt', value: new Date().toISOString() },
+      { op: 'set', path: '/revokedBy', value: revokedBy },
+    ]);
+    logger.info('Invite revoked', { inviteCode: normalizedCode, revokedBy });
+    return true;
+  } catch (error: unknown) {
+    if (isNotFoundError(error)) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 /**

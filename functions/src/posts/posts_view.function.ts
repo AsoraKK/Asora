@@ -8,6 +8,7 @@ interface PostDocument {
   id: string;
   postId: string;
   authorId: string;
+  status?: string;
   stats?: {
     likes?: number;
     comments?: number;
@@ -43,6 +44,10 @@ export const posts_view = httpHandler<void, { viewCount: number }>(async (ctx) =
   }
 
   if (!post) {
+    return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+  }
+
+  if (post.status === 'blocked' || post.status === 'hidden_pending_review' || post.status === 'hidden_confirmed' || post.status === 'deleted') {
     return ctx.notFound('Post not found', 'POST_NOT_FOUND');
   }
 

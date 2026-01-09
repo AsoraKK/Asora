@@ -311,7 +311,7 @@ describe('Integration Tests', () => {
         flagContent: () => ({ flagId: 'flag_123', status: 'flagged' }),
         submitAppeal: () => ({ appealId: 'appeal_123', status: 'pending' }),
         voteOnAppeal: () => ({ votesFor: 3, votesAgainst: 1 }),
-        resolveAppeal: () => ({ decision: 'approved', status: 'resolved' }),
+        resolveAppeal: () => ({ decision: 'approved', status: 'approved' }),
       };
 
       const content = workflow.createContent();

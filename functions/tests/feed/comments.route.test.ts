@@ -39,6 +39,22 @@ jest.mock('@shared/clients/cosmos', () => ({
       },
     },
   })),
+  getCosmosDatabase: jest.fn(() => ({
+    container: jest.fn((name: string) => {
+      if (name === 'users') {
+        return {
+          item: jest.fn(() => ({
+            read: jest.fn().mockResolvedValue({ resource: { id: 'user-123', isActive: true } }),
+          })),
+        };
+      }
+      return {
+        item: jest.fn(() => ({
+          read: jest.fn().mockResolvedValue({ resource: {} }),
+        })),
+      };
+    }),
+  })),
 }));
 
 // Mock App Insights

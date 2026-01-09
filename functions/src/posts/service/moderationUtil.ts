@@ -212,9 +212,9 @@ export function buildModerationMeta(
   const now = Date.now();
 
   if (error) {
-    // Moderation failed - route to pending review
+    // Moderation failed - allow publish with warning metadata
     return {
-      status: 'pending_review',
+      status: 'warned',
       checkedAt: now,
       error,
     };

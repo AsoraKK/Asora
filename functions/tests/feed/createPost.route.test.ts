@@ -41,15 +41,24 @@ jest.mock('@shared/clients/cosmos', () => ({
     },
   })),
   getCosmosDatabase: jest.fn(() => ({
-    container: jest.fn(() => ({
-      item: jest.fn(() => ({
-        read: jest.fn().mockRejectedValue(Object.assign(new Error('Not found'), { code: 404 })),
-        replace: jest.fn().mockResolvedValue({ resource: {} }),
-      })),
-      items: {
-        create: jest.fn().mockResolvedValue({ resource: {} }),
-      },
-    })),
+    container: jest.fn((name: string) => {
+      if (name === 'users') {
+        return {
+          item: jest.fn(() => ({
+            read: jest.fn().mockResolvedValue({ resource: { id: 'user-123', isActive: true } }),
+          })),
+        };
+      }
+      return {
+        item: jest.fn(() => ({
+          read: jest.fn().mockRejectedValue(Object.assign(new Error('Not found'), { code: 404 })),
+          replace: jest.fn().mockResolvedValue({ resource: {} }),
+        })),
+        items: {
+          create: jest.fn().mockResolvedValue({ resource: {} }),
+        },
+      };
+    }),
   })),
 }));
 
@@ -359,7 +368,7 @@ describe('createPost route', () => {
       }));
     });
 
-    it('routes to pending_review when moderation times out', async () => {
+    it('marks warned when moderation times out', async () => {
       mockModerateTextContent.mockRejectedValue(
         new HiveAPIError('Request timed out', 'TIMEOUT', undefined, true)
       );
@@ -367,11 +376,11 @@ describe('createPost route', () => {
       const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
-      expect(body.post.moderation.status).toBe('pending_review');
+      expect(body.post.moderation.status).toBe('warned');
       expect(body.post.moderation.error).toContain('timed out');
     });
 
-    it('routes to pending_review when moderation has network error', async () => {
+    it('marks warned when moderation has network error', async () => {
       mockModerateTextContent.mockRejectedValue(
         new HiveAPIError('Network error', 'NETWORK_ERROR', undefined, true)
       );
@@ -379,7 +388,7 @@ describe('createPost route', () => {
       const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
-      expect(body.post.moderation.status).toBe('pending_review');
+      expect(body.post.moderation.status).toBe('warned');
       expect(body.post.moderation.error).toBeDefined();
     });
 

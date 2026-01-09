@@ -36,7 +36,7 @@ export interface PostStats {
 /**
  * Moderation status for content
  */
-export type ModerationStatus = 'clean' | 'warned' | 'blocked' | 'pending_review';
+export type ModerationStatus = 'clean' | 'warned' | 'blocked';
 
 /**
  * Moderation metadata stored with content

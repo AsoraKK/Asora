@@ -38,8 +38,8 @@ export const posts_get_by_id = httpHandler<void, PostView>(async (ctx) => {
       return ctx.notFound('Post not found', 'POST_NOT_FOUND');
     }
 
-    // Check if post is deleted
-    if (postDoc.status === 'deleted') {
+    // Hide deleted or blocked posts
+    if (postDoc.status === 'deleted' || postDoc.status === 'blocked' || postDoc.status === 'hidden_pending_review' || postDoc.status === 'hidden_confirmed') {
       return ctx.notFound('Post not found', 'POST_NOT_FOUND');
     }
 

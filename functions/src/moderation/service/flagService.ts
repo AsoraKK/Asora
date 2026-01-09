@@ -330,8 +330,8 @@ export async function flagContentHandler({
       { op: 'set', path: '/lastFlaggedAt', value: now },
     ];
 
-    if (shouldAutoHide && contentDoc.status !== 'hidden_pending_review') {
-      patchOperations.push({ op: 'set', path: '/status', value: 'hidden_pending_review' });
+    if (shouldAutoHide && contentDoc.status !== 'blocked') {
+      patchOperations.push({ op: 'set', path: '/status', value: 'blocked' });
       context.log('moderation.flag.auto_hidden', { contentId, flagCount: currentFlagCount, threshold: flagAutoHideThreshold });
     }
 

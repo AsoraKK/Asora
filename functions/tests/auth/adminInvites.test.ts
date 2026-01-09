@@ -19,8 +19,9 @@ jest.mock('@shared/clients/cosmos', () => ({
                 return { resource: doc };
               }),
               query: jest.fn(() => ({
-                fetchAll: jest.fn(async () => ({
+                fetchNext: jest.fn(async () => ({
                   resources: Array.from(inviteStore.values()),
+                  continuationToken: null,
                 })),
               })),
             },
@@ -34,14 +35,25 @@ jest.mock('@shared/clients/cosmos', () => ({
                 }
                 return { resource: doc };
               }),
-              delete: jest.fn(async () => {
-                if (!inviteStore.has(id)) {
+              patch: jest.fn(async (operations: any[]) => {
+                const doc = inviteStore.get(id);
+                if (!doc) {
                   const error = new Error('Not found');
                   (error as any).code = 404;
                   throw error;
                 }
-                inviteStore.delete(id);
-                return {};
+                for (const op of operations) {
+                  if (op.op === 'add' || op.op === 'replace' || op.op === 'set') {
+                    const pathParts = op.path.split('/').filter(Boolean);
+                    let target = doc;
+                    for (let i = 0; i < pathParts.length - 1; i++) {
+                      target = target[pathParts[i]];
+                    }
+                    target[pathParts[pathParts.length - 1]] = op.value;
+                  }
+                }
+                inviteStore.set(id, doc);
+                return { resource: doc };
               }),
             })),
           };
@@ -55,6 +67,10 @@ jest.mock('@shared/clients/cosmos', () => ({
 // Mock auth middleware to inject principal
 jest.mock('@shared/middleware/auth', () => ({
   requireAdmin: jest.fn((handler: any) => handler),
+}));
+
+jest.mock('@admin/auditLogger', () => ({
+  recordAdminAudit: jest.fn(),
 }));
 
 import { InvocationContext } from '@azure/functions';
@@ -311,7 +327,7 @@ describe('Admin Invite Endpoints', () => {
       });
     });
 
-    it('deletes an existing invite', async () => {
+    it('revokes an existing invite', async () => {
       const req = httpReqMock({
         method: 'DELETE',
         params: { code: 'AAAA-1111' },
@@ -322,8 +338,8 @@ describe('Admin Invite Endpoints', () => {
 
       expect(res.status).toBe(200);
       const body = JSON.parse(res.body as string);
-      expect(body.data.deleted).toBe(true);
-      expect(inviteStore.has('AAAA-1111')).toBe(false);
+      expect(body.data.revoked).toBe(true);
+      expect(inviteStore.has('AAAA-1111')).toBe(true);
     });
 
     it('returns 404 for non-existent invite', async () => {

@@ -14,6 +14,7 @@ import type { FileAppealRequest, AppealResponse } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { createAppeal } from './appealsService';
 import { HttpError } from '@shared/utils/errors';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
 
 export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(async (ctx) => {
   ctx.context.log(`[appeals_create] Filing new appeal [${ctx.correlationId}]`);
@@ -27,6 +28,16 @@ export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(asy
     auth = await extractAuthContext(ctx);
   } catch {
     return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  try {
+    const db = getCosmosDatabase();
+    const { resource: user } = await db.container('users').item(auth.userId, auth.userId).read();
+    if (!user || user.isActive === false) {
+      return ctx.forbidden('Account is disabled', 'ACCOUNT_DISABLED');
+    }
+  } catch {
+    return ctx.forbidden('Account is disabled', 'ACCOUNT_DISABLED');
   }
 
   try {
