@@ -79,26 +79,26 @@ async function handleAppealDecision(
     const updatedAtValue = typeof document.updatedAt === 'number' ? Date.now() : nowIso;
     const contentStatus = decision === 'approve' ? 'published' : 'blocked';
 
-    const contentPatch = [
-      { op: 'set', path: '/status', value: contentStatus },
-      { op: 'set', path: '/appealStatus', value: DECISION_TO_STATUS[decision] },
-      { op: 'set', path: '/updatedAt', value: updatedAtValue },
+    const contentPatch: import('@azure/cosmos').PatchOperation[] = [
+      { op: 'set' as const, path: '/status', value: contentStatus },
+      { op: 'set' as const, path: '/appealStatus', value: DECISION_TO_STATUS[decision] },
+      { op: 'set' as const, path: '/updatedAt', value: updatedAtValue },
     ];
 
     if (decision === 'approve') {
-      contentPatch.push({ op: 'set', path: '/restoredAt', value: nowIso });
+      contentPatch.push({ op: 'set' as const, path: '/restoredAt', value: nowIso });
     } else {
-      contentPatch.push({ op: 'set', path: '/blockedAt', value: nowIso });
+      contentPatch.push({ op: 'set' as const, path: '/blockedAt', value: nowIso });
     }
 
     if (document.moderation) {
       contentPatch.push({
-        op: 'set',
+        op: 'set' as const,
         path: '/moderation/status',
         value: decision === 'approve' ? 'clean' : 'blocked',
       });
       contentPatch.push({
-        op: 'set',
+        op: 'set' as const,
         path: '/moderation/checkedAt',
         value: Date.now(),
       });
@@ -107,13 +107,13 @@ async function handleAppealDecision(
     await container.item(contentId, partitionKey).patch(contentPatch);
 
     await db.appeals.item(appeal.id, appeal.contentId).patch([
-      { op: 'set', path: '/status', value: DECISION_TO_STATUS[decision] },
-      { op: 'set', path: '/finalDecision', value: DECISION_TO_STATUS[decision] },
-      { op: 'set', path: '/updatedAt', value: nowIso },
-      { op: 'set', path: '/resolvedAt', value: nowIso },
-      { op: 'set', path: '/resolvedBy', value: actorId },
-      { op: 'set', path: '/decisionReasonCode', value: reasonCode },
-      { op: 'set', path: '/decisionNote', value: note },
+      { op: 'set' as const, path: '/status', value: DECISION_TO_STATUS[decision] },
+      { op: 'set' as const, path: '/finalDecision', value: DECISION_TO_STATUS[decision] },
+      { op: 'set' as const, path: '/updatedAt', value: nowIso },
+      { op: 'set' as const, path: '/resolvedAt', value: nowIso },
+      { op: 'set' as const, path: '/resolvedBy', value: actorId },
+      { op: 'set' as const, path: '/decisionReasonCode', value: reasonCode },
+      { op: 'set' as const, path: '/decisionNote', value: note },
     ]);
 
     await recordAdminAudit({

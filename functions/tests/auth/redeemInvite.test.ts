@@ -39,7 +39,7 @@ jest.mock('@shared/clients/cosmos', () => ({
                 const doc = inviteStore.get(id);
                 if (!doc) throw new Error('Not found');
                 for (const op of operations) {
-                  if (op.op === 'add' || op.op === 'replace') {
+                  if (op.op === 'add' || op.op === 'replace' || op.op === 'set') {
                     const path = op.path.replace(/^\//, '');
                     doc[path] = op.value;
                   }
@@ -62,7 +62,7 @@ jest.mock('@shared/clients/cosmos', () => ({
                 const doc = userStore.get(id);
                 if (!doc) throw new Error('User not found');
                 for (const op of operations) {
-                  if (op.op === 'add' || op.op === 'replace') {
+                  if (op.op === 'add' || op.op === 'replace' || op.op === 'set') {
                     const path = op.path.replace(/^\//, '');
                     doc[path] = op.value;
                   }

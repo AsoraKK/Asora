@@ -1,23 +1,25 @@
+import SessionPanel from '../components/SessionPanel.jsx';
+
 const tiles = [
   {
-    title: 'Moderation',
-    text: 'Review thresholds, queue volume, and policy signals.'
+    title: 'Flagged content',
+    text: 'Triage flagged posts and comments with block or publish actions.'
   },
   {
-    title: 'Audit',
-    text: 'Track moderator actions and sensitive configuration changes.'
+    title: 'Appeals',
+    text: 'Resolve disputes and flip content state when needed.'
   },
   {
-    title: 'System status',
-    text: 'Monitor service health across regions and pipelines.'
+    title: 'User safety',
+    text: 'Disable abusive users and restore access quickly.'
   },
   {
-    title: 'Escalations',
-    text: 'See items waiting for senior review and approval.'
+    title: 'Invites',
+    text: 'Create and revoke beta invites while tracking usage.'
   },
   {
-    title: 'Risk heatmap',
-    text: 'Spot emerging abuse patterns and unexpected spikes.'
+    title: 'Audit trail',
+    text: 'Review admin actions and system changes.'
   }
 ];
 
@@ -27,9 +29,10 @@ function Dashboard() {
       <div className="page-header">
         <h1>Dashboard</h1>
         <p className="page-subtitle">
-          Overview snapshots for moderation, audit, and system health.
+          Operational shortcuts for Lythaus beta administration.
         </p>
       </div>
+      <SessionPanel />
       <div className="card-grid">
         {tiles.map((tile) => (
           <article key={tile.title} className="card">

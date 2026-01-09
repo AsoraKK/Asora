@@ -11,6 +11,7 @@ const MAX_LIMIT = 100;
 type FlagStatusFilter = 'open' | 'resolved' | 'all';
 
 interface FlagGroup {
+  flagId: string;
   contentId: string;
   contentType: string;
   flagCount: number;
@@ -84,6 +85,7 @@ export async function listFlagQueue(
       const existing = groups.get(key);
       if (!existing) {
         groups.set(key, {
+          flagId: flag.id as string,
           contentId: key,
           contentType: flag.contentType as string,
           flagCount: 1,
@@ -96,6 +98,7 @@ export async function listFlagQueue(
         existing.reasonCategories.add(flag.reason as string);
         if (flag.createdAt > existing.lastFlaggedAt) {
           existing.lastFlaggedAt = flag.createdAt as string;
+          existing.flagId = flag.id as string;
         }
         if (flag.status === 'active') {
           existing.status = 'OPEN';
@@ -130,6 +133,7 @@ export async function listFlagQueue(
             displayName: authorProfile?.displayName ?? null,
           },
           flags: {
+            flagId: group.flagId,
             flagCount: group.flagCount,
             reasonCategories: Array.from(group.reasonCategories),
             lastFlaggedAt: group.lastFlaggedAt,

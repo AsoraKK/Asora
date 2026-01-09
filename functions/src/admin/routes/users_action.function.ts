@@ -56,22 +56,22 @@ async function handleUserAction(
 
     const beforeStatus = user.isActive === false ? 'DISABLED' : 'ACTIVE';
 
-    const patchOps = [
-      { op: 'set', path: '/isActive', value: action === 'enable' },
-      { op: 'set', path: '/updatedAt', value: nowIso },
+    const patchOps: import('@azure/cosmos').PatchOperation[] = [
+      { op: 'set' as const, path: '/isActive', value: action === 'enable' },
+      { op: 'set' as const, path: '/updatedAt', value: nowIso },
     ];
 
     if (action === 'disable') {
-      patchOps.push({ op: 'set', path: '/disabledAt', value: nowIso });
-      patchOps.push({ op: 'set', path: '/disabledBy', value: actorId });
-      patchOps.push({ op: 'set', path: '/disabledReasonCode', value: reasonCode });
-      patchOps.push({ op: 'set', path: '/disabledNote', value: note });
+      patchOps.push({ op: 'set' as const, path: '/disabledAt', value: nowIso });
+      patchOps.push({ op: 'set' as const, path: '/disabledBy', value: actorId });
+      patchOps.push({ op: 'set' as const, path: '/disabledReasonCode', value: reasonCode });
+      patchOps.push({ op: 'set' as const, path: '/disabledNote', value: note });
     } else {
-      patchOps.push({ op: 'set', path: '/disabledAt', value: null });
-      patchOps.push({ op: 'set', path: '/disabledBy', value: null });
-      patchOps.push({ op: 'set', path: '/disabledReasonCode', value: null });
-      patchOps.push({ op: 'set', path: '/disabledNote', value: null });
-      patchOps.push({ op: 'set', path: '/enabledAt', value: nowIso });
+      patchOps.push({ op: 'set' as const, path: '/disabledAt', value: null });
+      patchOps.push({ op: 'set' as const, path: '/disabledBy', value: null });
+      patchOps.push({ op: 'set' as const, path: '/disabledReasonCode', value: null });
+      patchOps.push({ op: 'set' as const, path: '/disabledNote', value: null });
+      patchOps.push({ op: 'set' as const, path: '/enabledAt', value: nowIso });
     }
 
     await db.users.item(userId, userId).patch(patchOps);
