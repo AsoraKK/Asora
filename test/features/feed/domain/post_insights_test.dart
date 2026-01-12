@@ -30,7 +30,7 @@ void main() {
       expect(RiskBand.low.displayLabel, 'Low');
       expect(
         RiskBand.medium.displayLabel,
-        'Under review',
+        'Appeal pending',
       ); // MEDIUM = appeal pending
       expect(RiskBand.high.displayLabel, 'High');
     });

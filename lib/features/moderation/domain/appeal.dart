@@ -14,11 +14,10 @@ enum ModerationStatus {
   hidden,
   communityApproved,
   communityRejected,
-  underReview,
 }
 
 /// Appeal status enum
-enum AppealStatus { pending, underReview, resolved, expired }
+enum AppealStatus { pending, approved, rejected, expired }
 
 /// Appeal model for community voting
 class Appeal {

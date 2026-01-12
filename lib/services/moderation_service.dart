@@ -299,7 +299,33 @@ class VoteResult {
 }
 
 // Appeal status enum
-enum AppealStatus { pending, underReview, resolved, expired }
+enum AppealStatus { pending, approved, rejected, expired }
+
+AppealStatus _parseAppealStatus(String? status, String? outcome) {
+  final normalized = status?.toLowerCase();
+  switch (normalized) {
+    case 'approved':
+      return AppealStatus.approved;
+    case 'rejected':
+      return AppealStatus.rejected;
+    case 'expired':
+      return AppealStatus.expired;
+    case 'resolved':
+      final outcomeValue = outcome?.toLowerCase();
+      if (outcomeValue == 'approved') {
+        return AppealStatus.approved;
+      }
+      if (outcomeValue == 'rejected') {
+        return AppealStatus.rejected;
+      }
+      return AppealStatus.pending;
+    case 'under_review':
+    case 'underreview':
+    case 'pending':
+    default:
+      return AppealStatus.pending;
+  }
+}
 
 // Content moderation status
 enum ModerationStatus {
@@ -308,7 +334,6 @@ enum ModerationStatus {
   hidden,
   communityApproved,
   communityRejected,
-  underReview,
 }
 
 // Voting progress model
@@ -399,9 +424,9 @@ class AppealHistoryItem {
       contentType: json['contentType'],
       contentTitle: json['contentTitle'],
       appealType: json['appealType'],
-      status: AppealStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => AppealStatus.pending,
+      status: _parseAppealStatus(
+        json['status'] as String?,
+        json['outcome'] as String?,
       ),
       reviewQueue: json['reviewQueue'],
       outcome: json['outcome'],

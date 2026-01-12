@@ -110,9 +110,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Under review'),
+        find.text('Appeal pending'),
         findsOneWidget,
-      ); // MEDIUM = under review
+      ); // MEDIUM = appeal pending
       expect(find.text('Appeal: Pending'), findsOneWidget);
     });
 

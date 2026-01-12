@@ -260,9 +260,11 @@ class _PostCardState extends ConsumerState<PostCard> {
       case ModerationStatus.flagged:
         return 'Your post has been flagged by the community. It is still visible.';
       case ModerationStatus.hidden:
+        final appealStatus = widget.post.appealStatus?.toLowerCase();
+        if (appealStatus == 'pending' || appealStatus == 'under_review') {
+          return 'Your post is blocked pending an appeal outcome.';
+        }
         return 'Your post has been blocked. You can appeal this decision if you believe it was made in error.';
-      case ModerationStatus.underReview:
-        return 'Your post is blocked pending an appeal outcome.';
       case ModerationStatus.communityRejected:
         return 'The community voted to keep your post blocked after your appeal.';
       case ModerationStatus.communityApproved:
