@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Asora API",
+    "title": "Lythaus (formerly Asora) API",
     "version": "v1",
-    "description": "HTTP contract for Asora Functions v1.",
+    "description": "HTTP contract for Lythaus (formerly Asora) Functions v1.",
     "license": {
       "name": "MIT"
     }
@@ -363,8 +363,7 @@
                       "type": "string",
                       "enum": [
                         "published",
-                        "under_review",
-                        "rejected"
+                        "blocked"
                       ]
                     }
                   }
@@ -1089,7 +1088,7 @@
       "post": {
         "operationId": "adminAppealsApprove",
         "summary": "Approve an appeal",
-        "description": "Approves an appeal and restores content to PUBLISHED.",
+        "description": "Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.",
         "tags": [
           "Admin"
         ],
@@ -1169,16 +1168,6 @@
                 }
               }
             }
-          },
-          "409": {
-            "description": "Appeal already decided",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
           }
         }
       }
@@ -1187,7 +1176,7 @@
       "post": {
         "operationId": "adminAppealsReject",
         "summary": "Reject an appeal",
-        "description": "Rejects an appeal and keeps content BLOCKED.",
+        "description": "Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.",
         "tags": [
           "Admin"
         ],
@@ -1260,16 +1249,6 @@
           },
           "404": {
             "description": "Appeal or content not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Appeal already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -2423,6 +2402,9 @@
             "type": "string"
           },
           "displayName": {
+            "type": "string"
+          },
+          "handle": {
             "type": "string"
           }
         }

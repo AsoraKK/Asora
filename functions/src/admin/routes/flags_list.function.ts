@@ -20,6 +20,36 @@ interface FlagGroup {
   status: 'OPEN' | 'RESOLVED';
 }
 
+interface UserSummary {
+  displayName: string | null;
+  handle: string | null;
+}
+
+async function lookupUserSummary(
+  authorId: string
+): Promise<UserSummary | null> {
+  const db = getTargetDatabase();
+  const { resources } = await db.users.items
+    .query(
+      {
+        query: 'SELECT TOP 1 c.displayName, c.username FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: authorId }],
+      },
+      { maxItemCount: 1 }
+    )
+    .fetchAll();
+
+  const user = resources[0] as { displayName?: string; username?: string } | undefined;
+  if (!user) {
+    return null;
+  }
+
+  return {
+    displayName: user.displayName ?? null,
+    handle: user.username ?? null,
+  };
+}
+
 function parseLimit(value?: string | null): number {
   if (!value) {
     return DEFAULT_LIMIT;
@@ -118,8 +148,13 @@ export async function listFlagQueue(
           (doc?.authorId as string | undefined) ??
           (doc?.userId as string | undefined) ??
           group.contentId;
-        const authorProfile = authorId ? await profileService.getProfile(authorId) : null;
+        const [authorProfile, authorSummary] = await Promise.all([
+          authorId ? profileService.getProfile(authorId) : Promise.resolve(null),
+          authorId ? lookupUserSummary(authorId) : Promise.resolve(null),
+        ]);
         const decision = await getLatestDecisionSummary(group.contentId);
+        const displayName = authorProfile?.displayName ?? authorSummary?.displayName ?? null;
+        const handle = authorSummary?.handle ?? null;
 
         return {
           content: {
@@ -130,7 +165,8 @@ export async function listFlagQueue(
           },
           author: {
             authorId,
-            displayName: authorProfile?.displayName ?? null,
+            displayName,
+            handle,
           },
           flags: {
             flagId: group.flagId,

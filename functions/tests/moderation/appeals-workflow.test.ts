@@ -265,7 +265,7 @@ describe('appealService - creating appeals', () => {
       votesFor: 0,
       votesAgainst: 0,
       totalVotes: 0,
-      requiredVotes: 5,
+      requiredVotes: 0,
     });
   });
 });
@@ -335,7 +335,7 @@ describe('voteService - voting on appeals', () => {
   });
 
   it('returns 404 when appeal does not exist', async () => {
-    mockRead.mockRejectedValueOnce(new Error('Not found'));
+    mockQuery.mockResolvedValueOnce({ resources: [] });
 
     const req = httpReqMock({
       method: 'POST',
@@ -357,12 +357,14 @@ describe('voteService - voting on appeals', () => {
   });
 
   it('returns 409 when appeal is already decided', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: {
-        id: 'appeal-123',
-        status: 'approved',
-        resolvedAt: '2025-11-28T12:00:00Z',
-      },
+    mockQuery.mockResolvedValueOnce({
+      resources: [
+        {
+          id: 'appeal-123',
+          status: 'approved',
+          resolvedAt: '2025-11-28T12:00:00Z',
+        },
+      ],
     });
 
     const req = httpReqMock({
@@ -385,17 +387,20 @@ describe('voteService - voting on appeals', () => {
   });
 
   it('returns 409 when voter has already voted', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: {
-        id: 'appeal-123',
-        status: 'pending',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        submitterId: 'original-submitter',
-      },
-    });
-    mockQuery.mockResolvedValueOnce({
-      resources: [{ id: 'existing-vote', voterId: 'voter-1', vote: 'approve' }],
-    });
+    mockQuery
+      .mockResolvedValueOnce({
+        resources: [
+          {
+            id: 'appeal-123',
+            status: 'pending',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            submitterId: 'original-submitter',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        resources: [{ id: 'existing-vote', voterId: 'voter-1', vote: 'approve' }],
+      });
 
     const req = httpReqMock({
       method: 'POST',
@@ -419,15 +424,18 @@ describe('voteService - voting on appeals', () => {
   });
 
   it('returns 403 when user tries to vote on own appeal', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: {
-        id: 'appeal-123',
-        status: 'pending',
-        submitterId: 'user-1',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    });
-    mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing votes
+    mockQuery
+      .mockResolvedValueOnce({
+        resources: [
+          {
+            id: 'appeal-123',
+            status: 'pending',
+            submitterId: 'user-1',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ resources: [] }); // No existing votes
 
     const req = httpReqMock({
       method: 'POST',
@@ -451,21 +459,23 @@ describe('voteService - voting on appeals', () => {
   });
 
   it('successfully records vote and updates tally', async () => {
-    mockRead
+    mockQuery
       .mockResolvedValueOnce({
-        resource: {
-          id: 'appeal-123',
-          status: 'pending',
-          submitterId: 'original-submitter',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          votesFor: 0,
-          votesAgainst: 0,
-          totalVotes: 0,
-          requiredVotes: 5,
-        },
+        resources: [
+          {
+            id: 'appeal-123',
+            status: 'pending',
+            submitterId: 'original-submitter',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            votesFor: 0,
+            votesAgainst: 0,
+            totalVotes: 0,
+            requiredVotes: 0,
+          },
+        ],
       }) // Appeal exists
-      .mockResolvedValueOnce({ resource: { id: 'voter-1', name: 'Voter One' } }); // Voter info
-    mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing votes
+      .mockResolvedValueOnce({ resources: [] }); // No existing votes
+    mockRead.mockResolvedValueOnce({ resource: { id: 'voter-1', name: 'Voter One' } }); // Voter info
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-1' } });
     mockReplace.mockResolvedValueOnce({ resource: {} });
 
@@ -513,30 +523,29 @@ describe('voteService - voting on appeals', () => {
 // State Transition Tests
 // ─────────────────────────────────────────────────────────────
 
-describe('voteService - quorum and state transitions', () => {
-  it('resolves appeal when quorum is reached with approve majority', async () => {
-    mockRead
+describe('voteService - vote window behavior', () => {
+  it('does not resolve appeals before the window ends (approve vote)', async () => {
+    mockQuery
       .mockResolvedValueOnce({
-        resource: {
-          id: 'appeal-123',
-          contentId: 'post-123',
-          contentType: 'post',
-          status: 'pending',
-          submitterId: 'original-submitter',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          votesFor: 3,
-          votesAgainst: 1,
-          totalVotes: 4,
-          requiredVotes: 5,
-        },
-      }) // Appeal at threshold - 1
-      .mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } }) // Voter info
-      .mockResolvedValueOnce({ resource: { id: 'post-123', status: 'blocked' } }); // Content for update
-    mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing votes
+        resources: [
+          {
+            id: 'appeal-123',
+            contentId: 'post-123',
+            contentType: 'post',
+            status: 'pending',
+            submitterId: 'original-submitter',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            votesFor: 3,
+            votesAgainst: 1,
+            totalVotes: 4,
+            requiredVotes: 0,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ resources: [] });
+    mockRead.mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-5' } });
-    mockReplace
-      .mockResolvedValueOnce({ resource: {} }) // Appeal update
-      .mockResolvedValueOnce({ resource: {} }); // Content update
+    mockReplace.mockResolvedValueOnce({ resource: {} });
 
     const req = httpReqMock({
       method: 'POST',
@@ -556,43 +565,40 @@ describe('voteService - quorum and state transitions', () => {
     expect(response.status).toBe(200);
     expect(response.jsonBody).toMatchObject({
       message: 'Vote recorded successfully',
-      finalDecision: 'approved',
-      status: 'approved',
+      finalDecision: null,
+      status: 'pending',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
       votesFor: 4,
       votesAgainst: 1,
       totalVotes: 5,
-      hasReachedQuorum: true,
+      hasReachedQuorum: false,
     });
-
-    // Verify appeal replace was called (first call is appeal, second is content)
-    expect(mockReplace).toHaveBeenCalledTimes(2);
+    expect(mockReplace).toHaveBeenCalledTimes(1);
   });
 
-  it('resolves appeal when quorum is reached with reject majority', async () => {
-    mockRead
+  it('does not resolve appeals before the window ends (reject vote)', async () => {
+    mockQuery
       .mockResolvedValueOnce({
-        resource: {
-          id: 'appeal-456',
-          contentId: 'post-456',
-          contentType: 'post',
-          status: 'pending',
-          submitterId: 'original-submitter',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          votesFor: 1,
-          votesAgainst: 3,
-          totalVotes: 4,
-          requiredVotes: 5,
-        },
+        resources: [
+          {
+            id: 'appeal-456',
+            contentId: 'post-456',
+            contentType: 'post',
+            status: 'pending',
+            submitterId: 'original-submitter',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            votesFor: 1,
+            votesAgainst: 3,
+            totalVotes: 4,
+            requiredVotes: 0,
+          },
+        ],
       })
-      .mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } })
-      .mockResolvedValueOnce({ resource: { id: 'post-456', status: 'blocked' } });
-    mockQuery.mockResolvedValueOnce({ resources: [] });
+      .mockResolvedValueOnce({ resources: [] });
+    mockRead.mockResolvedValueOnce({ resource: { id: 'voter-5', name: 'Voter Five' } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-5' } });
-    mockReplace
-      .mockResolvedValueOnce({ resource: {} })
-      .mockResolvedValueOnce({ resource: {} });
+    mockReplace.mockResolvedValueOnce({ resource: {} });
 
     const req = httpReqMock({
       method: 'POST',
@@ -611,27 +617,37 @@ describe('voteService - quorum and state transitions', () => {
 
     expect(response.status).toBe(200);
     expect(response.jsonBody).toMatchObject({
-      finalDecision: 'rejected',
-      status: 'rejected',
+      finalDecision: null,
+      status: 'pending',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
       votesFor: 1,
       votesAgainst: 4,
       totalVotes: 5,
-      hasReachedQuorum: true,
+      hasReachedQuorum: false,
     });
   });
 
   it('handles expired appeals correctly', async () => {
     const expiredDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 1 day ago
-    mockRead.mockResolvedValueOnce({
-      resource: {
-        id: 'appeal-expired',
-        status: 'pending',
-        submitterId: 'original-submitter',
-        expiresAt: expiredDate,
-      },
+    mockQuery.mockResolvedValueOnce({
+      resources: [
+        {
+          id: 'appeal-expired',
+          contentId: 'post-expired',
+          contentType: 'post',
+          status: 'pending',
+          submitterId: 'original-submitter',
+          expiresAt: expiredDate,
+          votesFor: 1,
+          votesAgainst: 0,
+          totalVotes: 1,
+        },
+      ],
     });
+    mockRead
+      .mockResolvedValueOnce({ resource: { id: 'post-expired', status: 'blocked' } })
+      .mockResolvedValueOnce({ resource: { id: 'post-expired', status: 'blocked' } });
     mockReplace.mockResolvedValueOnce({ resource: {} });
 
     const req = httpReqMock({
@@ -652,30 +668,34 @@ describe('voteService - quorum and state transitions', () => {
     expect(response.status).toBe(409);
     expect(response.jsonBody).toMatchObject({
       error: 'Appeal has expired',
+      finalDecision: 'approved',
+      status: 'approved',
     });
 
-    // Verify appeal was marked as rejected
+    // Verify appeal was resolved
     expect(mockReplace).toHaveBeenCalled();
   });
 
   it('uses weighted votes for moderators and admins', async () => {
-    mockRead
+    mockQuery
       .mockResolvedValueOnce({
-        resource: {
-          id: 'appeal-weighted',
-          contentId: 'post-weighted',
-          contentType: 'post',
-          status: 'pending',
-          submitterId: 'original-submitter',
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          votesFor: 0,
-          votesAgainst: 0,
-          totalVotes: 0,
-          requiredVotes: 5,
-        },
+        resources: [
+          {
+            id: 'appeal-weighted',
+            contentId: 'post-weighted',
+            contentType: 'post',
+            status: 'pending',
+            submitterId: 'original-submitter',
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            votesFor: 0,
+            votesAgainst: 0,
+            totalVotes: 0,
+            requiredVotes: 0,
+          },
+        ],
       })
-      .mockResolvedValueOnce({ resource: { id: 'admin-user', name: 'Admin User' } });
-    mockQuery.mockResolvedValueOnce({ resources: [] });
+      .mockResolvedValueOnce({ resources: [] });
+    mockRead.mockResolvedValueOnce({ resource: { id: 'admin-user', name: 'Admin User' } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'admin-vote' } });
     mockReplace.mockResolvedValueOnce({ resource: {} });
 
@@ -759,6 +779,6 @@ describe('appeals workflow - end-to-end flow', () => {
     expect(createdAppeal.votesFor).toBe(0);
     expect(createdAppeal.votesAgainst).toBe(0);
     expect(createdAppeal.status).toBe('pending');
-    expect(createdAppeal.requiredVotes).toBe(5);
+    expect(createdAppeal.requiredVotes).toBe(0);
   });
 });

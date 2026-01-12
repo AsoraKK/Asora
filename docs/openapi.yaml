@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Asora Backend API Contract
+  title: Lythaus (formerly Asora) Backend API Contract
   version: 1.0.0
-  description: 'Authenticity-first Asora backend contract covering Phase 1 domains (auth, users, posts, feeds, custom feeds,
+  description: 'Authenticity-first Lythaus (formerly Asora) backend contract covering Phase 1 domains (auth, users, posts, feeds, custom feeds,
     moderation, appeals) plus Phase 2 / future domains for reputation, search, trending, integrations, and onboarding. All
     list operations follow cursor-based pagination and every error uses a single shape with correlation identifiers.
 
@@ -1952,7 +1952,7 @@ paths:
       tags:
       - admin
       summary: Approve an appeal.
-      description: Approves an appeal and restores content to PUBLISHED.
+      description: Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
       operationId: admin_appeals_approve
       security:
       - bearerAuth: []
@@ -2000,18 +2000,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Appeal already decided
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /_admin/appeals/{appealId}/reject:
     post:
       tags:
       - admin
       summary: Reject an appeal.
-      description: Rejects an appeal and keeps content BLOCKED.
+      description: Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
       operationId: admin_appeals_reject
       security:
       - bearerAuth: []
@@ -2055,12 +2049,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Appeal or content not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Appeal already decided
           content:
             application/json:
               schema:
@@ -3385,6 +3373,8 @@ components:
         authorId:
           type: string
         displayName:
+          type: string
+        handle:
           type: string
     AdminFlagQueueFlags:
       type: object

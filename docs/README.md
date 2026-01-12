@@ -1,6 +1,8 @@
 Documents
 =========
 
+> Branding note: Lythaus (formerly Asora) is the user-facing product. Internal/infra naming remains Asora.
+
 - [Checks](checks.md): Full list of all checks done by actionlint with example inputs, outputs, and playground links.
 - [Installation](install.md): Installation instructions. Prebuilt binaries, Homebrew package, a Docker image, building from
   source, a download script (for CI) are available.

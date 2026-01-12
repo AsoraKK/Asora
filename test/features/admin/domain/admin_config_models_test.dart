@@ -232,7 +232,7 @@ void main() {
     });
 
     test('fromJson handles missing fields with defaults', () {
-      final config = FeatureFlagsConfig.fromJson({});
+      final config = FeatureFlagsConfig.fromJson(const {});
 
       expect(config.appealsEnabled, isTrue);
       expect(config.communityVotingEnabled, isTrue);
@@ -326,7 +326,7 @@ void main() {
     });
 
     test('fromJson handles missing nested objects', () {
-      final config = AdminConfig.fromJson({});
+      final config = AdminConfig.fromJson(const {});
 
       expect(config.schemaVersion, 1);
       expect(config.moderation, const ModerationConfig());
@@ -569,7 +569,7 @@ void main() {
     });
 
     test('fromJson handles missing fields with defaults', () {
-      final entry = AdminAuditEntry.fromJson({});
+      final entry = AdminAuditEntry.fromJson(const {});
 
       expect(entry.id, '');
       expect(entry.timestamp, isA<DateTime>());
@@ -678,7 +678,7 @@ void main() {
     });
 
     test('fromJson handles missing fields with defaults', () {
-      final response = AdminAuditResponse.fromJson({});
+      final response = AdminAuditResponse.fromJson(const {});
 
       expect(response.entries, isEmpty);
       expect(response.limit, 50);

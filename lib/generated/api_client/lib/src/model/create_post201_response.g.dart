@@ -10,21 +10,16 @@ const CreatePost201ResponseStatusEnum
     _$createPost201ResponseStatusEnum_published =
     const CreatePost201ResponseStatusEnum._('published');
 const CreatePost201ResponseStatusEnum
-    _$createPost201ResponseStatusEnum_underReview =
-    const CreatePost201ResponseStatusEnum._('underReview');
-const CreatePost201ResponseStatusEnum
-    _$createPost201ResponseStatusEnum_rejected =
-    const CreatePost201ResponseStatusEnum._('rejected');
+    _$createPost201ResponseStatusEnum_blocked =
+    const CreatePost201ResponseStatusEnum._('blocked');
 
 CreatePost201ResponseStatusEnum _$createPost201ResponseStatusEnumValueOf(
     String name) {
   switch (name) {
     case 'published':
       return _$createPost201ResponseStatusEnum_published;
-    case 'underReview':
-      return _$createPost201ResponseStatusEnum_underReview;
-    case 'rejected':
-      return _$createPost201ResponseStatusEnum_rejected;
+    case 'blocked':
+      return _$createPost201ResponseStatusEnum_blocked;
     default:
       throw ArgumentError(name);
   }
@@ -34,8 +29,7 @@ final BuiltSet<CreatePost201ResponseStatusEnum>
     _$createPost201ResponseStatusEnumValues = BuiltSet<
         CreatePost201ResponseStatusEnum>(const <CreatePost201ResponseStatusEnum>[
   _$createPost201ResponseStatusEnum_published,
-  _$createPost201ResponseStatusEnum_underReview,
-  _$createPost201ResponseStatusEnum_rejected,
+  _$createPost201ResponseStatusEnum_blocked,
 ]);
 
 Serializer<CreatePost201ResponseStatusEnum>
@@ -46,13 +40,11 @@ class _$CreatePost201ResponseStatusEnumSerializer
     implements PrimitiveSerializer<CreatePost201ResponseStatusEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'published': 'published',
-    'underReview': 'under_review',
-    'rejected': 'rejected',
+    'blocked': 'blocked',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'published': 'published',
-    'under_review': 'underReview',
-    'rejected': 'rejected',
+    'blocked': 'blocked',
   };
 
   @override

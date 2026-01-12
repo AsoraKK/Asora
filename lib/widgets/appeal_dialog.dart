@@ -177,7 +177,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
         statusIcon = Icons.flag;
         break;
       case ModerationStatus.hidden:
-        statusText = 'This content has been hidden by moderators';
+        statusText = 'This content has been blocked by moderators';
         statusColor = Colors.red;
         statusIcon = Icons.visibility_off;
         break;
@@ -187,9 +187,9 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
         statusIcon = Icons.cancel;
         break;
       default:
-        statusText = 'Content is under review';
-        statusColor = Colors.blue;
-        statusIcon = Icons.hourglass_empty;
+        statusText = 'This content is blocked';
+        statusColor = Colors.red;
+        statusIcon = Icons.visibility_off;
     }
 
     return Container(

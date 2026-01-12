@@ -223,20 +223,21 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
             showAiScores: _showAiScores,
           ),
 
-          // Under review post
+          // Appeal pending post
           PostCard(
             post: _createSamplePost(
               id: 'post7',
-              title: 'Under Review',
+              title: 'Appeal Pending',
               content:
-                  'This post is currently being reviewed by the moderation team. The status will be updated once review is complete.',
+                  'This post is blocked while the community vote is in progress.',
               author: const Author(
                 id: 'user5',
                 displayName: 'Eve Davis',
                 avatarUrl: null,
               ),
-              moderationStatus: ModerationStatus.underReview,
+              moderationStatus: ModerationStatus.hidden,
               aiScore: 0.58,
+              appealStatus: 'pending',
             ),
             showAiScores: _showAiScores,
           ),

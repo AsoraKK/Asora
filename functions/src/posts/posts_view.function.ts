@@ -47,7 +47,8 @@ export const posts_view = httpHandler<void, { viewCount: number }>(async (ctx) =
     return ctx.notFound('Post not found', 'POST_NOT_FOUND');
   }
 
-  if (post.status === 'blocked' || post.status === 'hidden_pending_review' || post.status === 'hidden_confirmed' || post.status === 'deleted') {
+  // Binary content state: only blocked or deleted posts are hidden
+  if (post.status === 'blocked' || post.status === 'deleted') {
     return ctx.notFound('Post not found', 'POST_NOT_FOUND');
   }
 

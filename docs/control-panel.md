@@ -1,5 +1,6 @@
-# Deprecated
+# Lythaus Control Panel (Primary Admin UI)
 
-This document moved to: specs/control-panel-legacy.md
+This legacy document is no longer maintained. For current admin UI setup, see:
 
-Please update bookmarks and links.
+- `apps/control-panel/README.md`
+- `docs/runbooks/admin-ops.md`

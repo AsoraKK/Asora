@@ -258,13 +258,13 @@ class _PostCardState extends ConsumerState<PostCard> {
   String? _getModerationMessage() {
     switch (widget.post.moderationStatus) {
       case ModerationStatus.flagged:
-        return 'Your post has been flagged by the community. It\'s still visible but under review.';
+        return 'Your post has been flagged by the community. It is still visible.';
       case ModerationStatus.hidden:
-        return 'Your post has been hidden. You can appeal this decision if you believe it was made in error.';
+        return 'Your post has been blocked. You can appeal this decision if you believe it was made in error.';
       case ModerationStatus.underReview:
-        return 'Your post is currently under review by moderators.';
+        return 'Your post is blocked pending an appeal outcome.';
       case ModerationStatus.communityRejected:
-        return 'The community voted to keep your post hidden after your appeal.';
+        return 'The community voted to keep your post blocked after your appeal.';
       case ModerationStatus.communityApproved:
         return 'Great news! The community voted to approve your appealed content.';
       default:

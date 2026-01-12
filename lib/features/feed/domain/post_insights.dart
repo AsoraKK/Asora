@@ -10,7 +10,7 @@ library;
 ///
 /// Mapping:
 ///   - LOW: Content is allowed/published
-///   - MEDIUM: Content is blocked but appeal is pending (under review)
+///   - MEDIUM: Content is blocked with a pending appeal
 ///   - HIGH: Content is blocked with no pending appeal
 enum RiskBand {
   low,
@@ -22,7 +22,7 @@ enum RiskBand {
       case RiskBand.low:
         return 'Low';
       case RiskBand.medium:
-        return 'Under review'; // MEDIUM = appeal pending
+        return 'Appeal pending';
       case RiskBand.high:
         return 'High';
     }

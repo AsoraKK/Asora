@@ -39,7 +39,8 @@ export const posts_get_by_id = httpHandler<void, PostView>(async (ctx) => {
     }
 
     // Hide deleted or blocked posts
-    if (postDoc.status === 'deleted' || postDoc.status === 'blocked' || postDoc.status === 'hidden_pending_review' || postDoc.status === 'hidden_confirmed') {
+    // Binary content state: only blocked or deleted posts are hidden
+    if (postDoc.status === 'deleted' || postDoc.status === 'blocked') {
       return ctx.notFound('Post not found', 'POST_NOT_FOUND');
     }
 
