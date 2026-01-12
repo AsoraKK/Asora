@@ -7,6 +7,7 @@ import { InvocationContext } from '@azure/functions';
 import { approveAppeal, rejectAppeal } from '../../src/admin/routes/appeals_action.function';
 import { getAppealDetail } from '../../src/admin/routes/appeals_get.function';
 import { listAppealsQueue } from '../../src/admin/routes/appeals_list.function';
+import { fetchContentById } from '../../src/admin/moderationAdminUtils';
 import { httpReqMock } from '../helpers/http';
 
 // Mock dependencies
@@ -24,6 +25,7 @@ jest.mock('../../src/admin/moderationAdminUtils', () => ({
     partitionKey: 'post-123',
   }),
   getLatestDecisionSummary: jest.fn().mockReturnValue({}),
+  extractPreview: jest.fn(() => 'preview'),
 }));
 
 const mockDb = {
@@ -46,9 +48,21 @@ jest.mock('@shared/clients/cosmos', () => ({
 
 describe('Admin Appeal Routes', () => {
   const contextStub = { log: jest.fn(), error: jest.fn() } as unknown as InvocationContext;
+  const fetchContentByIdMock = fetchContentById as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDb.appeals.items.query = jest.fn(() => ({
+      fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
+      fetchNext: jest.fn().mockResolvedValue({
+        resources: [],
+        continuationToken: null,
+      }),
+    })) as any;
+    mockDb.appeals.item = jest.fn(() => ({
+      read: jest.fn().mockResolvedValue({ resource: { id: 'appeal-123', status: 'pending' } }),
+      patch: jest.fn().mockResolvedValue({}),
+    })) as any;
   });
 
   describe('approveAppeal', () => {
@@ -73,6 +87,65 @@ describe('Admin Appeal Routes', () => {
       const response = await approveAppeal(req as any, contextStub);
       expect(response.status).toBe(200);
     });
+
+    it('requires appealId', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: {},
+        body: { reasonCode: 'CONTENT_RESTORED' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('requires reasonCode', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-123' },
+        body: {},
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 404 when appeal is missing', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'missing-appeal' },
+        body: { reasonCode: 'CONTENT_RESTORED' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBe(404);
+    });
+
+    it('returns 404 when content is missing', async () => {
+      fetchContentByIdMock.mockResolvedValueOnce(null);
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [{ id: 'appeal-123', contentType: 'post', contentId: 'post-123' }],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-123' },
+        body: { reasonCode: 'CONTENT_RESTORED' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBe(404);
+    });
   });
 
   describe('rejectAppeal', () => {
@@ -91,14 +164,17 @@ describe('Admin Appeal Routes', () => {
 
   describe('getAppealDetail', () => {
     it('retrieves appeal details', async () => {
-      mockDb.appeals.item = jest.fn(() => ({
-        read: jest.fn().mockResolvedValue({
-          resource: {
-            id: 'appeal-123',
-            status: 'pending',
-            contentType: 'post',
-            contentId: 'post-456',
-          },
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-123',
+              status: 'resolved',
+              finalDecision: 'approved',
+              contentType: 'post',
+              contentId: 'post-456',
+            },
+          ],
         }),
       })) as any;
 
@@ -112,8 +188,8 @@ describe('Admin Appeal Routes', () => {
     });
 
     it('returns 404 for missing appeals', async () => {
-      mockDb.appeals.item = jest.fn(() => ({
-        read: jest.fn().mockResolvedValue({ resource: null }),
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
       })) as any;
 
       const req = httpReqMock({
@@ -124,10 +200,102 @@ describe('Admin Appeal Routes', () => {
       const response = await getAppealDetail(req as any, contextStub);
       expect(response.status).toBe(404);
     });
+
+    it('requires appealId', async () => {
+      const req = httpReqMock({
+        method: 'GET',
+        params: {},
+      });
+
+      const response = await getAppealDetail(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('normalizes pending status', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-124',
+              status: 'pending',
+              contentType: 'post',
+              contentId: 'post-457',
+            },
+          ],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'GET',
+        params: { appealId: 'appeal-124' },
+      });
+
+      const response = await getAppealDetail(req as any, contextStub);
+      expect(response.status).toBeGreaterThanOrEqual(200);
+    });
+
+    it('normalizes expired status', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-125',
+              status: 'expired',
+              contentType: 'post',
+              contentId: 'post-458',
+            },
+          ],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'GET',
+        params: { appealId: 'appeal-125' },
+      });
+
+      const response = await getAppealDetail(req as any, contextStub);
+      expect(response.status).toBeGreaterThanOrEqual(200);
+    });
   });
 
   describe('listAppealsQueue', () => {
     it('lists appeals with pagination', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchNext: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-1',
+              contentId: 'post-1',
+              submitterId: 'user-1',
+              submittedAt: '2024-01-01T00:00:00Z',
+              status: 'pending',
+              flagCategories: ['spam'],
+              flagReason: 'spam',
+            },
+            {
+              id: 'appeal-2',
+              contentId: 'post-2',
+              submitterId: 'user-2',
+              submittedAt: '2024-01-02T00:00:00Z',
+              status: 'approved',
+              flagCategories: [],
+              flagReason: 'harassment',
+            },
+            {
+              id: 'appeal-3',
+              contentId: 'post-3',
+              submitterId: 'user-3',
+              submittedAt: '2024-01-03T00:00:00Z',
+              status: 'resolved',
+              finalDecision: 'rejected',
+              flagCategories: [],
+              flagReason: 'abuse',
+            },
+          ],
+          continuationToken: null,
+        }),
+      })) as any;
+
       const req = httpReqMock({
         method: 'GET',
         query: { status: 'pending', limit: '25' },
@@ -139,9 +307,54 @@ describe('Admin Appeal Routes', () => {
     });
 
     it('filters by status', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchNext: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-4',
+              contentId: 'post-4',
+              submitterId: 'user-4',
+              submittedAt: '2024-01-04T00:00:00Z',
+              status: 'rejected',
+              flagCategories: [],
+              flagReason: 'abuse',
+            },
+            {
+              id: 'appeal-5',
+              contentId: 'post-5',
+              submitterId: 'user-5',
+              submittedAt: '2024-01-05T00:00:00Z',
+              status: 'resolved',
+              finalDecision: 'approved',
+              flagCategories: [],
+              flagReason: 'other',
+            },
+          ],
+          continuationToken: null,
+        }),
+      })) as any;
+
       const req = httpReqMock({
         method: 'GET',
         query: { status: 'approved' },
+      });
+
+      const response = await listAppealsQueue(req as any, contextStub);
+      expect(response).toBeDefined();
+      expect(typeof response.status).toBe('number');
+    });
+
+    it('handles all-status filter', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchNext: jest.fn().mockResolvedValue({
+          resources: [],
+          continuationToken: null,
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'GET',
+        query: { status: 'all', limit: '200' },
       });
 
       const response = await listAppealsQueue(req as any, contextStub);

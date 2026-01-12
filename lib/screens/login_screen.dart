@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
-import '../features/auth/application/auth_service.dart';
-import '../features/auth/domain/user.dart';
-import '../features/auth/domain/auth_failure.dart';
 
+import '../design_system/components/index.dart';
+import '../design_system/theme/theme_build_context_x.dart';
+import '../features/auth/application/auth_service.dart';
+import '../features/auth/domain/auth_failure.dart';
+import '../features/auth/domain/user.dart';
+
+/// Login screen for Lythaus authentication
 class LoginScreen extends StatefulWidget {
+  /// Creates a login screen
   const LoginScreen({super.key});
 
   @override
@@ -14,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  String? _emailError;
 
   @override
   void dispose() {
@@ -22,32 +28,34 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_emailController.text.trim().isEmpty) {
-      _showError('Please enter your email');
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = 'Please enter your email';
+      });
       return;
     }
 
     setState(() {
       _isLoading = true;
+      _emailError = null;
     });
 
     try {
       final user = await _authService.loginWithEmail(
-        _emailController.text.trim(),
+        email,
         'defaultPassword', // Replace with actual password input
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome ${user.email}!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        LythSnackbar.success(
+          context: context,
+          message: 'Welcome ${user.email}!',
         );
 
         // Show user details in a dialog for demonstration
-        _showUserDialog(user);
+        await _showUserDialog(user);
       }
     } on AuthFailure catch (e) {
       _showError('Login failed: ${e.message}');
@@ -64,16 +72,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showError(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      setState(() {
+        _emailError = message;
+      });
+      LythSnackbar.error(context: context, message: message);
     }
   }
 
-  void _showUserDialog(User user) {
-    showDialog(
+  Future<void> _showUserDialog(User user) async {
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('User Profile'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -83,21 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
             Text('Role: ${user.role}'),
             Text('Tier: ${user.tier}'),
             Text('Reputation: ${user.reputationScore}'),
-            if (user.isTemporary)
-              const Text(
-                'Mode: Temporary (Database offline)',
-                style: TextStyle(color: Colors.orange),
-              ),
-            const SizedBox(height: 8),
-            Text(
-              'Token expires: ${user.tokenExpires?.toIso8601String() ?? 'Not set'}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('OK'),
           ),
         ],
@@ -110,54 +109,57 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Login'), centerTitle: true),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(context.spacing.lg.toDouble()),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.lock_outline, size: 80, color: Colors.blue),
-            const SizedBox(height: 32),
-            const Text(
-              'Welcome to Asora',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            LythIcon(
+              Icons.lock_outline,
+              size: LythIconSize.xlarge,
+              semanticColor: 'primary',
+            ),
+            SizedBox(height: context.spacing.xxl.toDouble()),
+            Text(
+              'Welcome to Lythaus',
+              style: context.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: context.spacing.xxl.toDouble()),
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleLogin(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Email',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
+                errorText: _emailError,
+                border: const OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _handleLogin,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            SizedBox(height: context.spacing.xl.toDouble()),
+            if (_isLoading)
+              const LythButton(
+                label: 'Logging in...',
+                variant: LythButtonVariant.primary,
+                isLoading: true,
+              )
+            else
+              LythButton(
+                label: 'Login',
+                variant: LythButtonVariant.primary,
+                onPressed: _handleLogin,
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Login', style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
+            SizedBox(height: context.spacing.md.toDouble()),
+            LythButton(
+              label: 'Logout (for testing)',
+              variant: LythButtonVariant.tertiary,
               onPressed: () {
-                // You can add logout functionality here for testing
                 _authService.logout();
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Logged out')));
+                LythSnackbar.info(context: context, message: 'Logged out');
               },
-              child: const Text('Logout (for testing)'),
             ),
           ],
         ),

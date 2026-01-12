@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'design_system/index.dart';
 import 'features/auth/presentation/auth_gate.dart';
-import 'ui/theme/asora_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,9 +16,9 @@ class AsoraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Lythaus',
-      theme: AsoraTheme.light(),
-      darkTheme: AsoraTheme.dark(),
-      themeMode: ThemeMode.dark,
+      theme: LythausTheme.light(),
+      darkTheme: LythausTheme.dark(),
+      themeMode: ThemeMode.system,
       home: const AuthGate(),
     );
   }
