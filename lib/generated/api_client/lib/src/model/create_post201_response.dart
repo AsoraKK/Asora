@@ -21,7 +21,7 @@ abstract class CreatePost201Response implements Built<CreatePost201Response, Cre
 
   @BuiltValueField(wireName: r'status')
   CreatePost201ResponseStatusEnum? get status;
-  // enum statusEnum {  published,  under_review,  rejected,  };
+  // enum statusEnum {  published,  blocked,  };
 
   CreatePost201Response._();
 
@@ -130,10 +130,8 @@ class CreatePost201ResponseStatusEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'published')
   static const CreatePost201ResponseStatusEnum published = _$createPost201ResponseStatusEnum_published;
-  @BuiltValueEnumConst(wireName: r'under_review')
-  static const CreatePost201ResponseStatusEnum underReview = _$createPost201ResponseStatusEnum_underReview;
-  @BuiltValueEnumConst(wireName: r'rejected')
-  static const CreatePost201ResponseStatusEnum rejected = _$createPost201ResponseStatusEnum_rejected;
+  @BuiltValueEnumConst(wireName: r'blocked')
+  static const CreatePost201ResponseStatusEnum blocked = _$createPost201ResponseStatusEnum_blocked;
 
   static Serializer<CreatePost201ResponseStatusEnum> get serializer => _$createPost201ResponseStatusEnumSerializer;
 

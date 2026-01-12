@@ -64,10 +64,6 @@ async function handleAppealDecision(
       return createErrorResponse(404, 'not_found', 'Appeal not found');
     }
 
-    if (appeal.status && appeal.status !== 'pending') {
-      return createErrorResponse(409, 'appeal_closed', 'Appeal has already been decided');
-    }
-
     const contentType = appeal.contentType as 'post' | 'comment' | 'user';
     const contentId = appeal.contentId as string;
     const contentLookup = await fetchContentById(contentType, contentId);

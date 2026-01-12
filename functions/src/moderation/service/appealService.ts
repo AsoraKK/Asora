@@ -11,7 +11,6 @@ import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { z } from 'zod';
 import type { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
-import { getModerationConfig } from '../config/moderationConfigProvider';
 
 // Request validation schema
 const SubmitAppealSchema = z.object({
@@ -29,6 +28,8 @@ const SubmitAppealSchema = z.object({
   evidenceUrls: z.array(z.string().url()).max(5).optional(),
 });
 
+const APPEAL_WINDOW_MINUTES = 5;
+
 interface SubmitAppealParams {
   request: HttpRequest;
   context: InvocationContext;
@@ -42,7 +43,8 @@ interface ContentLookup {
 }
 
 function isBlockedStatus(status: string | undefined): boolean {
-  return status === 'blocked' || status === 'hidden_pending_review' || status === 'hidden_confirmed';
+  // Binary content state: only blocked content is appealable
+  return status === 'blocked';
 }
 
 async function fetchContentForAppeal(
@@ -197,9 +199,9 @@ export async function submitAppealHandler({
     const flagCount = contentDoc.flagCount || 0;
     const urgencyScore = Math.min(10, baseUrgency + Math.floor(flagCount / 2));
 
-    // Appeal expires in 7 days
+    // Appeal expires in 5 minutes
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(now.getTime() + APPEAL_WINDOW_MINUTES * 60 * 1000);
 
     // 8. Create appeal record
     const appealId = `appeal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -235,7 +237,7 @@ export async function submitAppealHandler({
       votesFor: 0,
       votesAgainst: 0,
       totalVotes: 0,
-      requiredVotes: (await getModerationConfig()).appealRequiredVotes,
+      requiredVotes: 0,
       hasReachedQuorum: false,
 
       // Timestamps
@@ -270,7 +272,7 @@ export async function submitAppealHandler({
         message: 'Appeal submitted successfully',
         urgencyScore,
         expiresAt: expiresAt.toISOString(),
-        estimatedReviewTime: urgencyScore >= 7 ? '24-48 hours' : '3-7 days',
+        estimatedReviewTime: '5 minutes',
       },
     };
   } catch (error) {

@@ -33,7 +33,7 @@ Method | HTTP request | Description
 
 Approve an appeal
 
-Approves an appeal and restores content to PUBLISHED.
+Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
 
 ### Example
 ```dart
@@ -168,7 +168,7 @@ Name | Type | Description  | Notes
 
 Reject an appeal
 
-Rejects an appeal and keeps content BLOCKED.
+Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
 
 ### Example
 ```dart

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Asora Backend API Contract
+  title: Lythaus (formerly Asora) Backend API Contract
   version: 1.0.0
-  description: 'Authenticity-first Asora backend contract covering Phase 1 domains (auth, users, posts, feeds, custom feeds,
+  description: 'Authenticity-first Lythaus (formerly Asora) backend contract covering Phase 1 domains (auth, users, posts, feeds, custom feeds,
     moderation, appeals) plus Phase 2 / future domains for reputation, search, trending, integrations, and onboarding. All
     list operations follow cursor-based pagination and every error uses a single shape with correlation identifiers.
 
@@ -30,6 +30,8 @@ tags:
   description: Moderation queue, cases, and decisions.
 - name: appeals
   description: Appeals and appeal voting.
+- name: admin
+  description: Lythaus admin moderation and safety operations.
 - name: reputation
   description: Reputation, XP, and tier data (v2/future).
 - name: search
@@ -1597,6 +1599,831 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /_admin/flags:
+    get:
+      tags:
+      - admin
+      summary: List flagged content queue.
+      description: Returns grouped flagged content for admin triage.
+      operationId: admin_flags_list
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        description: Filter by queue status.
+        required: false
+        schema:
+          type: string
+          enum:
+          - open
+          - resolved
+          - all
+      - name: cursor
+        in: query
+        description: Cursor for pagination.
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Number of items to return (1-100).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: Flag queue response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFlagQueueResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/flags/{flagId}:
+    get:
+      tags:
+      - admin
+      summary: Get flagged content detail.
+      description: Fetch detail for a flagged content item.
+      operationId: admin_flags_get
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: flagId
+        in: path
+        description: Flag identifier.
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Flag detail response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminFlagDetailResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Flag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/flags/{flagId}/resolve:
+    post:
+      tags:
+      - admin
+      summary: Resolve a flagged content item.
+      description: Marks a flag as resolved with a reason code.
+      operationId: admin_flags_resolve
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: flagId
+        in: path
+        description: Flag identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminFlagResolveRequest'
+      responses:
+        '200':
+          description: Flag resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResolveResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Flag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/content/{contentId}/block:
+    post:
+      tags:
+      - admin
+      summary: Block content.
+      description: Sets content state to BLOCKED.
+      operationId: admin_content_block
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: contentId
+        in: path
+        description: Content identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminContentActionRequest'
+      responses:
+        '200':
+          description: Content blocked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentActionResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Content not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/content/{contentId}/publish:
+    post:
+      tags:
+      - admin
+      summary: Publish content.
+      description: Sets content state to PUBLISHED.
+      operationId: admin_content_publish
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: contentId
+        in: path
+        description: Content identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminContentActionRequest'
+      responses:
+        '200':
+          description: Content published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminContentActionResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Content not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/appeals:
+    get:
+      tags:
+      - admin
+      summary: List appeals queue.
+      description: Returns appeals awaiting admin review.
+      operationId: admin_appeals_list
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        description: Filter by appeal status.
+        required: false
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          - all
+      - name: cursor
+        in: query
+        description: Cursor for pagination.
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Number of items to return (1-100).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: Appeals queue response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppealQueueResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/appeals/{appealId}:
+    get:
+      tags:
+      - admin
+      summary: Get appeal detail.
+      description: Fetch appeal detail with content and decision context.
+      operationId: admin_appeals_get
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: appealId
+        in: path
+        description: Appeal identifier.
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Appeal detail response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppealDetailResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Appeal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/appeals/{appealId}/approve:
+    post:
+      tags:
+      - admin
+      summary: Approve an appeal.
+      description: Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
+      operationId: admin_appeals_approve
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: appealId
+        in: path
+        description: Appeal identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAppealDecisionRequest'
+      responses:
+        '200':
+          description: Appeal approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppealDecisionResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Appeal or content not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/appeals/{appealId}/reject:
+    post:
+      tags:
+      - admin
+      summary: Reject an appeal.
+      description: Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
+      operationId: admin_appeals_reject
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: appealId
+        in: path
+        description: Appeal identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAppealDecisionRequest'
+      responses:
+        '200':
+          description: Appeal rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAppealDecisionResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Appeal or content not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/users/search:
+    get:
+      tags:
+      - admin
+      summary: Search users.
+      description: Search by user id, handle, display name, or email.
+      operationId: admin_users_search
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: q
+        in: query
+        description: Search query.
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Number of items to return (1-100).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: User search response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserSearchResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/users/{userId}/disable:
+    post:
+      tags:
+      - admin
+      summary: Disable a user.
+      description: Disables a user account immediately.
+      operationId: admin_users_disable
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: userId
+        in: path
+        description: User identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserDisableRequest'
+      responses:
+        '200':
+          description: User disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserActionResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/users/{userId}/enable:
+    post:
+      tags:
+      - admin
+      summary: Enable a user.
+      description: Re-enables a previously disabled user.
+      operationId: admin_users_enable
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: userId
+        in: path
+        description: User identifier.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserEnableRequest'
+      responses:
+        '200':
+          description: User enabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserActionResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/invites:
+    get:
+      tags:
+      - admin
+      summary: List invite codes.
+      description: Returns admin invite codes with usage metadata.
+      operationId: admin_invites_list
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: createdBy
+        in: query
+        description: Filter by creator id.
+        required: false
+        schema:
+          type: string
+      - name: unused
+        in: query
+        description: Filter for unused invites only.
+        required: false
+        schema:
+          type: boolean
+      - name: cursor
+        in: query
+        description: Cursor for pagination.
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Number of items to return (1-200).
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+      responses:
+        '200':
+          description: Invite list response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteListResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - admin
+      summary: Create an invite code.
+      description: Creates a single admin invite code.
+      operationId: admin_invites_create
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInviteCreateRequest'
+      responses:
+        '201':
+          description: Invite created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/invites/batch:
+    post:
+      tags:
+      - admin
+      summary: Batch create invite codes.
+      description: Creates multiple invite codes in a single request.
+      operationId: admin_invites_batch
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInviteBatchRequest'
+      responses:
+        '201':
+          description: Invite batch created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteBatchResponse'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/invites/{code}:
+    get:
+      tags:
+      - admin
+      summary: Get an invite code.
+      description: Fetch a single invite by code.
+      operationId: admin_invites_get
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: code
+        in: path
+        description: Invite code.
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Invite response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/invites/{code}/revoke:
+    post:
+      tags:
+      - admin
+      summary: Revoke an invite code.
+      description: Revokes an invite code immediately.
+      operationId: admin_invites_revoke
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: code
+        in: path
+        description: Invite code.
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInviteRevokeRequest'
+      responses:
+        '200':
+          description: Invite revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteRevokeResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -2483,3 +3310,525 @@ components:
         submittedAt:
           type: string
           format: date-time
+    AdminContentType:
+      type: string
+      enum:
+      - post
+      - comment
+      - user
+    AdminContentState:
+      type: string
+      enum:
+      - PUBLISHED
+      - BLOCKED
+    AdminQueueStatus:
+      type: string
+      enum:
+      - OPEN
+      - RESOLVED
+    AdminAppealStatus:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+    AdminUserStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - DISABLED
+    AdminInviteStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - REVOKED
+      - EXHAUSTED
+    AdminModerationSummary:
+      type: object
+      properties:
+        lastDecisionAt:
+          type: string
+          format: date-time
+        configVersionUsed:
+          type: integer
+        reasonCodes:
+          type: array
+          items:
+            type: string
+    AdminFlagQueueContent:
+      type: object
+      properties:
+        contentId:
+          type: string
+        type:
+          $ref: '#/components/schemas/AdminContentType'
+        createdAt:
+          type: string
+          format: date-time
+        preview:
+          type: string
+    AdminFlagQueueAuthor:
+      type: object
+      properties:
+        authorId:
+          type: string
+        displayName:
+          type: string
+        handle:
+          type: string
+    AdminFlagQueueFlags:
+      type: object
+      properties:
+        flagId:
+          type: string
+        flagCount:
+          type: integer
+        reasonCategories:
+          type: array
+          items:
+            type: string
+        lastFlaggedAt:
+          type: string
+          format: date-time
+    AdminFlagQueueItem:
+      type: object
+      required:
+      - content
+      - author
+      - flags
+      - state
+      - status
+      properties:
+        content:
+          $ref: '#/components/schemas/AdminFlagQueueContent'
+        author:
+          $ref: '#/components/schemas/AdminFlagQueueAuthor'
+        flags:
+          $ref: '#/components/schemas/AdminFlagQueueFlags'
+        state:
+          $ref: '#/components/schemas/AdminContentState'
+        moderation:
+          $ref: '#/components/schemas/AdminModerationSummary'
+        status:
+          $ref: '#/components/schemas/AdminQueueStatus'
+    AdminFlagQueueResponse:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFlagQueueItem'
+        nextCursor:
+          type: string
+        count:
+          type: integer
+    AdminFlagDetailReason:
+      type: object
+      properties:
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+    AdminFlagDetailFlags:
+      type: object
+      properties:
+        flagId:
+          type: string
+        status:
+          type: string
+        flagCount:
+          type: integer
+        reporterCount:
+          type: integer
+        reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFlagDetailReason'
+    AdminFlagDetailContent:
+      type: object
+      properties:
+        contentId:
+          type: string
+        type:
+          $ref: '#/components/schemas/AdminContentType'
+        createdAt:
+          type: string
+          format: date-time
+        state:
+          $ref: '#/components/schemas/AdminContentState'
+        preview:
+          type: string
+    AdminFlagDetailAppeal:
+      type: object
+      properties:
+        appealId:
+          type: string
+        status:
+          $ref: '#/components/schemas/AdminAppealStatus'
+        submittedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AdminFlagHistoryFlag:
+      type: object
+      properties:
+        type:
+          type: string
+        at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    AdminFlagHistoryAdminAction:
+      type: object
+      properties:
+        type:
+          type: string
+        at:
+          type: string
+          format: date-time
+        action:
+          type: string
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminFlagHistoryAppeal:
+      type: object
+      properties:
+        type:
+          type: string
+        at:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AdminAppealStatus'
+    AdminFlagHistory:
+      type: object
+      properties:
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFlagHistoryFlag'
+        adminActions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminFlagHistoryAdminAction'
+        appeal:
+          $ref: '#/components/schemas/AdminFlagHistoryAppeal'
+    AdminFlagDetailResponse:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/AdminFlagDetailContent'
+        flags:
+          $ref: '#/components/schemas/AdminFlagDetailFlags'
+        moderation:
+          $ref: '#/components/schemas/AdminModerationSummary'
+        appeal:
+          $ref: '#/components/schemas/AdminFlagDetailAppeal'
+        history:
+          $ref: '#/components/schemas/AdminFlagHistory'
+    AdminFlagResolveRequest:
+      type: object
+      required:
+      - reasonCode
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminResolveResponse:
+      type: object
+      properties:
+        resolved:
+          type: boolean
+    AdminContentActionRequest:
+      type: object
+      required:
+      - contentType
+      - reasonCode
+      properties:
+        contentType:
+          $ref: '#/components/schemas/AdminContentType'
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminContentActionResponse:
+      type: object
+      properties:
+        contentId:
+          type: string
+        contentType:
+          $ref: '#/components/schemas/AdminContentType'
+        status:
+          $ref: '#/components/schemas/AdminContentState'
+    AdminAppealQueueItem:
+      type: object
+      properties:
+        appealId:
+          type: string
+        contentId:
+          type: string
+        authorId:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AdminAppealStatus'
+        originalReasonCategory:
+          type: string
+        configVersionUsed:
+          type: integer
+    AdminAppealQueueResponse:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAppealQueueItem'
+        nextCursor:
+          type: string
+        count:
+          type: integer
+    AdminAppealDetail:
+      type: object
+      properties:
+        appealId:
+          type: string
+        contentId:
+          type: string
+        authorId:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AdminAppealStatus'
+        appealType:
+          type: string
+        appealReason:
+          type: string
+        userStatement:
+          type: string
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+        internalNote:
+          type: string
+    AdminAppealContent:
+      type: object
+      properties:
+        contentId:
+          type: string
+        type:
+          $ref: '#/components/schemas/AdminContentType'
+        createdAt:
+          type: string
+          format: date-time
+        preview:
+          type: string
+    AdminAppealOriginalDecision:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - BLOCKED
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        configVersionUsed:
+          type: integer
+        decidedAt:
+          type: string
+          format: date-time
+    AdminAppealDetailResponse:
+      type: object
+      properties:
+        appeal:
+          $ref: '#/components/schemas/AdminAppealDetail'
+        content:
+          $ref: '#/components/schemas/AdminAppealContent'
+        originalDecision:
+          $ref: '#/components/schemas/AdminAppealOriginalDecision'
+    AdminAppealDecisionRequest:
+      type: object
+      required:
+      - reasonCode
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminAppealDecisionResponse:
+      type: object
+      properties:
+        appealId:
+          type: string
+        status:
+          $ref: '#/components/schemas/AdminAppealStatus'
+        contentId:
+          type: string
+        contentStatus:
+          $ref: '#/components/schemas/AdminContentState'
+    AdminUserSummary:
+      type: object
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: string
+        handle:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AdminUserStatus'
+    AdminUserSearchResponse:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUserSummary'
+        count:
+          type: integer
+    AdminUserDisableRequest:
+      type: object
+      required:
+      - reasonCode
+      - note
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminUserEnableRequest:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminUserActionResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        status:
+          $ref: '#/components/schemas/AdminUserStatus'
+    AdminInvite:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+        email:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        maxUses:
+          type: integer
+        usageCount:
+          type: integer
+        lastUsedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AdminInviteStatus'
+        label:
+          type: string
+        usedByUserId:
+          type: string
+    AdminInviteResponse:
+      allOf:
+      - $ref: '#/components/schemas/AdminInvite'
+    AdminInviteListResponse:
+      type: object
+      required:
+      - invites
+      - count
+      properties:
+        invites:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminInvite'
+        count:
+          type: integer
+        nextCursor:
+          type: string
+    AdminInviteBatchResponse:
+      type: object
+      required:
+      - count
+      - invites
+      properties:
+        count:
+          type: integer
+        invites:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminInvite'
+    AdminInviteCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        expiresInDays:
+          type: integer
+        maxUses:
+          type: integer
+        label:
+          type: string
+    AdminInviteBatchRequest:
+      type: object
+      required:
+      - count
+      properties:
+        count:
+          type: integer
+        expiresInDays:
+          type: integer
+        maxUses:
+          type: integer
+        label:
+          type: string
+    AdminInviteRevokeRequest:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+        note:
+          type: string
+    AdminInviteRevokeResponse:
+      type: object
+      properties:
+        revoked:
+          type: boolean

@@ -2,6 +2,7 @@ import './routes/flagContent';
 import './routes/submitAppeal';
 import './routes/voteOnAppeal';
 import './routes/reviewQueue';
+import './timers/resolveExpiredAppeals.function';
 
 // OpenAPI v1 handlers
 import './routes/moderation_queue_list.function';

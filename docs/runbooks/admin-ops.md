@@ -8,6 +8,10 @@ Operate the Lythaus beta admin surface with strict binary content states and app
 - Actions are audited in `audit_logs` (partition key `subjectId`).
 - Content state is binary: `PUBLISHED` or `BLOCKED`.
 
+## Primary UI
+Use the Lythaus Control Panel as the primary admin UI. The API calls below are
+intended for fallback or automation.
+
 ## Flagged Content Queue
 ### List flags (open by default)
 ```bash
@@ -31,6 +35,7 @@ curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
 ```
 
 ## Appeals Queue (only review path)
+- Appeals auto-resolve after a 5-minute community vote window; admins can override at any time.
 ### List appeals (oldest pending first)
 ```bash
 curl -s -H "Authorization: Bearer $ADMIN_JWT" \

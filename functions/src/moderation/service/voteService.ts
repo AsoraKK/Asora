@@ -3,7 +3,7 @@
  *
  * 🎯 Purpose: Allow moderators to vote on content appeals
  * 🔐 Security: JWT authentication + role verification + duplicate prevention
- * 🚨 Features: Democratic voting, quorum tracking, automatic resolution
+ * 🚨 Features: Democratic voting, time-window resolution
  * 📊 Models: Community moderation with weighted voting
  */
 
@@ -103,23 +103,24 @@ export async function voteOnAppealHandler({
     const votesContainer = database.container('appeal_votes');
 
     // 5. Get the appeal
-    let appealDoc;
-    try {
-      const { resource } = await appealsContainer.item(targetAppealId, targetAppealId).read();
-      appealDoc = resource;
-    } catch (error) {
-      return {
-        status: 404,
-        jsonBody: { error: 'Appeal not found' },
-      };
-    }
+    const { resources: appealMatches } = await appealsContainer.items
+      .query(
+        {
+          query: 'SELECT * FROM c WHERE c.id = @appealId',
+          parameters: [{ name: '@appealId', value: targetAppealId }],
+        },
+        { maxItemCount: 1 }
+      )
+      .fetchAll();
 
+    const appealDoc = appealMatches[0];
     if (!appealDoc) {
       return {
         status: 404,
         jsonBody: { error: 'Appeal not found' },
       };
     }
+    const appealPartitionKey = String(appealDoc.contentId ?? targetAppealId);
 
     // 6. Check if appeal is still active
     if (appealDoc.status !== 'pending') {
@@ -137,18 +138,22 @@ export async function voteOnAppealHandler({
     const now = new Date();
     const expiresAt = new Date(appealDoc.expiresAt);
     if (now > expiresAt) {
-      // Mark as rejected due to expiry
-      appealDoc.status = 'rejected';
-      appealDoc.resolvedAt = now.toISOString();
-      appealDoc.resolvedBy = 'system_expiry';
-      appealDoc.finalDecision = 'rejected';
-      await appealsContainer.item(targetAppealId, targetAppealId).replace(appealDoc);
+      const finalDecision = await resolveAppealFromVotes({
+        database,
+        appealDoc,
+        context,
+        resolvedBy: 'community_vote',
+        resolvedAt: now.toISOString(),
+      });
+      await appealsContainer.item(targetAppealId, appealPartitionKey).replace(appealDoc);
 
       return {
         status: 409,
         jsonBody: {
           error: 'Appeal has expired',
           expiredAt: appealDoc.expiresAt,
+          finalDecision,
+          status: appealDoc.status,
         },
       };
     }
@@ -237,44 +242,14 @@ export async function voteOnAppealHandler({
 
     appealDoc.totalVotes = (appealDoc.votesFor || 0) + (appealDoc.votesAgainst || 0);
     appealDoc.updatedAt = now.toISOString();
+    appealDoc.hasReachedQuorum = false;
+    appealDoc.votingStatus = 'in_progress';
 
-    // 12. Check if quorum is reached and resolve if necessary
-    const requiredVotes = appealDoc.requiredVotes || 5;
-    const hasQuorum = appealDoc.totalVotes >= requiredVotes;
+    const requiredVotes = appealDoc.requiredVotes ?? 0;
+    const hasQuorum = false;
+    const finalDecision: 'approved' | 'rejected' | null = null;
 
-    let finalDecision: 'approved' | 'rejected' | null = null;
-    if (hasQuorum) {
-      appealDoc.hasReachedQuorum = true;
-      appealDoc.votingStatus = 'completed';
-      appealDoc.resolvedAt = now.toISOString();
-      appealDoc.resolvedBy = 'community_vote';
-
-      // Determine final decision
-      const decidedApproval = (appealDoc.votesFor || 0) > (appealDoc.votesAgainst || 0);
-      finalDecision = decidedApproval ? 'approved' : 'rejected';
-      appealDoc.finalDecision = finalDecision;
-      appealDoc.status = finalDecision;
-
-      // Update the original content based on decision
-      await updateContentBasedOnDecision(
-        database,
-        appealDoc.contentId,
-        appealDoc.contentType,
-        finalDecision!,
-        context
-      );
-
-      await persistModerationDecision({
-        database,
-        appealDoc,
-        finalDecision,
-        context,
-      });
-    } else {
-      appealDoc.votingStatus = 'in_progress';
-    }
-
-    await appealsContainer.item(targetAppealId, targetAppealId).replace(appealDoc);
+    await appealsContainer.item(targetAppealId, appealPartitionKey).replace(appealDoc);
 
     context.log(`Vote cast on appeal ${targetAppealId} by ${userId}: ${vote} (weight: ${voterWeight})`);
 
@@ -304,6 +279,53 @@ export async function voteOnAppealHandler({
       },
     };
   }
+}
+
+interface ResolveAppealOptions {
+  database: ReturnType<typeof getCosmosDatabase>;
+  appealDoc: Record<string, any>;
+  context: InvocationContext;
+  resolvedBy?: string;
+  resolvedAt?: string;
+}
+
+export async function resolveAppealFromVotes({
+  database,
+  appealDoc,
+  context,
+  resolvedBy = 'community_vote',
+  resolvedAt,
+}: ResolveAppealOptions): Promise<'approved' | 'rejected'> {
+  const votesFor = Number(appealDoc.votesFor ?? 0);
+  const votesAgainst = Number(appealDoc.votesAgainst ?? 0);
+  const finalDecision = votesFor > votesAgainst ? 'approved' : 'rejected';
+  const resolvedAtValue = resolvedAt ?? new Date().toISOString();
+
+  appealDoc.totalVotes = votesFor + votesAgainst;
+  appealDoc.hasReachedQuorum = false;
+  appealDoc.votingStatus = 'completed';
+  appealDoc.resolvedAt = resolvedAtValue;
+  appealDoc.resolvedBy = resolvedBy;
+  appealDoc.finalDecision = finalDecision;
+  appealDoc.status = finalDecision;
+  appealDoc.updatedAt = resolvedAtValue;
+
+  await updateContentBasedOnDecision(
+    database,
+    appealDoc.contentId,
+    appealDoc.contentType,
+    finalDecision,
+    context
+  );
+
+  await persistModerationDecision({
+    database,
+    appealDoc,
+    finalDecision,
+    context,
+  });
+
+  return finalDecision;
 }
 
 interface ContentLookup {

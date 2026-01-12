@@ -100,6 +100,11 @@ function Flags() {
       setActionMessage('Reason code is required.');
       return;
     }
+    const actionLabel = action === 'block' ? 'Block' : 'Publish';
+    const contentId = selected?.content?.contentId;
+    if (!window.confirm(`${actionLabel} content ${contentId}?`)) {
+      return;
+    }
     setActionBusy(true);
     setActionMessage('');
     try {
@@ -214,7 +219,10 @@ function Flags() {
                   </span>
                 </span>
                 <span>
-                  {item.author.displayName || 'Unknown'}
+                  {item.author.displayName || item.author.handle || 'Unknown'}
+                  {item.author.handle ? (
+                    <span className="muted">{item.author.handle}</span>
+                  ) : null}
                   <span className="muted">{item.author.authorId}</span>
                 </span>
                 <span>

@@ -66,17 +66,11 @@ class ModerationBadges extends StatelessWidget {
         break;
 
       case ModerationStatus.hidden:
+      case ModerationStatus.underReview:
         icon = Icons.visibility_off;
         backgroundColor = Colors.red.shade100;
         textColor = Colors.red.shade800;
-        text = 'Hidden';
-        break;
-
-      case ModerationStatus.underReview:
-        icon = Icons.hourglass_empty;
-        backgroundColor = Colors.blue.shade100;
-        textColor = Colors.blue.shade800;
-        text = 'Under Review';
+        text = 'Blocked';
         break;
 
       case ModerationStatus.communityApproved:
@@ -153,17 +147,11 @@ class ModerationBadges extends StatelessWidget {
 
     switch (appealStatus) {
       case 'pending':
+      case 'under_review':
         icon = Icons.schedule;
         backgroundColor = Colors.blue.shade100;
         textColor = Colors.blue.shade800;
         text = 'Appeal Pending';
-        break;
-
-      case 'under_review':
-        icon = Icons.rate_review;
-        backgroundColor = Colors.purple.shade100;
-        textColor = Colors.purple.shade800;
-        text = 'Under Appeal Review';
         break;
 
       case 'approved':
@@ -296,17 +284,11 @@ class ModerationInfoBanner extends StatelessWidget {
         break;
 
       case ModerationStatus.hidden:
+      case ModerationStatus.underReview:
         backgroundColor = Colors.red.shade50;
         textColor = Colors.red.shade800;
         icon = Icons.visibility_off;
-        title = 'Content Hidden';
-        break;
-
-      case ModerationStatus.underReview:
-        backgroundColor = Colors.blue.shade50;
-        textColor = Colors.blue.shade800;
-        icon = Icons.hourglass_empty;
-        title = 'Under Review';
+        title = 'Content Blocked';
         break;
 
       case ModerationStatus.communityApproved:

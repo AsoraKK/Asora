@@ -40,7 +40,7 @@ class AdminApi {
   const AdminApi(this._dio, this._serializers);
 
   /// Approve an appeal
-  /// Approves an appeal and restores content to PUBLISHED.
+  /// Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
@@ -316,7 +316,7 @@ class AdminApi {
   }
 
   /// Reject an appeal
-  /// Rejects an appeal and keeps content BLOCKED.
+  /// Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier

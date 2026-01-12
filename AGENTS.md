@@ -5,6 +5,7 @@ Authoritative, concise instructions for agents working in this repository via Co
 
 - **User-facing product = Lythaus** (UI labels, store text, marketing copy)
 - **Internal/infra = Asora** (repo name, Azure resources, Terraform, package IDs)
+- When introducing the product in docs, use "Lythaus (formerly Asora)".
 - When generating code, use "Lythaus" for user-visible strings.
 - Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
 - Full guide: `docs/branding/lythaus-transition.md`
@@ -188,4 +189,3 @@ Keep most handoffs under ~10 lines unless the task demands detail.
 ## Contact & Next Steps
 
 If anything in these guidelines conflicts with explicit user instructions, the user’s instructions take precedence. When in doubt, ask a brief clarifying question and propose a default path forward.
-

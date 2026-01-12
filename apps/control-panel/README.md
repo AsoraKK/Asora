@@ -1,5 +1,7 @@
 # Lythaus Control Panel
 
+Primary admin UI for beta operations.
+
 Build command: npm ci && npm run build
 Output folder: dist/
 Note: Single-page app routing requires Pages redirect rules.

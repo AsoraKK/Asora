@@ -13,6 +13,7 @@ part 'admin_flag_queue_author.g.dart';
 /// Properties:
 /// * [authorId] 
 /// * [displayName] 
+/// * [handle] 
 @BuiltValue()
 abstract class AdminFlagQueueAuthor implements Built<AdminFlagQueueAuthor, AdminFlagQueueAuthorBuilder> {
   @BuiltValueField(wireName: r'authorId')
@@ -20,6 +21,9 @@ abstract class AdminFlagQueueAuthor implements Built<AdminFlagQueueAuthor, Admin
 
   @BuiltValueField(wireName: r'displayName')
   String? get displayName;
+
+  @BuiltValueField(wireName: r'handle')
+  String? get handle;
 
   AdminFlagQueueAuthor._();
 
@@ -55,6 +59,13 @@ class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQ
       yield r'displayName';
       yield serializers.serialize(
         object.displayName,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.handle != null) {
+      yield r'handle';
+      yield serializers.serialize(
+        object.handle,
         specifiedType: const FullType(String),
       );
     }
@@ -94,6 +105,13 @@ class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQ
             specifiedType: const FullType(String),
           ) as String;
           result.displayName = valueDes;
+          break;
+        case r'handle':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.handle = valueDes;
           break;
         default:
           unhandled.add(key);

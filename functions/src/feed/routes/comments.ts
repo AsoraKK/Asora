@@ -140,9 +140,9 @@ export const createComment = requireActiveUser(async (req: AuthenticatedRequest,
   try {
     const db = getTargetDatabase();
 
-    // Verify post exists
+    // Verify post exists (binary content states: only check blocked/deleted)
     const { resource: post } = await db.posts.item(postId, postId).read();
-    if (!post || post.status === 'blocked' || post.status === 'hidden_pending_review' || post.status === 'hidden_confirmed' || post.status === 'deleted') {
+    if (!post || post.status === 'blocked' || post.status === 'deleted') {
       context.log('comments.create.post_not_found', { postId });
       return notFound();
     }

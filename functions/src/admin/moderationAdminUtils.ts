@@ -15,7 +15,8 @@ export interface DecisionSummary {
   reasonCodes?: string[];
 }
 
-const BLOCKED_STATES = new Set(['blocked', 'hidden_pending_review', 'hidden_confirmed', 'deleted']);
+// Binary content states: PUBLISHED or BLOCKED only
+const BLOCKED_STATES = new Set(['blocked', 'deleted']);
 
 export function mapContentState(status: string | undefined): 'PUBLISHED' | 'BLOCKED' {
   if (!status) {
