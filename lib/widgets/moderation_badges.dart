@@ -66,7 +66,6 @@ class ModerationBadges extends StatelessWidget {
         break;
 
       case ModerationStatus.hidden:
-      case ModerationStatus.underReview:
         icon = Icons.visibility_off;
         backgroundColor = Colors.red.shade100;
         textColor = Colors.red.shade800;
@@ -284,7 +283,6 @@ class ModerationInfoBanner extends StatelessWidget {
         break;
 
       case ModerationStatus.hidden:
-      case ModerationStatus.underReview:
         backgroundColor = Colors.red.shade50;
         textColor = Colors.red.shade800;
         icon = Icons.visibility_off;
