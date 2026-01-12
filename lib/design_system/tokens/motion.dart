@@ -4,6 +4,8 @@
 /// All durations respect MediaQuery.disableAnimations and system reduce-motion settings.
 library;
 
+import 'package:flutter/material.dart';
+
 class LythMotion {
   /// Very quick feedback animations (e.g., button press, icon state change)
   /// Duration: 100ms
