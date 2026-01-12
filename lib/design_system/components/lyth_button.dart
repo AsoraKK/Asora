@@ -111,13 +111,13 @@ class LythButton extends StatelessWidget {
     super.key,
   }) : variant = LythButtonVariant.primary,
        disabled = false,
-       this.label = label,
-       this.onPressed = onPressed,
-       this.size = size,
-       this.icon = icon,
-       this.iconAfter = iconAfter,
-       this.isLoading = isLoading,
-       this.tooltip = tooltip;
+       label = label,
+       onPressed = onPressed,
+       size = size,
+       icon = icon,
+       iconAfter = iconAfter,
+       isLoading = isLoading,
+       tooltip = tooltip;
 
   /// Create a secondary action button
   const LythButton.secondary({
@@ -131,13 +131,13 @@ class LythButton extends StatelessWidget {
     super.key,
   }) : variant = LythButtonVariant.secondary,
        disabled = false,
-       this.label = label,
-       this.onPressed = onPressed,
-       this.size = size,
-       this.icon = icon,
-       this.iconAfter = iconAfter,
-       this.isLoading = isLoading,
-       this.tooltip = tooltip;
+       label = label,
+       onPressed = onPressed,
+       size = size,
+       icon = icon,
+       iconAfter = iconAfter,
+       isLoading = isLoading,
+       tooltip = tooltip;
 
   /// Create a tertiary action button (text-only)
   const LythButton.tertiary({
@@ -151,12 +151,12 @@ class LythButton extends StatelessWidget {
   }) : variant = LythButtonVariant.tertiary,
        disabled = false,
        isLoading = false,
-       this.label = label,
-       this.onPressed = onPressed,
-       this.size = size,
-       this.icon = icon,
-       this.iconAfter = iconAfter,
-       this.tooltip = tooltip;
+       label = label,
+       onPressed = onPressed,
+       size = size,
+       icon = icon,
+       iconAfter = iconAfter,
+       tooltip = tooltip;
 
   /// Create a destructive button
   const LythButton.destructive({
@@ -170,13 +170,13 @@ class LythButton extends StatelessWidget {
     super.key,
   }) : variant = LythButtonVariant.destructive,
        disabled = false,
-       this.label = label,
-       this.onPressed = onPressed,
-       this.size = size,
-       this.icon = icon,
-       this.iconAfter = iconAfter,
-       this.isLoading = isLoading,
-       this.tooltip = tooltip;
+       label = label,
+       onPressed = onPressed,
+       size = size,
+       icon = icon,
+       iconAfter = iconAfter,
+       isLoading = isLoading,
+       tooltip = tooltip;
 
   bool get _isDisabled => disabled || isLoading || onPressed == null;
 

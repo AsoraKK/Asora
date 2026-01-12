@@ -121,7 +121,7 @@ class _LythWordmarkState extends State<LythWordmark>
     final textColor =
         widget.color ??
         (isDark ? const Color(0xFFE6E2D9) : const Color(0xFF1A1A1A));
-    final glowColor = const Color(0xFFEDE3C8); // Warm ivory
+    const glowColor = Color(0xFFEDE3C8); // Warm ivory
 
     return AnimatedBuilder(
       animation: _glowAnimation,

@@ -13,19 +13,19 @@ extension LythBuildContextX on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
 
   /// Get spacing tokens
-  _SpacingTokens get spacing =>
+  SpacingTokens get spacing =>
       Theme.of(this).extension<LythThemeExtension>()?.spacing ??
-      const _SpacingTokens();
+      const SpacingTokens();
 
   /// Get radius tokens
-  _RadiusTokens get radius =>
+  RadiusTokens get radius =>
       Theme.of(this).extension<LythThemeExtension>()?.radius ??
-      const _RadiusTokens();
+      const RadiusTokens();
 
   /// Get motion tokens
-  _MotionTokens get motion =>
+  MotionTokens get motion =>
       Theme.of(this).extension<LythThemeExtension>()?.motion ??
-      const _MotionTokens();
+      const MotionTokens();
 
   /// Get text theme
   TextTheme get textTheme => Theme.of(this).textTheme;

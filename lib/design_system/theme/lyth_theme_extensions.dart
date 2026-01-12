@@ -19,37 +19,37 @@ class LythThemeExtension extends ThemeExtension<LythThemeExtension> {
   });
 
   /// Spacing tokens
-  final _SpacingTokens spacing;
+  final SpacingTokens spacing;
 
   /// Radius tokens
-  final _RadiusTokens radius;
+  final RadiusTokens radius;
 
   /// Motion tokens
-  final _MotionTokens motion;
+  final MotionTokens motion;
 
   /// Create a default instance
   factory LythThemeExtension.light() {
-    return LythThemeExtension(
-      spacing: const _SpacingTokens(),
-      radius: const _RadiusTokens(),
-      motion: const _MotionTokens(),
+    return const LythThemeExtension(
+      spacing: SpacingTokens(),
+      radius: RadiusTokens(),
+      motion: MotionTokens(),
     );
   }
 
   /// Create a default instance for dark mode
   factory LythThemeExtension.dark() {
-    return LythThemeExtension(
-      spacing: const _SpacingTokens(),
-      radius: const _RadiusTokens(),
-      motion: const _MotionTokens(),
+    return const LythThemeExtension(
+      spacing: SpacingTokens(),
+      radius: RadiusTokens(),
+      motion: MotionTokens(),
     );
   }
 
   @override
   LythThemeExtension copyWith({
-    _SpacingTokens? spacing,
-    _RadiusTokens? radius,
-    _MotionTokens? motion,
+    SpacingTokens? spacing,
+    RadiusTokens? radius,
+    MotionTokens? motion,
   }) {
     return LythThemeExtension(
       spacing: spacing ?? this.spacing,
@@ -61,17 +61,17 @@ class LythThemeExtension extends ThemeExtension<LythThemeExtension> {
   @override
   LythThemeExtension lerp(ThemeExtension<LythThemeExtension>? other, double t) {
     if (other is! LythThemeExtension) return this;
-    return LythThemeExtension(
-      spacing: _SpacingTokens(),
-      radius: _RadiusTokens(),
-      motion: _MotionTokens(),
+    return const LythThemeExtension(
+      spacing: SpacingTokens(),
+      radius: RadiusTokens(),
+      motion: MotionTokens(),
     );
   }
 }
 
 /// Spacing tokens wrapper
-class _SpacingTokens {
-  const _SpacingTokens();
+class SpacingTokens {
+  const SpacingTokens();
 
   double get xs => LythSpacing.xs;
   double get sm => LythSpacing.sm;
@@ -89,8 +89,8 @@ class _SpacingTokens {
 }
 
 /// Radius tokens wrapper
-class _RadiusTokens {
-  const _RadiusTokens();
+class RadiusTokens {
+  const RadiusTokens();
 
   double get xs => LythRadius.xs;
   double get sm => LythRadius.sm;
@@ -106,8 +106,8 @@ class _RadiusTokens {
 }
 
 /// Motion tokens wrapper
-class _MotionTokens {
-  const _MotionTokens();
+class MotionTokens {
+  const MotionTokens();
 
   Duration get quick => LythMotion.quick;
   Duration get standard => LythMotion.standard;
