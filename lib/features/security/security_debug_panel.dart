@@ -8,6 +8,10 @@ import 'package:asora/core/config/environment_config.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/security_overrides.dart';
 import 'package:asora/core/security/security_telemetry.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 class SecurityDebugPanel extends ConsumerWidget {
   const SecurityDebugPanel({super.key});
@@ -102,19 +106,19 @@ class SecurityDebugPanel extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  ElevatedButton(
+                  LythButton.secondary(
+                    label: 'Log security config',
                     onPressed: () {
                       SecurityTelemetry.logConfigSnapshot(config);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Logged security config snapshot.'),
-                        ),
+                      LythSnackbar.info(
+                        context: context,
+                        message: 'Logged security config snapshot.',
                       );
                     },
-                    child: const Text('Log security config'),
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
+                  SizedBox(width: context.spacing.md),
+                  LythButton.secondary(
+                    label: 'Override TLS pinning',
                     onPressed: kDebugMode
                         ? () {
                             SecurityOverridesProvider.set(
@@ -125,14 +129,14 @@ class SecurityDebugPanel extends ConsumerWidget {
                             );
                           }
                         : null,
-                    child: const Text('Override TLS pinning'),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  ElevatedButton(
+                  LythButton.secondary(
+                    label: 'Override integrity guard',
                     onPressed: kDebugMode
                         ? () {
                             SecurityOverridesProvider.set(
@@ -143,14 +147,13 @@ class SecurityDebugPanel extends ConsumerWidget {
                             );
                           }
                         : null,
-                    child: const Text('Override integrity guard'),
                   ),
-                  const SizedBox(width: 12),
-                  const ElevatedButton(
+                  SizedBox(width: context.spacing.md),
+                  LythButton.secondary(
+                    label: 'Clear overrides',
                     onPressed: kDebugMode
                         ? SecurityOverridesProvider.clear
                         : null,
-                    child: Text('Clear overrides'),
                   ),
                 ],
               ),
@@ -167,16 +170,19 @@ class SecurityDebugPanel extends ConsumerWidget {
     required String title,
     required List<Widget> children,
   }) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: EdgeInsets.only(bottom: context.spacing.md),
+      child: LythCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: context.spacing.sm),
             ...children,
           ],
         ),
@@ -186,15 +192,24 @@ class SecurityDebugPanel extends ConsumerWidget {
 
   Widget _buildKeyValue(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );

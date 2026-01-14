@@ -5,6 +5,9 @@ import {
   setAdminApiUrl,
   setAdminToken
 } from '../api/adminApi.js';
+import LythButton from './LythButton.jsx';
+import LythCard from './LythCard.jsx';
+import LythInput from './LythInput.jsx';
 
 function SessionPanel() {
   const [apiUrl, setApiUrl] = useState(getAdminApiUrl());
@@ -28,7 +31,7 @@ function SessionPanel() {
   };
 
   return (
-    <div className="panel">
+    <LythCard variant="panel">
       <div className="panel-header">
         <h2>Admin session</h2>
         <p>Store the admin API base URL and access token locally.</p>
@@ -36,8 +39,7 @@ function SessionPanel() {
       <div className="form-grid">
         <label className="field">
           <span className="field-label">Admin API base URL</span>
-          <input
-            className="input"
+          <LythInput
             type="text"
             value={apiUrl}
             onChange={(event) => setApiUrl(event.target.value)}
@@ -46,8 +48,7 @@ function SessionPanel() {
         </label>
         <label className="field">
           <span className="field-label">Admin access token</span>
-          <input
-            className="input"
+          <LythInput
             type="password"
             value={token}
             onChange={(event) => setToken(event.target.value)}
@@ -56,12 +57,12 @@ function SessionPanel() {
         </label>
       </div>
       <div className="panel-actions">
-        <button className="primary-button" type="button" onClick={handleSave}>
+        <LythButton type="button" onClick={handleSave}>
           Save session
-        </button>
-        <button className="ghost-button" type="button" onClick={handleClear}>
+        </LythButton>
+        <LythButton variant="ghost" type="button" onClick={handleClear}>
           Clear saved values
-        </button>
+        </LythButton>
         <span
           className={saved ? 'saved-indicator show' : 'saved-indicator'}
           aria-live="polite"
@@ -72,7 +73,7 @@ function SessionPanel() {
       <p className="panel-hint">
         Values are stored in local storage for this browser only.
       </p>
-    </div>
+    </LythCard>
   );
 }
 

@@ -197,6 +197,9 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
+      - name: Enforce design system gate
+        run: bash scripts/design_system_gate.sh
+
       - name: Test with coverage
         run: flutter test --coverage
 

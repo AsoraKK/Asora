@@ -9,4 +9,5 @@ export 'lyth_list_row.dart';
 export 'lyth_skeleton.dart';
 export 'lyth_slider.dart';
 export 'lyth_snackbar.dart';
+export 'lyth_text_field.dart';
 export 'lyth_text_input.dart';

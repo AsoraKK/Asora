@@ -14,6 +14,9 @@ import 'package:asora/core/config/environment_config.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/security/security_overrides.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Security debug screen (dev-only)
 class SecurityDebugScreen extends ConsumerStatefulWidget {
@@ -37,7 +40,6 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
         body: const Center(
           child: Text(
             'Security Debug is only available in debug builds.',
-            style: TextStyle(fontSize: 16),
             textAlign: TextAlign.center,
           ),
         ),
@@ -51,7 +53,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Security Debug'),
-        backgroundColor: Colors.orange,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: deviceSecurityState.when(
         data: (state) => _buildDebugContent(context, config, state, overrides),
@@ -67,8 +69,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
     DeviceSecurityState state,
     SecurityOverrideConfig overrides,
   ) {
+    final scheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(context.spacing.lg),
       children: [
         // Environment and config section
         _buildSection(
@@ -93,23 +96,23 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
               'Rooted/Jailbroken',
               state.isRootedOrJailbroken.toString(),
               valueColor: state.isRootedOrJailbroken
-                  ? Colors.red
-                  : Colors.green,
+                  ? scheme.error
+                  : scheme.primary,
             ),
             _buildKeyValue(
               'Emulator',
               state.isEmulator.toString(),
-              valueColor: state.isEmulator ? Colors.orange : Colors.green,
+              valueColor: state.isEmulator ? scheme.tertiary : scheme.primary,
             ),
             _buildKeyValue(
               'Debug Build',
               state.isDebugBuild.toString(),
-              valueColor: state.isDebugBuild ? Colors.blue : Colors.grey,
+              valueColor: state.isDebugBuild ? scheme.primary : scheme.outline,
             ),
             _buildKeyValue(
               'Is Compromised',
               state.isCompromised.toString(),
-              valueColor: state.isCompromised ? Colors.red : Colors.green,
+              valueColor: state.isCompromised ? scheme.error : scheme.primary,
             ),
             _buildKeyValue(
               'Last Checked',
@@ -131,8 +134,8 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
               'Strict Mode',
               config.security.tlsPins.strictMode.toString(),
               valueColor: config.security.tlsPins.strictMode
-                  ? Colors.red
-                  : Colors.orange,
+                  ? scheme.error
+                  : scheme.tertiary,
             ),
             _buildKeyValue(
               'Pin Count',
@@ -144,10 +147,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
                   padding: const EdgeInsets.only(left: 16, top: 4),
                   child: SelectableText(
                     '• ${_truncatePin(pin)}',
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
               ),
@@ -182,12 +184,12 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             _buildKeyValue(
               'Relax TLS Pinning',
               overrides.relaxTlsPinning.toString(),
-              valueColor: overrides.relaxTlsPinning ? Colors.red : null,
+              valueColor: overrides.relaxTlsPinning ? scheme.error : null,
             ),
             _buildKeyValue(
               'Relax Device Integrity',
               overrides.relaxDeviceIntegrity.toString(),
-              valueColor: overrides.relaxDeviceIntegrity ? Colors.red : null,
+              valueColor: overrides.relaxDeviceIntegrity ? scheme.error : null,
             ),
             _buildKeyValue('Override Valid', overrides.isValid().toString()),
             if (overrides.activatedAt != null)
@@ -219,13 +221,11 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
                 value: _simulateRooted,
                 onChanged: (value) {
                   setState(() => _simulateRooted = value);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
+                  LythSnackbar.info(
+                    context: context,
+                    message:
                         'Rooted simulation ${value ? 'enabled' : 'disabled'}. '
                         'Restart app to apply.',
-                      ),
-                    ),
                   );
                 },
               ),
@@ -237,39 +237,38 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
                 value: _simulatePinMismatch,
                 onChanged: (value) {
                   setState(() => _simulatePinMismatch = value);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
+                  LythSnackbar.info(
+                    context: context,
+                    message:
                         'Pin mismatch simulation ${value ? 'enabled' : 'disabled'}. '
                         'Restart app to apply.',
-                      ),
-                    ),
                   );
                 },
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
+              SizedBox(height: context.spacing.lg),
+              LythButton.secondary(
+                label: 'Test Integrity Guard',
+                icon: Icons.security,
                 onPressed: () => _testIntegrityGuard(context),
-                icon: const Icon(Icons.security),
-                label: const Text('Test Integrity Guard'),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
+              SizedBox(height: context.spacing.sm),
+              LythButton.secondary(
+                label: 'Test TLS Pinning',
+                icon: Icons.lock,
                 onPressed: () => _testTlsPinning(context),
-                icon: const Icon(Icons.lock),
-                label: const Text('Test TLS Pinning'),
               ),
             ],
           ),
         ],
 
-        const SizedBox(height: 32),
+        SizedBox(height: context.spacing.xxl),
         Text(
           '⚠️ This screen is only accessible in debug builds and should never '
           'appear in production.',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
             fontStyle: FontStyle.italic,
           ),
           textAlign: TextAlign.center,
@@ -287,9 +286,11 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: context.spacing.md),
         ...children,
       ],
     );
@@ -297,7 +298,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
 
   Widget _buildKeyValue(String key, String value, {Color? valueColor}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -305,16 +306,22 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             flex: 2,
             child: Text(
               key,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
             flex: 3,
             child: SelectableText(
               value,
-              style: TextStyle(
-                color: valueColor ?? Colors.black87,
-                fontWeight: valueColor != null ? FontWeight.bold : null,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:
+                    valueColor ??
+                    Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.8),
+                fontWeight: valueColor != null ? FontWeight.w600 : null,
               ),
             ),
           ),
@@ -360,9 +367,11 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
                 child: Text(
                   '${e.key}: ${decision.allow ? "✅ Allow" : "🚫 Block"}'
                   '${decision.warnOnly ? " (warn)" : ""}',
-                  style: TextStyle(
-                    color: decision.allow ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: decision.allow
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               );
@@ -370,9 +379,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          LythButton.tertiary(
+            label: 'Close',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
           ),
         ],
       ),
@@ -394,18 +403,18 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             Text('Enabled: ${tlsConfig.enabled}'),
             Text('Strict Mode: ${tlsConfig.strictMode}'),
             Text('Pin Count: ${tlsConfig.spkiPinsBase64.length}'),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: context.spacing.lg),
+            Text(
               'To test pinning, make an API request. '
               'Check logs for pinning validation results.',
-              style: TextStyle(fontSize: 12),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
         actions: [
-          TextButton(
+          LythButton.tertiary(
+            label: 'Close',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
           ),
         ],
       ),

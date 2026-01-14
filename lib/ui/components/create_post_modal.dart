@@ -3,10 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_chip.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/theme/spacing.dart';
 
 class CreatePostModal extends ConsumerStatefulWidget {
   const CreatePostModal({super.key, this.canMarkNews = true});
@@ -61,9 +65,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     }
 
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Posted to Lythaus')));
+      LythSnackbar.success(context: context, message: 'Posted to Lythaus');
       notifier.reset();
       Navigator.of(context).maybePop();
     }
@@ -74,9 +76,10 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     final state = ref.watch(postCreationProvider);
     final canCreate = ref.watch(canCreatePostProvider);
     final notifier = ref.read(postCreationProvider.notifier);
+    final spacing = context.spacing;
 
     return Padding(
-      padding: const EdgeInsets.all(Spacing.md),
+      padding: EdgeInsets.all(spacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -86,9 +89,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: Spacing.md),
+          SizedBox(height: spacing.lg),
           Wrap(
-            spacing: Spacing.xs,
+            spacing: spacing.xs,
             children: ContentType.values
                 .where((type) => type != ContentType.mixed)
                 .map((type) {
@@ -104,40 +107,37 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 })
                 .toList(),
           ),
-          const SizedBox(height: Spacing.md),
-          TextField(
+          SizedBox(height: spacing.lg),
+          LythTextField(
             controller: controller,
             onChanged: notifier.updateText,
             maxLines: 4,
-            decoration: InputDecoration(
-              hintText: 'Share an update...',
-              border: const OutlineInputBorder(),
-              errorText: state.validationError,
-            ),
+            placeholder: 'Share an update...',
+            errorText: state.validationError,
           ),
-          const SizedBox(height: Spacing.md),
+          SizedBox(height: spacing.lg),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+            child: LythButton.tertiary(
+              label: 'Add media',
+              icon: Icons.attach_file_outlined,
               onPressed: _openMediaPicker,
-              icon: const Icon(Icons.attach_file_outlined),
-              label: const Text('Add media'),
             ),
           ),
-          const SizedBox(height: Spacing.xs),
+          SizedBox(height: spacing.xs),
           if (state.mediaUrl != null)
             Wrap(
-              spacing: Spacing.xs,
-              runSpacing: Spacing.xs,
+              spacing: spacing.xs,
+              runSpacing: spacing.xs,
               children: [
-                InputChip(
-                  label: Text(state.mediaUrl!),
+                LythChip.input(
+                  label: state.mediaUrl!,
                   onDeleted: () => notifier.updateMediaUrl(null),
                 ),
               ],
             ),
           if (widget.canMarkNews) ...[
-            const SizedBox(height: Spacing.sm),
+            SizedBox(height: spacing.sm),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('This is News'),
@@ -153,36 +153,33 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
           ],
           if (state.hasError && state.errorResult != null)
             Padding(
-              padding: const EdgeInsets.only(top: Spacing.sm),
+              padding: EdgeInsets.only(top: spacing.sm),
               child: Text(
                 state.errorResult!.message,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
             ),
-          const SizedBox(height: Spacing.md),
+          SizedBox(height: spacing.lg),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: LythButton.secondary(
+                  label: 'Cancel',
                   onPressed: state.isSubmitting
                       ? null
                       : () => Navigator.of(context).maybePop(),
-                  child: const Text('Cancel'),
                 ),
               ),
-              const SizedBox(width: Spacing.sm),
+              SizedBox(width: spacing.md),
               Expanded(
-                child: FilledButton(
+                child: LythButton.primary(
+                  label: canCreate ? 'Post' : 'Sign in first',
                   onPressed: state.isSubmitting || !canCreate
                       ? null
                       : _handleSubmit,
-                  child: state.isSubmitting
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(canCreate ? 'Post' : 'Sign in first'),
+                  isLoading: state.isSubmitting,
                 ),
               ),
             ],
@@ -197,7 +194,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
+        padding: EdgeInsets.all(context.spacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,19 +205,19 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: Spacing.sm),
+            SizedBox(height: context.spacing.sm),
             Text(blocked.message),
-            const SizedBox(height: Spacing.sm),
+            SizedBox(height: context.spacing.sm),
             Wrap(
-              spacing: Spacing.xs,
+              spacing: context.spacing.xs,
               children: blocked.categories
-                  .map((c) => Chip(label: Text(c)))
+                  .map((c) => LythChip(label: c))
                   .toList(),
             ),
-            const SizedBox(height: Spacing.md),
-            FilledButton(
+            SizedBox(height: context.spacing.lg),
+            LythButton.primary(
+              label: 'Close',
               onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Close'),
             ),
           ],
         ),
@@ -233,7 +230,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
+        padding: EdgeInsets.all(context.spacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,15 +241,15 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: Spacing.sm),
+            SizedBox(height: context.spacing.sm),
             Text(limit.message),
-            const SizedBox(height: Spacing.sm),
+            SizedBox(height: context.spacing.sm),
             Text('Tier: ${limit.tier} • Limit: ${limit.limit}'),
             Text('Retry after: ${limit.retryAfter.inMinutes} minutes'),
-            const SizedBox(height: Spacing.md),
-            FilledButton(
+            SizedBox(height: context.spacing.lg),
+            LythButton.primary(
+              label: 'Got it',
               onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Got it'),
             ),
           ],
         ),
@@ -265,7 +262,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
+        padding: EdgeInsets.all(context.spacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,24 +273,22 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: Spacing.sm),
-            TextField(
+            SizedBox(height: context.spacing.sm),
+            LythTextField(
               controller: mediaController,
-              decoration: const InputDecoration(
-                labelText: 'Media URL',
-                helperText:
-                    'Paste an image/video URL. Native picker hooks in later.',
-              ),
+              label: 'Media URL',
+              helperText:
+                  'Paste an image/video URL. Native picker hooks in later.',
             ),
-            const SizedBox(height: Spacing.md),
-            FilledButton(
+            SizedBox(height: context.spacing.lg),
+            LythButton.primary(
+              label: 'Attach',
               onPressed: () {
                 ref
                     .read(postCreationProvider.notifier)
                     .updateMediaUrl(mediaController.text.trim());
                 Navigator.of(context).maybePop();
               },
-              child: const Text('Attach'),
             ),
           ],
         ),

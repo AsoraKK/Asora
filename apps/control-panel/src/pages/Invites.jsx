@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
+import LythInput from '../components/LythInput.jsx';
 
 function parseOptionalInt(value) {
   if (!value) {
@@ -154,15 +157,14 @@ function Invites() {
         </p>
       </div>
       <div className="page-grid">
-        <div className="panel">
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Create invite</h2>
           </div>
           <form className="form-grid" onSubmit={handleCreate}>
             <label className="field">
               <span className="field-label">Email restriction (optional)</span>
-              <input
-                className="input"
+              <LythInput
                 type="email"
                 value={createForm.email}
                 onChange={(event) =>
@@ -173,8 +175,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Max uses</span>
-              <input
-                className="input"
+              <LythInput
                 type="number"
                 min="1"
                 value={createForm.maxUses}
@@ -186,8 +187,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Expiry (days)</span>
-              <input
-                className="input"
+              <LythInput
                 type="number"
                 min="1"
                 value={createForm.expiresInDays}
@@ -199,8 +199,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Label</span>
-              <input
-                className="input"
+              <LythInput
                 type="text"
                 value={createForm.label}
                 onChange={(event) =>
@@ -210,9 +209,9 @@ function Invites() {
               />
             </label>
             <div className="panel-actions">
-              <button className="primary-button" type="submit">
+              <LythButton type="submit">
                 Create invite
-              </button>
+              </LythButton>
             </div>
           </form>
           <div className="divider" />
@@ -222,8 +221,7 @@ function Invites() {
           <form className="form-grid" onSubmit={handleBatch}>
             <label className="field">
               <span className="field-label">Count</span>
-              <input
-                className="input"
+              <LythInput
                 type="number"
                 min="1"
                 value={batchForm.count}
@@ -236,8 +234,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Max uses</span>
-              <input
-                className="input"
+              <LythInput
                 type="number"
                 min="1"
                 value={batchForm.maxUses}
@@ -249,8 +246,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Expiry (days)</span>
-              <input
-                className="input"
+              <LythInput
                 type="number"
                 min="1"
                 value={batchForm.expiresInDays}
@@ -262,8 +258,7 @@ function Invites() {
             </label>
             <label className="field">
               <span className="field-label">Label</span>
-              <input
-                className="input"
+              <LythInput
                 type="text"
                 value={batchForm.label}
                 onChange={(event) =>
@@ -273,25 +268,25 @@ function Invites() {
               />
             </label>
             <div className="panel-actions">
-              <button className="secondary-button" type="submit">
+              <LythButton variant="secondary" type="submit">
                 Create batch
-              </button>
+              </LythButton>
             </div>
           </form>
           {formMessage ? <div className="notice error">{formMessage}</div> : null}
-        </div>
-        <div className="panel">
+        </LythCard>
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Invites</h2>
             <div className="panel-actions">
-              <button
-                className="ghost-button"
+              <LythButton
+                variant="ghost"
                 type="button"
                 onClick={() => loadInvites(true)}
                 disabled={loading}
               >
                 Refresh
-              </button>
+              </LythButton>
             </div>
           </div>
           {error ? <div className="notice error">{error}</div> : null}
@@ -320,13 +315,13 @@ function Invites() {
                 </span>
                 <span>{formatDateTime(invite.lastUsedAt)}</span>
                 <span>
-                  <button
-                    className="ghost-button"
+                  <LythButton
+                    variant="ghost"
                     type="button"
                     onClick={() => setSelected(invite)}
                   >
                     Select
-                  </button>
+                  </LythButton>
                 </span>
               </div>
             ))}
@@ -336,14 +331,14 @@ function Invites() {
           ) : null}
           {cursor ? (
             <div className="panel-actions">
-              <button
-                className="secondary-button"
+              <LythButton
+                variant="secondary"
                 type="button"
                 onClick={() => loadInvites(false)}
                 disabled={loading}
               >
                 Load more
-              </button>
+              </LythButton>
             </div>
           ) : null}
           <div className="divider" />
@@ -370,8 +365,7 @@ function Invites() {
               <div className="form-grid">
                 <label className="field">
                   <span className="field-label">Reason code</span>
-                  <input
-                    className="input"
+                  <LythInput
                     type="text"
                     value={reasonCode}
                     onChange={(event) => setReasonCode(event.target.value)}
@@ -380,8 +374,8 @@ function Invites() {
                 </label>
                 <label className="field">
                   <span className="field-label">Internal note</span>
-                  <textarea
-                    className="textarea"
+                  <LythInput
+                    as="textarea"
                     rows={3}
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
@@ -390,18 +384,18 @@ function Invites() {
                 </label>
               </div>
               <div className="panel-actions">
-                <button
-                  className="danger-button"
+                <LythButton
+                  variant="danger"
                   type="button"
                   onClick={handleRevoke}
                   disabled={actionBusy || selected.status !== 'ACTIVE'}
                 >
                   Revoke invite
-                </button>
+                </LythButton>
               </div>
             </>
           )}
-        </div>
+        </LythCard>
       </div>
     </section>
   );

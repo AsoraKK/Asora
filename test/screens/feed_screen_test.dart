@@ -75,7 +75,7 @@ void main() {
 
       // Verify drawer is open and has expected items
       expect(find.text('Sign In'), findsOneWidget);
-      expect(find.text('About Asora'), findsOneWidget);
+      expect(find.text('About Lythaus'), findsOneWidget);
     });
 
     testWidgets('shows about dialog when about is tapped', (tester) async {
@@ -95,7 +95,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap about
-      await tester.tap(find.text('About Asora'));
+      await tester.tap(find.text('About Lythaus'));
       await tester.pumpAndSettle();
 
       // Verify about dialog appears (check for dialog content)

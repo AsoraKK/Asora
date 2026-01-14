@@ -125,7 +125,7 @@ class TlsPinningValidator {
 
   /// User-friendly error message for pinning failure
   static String getUserFacingError() {
-    return 'Secure connection to Asora failed. '
+    return 'Secure connection to Lythaus failed. '
         'Please try again or contact support if the issue persists.';
   }
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
 
 const STORAGE_KEY = 'controlPanelModeration';
 const defaultValues = {
@@ -54,7 +56,7 @@ function Moderation() {
           Tune placeholder thresholds while the backend wiring is in progress.
         </p>
       </div>
-      <div className="panel">
+      <LythCard variant="panel">
         {sliderConfig.map((item) => {
           const sliderId = `slider-${item.key}`;
           return (
@@ -77,9 +79,9 @@ function Moderation() {
           );
         })}
         <div className="panel-actions">
-          <button className="primary-button" type="button" onClick={handleSave}>
+          <LythButton type="button" onClick={handleSave}>
             Save thresholds
-          </button>
+          </LythButton>
           <span
             className={saved ? 'saved-indicator show' : 'saved-indicator'}
             aria-live="polite"
@@ -87,7 +89,7 @@ function Moderation() {
             Saved
           </span>
         </div>
-      </div>
+      </LythCard>
     </section>
   );
 }

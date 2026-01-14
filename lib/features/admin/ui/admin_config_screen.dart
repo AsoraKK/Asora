@@ -12,6 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_slider.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/admin/domain/admin_config_models.dart';
 import 'package:asora/features/admin/state/admin_config_controller.dart';
 
@@ -229,66 +233,63 @@ class AdminConfigScreen extends ConsumerWidget {
   ) {
     final error = state.error!;
 
-    return Card(
-      color: Theme.of(context).colorScheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  error.isVersionConflict ? Icons.sync_problem : Icons.error,
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    error.isVersionConflict
-                        ? 'Config changed on server'
-                        : 'Error saving',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error.message,
-              style: TextStyle(
+    return LythCard(
+      backgroundColor: Theme.of(context).colorScheme.errorContainer,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                error.isVersionConflict ? Icons.sync_problem : Icons.error,
                 color: Theme.of(context).colorScheme.onErrorContainer,
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (error.isVersionConflict)
-                  FilledButton.tonal(
-                    onPressed: () =>
-                        ref.read(adminConfigEditorProvider.notifier).reload(),
-                    child: const Text('Reload'),
-                  )
-                else if (error.isRetryable)
-                  FilledButton.tonal(
-                    onPressed: () =>
-                        ref.read(adminConfigEditorProvider.notifier).save(),
-                    child: const Text('Retry'),
+              SizedBox(width: context.spacing.sm),
+              Expanded(
+                child: Text(
+                  error.isVersionConflict
+                      ? 'Config changed on server'
+                      : 'Error saving',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w700,
                   ),
-              ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.spacing.sm),
+          Text(
+            error.message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onErrorContainer,
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: context.spacing.md),
+          Row(
+            children: [
+              if (error.isVersionConflict)
+                LythButton.secondary(
+                  label: 'Reload',
+                  onPressed: () =>
+                      ref.read(adminConfigEditorProvider.notifier).reload(),
+                )
+              else if (error.isRetryable)
+                LythButton.secondary(
+                  label: 'Retry',
+                  onPressed: () =>
+                      ref.read(adminConfigEditorProvider.notifier).save(),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: context.spacing.sm),
       child: Text(
         title,
         style: Theme.of(
@@ -419,32 +420,14 @@ class AdminConfigScreen extends ConsumerWidget {
     required ValueChanged<double> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label),
-              Text(
-                value.toStringAsFixed(2),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: divisions,
-            label: value.toStringAsFixed(2),
-            onChanged: onChanged,
-          ),
-        ],
+      padding: EdgeInsets.symmetric(vertical: context.spacing.sm),
+      child: LythSlider(
+        label: label,
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        onChanged: onChanged,
       ),
     );
   }
@@ -461,7 +444,10 @@ class AdminConfigScreen extends ConsumerWidget {
       title: Text(
         label,
         style: isDestructive
-            ? TextStyle(color: Theme.of(context).colorScheme.error)
+            ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w600,
+              )
             : null,
       ),
       subtitle: Text(subtitle),
@@ -479,7 +465,7 @@ class AdminConfigScreen extends ConsumerWidget {
 
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(context.spacing.lg),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           border: Border(
@@ -491,26 +477,18 @@ class AdminConfigScreen extends ConsumerWidget {
         child: Row(
           children: [
             // Discard button
-            OutlinedButton(
+            LythButton.secondary(
+              label: 'Discard',
               onPressed: state.canDiscard ? () => notifier.discard() : null,
-              child: const Text('Discard'),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: context.spacing.lg),
 
             // Save button
             Expanded(
-              child: FilledButton(
+              child: LythButton.primary(
+                label: 'Save',
                 onPressed: state.canSave ? () => notifier.save() : null,
-                child: state.status == AdminConfigStatus.saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Save'),
+                isLoading: state.status == AdminConfigStatus.saving,
               ),
             ),
           ],

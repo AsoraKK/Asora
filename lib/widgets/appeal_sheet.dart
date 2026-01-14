@@ -2,6 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/services/appeal_provider.dart';
 
 class AppealSheet extends ConsumerStatefulWidget {
@@ -25,27 +29,28 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+        left: context.spacing.lg,
+        right: context.spacing.lg,
+        top: context.spacing.lg,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Appeal decision',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
-          TextField(
+          SizedBox(height: context.spacing.sm),
+          LythTextField(
             controller: _ctrl,
             maxLines: 5,
-            decoration: const InputDecoration(
-              hintText: 'Explain why this was a mistake',
-            ),
+            placeholder: 'Explain why this was a mistake',
           ),
-          const SizedBox(height: 12),
-          FilledButton(
+          SizedBox(height: context.spacing.md),
+          LythButton.primary(
+            label: _loading ? 'Submitting...' : 'Submit',
             onPressed: _loading
                 ? null
                 : () async {
@@ -56,17 +61,21 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
                     setState(() => _loading = false);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          ok ? 'Appeal submitted' : 'Failed to submit appeal',
-                        ),
-                      ),
-                    );
+                    if (ok) {
+                      LythSnackbar.success(
+                        context: context,
+                        message: 'Appeal submitted',
+                      );
+                    } else {
+                      LythSnackbar.error(
+                        context: context,
+                        message: 'Failed to submit appeal',
+                      );
+                    }
                   },
-            child: Text(_loading ? 'Submitting...' : 'Submit'),
+            isLoading: _loading,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: context.spacing.md),
         ],
       ),
     );

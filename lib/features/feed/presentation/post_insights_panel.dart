@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/feed/application/post_insights_providers.dart';
 import 'package:asora/features/feed/domain/post_insights.dart';
 
@@ -214,28 +215,37 @@ class _RiskBandChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, bgColor) = _getRiskColors();
+    final scheme = Theme.of(context).colorScheme;
+    final (color, bgColor) = _getRiskColors(scheme);
 
-    return Chip(
-      label: Text(
-        riskBand.displayLabel,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacing.sm,
+        vertical: context.spacing.xs,
       ),
-      backgroundColor: bgColor,
-      side: BorderSide(color: color.withValues(alpha: 0.5)),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(context.radius.pill),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        riskBand.displayLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
-  (Color, Color) _getRiskColors() {
+  (Color, Color) _getRiskColors(ColorScheme scheme) {
     switch (riskBand) {
       case RiskBand.low:
-        return (Colors.green[700]!, Colors.green[50]!);
+        return (scheme.primary, scheme.primary.withValues(alpha: 0.12));
       case RiskBand.medium:
-        return (Colors.orange[700]!, Colors.orange[50]!);
+        return (scheme.tertiary, scheme.tertiary.withValues(alpha: 0.12));
       case RiskBand.high:
-        return (Colors.red[700]!, Colors.red[50]!);
+        return (scheme.error, scheme.error.withValues(alpha: 0.12));
     }
   }
 }

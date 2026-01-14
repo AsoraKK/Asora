@@ -9,8 +9,8 @@ import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/components/asora_top_bar.dart';
 import 'package:asora/ui/components/feed_carousel_indicator.dart';
 import 'package:asora/ui/components/feed_control_panel.dart';
-import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/ui/utils/motion.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/tokens/motion.dart';
 import 'package:asora/ui/screens/home/custom_feed.dart';
 import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
 import 'package:asora/ui/screens/home/discover_feed.dart';
@@ -29,6 +29,7 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 }
 
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
+  static const double _horizontalParallax = 12;
   late final PageController _pageController;
 
   @override
@@ -43,8 +44,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               next) {
         _pageController.animateToPage(
           next,
-          duration: baseMotion,
-          curve: emphasizedDecelerate,
+          duration: LythMotion.standard,
+          curve: LythMotion.emphasisCurve,
         );
       }
     });
@@ -56,6 +57,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     final activeIndex = ref.watch(currentFeedIndexProvider);
     final activeFeed = feeds[activeIndex];
     final swipeEnabled = ref.watch(horizontalSwipeEnabledProvider);
+    final spacing = context.spacing;
 
     return Scaffold(
       body: SafeArea(
@@ -67,13 +69,14 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               onTitleTap: _openFeedControl,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
+              useWordmark: true,
             ),
-            const SizedBox(height: Spacing.xs),
+            SizedBox(height: spacing.xs),
             FeedCarouselIndicator(
               count: feeds.length,
               activeIndex: activeIndex,
             ),
-            const SizedBox(height: Spacing.xs),
+            SizedBox(height: spacing.xs),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -97,7 +100,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                         offset = (currentPage - index).toDouble();
                       }
                       return Transform.translate(
-                        offset: Offset(offset * horizontalParallax, 0),
+                        offset: Offset(offset * _horizontalParallax, 0),
                         child: child,
                       );
                     },
@@ -124,8 +127,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
             ref.read(currentFeedIndexProvider.notifier).state = index;
             _pageController.animateToPage(
               index,
-              duration: baseMotion,
-              curve: emphasizedDecelerate,
+              duration: LythMotion.standard,
+              curve: LythMotion.emphasisCurve,
             );
           }
           Navigator.of(context).maybePop();

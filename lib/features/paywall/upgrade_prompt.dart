@@ -2,6 +2,11 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+
 class UpgradePrompt extends StatelessWidget {
   final String currentTier;
   final VoidCallback? onUpgrade;
@@ -9,50 +14,48 @@ class UpgradePrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Colors.amber.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Upgrade to unlock more',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your current tier "$currentTier" limits post length and media.',
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    if (onUpgrade != null) {
-                      onUpgrade!();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Upgrade flow coming soon. Check back shortly!',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Upgrade'),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () => Navigator.maybePop(context),
-                  child: const Text('Not now'),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return LythCard(
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: 0.12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Upgrade to unlock more',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          SizedBox(height: context.spacing.sm),
+          Text(
+            'Your current tier "$currentTier" limits post length and media.',
+          ),
+          SizedBox(height: context.spacing.sm),
+          Row(
+            children: [
+              LythButton.primary(
+                label: 'Upgrade',
+                onPressed: () {
+                  if (onUpgrade != null) {
+                    onUpgrade!();
+                  } else {
+                    LythSnackbar.info(
+                      context: context,
+                      message: 'Upgrade flow coming soon. Check back shortly!',
+                    );
+                  }
+                },
+              ),
+              SizedBox(width: context.spacing.sm),
+              LythButton.tertiary(
+                label: 'Not now',
+                onPressed: () => Navigator.maybePop(context),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/feed/presentation/post_insights_panel.dart';
 import 'package:asora/widgets/post_actions.dart';
@@ -37,184 +39,200 @@ class _PostCardState extends ConsumerState<PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Moderation info banner (for own posts)
-          if (widget.isOwnPost && !_bannerDismissed)
-            ModerationInfoBanner(
-              status: widget.post.moderationStatus,
-              message: _getModerationMessage(),
-              onAppeal: _canAppeal() ? _showAppealDialog : null,
-              onDismiss: () {
-                setState(() {
-                  _bannerDismissed = true;
-                });
-              },
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.lg,
+        vertical: spacing.sm,
+      ),
+      child: LythCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Moderation info banner (for own posts)
+            if (widget.isOwnPost && !_bannerDismissed)
+              ModerationInfoBanner(
+                status: widget.post.moderationStatus,
+                message: _getModerationMessage(),
+                onAppeal: _canAppeal() ? _showAppealDialog : null,
+                onDismiss: () {
+                  setState(() {
+                    _bannerDismissed = true;
+                  });
+                },
+              ),
+
+            // Post header
+            Padding(
+              padding: EdgeInsets.all(spacing.lg),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: widget.post.author.avatarUrl != null
+                        ? NetworkImage(widget.post.author.avatarUrl!)
+                        : null,
+                    child: widget.post.author.avatarUrl == null
+                        ? Text(widget.post.author.displayName[0].toUpperCase())
+                        : null,
+                  ),
+                  SizedBox(width: spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              widget.post.author.displayName,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(width: spacing.sm),
+                            // Author reputation badge
+                            ReputationBadge(
+                              score: widget.post.author.reputationScore,
+                              size: ReputationBadgeSize.small,
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _formatTimeAgo(widget.post.createdAt),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Moderation badges
+                  ModerationBadges(
+                    status: widget.post.moderationStatus,
+                    aiScore: widget.post.aiScore,
+                    showAiScore: widget.showAiScores,
+                    appealStatus: widget.post.appealStatus,
+                    onAppeal: widget.isOwnPost && _canAppeal()
+                        ? _showAppealDialog
+                        : null,
+                    isOwnContent: widget.isOwnPost,
+                  ),
+                ],
+              ),
             ),
 
-          // Post header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: widget.post.author.avatarUrl != null
-                      ? NetworkImage(widget.post.author.avatarUrl!)
-                      : null,
-                  child: widget.post.author.avatarUrl == null
-                      ? Text(widget.post.author.displayName[0].toUpperCase())
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            widget.post.author.displayName,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          // Author reputation badge
-                          ReputationBadge(
-                            score: widget.post.author.reputationScore,
-                            size: ReputationBadgeSize.small,
-                          ),
-                        ],
-                      ),
+            // Post content
+            if (widget.post.moderationStatus != ModerationStatus.hidden ||
+                widget.isOwnPost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.post.title != null) ...[
                       Text(
-                        _formatTimeAgo(widget.post.createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                        widget.post.title!,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
+                      SizedBox(height: spacing.sm),
                     ],
+                    Text(
+                      widget.post.content,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+
+                    // Media content (if any)
+                    if (widget.post.mediaUrls.isNotEmpty) ...[
+                      SizedBox(height: spacing.md),
+                      _buildMediaContent(),
+                    ],
+                  ],
+                ),
+              )
+            else
+              // Hidden content placeholder
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(spacing.xxl),
+                margin: EdgeInsets.symmetric(horizontal: spacing.lg),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(context.radius.md),
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
-
-                // Moderation badges
-                ModerationBadges(
-                  status: widget.post.moderationStatus,
-                  aiScore: widget.post.aiScore,
-                  showAiScore: widget.showAiScores,
-                  appealStatus: widget.post.appealStatus,
-                  onAppeal: widget.isOwnPost && _canAppeal()
-                      ? _showAppealDialog
-                      : null,
-                  isOwnContent: widget.isOwnPost,
-                ),
-              ],
-            ),
-          ),
-
-          // Post content
-          if (widget.post.moderationStatus != ModerationStatus.hidden ||
-              widget.isOwnPost)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.post.title != null) ...[
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.visibility_off,
+                      size: 48,
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    SizedBox(height: spacing.sm),
                     Text(
-                      widget.post.title!,
+                      'Content Hidden',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                  Text(
-                    widget.post.content,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-
-                  // Media content (if any)
-                  if (widget.post.mediaUrls.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildMediaContent(),
-                  ],
-                ],
-              ),
-            )
-          else
-            // Hidden content placeholder
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(32),
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                children: [
-                  Icon(Icons.visibility_off, size: 48, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Content Hidden',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.bold,
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      'This content has been hidden due to community reports',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.55),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'This content has been hidden due to community reports',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-          const SizedBox(height: 16),
+            SizedBox(height: spacing.lg),
 
-          // Post actions
-          if (widget.post.moderationStatus != ModerationStatus.hidden ||
-              widget.isOwnPost)
-            PostActions(
-              contentId: widget.post.id,
-              contentType: 'post',
-              isLiked: widget.post.isLiked,
-              likeCount: widget.post.likeCount,
-              commentCount: widget.post.commentCount,
-              onLike: () => _handleLike(),
-              onComment: () => _handleComment(),
-              onShare: () => _handleShare(),
-            ),
+            // Post actions
+            if (widget.post.moderationStatus != ModerationStatus.hidden ||
+                widget.isOwnPost)
+              PostActions(
+                contentId: widget.post.id,
+                contentType: 'post',
+                isLiked: widget.post.isLiked,
+                likeCount: widget.post.likeCount,
+                commentCount: widget.post.commentCount,
+                onLike: () => _handleLike(),
+                onComment: () => _handleComment(),
+                onShare: () => _handleShare(),
+              ),
 
-          // Insights panel (only visible to post author or admin)
-          // The panel itself handles authorization - returns empty if not allowed
-          if (widget.isOwnPost) PostInsightsPanel(postId: widget.post.id),
+            // Insights panel (only visible to post author or admin)
+            // The panel itself handles authorization - returns empty if not allowed
+            if (widget.isOwnPost) PostInsightsPanel(postId: widget.post.id),
 
-          const SizedBox(height: 8),
-        ],
+            SizedBox(height: spacing.sm),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMediaContent() {
     if (widget.post.mediaUrls.isEmpty) return const SizedBox.shrink();
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
 
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(context.radius.md),
+        color: scheme.surfaceContainerHigh,
       ),
       child: widget.post.mediaUrls.length == 1
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.radius.md),
               child: Image.network(
                 widget.post.mediaUrls.first,
                 width: double.infinity,
@@ -223,8 +241,12 @@ class _PostCardState extends ConsumerState<PostCard> {
                 errorBuilder: (context, error, stackTrace) => Container(
                   width: double.infinity,
                   height: 200,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 48),
+                  color: scheme.surfaceContainerHigh,
+                  child: Icon(
+                    Icons.broken_image,
+                    size: 48,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
             )
@@ -234,11 +256,13 @@ class _PostCardState extends ConsumerState<PostCard> {
               itemBuilder: (context, index) => Container(
                 width: 150,
                 margin: EdgeInsets.only(
-                  left: index == 0 ? 0 : 8,
-                  right: index == widget.post.mediaUrls.length - 1 ? 0 : 8,
+                  left: index == 0 ? 0 : spacing.sm,
+                  right: index == widget.post.mediaUrls.length - 1
+                      ? 0
+                      : spacing.sm,
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(context.radius.md),
                   child: Image.network(
                     widget.post.mediaUrls[index],
                     width: 150,
@@ -247,8 +271,11 @@ class _PostCardState extends ConsumerState<PostCard> {
                     errorBuilder: (context, error, stackTrace) => Container(
                       width: 150,
                       height: 200,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.broken_image),
+                      color: scheme.surfaceContainerHigh,
+                      child: Icon(
+                        Icons.broken_image,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                 ),

@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/ui/utils/motion.dart';
+import 'package:asora/design_system/components/lyth_icon_button.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/widgets/lyth_wordmark.dart';
 
 class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AsoraTopBar({
@@ -15,6 +16,7 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onSearchTap,
     this.onTrendingTap,
     this.showDivider = false,
+    this.useWordmark = false,
   });
 
   final String title;
@@ -23,13 +25,15 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSearchTap;
   final VoidCallback? onTrendingTap;
   final bool showDivider;
+  final bool useWordmark;
 
   @override
-  Size get preferredSize => const Size.fromHeight(48);
+  Size get preferredSize => const Size.fromHeight(56);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     return Container(
       height: preferredSize.height,
       decoration: BoxDecoration(
@@ -38,17 +42,17 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
             ? Border(bottom: BorderSide(color: theme.dividerColor, width: 1))
             : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+      padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Row(
         children: [
           InkWell(
             onTap: onLogoTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(context.radius.md),
             child: Container(
-              padding: const EdgeInsets.all(Spacing.xs),
+              padding: EdgeInsets.all(spacing.xs),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(context.radius.md),
               ),
               child: SvgPicture.asset(
                 'assets/brand/asora_mark.svg',
@@ -66,41 +70,28 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
-          const SizedBox(width: Spacing.sm),
+          SizedBox(width: spacing.sm),
           Expanded(
             child: GestureDetector(
               onTap: onTitleTap,
               child: Center(
-                child: AnimatedSwitcher(
-                  duration: baseMotion,
-                  child: Text(
-                    title,
-                    key: ValueKey(title),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                child: useWordmark
+                    ? const LythWordmark()
+                    : Text(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
           ),
           Row(
             children: [
-              IconButton(
-                iconSize: 20,
-                onPressed: onSearchTap,
-                icon: Icon(
-                  Icons.search,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.82),
-                ),
-              ),
-              IconButton(
-                iconSize: 20,
+              LythIconButton(icon: Icons.search, onPressed: onSearchTap),
+              LythIconButton(
+                icon: Icons.trending_up_outlined,
                 onPressed: onTrendingTap,
-                icon: Icon(
-                  Icons.trending_up_outlined,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.82),
-                ),
               ),
             ],
           ),

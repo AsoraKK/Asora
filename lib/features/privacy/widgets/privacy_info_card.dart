@@ -9,7 +9,7 @@ class PrivacyInfoCard extends StatelessWidget {
     (
       icon: Icons.policy_outlined,
       title: 'Privacy policy',
-      body: 'Learn how we collect and use data across Asora surfaces.',
+      body: 'Learn how we collect and use data across Lythaus surfaces.',
     ),
     (
       icon: Icons.verified_user_outlined,

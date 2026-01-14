@@ -8,6 +8,9 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/tokens/motion.dart';
+
 /// Displays the Lythaus wordmark with a pulsing glow effect.
 ///
 /// Features:
@@ -62,7 +65,7 @@ class _LythWordmarkState extends State<LythWordmark>
   }
 
   void _initializeAnimation() {
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final disableAnimations = context.disableAnimations;
 
     if (disableAnimations) {
       // No animation when reduced motion is enabled
@@ -74,13 +77,16 @@ class _LythWordmarkState extends State<LythWordmark>
     } else {
       // Pulse animation: 240 second interval, 8 second duration per pulse
       _glowController = AnimationController(
-        duration: const Duration(seconds: 8),
+        duration: LythMotion.wordmarkPulseDuration,
         vsync: this,
       );
 
       // Create a repeating animation with proper intervals
       _glowAnimation = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+        CurvedAnimation(
+          parent: _glowController,
+          curve: LythMotion.standardCurve,
+        ),
       );
 
       // Schedule repeating pulses with 240-second interval
@@ -89,8 +95,8 @@ class _LythWordmarkState extends State<LythWordmark>
   }
 
   void _scheduleNextPulse() {
-    Future.delayed(const Duration(seconds: 240), () {
-      if (mounted && !MediaQuery.disableAnimationsOf(context)) {
+    Future.delayed(LythMotion.wordmarkPulseInterval, () {
+      if (mounted && !context.disableAnimations) {
         // Run the 8-second glow animation
         _glowController.forward(from: 0).then((_) {
           if (mounted) {
@@ -105,7 +111,7 @@ class _LythWordmarkState extends State<LythWordmark>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Check if reduce-motion setting changed
-    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final disableAnimations = context.disableAnimations;
     if (disableAnimations && _glowController.isAnimating) {
       _glowController.stop();
     }
@@ -119,48 +125,49 @@ class _LythWordmarkState extends State<LythWordmark>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        widget.color ??
-        (isDark ? const Color(0xFFE6E2D9) : const Color(0xFF1A1A1A));
-    const glowColor = Color(0xFFEDE3C8); // Warm ivory
+    final colorScheme = context.colorScheme;
+    final textColor = (widget.color ?? colorScheme.onSurface).withValues(
+      alpha: 0.9,
+    );
+    final glowColor = colorScheme.primary;
+    final textStyle = TextStyle(
+      fontSize: widget.size.height * 0.6,
+      fontWeight: FontWeight.w700,
+      color: textColor,
+      letterSpacing: 0.5,
+      height: 1.2,
+    );
 
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
+        final glowOpacity = _glowAnimation.value.clamp(0.0, 1.0).toDouble();
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Glow background layer (only visible during pulse)
-            if (_glowAnimation.value > 0)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: glowColor.withValues(
-                          alpha: 0.3 * _glowAnimation.value,
-                        ),
-                        blurRadius: 24 * _glowAnimation.value,
-                        spreadRadius: 8 * _glowAnimation.value,
-                      ),
-                    ],
-                  ),
+            // Glow text layer (soft bloom)
+            Opacity(
+              opacity: glowOpacity,
+              child: Text(
+                'Lyt haus',
+                style: textStyle.copyWith(
+                  color: glowColor.withValues(alpha: 0.8),
+                  shadows: [
+                    Shadow(
+                      color: glowColor.withValues(alpha: 0.7),
+                      blurRadius: 24,
+                    ),
+                    Shadow(
+                      color: glowColor.withValues(alpha: 0.4),
+                      blurRadius: 48,
+                    ),
+                  ],
                 ),
+                textAlign: TextAlign.center,
               ),
-            // Text layer
-            Text(
-              'Lyt haus',
-              style: TextStyle(
-                fontSize: widget.size.height * 0.6,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-                letterSpacing: 0.5,
-                height: 1.2,
-              ),
-              textAlign: TextAlign.center,
             ),
+            // Foreground text layer
+            Text('Lyt haus', style: textStyle, textAlign: TextAlign.center),
           ],
         );
       },
@@ -181,9 +188,8 @@ class LythWordmarkStatic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor =
-        color ?? (isDark ? const Color(0xFFE6E2D9) : const Color(0xFF1A1A1A));
+    final textColor = (color ?? Theme.of(context).colorScheme.onSurface)
+        .withValues(alpha: 0.9);
 
     return Text(
       'Lyt haus',

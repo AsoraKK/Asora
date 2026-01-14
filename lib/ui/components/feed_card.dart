@@ -2,8 +2,10 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_chip.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/theme/spacing.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 
 class FeedCard extends StatelessWidget {
@@ -21,63 +23,58 @@ class FeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
     final headline = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
     );
     final body = theme.textTheme.bodyMedium?.copyWith(height: 1.3);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: Spacing.md,
-        vertical: Spacing.xs,
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.lg,
+        vertical: spacing.xs,
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+      child: LythCard.clickable(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (item.isPinned)
-                    Padding(
-                      padding: const EdgeInsets.only(right: Spacing.xs),
-                      child: Icon(
-                        Icons.push_pin_outlined,
-                        size: 16,
-                        color: theme.colorScheme.secondary,
-                      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (item.isPinned)
+                  Padding(
+                    padding: EdgeInsets.only(right: spacing.xs),
+                    child: Icon(
+                      Icons.push_pin_outlined,
+                      size: 16,
+                      color: theme.colorScheme.secondary,
                     ),
-                  Expanded(child: Text(item.title, style: headline)),
-                  if (showSource)
-                    Text(item.author, style: theme.textTheme.labelMedium),
-                ],
-              ),
-              const SizedBox(height: Spacing.xs),
-              if (item.imageUrl != null || item.videoThumbnailUrl != null)
-                _MediaPreview(
-                  imageUrl: item.imageUrl ?? item.videoThumbnailUrl!,
-                  isVideo: item.videoThumbnailUrl != null,
-                ),
-              if (item.body.isNotEmpty) ...[
-                const SizedBox(height: Spacing.xs),
-                Text(item.body, style: body),
-              ],
-              const SizedBox(height: Spacing.xs),
-              Wrap(
-                spacing: Spacing.xs,
-                runSpacing: Spacing.xxs,
-                children: [
-                  TierBadge(label: _contentLabel(item.contentType)),
-                  ...item.tags.map(
-                    (tag) => Chip(label: Text(tag), padding: EdgeInsets.zero),
                   ),
-                ],
+                Expanded(child: Text(item.title, style: headline)),
+                if (showSource)
+                  Text(item.author, style: theme.textTheme.labelMedium),
+              ],
+            ),
+            SizedBox(height: spacing.xs),
+            if (item.imageUrl != null || item.videoThumbnailUrl != null)
+              _MediaPreview(
+                imageUrl: item.imageUrl ?? item.videoThumbnailUrl!,
+                isVideo: item.videoThumbnailUrl != null,
               ),
+            if (item.body.isNotEmpty) ...[
+              SizedBox(height: spacing.xs),
+              Text(item.body, style: body),
             ],
-          ),
+            SizedBox(height: spacing.xs),
+            Wrap(
+              spacing: spacing.xs,
+              runSpacing: spacing.xs,
+              children: [
+                TierBadge(label: _contentLabel(item.contentType)),
+                ...item.tags.map((tag) => LythChip(label: tag)),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -106,8 +103,10 @@ class _MediaPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(context.radius.lg),
       child: Stack(
         children: [
           AspectRatio(
@@ -120,33 +119,36 @@ class _MediaPreview extends StatelessWidget {
                   alpha: 0.4,
                 ),
                 alignment: Alignment.center,
-                child: const Icon(Icons.broken_image_outlined, size: 32),
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  size: 32,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ),
           ),
           if (isVideo)
             Positioned(
-              right: Spacing.sm,
-              bottom: Spacing.sm,
+              right: spacing.sm,
+              bottom: spacing.sm,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.sm,
-                  vertical: Spacing.xxxs,
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.sm,
+                  vertical: spacing.xs / 2,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(12),
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(context.radius.pill),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.play_arrow, size: 16, color: Colors.white),
-                    SizedBox(width: Spacing.xxs),
+                    Icon(Icons.play_arrow, size: 16, color: scheme.surface),
+                    SizedBox(width: spacing.xs),
                     Text(
                       'Preview',
-                      style: TextStyle(
-                        color: Colors.white,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: scheme.surface,
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
                       ),
                     ),
                   ],

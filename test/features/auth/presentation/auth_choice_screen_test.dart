@@ -21,7 +21,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome to Asora'), findsOneWidget);
+    expect(find.text('Welcome to Lythaus'), findsOneWidget);
     expect(find.text('Continue as guest'), findsOneWidget);
     expect(find.text('Sign in'), findsOneWidget);
     expect(find.text('Create account'), findsOneWidget);

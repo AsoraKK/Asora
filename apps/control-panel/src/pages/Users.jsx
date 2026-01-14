@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
+import LythInput from '../components/LythInput.jsx';
 
 function Users() {
   const [query, setQuery] = useState('');
@@ -80,18 +83,17 @@ function Users() {
           Find users and disable abusive accounts immediately.
         </p>
       </div>
-      <div className="panel">
+      <LythCard variant="panel">
         <form className="form-row" onSubmit={runSearch}>
-          <input
-            className="input"
+          <LythInput
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by user id, handle, or email"
           />
-          <button className="primary-button" type="submit" disabled={loading}>
+          <LythButton type="submit" disabled={loading}>
             Search
-          </button>
+          </LythButton>
         </form>
         {error ? <div className="notice error">{error}</div> : null}
         <div className="data-table">
@@ -115,13 +117,13 @@ function Users() {
                 </span>
               </span>
               <span>
-                <button
-                  className="ghost-button"
+                <LythButton
+                  variant="ghost"
                   type="button"
                   onClick={() => setSelected(user)}
                 >
                   Select
-                </button>
+                </LythButton>
               </span>
             </div>
           ))}
@@ -129,8 +131,8 @@ function Users() {
         {!items.length && !loading ? (
           <div className="empty-state">No users found.</div>
         ) : null}
-      </div>
-      <div className="panel">
+      </LythCard>
+      <LythCard variant="panel">
         <div className="panel-header">
           <h2>Action</h2>
         </div>
@@ -154,8 +156,7 @@ function Users() {
             <div className="form-grid">
               <label className="field">
                 <span className="field-label">Reason code</span>
-                <input
-                  className="input"
+                <LythInput
                   type="text"
                   value={reasonCode}
                   onChange={(event) => setReasonCode(event.target.value)}
@@ -164,8 +165,8 @@ function Users() {
               </label>
               <label className="field">
                 <span className="field-label">Internal note</span>
-                <textarea
-                  className="textarea"
+                <LythInput
+                  as="textarea"
                   rows={3}
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
@@ -174,26 +175,26 @@ function Users() {
               </label>
             </div>
             <div className="panel-actions">
-              <button
-                className="danger-button"
+              <LythButton
+                variant="danger"
                 type="button"
                 onClick={() => runAction('disable')}
                 disabled={actionBusy}
               >
                 Disable user
-              </button>
-              <button
-                className="secondary-button"
+              </LythButton>
+              <LythButton
+                variant="secondary"
                 type="button"
                 onClick={() => runAction('enable')}
                 disabled={actionBusy}
               >
                 Enable user
-              </button>
+              </LythButton>
             </div>
           </>
         )}
-      </div>
+      </LythCard>
     </section>
   );
 }
