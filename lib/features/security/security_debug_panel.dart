@@ -39,7 +39,11 @@ class SecurityDebugPanel extends ConsumerWidget {
                     '${state.isRootedOrJailbroken}',
                   ),
                   _buildKeyValue(context, 'Emulator', '${state.isEmulator}'),
-                  _buildKeyValue(context, 'Debug build', '${state.isDebugBuild}'),
+                  _buildKeyValue(
+                    context,
+                    'Debug build',
+                    '${state.isDebugBuild}',
+                  ),
                   _buildKeyValue(
                     context,
                     'Last checked',
@@ -51,7 +55,11 @@ class SecurityDebugPanel extends ConsumerWidget {
                 context: context,
                 title: 'Mobile Security Config',
                 children: [
-                  _buildKeyValue(context, 'Environment', config.environment.name),
+                  _buildKeyValue(
+                    context,
+                    'Environment',
+                    config.environment.name,
+                  ),
                   _buildKeyValue(
                     context,
                     'Strict device integrity',
@@ -109,7 +117,11 @@ class SecurityDebugPanel extends ConsumerWidget {
                     'Relax integrity',
                     '${overrides.relaxDeviceIntegrity}',
                   ),
-                  _buildKeyValue(context, 'Reason', overrides.overrideReason ?? 'n/a'),
+                  _buildKeyValue(
+                    context,
+                    'Reason',
+                    overrides.overrideReason ?? 'n/a',
+                  ),
                   _buildKeyValue(
                     context,
                     'Expires in',
@@ -167,8 +179,9 @@ class SecurityDebugPanel extends ConsumerWidget {
                   SizedBox(width: context.spacing.md),
                   LythButton.secondary(
                     label: 'Clear overrides',
-                    onPressed:
-                        kDebugMode ? SecurityOverridesProvider.clear : null,
+                    onPressed: kDebugMode
+                        ? SecurityOverridesProvider.clear
+                        : null,
                   ),
                 ],
               ),
@@ -194,9 +207,9 @@ class SecurityDebugPanel extends ConsumerWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: context.spacing.sm),
             ...children,
@@ -215,16 +228,16 @@ class SecurityDebugPanel extends ConsumerWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(
-                    alpha: 0.6,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

@@ -83,7 +83,10 @@ class _LythWordmarkState extends State<LythWordmark>
 
       // Create a repeating animation with proper intervals
       _glowAnimation = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _glowController, curve: LythMotion.standardCurve),
+        CurvedAnimation(
+          parent: _glowController,
+          curve: LythMotion.standardCurve,
+        ),
       );
 
       // Schedule repeating pulses with 240-second interval
@@ -123,8 +126,9 @@ class _LythWordmarkState extends State<LythWordmark>
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final textColor =
-        (widget.color ?? colorScheme.onSurface).withValues(alpha: 0.9);
+    final textColor = (widget.color ?? colorScheme.onSurface).withValues(
+      alpha: 0.9,
+    );
     final glowColor = colorScheme.primary;
     final textStyle = TextStyle(
       fontSize: widget.size.height * 0.6,
@@ -163,11 +167,7 @@ class _LythWordmarkState extends State<LythWordmark>
               ),
             ),
             // Foreground text layer
-            Text(
-              'Lyt haus',
-              style: textStyle,
-              textAlign: TextAlign.center,
-            ),
+            Text('Lyt haus', style: textStyle, textAlign: TextAlign.center),
           ],
         );
       },
@@ -188,10 +188,8 @@ class LythWordmarkStatic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor =
-        (color ?? Theme.of(context).colorScheme.onSurface).withValues(
-          alpha: 0.9,
-        );
+    final textColor = (color ?? Theme.of(context).colorScheme.onSurface)
+        .withValues(alpha: 0.9);
 
     return Text(
       'Lyt haus',

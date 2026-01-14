@@ -282,7 +282,11 @@ class _Step5Confirmation extends ConsumerWidget {
                   ),
                   const SizedBox(height: Spacing.sm),
                   _summaryRow(context, 'Name', draft.name),
-                  _summaryRow(context, 'Content', _contentTypeLabel(draft.contentType)),
+                  _summaryRow(
+                    context,
+                    'Content',
+                    _contentTypeLabel(draft.contentType),
+                  ),
                   _summaryRow(context, 'Sorting', _sortingLabel(draft.sorting)),
                   if (draft.refinements.includeKeywords.isNotEmpty)
                     _summaryRow(
@@ -317,9 +321,9 @@ class _Step5Confirmation extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           Text(value),
         ],

@@ -45,7 +45,8 @@ class ModerationHubScreen extends ConsumerWidget {
                 onApprove: () {},
                 onReject: () {},
               ),
-              separatorBuilder: (_, __) => const SizedBox(height: LythSpacing.xs),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: LythSpacing.xs),
               itemCount: queue.length,
             ),
             ListView.separated(
@@ -58,8 +59,7 @@ class ModerationHubScreen extends ConsumerWidget {
                 onVoteFor: () {},
                 onVoteAgainst: () {},
               ),
-              separatorBuilder: (_, __) =>
-                  SizedBox(height: context.spacing.xs),
+              separatorBuilder: (_, __) => SizedBox(height: context.spacing.xs),
               itemCount: appeals.length,
             ),
             const _HistoryStub(),
@@ -76,8 +76,16 @@ class ModerationHubScreen extends ConsumerWidget {
                   ),
                   SizedBox(height: context.spacing.md),
                   _statTile(context, 'Queue', stats.queueSize.toString()),
-                  _statTile(context, 'Appeals open', stats.appealOpen.toString()),
-                  _statTile(context, 'Decisions today', stats.decisionsToday.toString()),
+                  _statTile(
+                    context,
+                    'Appeals open',
+                    stats.appealOpen.toString(),
+                  ),
+                  _statTile(
+                    context,
+                    'Decisions today',
+                    stats.decisionsToday.toString(),
+                  ),
                 ],
               ),
             ),
@@ -96,9 +104,9 @@ class ModerationHubScreen extends ConsumerWidget {
           Text(title),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
