@@ -2,10 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/theme/lyth_theme.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/feed/domain/models.dart' as domain;
@@ -26,58 +29,12 @@ import 'package:asora/features/moderation/presentation/moderation_console/modera
 /// ---------------------------------------------------------------------------
 
 class AsoraTheme {
-  // Core palette
-  static const _darkBg = Color(0xFF202124); // charcoal
-  static const _lightBg = Color(0xFFF8F9FA); // light gray
-  static const _accentBlue = Color(0xFF33B1FF); // neon sky blue
-  static const _accentOrange = Color(0xFFFF7F45); // sunrise orange
-
   static ThemeData dark() {
-    final base = ThemeData.dark(useMaterial3: true);
-    return base.copyWith(
-      scaffoldBackgroundColor: _darkBg,
-      // Use base textTheme instead of GoogleFonts during theme creation
-      textTheme: base.textTheme,
-      colorScheme: base.colorScheme.copyWith(
-        primary: _accentBlue,
-        secondary: _accentOrange,
-      ),
-      chipTheme: base.chipTheme.copyWith(
-        backgroundColor: _darkBg,
-        labelStyle: const TextStyle(color: Colors.white), // Use default style
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 2,
-      ),
-      cardTheme: CardThemeData(
-        color: _darkBg.withValues(alpha: 0.94),
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      ),
-    );
+    return LythausTheme.dark();
   }
 
   static ThemeData light() {
-    final base = ThemeData.light(useMaterial3: true);
-    return base.copyWith(
-      scaffoldBackgroundColor: _lightBg,
-      // Use base textTheme instead of GoogleFonts during theme creation
-      textTheme: base.textTheme,
-      colorScheme: base.colorScheme.copyWith(
-        primary: _accentBlue,
-        secondary: _accentOrange,
-      ),
-      chipTheme: base.chipTheme.copyWith(
-        backgroundColor: _lightBg,
-        labelStyle: const TextStyle(color: Colors.black87), // Use default style
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 2,
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      ),
-    );
+    return LythausTheme.light();
   }
 }
 
@@ -90,12 +47,6 @@ extension ConfidenceProps on HumanConfidence {
     HumanConfidence.medium => 'Medium',
     HumanConfidence.low => 'Low',
     HumanConfidence.aiGen => 'AI Gen',
-  };
-  Color get color => switch (this) {
-    HumanConfidence.high => Colors.greenAccent,
-    HumanConfidence.medium => Colors.amberAccent,
-    HumanConfidence.low => Colors.deepOrangeAccent,
-    HumanConfidence.aiGen => Colors.redAccent,
   };
 }
 
@@ -120,7 +71,9 @@ class FeedScreen extends ConsumerWidget {
         ),
         title: Text(
           'Lythaus',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -334,15 +287,17 @@ class _PostCard extends StatelessWidget {
                       backgroundColor: theme.colorScheme.primary,
                       child: Text(
                         username[0].toUpperCase(),
-                        style: GoogleFonts.sora(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       username,
-                      style: GoogleFonts.sora(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 16,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -352,11 +307,7 @@ class _PostCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   text,
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
                 ),
                 const SizedBox(height: 12),
                 IconTheme(
@@ -405,11 +356,10 @@ class _PostCard extends StatelessWidget {
 
 void _promptSignIn(BuildContext context) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Sign in to like, comment, or report.'),
-      duration: Duration(seconds: 2),
-    ),
+  LythSnackbar.info(
+    context: context,
+    message: 'Sign in to like, comment, or report.',
+    duration: const Duration(seconds: 2),
   );
 }
 
@@ -419,21 +369,37 @@ class _ConfidenceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = _chipColor(scheme);
+
     return Chip(
-      labelPadding: const EdgeInsets.symmetric(horizontal: 10),
-      shape: const StadiumBorder(),
+      labelPadding: EdgeInsets.symmetric(horizontal: context.spacing.md),
+      shape: StadiumBorder(
+        side: BorderSide(color: color.withValues(alpha: 0.4)),
+      ),
       label: Text(
         confidence.label,
-        style: GoogleFonts.sora(
-          fontSize: 12,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w600,
-          color: confidence.color,
+          color: color,
         ),
       ),
-      backgroundColor: confidence.color.withValues(alpha: 0.18),
-      side: BorderSide(color: confidence.color, width: 1),
+      backgroundColor: color.withValues(alpha: 0.14),
       visualDensity: VisualDensity.compact,
     );
+  }
+
+  Color _chipColor(ColorScheme scheme) {
+    switch (confidence) {
+      case HumanConfidence.high:
+        return scheme.primary;
+      case HumanConfidence.medium:
+        return scheme.tertiary;
+      case HumanConfidence.low:
+        return scheme.onSurface.withValues(alpha: 0.6);
+      case HumanConfidence.aiGen:
+        return scheme.error;
+    }
   }
 }
 
@@ -442,7 +408,7 @@ class _AsoraNavBar extends StatelessWidget {
   const _AsoraNavBar();
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return NavigationBar(
       height: 80,
       destinations: const [
@@ -454,7 +420,7 @@ class _AsoraNavBar extends StatelessWidget {
         ),
         NavigationDestination(icon: Icon(Icons.sensors_outlined), label: ''),
       ],
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: scheme.surface,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
     );
   }
@@ -495,19 +461,19 @@ class _AsoraDrawer extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  backgroundColor:
+                      theme.colorScheme.onPrimary.withValues(alpha: 0.2),
                   child: Icon(
                     isSignedIn ? Icons.person : Icons.person_outline,
                     size: 32,
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  isSignedIn ? 'Welcome back!' : 'Welcome to Asora',
-                  style: GoogleFonts.sora(
-                    color: Colors.white,
-                    fontSize: 18,
+                  isSignedIn ? 'Welcome back!' : 'Welcome to Lythaus',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -532,7 +498,7 @@ class _AsoraDrawer extends ConsumerWidget {
             if (isModerator)
               ListTile(
                 leading: const Icon(Icons.rule_folder_outlined),
-                title: Text('Moderation Queue', style: GoogleFonts.sora()),
+                title: const Text('Moderation Queue'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.of(context).push(
@@ -544,7 +510,7 @@ class _AsoraDrawer extends ConsumerWidget {
               ),
             ListTile(
               leading: const Icon(Icons.person),
-              title: Text('Profile', style: GoogleFonts.sora()),
+              title: const Text('Profile'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Profile');
@@ -552,7 +518,7 @@ class _AsoraDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.notifications_outlined),
-              title: Text('Notifications', style: GoogleFonts.sora()),
+              title: const Text('Notifications'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Notifications');
@@ -560,7 +526,7 @@ class _AsoraDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.privacy_tip_outlined),
-              title: Text('Privacy Settings', style: GoogleFonts.sora()),
+              title: const Text('Privacy Settings'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
@@ -573,7 +539,7 @@ class _AsoraDrawer extends ConsumerWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
-              title: Text('Settings', style: GoogleFonts.sora()),
+              title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Settings');
@@ -581,7 +547,7 @@ class _AsoraDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.help_outline),
-              title: Text('Help & Support', style: GoogleFonts.sora()),
+              title: const Text('Help & Support'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Help & Support');
@@ -592,14 +558,17 @@ class _AsoraDrawer extends ConsumerWidget {
               leading: Icon(Icons.logout, color: theme.colorScheme.error),
               title: Text(
                 'Sign Out',
-                style: GoogleFonts.sora(color: theme.colorScheme.error),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               onTap: () => _handleSignOut(context, ref),
             ),
           ] else ...[
             ListTile(
               leading: const Icon(Icons.login),
-              title: Text('Sign In', style: GoogleFonts.sora()),
+              title: const Text('Sign In'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Sign In');
@@ -607,7 +576,7 @@ class _AsoraDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.person_add),
-              title: Text('Sign Up', style: GoogleFonts.sora()),
+              title: const Text('Sign Up'),
               onTap: () {
                 Navigator.pop(context);
                 _showComingSoon(context, 'Sign Up');
@@ -618,7 +587,7 @@ class _AsoraDrawer extends ConsumerWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: Text('About Asora', style: GoogleFonts.sora()),
+            title: const Text('About Lythaus'),
             onTap: () {
               Navigator.pop(context);
               _showAboutDialog(context);
@@ -630,11 +599,10 @@ class _AsoraDrawer extends ConsumerWidget {
   }
 
   void _showComingSoon(BuildContext context, String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$featureName is coming soon.'),
-        duration: const Duration(seconds: 2),
-      ),
+    LythSnackbar.info(
+      context: context,
+      message: '$featureName is coming soon.',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -642,24 +610,24 @@ class _AsoraDrawer extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Sign Out', style: GoogleFonts.sora()),
+        title: const Text('Sign Out'),
         content: Text(
           'Are you sure you want to sign out?',
-          style: GoogleFonts.sora(),
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
-          TextButton(
+          LythButton.tertiary(
+            label: 'Cancel',
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: GoogleFonts.sora()),
           ),
-          FilledButton(
+          LythButton.primary(
+            label: 'Sign Out',
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Close drawer
               // Sign out using the auth state notifier
               ref.read(authStateProvider.notifier).signOut();
             },
-            child: Text('Sign Out', style: GoogleFonts.sora()),
           ),
         ],
       ),
@@ -690,7 +658,7 @@ class _AsoraDrawer extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 16),
           child: Text(
             'A social platform for authentic human-authored content with AI-powered verification.',
-            style: GoogleFonts.sora(fontSize: 14),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
       ],

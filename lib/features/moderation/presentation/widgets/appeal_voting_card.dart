@@ -2,6 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_chip.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 
@@ -41,91 +47,98 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
+    final spacing = context.spacing;
+
+    return LythCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with urgency indicator
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _getUrgencyColor(
-                widget.appeal.urgencyScore,
-              ).withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              children: [
-                _buildUrgencyBadge(),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Appeal for ${widget.appeal.contentType}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: _getUrgencyColor(widget.appeal.urgencyScore),
-                        ),
-                      ),
-                      Text(
-                        'by ${widget.appeal.submitterName} • ${_formatTimeAgo(widget.appeal.submittedAt)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                if (widget.appeal.votingProgress != null) _buildTimeRemaining(),
-              ],
-            ),
-          ),
+          _buildHeader(context),
 
           // Content preview
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(spacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Original content
                 _buildContentSection(),
 
-                const SizedBox(height: 16),
+                SizedBox(height: spacing.lg),
 
                 // Moderation info
                 _buildModerationInfo(),
 
-                const SizedBox(height: 16),
+                SizedBox(height: spacing.lg),
 
                 // Appeal reason
                 _buildAppealSection(),
 
-                const SizedBox(height: 16),
+                SizedBox(height: spacing.lg),
 
                 // Voting progress
                 if (widget.appeal.votingProgress != null)
                   _buildVotingProgress(),
 
-                const SizedBox(height: 16),
-
-                // Voting buttons
-                _buildVotingButtons(),
+                SizedBox(height: spacing.lg),
               ],
             ),
           ),
+
+          // Voting buttons
+          _buildVotingButtons(),
         ],
       ),
     );
   }
 
-  Widget _buildUrgencyBadge() {
+  Widget _buildHeader(BuildContext context) {
+    final spacing = context.spacing;
+    final urgencyColor = _getUrgencyColor(context, widget.appeal.urgencyScore);
+    final headerColor = urgencyColor.withValues(alpha: 0.12);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(context.radius.card),
+        topRight: Radius.circular(context.radius.card),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(spacing.lg),
+        color: headerColor,
+        child: Row(
+          children: [
+            _buildUrgencyBadge(context, urgencyColor),
+            SizedBox(width: spacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Appeal for ${widget.appeal.contentType}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: urgencyColor,
+                    ),
+                  ),
+                  Text(
+                    'by ${widget.appeal.submitterName} • ${_formatTimeAgo(widget.appeal.submittedAt)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            if (widget.appeal.votingProgress != null)
+              _buildTimeRemaining(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyBadge(BuildContext context, Color urgencyColor) {
     final urgency = widget.appeal.urgencyScore;
-    final color = _getUrgencyColor(urgency);
     String label;
 
     if (urgency >= 80) {
@@ -138,45 +151,57 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
       label = 'Low';
     }
 
+    final textColor = urgencyColor == context.colorScheme.error
+        ? context.colorScheme.onError
+        : context.colorScheme.onSurface;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacing.sm,
+        vertical: context.spacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
+        color: urgencyColor,
+        borderRadius: BorderRadius.circular(context.radius.pill),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  Widget _buildTimeRemaining() {
+  Widget _buildTimeRemaining(BuildContext context) {
     final progress = widget.appeal.votingProgress;
-    if (progress?.timeRemaining == null) return const SizedBox.shrink();
+    if (progress == null) return const SizedBox.shrink();
+    final timeRemaining = progress.timeRemaining ?? '5m window';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacing.sm,
+        vertical: context.spacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange),
+        color: context.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(context.radius.sm),
+        border: Border.all(color: context.colorScheme.outline),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.access_time, size: 14, color: Colors.orange),
-          const SizedBox(width: 4),
+          Icon(
+            Icons.access_time,
+            size: 14,
+            color: context.colorScheme.onSurface,
+          ),
+          SizedBox(width: context.spacing.xs),
           Text(
-            progress!.timeRemaining!,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.orange,
-              fontWeight: FontWeight.w500,
+            timeRemaining,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -185,11 +210,15 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildContentSection() {
+    final spacing = context.spacing;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        color: context.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(context.radius.md),
+        border: Border.all(
+          color: context.colorScheme.outline.withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,18 +228,18 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               Icon(
                 _getContentIcon(widget.appeal.contentType),
                 size: 16,
-                color: Theme.of(context).colorScheme.primary,
+                color: context.colorScheme.primary,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: spacing.sm),
               Text(
                 'Original ${widget.appeal.contentType}',
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: spacing.sm),
           if (widget.appeal.contentTitle != null) ...[
             Text(
               widget.appeal.contentTitle!,
@@ -220,7 +249,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               maxLines: widget.showFullContent ? null : 2,
               overflow: widget.showFullContent ? null : TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.sm),
           ],
           Text(
             widget.appeal.contentPreview,
@@ -234,38 +263,49 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildModerationInfo() {
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
+    final aiLabel = _aiLabel(widget.appeal.aiScore);
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        color: scheme.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(context.radius.md),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.flag, size: 16, color: Colors.red),
-              const SizedBox(width: 8),
+              Icon(Icons.flag, size: 16, color: scheme.error),
+              SizedBox(width: spacing.sm),
               Text(
                 'Flagged for: ${widget.appeal.flagReason}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[700],
+                  fontWeight: FontWeight.w600,
+                  color: scheme.error,
                 ),
               ),
             ],
           ),
+          if (aiLabel != null) ...[
+            SizedBox(height: spacing.sm),
+            LythChip(
+              label: aiLabel,
+              icon: Icons.psychology,
+              backgroundColor: scheme.surfaceContainerHigh,
+            ),
+          ],
           if (widget.appeal.flagCategories.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.sm),
             Wrap(
               spacing: 8,
               children: widget.appeal.flagCategories.map((category) {
-                return Chip(
-                  label: Text(category, style: const TextStyle(fontSize: 12)),
-                  backgroundColor: Colors.red.withValues(alpha: 0.1),
-                  side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+                return LythChip(
+                  label: category,
+                  backgroundColor: scheme.surfaceContainerHigh,
                 );
               }).toList(),
             ),
@@ -276,36 +316,38 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildAppealSection() {
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+        color: scheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(context.radius.md),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.gavel, size: 16, color: Colors.blue),
-              const SizedBox(width: 8),
+              Icon(Icons.gavel, size: 16, color: scheme.primary),
+              SizedBox(width: spacing.sm),
               Text(
                 'Appeal: ${widget.appeal.appealType.replaceAll('_', ' ').toUpperCase()}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue[700],
+                  fontWeight: FontWeight.w600,
+                  color: scheme.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: spacing.sm),
           Text(
             widget.appeal.appealReason,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (widget.appeal.userStatement.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.sm),
             Text(
               '"${widget.appeal.userStatement}"',
               style: Theme.of(
@@ -321,25 +363,27 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   Widget _buildVotingProgress() {
     final progress = widget.appeal.votingProgress!;
     final approvalRate = progress.approvalRate;
+    final spacing = context.spacing;
+    final scheme = context.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(context.radius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.how_to_vote, size: 16),
-              const SizedBox(width: 8),
+              Icon(Icons.how_to_vote, size: 16, color: scheme.primary),
+              SizedBox(width: spacing.sm),
               Text(
                 'Community Voting',
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               Text(
@@ -348,31 +392,29 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: spacing.md),
           if (progress.totalVotes > 0) ...[
             LinearProgressIndicator(
               value: approvalRate / 100,
-              backgroundColor: Colors.red.withValues(alpha: 0.3),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+              backgroundColor: scheme.error.withValues(alpha: 0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacing.sm),
             Row(
               children: [
                 Text(
-                  '${progress.approveVotes} approve (${approvalRate.toStringAsFixed(1)}%)',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.green,
-                    fontWeight: FontWeight.w500,
+                  '${progress.approveVotes} approve',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   '${progress.rejectVotes} reject',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.red,
-                    fontWeight: FontWeight.w500,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.error,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -386,22 +428,11 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
             ),
           ],
           if (progress.quorumMet) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.green),
-              ),
-              child: const Text(
-                'Quorum reached',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            SizedBox(height: spacing.sm),
+            LythChip(
+              label: 'Quorum reached',
+              icon: Icons.check_circle,
+              backgroundColor: scheme.surfaceContainerHigh,
             ),
           ],
         ],
@@ -426,28 +457,30 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
 
   Widget _buildVotedState() {
     final isApprove = _localUserVote == 'approve';
+    final scheme = context.colorScheme;
+    final spacing = context.spacing;
+    final accentColor = isApprove ? scheme.primary : scheme.error;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: (isApprove ? Colors.green : Colors.red).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: (isApprove ? Colors.green : Colors.red).withValues(alpha: 0.3),
-        ),
+        color: accentColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(context.radius.md),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(
             isApprove ? Icons.thumb_up : Icons.thumb_down,
-            color: isApprove ? Colors.green : Colors.red,
+            color: accentColor,
             size: 20,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: spacing.sm),
           Text(
             'You voted to ${isApprove ? 'approve' : 'reject'} this appeal',
-            style: TextStyle(
-              color: isApprove ? Colors.green[700] : Colors.red[700],
-              fontWeight: FontWeight.w500,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: accentColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -456,23 +489,25 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildIneligibleState() {
+    final scheme = context.colorScheme;
+    final spacing = context.spacing;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(spacing.md),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(context.radius.md),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.block, color: Colors.grey, size: 20),
-          const SizedBox(width: 8),
+          Icon(Icons.block, color: scheme.onSurface, size: 20),
+          SizedBox(width: spacing.sm),
           Expanded(
             child: Text(
               widget.appeal.voteIneligibilityReason ??
                   'You cannot vote on this appeal',
-              style: const TextStyle(
-                color: Colors.grey,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -483,49 +518,44 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   }
 
   Widget _buildActiveVotingButtons() {
-    final row = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ElevatedButton.icon(
-          onPressed: _isVoting ? null : () => _submitVote('approve'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
+    final spacing = context.spacing;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        spacing.lg,
+        spacing.md,
+        spacing.lg,
+        spacing.lg,
+      ),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: context.colorScheme.outline.withValues(alpha: 0.3),
           ),
-          icon: _isVoting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Icon(Icons.thumb_up),
-          label: const Text('Approve'),
         ),
-        const SizedBox(width: 12),
-        ElevatedButton.icon(
-          onPressed: _isVoting ? null : () => _submitVote('reject'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: LythButton.primary(
+              label: 'Approve',
+              icon: Icons.thumb_up,
+              onPressed: _isVoting ? null : () => _submitVote('approve'),
+              isLoading: _isVoting && _localUserVote == 'approve',
+            ),
           ),
-          icon: _isVoting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Icon(Icons.thumb_down),
-          label: const Text('Reject'),
-        ),
-      ],
+          SizedBox(width: spacing.md),
+          Expanded(
+            child: LythButton.destructive(
+              label: 'Reject',
+              icon: Icons.thumb_down,
+              onPressed: _isVoting ? null : () => _submitVote('reject'),
+              isLoading: _isVoting && _localUserVote == 'reject',
+            ),
+          ),
+        ],
+      ),
     );
-    return row;
   }
 
   Future<void> _submitVote(String vote) async {
@@ -547,11 +577,9 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vote submitted successfully!'),
-              backgroundColor: Colors.green,
-            ),
+          LythSnackbar.success(
+            context: context,
+            message: 'Vote submitted successfully!',
           );
         }
 
@@ -561,11 +589,9 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit vote: $error'),
-            backgroundColor: Colors.red,
-          ),
+        LythSnackbar.error(
+          context: context,
+          message: 'Failed to submit vote: $error',
         );
       }
     } finally {
@@ -577,11 +603,20 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
     }
   }
 
-  Color _getUrgencyColor(int urgency) {
-    if (urgency >= 80) return Colors.red;
-    if (urgency >= 60) return Colors.orange;
-    if (urgency >= 40) return Colors.yellow[700]!;
-    return Colors.green;
+  Color _getUrgencyColor(BuildContext context, int urgency) {
+    final scheme = context.colorScheme;
+    if (urgency >= 80) return scheme.error;
+    if (urgency >= 60) return scheme.primary;
+    if (urgency >= 40) return scheme.tertiary;
+    return scheme.onSurface.withValues(alpha: 0.6);
+  }
+
+  String? _aiLabel(double? score) {
+    if (score == null) return null;
+    if (score >= 0.8) return 'AI flagged';
+    if (score >= 0.6) return 'AI review';
+    if (score >= 0.4) return 'AI signal';
+    return 'AI clear';
   }
 
   IconData _getContentIcon(String contentType) {

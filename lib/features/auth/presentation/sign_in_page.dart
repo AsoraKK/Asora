@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/auth/application/auth_controller.dart';
 
 /// Sign-in page with Email and Google B2C options
@@ -14,42 +16,43 @@ class SignInPage extends ConsumerWidget {
     final authState = ref.watch(authControllerProvider);
     final controller = ref.read(authControllerProvider.notifier);
 
+    final scheme = Theme.of(context).colorScheme;
+    final spacing = context.spacing;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: EdgeInsets.symmetric(horizontal: spacing.xxl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Logo and title
-              const Icon(
+              Icon(
                 Icons.account_circle,
                 size: 80,
-                color: Color(0xFF1976D2),
+                color: scheme.primary,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Welcome to Asora',
+              SizedBox(height: spacing.lg),
+              Text(
+                'Welcome to Lythaus',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF212121),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: spacing.sm),
+              Text(
                 'Sign in to continue',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Color(0xFF757575)),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: spacing.huge),
 
               // Email sign-in button
-              _buildSignInButton(
-                context: context,
+              LythButton.primary(
                 label: 'Continue with Email',
                 icon: Icons.email_outlined,
                 onPressed: authState.isLoading
@@ -60,14 +63,11 @@ class SignInPage extends ConsumerWidget {
                         IntegrityUseCase.signIn,
                         () => controller.signInEmail(),
                       ),
-                backgroundColor: const Color(0xFF1976D2),
-                textColor: Colors.white,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: spacing.lg),
 
               // Google sign-in button
-              _buildSignInButton(
-                context: context,
+              LythButton.secondary(
                 label: 'Continue with Google',
                 icon: Icons.g_mobiledata,
                 onPressed: authState.isLoading
@@ -80,36 +80,36 @@ class SignInPage extends ConsumerWidget {
                           () => controller.signInGoogle(),
                         );
                       },
-                backgroundColor: Colors.white,
-                textColor: const Color(0xFF212121),
-                borderColor: const Color(0xFFE0E0E0),
               ),
 
               // Loading indicator
               if (authState.isLoading) ...[
-                const SizedBox(height: 24),
+                SizedBox(height: spacing.xl),
                 const Center(child: CircularProgressIndicator()),
               ],
 
               // Error message
               if (authState.error != null) ...[
-                const SizedBox(height: 24),
+                SizedBox(height: spacing.xl),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(spacing.md),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEBEE),
-                    borderRadius: BorderRadius.circular(8),
+                    color: scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(context.radius.md),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Color(0xFFD32F2F)),
-                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.error_outline,
+                        color: scheme.error,
+                      ),
+                      SizedBox(width: spacing.sm),
                       Expanded(
                         child: Text(
                           authState.error!,
-                          style: const TextStyle(
-                            color: Color(0xFFD32F2F),
-                            fontSize: 14,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onErrorContainer,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -118,52 +118,19 @@ class SignInPage extends ConsumerWidget {
                 ),
               ],
 
-              const SizedBox(height: 48),
+              SizedBox(height: spacing.huge),
 
               // Terms and Privacy
               Text(
                 'By continuing, you agree to our Terms of Service and Privacy Policy',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSignInButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required VoidCallback? onPressed,
-    required Color backgroundColor,
-    required Color textColor,
-    Color? borderColor,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: textColor),
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: textColor,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: borderColor != null
-              ? BorderSide(color: borderColor, width: 1)
-              : BorderSide.none,
-        ),
-        elevation: borderColor != null ? 0 : 2,
       ),
     );
   }

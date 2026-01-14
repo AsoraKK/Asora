@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 class FirstPostLockScreen extends ConsumerWidget {
   const FirstPostLockScreen({super.key});
@@ -12,25 +14,32 @@ class FirstPostLockScreen extends ConsumerWidget {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(context.spacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_outline, size: 64, color: Colors.amber),
-              const SizedBox(height: 24),
-              const Text(
+              Icon(
+                Icons.lock_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(height: context.spacing.xl),
+              Text(
                 'Create your first post to unlock reading',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'New users need to create their first post within 48 hours to continue using Asora.',
-                style: TextStyle(fontSize: 14),
+              SizedBox(height: context.spacing.md),
+              Text(
+                'New users need to create their first post within 48 hours to continue using Lythaus.',
+                style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              FilledButton(
+              SizedBox(height: context.spacing.xl),
+              LythButton.primary(
+                label: 'Create first post',
                 onPressed: () => runWithDeviceGuard(
                   context,
                   ref,
@@ -40,7 +49,6 @@ class FirstPostLockScreen extends ConsumerWidget {
                     Navigator.pushNamed(context, '/compose');
                   },
                 ),
-                child: const Text('Create first post'),
               ),
             ],
           ),

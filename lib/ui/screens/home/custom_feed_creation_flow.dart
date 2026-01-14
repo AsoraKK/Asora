@@ -281,11 +281,16 @@ class _Step5Confirmation extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: Spacing.sm),
-                  _summaryRow('Name', draft.name),
-                  _summaryRow('Content', _contentTypeLabel(draft.contentType)),
-                  _summaryRow('Sorting', _sortingLabel(draft.sorting)),
+                  _summaryRow(context, 'Name', draft.name),
+                  _summaryRow(
+                    context,
+                    'Content',
+                    _contentTypeLabel(draft.contentType),
+                  ),
+                  _summaryRow(context, 'Sorting', _sortingLabel(draft.sorting)),
                   if (draft.refinements.includeKeywords.isNotEmpty)
                     _summaryRow(
+                      context,
                       'Include keywords',
                       draft.refinements.includeKeywords.join(', '),
                     ),
@@ -298,7 +303,7 @@ class _Step5Confirmation extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Set as home feed'),
             subtitle: const Text(
-              'Make this your default feed when you open Asora',
+              'Make this your default feed when you open Lythaus',
             ),
             value: draft.setAsHome,
             onChanged: (value) => notifier.setHome(value),
@@ -308,13 +313,18 @@ class _Step5Confirmation extends ConsumerWidget {
     );
   }
 
-  Widget _summaryRow(String label, String value) {
+  Widget _summaryRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
           Text(value),
         ],
       ),
