@@ -2,6 +2,8 @@
 
 library feed_models;
 
+import 'package:flutter/material.dart';
+
 /// ASORA FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
@@ -370,5 +372,12 @@ extension HumanConfidenceExtension on HumanConfidence {
     HumanConfidence.medium => 'Medium',
     HumanConfidence.low => 'Low',
     HumanConfidence.aiGen => 'AI Generated',
+  };
+
+  Color get color => switch (this) {
+    HumanConfidence.high => const Color(0xFF4CAF50),
+    HumanConfidence.medium => const Color(0xFFFF9800),
+    HumanConfidence.low => const Color(0xFFFF5722),
+    HumanConfidence.aiGen => const Color(0xFFF44336),
   };
 }

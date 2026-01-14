@@ -7,7 +7,7 @@ import 'package:asora/state/providers/moderation_providers.dart';
 import 'package:asora/ui/components/appeal_card.dart';
 import 'package:asora/ui/components/moderation_card.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/design_system/tokens/spacing.dart';
 
 class ModerationHubScreen extends ConsumerWidget {
   const ModerationHubScreen({super.key});
@@ -37,34 +37,34 @@ class ModerationHubScreen extends ConsumerWidget {
           children: [
             ListView.separated(
               padding: const EdgeInsets.only(
-                top: Spacing.sm,
-                bottom: Spacing.xl,
+                top: LythSpacing.sm,
+                bottom: LythSpacing.xl,
               ),
               itemBuilder: (_, index) => ModerationCard(
                 caseItem: queue[index],
                 onApprove: () {},
                 onReject: () {},
               ),
-              separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: LythSpacing.xs),
               itemCount: queue.length,
             ),
             ListView.separated(
               padding: const EdgeInsets.only(
-                top: Spacing.sm,
-                bottom: Spacing.xl,
+                top: LythSpacing.sm,
+                bottom: LythSpacing.xl,
               ),
               itemBuilder: (_, index) => AppealCard(
                 appeal: appeals[index],
                 onVoteFor: () {},
                 onVoteAgainst: () {},
               ),
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: Spacing.xs),
+              separatorBuilder: (_, __) => SizedBox(height: context.spacing.xs),
               itemCount: appeals.length,
             ),
             const _HistoryStub(),
             Padding(
-              padding: const EdgeInsets.all(Spacing.lg),
+              padding: EdgeInsets.all(context.spacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -74,10 +74,18 @@ class ModerationHubScreen extends ConsumerWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: Spacing.md),
+                  SizedBox(height: context.spacing.md),
                   _statTile(context, 'Queue', stats.queueSize.toString()),
-                  _statTile(context, 'Appeals open', stats.appealOpen.toString()),
-                  _statTile(context, 'Decisions today', stats.decisionsToday.toString()),
+                  _statTile(
+                    context,
+                    'Appeals open',
+                    stats.appealOpen.toString(),
+                  ),
+                  _statTile(
+                    context,
+                    'Decisions today',
+                    stats.decisionsToday.toString(),
+                  ),
                 ],
               ),
             ),
@@ -89,16 +97,16 @@ class ModerationHubScreen extends ConsumerWidget {
 
   Widget _statTile(BuildContext context, String title, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.sm),
+      padding: EdgeInsets.only(bottom: context.spacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

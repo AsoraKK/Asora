@@ -88,10 +88,7 @@ class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           Row(
             children: [
-              LythIconButton(
-                icon: Icons.search,
-                onPressed: onSearchTap,
-              ),
+              LythIconButton(icon: Icons.search, onPressed: onSearchTap),
               LythIconButton(
                 icon: Icons.trending_up_outlined,
                 onPressed: onTrendingTap,

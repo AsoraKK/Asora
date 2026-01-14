@@ -29,73 +29,101 @@ class SecurityDebugPanel extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              _buildSection(context: context, 
+              _buildSection(
+                context: context,
                 title: 'Device Security State',
                 children: [
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Rooted/Jailbroken',
                     '${state.isRootedOrJailbroken}',
                   ),
                   _buildKeyValue(context, 'Emulator', '${state.isEmulator}'),
-                  _buildKeyValue(context, 'Debug build', '${state.isDebugBuild}'),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
+                    'Debug build',
+                    '${state.isDebugBuild}',
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Last checked',
                     state.lastCheckedAt.toIso8601String(),
                   ),
                 ],
               ),
-              _buildSection(context: context, 
+              _buildSection(
+                context: context,
                 title: 'Mobile Security Config',
                 children: [
-                  _buildKeyValue(context, 'Environment', config.environment.name),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
+                    'Environment',
+                    config.environment.name,
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Strict device integrity',
                     '${config.security.strictDeviceIntegrity}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Block rooted devices',
                     '${config.security.blockRootedDevices}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Allow rooted in staging QA',
                     '${config.security.allowRootedInStagingForQa}',
                   ),
                 ],
               ),
-              _buildSection(context: context, 
+              _buildSection(
+                context: context,
                 title: 'TLS Pinning Config',
                 children: [
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Enabled',
                     '${config.security.tlsPins.enabled}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Strict mode',
                     '${config.security.tlsPins.strictMode}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Pins configured',
                     '${config.security.tlsPins.spkiPinsBase64.length}',
                   ),
                 ],
               ),
-              _buildSection(context: context, 
+              _buildSection(
+                context: context,
                 title: 'Security Overrides',
                 children: [
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Active',
                     '${SecurityOverridesProvider.hasActiveOverrides}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Relax TLS pinning',
                     '${overrides.relaxTlsPinning}',
                   ),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
                     'Relax integrity',
                     '${overrides.relaxDeviceIntegrity}',
                   ),
-                  _buildKeyValue(context, 'Reason', overrides.overrideReason ?? 'n/a'),
-                  _buildKeyValue(context, 
+                  _buildKeyValue(
+                    context,
+                    'Reason',
+                    overrides.overrideReason ?? 'n/a',
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Expires in',
                     (overrides.timeRemaining?.inMinutes ?? 0) >= 0
                         ? '${overrides.timeRemaining?.inMinutes} min'
@@ -151,8 +179,9 @@ class SecurityDebugPanel extends ConsumerWidget {
                   SizedBox(width: context.spacing.md),
                   LythButton.secondary(
                     label: 'Clear overrides',
-                    onPressed:
-                        kDebugMode ? SecurityOverridesProvider.clear : null,
+                    onPressed: kDebugMode
+                        ? SecurityOverridesProvider.clear
+                        : null,
                   ),
                 ],
               ),
@@ -178,9 +207,9 @@ class SecurityDebugPanel extends ConsumerWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: context.spacing.sm),
             ...children,
@@ -199,16 +228,16 @@ class SecurityDebugPanel extends ConsumerWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(
-                    alpha: 0.6,
-                  ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

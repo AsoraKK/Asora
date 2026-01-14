@@ -53,7 +53,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
               authState.when(
                 data: (_) => const SizedBox.shrink(),
                 loading: () => const SizedBox.shrink(),
-                error: (error, _) => _buildErrorMessage(error),
+                error: (error, _) => _buildErrorMessage(context, error),
               ),
             ],
           ),
@@ -81,17 +81,17 @@ class OAuth2SignInScreen extends ConsumerWidget {
         SizedBox(height: context.spacing.xl),
         Text(
           'Welcome to Lythaus',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         SizedBox(height: context.spacing.sm),
         Text(
           'Sign in securely with Microsoft Entra',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(
-                  alpha: 0.7,
-                ),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           textAlign: TextAlign.center,
         ),
@@ -124,9 +124,9 @@ class OAuth2SignInScreen extends ConsumerWidget {
         Text(
           'Or sign in with email',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(
-                  alpha: 0.6,
-                ),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         SizedBox(height: context.spacing.md),
@@ -141,7 +141,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorMessage(Object error) {
+  Widget _buildErrorMessage(BuildContext context, Object error) {
     String message = 'An unexpected error occurred';
 
     if (error is AuthFailure) {

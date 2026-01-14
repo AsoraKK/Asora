@@ -32,13 +32,18 @@ class VotingStatusBreakdown extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.lg),
-          ...statusCounts.entries.map((entry) => _buildStatusRow(context, entry)),
+          ...statusCounts.entries.map(
+            (entry) => _buildStatusRow(context, entry),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusRow(BuildContext context, MapEntry<VotingStatus, int> entry) {
+  Widget _buildStatusRow(
+    BuildContext context,
+    MapEntry<VotingStatus, int> entry,
+  ) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(
@@ -47,9 +52,9 @@ class VotingStatusBreakdown extends StatelessWidget {
           const Spacer(),
           Text(
             entry.value.toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

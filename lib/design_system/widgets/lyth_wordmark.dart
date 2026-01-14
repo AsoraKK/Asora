@@ -123,8 +123,9 @@ class _LythWordmarkState extends State<LythWordmark>
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final textColor =
-        (widget.color ?? colorScheme.onSurface).withValues(alpha: 0.9);
+    final textColor = (widget.color ?? colorScheme.onSurface).withValues(
+      alpha: 0.9,
+    );
     final glowColor = colorScheme.primary;
     final textStyle = TextStyle(
       fontSize: widget.size.height * 0.6,
@@ -137,13 +138,13 @@ class _LythWordmarkState extends State<LythWordmark>
     return AnimatedBuilder(
       animation: _glowAnimation,
       builder: (context, child) {
-        final glowOpacity = _glowAnimation.value.clamp(0, 1);
+        final glowOpacity = _glowAnimation.value.clamp(0.0, 1.0).toDouble();
         return Stack(
           alignment: Alignment.center,
           children: [
             // Glow text layer (soft bloom)
             Opacity(
-              opacity: glowOpacity.toDouble(),
+              opacity: glowOpacity,
               child: Text(
                 'Lyt haus',
                 style: textStyle.copyWith(
@@ -163,11 +164,7 @@ class _LythWordmarkState extends State<LythWordmark>
               ),
             ),
             // Foreground text layer
-            Text(
-              'Lyt haus',
-              style: textStyle,
-              textAlign: TextAlign.center,
-            ),
+            Text('Lyt haus', style: textStyle, textAlign: TextAlign.center),
           ],
         );
       },
@@ -188,10 +185,8 @@ class LythWordmarkStatic extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor =
-        (color ?? Theme.of(context).colorScheme.onSurface).withValues(
-          alpha: 0.9,
-        );
+    final textColor = (color ?? Theme.of(context).colorScheme.onSurface)
+        .withValues(alpha: 0.9);
 
     return Text(
       'Lyt haus',
