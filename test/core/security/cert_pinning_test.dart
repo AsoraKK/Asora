@@ -114,7 +114,7 @@ void main() {
     fake.throwWithIncomingOptions = true;
     fake.errorToThrow = Exception('tls');
     try {
-      await dio.get('/x');
+      await dio.get<Map<String, dynamic>>('/x');
       fail('should throw');
     } on DioException catch (e) {
       expect(isPinValidationError(e), isTrue);

@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../../domain/moderation_queue_item.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
 
 /// Represents a single moderation queue row.
 class ModerationQueueItemTile extends StatelessWidget {

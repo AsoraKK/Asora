@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../components/create_post_modal.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/ui/components/create_post_modal.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class CreateScreen extends StatelessWidget {
   const CreateScreen({super.key});

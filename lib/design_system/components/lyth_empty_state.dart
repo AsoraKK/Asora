@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Empty State Component
 ///
 /// Container for displaying empty state screens.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic empty state component
 ///

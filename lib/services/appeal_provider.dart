@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
@@ -15,9 +17,9 @@ class AppealService {
   Future<bool> submit(String postId, String reason) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.post(
-        "/api/appeals",
-        data: {"postId": postId, "reason": reason},
+      await dio.post<void>(
+        '/api/appeals',
+        data: {'postId': postId, 'reason': reason},
       );
       return true;
     } catch (_) {

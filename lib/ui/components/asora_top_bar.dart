@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../theme/spacing.dart';
-import '../utils/motion.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/utils/motion.dart';
 
 class AsoraTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AsoraTopBar({

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA CONSENT-AWARE ANALYTICS CLIENT
 ///
 /// 🎯 Purpose: Wrapper that enforces consent before analytics
@@ -5,8 +7,8 @@
 /// 📊 Architecture: Decorator pattern around real analytics client
 library;
 
-import 'analytics_client.dart';
-import 'analytics_consent.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_consent.dart';
 
 /// Analytics client wrapper that enforces consent.
 ///

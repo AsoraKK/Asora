@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/providers/moderation_providers.dart';
-import '../../components/moderation_card.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/state/providers/moderation_providers.dart';
+import 'package:asora/ui/components/moderation_card.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class ModerationCaseScreen extends ConsumerWidget {
   const ModerationCaseScreen({super.key, this.caseId});

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ENVIRONMENT CONFIGURATION
 ///
 /// 🎯 Purpose: Environment-specific configuration (dev/staging/prod)

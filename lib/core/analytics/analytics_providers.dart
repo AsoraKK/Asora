@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ANALYTICS PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for analytics client and consent
@@ -9,12 +11,12 @@ import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../providers/repository_providers.dart';
-import 'analytics_client.dart';
-import 'analytics_consent.dart';
-import 'analytics_consent_storage.dart';
-import 'consent_aware_analytics_client.dart';
-import 'http_analytics_client.dart';
+import 'package:asora/core/providers/repository_providers.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_consent.dart';
+import 'package:asora/core/analytics/analytics_consent_storage.dart';
+import 'package:asora/core/analytics/consent_aware_analytics_client.dart';
+import 'package:asora/core/analytics/http_analytics_client.dart';
 
 /// Provider for analytics consent storage
 final analyticsConsentStorageProvider = Provider<AnalyticsConsentStorage>((

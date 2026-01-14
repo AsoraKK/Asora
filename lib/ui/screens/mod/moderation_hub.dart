@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/providers/moderation_providers.dart';
-import '../../components/appeal_card.dart';
-import '../../components/moderation_card.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/state/providers/moderation_providers.dart';
+import 'package:asora/ui/components/appeal_card.dart';
+import 'package:asora/ui/components/moderation_card.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class ModerationHubScreen extends ConsumerWidget {
   const ModerationHubScreen({super.key});

@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../state/models/feed_models.dart';
-import '../theme/spacing.dart';
-import 'tier_badge.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/components/tier_badge.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({

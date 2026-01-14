@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA DEVICE INTEGRITY DETECTION
 ///
 /// 🎯 Purpose: Detect compromised devices (root/jailbreak)

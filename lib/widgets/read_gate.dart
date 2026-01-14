@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../screens/lock_screen.dart';
+import 'package:asora/screens/lock_screen.dart';
 
 // Placeholder provider - replace with your actual user provider
 final meProvider = FutureProvider<UserProfile>((ref) async {
   // NOTE(asora-auth): replace with real /api/me call once backend contract stabilizes
-  await Future.delayed(const Duration(seconds: 1));
+  await Future<void>.delayed(const Duration(seconds: 1));
   return const UserProfile(accountLocked: false);
 });
 

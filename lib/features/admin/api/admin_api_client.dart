@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ADMIN API CLIENT
 ///
 /// 🎯 Purpose: HTTP client for admin configuration endpoints
@@ -9,7 +11,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
-import '../domain/admin_config_models.dart';
+import 'package:asora/features/admin/domain/admin_config_models.dart';
 
 /// Exception thrown by AdminApiClient operations
 class AdminApiException implements Exception {

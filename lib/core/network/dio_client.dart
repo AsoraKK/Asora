@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA SECURE DIO CLIENT
 ///
 /// 🎯 Purpose: Secure HTTP client with certificate pinning and integrity checks
@@ -10,12 +12,12 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/environment_config.dart';
-import '../security/tls_pinning.dart';
-import '../security/device_security_service.dart';
-import '../security/device_integrity.dart';
-import '../security/security_overrides.dart';
-import '../security/security_telemetry.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/tls_pinning.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/security/device_integrity.dart';
+import 'package:asora/core/security/security_overrides.dart';
+import 'package:asora/core/security/security_telemetry.dart';
 
 /// Secure Dio client provider with certificate pinning and integrity checks
 final secureDioProvider = Provider<Dio>((ref) {

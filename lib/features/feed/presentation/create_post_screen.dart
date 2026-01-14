@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA CREATE POST SCREEN
 ///
 /// 🎯 Purpose: UI for creating new posts
@@ -9,8 +11,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../application/post_creation_providers.dart';
-import '../domain/post_repository.dart';
+import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:asora/features/feed/domain/post_repository.dart';
 
 /// Screen for creating a new post
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -194,7 +196,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Discard post?', style: GoogleFonts.sora()),
@@ -445,7 +447,7 @@ class CreatePostFAB extends ConsumerWidget {
     }
 
     Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (context) => const CreatePostScreen(),
         fullscreenDialog: true,
       ),

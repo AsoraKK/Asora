@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../state/models/feed_models.dart';
-import '../../state/providers/feed_providers.dart';
-import '../theme/spacing.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/state/providers/feed_providers.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class FeedControlPanel extends ConsumerWidget {
   const FeedControlPanel({

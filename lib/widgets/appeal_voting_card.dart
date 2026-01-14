@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../features/auth/application/auth_providers.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// ASORA APPEAL VOTING CARD
 ///
@@ -749,8 +751,9 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
             errorMessage = 'You have already voted on this appeal';
           } else if (error.response?.statusCode == 429) {
             errorMessage = 'Please wait before voting again';
-          } else if (error.response?.data?['error'] != null) {
-            errorMessage = error.response!.data['error'];
+          } else if (error.response?.data is Map &&
+              (error.response!.data as Map)['error'] is String) {
+            errorMessage = (error.response!.data as Map)['error'] as String;
           }
         } else if (error is ModerationException) {
           errorMessage = error.message;

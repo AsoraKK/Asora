@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Privacy feature immutable state and enums.
 ///
 /// Defines the export/delete state machines used by the privacy controller.

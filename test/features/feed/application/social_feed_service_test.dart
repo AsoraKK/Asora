@@ -17,9 +17,9 @@ Map<String, dynamic> _postJson(String id) {
   };
 }
 
-Response<dynamic> _response(Object data, String path) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(Object data, String path) {
+  return Response<Map<String, dynamic>>(
+    data: data as Map<String, dynamic>,
     statusCode: 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -47,7 +47,7 @@ void main() {
 
   test('cursor feeds parse posts and cursors', () async {
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -60,7 +60,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/news',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -73,7 +73,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/user/user-1',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -106,7 +106,7 @@ void main() {
 
     final captured =
         verify(
-              () => dio.get(
+              () => dio.get<Map<String, dynamic>>(
                 '/feed/user/user-1',
                 queryParameters: captureAny(named: 'queryParameters'),
                 options: any(named: 'options'),
@@ -118,7 +118,7 @@ void main() {
 
   test('getFeed handles success and failure', () async {
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/get',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -135,7 +135,7 @@ void main() {
     expect(response.posts, hasLength(1));
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/get',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -156,7 +156,7 @@ void main() {
 
   test('list feeds use shared response handler', () async {
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/trending',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -167,7 +167,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/local',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -178,7 +178,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/new-creators',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -191,7 +191,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/following',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -217,7 +217,10 @@ void main() {
 
   test('post actions and comments parse correctly', () async {
     when(
-      () => dio.get('/posts/post-1', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/posts/post-1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => _response({
         'success': true,
@@ -226,7 +229,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/posts/post-1/like',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -239,7 +242,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/posts/post-1/dislike',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -252,7 +255,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/posts/post-1/comments',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -274,7 +277,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/posts/post-1/flag',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -305,7 +308,7 @@ void main() {
 
   test('throws on invalid response and network error', () async {
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -318,7 +321,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/feed/trending',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),

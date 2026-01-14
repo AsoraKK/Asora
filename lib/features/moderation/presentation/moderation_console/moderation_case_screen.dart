@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/moderation_case.dart';
-import '../../domain/moderation_decision.dart';
-import '../providers/moderation_console_providers.dart';
-import 'widgets/moderation_audit_timeline.dart';
-import 'widgets/moderation_decision_panel.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_audit_timeline.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_decision_panel.dart';
 
 class ModerationCaseScreen extends ConsumerWidget {
   const ModerationCaseScreen({super.key, required this.caseId});

@@ -1,22 +1,24 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/security/device_integrity_guard.dart';
-import '../../../core/analytics/analytics_providers.dart';
-import '../../../core/analytics/analytics_events.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
 
-import '../auth/presentation/auth_gate.dart';
-import 'state/privacy_controller.dart';
-import 'state/privacy_state.dart';
-import 'utils/privacy_formatters.dart';
-import 'widgets/analytics_settings_card.dart';
-import 'widgets/cooldown_row.dart';
-import 'widgets/delete_confirmation_dialog.dart';
-import 'widgets/delete_section.dart';
-import 'widgets/export_section.dart';
-import 'widgets/privacy_blocking_overlay.dart';
-import 'widgets/privacy_error_banner.dart';
-import 'widgets/privacy_info_card.dart';
+import 'package:asora/features/auth/presentation/auth_gate.dart';
+import 'package:asora/features/privacy/state/privacy_controller.dart';
+import 'package:asora/features/privacy/state/privacy_state.dart';
+import 'package:asora/features/privacy/utils/privacy_formatters.dart';
+import 'package:asora/features/privacy/widgets/analytics_settings_card.dart';
+import 'package:asora/features/privacy/widgets/cooldown_row.dart';
+import 'package:asora/features/privacy/widgets/delete_confirmation_dialog.dart';
+import 'package:asora/features/privacy/widgets/delete_section.dart';
+import 'package:asora/features/privacy/widgets/export_section.dart';
+import 'package:asora/features/privacy/widgets/privacy_blocking_overlay.dart';
+import 'package:asora/features/privacy/widgets/privacy_error_banner.dart';
+import 'package:asora/features/privacy/widgets/privacy_info_card.dart';
 
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -164,7 +166,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         next.deleteStatus == DeleteStatus.deleted) {
       messenger.showSnackBar(const SnackBar(content: Text('Account deleted.')));
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthGate()),
+        MaterialPageRoute<void>(builder: (_) => const AuthGate()),
         (route) => false,
       );
     }

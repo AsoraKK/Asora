@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Icon Button Component
 ///
 /// Icon-only button for compact, semantically clear actions.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic icon button component
 ///
@@ -56,33 +58,23 @@ class LythIconButton extends StatelessWidget {
 
   /// Create a filled icon button variant
   const LythIconButton.filled({
-    required IconData icon,
-    required VoidCallback onPressed,
-    Color? color,
-    String? tooltip,
-    double iconSize = 24,
+    required this.icon,
+    required this.onPressed,
+    this.color,
+    this.tooltip,
+    this.iconSize = 24,
     super.key,
-  }) : icon = icon,
-       onPressed = onPressed,
-       disabled = false,
-       color = color,
-       tooltip = tooltip,
-       iconSize = iconSize;
+  }) : disabled = false;
 
   /// Create an outlined icon button variant
   const LythIconButton.outlined({
-    required IconData icon,
-    required VoidCallback onPressed,
-    Color? color,
-    String? tooltip,
-    double iconSize = 24,
+    required this.icon,
+    required this.onPressed,
+    this.color,
+    this.tooltip,
+    this.iconSize = 24,
     super.key,
-  }) : icon = icon,
-       onPressed = onPressed,
-       disabled = false,
-       color = color,
-       tooltip = tooltip,
-       iconSize = iconSize;
+  }) : disabled = false;
 
   @override
   Widget build(BuildContext context) {

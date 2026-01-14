@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST SERVICE
 ///
 /// 🎯 Purpose: HTTP client for post management API calls
@@ -8,9 +10,9 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../core/observability/asora_tracer.dart';
-import '../features/auth/domain/user_models.dart';
-import '../core/network/response_models.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/features/auth/domain/user_models.dart';
+import 'package:asora/core/network/response_models.dart';
 
 /// Post management service for Azure Functions integration
 class PostService {
@@ -27,22 +29,22 @@ class PostService {
     return AsoraTracer.traceOperation(
       'PostService.createPost',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '/api/posts',
           data: {'text': text, if (mediaUrl != null) 'mediaUrl': mediaUrl},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.statusCode == 201) {
-          debugPrint('✅ Post created successfully: ${response.data['postId']}');
-          return PostCreateResponse.fromJson(response.data);
-        } else {
-          throw DioException(
-            requestOptions: response.requestOptions,
-            response: response,
-            message: 'Failed to create post: ${response.data}',
-          );
+        final data = response.data;
+        if (response.statusCode == 201 && data != null) {
+          debugPrint('✅ Post created successfully: ${data['postId']}');
+          return PostCreateResponse.fromJson(data);
         }
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: 'Failed to create post: ${response.data}',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
@@ -61,21 +63,21 @@ class PostService {
     return AsoraTracer.traceOperation(
       'PostService.deletePost',
       () async {
-        final response = await _dio.delete(
+        final response = await _dio.delete<Map<String, dynamic>>(
           '/api/posts/$postId',
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data;
+        if (response.statusCode == 200 && data?['success'] == true) {
           debugPrint('✅ Post deleted successfully: $postId');
-          return response.data;
-        } else {
-          throw DioException(
-            requestOptions: response.requestOptions,
-            response: response,
-            message: 'Failed to delete post: ${response.data}',
-          );
+          return data!;
         }
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: 'Failed to delete post: ${response.data}',
+        );
       },
       attributes: AsoraTracer.httpRequestAttributes(
         method: 'DELETE',
@@ -98,7 +100,7 @@ class PostService {
           if (cursor != null) 'cursor': cursor,
         };
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '/api/feed',
           queryParameters: queryParams,
           options: Options(
@@ -106,18 +108,18 @@ class PostService {
           ),
         );
 
-        if (response.statusCode == 200) {
+        final data = response.data;
+        if (response.statusCode == 200 && data != null) {
           debugPrint(
-            '✅ Feed fetched successfully: ${response.data['feed']?.length ?? 0} posts',
+            '✅ Feed fetched successfully: ${data['feed']?.length ?? 0} posts',
           );
-          return FeedResponse.fromJson(response.data);
-        } else {
-          throw DioException(
-            requestOptions: response.requestOptions,
-            response: response,
-            message: 'Failed to fetch feed: ${response.data}',
-          );
+          return FeedResponse.fromJson(data);
         }
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: 'Failed to fetch feed: ${response.data}',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
@@ -139,23 +141,23 @@ class PostService {
       () async {
         final url = userId != null ? '/api/user/$userId' : '/api/user';
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           url,
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.statusCode == 200) {
+        final data = response.data;
+        if (response.statusCode == 200 && data != null) {
           debugPrint(
-            '✅ User profile fetched successfully: ${response.data['user']['id']}',
+            '✅ User profile fetched successfully: ${data['user']?['id']}',
           );
-          return UserProfileResponse.fromJson(response.data);
-        } else {
-          throw DioException(
-            requestOptions: response.requestOptions,
-            response: response,
-            message: 'Failed to fetch user profile: ${response.data}',
-          );
+          return UserProfileResponse.fromJson(data);
         }
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: 'Failed to fetch user profile: ${response.data}',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -173,18 +175,18 @@ class PostService {
     return AsoraTracer.traceOperation(
       'PostService.checkHealth',
       () async {
-        final response = await _dio.get('/api/health');
+        final response = await _dio.get<Map<String, dynamic>>('/api/health');
 
-        if (response.statusCode == 200) {
+        final data = response.data;
+        if (response.statusCode == 200 && data != null) {
           debugPrint('✅ Backend health check successful');
-          return response.data;
-        } else {
-          throw DioException(
-            requestOptions: response.requestOptions,
-            response: response,
-            message: 'Health check failed: ${response.data}',
-          );
+          return data;
         }
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          message: 'Health check failed: ${response.data}',
+        );
       },
       attributes: AsoraTracer.httpRequestAttributes(
         method: 'GET',

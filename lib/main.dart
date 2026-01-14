@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'design_system/index.dart';
-import 'features/auth/presentation/auth_gate.dart';
+import 'package:asora/design_system/index.dart';
+import 'package:asora/features/auth/presentation/auth_gate.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

@@ -38,9 +38,14 @@ class FakePushNotificationService implements PushNotificationService {
   void dispose() {}
 }
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  final map = Map<String, dynamic>.from(data as Map);
+  return Response<Map<String, dynamic>>(
+    data: map,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -69,7 +74,10 @@ void main() {
     );
 
     when(
-      () => dio.post('/api/devices/register', data: any(named: 'data')),
+      () => dio.post<Map<String, dynamic>>(
+        '/api/devices/register',
+        data: any(named: 'data'),
+      ),
     ).thenAnswer(
       (_) async => _response({
         'success': true,
@@ -99,18 +107,22 @@ void main() {
       pushService: FakePushNotificationService(token: 'token'),
     );
 
-    when(() => dio.get('/api/devices')).thenAnswer(
-      (_) async => _response([
-        {
-          'id': 'd1',
-          'userId': 'u1',
-          'deviceId': 'device-1',
-          'pushToken': 'token',
-          'platform': 'fcm',
-          'createdAt': '2024-01-01T00:00:00Z',
-          'lastSeenAt': '2024-01-01T01:00:00Z',
-        },
-      ], '/api/devices'),
+    when(() => dio.get<List<dynamic>>('/api/devices')).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        data: [
+          {
+            'id': 'd1',
+            'userId': 'u1',
+            'deviceId': 'device-1',
+            'pushToken': 'token',
+            'platform': 'fcm',
+            'createdAt': '2024-01-01T00:00:00Z',
+            'lastSeenAt': '2024-01-01T01:00:00Z',
+          },
+        ],
+        statusCode: 200,
+        requestOptions: RequestOptions(path: '/api/devices'),
+      ),
     );
 
     final devices = await service.getRegisteredDevices();
@@ -126,11 +138,13 @@ void main() {
     );
 
     when(
-      () => dio.post('/api/devices/device-1/revoke'),
+      () => dio.post<Map<String, dynamic>>('/api/devices/device-1/revoke'),
     ).thenAnswer((_) async => _response({}, '/api/devices/device-1/revoke'));
 
     await service.revokeDevice('device-1');
 
-    verify(() => dio.post('/api/devices/device-1/revoke')).called(1);
+    verify(
+      () => dio.post<Map<String, dynamic>>('/api/devices/device-1/revoke'),
+    ).called(1);
   });
 }

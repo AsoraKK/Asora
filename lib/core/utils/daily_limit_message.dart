@@ -7,7 +7,8 @@ String dailyLimitMessage({
   final tier = payload['tier']?.toString().toUpperCase() ?? 'YOUR TIER';
   final limit = payload['limit']?.toString() ?? 'your limit';
   final nowUtc = (now ?? DateTime.now()).toUtc();
-  final resetAt = DateTime.tryParse(payload['resetAt'] ?? '');
+  final resetAtRaw = payload['resetAt'];
+  final resetAt = resetAtRaw is String ? DateTime.tryParse(resetAtRaw) : null;
   final waitText = (resetAt != null)
       ? _formatRetryText(resetAt.toUtc().difference(nowUtc))
       : 'later';

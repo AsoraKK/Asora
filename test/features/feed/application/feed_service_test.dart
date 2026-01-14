@@ -56,7 +56,7 @@ void main() {
       };
 
       when(
-        () => mockDio.get(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',
           queryParameters: any(named: 'queryParameters'),
           options: any(named: 'options'),
@@ -78,7 +78,7 @@ void main() {
 
     test('getVotingFeed failure', () async {
       when(
-        () => mockDio.get(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',
           queryParameters: any(named: 'queryParameters'),
           options: any(named: 'options'),
@@ -99,7 +99,7 @@ void main() {
 
     test('getVotingFeed network error', () async {
       when(
-        () => mockDio.get(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',
           queryParameters: any(named: 'queryParameters'),
           options: any(named: 'options'),
@@ -134,7 +134,7 @@ void main() {
       };
 
       when(
-        () => mockDio.get(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/getMyVotes',
           queryParameters: any(named: 'queryParameters'),
           options: any(named: 'options'),
@@ -155,7 +155,7 @@ void main() {
 
     test('getVotingHistory failure', () async {
       when(
-        () => mockDio.get(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/getMyVotes',
           queryParameters: any(named: 'queryParameters'),
           options: any(named: 'options'),
@@ -188,8 +188,10 @@ void main() {
       };
 
       when(
-        () =>
-            mockDio.get('/api/getFeedMetrics', options: any(named: 'options')),
+        () => mockDio.get<Map<String, dynamic>>(
+          '/api/getFeedMetrics',
+          options: any(named: 'options'),
+        ),
       ).thenAnswer(
         (_) async => Response(
           data: mockResponse,
@@ -207,8 +209,10 @@ void main() {
 
     test('getFeedMetrics failure', () async {
       when(
-        () =>
-            mockDio.get('/api/getFeedMetrics', options: any(named: 'options')),
+        () => mockDio.get<Map<String, dynamic>>(
+          '/api/getFeedMetrics',
+          options: any(named: 'options'),
+        ),
       ).thenAnswer(
         (_) async => Response(
           data: {'success': false, 'message': 'Failed'},

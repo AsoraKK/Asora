@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../utils/motion.dart';
-import 'spacing.dart';
+import 'package:asora/ui/utils/motion.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class AsoraTheme {
   static const Color _ink = Color(0xFF0F1720);

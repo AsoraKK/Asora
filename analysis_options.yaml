@@ -17,6 +17,7 @@ analyzer:
     
     # Code quality
     dead_code: warning
+    always_put_control_body_on_new_line: ignore
     unused_import: warning
     unused_local_variable: info
     

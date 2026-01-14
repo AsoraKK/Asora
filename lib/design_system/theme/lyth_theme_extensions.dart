@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Theme Extensions
 ///
 /// Extends ThemeData with tokens not covered by standard Material 3 ColorScheme.
@@ -6,9 +8,9 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../tokens/motion.dart';
-import '../tokens/radius.dart';
-import '../tokens/spacing.dart';
+import 'package:asora/design_system/tokens/motion.dart';
+import 'package:asora/design_system/tokens/radius.dart';
+import 'package:asora/design_system/tokens/spacing.dart';
 
 /// ThemeExtension for Lythaus design tokens
 class LythThemeExtension extends ThemeExtension<LythThemeExtension> {

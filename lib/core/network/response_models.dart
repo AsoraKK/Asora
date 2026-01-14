@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA API RESPONSE MODELS
 ///
 /// 🎯 Purpose: Response models for Azure Functions API integration
@@ -24,12 +26,14 @@ class PostCreateResponse {
 
   factory PostCreateResponse.fromJson(Map<String, dynamic> json) {
     return PostCreateResponse(
-      success: json['success'] ?? false,
-      postId: json['postId'],
-      message: json['message'],
-      moderationResult: json['moderationResult'] as Map<String, dynamic>?,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+      success: json['success'] as bool? ?? false,
+      postId: json['postId'] as String?,
+      message: json['message'] as String?,
+      moderationResult: json['moderationResult'] is Map
+          ? Map<String, dynamic>.from(json['moderationResult'] as Map)
+          : null,
+      createdAt: json['createdAt'] is String
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
     );
   }
@@ -62,13 +66,21 @@ class FeedResponse {
   });
 
   factory FeedResponse.fromJson(Map<String, dynamic> json) {
+    final feedItems = json['feed'];
     return FeedResponse(
-      success: json['success'] ?? false,
-      feed: List<Map<String, dynamic>>.from(json['feed'] ?? []),
-      nextCursor: json['nextCursor'],
-      message: json['message'],
-      metadata: json['metadata'] != null
-          ? FeedMetadata.fromJson(json['metadata'])
+      success: json['success'] as bool? ?? false,
+      feed: feedItems is List
+          ? feedItems
+                .whereType<Map<String, dynamic>>()
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList()
+          : const <Map<String, dynamic>>[],
+      nextCursor: json['nextCursor'] as String?,
+      message: json['message'] as String?,
+      metadata: json['metadata'] is Map
+          ? FeedMetadata.fromJson(
+              Map<String, dynamic>.from(json['metadata'] as Map),
+            )
           : null,
     );
   }
@@ -102,12 +114,12 @@ class FeedMetadata {
 
   factory FeedMetadata.fromJson(Map<String, dynamic> json) {
     return FeedMetadata(
-      totalCount: json['totalCount'] ?? 0,
-      hasMore: json['hasMore'] ?? false,
-      algorithm: json['algorithm'],
-      cached: json['cached'],
-      cacheExpiry: json['cacheExpiry'] != null
-          ? DateTime.parse(json['cacheExpiry'])
+      totalCount: json['totalCount'] as int? ?? 0,
+      hasMore: json['hasMore'] as bool? ?? false,
+      algorithm: json['algorithm'] as String?,
+      cached: json['cached'] as bool?,
+      cacheExpiry: json['cacheExpiry'] is String
+          ? DateTime.parse(json['cacheExpiry'] as String)
           : null,
     );
   }

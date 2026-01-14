@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/feed/application/post_creation_providers.dart';
-import '../../features/feed/domain/post_repository.dart';
-import '../../state/models/feed_models.dart';
-import '../theme/spacing.dart';
+import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class CreatePostModal extends ConsumerStatefulWidget {
   const CreatePostModal({super.key, this.canMarkNews = true});
@@ -191,7 +193,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   void _showAiScan(CreatePostBlocked blocked) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(
@@ -227,7 +229,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   void _showLimitSheet(CreatePostLimitExceeded limit) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(
@@ -259,7 +261,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   void _openMediaPicker() {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (_) => Padding(

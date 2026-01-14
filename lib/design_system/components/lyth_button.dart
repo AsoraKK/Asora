@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Button Component
 ///
 /// High-level button component with multiple semantic variants.
@@ -6,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic button variants following Lythaus design system
 enum LythButtonVariant {
@@ -101,82 +103,55 @@ class LythButton extends StatelessWidget {
 
   /// Create a primary action button
   const LythButton.primary({
-    required String label,
-    required VoidCallback onPressed,
-    LythButtonSize size = LythButtonSize.medium,
-    IconData? icon,
-    bool iconAfter = false,
-    bool isLoading = false,
-    String? tooltip,
+    required this.label,
+    required this.onPressed,
+    this.size = LythButtonSize.medium,
+    this.icon,
+    this.iconAfter = false,
+    this.isLoading = false,
+    this.tooltip,
     super.key,
   }) : variant = LythButtonVariant.primary,
-       disabled = false,
-       label = label,
-       onPressed = onPressed,
-       size = size,
-       icon = icon,
-       iconAfter = iconAfter,
-       isLoading = isLoading,
-       tooltip = tooltip;
+       disabled = false;
 
   /// Create a secondary action button
   const LythButton.secondary({
-    required String label,
-    required VoidCallback onPressed,
-    LythButtonSize size = LythButtonSize.medium,
-    IconData? icon,
-    bool iconAfter = false,
-    bool isLoading = false,
-    String? tooltip,
+    required this.label,
+    required this.onPressed,
+    this.size = LythButtonSize.medium,
+    this.icon,
+    this.iconAfter = false,
+    this.isLoading = false,
+    this.tooltip,
     super.key,
   }) : variant = LythButtonVariant.secondary,
-       disabled = false,
-       label = label,
-       onPressed = onPressed,
-       size = size,
-       icon = icon,
-       iconAfter = iconAfter,
-       isLoading = isLoading,
-       tooltip = tooltip;
+       disabled = false;
 
   /// Create a tertiary action button (text-only)
   const LythButton.tertiary({
-    required String label,
-    required VoidCallback onPressed,
-    LythButtonSize size = LythButtonSize.medium,
-    IconData? icon,
-    bool iconAfter = false,
-    String? tooltip,
+    required this.label,
+    required this.onPressed,
+    this.size = LythButtonSize.medium,
+    this.icon,
+    this.iconAfter = false,
+    this.tooltip,
     super.key,
   }) : variant = LythButtonVariant.tertiary,
        disabled = false,
-       isLoading = false,
-       label = label,
-       onPressed = onPressed,
-       size = size,
-       icon = icon,
-       iconAfter = iconAfter,
-       tooltip = tooltip;
+       isLoading = false;
 
   /// Create a destructive button
   const LythButton.destructive({
-    required String label,
-    required VoidCallback onPressed,
-    LythButtonSize size = LythButtonSize.medium,
-    IconData? icon,
-    bool iconAfter = false,
-    bool isLoading = false,
-    String? tooltip,
+    required this.label,
+    required this.onPressed,
+    this.size = LythButtonSize.medium,
+    this.icon,
+    this.iconAfter = false,
+    this.isLoading = false,
+    this.tooltip,
     super.key,
   }) : variant = LythButtonVariant.destructive,
-       disabled = false,
-       label = label,
-       onPressed = onPressed,
-       size = size,
-       icon = icon,
-       iconAfter = iconAfter,
-       isLoading = isLoading,
-       tooltip = tooltip;
+       disabled = false;
 
   bool get _isDisabled => disabled || isLoading || onPressed == null;
 

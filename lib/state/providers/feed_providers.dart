@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_feeds.dart';
-import '../../features/auth/application/auth_providers.dart';
-import '../../features/feed/application/social_feed_providers.dart';
-import '../../features/feed/domain/models.dart' as domain;
-import '../models/feed_models.dart';
+import 'package:asora/data/mock/mock_feeds.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/feed/application/social_feed_providers.dart';
+import 'package:asora/features/feed/domain/models.dart' as domain;
+import 'package:asora/state/models/feed_models.dart';
 
 final feedListProvider = Provider<List<FeedModel>>((ref) => mockFeeds);
 

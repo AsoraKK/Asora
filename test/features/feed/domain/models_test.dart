@@ -313,7 +313,7 @@ void main() {
 
       expect(moderation.confidence, 'low');
       expect(moderation.score, 0.3);
-      expect(moderation.flags, []);
+      expect(moderation.flags, <String>[]);
       expect(moderation.analyzedAt, testDate);
       expect(moderation.provider, 'openai');
     });

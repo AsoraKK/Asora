@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_settings.dart';
-import '../models/settings.dart';
+import 'package:asora/data/mock/mock_settings.dart';
+import 'package:asora/state/models/settings.dart';
 
 class SettingsController extends StateNotifier<SettingsState> {
   SettingsController() : super(defaultSettings);

@@ -1,15 +1,17 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/auth/application/auth_providers.dart';
-import '../core/providers/repository_providers.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../features/moderation/domain/moderation_repository.dart';
-import '../features/moderation/presentation/widgets/appeal_card.dart';
-import '../features/moderation/presentation/widgets/analytics_overview_cards.dart';
-import '../features/moderation/presentation/widgets/content_type_breakdown.dart';
-import '../features/moderation/presentation/widgets/voting_status_breakdown.dart';
-import '../features/moderation/presentation/widgets/empty_state_widget.dart';
-import '../core/utils/date_formatter.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/providers/repository_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart';
+import 'package:asora/features/moderation/presentation/widgets/analytics_overview_cards.dart';
+import 'package:asora/features/moderation/presentation/widgets/content_type_breakdown.dart';
+import 'package:asora/features/moderation/presentation/widgets/voting_status_breakdown.dart';
+import 'package:asora/features/moderation/presentation/widgets/empty_state_widget.dart';
+import 'package:asora/core/utils/date_formatter.dart';
 
 /// ASORA APPEAL HISTORY PAGE
 ///
@@ -207,7 +209,7 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
   }
 
   void _showAppealDetails(Appeal appeal) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Appeal Details'),

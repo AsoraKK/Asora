@@ -1,14 +1,16 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../features/auth/application/auth_providers.dart';
-import '../../../features/profile/application/profile_providers.dart';
-import '../../../features/profile/domain/public_user.dart';
-import '../../components/tier_badge.dart';
-import '../../theme/spacing.dart';
-import '../rewards/rewards_dashboard.dart';
-import '../mod/moderation_hub.dart';
-import 'settings_screen.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/profile/application/profile_providers.dart';
+import 'package:asora/features/profile/domain/public_user.dart';
+import 'package:asora/ui/components/tier_badge.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
+import 'package:asora/ui/screens/mod/moderation_hub.dart';
+import 'package:asora/ui/screens/profile/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -133,7 +135,7 @@ class ProfileScreen extends ConsumerWidget {
             trailing: TierBadge(label: profile.tier),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (_) => const RewardsDashboardScreen(),
                 ),
               );
@@ -145,7 +147,9 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('Moderation hub'),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ModerationHubScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const ModerationHubScreen(),
+                ),
               );
             },
           ),
@@ -153,9 +157,9 @@ class ProfileScreen extends ConsumerWidget {
             leading: const Icon(Icons.settings_outlined),
             title: const Text('Settings'),
             onTap: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
         ],

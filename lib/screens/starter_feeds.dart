@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
 class StarterFeeds extends StatefulWidget {
@@ -20,22 +22,22 @@ class _StarterFeedsState extends State<StarterFeeds>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Lythaus"),
+        title: const Text('Lythaus'),
         bottom: TabBar(
           controller: _tc,
           tabs: const [
-            Tab(text: "Trending"),
-            Tab(text: "New Creators"),
-            Tab(text: "Local"),
+            Tab(text: 'Trending'),
+            Tab(text: 'New Creators'),
+            Tab(text: 'Local'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tc,
         children: const [
-          FeedList(endpoint: "/api/feed/trending"),
-          FeedList(endpoint: "/api/feed/new-creators"),
-          FeedList(endpoint: "/api/feed/local"),
+          FeedList(endpoint: '/api/feed/trending'),
+          FeedList(endpoint: '/api/feed/new-creators'),
+          FeedList(endpoint: '/api/feed/local'),
         ],
       ),
     );

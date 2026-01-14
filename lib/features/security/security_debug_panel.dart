@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/environment_config.dart';
-import '../../core/security/device_security_service.dart';
-import '../../core/security/security_overrides.dart';
-import '../../core/security/security_telemetry.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/security/security_overrides.dart';
+import 'package:asora/core/security/security_telemetry.dart';
 
 class SecurityDebugPanel extends ConsumerWidget {
   const SecurityDebugPanel({super.key});

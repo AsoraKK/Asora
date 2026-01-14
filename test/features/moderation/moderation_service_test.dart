@@ -121,10 +121,10 @@ void main() {
 
       test('should return parsed JSON response on success', () async {
         final responseData = {
-          "items": [
-            {"id": "1"},
+          'items': [
+            {'id': '1'},
           ],
-          "total": 1,
+          'total': 1,
         };
         mockClient.addResponse(
           '$baseUrl/api/moderation/review-queue?page=1&pageSize=20&status=pending',

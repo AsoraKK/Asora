@@ -1,8 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/appeal.dart' show Appeal, VotingStatus;
-import '../widgets/appeal_voting_card.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart'
+    show Appeal, VotingStatus;
+import 'package:asora/widgets/appeal_voting_card.dart';
 
 /// ASORA VOTE FEED PAGE
 ///
@@ -351,7 +354,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   List<Appeal> _getFilteredAppeals() {
-    var filtered = _appeals.where((appeal) {
+    final filtered = _appeals.where((appeal) {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -447,7 +450,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showStatusFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Filter by Status'),
@@ -465,7 +468,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showContentTypeFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Filter by Content Type'),
@@ -483,7 +486,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showUrgencyFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Filter by Urgency'),

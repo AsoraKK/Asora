@@ -19,7 +19,7 @@ void main() {
 
         // No immediate network call
         verifyNever(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -30,7 +30,7 @@ void main() {
       test('flush sends events to backend', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -49,7 +49,7 @@ void main() {
         await client.flush();
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: argThat(
               isA<Map<String, dynamic>>().having(
@@ -67,7 +67,7 @@ void main() {
       test('flush threshold triggers automatic flush', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -84,7 +84,7 @@ void main() {
         await client.logEvent('event1');
         await client.logEvent('event2');
         verifyNever(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -96,7 +96,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 100));
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -109,7 +109,7 @@ void main() {
       test('flush includes session ID and metadata', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -131,7 +131,7 @@ void main() {
         await client.flush();
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: argThat(
               isA<Map<String, dynamic>>()
@@ -152,7 +152,7 @@ void main() {
       test('setUserId includes userId in flush payload', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -171,7 +171,7 @@ void main() {
         await client.flush();
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: argThat(
               isA<Map<String, dynamic>>().having(
@@ -189,7 +189,7 @@ void main() {
       test('reset generates new session ID', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -207,7 +207,7 @@ void main() {
         await client.flush();
 
         final firstCall = verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: captureAnyNamed('data'),
             options: anyNamed('options'),
@@ -221,7 +221,7 @@ void main() {
         await client.flush();
 
         final secondCall = verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: captureAnyNamed('data'),
             options: anyNamed('options'),
@@ -238,7 +238,7 @@ void main() {
       test('flush handles network errors gracefully', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -261,7 +261,7 @@ void main() {
       test('dispose flushes pending events', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -279,7 +279,7 @@ void main() {
         await client.dispose();
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -302,7 +302,7 @@ void main() {
 
         // No events should be sent
         verifyNever(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -324,7 +324,7 @@ void main() {
 
         // Event should be rejected
         verifyNever(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -335,7 +335,7 @@ void main() {
       test('validates property types', () async {
         final mockDio = MockDio();
         when(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             any,
             data: anyNamed('data'),
             options: anyNamed('options'),
@@ -363,7 +363,7 @@ void main() {
         await client.flush();
 
         verify(
-          mockDio.post(
+          mockDio.post<Map<String, dynamic>>(
             '/api/analytics/events',
             data: anyNamed('data'),
             options: anyNamed('options'),

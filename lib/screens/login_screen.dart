@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../design_system/components/index.dart';
-import '../design_system/theme/theme_build_context_x.dart';
-import '../features/auth/application/auth_service.dart';
-import '../features/auth/domain/auth_failure.dart';
-import '../features/auth/domain/user.dart';
+import 'package:asora/design_system/components/index.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/features/auth/application/auth_service.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/domain/user.dart';
 
 /// Login screen for Lythaus authentication
 class LoginScreen extends StatefulWidget {
@@ -114,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            LythIcon(
+            const LythIcon(
               Icons.lock_outline,
               size: LythIconSize.xlarge,
               semanticColor: 'primary',

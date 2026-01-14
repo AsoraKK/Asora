@@ -37,16 +37,16 @@ class Post {
 
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
-      postId: json['postId'],
-      authorId: json['authorId'],
-      authorName: json['authorName'],
-      content: json['content'],
-      createdAt: DateTime.parse(json['createdAt']),
-      likeCount: json['likeCount'] ?? 0,
-      commentCount: json['commentCount'] ?? 0,
-      isLiked: json['isLiked'] ?? false,
-      tags: List<String>.from(json['tags'] ?? []),
-      imageUrl: json['imageUrl'],
+      postId: json['postId'] as String,
+      authorId: json['authorId'] as String,
+      authorName: json['authorName'] as String,
+      content: json['content'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      likeCount: (json['likeCount'] as int?) ?? 0,
+      commentCount: (json['commentCount'] as int?) ?? 0,
+      isLiked: (json['isLiked'] as bool?) ?? false,
+      tags: List<String>.from(json['tags'] as Iterable<dynamic>? ?? []),
+      imageUrl: json['imageUrl'] as String?,
       status: PostStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => PostStatus.published,

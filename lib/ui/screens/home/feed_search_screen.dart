@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../features/feed/application/social_feed_providers.dart';
-import '../../../features/feed/domain/models.dart' as domain;
-import '../../../state/models/feed_models.dart';
-import '../../components/feed_card.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/features/feed/application/social_feed_providers.dart';
+import 'package:asora/features/feed/domain/models.dart' as domain;
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/ui/components/feed_card.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class FeedSearchScreen extends ConsumerStatefulWidget {
   const FeedSearchScreen({super.key});

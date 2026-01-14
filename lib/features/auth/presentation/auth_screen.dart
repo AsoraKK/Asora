@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../application/auth_service.dart'; // ← KEEP
-import '../domain/auth_failure.dart';
+import 'package:asora/features/auth/application/auth_service.dart'; // ← KEEP
+import 'package:asora/features/auth/domain/auth_failure.dart';
 
 /// Simple authentication screen with a Google sign-in button.
 class AuthScreen extends ConsumerWidget {

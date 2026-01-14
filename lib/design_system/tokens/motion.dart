@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Motion Tokens
 ///
 /// Defines animation durations and curves used throughout the design system.

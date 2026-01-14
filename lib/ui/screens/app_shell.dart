@@ -1,13 +1,15 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../state/providers/settings_providers.dart';
-import '../components/asora_bottom_nav.dart';
-import 'create/create_modal.dart';
-import 'create/create_screen.dart';
-import 'home/home_feed_navigator.dart';
-import 'profile/profile_screen.dart';
-import 'rewards/rewards_dashboard.dart';
+import 'package:asora/state/providers/settings_providers.dart';
+import 'package:asora/ui/components/asora_bottom_nav.dart';
+import 'package:asora/ui/screens/create/create_modal.dart';
+import 'package:asora/ui/screens/create/create_screen.dart';
+import 'package:asora/ui/screens/home/home_feed_navigator.dart';
+import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
 
 class AsoraAppShell extends ConsumerStatefulWidget {
   const AsoraAppShell({super.key});

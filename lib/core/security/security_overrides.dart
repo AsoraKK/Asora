@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA SECURITY OVERRIDES
 ///
 /// 🎯 Purpose: Break-glass mechanism for emergency security relaxation

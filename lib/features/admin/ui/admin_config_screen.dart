@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ADMIN CONFIG SCREEN
 ///
 /// 🎯 Purpose: UI for admin configuration management
@@ -10,8 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../domain/admin_config_models.dart';
-import '../state/admin_config_controller.dart';
+import 'package:asora/features/admin/domain/admin_config_models.dart';
+import 'package:asora/features/admin/state/admin_config_controller.dart';
 
 /// Admin configuration screen
 class AdminConfigScreen extends ConsumerWidget {

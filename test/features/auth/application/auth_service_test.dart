@@ -43,7 +43,8 @@ class MockHttpClient implements http.Client {
     }
 
     final statusCode = statusCodes[urlString] ?? 200;
-    final response = responses[urlString] ?? {};
+    final response =
+        (responses[urlString] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
     return http.Response(
       jsonEncode(response),
@@ -61,7 +62,8 @@ class MockHttpClient implements http.Client {
     }
 
     final statusCode = statusCodes[urlString] ?? 200;
-    final response = responses[urlString] ?? {};
+    final response =
+        (responses[urlString] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
     return http.Response(
       jsonEncode(response),

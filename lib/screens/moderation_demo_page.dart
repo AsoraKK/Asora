@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../widgets/post_card.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/widgets/post_card.dart';
 
 /// ASORA MODERATION DEMO PAGE
 ///
@@ -336,7 +338,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
   }
 
   void _showSettingsDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Moderation Settings'),

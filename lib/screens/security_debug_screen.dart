@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA SECURITY DEBUG SCREEN
 ///
 /// 🎯 Purpose: Dev-only screen showing security state, configs, and test controls
@@ -8,10 +10,10 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/config/environment_config.dart';
-import '../core/security/device_security_service.dart';
-import '../core/security/device_integrity_guard.dart';
-import '../core/security/security_overrides.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/security/security_overrides.dart';
 
 /// Security debug screen (dev-only)
 class SecurityDebugScreen extends ConsumerStatefulWidget {
@@ -343,7 +345,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
 
     if (!context.mounted) return;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Integrity Guard Test Results'),
@@ -381,7 +383,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
     final config = EnvironmentConfig.fromEnvironment();
     final tlsConfig = config.security.tlsPins;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('TLS Pinning Status'),

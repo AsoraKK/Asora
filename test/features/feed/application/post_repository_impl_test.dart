@@ -16,9 +16,13 @@ Map<String, dynamic> _postJson(String id) {
   };
 }
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  return Response<Map<String, dynamic>>(
+    data: data as Map<String, dynamic>,
     statusCode: statusCode,
     requestOptions: RequestOptions(path: path),
   );
@@ -35,7 +39,7 @@ void main() {
 
   test('createPost returns success on 201', () async {
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -55,7 +59,7 @@ void main() {
 
   test('createPost maps blocked and limit errors', () async {
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -84,7 +88,7 @@ void main() {
     expect(blocked, isA<CreatePostBlocked>());
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -117,7 +121,7 @@ void main() {
 
   test('createPost handles unexpected status', () async {
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -136,7 +140,10 @@ void main() {
 
   test('deletePost success and failure', () async {
     when(
-      () => dio.delete('/api/posts/p1', options: any(named: 'options')),
+      () => dio.delete<Map<String, dynamic>>(
+        '/api/posts/p1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async =>
           _response({'success': true}, '/api/posts/p1', statusCode: 200),
@@ -146,7 +153,10 @@ void main() {
     expect(ok, isTrue);
 
     when(
-      () => dio.delete('/api/posts/p2', options: any(named: 'options')),
+      () => dio.delete<Map<String, dynamic>>(
+        '/api/posts/p2',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async =>
           _response({'success': false}, '/api/posts/p2', statusCode: 500),
@@ -160,7 +170,10 @@ void main() {
 
   test('getPost returns post and handles 404', () async {
     when(
-      () => dio.get('/api/posts/p3', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/api/posts/p3',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => _response(
         {'post': _postJson('p3')},
@@ -173,7 +186,10 @@ void main() {
     expect(post.id, 'p3');
 
     when(
-      () => dio.get('/api/posts/missing', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/api/posts/missing',
+        options: any(named: 'options'),
+      ),
     ).thenThrow(
       DioException(
         requestOptions: RequestOptions(path: '/api/posts/missing'),

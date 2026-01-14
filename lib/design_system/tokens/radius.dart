@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Border Radius Tokens
 ///
 /// Defines consistent border radius values for surfaces and components.

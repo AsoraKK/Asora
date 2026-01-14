@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/analytics/analytics_providers.dart';
-import '../../../core/analytics/analytics_consent.dart';
-import '../../../core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/core/analytics/analytics_consent.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
 
 /// Analytics settings card for privacy settings screen.
 ///
@@ -125,7 +127,7 @@ class AnalyticsSettingsCard extends ConsumerWidget {
               onPressed: () {
                 // TODO: Navigate to privacy policy or open URL
                 // For now, show a simple dialog
-                showDialog(
+                showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Privacy Policy'),

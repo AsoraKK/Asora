@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA CERTIFICATE PINNING
 ///
 /// 🎯 Purpose: Pin SHA-256 of server's leaf SPKI, fail closed on mismatch

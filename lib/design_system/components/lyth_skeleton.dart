@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic skeleton (loading placeholder) component
 ///
@@ -32,16 +32,16 @@ class LythSkeleton extends StatefulWidget {
   final bool animate;
 
   /// Shape of the skeleton
-  final _SkeletonShape shape;
+  final _SkeletonShape _shape;
 
   const LythSkeleton._({
     this.width,
     required this.height,
     this.borderRadius,
-    required this.shape,
+    required _SkeletonShape shape,
     this.animate = true,
     super.key,
-  });
+  }) : _shape = shape;
 
   /// Line skeleton (text placeholder)
   const factory LythSkeleton.line({required double height, double? width}) =
@@ -64,26 +64,16 @@ class LythSkeleton extends StatefulWidget {
 enum _SkeletonShape { line, box, circle }
 
 class _LineSkeleton extends LythSkeleton {
-  const _LineSkeleton({required double height, double? width})
-    : super._(
-        height: height,
-        width: width,
-        borderRadius: 4,
-        shape: _SkeletonShape.line,
-      );
+  const _LineSkeleton({required super.height, super.width})
+    : super._(borderRadius: 4, shape: _SkeletonShape.line);
 }
 
 class _BoxSkeleton extends LythSkeleton {
   const _BoxSkeleton({
-    required double width,
-    required double height,
-    double? borderRadius,
-  }) : super._(
-         height: height,
-         width: width,
-         borderRadius: borderRadius,
-         shape: _SkeletonShape.box,
-       );
+    required double super.width,
+    required super.height,
+    super.borderRadius,
+  }) : super._(shape: _SkeletonShape.box);
 }
 
 class _CircleSkeleton extends LythSkeleton {
@@ -122,7 +112,7 @@ class _LythSkeletonState extends State<LythSkeleton>
         end: 1.0,
       ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     } else {
-      _opacity = AlwaysStoppedAnimation<double>(0.7);
+      _opacity = const AlwaysStoppedAnimation<double>(0.7);
     }
   }
 
@@ -159,11 +149,11 @@ class _LythSkeletonState extends State<LythSkeleton>
         height: widget.height,
         child: Container(
           decoration: BoxDecoration(
-            color: color.withOpacity(0.7 * _opacity.value),
+            color: color.withValues(alpha: 0.7 * _opacity.value),
             borderRadius: widget.borderRadius != null
                 ? BorderRadius.circular(widget.borderRadius!)
                 : null,
-            shape: widget.shape == _SkeletonShape.circle
+            shape: widget._shape == _SkeletonShape.circle
                 ? BoxShape.circle
                 : BoxShape.rectangle,
           ),

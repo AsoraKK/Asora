@@ -62,7 +62,7 @@ void main() {
       });
 
       test('should handle empty response list', () {
-        const posts = <dynamic>[];
+        const posts = <Map<String, dynamic>>[];
         expect(posts.isEmpty, isTrue);
       });
     });
@@ -154,7 +154,7 @@ void main() {
       });
 
       test('should handle empty list iteration', () {
-        const posts = <Map>[];
+        const posts = <Map<String, dynamic>>[];
         var count = 0;
 
         for (final _ in posts) {
@@ -307,7 +307,7 @@ void main() {
       });
 
       test('should use value when not null', () {
-        String? value = _runtimeTrue() ? 'actual' : null;
+        final String? value = _runtimeTrue() ? 'actual' : null;
         final result = value ?? 'default';
         expect(result, equals('actual'));
       });

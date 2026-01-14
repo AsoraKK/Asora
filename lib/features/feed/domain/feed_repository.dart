@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA FEED REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for feed operations
@@ -6,7 +8,7 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import '../../../features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// Abstract repository defining feed domain operations
 ///
@@ -73,13 +75,22 @@ class FeedMetrics {
   });
 
   factory FeedMetrics.fromJson(Map<String, dynamic> json) {
+    final breakdown = json['categoryBreakdown'];
+    final featured = json['featuredAppeals'];
+    final participation = json['userParticipationRate'];
     return FeedMetrics(
-      totalActiveAppeals: json['totalActiveAppeals'] ?? 0,
-      userVotesToday: json['userVotesToday'] ?? 0,
-      userTotalVotes: json['userTotalVotes'] ?? 0,
-      userParticipationRate: (json['userParticipationRate'] ?? 0.0).toDouble(),
-      categoryBreakdown: Map<String, int>.from(json['categoryBreakdown'] ?? {}),
-      featuredAppeals: List<String>.from(json['featuredAppeals'] ?? []),
+      totalActiveAppeals: json['totalActiveAppeals'] as int? ?? 0,
+      userVotesToday: json['userVotesToday'] as int? ?? 0,
+      userTotalVotes: json['userTotalVotes'] as int? ?? 0,
+      userParticipationRate: participation is num
+          ? participation.toDouble()
+          : 0.0,
+      categoryBreakdown: breakdown is Map
+          ? Map<String, int>.from(breakdown)
+          : const <String, int>{},
+      featuredAppeals: featured is List
+          ? featured.whereType<String>().toList()
+          : const <String>[],
     );
   }
 }

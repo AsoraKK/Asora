@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_rewards.dart';
-import '../models/reputation.dart';
+import 'package:asora/data/mock/mock_rewards.dart';
+import 'package:asora/state/models/reputation.dart';
 
 class ReputationController extends StateNotifier<UserReputation> {
   ReputationController() : super(mockReputation);

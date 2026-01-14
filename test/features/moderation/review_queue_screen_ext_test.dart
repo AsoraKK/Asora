@@ -128,5 +128,5 @@ class _FakeModerationServiceEmpty extends ModerationService {
     int page = 1,
     int pageSize = 20,
     String status = 'pending',
-  }) async => {'items': []};
+  }) async => {'items': <Map<String, dynamic>>[]};
 }

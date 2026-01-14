@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Slider Component
 ///
 /// Input component for selecting a value from a range.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic slider component
 ///

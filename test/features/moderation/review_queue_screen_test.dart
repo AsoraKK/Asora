@@ -34,7 +34,9 @@ class MockModerationService implements ModerationService {
       throw exceptions['fetchReviewQueue']!;
     }
 
-    return reviewQueueResponses[key] ?? {'items': []};
+    final response =
+        reviewQueueResponses[key] ?? {'items': <Map<String, dynamic>>[]};
+    return response as Map<String, dynamic>;
   }
 
   @override
@@ -183,7 +185,7 @@ void main() {
     final svc = MockModerationService();
 
     svc.setReviewQueueResponse('fetchReviewQueue_test-token_1_20_pending', {
-      'items': [],
+      'items': <Map<String, dynamic>>[],
     });
 
     await tester.pumpWidget(

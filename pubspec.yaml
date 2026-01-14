@@ -29,59 +29,41 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  app_links: ^6.3.2 # Deep link handling for OAuth callbacks (replaces uni_links)
+  crypto: ^3.0.3 # For certificate pinning SPKI hashing
+  cupertino_icons: ^1.0.8
+  dio: ^5.4.0
+  firebase_core: ^3.8.1
+  firebase_messaging: ^15.1.3
   flutter:
     sdk: flutter
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
+  flutter_appauth: ^7.0.1 # OAuth2/OIDC client for B2C authentication
+  flutter_jailbreak_detection: ^1.10.0 # Device integrity checks
+  flutter_local_notifications: ^18.0.1
   flutter_riverpod: ^2.4.0
   flutter_secure_storage: ^9.0.0
-  local_auth: ^2.2.0
-  flutter_appauth: ^7.0.1  # OAuth2/OIDC client for B2C authentication
-  http: ^1.2.0
-  dio: ^5.4.0
+  flutter_svg: ^2.0.9
   google_fonts: ^6.0.0
-  crypto: ^3.0.3  # For certificate pinning SPKI hashing
-  flutter_jailbreak_detection: ^1.10.0  # Device integrity checks (iOS/Android)
+  http: ^1.2.0
+  intl: ^0.19.0 # Date/time formatting
+  local_auth: ^2.2.0
   meta: ^1.12.0
-  
-  # Security packages
-  
-  # OAuth2 and deep linking packages
-  url_launcher: ^6.2.2          # Launch URLs and handle OAuth callbacks
-  app_links: ^6.3.2             # Deep link handling for OAuth callbacks (replaces discontinued uni_links)
-  
-  # OpenTelemetry for observability and tracing
   opentelemetry: ^0.18.10
   permission_handler: ^12.0.1
-  
-  # Push notifications
-  firebase_messaging: ^15.1.3
-  firebase_core: ^3.8.1
-  flutter_local_notifications: ^18.0.1
-  timezone: ^0.9.4  # For scheduled local notifications
-  flutter_svg: ^2.0.9
-  intl: ^0.19.0             # Date/time formatting
-  uuid: ^4.4.0              # UUID generation for request IDs
+  timezone: ^0.9.4 # For scheduled local notifications
+  url_launcher: ^6.2.2 # Launch URLs and handle OAuth callbacks
+  uuid: ^4.4.0 # UUID generation for request IDs
 
 dev_dependencies:
+  build_runner: ^2.4.7 # Code generation for mockito
+  flutter_lints: ^4.0.0
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^4.0.0
-  
-  # Testing dependencies
-  mockito: ^5.4.4                 # Mocking framework for unit tests
-  build_runner: ^2.4.7            # Code generation for mockito
-  mocktail: ^1.0.3                # Lightweight mocking for Riverpod/appauth tests
+  mockito: ^5.4.4 # Mocking framework for unit tests
+  mocktail: ^1.0.3 # Lightweight mocking for Riverpod/appauth tests
+  permission_handler_platform_interface: ^4.3.0
   test: ^1.25.15
 
 # For information on the generic Dart part of this file, see the

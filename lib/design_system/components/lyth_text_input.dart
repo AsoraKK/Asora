@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Text Input Component
 ///
 /// High-level text input field using design system tokens.
@@ -6,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Size variants for text inputs
 enum LythTextInputSize {
@@ -120,66 +122,46 @@ class LythTextInput extends StatefulWidget {
 
   /// Create a password input field
   const LythTextInput.password({
-    required String label,
-    String? placeholder,
-    required ValueChanged<String> onChanged,
-    VoidCallback? onSubmitted,
-    LythTextInputSize size = LythTextInputSize.medium,
-    String? helperText,
-    String? errorText,
-    bool disabled = false,
-    TextEditingController? controller,
-    FocusNode? focusNode,
+    required this.label,
+    this.placeholder,
+    required this.onChanged,
+    this.onSubmitted,
+    this.size = LythTextInputSize.medium,
+    this.helperText,
+    this.errorText,
+    this.disabled = false,
+    this.controller,
+    this.focusNode,
     super.key,
-  }) : label = label,
-       placeholder = placeholder,
-       value = null,
-       onChanged = onChanged,
-       onSubmitted = onSubmitted,
-       size = size,
+  }) : value = null,
        prefixIcon = Icons.lock,
        suffixIcon = null,
        suffixIconOnPressed = null,
-       helperText = helperText,
-       errorText = errorText,
-       disabled = disabled,
        keyboardType = TextInputType.visiblePassword,
        maxLines = 1,
        obscureText = true,
-       controller = controller,
-       focusNode = focusNode,
        textInputAction = null;
 
   /// Create an email input field
   const LythTextInput.email({
-    required String label,
-    String? placeholder,
-    required ValueChanged<String> onChanged,
-    VoidCallback? onSubmitted,
-    LythTextInputSize size = LythTextInputSize.medium,
-    String? helperText,
-    String? errorText,
-    bool disabled = false,
-    TextEditingController? controller,
-    FocusNode? focusNode,
+    required this.label,
+    this.placeholder,
+    required this.onChanged,
+    this.onSubmitted,
+    this.size = LythTextInputSize.medium,
+    this.helperText,
+    this.errorText,
+    this.disabled = false,
+    this.controller,
+    this.focusNode,
     super.key,
-  }) : label = label,
-       placeholder = placeholder,
-       value = null,
-       onChanged = onChanged,
-       onSubmitted = onSubmitted,
-       size = size,
+  }) : value = null,
        prefixIcon = Icons.email,
        suffixIcon = null,
        suffixIconOnPressed = null,
-       helperText = helperText,
-       errorText = errorText,
-       disabled = disabled,
        keyboardType = TextInputType.emailAddress,
        maxLines = 1,
        obscureText = false,
-       controller = controller,
-       focusNode = focusNode,
        textInputAction = TextInputAction.next;
 
   @override

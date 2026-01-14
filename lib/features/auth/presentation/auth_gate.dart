@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../auth/application/auth_providers.dart';
-import '../../../core/analytics/analytics_events.dart';
-import '../../../core/analytics/analytics_providers.dart';
-import '../../../ui/screens/app_shell.dart';
-import 'auth_choice_screen.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/ui/screens/app_shell.dart';
+import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 
 class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});

@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/models/reputation.dart';
-import '../../../state/providers/reputation_providers.dart';
-import '../../components/tier_badge.dart';
-import '../../components/xp_progress_ring.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/state/models/reputation.dart';
+import 'package:asora/state/providers/reputation_providers.dart';
+import 'package:asora/ui/components/tier_badge.dart';
+import 'package:asora/ui/components/xp_progress_ring.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class RewardsDashboardScreen extends ConsumerWidget {
   const RewardsDashboardScreen({super.key});
