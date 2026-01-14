@@ -53,7 +53,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
               authState.when(
                 data: (_) => const SizedBox.shrink(),
                 loading: () => const SizedBox.shrink(),
-                error: (error, _) => _buildErrorMessage(error),
+                error: (error, _) => _buildErrorMessage(context, error),
               ),
             ],
           ),
@@ -141,7 +141,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorMessage(Object error) {
+  Widget _buildErrorMessage(BuildContext context, Object error) {
     String message = 'An unexpected error occurred';
 
     if (error is AuthFailure) {

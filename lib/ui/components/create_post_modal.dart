@@ -133,7 +133,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 LythChip.input(
                   label: state.mediaUrl!,
                   onDeleted: () => notifier.updateMediaUrl(null),
-                ),
+                )
               ],
             ),
           if (widget.canMarkNews) ...[

@@ -38,7 +38,10 @@ class VotingStatusBreakdown extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusRow(MapEntry<VotingStatus, int> entry) {
+  Widget _buildStatusRow(
+    BuildContext context,
+    MapEntry<VotingStatus, int> entry,
+  ) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(

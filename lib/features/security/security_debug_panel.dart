@@ -30,72 +30,100 @@ class SecurityDebugPanel extends ConsumerWidget {
           child: ListView(
             children: [
               _buildSection(
+                context: context,
                 title: 'Device Security State',
                 children: [
                   _buildKeyValue(
+                    context,
                     'Rooted/Jailbroken',
                     '${state.isRootedOrJailbroken}',
                   ),
-                  _buildKeyValue('Emulator', '${state.isEmulator}'),
-                  _buildKeyValue('Debug build', '${state.isDebugBuild}'),
+                  _buildKeyValue(context, 'Emulator', '${state.isEmulator}'),
                   _buildKeyValue(
+                    context,
+                    'Debug build',
+                    '${state.isDebugBuild}',
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Last checked',
                     state.lastCheckedAt.toIso8601String(),
                   ),
                 ],
               ),
               _buildSection(
+                context: context,
                 title: 'Mobile Security Config',
                 children: [
-                  _buildKeyValue('Environment', config.environment.name),
                   _buildKeyValue(
+                    context,
+                    'Environment',
+                    config.environment.name,
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Strict device integrity',
                     '${config.security.strictDeviceIntegrity}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Block rooted devices',
                     '${config.security.blockRootedDevices}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Allow rooted in staging QA',
                     '${config.security.allowRootedInStagingForQa}',
                   ),
                 ],
               ),
               _buildSection(
+                context: context,
                 title: 'TLS Pinning Config',
                 children: [
                   _buildKeyValue(
+                    context,
                     'Enabled',
                     '${config.security.tlsPins.enabled}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Strict mode',
                     '${config.security.tlsPins.strictMode}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Pins configured',
                     '${config.security.tlsPins.spkiPinsBase64.length}',
                   ),
                 ],
               ),
               _buildSection(
+                context: context,
                 title: 'Security Overrides',
                 children: [
                   _buildKeyValue(
+                    context,
                     'Active',
                     '${SecurityOverridesProvider.hasActiveOverrides}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Relax TLS pinning',
                     '${overrides.relaxTlsPinning}',
                   ),
                   _buildKeyValue(
+                    context,
                     'Relax integrity',
                     '${overrides.relaxDeviceIntegrity}',
                   ),
-                  _buildKeyValue('Reason', overrides.overrideReason ?? 'n/a'),
                   _buildKeyValue(
+                    context,
+                    'Reason',
+                    overrides.overrideReason ?? 'n/a',
+                  ),
+                  _buildKeyValue(
+                    context,
                     'Expires in',
                     (overrides.timeRemaining?.inMinutes ?? 0) >= 0
                         ? '${overrides.timeRemaining?.inMinutes} min'
@@ -167,6 +195,7 @@ class SecurityDebugPanel extends ConsumerWidget {
   }
 
   Widget _buildSection({
+    required BuildContext context,
     required String title,
     required List<Widget> children,
   }) {
@@ -190,7 +219,7 @@ class SecurityDebugPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildKeyValue(String label, String value) {
+  Widget _buildKeyValue(BuildContext context, String label, String value) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(
