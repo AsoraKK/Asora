@@ -1,6 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
 
@@ -18,36 +21,35 @@ class VotingStatusBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusCounts = _calculateStatusBreakdown();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Appeals by Status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...statusCounts.entries.map((entry) => _buildStatusRow(entry)),
-          ],
-        ),
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Appeals by Status',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: context.spacing.lg),
+          ...statusCounts.entries.map((entry) => _buildStatusRow(context, entry)),
+        ],
       ),
     );
   }
 
-  Widget _buildStatusRow(MapEntry<VotingStatus, int> entry) {
+  Widget _buildStatusRow(BuildContext context, MapEntry<VotingStatus, int> entry) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
       child: Row(
         children: [
           VotingStatusBadge(status: entry.key),
           const Spacer(),
           Text(
             entry.value.toString(),
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

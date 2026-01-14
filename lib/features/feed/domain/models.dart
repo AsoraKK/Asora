@@ -9,8 +9,6 @@ library feed_models;
 /// 🔐 Dependency Rule: No dependencies on external layers
 /// 📱 Platform: Dart domain models
 
-import 'package:flutter/material.dart';
-
 class Post {
   final String id;
   final String authorId;
@@ -367,11 +365,10 @@ enum HumanConfidence {
 }
 
 extension HumanConfidenceExtension on HumanConfidence {
-  /// Get display color for the confidence chip
-  Color get color => switch (this) {
-    HumanConfidence.high => const Color(0xFF4CAF50), // Green
-    HumanConfidence.medium => const Color(0xFFFF9800), // Orange
-    HumanConfidence.low => const Color(0xFFFF5722), // Deep Orange
-    HumanConfidence.aiGen => const Color(0xFFF44336), // Red
+  String get displayLabel => switch (this) {
+    HumanConfidence.high => 'High',
+    HumanConfidence.medium => 'Medium',
+    HumanConfidence.low => 'Low',
+    HumanConfidence.aiGen => 'AI Generated',
   };
 }

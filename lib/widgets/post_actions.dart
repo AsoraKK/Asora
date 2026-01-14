@@ -6,6 +6,10 @@ import 'package:dio/dio.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///
@@ -46,7 +50,7 @@ class PostActions extends ConsumerWidget {
         _ActionButton(
           icon: isLiked ? Icons.favorite : Icons.favorite_border,
           label: _formatCount(likeCount),
-          color: isLiked ? Colors.red : null,
+          color: isLiked ? Theme.of(context).colorScheme.error : null,
           onPressed: onLike,
         ),
 
@@ -97,11 +101,15 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.radius.md),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: spacing.lg,
+          vertical: spacing.sm,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -110,11 +118,10 @@ class _ActionButton extends StatelessWidget {
               size: 20,
               color: color ?? Theme.of(context).iconTheme.color,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: spacing.xs),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 12,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: color ?? Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
@@ -149,11 +156,11 @@ class _FlagButton extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.flag, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Report Content'),
+              Icon(Icons.flag, color: Theme.of(context).colorScheme.primary),
+              SizedBox(width: context.spacing.sm),
+              const Text('Report Content'),
             ],
           ),
           content: SingleChildScrollView(
@@ -165,7 +172,7 @@ class _FlagButton extends ConsumerWidget {
                   'Why are you reporting this $contentType?',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: context.spacing.lg),
 
                 // Reason selection
                 ...FlagReason.values.map((reason) {
@@ -193,31 +200,28 @@ class _FlagButton extends ConsumerWidget {
                   );
                 }),
 
-                const SizedBox(height: 16),
+                SizedBox(height: context.spacing.lg),
 
                 // Additional details (optional)
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Additional details (optional)',
-                    hintText: 'Provide more context about the issue...',
-                    border: OutlineInputBorder(),
-                  ),
+                LythTextField(
+                  label: 'Additional details (optional)',
+                  placeholder: 'Provide more context about the issue...',
                   maxLines: 3,
                   onChanged: (value) {
                     additionalDetails = value.isEmpty ? null : value;
                   },
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: context.spacing.lg),
 
                 // Disclaimer
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(context.spacing.md),
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(context.radius.md),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +231,7 @@ class _FlagButton extends ConsumerWidget {
                         size: 16,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: context.spacing.sm),
                       Expanded(
                         child: Text(
                           'Reports are reviewed by our moderation team and community. '
@@ -245,17 +249,13 @@ class _FlagButton extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(
+            LythButton.tertiary(
+              label: 'Cancel',
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            LythButton.primary(
+              label: 'Submit Report',
               onPressed: () => Navigator.pop(dialogContext, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Submit Report'),
             ),
           ],
         ),
@@ -275,21 +275,10 @@ class _FlagButton extends ConsumerWidget {
   ) async {
     // Show loading indicator
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 16),
-              Text('Submitting report...'),
-            ],
-          ),
-          duration: Duration(seconds: 2),
-        ),
+      LythSnackbar.info(
+        context: context,
+        message: 'Submitting report...',
+        duration: const Duration(seconds: 2),
       );
     }
 
@@ -311,20 +300,9 @@ class _FlagButton extends ConsumerWidget {
       if (context.mounted) {
         final message = result['message'] as String?;
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(message ?? 'Report submitted successfully'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
+        LythSnackbar.success(
+          context: context,
+          message: message ?? 'Report submitted successfully',
         );
       }
     } catch (error) {
@@ -348,23 +326,13 @@ class _FlagButton extends ConsumerWidget {
           errorMessage = error.toString();
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 16),
-                Expanded(child: Text(errorMessage)),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: () =>
-                  _submitFlag(context, ref, reason, additionalDetails),
-            ),
+        LythSnackbar.error(
+          context: context,
+          message: errorMessage,
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () =>
+                _submitFlag(context, ref, reason, additionalDetails),
           ),
         );
       }

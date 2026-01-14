@@ -86,6 +86,9 @@ class LythTextInput extends StatefulWidget {
   /// Max lines (null = multiline)
   final int? maxLines;
 
+  /// Max length (null = unlimited)
+  final int? maxLength;
+
   /// Whether to obscure text (password field)
   final bool obscureText;
 
@@ -113,6 +116,7 @@ class LythTextInput extends StatefulWidget {
     this.disabled = false,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
+    this.maxLength,
     this.obscureText = false,
     this.controller,
     this.focusNode,
@@ -139,6 +143,7 @@ class LythTextInput extends StatefulWidget {
        suffixIconOnPressed = null,
        keyboardType = TextInputType.visiblePassword,
        maxLines = 1,
+       maxLength = null,
        obscureText = true,
        textInputAction = null;
 
@@ -161,6 +166,7 @@ class LythTextInput extends StatefulWidget {
        suffixIconOnPressed = null,
        keyboardType = TextInputType.emailAddress,
        maxLines = 1,
+       maxLength = null,
        obscureText = false,
        textInputAction = TextInputAction.next;
 
@@ -233,6 +239,7 @@ class _LythTextInputState extends State<LythTextInput> {
             keyboardType: widget.keyboardType,
             obscureText: widget.obscureText,
             maxLines: widget.maxLines,
+            maxLength: widget.maxLength,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: context.colorScheme.onSurface,
             ),

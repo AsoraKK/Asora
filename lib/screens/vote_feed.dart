@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart'
     show Appeal, VotingStatus;
@@ -173,12 +175,15 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.spacing.md,
+          vertical: context.spacing.xs,
+        ),
         decoration: BoxDecoration(
           color: hasFilter || isAction
               ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(context.radius.pill),
           border: Border.all(
             color: hasFilter || isAction
                 ? Theme.of(context).colorScheme.primary
@@ -195,14 +200,12 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.onSurface,
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: context.spacing.xs),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: hasFilter || isAction
-                    ? FontWeight.w600
-                    : FontWeight.w500,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight:
+                    hasFilter || isAction ? FontWeight.w600 : FontWeight.w500,
                 color: hasFilter || isAction
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onSurface,

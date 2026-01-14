@@ -1,6 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// ASORA VOTING PROGRESS INDICATOR
@@ -19,16 +21,16 @@ class VotingProgressIndicator extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(context),
-        const SizedBox(height: 8),
+        SizedBox(height: context.spacing.sm),
         if (progress.totalVotes > 0) ...[
-          _buildProgressBar(),
-          const SizedBox(height: 4),
-          _buildVoteBreakdown(),
+          _buildProgressBar(context),
+          SizedBox(height: context.spacing.xs),
+          _buildVoteBreakdown(context),
         ] else ...[
           _buildWaitingMessage(context),
         ],
         if (progress.timeRemaining != null) ...[
-          const SizedBox(height: 4),
+          SizedBox(height: context.spacing.xs),
           _buildTimeRemaining(context),
         ],
       ],
@@ -43,12 +45,12 @@ class VotingProgressIndicator extends StatelessWidget {
           size: 16,
           color: Theme.of(context).colorScheme.primary,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: context.spacing.sm),
         Text(
           'Community Voting Progress',
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const Spacer(),
         Text(
@@ -59,32 +61,32 @@ class VotingProgressIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(BuildContext context) {
+    final scheme = context.colorScheme;
     return LinearProgressIndicator(
       value: progress.approvalRate / 100,
-      backgroundColor: Colors.red.withValues(alpha: 0.3),
-      valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+      backgroundColor: scheme.error.withValues(alpha: 0.2),
+      valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
     );
   }
 
-  Widget _buildVoteBreakdown() {
+  Widget _buildVoteBreakdown(BuildContext context) {
+    final scheme = context.colorScheme;
     return Row(
       children: [
         Text(
           '${progress.approveVotes} approve',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.green,
-            fontWeight: FontWeight.w500,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.primary,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const Spacer(),
         Text(
           '${progress.rejectVotes} reject',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.red,
-            fontWeight: FontWeight.w500,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.error,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -102,7 +104,7 @@ class VotingProgressIndicator extends StatelessWidget {
 
   Widget _buildTimeRemaining(BuildContext context) {
     return Text(
-      'Time remaining: ${progress.timeRemaining}',
+      'Time remaining: ${progress.timeRemaining ?? '5m window'}',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: Theme.of(context).colorScheme.outline,
       ),

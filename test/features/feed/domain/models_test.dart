@@ -1,5 +1,4 @@
 import 'package:asora/features/feed/domain/models.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ASORA FEED DOMAIN MODELS TESTS
@@ -814,11 +813,11 @@ void main() {
       expect(HumanConfidence.fromString('unknown'), HumanConfidence.medium);
     });
 
-    test('colors', () {
-      expect(HumanConfidence.high.color, const Color(0xFF4CAF50)); // Green
-      expect(HumanConfidence.medium.color, const Color(0xFFFF9800)); // Orange
-      expect(HumanConfidence.low.color, const Color(0xFFFF5722)); // Deep Orange
-      expect(HumanConfidence.aiGen.color, const Color(0xFFF44336)); // Red
+    test('displayLabel', () {
+      expect(HumanConfidence.high.displayLabel, 'High');
+      expect(HumanConfidence.medium.displayLabel, 'Medium');
+      expect(HumanConfidence.low.displayLabel, 'Low');
+      expect(HumanConfidence.aiGen.displayLabel, 'AI Generated');
     });
   });
 }

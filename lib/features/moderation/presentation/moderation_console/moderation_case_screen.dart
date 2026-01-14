@@ -3,6 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_chip.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/moderation_case.dart';
 import 'package:asora/features/moderation/domain/moderation_decision.dart';
 import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
@@ -42,43 +48,41 @@ class ModerationCaseScreen extends ConsumerWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(context.spacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (state.errorMessage != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.only(bottom: context.spacing.md),
                     child: Text(
                       state.errorMessage!,
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.error,
                       ),
                     ),
                   ),
-                _buildHeader(caseDetail),
-                const SizedBox(height: 16),
+                _buildHeader(context, caseDetail),
+                SizedBox(height: context.spacing.lg),
                 _buildContentPanel(caseDetail, context),
-                const SizedBox(height: 16),
-                _buildReportSection(caseDetail),
-                const SizedBox(height: 16),
+                SizedBox(height: context.spacing.lg),
+                _buildReportSection(context, caseDetail),
+                SizedBox(height: context.spacing.lg),
                 if (caseDetail.appealDetails != null)
-                  _buildAppealSummary(caseDetail.appealDetails!),
-                const SizedBox(height: 16),
+                  _buildAppealSummary(context, caseDetail.appealDetails!),
+                SizedBox(height: context.spacing.lg),
                 ModerationDecisionPanel(
                   isSubmitting: state.decisionSubmitting,
                   onSubmit: (input) async {
                     await notifier.submitDecision(input);
                   },
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.arrow_upward),
-                  label: Text(
-                    caseDetail.escalation != null
-                        ? 'Escalated to ${caseDetail.escalation!.targetQueue}'
-                        : 'Escalate Case',
-                  ),
+                SizedBox(height: context.spacing.lg),
+                LythButton.secondary(
+                  label: caseDetail.escalation != null
+                      ? 'Escalated to ${caseDetail.escalation!.targetQueue}'
+                      : 'Escalate Case',
+                  icon: Icons.arrow_upward,
                   onPressed: state.escalating
                       ? null
                       : () async {
@@ -88,12 +92,12 @@ class ModerationCaseScreen extends ConsumerWidget {
                           }
                         },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: context.spacing.xl),
                 Text(
                   'Audit trail',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: context.spacing.sm),
                 ModerationAuditTimeline(entries: caseDetail.auditTrail),
               ],
             ),
@@ -103,132 +107,131 @@ class ModerationCaseScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(ModerationCase data) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              data.contentType.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+  Widget _buildHeader(BuildContext context, ModerationCase data) {
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            data.contentType.toUpperCase(),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                Chip(label: Text(data.status)),
-                Chip(label: Text(data.queue)),
-                Chip(label: Text(data.severity.name)),
-              ],
-            ),
-          ],
-        ),
+          ),
+          SizedBox(height: context.spacing.sm),
+          Wrap(
+            spacing: context.spacing.sm,
+            children: [
+              LythChip(label: data.status),
+              LythChip(label: data.queue),
+              LythChip(label: data.severity.name),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildContentPanel(ModerationCase data, BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Content', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              data.contentText,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            if (data.mediaUrl != null) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 180,
-                width: double.infinity,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.black12,
-                    image: DecorationImage(
-                      image: NetworkImage(data.mediaUrl!),
-                      fit: BoxFit.cover,
-                    ),
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Content', style: Theme.of(context).textTheme.titleMedium),
+          SizedBox(height: context.spacing.sm),
+          Text(
+            data.contentText,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          if (data.mediaUrl != null) ...[
+            SizedBox(height: context.spacing.md),
+            SizedBox(
+              height: 180,
+              width: double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(context.radius.md),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHigh,
+                  image: DecorationImage(
+                    image: NetworkImage(data.mediaUrl!),
+                    fit: BoxFit.cover,
                   ),
                 ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportSection(BuildContext context, ModerationCase data) {
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Reports',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: context.spacing.sm),
+          if (data.reports.isEmpty)
+            const Text('No detailed reports available.')
+          else
+            ...data.reports.map(
+              (report) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.flag),
+                title: Text(report.reason),
+                subtitle: Text('${report.count} report(s)'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppealSummary(
+    BuildContext context,
+    ModerationAppealDetails appeal,
+  ) {
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Appeal & Community vote',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: context.spacing.sm),
+          Text(appeal.summary),
+          SizedBox(height: context.spacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value:
+                      appeal.overturnVotes /
+                      (appeal.overturnVotes + appeal.upholdVotes + 1),
+                ),
+              ),
+              SizedBox(width: context.spacing.md),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Overturn: ${appeal.overturnVotes}'),
+                  Text('Uphold: ${appeal.upholdVotes}'),
+                ],
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportSection(ModerationCase data) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Reports',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            if (data.reports.isEmpty)
-              const Text('No detailed reports available.')
-            else
-              ...data.reports.map(
-                (report) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.flag),
-                  title: Text(report.reason),
-                  subtitle: Text('${report.count} report(s)'),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppealSummary(ModerationAppealDetails appeal) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Appeal & Community vote',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(appeal.summary),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value:
-                        appeal.overturnVotes /
-                        (appeal.overturnVotes + appeal.upholdVotes + 1),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Overturn: ${appeal.overturnVotes}'),
-                    Text('Uphold: ${appeal.upholdVotes}'),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -247,13 +250,14 @@ class ModerationCaseScreen extends ConsumerWidget {
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              LythTextField(
                 controller: reasonController,
-                decoration: const InputDecoration(labelText: 'Reason'),
+                label: 'Reason',
+                onChanged: (_) {},
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: context.spacing.md),
               DropdownButtonFormField<String>(
-                initialValue: targetQueue,
+                value: targetQueue,
                 items: _escalationQueues
                     .map(
                       (queue) =>
@@ -273,16 +277,18 @@ class ModerationCaseScreen extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          LythButton.tertiary(
+            label: 'Cancel',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
           ),
-          FilledButton(
+          LythButton.primary(
+            label: 'Escalate',
             onPressed: () {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please provide a reason.')),
+                LythSnackbar.error(
+                  context: context,
+                  message: 'Please provide a reason.',
                 );
                 return;
               }
@@ -293,7 +299,6 @@ class ModerationCaseScreen extends ConsumerWidget {
                 ),
               );
             },
-            child: const Text('Escalate'),
           ),
         ],
       ),

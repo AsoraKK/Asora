@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
@@ -171,7 +174,7 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
             // Header with status and date
             Row(
               children: [
-                _buildStatusBadge(appeal.votingStatus),
+                _buildStatusBadge(context, appeal.votingStatus),
                 const Spacer(),
                 Text(
                   _formatDate(appeal.submittedAt),
@@ -200,25 +203,25 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
                 ),
                 const SizedBox(width: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.spacing.sm,
+                    vertical: context.spacing.xs / 2,
                   ),
                   decoration: BoxDecoration(
                     color: _getUrgencyColor(
+                      context,
                       appeal.urgencyScore,
                     ).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(context.radius.pill),
                     border: Border.all(
-                      color: _getUrgencyColor(appeal.urgencyScore),
+                      color: _getUrgencyColor(context, appeal.urgencyScore),
                     ),
                   ),
                   child: Text(
-                    'Urgency: ${appeal.urgencyScore}/100',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _getUrgencyColor(appeal.urgencyScore),
+                    'Urgency: ${_getUrgencyLabel(appeal.urgencyScore)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: _getUrgencyColor(context, appeal.urgencyScore),
                     ),
                   ),
                 ),
@@ -308,50 +311,53 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
     );
   }
 
-  Widget _buildStatusBadge(VotingStatus status) {
+  Widget _buildStatusBadge(BuildContext context, VotingStatus status) {
+    final scheme = context.colorScheme;
     Color color;
     IconData icon;
     String label;
 
     switch (status) {
       case VotingStatus.active:
-        color = Colors.blue;
+        color = scheme.primary;
         icon = Icons.how_to_vote;
         label = 'Active Voting';
         break;
       case VotingStatus.quorumReached:
-        color = Colors.green;
+        color = scheme.tertiary;
         icon = Icons.check_circle;
         label = 'Quorum Reached';
         break;
       case VotingStatus.timeExpired:
-        color = Colors.orange;
+        color = scheme.onSurface.withValues(alpha: 0.6);
         icon = Icons.access_time;
         label = 'Time Expired';
         break;
       case VotingStatus.resolved:
-        color = Colors.purple;
+        color = scheme.secondary;
         icon = Icons.verified;
         label = 'Resolved';
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacing.md,
+        vertical: context.spacing.xs,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.radius.pill),
         border: Border.all(color: color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          SizedBox(width: context.spacing.xs),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -393,27 +399,28 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
         if (progress.totalVotes > 0) ...[
           LinearProgressIndicator(
             value: approvalRate / 100,
-            backgroundColor: Colors.red.withValues(alpha: 0.3),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+            backgroundColor:
+                Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).colorScheme.primary,
+            ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: context.spacing.xs),
           Row(
             children: [
               Text(
                 '${progress.approveVotes} approve',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.green,
-                  fontWeight: FontWeight.w500,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Text(
                 '${progress.rejectVotes} reject',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.red,
-                  fontWeight: FontWeight.w500,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -428,9 +435,9 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
         ],
 
         if (progress.timeRemaining != null) ...[
-          const SizedBox(height: 4),
+          SizedBox(height: context.spacing.xs),
           Text(
-            'Time remaining: ${progress.timeRemaining}',
+            'Time remaining: ${progress.timeRemaining ?? '5m window'}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.outline,
             ),
@@ -522,42 +529,41 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
           (contentTypes[appeal.contentType] ?? 0) + 1;
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Appeals by Content Type',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...contentTypes.entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getContentIcon(entry.key),
-                      size: 16,
-                      color: Theme.of(context).colorScheme.primary,
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Appeals by Content Type',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: context.spacing.lg),
+          ...contentTypes.entries.map(
+            (entry) => Padding(
+              padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
+              child: Row(
+                children: [
+                  Icon(
+                    _getContentIcon(entry.key),
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  SizedBox(width: context.spacing.sm),
+                  Text(entry.key.toUpperCase()),
+                  const Spacer(),
+                  Text(
+                    entry.value.toString(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(width: 8),
-                    Text(entry.key.toUpperCase()),
-                    const Spacer(),
-                    Text(
-                      entry.value.toString(),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -569,36 +575,35 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
           (statusCounts[appeal.votingStatus] ?? 0) + 1;
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Appeals by Status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ...statusCounts.entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    _buildStatusBadge(entry.key),
-                    const Spacer(),
-                    Text(
-                      entry.value.toString(),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+    return LythCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Appeals by Status',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: context.spacing.lg),
+          ...statusCounts.entries.map(
+            (entry) => Padding(
+              padding: EdgeInsets.symmetric(vertical: context.spacing.xs),
+              child: Row(
+                children: [
+                  _buildStatusBadge(context, entry.key),
+                  const Spacer(),
+                  Text(
+                    entry.value.toString(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -608,8 +613,12 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          SizedBox(height: context.spacing.lg),
           Text(
             'Failed to load appeals',
             style: Theme.of(context).textTheme.titleLarge,
@@ -676,11 +685,19 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
     }
   }
 
-  Color _getUrgencyColor(int urgency) {
-    if (urgency >= 80) return Colors.red;
-    if (urgency >= 60) return Colors.orange;
-    if (urgency >= 40) return Colors.yellow[700]!;
-    return Colors.green;
+  Color _getUrgencyColor(BuildContext context, int urgency) {
+    final scheme = context.colorScheme;
+    if (urgency >= 80) return scheme.error;
+    if (urgency >= 60) return scheme.primary;
+    if (urgency >= 40) return scheme.tertiary;
+    return scheme.onSurface.withValues(alpha: 0.6);
+  }
+
+  String _getUrgencyLabel(int urgency) {
+    if (urgency >= 80) return 'Critical';
+    if (urgency >= 60) return 'High';
+    if (urgency >= 40) return 'Medium';
+    return 'Low';
   }
 
   String _formatDate(DateTime dateTime) {
@@ -716,16 +733,20 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
               const SizedBox(height: 8),
               Text('Submitted: ${_formatDate(appeal.submittedAt)}'),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Reason:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(appeal.appealReason),
               if (appeal.userStatement.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Statement:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(appeal.userStatement),
               ],
@@ -733,9 +754,9 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
           ),
         ),
         actions: [
-          TextButton(
+          LythButton.tertiary(
+            label: 'Close',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
           ),
         ],
       ),

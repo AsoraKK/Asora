@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/state/providers/moderation_providers.dart';
 import 'package:asora/ui/components/appeal_card.dart';
 import 'package:asora/ui/components/moderation_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/ui/theme/spacing.dart';
 
 class ModerationHubScreen extends ConsumerWidget {
@@ -57,7 +58,8 @@ class ModerationHubScreen extends ConsumerWidget {
                 onVoteFor: () {},
                 onVoteAgainst: () {},
               ),
-              separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: Spacing.xs),
               itemCount: appeals.length,
             ),
             const _HistoryStub(),
@@ -73,9 +75,9 @@ class ModerationHubScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: Spacing.md),
-                  _statTile('Queue', stats.queueSize.toString()),
-                  _statTile('Appeals open', stats.appealOpen.toString()),
-                  _statTile('Decisions today', stats.decisionsToday.toString()),
+                  _statTile(context, 'Queue', stats.queueSize.toString()),
+                  _statTile(context, 'Appeals open', stats.appealOpen.toString()),
+                  _statTile(context, 'Decisions today', stats.decisionsToday.toString()),
                 ],
               ),
             ),
@@ -85,7 +87,7 @@ class ModerationHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _statTile(String title, String value) {
+  Widget _statTile(BuildContext context, String title, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.sm),
       child: Row(
@@ -94,7 +96,9 @@ class ModerationHubScreen extends ConsumerWidget {
           Text(title),
           Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -109,7 +113,7 @@ class _HistoryStub extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
+        padding: EdgeInsets.all(context.spacing.lg),
         child: Text(
           'History feed coming with backend wiring.',
           style: Theme.of(context).textTheme.bodyLarge,

@@ -1,6 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// ASORA VOTING STATUS BADGE
@@ -15,24 +17,26 @@ class VotingStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusInfo = _getStatusInfo(status);
+    final statusInfo = _getStatusInfo(context, status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.spacing.md,
+        vertical: context.spacing.xs,
+      ),
       decoration: BoxDecoration(
         color: statusInfo.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.radius.pill),
         border: Border.all(color: statusInfo.color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(statusInfo.icon, size: 16, color: statusInfo.color),
-          const SizedBox(width: 6),
+          SizedBox(width: context.spacing.xs),
           Text(
             statusInfo.label,
-            style: TextStyle(
-              fontSize: 14,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: statusInfo.color,
             ),
@@ -42,29 +46,30 @@ class VotingStatusBadge extends StatelessWidget {
     );
   }
 
-  StatusInfo _getStatusInfo(VotingStatus status) {
+  StatusInfo _getStatusInfo(BuildContext context, VotingStatus status) {
+    final scheme = context.colorScheme;
     switch (status) {
       case VotingStatus.active:
         return StatusInfo(
-          color: Colors.blue,
+          color: scheme.primary,
           icon: Icons.how_to_vote,
           label: 'Active Voting',
         );
       case VotingStatus.quorumReached:
         return StatusInfo(
-          color: Colors.green,
+          color: scheme.tertiary,
           icon: Icons.check_circle,
           label: 'Quorum Reached',
         );
       case VotingStatus.timeExpired:
         return StatusInfo(
-          color: Colors.orange,
+          color: scheme.onSurface.withValues(alpha: 0.6),
           icon: Icons.access_time,
           label: 'Time Expired',
         );
       case VotingStatus.resolved:
         return StatusInfo(
-          color: Colors.purple,
+          color: scheme.secondary,
           icon: Icons.verified,
           label: 'Resolved',
         );

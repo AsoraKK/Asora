@@ -157,17 +157,8 @@ void main() {
         expect(ReputationBadge.getTierName(5000), 'Platinum');
       });
 
-      test('getTierColor returns different colors for each tier', () {
-        final bronzeColor = ReputationBadge.getTierColor(50);
-        final silverColor = ReputationBadge.getTierColor(200);
-        final goldColor = ReputationBadge.getTierColor(700);
-        final platinumColor = ReputationBadge.getTierColor(1500);
-
-        // All colors should be different
-        expect(bronzeColor, isNot(equals(silverColor)));
-        expect(silverColor, isNot(equals(goldColor)));
-        expect(goldColor, isNot(equals(platinumColor)));
-      });
+      // Note: getTierColor is now a private method (_tierColor) that depends on ColorScheme
+      // Color testing is handled through golden tests and widget integration tests
 
       test('getTierIcon returns correct icons', () {
         expect(ReputationBadge.getTierIcon(50), Icons.emoji_events_outlined);
