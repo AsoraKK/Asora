@@ -251,6 +251,8 @@ class _Step4Naming extends ConsumerWidget {
 
 /// Step 5: Confirmation - set as home feed?
 class _Step5Confirmation extends ConsumerWidget {
+  const _Step5Confirmation();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(customFeedDraftProvider);
