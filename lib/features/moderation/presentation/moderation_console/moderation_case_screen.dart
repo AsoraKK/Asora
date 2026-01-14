@@ -114,9 +114,9 @@ class ModerationCaseScreen extends ConsumerWidget {
         children: [
           Text(
             data.contentType.toUpperCase(),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.sm),
           Wrap(
@@ -139,10 +139,7 @@ class ModerationCaseScreen extends ConsumerWidget {
         children: [
           Text('Content', style: Theme.of(context).textTheme.titleMedium),
           SizedBox(height: context.spacing.sm),
-          Text(
-            data.contentText,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+          Text(data.contentText, style: Theme.of(context).textTheme.bodyLarge),
           if (data.mediaUrl != null) ...[
             SizedBox(height: context.spacing.md),
             SizedBox(
@@ -151,9 +148,7 @@ class ModerationCaseScreen extends ConsumerWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(context.radius.md),
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHigh,
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   image: DecorationImage(
                     image: NetworkImage(data.mediaUrl!),
                     fit: BoxFit.cover,
@@ -174,9 +169,9 @@ class ModerationCaseScreen extends ConsumerWidget {
         children: [
           Text(
             'Reports',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.sm),
           if (data.reports.isEmpty)
@@ -205,9 +200,9 @@ class ModerationCaseScreen extends ConsumerWidget {
         children: [
           Text(
             'Appeal & Community vote',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.sm),
           Text(appeal.summary),

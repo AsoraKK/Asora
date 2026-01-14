@@ -1,4 +1,5 @@
 import SessionPanel from '../components/SessionPanel.jsx';
+import LythCard from '../components/LythCard.jsx';
 
 const tiles = [
   {
@@ -35,10 +36,10 @@ function Dashboard() {
       <SessionPanel />
       <div className="card-grid">
         {tiles.map((tile) => (
-          <article key={tile.title} className="card">
+          <LythCard key={tile.title} as="article" variant="tile">
             <h2>{tile.title}</h2>
             <p>{tile.text}</p>
-          </article>
+          </LythCard>
         ))}
       </div>
     </section>

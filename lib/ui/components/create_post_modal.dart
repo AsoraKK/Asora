@@ -176,8 +176,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               Expanded(
                 child: LythButton.primary(
                   label: canCreate ? 'Post' : 'Sign in first',
-                  onPressed:
-                      state.isSubmitting || !canCreate ? null : _handleSubmit,
+                  onPressed: state.isSubmitting || !canCreate
+                      ? null
+                      : _handleSubmit,
                   isLoading: state.isSubmitting,
                 ),
               ),

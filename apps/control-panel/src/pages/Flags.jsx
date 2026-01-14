@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime, formatList } from '../utils/formatters.js';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
+import LythInput from '../components/LythInput.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'open', label: 'Open' },
@@ -173,12 +176,12 @@ function Flags() {
         </p>
       </div>
       <div className="page-grid">
-        <div className="panel">
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Queue</h2>
             <div className="panel-actions">
-              <select
-                className="select"
+              <LythInput
+                as="select"
                 value={status}
                 onChange={(event) => setStatus(event.target.value)}
               >
@@ -187,15 +190,15 @@ function Flags() {
                     {option.label}
                   </option>
                 ))}
-              </select>
-              <button
-                className="ghost-button"
+              </LythInput>
+              <LythButton
+                variant="ghost"
                 type="button"
                 onClick={() => loadFlags(true)}
                 disabled={loading}
               >
                 Refresh
-              </button>
+              </LythButton>
             </div>
           </div>
           {error ? <div className="notice error">{error}</div> : null}
@@ -253,13 +256,13 @@ function Flags() {
                   </span>
                 </span>
                 <span>
-                  <button
-                    className="ghost-button"
+                  <LythButton
+                    variant="ghost"
                     type="button"
                     onClick={() => loadDetail(item)}
                   >
                     Open
-                  </button>
+                  </LythButton>
                 </span>
               </div>
             ))}
@@ -269,18 +272,18 @@ function Flags() {
           ) : null}
           {cursor ? (
             <div className="panel-actions">
-              <button
-                className="secondary-button"
+              <LythButton
+                variant="secondary"
                 type="button"
                 onClick={() => loadFlags(false)}
                 disabled={loading}
               >
                 Load more
-              </button>
+              </LythButton>
             </div>
           ) : null}
-        </div>
-        <div className="panel">
+        </LythCard>
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Detail</h2>
           </div>
@@ -384,8 +387,7 @@ function Flags() {
               <div className="form-grid">
                 <label className="field">
                   <span className="field-label">Reason code</span>
-                  <input
-                    className="input"
+                  <LythInput
                     type="text"
                     value={reasonCode}
                     onChange={(event) => setReasonCode(event.target.value)}
@@ -394,8 +396,8 @@ function Flags() {
                 </label>
                 <label className="field">
                   <span className="field-label">Internal note</span>
-                  <textarea
-                    className="textarea"
+                  <LythInput
+                    as="textarea"
                     rows={3}
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
@@ -404,34 +406,33 @@ function Flags() {
                 </label>
               </div>
               <div className="panel-actions">
-                <button
-                  className="danger-button"
+                <LythButton
+                  variant="danger"
                   type="button"
                   onClick={() => runContentAction('block')}
                   disabled={actionBusy}
                 >
                   Block content
-                </button>
-                <button
-                  className="primary-button"
+                </LythButton>
+                <LythButton
                   type="button"
                   onClick={() => runContentAction('publish')}
                   disabled={actionBusy}
                 >
                   Publish content
-                </button>
-                <button
-                  className="ghost-button"
+                </LythButton>
+                <LythButton
+                  variant="ghost"
                   type="button"
                   onClick={runResolve}
                   disabled={actionBusy}
                 >
                   Resolve flag
-                </button>
+                </LythButton>
               </div>
             </>
           )}
-        </div>
+        </LythCard>
       </div>
     </section>
   );

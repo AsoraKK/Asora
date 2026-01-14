@@ -200,9 +200,9 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
           SizedBox(width: context.spacing.xs),
           Text(
             timeRemaining,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

@@ -151,8 +151,9 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
                 children: [
                   LythButton.tertiary(
                     label: 'Cancel',
-                    onPressed:
-                        _isSubmitting ? null : () => Navigator.pop(context),
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => Navigator.pop(context),
                   ),
                   SizedBox(width: spacing.md),
                   LythButton.primary(

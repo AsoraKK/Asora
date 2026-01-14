@@ -38,9 +38,9 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
         children: [
           Text(
             'Appeal decision',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.sm),
           LythTextField(

@@ -399,8 +399,9 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
         if (progress.totalVotes > 0) ...[
           LinearProgressIndicator(
             value: approvalRate / 100,
-            backgroundColor:
-                Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.error.withValues(alpha: 0.2),
             valueColor: AlwaysStoppedAnimation<Color>(
               Theme.of(context).colorScheme.primary,
             ),
@@ -735,18 +736,18 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
               const SizedBox(height: 16),
               Text(
                 'Reason:',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(appeal.appealReason),
               if (appeal.userStatement.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(
                   'Statement:',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(appeal.userStatement),
               ],

@@ -241,20 +241,11 @@ class _RiskBandChip extends StatelessWidget {
   (Color, Color) _getRiskColors(ColorScheme scheme) {
     switch (riskBand) {
       case RiskBand.low:
-        return (
-          scheme.primary,
-          scheme.primary.withValues(alpha: 0.12),
-        );
+        return (scheme.primary, scheme.primary.withValues(alpha: 0.12));
       case RiskBand.medium:
-        return (
-          scheme.tertiary,
-          scheme.tertiary.withValues(alpha: 0.12),
-        );
+        return (scheme.tertiary, scheme.tertiary.withValues(alpha: 0.12));
       case RiskBand.high:
-        return (
-          scheme.error,
-          scheme.error.withValues(alpha: 0.12),
-        );
+        return (scheme.error, scheme.error.withValues(alpha: 0.12));
     }
   }
 }

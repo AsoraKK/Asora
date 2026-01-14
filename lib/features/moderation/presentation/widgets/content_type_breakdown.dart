@@ -58,9 +58,9 @@ class ContentTypeBreakdown extends StatelessWidget {
           const Spacer(),
           Text(
             entry.value.toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

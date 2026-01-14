@@ -11,6 +11,7 @@ import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/screens/security_debug_screen.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 
@@ -106,7 +107,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                   const Icon(Icons.auto_awesome, size: 56),
                   const SizedBox(height: 12),
                   Text(
-                    'Welcome to Asora',
+                    'Welcome to Lythaus',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w600,
@@ -119,18 +120,19 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 32),
-                  FilledButton(
+                  LythButton.primary(
+                    label: 'Continue as guest',
                     onPressed: _handleGuestContinue,
-                    child: const Text('Continue as guest'),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
+                  LythButton.secondary(
+                    label: 'Sign in',
                     onPressed: () => _handleSignIn(context),
-                    icon: const Icon(Icons.login),
-                    label: const Text('Sign in'),
+                    icon: Icons.login,
                   ),
                   const SizedBox(height: 24),
-                  TextButton(
+                  LythButton.tertiary(
+                    label: 'Create account',
                     onPressed: () => runWithDeviceGuard(
                       context,
                       ref,
@@ -144,11 +146,11 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                         );
                       },
                     ),
-                    child: const Text('Create account'),
                   ),
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),
-                    FilledButton(
+                    LythButton.secondary(
+                      label: 'Security Debug',
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
@@ -156,14 +158,6 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                           ),
                         );
                       },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                      ),
-                      child: const Text('Security Debug'),
                     ),
                   ],
                   const SizedBox(height: 40),

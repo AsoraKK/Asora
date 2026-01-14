@@ -22,8 +22,9 @@ void main() {
     expect(texts.length, 2);
 
     final context = tester.element(find.byType(LythWordmark));
-    final expectedColor =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9);
+    final expectedColor = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.9);
     expect(texts.last.style?.color, expectedColor);
 
     expect(texts.first.style?.shadows, isNotEmpty);

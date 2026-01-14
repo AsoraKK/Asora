@@ -107,8 +107,7 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             _buildKeyValue(
               'Debug Build',
               state.isDebugBuild.toString(),
-              valueColor:
-                  state.isDebugBuild ? scheme.primary : scheme.outline,
+              valueColor: state.isDebugBuild ? scheme.primary : scheme.outline,
             ),
             _buildKeyValue(
               'Is Compromised',
@@ -148,9 +147,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
                   padding: const EdgeInsets.only(left: 16, top: 4),
                   child: SelectableText(
                     '• ${_truncatePin(pin)}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontFamily: 'monospace',
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
               ),
@@ -267,10 +266,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
           '⚠️ This screen is only accessible in debug builds and should never '
           'appear in production.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
             fontStyle: FontStyle.italic,
           ),
           textAlign: TextAlign.center,
@@ -288,9 +286,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         SizedBox(height: context.spacing.md),
         ...children,
@@ -308,9 +306,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             flex: 2,
             child: Text(
               key,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
@@ -320,9 +318,9 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color:
                     valueColor ??
-                    Theme.of(context).colorScheme.onSurface.withValues(
-                          alpha: 0.8,
-                        ),
+                    Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.8),
                 fontWeight: valueColor != null ? FontWeight.w600 : null,
               ),
             ),

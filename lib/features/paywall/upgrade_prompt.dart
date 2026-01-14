@@ -15,17 +15,18 @@ class UpgradePrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LythCard(
-      backgroundColor:
-          Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: 0.12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Upgrade to unlock more',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           SizedBox(height: context.spacing.sm),
           Text(
@@ -42,8 +43,7 @@ class UpgradePrompt extends StatelessWidget {
                   } else {
                     LythSnackbar.info(
                       context: context,
-                      message:
-                          'Upgrade flow coming soon. Check back shortly!',
+                      message: 'Upgrade flow coming soon. Check back shortly!',
                     );
                   }
                 },

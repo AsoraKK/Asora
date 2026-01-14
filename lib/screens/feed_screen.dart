@@ -71,9 +71,9 @@ class FeedScreen extends ConsumerWidget {
         ),
         title: Text(
           'Lythaus',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
         actions: [
@@ -461,8 +461,9 @@ class _AsoraDrawer extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor:
-                      theme.colorScheme.onPrimary.withValues(alpha: 0.2),
+                  backgroundColor: theme.colorScheme.onPrimary.withValues(
+                    alpha: 0.2,
+                  ),
                   child: Icon(
                     isSignedIn ? Icons.person : Icons.person_outline,
                     size: 32,

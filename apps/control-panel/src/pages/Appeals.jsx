@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
+import LythInput from '../components/LythInput.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
@@ -101,12 +104,12 @@ function Appeals() {
         </p>
       </div>
       <div className="page-grid">
-        <div className="panel">
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Queue</h2>
             <div className="panel-actions">
-              <select
-                className="select"
+              <LythInput
+                as="select"
                 value={status}
                 onChange={(event) => setStatus(event.target.value)}
               >
@@ -115,15 +118,15 @@ function Appeals() {
                     {option.label}
                   </option>
                 ))}
-              </select>
-              <button
-                className="ghost-button"
+              </LythInput>
+              <LythButton
+                variant="ghost"
                 type="button"
                 onClick={() => loadAppeals(true)}
                 disabled={loading}
               >
                 Refresh
-              </button>
+              </LythButton>
             </div>
           </div>
           {error ? <div className="notice error">{error}</div> : null}
@@ -156,13 +159,13 @@ function Appeals() {
                 </span>
                 <span>{item.originalReasonCategory || '-'}</span>
                 <span>
-                  <button
-                    className="ghost-button"
+                  <LythButton
+                    variant="ghost"
                     type="button"
                     onClick={() => loadDetail(item)}
                   >
                     Open
-                  </button>
+                  </LythButton>
                 </span>
               </div>
             ))}
@@ -172,18 +175,18 @@ function Appeals() {
           ) : null}
           {cursor ? (
             <div className="panel-actions">
-              <button
-                className="secondary-button"
+              <LythButton
+                variant="secondary"
                 type="button"
                 onClick={() => loadAppeals(false)}
                 disabled={loading}
               >
                 Load more
-              </button>
+              </LythButton>
             </div>
           ) : null}
-        </div>
-        <div className="panel">
+        </LythCard>
+        <LythCard variant="panel">
           <div className="panel-header">
             <h2>Detail</h2>
           </div>
@@ -274,8 +277,7 @@ function Appeals() {
               <div className="form-grid">
                 <label className="field">
                   <span className="field-label">Reason code</span>
-                  <input
-                    className="input"
+                  <LythInput
                     type="text"
                     value={reasonCode}
                     onChange={(event) => setReasonCode(event.target.value)}
@@ -284,8 +286,8 @@ function Appeals() {
                 </label>
                 <label className="field">
                   <span className="field-label">Internal note</span>
-                  <textarea
-                    className="textarea"
+                  <LythInput
+                    as="textarea"
                     rows={3}
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
@@ -294,26 +296,25 @@ function Appeals() {
                 </label>
               </div>
               <div className="panel-actions">
-                <button
-                  className="primary-button"
+                <LythButton
                   type="button"
                   onClick={() => runDecision('approve')}
                   disabled={actionBusy}
                 >
                   Approve appeal
-                </button>
-                <button
-                  className="danger-button"
+                </LythButton>
+                <LythButton
+                  variant="danger"
                   type="button"
                   onClick={() => runDecision('reject')}
                   disabled={actionBusy}
                 >
                   Reject appeal
-                </button>
+                </LythButton>
               </div>
             </>
           )}
-        </div>
+        </LythCard>
       </div>
     </section>
   );

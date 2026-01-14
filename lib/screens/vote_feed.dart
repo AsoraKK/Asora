@@ -204,8 +204,9 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
             Text(
               value,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight:
-                    hasFilter || isAction ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: hasFilter || isAction
+                    ? FontWeight.w600
+                    : FontWeight.w500,
                 color: hasFilter || isAction
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.onSurface,

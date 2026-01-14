@@ -19,7 +19,7 @@ class OnboardingIntroScreen extends StatelessWidget {
           children: [
             const Spacer(),
             Text(
-              'Welcome to Asora',
+              'Welcome to Lythaus',
               style: Theme.of(
                 context,
               ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700),

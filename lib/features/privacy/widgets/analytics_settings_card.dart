@@ -63,7 +63,7 @@ class AnalyticsSettingsCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Help us improve Asora by sharing anonymous usage patterns. '
+                        'Help us improve Lythaus by sharing anonymous usage patterns. '
                         'No personal information is collected.',
                         style: GoogleFonts.sora(
                           fontSize: 12,

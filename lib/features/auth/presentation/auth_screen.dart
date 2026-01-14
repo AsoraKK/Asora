@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/features/auth/application/auth_service.dart'; // ← KEEP
 import 'package:asora/features/auth/domain/auth_failure.dart';
 
@@ -19,9 +20,9 @@ class AuthScreen extends ConsumerWidget {
       body: Center(
         child: isLoading
             ? const CircularProgressIndicator()
-            : ElevatedButton(
+            : LythButton.primary(
+                label: 'Sign in with Google',
                 onPressed: () => _handleSignIn(context, ref),
-                child: const Text('Sign in with Google'),
               ),
       ),
     );

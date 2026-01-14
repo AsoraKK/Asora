@@ -7,7 +7,6 @@ import 'package:asora/state/providers/moderation_providers.dart';
 import 'package:asora/ui/components/appeal_card.dart';
 import 'package:asora/ui/components/moderation_card.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/design_system/tokens/spacing.dart';
 
 class ModerationHubScreen extends ConsumerWidget {
   const ModerationHubScreen({super.key});
@@ -36,23 +35,22 @@ class ModerationHubScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             ListView.separated(
-              padding: const EdgeInsets.only(
-                top: LythSpacing.sm,
-                bottom: LythSpacing.xl,
+              padding: EdgeInsets.only(
+                top: context.spacing.sm,
+                bottom: context.spacing.xl,
               ),
               itemBuilder: (_, index) => ModerationCard(
                 caseItem: queue[index],
                 onApprove: () {},
                 onReject: () {},
               ),
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: LythSpacing.xs),
+              separatorBuilder: (_, __) => SizedBox(height: context.spacing.xs),
               itemCount: queue.length,
             ),
             ListView.separated(
-              padding: const EdgeInsets.only(
-                top: LythSpacing.sm,
-                bottom: LythSpacing.xl,
+              padding: EdgeInsets.only(
+                top: context.spacing.sm,
+                bottom: context.spacing.xl,
               ),
               itemBuilder: (_, index) => AppealCard(
                 appeal: appeals[index],

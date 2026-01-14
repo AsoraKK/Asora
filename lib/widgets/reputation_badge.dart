@@ -92,23 +92,23 @@ class ReputationBadge extends StatelessWidget {
       double paddingV,
     ) = switch (size) {
       ReputationBadgeSize.small => (
-          12.0,
-          context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-          context.spacing.xs,
-          context.spacing.xs / 2,
-        ),
+        12.0,
+        context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+        context.spacing.xs,
+        context.spacing.xs / 2,
+      ),
       ReputationBadgeSize.medium => (
-          16.0,
-          context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-          context.spacing.sm,
-          context.spacing.xs,
-        ),
+        16.0,
+        context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+        context.spacing.sm,
+        context.spacing.xs,
+      ),
       ReputationBadgeSize.large => (
-          20.0,
-          context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-          context.spacing.md,
-          context.spacing.sm,
-        ),
+        20.0,
+        context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        context.spacing.md,
+        context.spacing.sm,
+      ),
     };
 
     return Tooltip(

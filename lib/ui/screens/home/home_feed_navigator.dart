@@ -31,6 +31,7 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 }
 
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
+  static const double _horizontalParallax = 12;
   late final PageController _pageController;
 
   @override

@@ -83,7 +83,10 @@ class _LythWordmarkState extends State<LythWordmark>
 
       // Create a repeating animation with proper intervals
       _glowAnimation = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _glowController, curve: LythMotion.standardCurve),
+        CurvedAnimation(
+          parent: _glowController,
+          curve: LythMotion.standardCurve,
+        ),
       );
 
       // Schedule repeating pulses with 240-second interval

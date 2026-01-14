@@ -26,9 +26,9 @@ class FirstPostLockScreen extends ConsumerWidget {
               SizedBox(height: context.spacing.xl),
               Text(
                 'Create your first post to unlock reading',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: context.spacing.md),

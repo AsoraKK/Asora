@@ -43,7 +43,10 @@ class _PostCardState extends ConsumerState<PostCard> {
     final scheme = context.colorScheme;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: spacing.lg, vertical: spacing.sm),
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.lg,
+        vertical: spacing.sm,
+      ),
       child: LythCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,153 +64,153 @@ class _PostCardState extends ConsumerState<PostCard> {
                 },
               ),
 
-          // Post header
-          Padding(
-            padding: EdgeInsets.all(spacing.lg),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: widget.post.author.avatarUrl != null
-                      ? NetworkImage(widget.post.author.avatarUrl!)
-                      : null,
-                  child: widget.post.author.avatarUrl == null
-                      ? Text(widget.post.author.displayName[0].toUpperCase())
-                      : null,
-                ),
-                SizedBox(width: spacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            widget.post.author.displayName,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(width: spacing.sm),
-                          // Author reputation badge
-                          ReputationBadge(
-                            score: widget.post.author.reputationScore,
-                            size: ReputationBadgeSize.small,
-                          ),
-                        ],
-                      ),
-                      Text(
-                        _formatTimeAgo(widget.post.createdAt),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
+            // Post header
+            Padding(
+              padding: EdgeInsets.all(spacing.lg),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: widget.post.author.avatarUrl != null
+                        ? NetworkImage(widget.post.author.avatarUrl!)
+                        : null,
+                    child: widget.post.author.avatarUrl == null
+                        ? Text(widget.post.author.displayName[0].toUpperCase())
+                        : null,
+                  ),
+                  SizedBox(width: spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              widget.post.author.displayName,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(width: spacing.sm),
+                            // Author reputation badge
+                            ReputationBadge(
+                              score: widget.post.author.reputationScore,
+                              size: ReputationBadgeSize.small,
+                            ),
+                          ],
                         ),
+                        Text(
+                          _formatTimeAgo(widget.post.createdAt),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Moderation badges
+                  ModerationBadges(
+                    status: widget.post.moderationStatus,
+                    aiScore: widget.post.aiScore,
+                    showAiScore: widget.showAiScores,
+                    appealStatus: widget.post.appealStatus,
+                    onAppeal: widget.isOwnPost && _canAppeal()
+                        ? _showAppealDialog
+                        : null,
+                    isOwnContent: widget.isOwnPost,
+                  ),
+                ],
+              ),
+            ),
+
+            // Post content
+            if (widget.post.moderationStatus != ModerationStatus.hidden ||
+                widget.isOwnPost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.post.title != null) ...[
+                      Text(
+                        widget.post.title!,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
+                      SizedBox(height: spacing.sm),
                     ],
+                    Text(
+                      widget.post.content,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+
+                    // Media content (if any)
+                    if (widget.post.mediaUrls.isNotEmpty) ...[
+                      SizedBox(height: spacing.md),
+                      _buildMediaContent(),
+                    ],
+                  ],
+                ),
+              )
+            else
+              // Hidden content placeholder
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(spacing.xxl),
+                margin: EdgeInsets.symmetric(horizontal: spacing.lg),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(context.radius.md),
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
-
-                // Moderation badges
-                ModerationBadges(
-                  status: widget.post.moderationStatus,
-                  aiScore: widget.post.aiScore,
-                  showAiScore: widget.showAiScores,
-                  appealStatus: widget.post.appealStatus,
-                  onAppeal: widget.isOwnPost && _canAppeal()
-                      ? _showAppealDialog
-                      : null,
-                  isOwnContent: widget.isOwnPost,
-                ),
-              ],
-            ),
-          ),
-
-          // Post content
-          if (widget.post.moderationStatus != ModerationStatus.hidden ||
-              widget.isOwnPost)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.post.title != null) ...[
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.visibility_off,
+                      size: 48,
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    SizedBox(height: spacing.sm),
                     Text(
-                      widget.post.title!,
+                      'Content Hidden',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: spacing.sm),
-                  ],
-                  Text(
-                    widget.post.content,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-
-                  // Media content (if any)
-                  if (widget.post.mediaUrls.isNotEmpty) ...[
-                    SizedBox(height: spacing.md),
-                    _buildMediaContent(),
-                  ],
-                ],
-              ),
-            )
-          else
-            // Hidden content placeholder
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(spacing.xxl),
-              margin: EdgeInsets.symmetric(horizontal: spacing.lg),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(context.radius.md),
-                border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.visibility_off,
-                    size: 48,
-                    color: scheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  SizedBox(height: spacing.sm),
-                  Text(
-                    'Content Hidden',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.bold,
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      'This content has been hidden due to community reports',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.55),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  SizedBox(height: spacing.xs),
-                  Text(
-                    'This content has been hidden due to community reports',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.55),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-          SizedBox(height: spacing.lg),
+            SizedBox(height: spacing.lg),
 
-          // Post actions
-          if (widget.post.moderationStatus != ModerationStatus.hidden ||
-              widget.isOwnPost)
-            PostActions(
-              contentId: widget.post.id,
-              contentType: 'post',
-              isLiked: widget.post.isLiked,
-              likeCount: widget.post.likeCount,
-              commentCount: widget.post.commentCount,
-              onLike: () => _handleLike(),
-              onComment: () => _handleComment(),
-              onShare: () => _handleShare(),
-            ),
+            // Post actions
+            if (widget.post.moderationStatus != ModerationStatus.hidden ||
+                widget.isOwnPost)
+              PostActions(
+                contentId: widget.post.id,
+                contentType: 'post',
+                isLiked: widget.post.isLiked,
+                likeCount: widget.post.likeCount,
+                commentCount: widget.post.commentCount,
+                onLike: () => _handleLike(),
+                onComment: () => _handleComment(),
+                onShare: () => _handleShare(),
+              ),
 
-          // Insights panel (only visible to post author or admin)
-          // The panel itself handles authorization - returns empty if not allowed
-          if (widget.isOwnPost) PostInsightsPanel(postId: widget.post.id),
+            // Insights panel (only visible to post author or admin)
+            // The panel itself handles authorization - returns empty if not allowed
+            if (widget.isOwnPost) PostInsightsPanel(postId: widget.post.id),
 
             SizedBox(height: spacing.sm),
           ],

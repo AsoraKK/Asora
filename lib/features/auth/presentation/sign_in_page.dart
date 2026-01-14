@@ -28,11 +28,7 @@ class SignInPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Logo and title
-              Icon(
-                Icons.account_circle,
-                size: 80,
-                color: scheme.primary,
-              ),
+              Icon(Icons.account_circle, size: 80, color: scheme.primary),
               SizedBox(height: spacing.lg),
               Text(
                 'Welcome to Lythaus',
@@ -99,18 +95,16 @@ class SignInPage extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: scheme.error,
-                      ),
+                      Icon(Icons.error_outline, color: scheme.error),
                       SizedBox(width: spacing.sm),
                       Expanded(
                         child: Text(
                           authState.error!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onErrorContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: scheme.onErrorContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ),
                     ],

@@ -37,7 +37,10 @@ void main() {
           children: const [
             LythButton(label: 'Primary', variant: LythButtonVariant.primary),
             SizedBox(height: 12),
-            LythButton(label: 'Secondary', variant: LythButtonVariant.secondary),
+            LythButton(
+              label: 'Secondary',
+              variant: LythButtonVariant.secondary,
+            ),
             SizedBox(height: 12),
             LythButton(label: 'Tertiary', variant: LythButtonVariant.tertiary),
             SizedBox(height: 12),
@@ -73,7 +76,10 @@ void main() {
           children: const [
             LythButton(label: 'Primary', variant: LythButtonVariant.primary),
             SizedBox(height: 12),
-            LythButton(label: 'Secondary', variant: LythButtonVariant.secondary),
+            LythButton(
+              label: 'Secondary',
+              variant: LythButtonVariant.secondary,
+            ),
             SizedBox(height: 12),
             LythButton(label: 'Tertiary', variant: LythButtonVariant.tertiary),
             SizedBox(height: 12),
