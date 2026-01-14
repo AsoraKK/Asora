@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION SERVICE
 ///
 /// 🎯 Purpose: Implementation of moderation repository interface
@@ -7,14 +9,14 @@
 library;
 
 import 'package:dio/dio.dart';
-import '../../../core/observability/asora_tracer.dart';
-import '../domain/appeal.dart';
-import '../domain/moderation_audit_entry.dart';
-import '../domain/moderation_case.dart';
-import '../domain/moderation_decision.dart';
-import '../domain/moderation_filters.dart';
-import '../domain/moderation_queue_item.dart';
-import '../domain/moderation_repository.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// Concrete implementation of [ModerationRepository]
 ///
@@ -31,19 +33,19 @@ class ModerationService implements ModerationRepository {
   @override
   Future<List<Appeal>> getMyAppeals({required String token}) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/getMyAppeals',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true &&
-          response.data['appeals'] != null) {
-        return (response.data['appeals'] as List)
-            .map((data) => Appeal.fromJson(data))
+      if (response.data?['success'] == true &&
+          response.data?['appeals'] != null) {
+        return (response.data!['appeals'] as List)
+            .map((data) => Appeal.fromJson(data as Map<String, dynamic>))
             .toList();
       } else {
         throw ModerationException(
-          response.data['message'] ?? 'Failed to load appeals',
+          (response.data?['message'] as String?) ?? 'Failed to load appeals',
           code: 'LOAD_APPEALS_FAILED',
         );
       }
@@ -72,7 +74,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/appealContent',
         data: {
           'contentId': contentId,
@@ -84,11 +86,14 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true && response.data['appeal'] != null) {
-        return Appeal.fromJson(response.data['appeal']);
+      if (response.data?['success'] == true &&
+          response.data?['appeal'] != null) {
+        return Appeal.fromJson(
+          response.data!['appeal'] as Map<String, dynamic>,
+        );
       } else {
         throw ModerationException(
-          response.data['message'] ?? 'Failed to submit appeal',
+          (response.data?['message'] as String?) ?? 'Failed to submit appeal',
           code: 'SUBMIT_APPEAL_FAILED',
         );
       }
@@ -116,7 +121,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/flag',
         data: {
           'contentId': contentId,
@@ -127,7 +132,14 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      return response.data;
+      final data = response.data;
+      if (data == null) {
+        throw const ModerationException(
+          'Invalid flag response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return data;
     } on DioException catch (e) {
       throw ModerationException(
         'Network error: ${e.message}',
@@ -151,7 +163,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/voteOnAppeal',
         data: {
           'appealId': appealId,
@@ -161,7 +173,14 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      return VoteResult.fromJson(response.data);
+      final data = response.data;
+      if (data == null) {
+        throw const ModerationException(
+          'Invalid vote response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return VoteResult.fromJson(data);
     } on DioException catch (e) {
       throw ModerationException(
         'Network error: ${e.message}',
@@ -191,18 +210,20 @@ class ModerationService implements ModerationRepository {
         if (filters != null) ...filters.toJson(),
       };
 
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/reviewAppealedContent',
         queryParameters: queryParams,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      final responseData = (response.data as Map<String, dynamic>?) ?? {};
+      final Map<String, dynamic> responseData =
+          response.data ?? <String, dynamic>{};
       if (responseData['success'] == true) {
         return AppealResponse.fromJson(responseData);
       } else {
+        final message = responseData['message'] as String?;
         throw ModerationException(
-          responseData['message'] ?? 'Failed to load voting feed',
+          message ?? 'Failed to load voting feed',
           code: 'LOAD_FEED_FAILED',
         );
       }
@@ -246,12 +267,12 @@ class ModerationService implements ModerationRepository {
       return await AsoraTracer.traceOperation(
         'ModerationService.fetchModerationQueue',
         () async {
-          final response = await _dio.get(
+          final response = await _dio.get<Map<String, dynamic>>(
             '/moderation/review-queue',
             queryParameters: queryParams,
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          final payload = (response.data as Map<String, dynamic>?) ?? {};
+          final payload = response.data ?? {};
           final queueData =
               (payload['data'] as Map<String, dynamic>?) ?? payload;
           return ModerationQueueResponse.fromJson(queueData);
@@ -282,11 +303,11 @@ class ModerationService implements ModerationRepository {
       return await AsoraTracer.traceOperation(
         'ModerationService.fetchModerationCase',
         () async {
-          final response = await _dio.get(
+          final response = await _dio.get<Map<String, dynamic>>(
             '/moderation/cases/$caseId',
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          final payload = (response.data as Map<String, dynamic>?) ?? {};
+          final payload = response.data ?? {};
           final caseData =
               (payload['data'] as Map<String, dynamic>?) ?? payload;
           return ModerationCase.fromJson(caseData);
@@ -318,12 +339,12 @@ class ModerationService implements ModerationRepository {
       return await AsoraTracer.traceOperation(
         'ModerationService.submitModerationDecision',
         () async {
-          final response = await _dio.post(
+          final response = await _dio.post<Map<String, dynamic>>(
             '/moderation/cases/$caseId/decision',
             data: input.toJson(),
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          final payload = (response.data as Map<String, dynamic>?) ?? {};
+          final payload = response.data ?? {};
           final resultData =
               (payload['data'] as Map<String, dynamic>?) ?? payload;
           return ModerationDecisionResult.fromJson(resultData);
@@ -359,7 +380,7 @@ class ModerationService implements ModerationRepository {
       await AsoraTracer.traceOperation<void>(
         'ModerationService.escalateModerationCase',
         () async {
-          await _dio.post(
+          await _dio.post<Map<String, dynamic>>(
             '/moderation/cases/$caseId/escalate',
             data: input.toJson(),
             options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -394,11 +415,11 @@ class ModerationService implements ModerationRepository {
       return await AsoraTracer.traceOperation(
         'ModerationService.fetchCaseAudit',
         () async {
-          final response = await _dio.get(
+          final response = await _dio.get<Map<String, dynamic>>(
             '/moderation/cases/$caseId/audit',
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          final payload = (response.data as Map<String, dynamic>?) ?? {};
+          final payload = response.data ?? {};
           final auditData =
               (payload['data'] as Map<String, dynamic>?) ?? payload;
           return ModerationAuditResponse.fromJson(auditData);
@@ -439,12 +460,12 @@ class ModerationService implements ModerationRepository {
       return await AsoraTracer.traceOperation(
         'ModerationService.searchAudit',
         () async {
-          final response = await _dio.get(
+          final response = await _dio.get<Map<String, dynamic>>(
             '/moderation/audit',
             queryParameters: queryParams,
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
-          final payload = (response.data as Map<String, dynamic>?) ?? {};
+          final payload = response.data ?? {};
           final auditData =
               (payload['data'] as Map<String, dynamic>?) ?? payload;
           return ModerationAuditResponse.fromJson(auditData);

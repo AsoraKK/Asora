@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
-import '../../domain/appeal.dart';
-import 'voting_status_badge.dart';
-import 'urgency_indicator.dart';
-import 'voting_progress_indicator.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/content_type_helper.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
+import 'package:asora/features/moderation/presentation/widgets/urgency_indicator.dart';
+import 'package:asora/features/moderation/presentation/widgets/voting_progress_indicator.dart';
+import 'package:asora/features/core/utils/date_formatter.dart';
+import 'package:asora/features/core/utils/content_type_helper.dart';
 
 /// ASORA APPEAL CARD WIDGET
 ///

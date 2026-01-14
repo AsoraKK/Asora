@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA FEED PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for feed feature
@@ -7,12 +9,12 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/feed_repository.dart';
-import '../../moderation/domain/appeal.dart';
-import '../../auth/application/auth_providers.dart';
-import '../../moderation/application/moderation_providers.dart'
+import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart'
     show VotingFeedParams;
-import '../../../core/providers/repository_providers.dart';
+import 'package:asora/core/providers/repository_providers.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure

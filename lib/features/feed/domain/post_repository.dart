@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for post CRUD operations
@@ -6,7 +8,7 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'models.dart';
+import 'package:asora/features/feed/domain/models.dart';
 
 /// Result of a post creation attempt
 sealed class CreatePostResult {

@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../features/notifications/domain/notification_models.dart';
-import 'push_notification_service.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:asora/services/push/push_notification_service.dart';
 
 /// Service for registering and managing device tokens with backend
 class DeviceTokenService {
@@ -32,16 +34,16 @@ class DeviceTokenService {
     final deviceLabel = label ?? _generateDeviceLabel();
 
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/devices/register',
         data: {'pushToken': token, 'platform': platform, 'label': deviceLabel},
       );
 
       debugPrint('[DeviceToken] Device token registered successfully');
 
-      if (response.data['evictedDevice'] != null) {
+      if (response.data?['evictedDevice'] != null) {
         final evicted = UserDeviceToken.fromJson(
-          response.data['evictedDevice'] as Map<String, dynamic>,
+          response.data!['evictedDevice'] as Map<String, dynamic>,
         );
         debugPrint(
           '[DeviceToken] Another device was removed due to 3-device cap: ${evicted.label}',
@@ -58,7 +60,7 @@ class DeviceTokenService {
   /// Get list of registered devices for current user
   Future<List<UserDeviceToken>> getRegisteredDevices() async {
     try {
-      final response = await _dio.get('/api/devices');
+      final response = await _dio.get<List<dynamic>>('/api/devices');
       final devices = (response.data as List)
           .map((json) => UserDeviceToken.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -72,7 +74,7 @@ class DeviceTokenService {
   /// Revoke a device token (user manually removes device)
   Future<void> revokeDevice(String deviceId) async {
     try {
-      await _dio.post('/api/devices/$deviceId/revoke');
+      await _dio.post<Map<String, dynamic>>('/api/devices/$deviceId/revoke');
       debugPrint('[DeviceToken] Device revoked successfully');
     } catch (e) {
       debugPrint('[DeviceToken] Failed to revoke device: $e');

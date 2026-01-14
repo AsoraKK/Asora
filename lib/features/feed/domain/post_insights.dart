@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST INSIGHTS DOMAIN MODEL
 ///
 /// 🎯 Purpose: Domain models for post insights (author-only view)

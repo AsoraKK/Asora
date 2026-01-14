@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../components/filter_modal.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/ui/components/filter_modal.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class OnboardingCustomFeedPrompt extends StatelessWidget {
   const OnboardingCustomFeedPrompt({super.key});

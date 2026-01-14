@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library feed_models;
 
 /// ASORA FEED DOMAIN MODELS
@@ -46,6 +48,8 @@ class Post {
     final author = json['author'] as Map<String, dynamic>?;
     final textValue = _extractText(json);
     final metadata = _extractMetadata(json);
+    final media = json['mediaUrls'];
+    final moderation = json['moderation'];
     final username =
         json['authorUsername'] as String? ??
         author?['username'] as String? ??
@@ -64,11 +68,9 @@ class Post {
       likeCount: json['likeCount'] as int? ?? 0,
       dislikeCount: json['dislikeCount'] as int? ?? 0,
       commentCount: json['commentCount'] as int? ?? 0,
-      mediaUrls: json['mediaUrls'] != null
-          ? List<String>.from(json['mediaUrls'])
-          : null,
-      moderation: json['moderation'] != null
-          ? PostModerationData.fromJson(json['moderation'])
+      mediaUrls: media is List ? media.whereType<String>().toList() : null,
+      moderation: moderation is Map
+          ? PostModerationData.fromJson(Map<String, dynamic>.from(moderation))
           : null,
       metadata: metadata,
       userLiked:
@@ -140,10 +142,11 @@ class PostModerationData {
   });
 
   factory PostModerationData.fromJson(Map<String, dynamic> json) {
+    final flags = json['flags'];
     return PostModerationData(
       confidence: json['confidence'] as String,
       score: (json['score'] as num).toDouble(),
-      flags: List<String>.from(json['flags'] ?? []),
+      flags: flags is List ? List<String>.from(flags) : const <String>[],
       analyzedAt: DateTime.parse(json['analyzedAt'] as String),
       provider: json['provider'] as String,
     );
@@ -177,9 +180,10 @@ class PostMetadata {
   });
 
   factory PostMetadata.fromJson(Map<String, dynamic> json) {
+    final tags = json['tags'];
     return PostMetadata(
       location: json['location'] as String?,
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
+      tags: tags is List ? List<String>.from(tags) : null,
       isPinned: json['isPinned'] as bool? ?? false,
       isEdited: json['isEdited'] as bool? ?? false,
       category: json['category'] as String?,
@@ -283,12 +287,16 @@ class FeedResponse {
   }
 
   factory FeedResponse.fromJson(Map<String, dynamic> json) {
+    final posts = json['posts'];
     return FeedResponse(
-      posts: (json['posts'] as List)
-          .map((post) => Post.fromJson(post as Map<String, dynamic>))
-          .toList(),
-      totalCount: json['totalCount'] as int,
-      hasMore: json['hasMore'] as bool,
+      posts: posts is List
+          ? posts
+                .whereType<Map<String, dynamic>>()
+                .map((post) => Post.fromJson(Map<String, dynamic>.from(post)))
+                .toList()
+          : const <Post>[],
+      totalCount: json['totalCount'] as int? ?? 0,
+      hasMore: json['hasMore'] as bool? ?? false,
       nextCursor: json['nextCursor'] as String?,
       page: json['page'] as int? ?? 1,
       pageSize: json['pageSize'] as int? ?? 20,

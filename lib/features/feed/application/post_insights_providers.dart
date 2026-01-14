@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST INSIGHTS PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for fetching post insights
@@ -10,9 +12,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/dio_client.dart';
-import '../../auth/application/auth_providers.dart';
-import '../domain/post_insights.dart';
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/feed/domain/post_insights.dart';
 
 /// Result type for insights fetch
 sealed class InsightsResult {}

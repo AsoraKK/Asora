@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for moderation feature
@@ -8,10 +10,10 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../auth/application/auth_providers.dart';
-import '../domain/moderation_repository.dart';
-import '../domain/appeal.dart';
-import '../../../core/providers/repository_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/core/providers/repository_providers.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure

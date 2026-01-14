@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'moderation_service.dart';
+import 'package:asora/features/moderation/moderation_service.dart';
 
 class ReviewQueueScreen extends StatefulWidget {
   final String baseUrl;
@@ -188,7 +190,7 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
                           ),
                         ],
                       ),
-                      onTap: () => showDialog(
+                      onTap: () => showDialog<void>(
                         context: context,
                         builder: (_) => _DetailDialog(item: item),
                       ),

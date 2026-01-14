@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../theme/spacing.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class FeedCarouselIndicator extends StatelessWidget {
   const FeedCarouselIndicator({

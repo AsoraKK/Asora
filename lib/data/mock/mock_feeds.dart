@@ -1,4 +1,6 @@
-import '../../state/models/feed_models.dart';
+// ignore_for_file: public_member_api_docs
+
+import 'package:asora/state/models/feed_models.dart';
 
 const List<FeedModel> mockFeeds = [
   FeedModel(

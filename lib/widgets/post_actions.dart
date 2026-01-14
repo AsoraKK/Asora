@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../features/auth/application/auth_providers.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///
@@ -307,6 +309,7 @@ class _FlagButton extends ConsumerWidget {
       );
 
       if (context.mounted) {
+        final message = result['message'] as String?;
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -315,9 +318,7 @@ class _FlagButton extends ConsumerWidget {
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    result['message'] ?? 'Report submitted successfully',
-                  ),
+                  child: Text(message ?? 'Report submitted successfully'),
                 ),
               ],
             ),
@@ -337,8 +338,9 @@ class _FlagButton extends ConsumerWidget {
           } else if (error.response?.statusCode == 429) {
             errorMessage =
                 'Too many reports. Please wait before reporting again.';
-          } else if (error.response?.data?['error'] != null) {
-            errorMessage = error.response!.data['error'];
+          } else if (error.response?.data is Map &&
+              (error.response!.data as Map)['error'] is String) {
+            errorMessage = (error.response!.data as Map)['error'] as String;
           }
         } else if (error is ModerationException) {
           errorMessage = error.message;

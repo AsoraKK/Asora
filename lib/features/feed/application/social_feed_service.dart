@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library social_feed_service;
 
 /// ASORA SOCIAL FEED SERVICE
@@ -8,9 +10,9 @@ library social_feed_service;
 /// 📱 Platform: Flutter with Dio HTTP client
 
 import 'package:dio/dio.dart';
-import '../domain/social_feed_repository.dart';
-import '../domain/models.dart';
-import '../../../core/observability/asora_tracer.dart';
+import 'package:asora/features/feed/domain/social_feed_repository.dart';
+import 'package:asora/features/feed/domain/models.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
 
 /// Concrete implementation of [SocialFeedRepository]
 ///
@@ -43,7 +45,7 @@ class SocialFeedService implements SocialFeedRepository {
           if (extraQuery != null) ...extraQuery,
         };
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl$urlPath',
           queryParameters: queryParameters,
           options: Options(
@@ -52,7 +54,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
 
         final data = response.data;
-        if (data == null || data is! Map<String, dynamic>) {
+        if (data == null) {
           throw const SocialFeedException(
             'Invalid feed response',
             code: 'INVALID_RESPONSE',
@@ -149,7 +151,7 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getFeed',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/feed/get',
           queryParameters: params.toJson(),
           options: Options(
@@ -157,14 +159,30 @@ class SocialFeedService implements SocialFeedRepository {
           ),
         );
 
-        if (response.data['success'] == true) {
-          return FeedResponse.fromJson(response.data['data']);
-        } else {
-          throw SocialFeedException(
-            response.data['message'] ?? 'Failed to load feed',
-            code: 'LOAD_FEED_FAILED',
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid feed response',
+            code: 'INVALID_RESPONSE',
           );
         }
+
+        if (data['success'] == true) {
+          final payload = data['data'];
+          if (payload is! Map<String, dynamic>) {
+            throw const SocialFeedException(
+              'Invalid feed response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+          return FeedResponse.fromJson(payload);
+        }
+
+        final message = data['message'];
+        throw SocialFeedException(
+          message is String ? message : 'Failed to load feed',
+          code: 'LOAD_FEED_FAILED',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed/get')
@@ -187,7 +205,7 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getTrendingFeed',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/feed/trending',
           queryParameters: {'page': page, 'pageSize': pageSize},
           options: Options(
@@ -223,7 +241,7 @@ class SocialFeedService implements SocialFeedRepository {
           if (radius != null) 'radius': radius,
         };
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/feed/local',
           queryParameters: queryParams,
           options: Options(
@@ -256,7 +274,7 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getNewCreatorsFeed',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/feed/new-creators',
           queryParameters: {'page': page, 'pageSize': pageSize},
           options: Options(
@@ -283,7 +301,7 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getFollowingFeed',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/feed/following',
           queryParameters: {'page': page, 'pageSize': pageSize},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -304,21 +322,37 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getPost',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/posts/$postId',
           options: Options(
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
           ),
         );
 
-        if (response.data['success'] == true) {
-          return Post.fromJson(response.data['post']);
-        } else {
-          throw SocialFeedException(
-            response.data['message'] ?? 'Post not found',
-            code: 'POST_NOT_FOUND',
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid post response',
+            code: 'INVALID_RESPONSE',
           );
         }
+
+        if (data['success'] == true) {
+          final payload = data['post'];
+          if (payload is! Map<String, dynamic>) {
+            throw const SocialFeedException(
+              'Invalid post response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+          return Post.fromJson(payload);
+        }
+
+        final message = data['message'];
+        throw SocialFeedException(
+          message is String ? message : 'Post not found',
+          code: 'POST_NOT_FOUND',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -341,20 +375,36 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.likePost',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '$_baseUrl/posts/$postId/like',
           data: {'action': isLike ? 'like' : 'unlike'},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.data['success'] == true) {
-          return Post.fromJson(response.data['post']);
-        } else {
-          throw SocialFeedException(
-            response.data['message'] ?? 'Failed to update like',
-            code: 'LIKE_FAILED',
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid like response',
+            code: 'INVALID_RESPONSE',
           );
         }
+
+        if (data['success'] == true) {
+          final payload = data['post'];
+          if (payload is! Map<String, dynamic>) {
+            throw const SocialFeedException(
+              'Invalid like response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+          return Post.fromJson(payload);
+        }
+
+        final message = data['message'];
+        throw SocialFeedException(
+          message is String ? message : 'Failed to update like',
+          code: 'LIKE_FAILED',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -377,20 +427,36 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.dislikePost',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '$_baseUrl/posts/$postId/dislike',
           data: {'action': isDislike ? 'dislike' : 'remove_dislike'},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.data['success'] == true) {
-          return Post.fromJson(response.data['post']);
-        } else {
-          throw SocialFeedException(
-            response.data['message'] ?? 'Failed to update dislike',
-            code: 'DISLIKE_FAILED',
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid dislike response',
+            code: 'INVALID_RESPONSE',
           );
         }
+
+        if (data['success'] == true) {
+          final payload = data['post'];
+          if (payload is! Map<String, dynamic>) {
+            throw const SocialFeedException(
+              'Invalid dislike response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+          return Post.fromJson(payload);
+        }
+
+        final message = data['message'];
+        throw SocialFeedException(
+          message is String ? message : 'Failed to update dislike',
+          code: 'DISLIKE_FAILED',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -414,7 +480,7 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.getComments',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '$_baseUrl/posts/$postId/comments',
           queryParameters: {'page': page, 'pageSize': pageSize},
           options: Options(
@@ -422,16 +488,33 @@ class SocialFeedService implements SocialFeedRepository {
           ),
         );
 
-        if (response.data['success'] == true) {
-          return (response.data['comments'] as List)
-              .map((comment) => Comment.fromJson(comment))
-              .toList();
-        } else {
-          throw SocialFeedException(
-            response.data['message'] ?? 'Failed to load comments',
-            code: 'LOAD_COMMENTS_FAILED',
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid comments response',
+            code: 'INVALID_RESPONSE',
           );
         }
+
+        if (data['success'] == true) {
+          final commentsData = data['comments'];
+          if (commentsData is! List) {
+            throw const SocialFeedException(
+              'Invalid comments response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+          return commentsData
+              .whereType<Map<String, dynamic>>()
+              .map(Comment.fromJson)
+              .toList();
+        }
+
+        final message = data['message'];
+        throw SocialFeedException(
+          message is String ? message : 'Failed to load comments',
+          code: 'LOAD_COMMENTS_FAILED',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -456,15 +539,24 @@ class SocialFeedService implements SocialFeedRepository {
     return AsoraTracer.traceOperation(
       'SocialFeedService.flagPost',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '$_baseUrl/posts/$postId/flag',
           data: {'reason': reason, if (details != null) 'details': details},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.data['success'] != true) {
+        final data = response.data;
+        if (data == null) {
+          throw const SocialFeedException(
+            'Invalid flag response',
+            code: 'INVALID_RESPONSE',
+          );
+        }
+
+        if (data['success'] != true) {
+          final message = data['message'];
           throw SocialFeedException(
-            response.data['message'] ?? 'Failed to flag post',
+            message is String ? message : 'Failed to flag post',
             code: 'FLAG_FAILED',
           );
         }
@@ -483,15 +575,31 @@ class SocialFeedService implements SocialFeedRepository {
   }
 
   /// Helper method to handle feed response parsing
-  FeedResponse _handleFeedResponse(Response response) {
-    if (response.data['success'] == true) {
-      return FeedResponse.fromJson(response.data['data']);
-    } else {
-      throw SocialFeedException(
-        response.data['message'] ?? 'Failed to load feed',
-        code: 'LOAD_FEED_FAILED',
+  FeedResponse _handleFeedResponse(Response<Map<String, dynamic>> response) {
+    final data = response.data;
+    if (data == null) {
+      throw const SocialFeedException(
+        'Invalid feed response',
+        code: 'INVALID_RESPONSE',
       );
     }
+
+    if (data['success'] == true) {
+      final payload = data['data'];
+      if (payload is! Map<String, dynamic>) {
+        throw const SocialFeedException(
+          'Invalid feed response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return FeedResponse.fromJson(payload);
+    }
+
+    final message = data['message'];
+    throw SocialFeedException(
+      message is String ? message : 'Failed to load feed',
+      code: 'LOAD_FEED_FAILED',
+    );
   }
 
   /// Helper method to handle and convert errors

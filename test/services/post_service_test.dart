@@ -5,9 +5,13 @@ import 'package:asora/services/post_service.dart';
 
 class MockDio extends Mock implements Dio {}
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  return Response<Map<String, dynamic>>(
+    data: data as Map<String, dynamic>,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -23,7 +27,7 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -55,7 +59,7 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/posts',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -75,7 +79,10 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.delete('/api/posts/post-1', options: any(named: 'options')),
+      () => dio.delete<Map<String, dynamic>>(
+        '/api/posts/post-1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async =>
           _response({'success': true}, '/api/posts/post-1', statusCode: 200),
@@ -90,7 +97,10 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.delete('/api/posts/post-1', options: any(named: 'options')),
+      () => dio.delete<Map<String, dynamic>>(
+        '/api/posts/post-1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async =>
           _response({'success': false}, '/api/posts/post-1', statusCode: 403),
@@ -107,7 +117,7 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/feed',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -137,7 +147,7 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/feed',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -154,7 +164,10 @@ void main() {
     final service = PostService(dio);
 
     when(
-      () => dio.get('/api/user/user-1', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/api/user/user-1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => _response(
         {
@@ -184,7 +197,12 @@ void main() {
     final dio = MockDio();
     final service = PostService(dio);
 
-    when(() => dio.get('/api/user', options: any(named: 'options'))).thenAnswer(
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/user',
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
       (_) async => _response({'success': false}, '/api/user', statusCode: 404),
     );
 
@@ -198,7 +216,7 @@ void main() {
     final dio = MockDio();
     final service = PostService(dio);
 
-    when(() => dio.get('/api/health')).thenAnswer(
+    when(() => dio.get<Map<String, dynamic>>('/api/health')).thenAnswer(
       (_) async => _response({'status': 'ok'}, '/api/health', statusCode: 200),
     );
 
@@ -210,7 +228,7 @@ void main() {
     final dio = MockDio();
     final service = PostService(dio);
 
-    when(() => dio.get('/api/health')).thenAnswer(
+    when(() => dio.get<Map<String, dynamic>>('/api/health')).thenAnswer(
       (_) async =>
           _response({'status': 'down'}, '/api/health', statusCode: 500),
     );

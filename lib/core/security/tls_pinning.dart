@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA TLS CERTIFICATE PINNING (Enhanced)
 ///
 /// 🎯 Purpose: Pin SHA-256 of server's SPKI, strict/warn modes, multi-pin support
@@ -10,8 +12,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import '../config/environment_config.dart';
-import 'security_telemetry.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/security_telemetry.dart';
 
 /// TLS pinning implementation with SPKI verification
 class TlsPinningValidator {
@@ -287,7 +289,7 @@ class PinnedHttpClient implements HttpClient {
   ) => _client.connectionFactory = f;
 
   @override
-  set keyLog(Function(String line)? callback) => _client.keyLog = callback;
+  set keyLog(void Function(String line)? callback) => _client.keyLog = callback;
 
   @override
   set findProxy(String Function(Uri url)? f) => _client.findProxy = f;

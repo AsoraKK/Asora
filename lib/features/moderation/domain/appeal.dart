@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library appeal_models;
 
 /// ASORA APPEAL MODELS
@@ -84,37 +86,48 @@ class Appeal {
   });
 
   factory Appeal.fromJson(Map<String, dynamic> json) {
+    final aiScoreValue = json['aiScore'];
+    final aiAnalysisValue = json['aiAnalysis'];
+    final flagCategoriesValue = json['flagCategories'];
+    final votingStatusValue = json['votingStatus'] as String?;
+    final votingProgressValue = json['votingProgress'];
     return Appeal(
-      appealId: json['appealId'],
-      contentId: json['contentId'],
-      contentType: json['contentType'],
-      contentTitle: json['contentTitle'],
-      contentPreview: json['contentPreview'] ?? '',
-      appealType: json['appealType'],
-      appealReason: json['appealReason'],
-      userStatement: json['userStatement'],
-      submitterId: json['submitterId'],
-      submitterName: json['submitterName'],
-      submittedAt: DateTime.parse(json['submittedAt']),
-      expiresAt: DateTime.parse(json['expiresAt']),
-      flagReason: json['flagReason'],
-      aiScore: json['aiScore']?.toDouble(),
-      aiAnalysis: json['aiAnalysis'],
-      flagCategories: List<String>.from(json['flagCategories'] ?? []),
-      flagCount: json['flagCount'] ?? 0,
+      appealId: json['appealId'] as String,
+      contentId: json['contentId'] as String,
+      contentType: json['contentType'] as String,
+      contentTitle: json['contentTitle'] as String?,
+      contentPreview: json['contentPreview'] as String? ?? '',
+      appealType: json['appealType'] as String,
+      appealReason: json['appealReason'] as String,
+      userStatement: json['userStatement'] as String,
+      submitterId: json['submitterId'] as String,
+      submitterName: json['submitterName'] as String,
+      submittedAt: DateTime.parse(json['submittedAt'] as String),
+      expiresAt: DateTime.parse(json['expiresAt'] as String),
+      flagReason: json['flagReason'] as String,
+      aiScore: aiScoreValue is num ? aiScoreValue.toDouble() : null,
+      aiAnalysis: aiAnalysisValue is Map
+          ? Map<String, dynamic>.from(aiAnalysisValue)
+          : null,
+      flagCategories: flagCategoriesValue is List
+          ? List<String>.from(flagCategoriesValue)
+          : const <String>[],
+      flagCount: json['flagCount'] as int? ?? 0,
       votingStatus: VotingStatus.values.firstWhere(
-        (e) => e.name == json['votingStatus'],
+        (e) => e.name == votingStatusValue,
         orElse: () => VotingStatus.active,
       ),
-      votingProgress: json['votingProgress'] != null
-          ? VotingProgress.fromJson(json['votingProgress'])
+      votingProgress: votingProgressValue is Map
+          ? VotingProgress.fromJson(
+              Map<String, dynamic>.from(votingProgressValue),
+            )
           : null,
-      urgencyScore: json['urgencyScore'] ?? 0,
-      estimatedResolution: json['estimatedResolution'] ?? 'Unknown',
-      hasUserVoted: json['hasUserVoted'] ?? false,
-      userVote: json['userVote'],
-      canUserVote: json['canUserVote'] ?? false,
-      voteIneligibilityReason: json['voteIneligibilityReason'],
+      urgencyScore: json['urgencyScore'] as int? ?? 0,
+      estimatedResolution: json['estimatedResolution'] as String? ?? 'Unknown',
+      hasUserVoted: json['hasUserVoted'] as bool? ?? false,
+      userVote: json['userVote'] as String?,
+      canUserVote: json['canUserVote'] as bool? ?? false,
+      voteIneligibilityReason: json['voteIneligibilityReason'] as String?,
     );
   }
 
@@ -175,19 +188,26 @@ class VotingProgress {
   });
 
   factory VotingProgress.fromJson(Map<String, dynamic> json) {
+    final approvalRateValue = json['approvalRate'];
+    final voteBreakdownValue = json['voteBreakdown'];
     return VotingProgress(
-      totalVotes: json['totalVotes'] ?? 0,
-      approveVotes: json['approveVotes'] ?? 0,
-      rejectVotes: json['rejectVotes'] ?? 0,
-      approvalRate: (json['approvalRate'] ?? 0.0).toDouble(),
-      quorumMet: json['quorumMet'] ?? false,
-      timeRemaining: json['timeRemaining'],
-      estimatedResolution: json['estimatedResolution'],
-      voteBreakdown:
-          (json['voteBreakdown'] as List?)
-              ?.map((e) => VoteBreakdown.fromJson(e))
-              .toList() ??
-          [],
+      totalVotes: json['totalVotes'] as int? ?? 0,
+      approveVotes: json['approveVotes'] as int? ?? 0,
+      rejectVotes: json['rejectVotes'] as int? ?? 0,
+      approvalRate: approvalRateValue is num
+          ? approvalRateValue.toDouble()
+          : 0.0,
+      quorumMet: json['quorumMet'] as bool? ?? false,
+      timeRemaining: json['timeRemaining'] as String?,
+      estimatedResolution: json['estimatedResolution'] as String?,
+      voteBreakdown: voteBreakdownValue is List
+          ? voteBreakdownValue
+                .whereType<Map<String, dynamic>>()
+                .map(
+                  (e) => VoteBreakdown.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList()
+          : const <VoteBreakdown>[],
     );
   }
 
@@ -220,11 +240,12 @@ class VoteBreakdown {
   });
 
   factory VoteBreakdown.fromJson(Map<String, dynamic> json) {
+    final percentageValue = json['percentage'];
     return VoteBreakdown(
-      category: json['category'],
-      approveCount: json['approveCount'] ?? 0,
-      rejectCount: json['rejectCount'] ?? 0,
-      percentage: (json['percentage'] ?? 0.0).toDouble(),
+      category: json['category'] as String,
+      approveCount: json['approveCount'] as int? ?? 0,
+      rejectCount: json['rejectCount'] as int? ?? 0,
+      percentage: percentageValue is num ? percentageValue.toDouble() : 0.0,
     );
   }
 
@@ -260,13 +281,13 @@ class UserVote {
 
   factory UserVote.fromJson(Map<String, dynamic> json) {
     return UserVote(
-      voteId: json['voteId'],
-      appealId: json['appealId'],
-      userId: json['userId'],
-      vote: json['vote'],
-      comment: json['comment'],
-      timestamp: DateTime.parse(json['timestamp']),
-      isValidated: json['isValidated'] ?? false,
+      voteId: json['voteId'] as String,
+      appealId: json['appealId'] as String,
+      userId: json['userId'] as String,
+      vote: json['vote'] as String,
+      comment: json['comment'] as String?,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      isValidated: json['isValidated'] as bool? ?? false,
     );
   }
 
@@ -298,13 +319,32 @@ class AppealResponse {
   });
 
   factory AppealResponse.fromJson(Map<String, dynamic> json) {
+    final appealsValue = json['appeals'];
+    final paginationValue = json['pagination'];
+    final filtersValue = json['filters'];
+    final summaryValue = json['summary'];
     return AppealResponse(
-      appeals: (json['appeals'] as List)
-          .map((e) => Appeal.fromJson(e))
-          .toList(),
-      pagination: AppealPagination.fromJson(json['pagination']),
-      filters: AppealFilters.fromJson(json['filters'] ?? {}),
-      summary: AppealSummary.fromJson(json['summary'] ?? {}),
+      appeals: appealsValue is List
+          ? appealsValue
+                .whereType<Map<String, dynamic>>()
+                .map((e) => Appeal.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
+          : const <Appeal>[],
+      pagination: AppealPagination.fromJson(
+        paginationValue is Map
+            ? Map<String, dynamic>.from(paginationValue)
+            : const <String, dynamic>{},
+      ),
+      filters: AppealFilters.fromJson(
+        filtersValue is Map
+            ? Map<String, dynamic>.from(filtersValue)
+            : const <String, dynamic>{},
+      ),
+      summary: AppealSummary.fromJson(
+        summaryValue is Map
+            ? Map<String, dynamic>.from(summaryValue)
+            : const <String, dynamic>{},
+      ),
     );
   }
 }
@@ -327,11 +367,11 @@ class AppealPagination {
 
   factory AppealPagination.fromJson(Map<String, dynamic> json) {
     return AppealPagination(
-      total: json['total'] ?? 0,
-      page: json['page'] ?? 1,
-      pageSize: json['pageSize'] ?? 20,
-      hasMore: json['hasMore'] ?? false,
-      totalPages: json['totalPages'] ?? 1,
+      total: json['total'] as int? ?? 0,
+      page: json['page'] as int? ?? 1,
+      pageSize: json['pageSize'] as int? ?? 20,
+      hasMore: json['hasMore'] as bool? ?? false,
+      totalPages: json['totalPages'] as int? ?? 1,
     );
   }
 }
@@ -354,11 +394,11 @@ class AppealFilters {
 
   factory AppealFilters.fromJson(Map<String, dynamic> json) {
     return AppealFilters(
-      contentType: json['contentType'],
-      urgency: json['urgency'],
-      category: json['category'],
-      sortBy: json['sortBy'] ?? 'urgency',
-      sortOrder: json['sortOrder'] ?? 'desc',
+      contentType: json['contentType'] as String?,
+      urgency: json['urgency'] as String?,
+      category: json['category'] as String?,
+      sortBy: json['sortBy'] as String? ?? 'urgency',
+      sortOrder: json['sortOrder'] as String? ?? 'desc',
     );
   }
 
@@ -390,12 +430,18 @@ class AppealSummary {
   });
 
   factory AppealSummary.fromJson(Map<String, dynamic> json) {
+    final avgResolutionValue = json['averageResolutionTime'];
+    final breakdownValue = json['categoryBreakdown'];
     return AppealSummary(
-      totalActive: json['totalActive'] ?? 0,
-      totalVotes: json['totalVotes'] ?? 0,
-      userVotes: json['userVotes'] ?? 0,
-      averageResolutionTime: (json['averageResolutionTime'] ?? 0.0).toDouble(),
-      categoryBreakdown: Map<String, int>.from(json['categoryBreakdown'] ?? {}),
+      totalActive: json['totalActive'] as int? ?? 0,
+      totalVotes: json['totalVotes'] as int? ?? 0,
+      userVotes: json['userVotes'] as int? ?? 0,
+      averageResolutionTime: avgResolutionValue is num
+          ? avgResolutionValue.toDouble()
+          : 0.0,
+      categoryBreakdown: breakdownValue is Map
+          ? Map<String, int>.from(breakdownValue)
+          : const <String, int>{},
     );
   }
 }
@@ -415,12 +461,15 @@ class VoteResult {
   });
 
   factory VoteResult.fromJson(Map<String, dynamic> json) {
+    final updatedProgressValue = json['updatedProgress'];
     return VoteResult(
-      success: json['success'] ?? false,
-      message: json['message'],
-      tallyTriggered: json['tallyTriggered'] ?? false,
-      updatedProgress: json['updatedProgress'] != null
-          ? VotingProgress.fromJson(json['updatedProgress'])
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+      tallyTriggered: json['tallyTriggered'] as bool? ?? false,
+      updatedProgress: updatedProgressValue is Map
+          ? VotingProgress.fromJson(
+              Map<String, dynamic>.from(updatedProgressValue),
+            )
           : null,
     );
   }

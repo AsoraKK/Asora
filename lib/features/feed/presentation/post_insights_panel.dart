@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST INSIGHTS PANEL WIDGET
 ///
 /// 🎯 Purpose: Display sanitized moderation insights for post authors/admins
@@ -11,8 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../application/post_insights_providers.dart';
-import '../domain/post_insights.dart';
+import 'package:asora/features/feed/application/post_insights_providers.dart';
+import 'package:asora/features/feed/domain/post_insights.dart';
 
 /// Insights panel for post details screen
 ///

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // lib/features/auth/application/auth_service.dart
 import 'dart:async';
 import 'dart:convert';
@@ -7,9 +9,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/auth_failure.dart';
-import '../domain/user.dart';
-import 'oauth2_service.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 
 class AuthService {
   AuthService({

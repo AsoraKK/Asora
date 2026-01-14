@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/service_providers.dart';
-import '../routing/deeplink_router.dart';
+import 'package:asora/services/service_providers.dart';
+import 'package:asora/core/routing/deeplink_router.dart';
 
 /// Initialize push notification system
 /// Call this during app startup after Firebase initialization

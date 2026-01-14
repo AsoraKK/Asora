@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Confirm Dialog Component
 ///
 /// High-level dialog for confirmations and destructive actions.
@@ -5,8 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
-import 'lyth_button.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
 
 /// Semantic confirmation dialog
 ///
@@ -15,7 +17,7 @@ import 'lyth_button.dart';
 ///
 /// Usage:
 /// ```dart
-/// showDialog(
+/// showDialog<void>(
 ///   context: context,
 ///   builder: (context) => LythConfirmDialog(
 ///     title: 'Delete Item?',
@@ -64,22 +66,15 @@ class LythConfirmDialog extends StatelessWidget {
 
   /// Create a destructive confirmation dialog
   const LythConfirmDialog.destructive({
-    required String title,
-    required String confirmLabel,
-    required VoidCallback onConfirm,
-    String? message,
-    String cancelLabel = 'Cancel',
-    VoidCallback? onCancel,
-    IconData? icon,
+    required this.title,
+    required this.confirmLabel,
+    required this.onConfirm,
+    this.message,
+    this.cancelLabel = 'Cancel',
+    this.onCancel,
+    this.icon,
     super.key,
-  }) : title = title,
-       confirmLabel = confirmLabel,
-       onConfirm = onConfirm,
-       message = message,
-       cancelLabel = cancelLabel,
-       onCancel = onCancel,
-       isDestructive = true,
-       icon = icon;
+  }) : isDestructive = true;
 
   @override
   Widget build(BuildContext context) {

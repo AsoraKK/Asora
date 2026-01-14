@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Color Schemes (Material 3)
 ///
 /// Defines grayscale color schemes with warm ivory accents.
@@ -114,9 +116,9 @@ class LythColorSchemes {
 
   /// Calculate relative luminance per WCAG standards
   static double _relativeLuminance(Color color) {
-    final r = _linearizeChannel(color.red / 255);
-    final g = _linearizeChannel(color.green / 255);
-    final b = _linearizeChannel(color.blue / 255);
+    final r = _linearizeChannel(color.r);
+    final g = _linearizeChannel(color.g);
+    final b = _linearizeChannel(color.b);
 
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }

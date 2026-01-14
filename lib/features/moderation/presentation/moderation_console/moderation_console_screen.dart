@@ -1,12 +1,14 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/analytics/analytics_client.dart';
-import '../../../../core/analytics/analytics_events.dart';
-import '../../../../core/analytics/analytics_providers.dart';
-import '../widgets/moderator_guard.dart';
-import 'moderation_audit_tab.dart';
-import 'moderation_queue_tab.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/features/moderation/presentation/widgets/moderator_guard.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_audit_tab.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_queue_tab.dart';
 
 class ModerationConsoleScreen extends ConsumerStatefulWidget {
   const ModerationConsoleScreen({super.key});

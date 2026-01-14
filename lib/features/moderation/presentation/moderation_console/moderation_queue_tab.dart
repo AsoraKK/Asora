@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/moderation_filters.dart';
-import '../providers/moderation_console_providers.dart';
-import 'moderation_case_screen.dart';
-import 'widgets/moderation_queue_item_tile.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_case_screen.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_queue_item_tile.dart';
 
 class ModerationQueueTab extends ConsumerStatefulWidget {
   const ModerationQueueTab({super.key});
@@ -134,7 +136,7 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
                   child: ModerationQueueItemTile(
                     item: item,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (_) => ModerationCaseScreen(caseId: item.id),
                       ),
                     ),

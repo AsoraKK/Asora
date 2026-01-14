@@ -1,17 +1,19 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/analytics/analytics_client.dart';
-import '../core/analytics/analytics_events.dart';
-import '../core/analytics/analytics_providers.dart';
-import '../features/auth/application/auth_providers.dart';
-import '../features/auth/domain/user.dart';
-import '../features/feed/domain/models.dart' as domain;
-import '../widgets/security_widgets.dart';
-import '../widgets/reputation_badge.dart';
-import '../features/privacy/privacy_settings_screen.dart';
-import '../features/feed/presentation/create_post_screen.dart';
-import '../features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/feed/domain/models.dart' as domain;
+import 'package:asora/widgets/security_widgets.dart';
+import 'package:asora/widgets/reputation_badge.dart';
+import 'package:asora/features/privacy/privacy_settings_screen.dart';
+import 'package:asora/features/feed/presentation/create_post_screen.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 
 /// ---------------------------------------------------------------------------
 ///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
@@ -534,7 +536,7 @@ class _AsoraDrawer extends ConsumerWidget {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.of(context).push(
-                    MaterialPageRoute(
+                    MaterialPageRoute<void>(
                       builder: (context) => const ModerationConsoleScreen(),
                     ),
                   );
@@ -562,7 +564,7 @@ class _AsoraDrawer extends ConsumerWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (context) => const PrivacySettingsScreen(),
                   ),
                 );
@@ -637,7 +639,7 @@ class _AsoraDrawer extends ConsumerWidget {
   }
 
   void _handleSignOut(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Sign Out', style: GoogleFonts.sora()),

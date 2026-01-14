@@ -124,7 +124,7 @@ void main() {
         'knownAuthorities': ['server.ciamlogin.com'],
       };
 
-      when(() => mockDio.get(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
           data: configJson,
           statusCode: 200,
@@ -135,12 +135,14 @@ void main() {
       await service.initialize();
 
       verify(
-        () => mockDio.get('https://example.com/api/auth/b2c-config'),
+        () => mockDio.get<Map<String, dynamic>>(
+          'https://example.com/api/auth/b2c-config',
+        ),
       ).called(1);
     });
 
     test('falls back to environment config when server fails', () async {
-      when(() => mockDio.get(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(path: ''),
           type: DioExceptionType.connectionTimeout,
@@ -154,7 +156,7 @@ void main() {
     });
 
     test('checks for cached token on init', () async {
-      when(() => mockDio.get(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
           data: {
             'tenant': 'test.onmicrosoft.com',
@@ -271,7 +273,7 @@ void main() {
       service.testingUpdateState(AuthState.authenticating);
       service.testingUpdateState(AuthState.authenticated);
 
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(states, [AuthState.authenticating, AuthState.authenticated]);
     });

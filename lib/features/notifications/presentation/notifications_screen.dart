@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA NOTIFICATIONS - NOTIFICATION CENTRE
 ///
 /// Main notifications screen:
@@ -10,8 +12,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/notification_models.dart' as models;
-import '../application/notification_providers.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart'
+    as models;
+import 'package:asora/features/notifications/application/notification_providers.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});

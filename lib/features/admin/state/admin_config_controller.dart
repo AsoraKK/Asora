@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ADMIN CONFIG STATE CONTROLLER
 ///
 /// 🎯 Purpose: Riverpod state management for admin configuration
@@ -8,9 +10,9 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../api/admin_api_client.dart';
-import '../domain/admin_config_models.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:asora/features/admin/api/admin_api_client.dart';
+import 'package:asora/features/admin/domain/admin_config_models.dart';
+import 'package:asora/core/network/dio_client.dart';
 
 /// Status of the admin config editor
 enum AdminConfigStatus {
@@ -220,7 +222,7 @@ class AdminConfigEditorNotifier extends StateNotifier<AdminConfigEditorState> {
       );
 
       // After brief "saved" display, return to idle
-      await Future.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 2));
       if (state.status == AdminConfigStatus.saved) {
         state = state.copyWith(status: AdminConfigStatus.idle);
       }

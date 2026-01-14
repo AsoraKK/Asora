@@ -1,16 +1,18 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
-import '../../auth/application/auth_providers.dart';
-import '../../../core/analytics/analytics_client.dart';
-import '../../../core/analytics/analytics_events.dart';
-import '../../../core/analytics/analytics_providers.dart';
-import '../../../core/logging/app_logger.dart';
-import '../services/privacy_api.dart';
-import '../services/privacy_repository.dart';
-import 'privacy_state.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/core/logging/app_logger.dart';
+import 'package:asora/features/privacy/services/privacy_api.dart';
+import 'package:asora/features/privacy/services/privacy_repository.dart';
+import 'package:asora/features/privacy/state/privacy_state.dart';
 
 /// Riverpod controller orchestrating privacy flows.
 class PrivacyController extends StateNotifier<PrivacyState> {
@@ -236,7 +238,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
       return;
     }
 
-    Duration? derivedRemaining = error.retryAfter;
+    final Duration? derivedRemaining = error.retryAfter;
     DateTime? derivedTimestamp;
 
     if (derivedRemaining != null && derivedRemaining > Duration.zero) {

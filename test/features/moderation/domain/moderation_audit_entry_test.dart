@@ -318,7 +318,7 @@ void main() {
 
     test('fromJson handles empty entries list', () {
       final json = <String, dynamic>{
-        'entries': [],
+        'entries': <Map<String, dynamic>>[],
         'pagination': {'total': 0},
       };
 

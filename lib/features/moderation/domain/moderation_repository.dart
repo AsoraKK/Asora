@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for moderation operations
@@ -6,12 +8,12 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'appeal.dart';
-import 'moderation_audit_entry.dart';
-import 'moderation_case.dart';
-import 'moderation_decision.dart';
-import 'moderation_filters.dart';
-import 'moderation_queue_item.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
 
 /// Abstract repository defining moderation domain operations
 ///

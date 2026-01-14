@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/models/reputation.dart';
-import '../../components/tier_badge.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/state/models/reputation.dart';
+import 'package:asora/ui/components/tier_badge.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 class TierUnlockScreen extends ConsumerWidget {
   const TierUnlockScreen({super.key, required this.tier});

@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/models/feed_models.dart';
-import '../../../state/providers/feed_providers.dart';
-import '../../components/filter_modal.dart';
-import '../../theme/spacing.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/state/providers/feed_providers.dart';
+import 'package:asora/ui/components/filter_modal.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 /// Multi-step custom feed creation wizard (3 layers + naming + confirmation)
 class CustomFeedCreationFlow extends ConsumerStatefulWidget {

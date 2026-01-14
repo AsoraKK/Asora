@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Chip Component
 ///
 /// Compact, interactive component for tags, filters, and selections.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic chip component
 ///
@@ -64,31 +66,24 @@ class LythChip extends StatelessWidget {
 
   /// Create a filter chip variant (can be selected/deselected)
   const LythChip.filter({
-    required String label,
-    required ValueChanged<bool> onSelected,
-    bool selected = false,
-    IconData? icon,
+    required this.label,
+    required this.onSelected,
+    this.selected = false,
+    this.icon,
     String? tooltip,
     super.key,
-  }) : label = label,
-       icon = icon,
-       onDeleted = null,
-       selected = selected,
-       onSelected = onSelected,
+  }) : onDeleted = null,
        backgroundColor = null,
        labelColor = null,
        disabled = false;
 
   /// Create an input chip (with delete)
   const LythChip.input({
-    required String label,
-    required VoidCallback onDeleted,
-    IconData? icon,
+    required this.label,
+    required this.onDeleted,
+    this.icon,
     super.key,
-  }) : label = label,
-       icon = icon,
-       onDeleted = onDeleted,
-       selected = false,
+  }) : selected = false,
        onSelected = null,
        backgroundColor = null,
        labelColor = null,

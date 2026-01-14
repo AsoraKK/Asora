@@ -158,7 +158,7 @@ void main() {
             'quorumMet': true,
             'timeRemaining': '2 hours',
             'estimatedResolution': 'Tonight',
-            'voteBreakdown': [],
+            'voteBreakdown': <dynamic>[],
           },
         };
 
@@ -594,7 +594,7 @@ void main() {
 
     test('should handle empty filters and summary', () {
       final json = {
-        'appeals': [],
+        'appeals': <dynamic>[],
         'pagination': {
           'total': 0,
           'page': 1,

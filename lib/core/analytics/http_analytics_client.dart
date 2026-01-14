@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA HTTP ANALYTICS CLIENT
 ///
 /// 🎯 Purpose: Transport layer for analytics events to backend
@@ -10,7 +12,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'analytics_client.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
 
 /// Analytics event model for batching
 class _AnalyticsEvent {
@@ -162,7 +164,7 @@ class HttpAnalyticsClient implements AnalyticsClient {
         'app': {'version': _appVersion, 'platform': _platform},
       };
 
-      await _dio.post(
+      await _dio.post<Map<String, dynamic>>(
         '/api/analytics/events',
         data: payload,
         options: Options(

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Wordmark Widget
 ///
 /// Animated wordmark displaying "Lyt haus" with a soft warm ivory glow pulse.

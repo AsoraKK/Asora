@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../services/oauth2_service.dart';
-import '../../../services/service_providers.dart';
+import 'package:asora/services/oauth2_service.dart';
+import 'package:asora/services/service_providers.dart';
 
 /// Authentication state for UI
 class AuthControllerState {

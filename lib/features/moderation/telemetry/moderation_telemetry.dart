@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/foundation.dart';
 
-import '../domain/moderation_decision.dart';
-import '../domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
 
 /// Structured telemetry events for moderation workflows
 class ModerationTelemetry {

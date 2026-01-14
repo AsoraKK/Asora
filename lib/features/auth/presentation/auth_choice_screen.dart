@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/foundation.dart';
@@ -5,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../../core/analytics/analytics_client.dart';
-import '../../../core/analytics/analytics_events.dart';
-import '../../../core/analytics/analytics_providers.dart';
-import '../../../core/security/device_integrity_guard.dart';
-import '../../../screens/security_debug_screen.dart';
-import '../application/auth_providers.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/screens/security_debug_screen.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
   const AuthChoiceScreen({super.key});
@@ -149,7 +151,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     FilledButton(
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
+                          MaterialPageRoute<void>(
                             builder: (_) => const SecurityDebugScreen(),
                           ),
                         );

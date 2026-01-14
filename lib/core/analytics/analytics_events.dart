@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA ANALYTICS EVENT NAMES
 ///
 /// 🎯 Purpose: Centralized analytics event catalog

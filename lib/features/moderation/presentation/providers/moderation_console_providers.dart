@@ -1,14 +1,16 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/application/auth_providers.dart';
-import '../../domain/moderation_audit_entry.dart';
-import '../../domain/moderation_case.dart';
-import '../../domain/moderation_decision.dart';
-import '../../domain/moderation_filters.dart';
-import '../../domain/moderation_queue_item.dart';
-import '../../telemetry/moderation_telemetry.dart';
-import '../../domain/moderation_repository.dart';
-import '../../../../core/providers/repository_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:asora/features/moderation/telemetry/moderation_telemetry.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/core/providers/repository_providers.dart';
 
 Future<String> _requireJwtToken(Ref ref) async {
   final token = await ref.watch(jwtProvider.future);

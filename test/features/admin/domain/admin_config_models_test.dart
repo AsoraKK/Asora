@@ -669,7 +669,7 @@ void main() {
     });
 
     test('fromJson handles empty entries list', () {
-      final json = {'entries': [], 'limit': 50};
+      final json = {'entries': <dynamic>[], 'limit': 50};
 
       final response = AdminAuditResponse.fromJson(json);
 

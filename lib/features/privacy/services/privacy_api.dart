@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/logging/app_logger.dart';
-import '../../../core/network/api_endpoints.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:asora/core/logging/app_logger.dart';
+import 'package:asora/core/network/api_endpoints.dart';
+import 'package:asora/core/network/dio_client.dart';
 
 /// Normalized error categories returned by the privacy API client.
 enum PrivacyErrorType { unauthorized, rateLimited, network, server }

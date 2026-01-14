@@ -5,8 +5,12 @@ import 'package:asora/services/moderation_service.dart';
 
 class MockDio extends Mock implements Dio {}
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
+Response<Map<String, dynamic>> _response(
+  Map<String, dynamic> data,
+  String path, {
+  int? statusCode,
+}) {
+  return Response<Map<String, dynamic>>(
     data: data,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
@@ -25,7 +29,7 @@ void main() {
       final client = ModerationClient(dio);
 
       when(
-        () => dio.post(
+        () => dio.post<Map<String, dynamic>>(
           '/api/flag',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -33,7 +37,7 @@ void main() {
       ).thenAnswer((_) async => _response({'success': true}, '/api/flag'));
 
       when(
-        () => dio.post(
+        () => dio.post<Map<String, dynamic>>(
           '/api/appealContent',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -46,7 +50,7 @@ void main() {
       );
 
       when(
-        () => dio.post(
+        () => dio.post<Map<String, dynamic>>(
           '/api/voteOnAppeal',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -92,7 +96,7 @@ void main() {
     final client = ModerationClient(dio);
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/getMyAppeals',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -102,7 +106,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/reviewAppealedContent',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -139,7 +143,7 @@ void main() {
     final client = ModerationClient(dio);
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/voteOnAppeal',
         data: any(named: 'data'),
         options: any(named: 'options'),

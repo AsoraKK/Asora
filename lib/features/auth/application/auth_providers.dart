@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA OAUTH2 PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for OAuth2 authentication state management
@@ -11,10 +13,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/user.dart';
-import '../domain/auth_failure.dart';
-import 'oauth2_service.dart';
-import 'auth_service.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/features/auth/application/auth_service.dart';
 
 /// OAuth2Service provider - manages OAuth2 PKCE flow
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {

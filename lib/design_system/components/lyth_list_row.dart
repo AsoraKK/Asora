@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus List Row Component
 ///
 /// Container for list items with consistent spacing and interactions.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic list row component
 ///
@@ -85,7 +87,7 @@ class LythListRow extends StatelessWidget {
 
     final height = this.height ?? 60;
 
-    Widget content = Row(
+    final Widget content = Row(
       children: [
         // Leading icon
         if (leadingIcon != null)

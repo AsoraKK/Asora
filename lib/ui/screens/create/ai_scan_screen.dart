@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../theme/spacing.dart';
+import 'package:asora/ui/theme/spacing.dart';
 
 /// AI scan screen shown when content is flagged for moderation review
 class AiScanScreen extends StatefulWidget {

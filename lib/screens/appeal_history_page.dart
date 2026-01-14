@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/auth/application/auth_providers.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// ASORA APPEAL HISTORY PAGE
 ///
@@ -718,7 +720,7 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
   }
 
   void _showAppealDetails(Appeal appeal) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Appeal Details'),

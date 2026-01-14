@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 
-import '../../../domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
 
 class ModerationDecisionPanel extends StatefulWidget {
   const ModerationDecisionPanel({

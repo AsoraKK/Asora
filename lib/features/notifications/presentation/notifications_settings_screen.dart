@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA NOTIFICATIONS - SETTINGS SCREEN
 ///
 /// Notification preferences management:
@@ -9,8 +11,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/notification_models.dart';
-import '../application/notification_providers.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:asora/features/notifications/application/notification_providers.dart';
 
 class NotificationsSettingsScreen extends ConsumerWidget {
   const NotificationsSettingsScreen({super.key});
@@ -125,7 +127,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
 
 class _CategoryTogglesSection extends StatelessWidget {
   final UserNotificationPreferences preferences;
-  final Function(UserNotificationPreferences) onUpdate;
+  final ValueChanged<UserNotificationPreferences> onUpdate;
 
   const _CategoryTogglesSection({
     required this.preferences,
@@ -271,7 +273,7 @@ class _CategoryToggle extends StatelessWidget {
 
 class _QuietHoursSection extends StatelessWidget {
   final UserNotificationPreferences preferences;
-  final Function(UserNotificationPreferences) onUpdate;
+  final ValueChanged<UserNotificationPreferences> onUpdate;
 
   const _QuietHoursSection({required this.preferences, required this.onUpdate});
 

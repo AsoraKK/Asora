@@ -7,9 +7,13 @@ import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 class MockDio extends Mock implements Dio {}
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  return Response<Map<String, dynamic>>(
+    data: data as Map<String, dynamic>,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -67,10 +71,10 @@ Map<String, dynamic> _caseJson() {
     'severity': 'low',
     'createdAt': DateTime(2024, 1, 1).toIso8601String(),
     'updatedAt': DateTime(2024, 1, 2).toIso8601String(),
-    'reports': [],
-    'auditTrail': [],
-    'decisionHistory': [],
-    'aiSignals': [],
+    'reports': <dynamic>[],
+    'auditTrail': <dynamic>[],
+    'decisionHistory': <dynamic>[],
+    'aiSignals': <dynamic>[],
   };
 }
 
@@ -97,7 +101,10 @@ void main() {
 
   test('handles basic moderation operations', () async {
     when(
-      () => dio.get('/api/getMyAppeals', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/api/getMyAppeals',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => _response({
         'success': true,
@@ -106,7 +113,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/appealContent',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -119,7 +126,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/flag',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -127,7 +134,7 @@ void main() {
     ).thenAnswer((_) async => _response({'success': true}, '/api/flag'));
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/api/voteOnAppeal',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -168,7 +175,7 @@ void main() {
 
   test('handles queue, case, and audit operations', () async {
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/reviewAppealedContent',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -194,7 +201,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/moderation/review-queue',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -214,13 +221,16 @@ void main() {
     );
 
     when(
-      () => dio.get('/moderation/cases/case-1', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/moderation/cases/case-1',
+        options: any(named: 'options'),
+      ),
     ).thenAnswer(
       (_) async => _response({'data': _caseJson()}, '/moderation/cases/case-1'),
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/moderation/cases/case-1/decision',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -232,7 +242,7 @@ void main() {
     );
 
     when(
-      () => dio.post(
+      () => dio.post<Map<String, dynamic>>(
         '/moderation/cases/case-1/escalate',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -243,7 +253,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/moderation/cases/case-1/audit',
         options: any(named: 'options'),
       ),
@@ -262,7 +272,7 @@ void main() {
     );
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/moderation/audit',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -315,7 +325,10 @@ void main() {
 
   test('throws moderation exception on network error', () async {
     when(
-      () => dio.get('/api/getMyAppeals', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/api/getMyAppeals',
+        options: any(named: 'options'),
+      ),
     ).thenThrow(
       DioException(
         requestOptions: RequestOptions(path: '/api/getMyAppeals'),

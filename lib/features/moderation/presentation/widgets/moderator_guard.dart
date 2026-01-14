@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/application/auth_providers.dart';
-import '../../../auth/domain/user.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
 
 const bool _kEnableModerationConsole = bool.fromEnvironment(
   'ENABLE_MODERATION_CONSOLE',

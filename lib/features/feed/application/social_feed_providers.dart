@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// 🎯 Purpose: Riverpod providers for social media feed state management
 /// 🏗️ Architecture: Application layer - manages state and dependency injection
 /// 🔐 Dependency Rule: Depends on domain and application services
@@ -5,11 +7,11 @@
 library social_feed_providers;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/social_feed_repository.dart';
-import '../domain/models.dart';
-import '../application/social_feed_service.dart';
-import '../../../core/network/dio_client.dart';
-import '../../../features/auth/application/auth_providers.dart';
+import 'package:asora/features/feed/domain/social_feed_repository.dart';
+import 'package:asora/features/feed/domain/models.dart';
+import 'package:asora/features/feed/application/social_feed_service.dart';
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 
 /// Provider for the social feed service implementation
 final socialFeedServiceProvider = Provider<SocialFeedRepository>((ref) {
@@ -379,8 +381,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // NOTE(asora-auth): enforce auth gate after hooking up token validation
-    const token = null; // Placeholder
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(
@@ -407,8 +408,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // NOTE(asora-auth): enforce auth gate after hooking up token validation
-    const token = null; // Placeholder
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(
@@ -432,8 +432,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
   /// Flag post for moderation (requires authentication when implemented)
   Future<void> flagPost({required String reason, String? details}) async {
-    // NOTE(asora-auth): enforce auth gate after hooking up token validation
-    const token = null; // Placeholder
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(

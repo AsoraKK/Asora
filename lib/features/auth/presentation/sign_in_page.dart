@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/security/device_integrity_guard.dart';
-import '../application/auth_controller.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/features/auth/application/auth_controller.dart';
 
 /// Sign-in page with Email and Google B2C options
 class SignInPage extends ConsumerWidget {

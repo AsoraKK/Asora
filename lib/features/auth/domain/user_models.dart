@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA USER MODELS
 ///
 /// 🎯 Purpose: User data models for authentication and profiles

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Notification Providers
 ///
 /// Riverpod providers for notifications state management.
@@ -7,8 +9,8 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../domain/notification_models.dart';
-import 'notification_api_service.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:asora/features/notifications/application/notification_api_service.dart';
 
 // ============================================================================
 // SERVICE PROVIDERS

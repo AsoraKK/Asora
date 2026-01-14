@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
 /// Size variants for the reputation badge
@@ -46,33 +48,57 @@ class ReputationBadge extends StatelessWidget {
 
   /// Get the tier name based on score
   static String getTierName(int score) {
-    if (score >= 1000) return 'Platinum';
-    if (score >= 500) return 'Gold';
-    if (score >= 100) return 'Silver';
+    if (score >= 1000) {
+      return 'Platinum';
+    }
+    if (score >= 500) {
+      return 'Gold';
+    }
+    if (score >= 100) {
+      return 'Silver';
+    }
     return 'Bronze';
   }
 
   /// Get the tier color based on score
   static Color getTierColor(int score) {
-    if (score >= 1000) return const Color(0xFF60A5FA); // Platinum - light blue
-    if (score >= 500) return const Color(0xFFFBBF24); // Gold
-    if (score >= 100) return const Color(0xFF9CA3AF); // Silver
+    if (score >= 1000) {
+      return const Color(0xFF60A5FA); // Platinum - light blue
+    }
+    if (score >= 500) {
+      return const Color(0xFFFBBF24); // Gold
+    }
+    if (score >= 100) {
+      return const Color(0xFF9CA3AF); // Silver
+    }
     return const Color(0xFFD97706); // Bronze
   }
 
   /// Get the background color (lighter version of tier color)
   static Color getBackgroundColor(int score) {
-    if (score >= 1000) return const Color(0xFF60A5FA).withValues(alpha: 0.15);
-    if (score >= 500) return const Color(0xFFFBBF24).withValues(alpha: 0.15);
-    if (score >= 100) return const Color(0xFF9CA3AF).withValues(alpha: 0.15);
+    if (score >= 1000) {
+      return const Color(0xFF60A5FA).withValues(alpha: 0.15);
+    }
+    if (score >= 500) {
+      return const Color(0xFFFBBF24).withValues(alpha: 0.15);
+    }
+    if (score >= 100) {
+      return const Color(0xFF9CA3AF).withValues(alpha: 0.15);
+    }
     return const Color(0xFFD97706).withValues(alpha: 0.15);
   }
 
   /// Get the icon for the tier
   static IconData getTierIcon(int score) {
-    if (score >= 1000) return Icons.workspace_premium;
-    if (score >= 500) return Icons.stars;
-    if (score >= 100) return Icons.military_tech;
+    if (score >= 1000) {
+      return Icons.workspace_premium;
+    }
+    if (score >= 500) {
+      return Icons.stars;
+    }
+    if (score >= 100) {
+      return Icons.military_tech;
+    }
     return Icons.emoji_events_outlined;
   }
 

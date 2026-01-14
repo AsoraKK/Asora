@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Card Component
 ///
 /// Container component for grouping related content.
@@ -6,8 +8,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
-import '../tokens/spacing.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/design_system/tokens/spacing.dart';
 
 /// Semantic card component
 ///
@@ -64,20 +66,14 @@ class LythCard extends StatelessWidget {
 
   /// Create a clickable card
   const LythCard.clickable({
-    required Widget child,
-    required VoidCallback onTap,
-    EdgeInsets? padding,
-    VoidCallback? onLongPress,
-    Color? backgroundColor,
-    Color? borderColor,
+    required this.child,
+    required this.onTap,
+    this.padding,
+    this.onLongPress,
+    this.backgroundColor,
+    this.borderColor,
     super.key,
-  }) : clickable = true,
-       onTap = onTap,
-       onLongPress = onLongPress,
-       child = child,
-       padding = padding,
-       backgroundColor = backgroundColor,
-       borderColor = borderColor;
+  }) : clickable = true;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +84,7 @@ class LythCard extends StatelessWidget {
     final borderColor =
         this.borderColor ?? context.colorScheme.outline.withValues(alpha: 0.1);
 
-    Widget card = Container(
+    final Widget card = Container(
       padding: padding,
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -151,7 +147,7 @@ class LythCardElevated extends StatelessWidget {
         this.padding ?? EdgeInsets.all(LythSpacing.cardPadding.toDouble());
     final backgroundColor = this.backgroundColor ?? context.colorScheme.surface;
 
-    Widget card = Container(
+    final Widget card = Container(
       padding: padding,
       decoration: BoxDecoration(
         color: backgroundColor,

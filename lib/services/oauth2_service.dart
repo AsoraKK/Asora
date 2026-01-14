@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -237,7 +239,7 @@ class OAuth2Service {
     final span = _tracer.startSpan('auth.config.fetch');
     try {
       if (_configEndpoint != null) {
-        final response = await _dio.get(_configEndpoint);
+        final response = await _dio.get<Map<String, dynamic>>(_configEndpoint);
         if (response.statusCode == 200) {
           return AuthConfig.fromJson(response.data as Map<String, dynamic>);
         }

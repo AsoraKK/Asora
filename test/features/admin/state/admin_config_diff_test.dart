@@ -49,7 +49,7 @@ void main() {
     Future<void> initNotifier() async {
       notifier = AdminConfigEditorNotifier(mockClient);
       // Wait for initial load
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
     }
 
     test('computeDiff returns empty map when no changes', () async {
@@ -233,14 +233,14 @@ void main() {
 
     test('isDirty is false initially', () async {
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(notifier.state.isDirty, false);
     });
 
     test('isDirty becomes true after change', () async {
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.5),
@@ -251,7 +251,7 @@ void main() {
 
     test('discard resets isDirty to false', () async {
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.5),
@@ -280,7 +280,7 @@ void main() {
       when(mockClient.getConfig()).thenAnswer((_) async => customEnvelope);
 
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.1),
@@ -293,14 +293,14 @@ void main() {
 
     test('canSave is false when not dirty', () async {
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(notifier.state.canSave, false);
     });
 
     test('canSave is true when dirty', () async {
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.5),
@@ -328,7 +328,7 @@ void main() {
       ).thenAnswer((_) async => updatedEnvelope);
 
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.5),
@@ -355,7 +355,7 @@ void main() {
       );
 
       notifier = AdminConfigEditorNotifier(mockClient);
-      await Future.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
       notifier.updateModeration(
         notifier.state.draftConfig!.moderation.copyWith(temperature: 0.5),

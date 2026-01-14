@@ -1,11 +1,13 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../features/feed/presentation/post_insights_panel.dart';
-import '../widgets/post_actions.dart';
-import '../widgets/moderation_badges.dart';
-import '../widgets/appeal_dialog.dart';
-import '../widgets/reputation_badge.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/feed/presentation/post_insights_panel.dart';
+import 'package:asora/widgets/post_actions.dart';
+import 'package:asora/widgets/moderation_badges.dart';
+import 'package:asora/widgets/appeal_dialog.dart';
+import 'package:asora/widgets/reputation_badge.dart';
 
 /// ASORA POST CARD WITH MODERATION INTEGRATION
 ///

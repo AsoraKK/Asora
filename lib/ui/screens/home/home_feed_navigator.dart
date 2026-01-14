@@ -1,23 +1,25 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../state/models/feed_models.dart';
-import '../../../state/providers/feed_providers.dart';
-import '../../../state/providers/settings_providers.dart';
-import '../../components/asora_top_bar.dart';
-import '../../components/feed_carousel_indicator.dart';
-import '../../components/feed_control_panel.dart';
-import '../../theme/spacing.dart';
-import '../../utils/motion.dart';
-import 'custom_feed.dart';
-import 'custom_feed_creation_flow.dart';
-import 'discover_feed.dart';
-import '../../../state/providers/moderation_providers.dart';
-import '../mod/appeal_case.dart';
-import '../mod/moderation_hub.dart';
-import 'news_feed.dart';
-import 'feed_search_screen.dart';
-import 'trending_feed_screen.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/state/providers/feed_providers.dart';
+import 'package:asora/state/providers/settings_providers.dart';
+import 'package:asora/ui/components/asora_top_bar.dart';
+import 'package:asora/ui/components/feed_carousel_indicator.dart';
+import 'package:asora/ui/components/feed_control_panel.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/utils/motion.dart';
+import 'package:asora/ui/screens/home/custom_feed.dart';
+import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
+import 'package:asora/ui/screens/home/discover_feed.dart';
+import 'package:asora/state/providers/moderation_providers.dart';
+import 'package:asora/ui/screens/mod/appeal_case.dart';
+import 'package:asora/ui/screens/mod/moderation_hub.dart';
+import 'package:asora/ui/screens/home/news_feed.dart';
+import 'package:asora/ui/screens/home/feed_search_screen.dart';
+import 'package:asora/ui/screens/home/trending_feed_screen.dart';
 
 class HomeFeedNavigator extends ConsumerStatefulWidget {
   const HomeFeedNavigator({super.key});
@@ -112,7 +114,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   void _openFeedControl() {
     final feeds = ref.read(feedListProvider);
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       builder: (_) => FeedControlPanel(
@@ -131,7 +133,9 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
         onCreateCustom: () {
           Navigator.of(context).maybePop();
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const CustomFeedCreationFlow()),
+            MaterialPageRoute<void>(
+              builder: (_) => const CustomFeedCreationFlow(),
+            ),
           );
         },
         onOpenModerationHub: () {
@@ -147,28 +151,30 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _openModerationHub() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const ModerationHubScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ModerationHubScreen()),
+    );
   }
 
   void _openTrending() {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const TrendingFeedScreen()));
+    ).push(MaterialPageRoute<void>(builder: (_) => const TrendingFeedScreen()));
   }
 
   void _openSearch() {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const FeedSearchScreen()));
+    ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));
   }
 
   void _openAppeals() {
     final appeals = ref.read(appealsProvider);
     final first = appeals.isNotEmpty ? appeals.first.id : null;
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AppealCaseScreen(appealId: first)),
+      MaterialPageRoute<void>(
+        builder: (_) => AppealCaseScreen(appealId: first),
+      ),
     );
   }
 }

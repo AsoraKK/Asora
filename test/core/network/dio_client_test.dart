@@ -103,7 +103,7 @@ void main() {
       );
 
       try {
-        await dio.get('/test');
+        await dio.get<Map<String, dynamic>>('/test');
       } catch (_) {
         // Connection will fail, but we captured the request
       }
@@ -124,7 +124,7 @@ void main() {
       );
 
       expect(
-        () => dio.post('/test', data: {'test': 'data'}),
+        () => dio.post<void>('/test', data: {'test': 'data'}),
         throwsA(isA<DioException>()),
       );
     });
@@ -143,7 +143,7 @@ void main() {
       // GET requests should be allowed to proceed (even if they fail due to network)
       // The integrity interceptor should not block the request
       try {
-        await dio.get('/test');
+        await dio.get<Map<String, dynamic>>('/test');
       } on DioException catch (e) {
         // Expect connection/network error, not a security block
         expect(e.type, isNot(equals(DioExceptionType.cancel)));

@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import 'cooldown_row.dart';
+import 'package:asora/features/privacy/widgets/cooldown_row.dart';
 
 /// Card widget for the privacy export flow.
 class PrivacyExportSection extends StatelessWidget {

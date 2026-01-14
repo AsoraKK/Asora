@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA NOTIFICATIONS - PERMISSION PRE-PROMPT
 ///
 /// Pre-prompt UI following iOS best practices:
@@ -8,8 +10,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../application/notification_permission_service.dart';
-import '../domain/notification_models.dart';
+import 'package:asora/features/notifications/application/notification_permission_service.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
 
 class NotificationPermissionPrompt extends ConsumerStatefulWidget {
   final VoidCallback? onPermissionGranted;

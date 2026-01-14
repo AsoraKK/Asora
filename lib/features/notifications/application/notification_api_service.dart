@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Notification API Service
 ///
 /// HTTP client for notification-related REST endpoints.
@@ -5,7 +7,7 @@
 library;
 
 import 'package:dio/dio.dart';
-import '../domain/notification_models.dart';
+import 'package:asora/features/notifications/domain/notification_models.dart';
 
 /// Response from GET /api/notifications
 class NotificationsListResponse {
@@ -52,14 +54,16 @@ class NotificationApiService {
         if (continuationToken != null) 'continuationToken': continuationToken,
       };
 
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/notifications',
         queryParameters: queryParams,
       );
 
-      return NotificationsListResponse.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Invalid notifications response');
+      }
+      return NotificationsListResponse.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to fetch notifications');
     }
@@ -69,8 +73,10 @@ class NotificationApiService {
   /// Get unread badge count
   Future<int> getUnreadCount() async {
     try {
-      final response = await _dio.get('/api/notifications/unread-count');
-      return (response.data['count'] as num?)?.toInt() ?? 0;
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/notifications/unread-count',
+      );
+      return (response.data?['count'] as num?)?.toInt() ?? 0;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to fetch unread count');
     }
@@ -80,7 +86,9 @@ class NotificationApiService {
   /// Mark a single notification as read
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _dio.post('/api/notifications/$notificationId/read');
+      await _dio.post<Map<String, dynamic>>(
+        '/api/notifications/$notificationId/read',
+      );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to mark notification as read');
     }
@@ -90,7 +98,9 @@ class NotificationApiService {
   /// Dismiss a notification (remove from list)
   Future<void> dismissNotification(String notificationId) async {
     try {
-      await _dio.post('/api/notifications/$notificationId/dismiss');
+      await _dio.post<Map<String, dynamic>>(
+        '/api/notifications/$notificationId/dismiss',
+      );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to dismiss notification');
     }
@@ -104,10 +114,14 @@ class NotificationApiService {
   /// Fetch user notification preferences
   Future<UserNotificationPreferences> getPreferences() async {
     try {
-      final response = await _dio.get('/api/notification-preferences');
-      return UserNotificationPreferences.fromJson(
-        response.data as Map<String, dynamic>,
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/notification-preferences',
       );
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Invalid notification preferences response');
+      }
+      return UserNotificationPreferences.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to fetch notification preferences');
     }
@@ -119,13 +133,15 @@ class NotificationApiService {
     UserNotificationPreferences preferences,
   ) async {
     try {
-      final response = await _dio.put(
+      final response = await _dio.put<Map<String, dynamic>>(
         '/api/notification-preferences',
         data: preferences.toJson(),
       );
-      return UserNotificationPreferences.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Invalid notification preferences response');
+      }
+      return UserNotificationPreferences.fromJson(data);
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to update notification preferences');
     }
@@ -144,7 +160,7 @@ class NotificationApiService {
     required String label,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/devices/register',
         data: {'pushToken': pushToken, 'platform': platform, 'label': label},
       );
@@ -158,12 +174,19 @@ class NotificationApiService {
   /// Fetch list of registered devices
   Future<List<UserDeviceToken>> getDevices({bool activeOnly = true}) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<List<dynamic>>(
         '/api/devices',
         queryParameters: {'activeOnly': activeOnly},
       );
-      return (response.data as List)
-          .map((item) => UserDeviceToken.fromJson(item as Map<String, dynamic>))
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Invalid devices response');
+      }
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => UserDeviceToken.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to fetch devices');
@@ -174,7 +197,7 @@ class NotificationApiService {
   /// Revoke (soft-delete) a device token
   Future<void> revokeDevice(String deviceId) async {
     try {
-      await _dio.post('/api/devices/$deviceId/revoke');
+      await _dio.post<Map<String, dynamic>>('/api/devices/$deviceId/revoke');
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to revoke device');
     }

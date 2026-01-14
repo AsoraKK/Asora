@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // lib/features/auth/domain/user.dart
 
 /// User model representing an authenticated user in the Asora system

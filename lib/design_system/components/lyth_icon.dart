@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// Lythaus Icon Component
 ///
 /// Semantic wrapper for icons with consistent sizing and coloring.
@@ -5,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/theme_build_context_x.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Icon size variants
 enum LythIconSize {
@@ -58,33 +60,21 @@ class LythIcon extends StatelessWidget {
 
   /// Create a primary-colored icon
   const LythIcon.primary(
-    IconData icon, {
-    LythIconSize size = LythIconSize.medium,
+    this.icon, {
+    this.size = LythIconSize.medium,
     super.key,
-  }) : icon = icon,
-       size = size,
-       color = null,
+  }) : color = null,
        semanticColor = 'primary';
 
   /// Create an error-colored icon
-  const LythIcon.error(
-    IconData icon, {
-    LythIconSize size = LythIconSize.medium,
-    super.key,
-  }) : icon = icon,
-       size = size,
-       color = null,
-       semanticColor = 'error';
+  const LythIcon.error(this.icon, {this.size = LythIconSize.medium, super.key})
+    : color = null,
+      semanticColor = 'error';
 
   /// Create a muted (disabled-looking) icon
-  const LythIcon.muted(
-    IconData icon, {
-    LythIconSize size = LythIconSize.medium,
-    super.key,
-  }) : icon = icon,
-       size = size,
-       color = null,
-       semanticColor = 'muted';
+  const LythIcon.muted(this.icon, {this.size = LythIconSize.medium, super.key})
+    : color = null,
+      semanticColor = 'muted';
 
   Color _resolveColor(BuildContext context) {
     if (color != null) return color!;

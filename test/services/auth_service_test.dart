@@ -8,9 +8,14 @@ class MockDio extends Mock implements Dio {}
 
 class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  final map = Map<String, dynamic>.from(data as Map);
+  return Response<Map<String, dynamic>>(
+    data: map,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -26,7 +31,12 @@ void main() {
     final storage = MockFlutterSecureStorage();
     when(() => dio.options).thenReturn(BaseOptions());
 
-    when(() => dio.post('/authEmail', data: any(named: 'data'))).thenAnswer(
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/authEmail',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer(
       (_) async =>
           _response({'token': 'jwt-token'}, '/authEmail', statusCode: 200),
     );
@@ -51,7 +61,10 @@ void main() {
     when(() => dio.options).thenReturn(BaseOptions());
 
     when(
-      () => dio.post('/authEmail', data: any(named: 'data')),
+      () => dio.post<Map<String, dynamic>>(
+        '/authEmail',
+        data: any(named: 'data'),
+      ),
     ).thenAnswer((_) async => _response({}, '/authEmail', statusCode: 200));
 
     final service = AuthService(dio: dio, storage: storage);
@@ -65,7 +78,12 @@ void main() {
     final storage = MockFlutterSecureStorage();
     when(() => dio.options).thenReturn(BaseOptions());
 
-    when(() => dio.post('/authEmail', data: any(named: 'data'))).thenThrow(
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/authEmail',
+        data: any(named: 'data'),
+      ),
+    ).thenThrow(
       DioException(requestOptions: RequestOptions(path: '/authEmail')),
     );
 
@@ -140,7 +158,12 @@ void main() {
     when(
       () => storage.read(key: 'jwt_token'),
     ).thenAnswer((_) async => 'jwt-token');
-    when(() => dio.get('/getMe', options: any(named: 'options'))).thenAnswer(
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/getMe',
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
       (_) async => _response({'id': 'user-1'}, '/getMe', statusCode: 200),
     );
 
@@ -158,7 +181,10 @@ void main() {
       () => storage.read(key: 'jwt_token'),
     ).thenAnswer((_) async => 'jwt-token');
     when(
-      () => dio.get('/getMe', options: any(named: 'options')),
+      () => dio.get<Map<String, dynamic>>(
+        '/getMe',
+        options: any(named: 'options'),
+      ),
     ).thenThrow(DioException(requestOptions: RequestOptions(path: '/getMe')));
 
     final service = AuthService(dio: dio, storage: storage);

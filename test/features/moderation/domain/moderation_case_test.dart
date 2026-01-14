@@ -96,10 +96,10 @@ void main() {
         'contentType': 'comment',
         'created_at': '2024-02-01T10:00:00.000Z',
         'updated_at': '2024-02-02T10:00:00.000Z',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);
@@ -121,10 +121,10 @@ void main() {
         'type': 'appeal', // Use appeal type
         'contentId': 'user-profile',
         'contentType': 'profile',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);
@@ -140,10 +140,10 @@ void main() {
         'contentId': 'post-1',
         'contentType': 'post',
         'text': 'Using text field',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final caseWithText = ModerationCase.fromJson(jsonWithText);
@@ -155,10 +155,10 @@ void main() {
         'contentId': 'post-2',
         'contentType': 'post',
         'body': 'Using body field',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final caseWithBody = ModerationCase.fromJson(jsonWithBody);
@@ -171,8 +171,8 @@ void main() {
         'type': 'post',
         'contentId': 'post-1',
         'contentType': 'post',
-        'reports': [],
-        'aiSignals': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
         'audit': [
           {
             'id': 'audit-1',
@@ -184,7 +184,7 @@ void main() {
             'details': 'Test audit',
           },
         ],
-        'decisionHistory': [],
+        'decisionHistory': <dynamic>[],
       };
 
       final caseWithAudit = ModerationCase.fromJson(jsonWithAudit);
@@ -195,8 +195,8 @@ void main() {
         'type': 'post',
         'contentId': 'post-2',
         'contentType': 'post',
-        'reports': [],
-        'aiSignals': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
         'timeline': [
           {
             'id': 'audit-2',
@@ -208,7 +208,7 @@ void main() {
             'details': 'Test timeline',
           },
         ],
-        'decisionHistory': [],
+        'decisionHistory': <dynamic>[],
       };
 
       final caseWithTimeline = ModerationCase.fromJson(jsonWithTimeline);
@@ -221,10 +221,10 @@ void main() {
         'type': 'post',
         'contentId': 'post-1',
         'contentType': 'post',
-        'reports': [],
+        'reports': <dynamic>[],
         'aiSummary': ['signal1', 'signal2'],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);
@@ -237,10 +237,10 @@ void main() {
         'type': 'post',
         'contentId': 'post-1',
         'contentType': 'post',
-        'reports': [],
+        'reports': <dynamic>[],
         'aiSignals': ['valid', '', null, 'another'],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);
@@ -250,10 +250,10 @@ void main() {
     test('fromJson handles missing optional fields with defaults', () {
       final minimalJson = {
         'contentId': 'content-1',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(minimalJson);
@@ -283,10 +283,10 @@ void main() {
         'contentType': 'post',
         'createdAt': 'invalid-date',
         'updatedAt': 'also-invalid',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);
@@ -302,10 +302,10 @@ void main() {
         'contentId': 'post-1',
         'contentType': 'post',
         'createdAt': '2024-01-01T10:00:00.000Z',
-        'reports': [],
-        'aiSignals': [],
-        'auditTrail': [],
-        'decisionHistory': [],
+        'reports': <dynamic>[],
+        'aiSignals': <dynamic>[],
+        'auditTrail': <dynamic>[],
+        'decisionHistory': <dynamic>[],
       };
 
       final moderationCase = ModerationCase.fromJson(json);

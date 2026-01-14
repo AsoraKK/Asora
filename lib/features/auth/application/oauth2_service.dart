@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA OAUTH2 SERVICE WITH FLUTTER APPAUTH
 ///
 /// 🎯 Purpose: OAuth2 authorization and token management backed by AppAuth
@@ -19,8 +21,8 @@ import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import 'package:asora/core/auth/auth_session_manager.dart';
 
-import '../domain/auth_failure.dart';
-import '../domain/user.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/domain/user.dart';
 
 /// Centralized configuration for Microsoft Entra / OAuth2 endpoints used by the
 /// Flutter client. The defaults mirror our Azure Functions wrappers so the
@@ -264,12 +266,13 @@ class OAuth2Service {
     }
 
     try {
-      final Map<String, dynamic> data = jsonDecode(userJson);
-      return User.fromJson(data);
-    } catch (_) {
-      await _secureStorage.delete(key: _userDataKey);
-      return null;
-    }
+      final decoded = jsonDecode(userJson);
+      if (decoded is Map<String, dynamic>) {
+        return User.fromJson(decoded);
+      }
+    } catch (_) {}
+    await _secureStorage.delete(key: _userDataKey);
+    return null;
   }
 
   /// True when a non-expired access token is present.

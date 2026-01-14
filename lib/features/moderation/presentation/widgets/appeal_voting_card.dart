@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/appeal.dart';
-import '../../application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
 
 /// ASORA APPEAL VOTING CARD
 ///

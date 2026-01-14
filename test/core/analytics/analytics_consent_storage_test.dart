@@ -65,13 +65,6 @@ void main() {
     final storage = _FakeSecureStorage();
     final consentStorage = AnalyticsConsentStorage(storage: storage);
 
-    final stored = AnalyticsConsent(
-      enabled: true,
-      updatedAt: DateTime.utc(2024, 1, 1),
-      source: ConsentSource.onboarding,
-      policyVersion: 2,
-    );
-
     // Replace with JSON to avoid string map parsing differences
     await storage.write(
       key: 'analytics_consent',

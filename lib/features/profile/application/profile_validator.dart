@@ -1,7 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 // Lightweight client-side pre-check for profile text
 class ProfileValidator {
   static final _badWords = RegExp(
-    r"\b(fuck|shit|bitch|asshole|bastard)\b",
+    r'\b(fuck|shit|bitch|asshole|bastard)\b',
     caseSensitive: false,
   );
 

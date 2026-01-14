@@ -67,13 +67,13 @@ Future<void> _extractFromUrl(String url) async {
 Future<void> _extractFromFile(String filePath) async {
   final file = File(filePath);
 
-  if (!await file.exists()) {
+  if (!file.existsSync()) {
     stderr.writeln('❌ File not found: $filePath');
     exit(1);
   }
 
   // Verify it's a PEM file
-  final content = await file.readAsString();
+  final content = file.readAsStringSync();
   if (!content.contains('BEGIN CERTIFICATE')) {
     stderr.writeln('⚠️  Warning: File does not appear to be a PEM certificate');
   }

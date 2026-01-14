@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../../domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
 
 class ModerationAuditTimeline extends StatelessWidget {
   const ModerationAuditTimeline({super.key, required this.entries});

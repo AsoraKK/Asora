@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA DEVICE INTEGRITY GUARD
 ///
 /// 🎯 Purpose: Policy-based device integrity enforcement per use-case
@@ -7,10 +9,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/environment_config.dart';
-import 'device_security_service.dart';
-import 'security_overrides.dart';
-import 'security_telemetry.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/security/security_overrides.dart';
+import 'package:asora/core/security/security_telemetry.dart';
 
 /// Use cases for integrity checks
 enum IntegrityUseCase {
@@ -236,7 +238,7 @@ Future<void> runWithDeviceGuard(
   if (!decision.allow && decision.showBlockingUi) {
     // Show blocking dialog
     if (context.mounted) {
-      await showDialog(
+      await showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(

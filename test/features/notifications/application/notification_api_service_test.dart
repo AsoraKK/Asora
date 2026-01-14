@@ -6,9 +6,14 @@ import 'package:mocktail/mocktail.dart';
 
 class MockDio extends Mock implements Dio {}
 
-Response<dynamic> _response(Object data, String path, {int? statusCode}) {
-  return Response(
-    data: data,
+Response<Map<String, dynamic>> _response(
+  Object data,
+  String path, {
+  int? statusCode,
+}) {
+  final map = Map<String, dynamic>.from(data as Map);
+  return Response<Map<String, dynamic>>(
+    data: map,
     statusCode: statusCode ?? 200,
     requestOptions: RequestOptions(path: path),
   );
@@ -25,7 +30,7 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/notifications',
         queryParameters: any(named: 'queryParameters'),
       ),
@@ -60,7 +65,7 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get('/api/notifications/unread-count'),
+      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
     ).thenAnswer((_) async => _response({}, '/api/notifications/unread-count'));
 
     final count = await service.getUnreadCount();
@@ -72,12 +77,14 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post('/api/notifications/n1/read'),
+      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/read'),
     ).thenAnswer((_) async => _response({}, '/api/notifications/n1/read'));
 
     await service.markAsRead('n1');
 
-    verify(() => dio.post('/api/notifications/n1/read')).called(1);
+    verify(
+      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/read'),
+    ).called(1);
   });
 
   test('preferences endpoints round trip', () async {
@@ -96,12 +103,17 @@ void main() {
       updatedAt: DateTime.utc(2024, 1, 1),
     );
 
-    when(() => dio.get('/api/notification-preferences')).thenAnswer(
+    when(
+      () => dio.get<Map<String, dynamic>>('/api/notification-preferences'),
+    ).thenAnswer(
       (_) async => _response(prefs.toJson(), '/api/notification-preferences'),
     );
 
     when(
-      () => dio.put('/api/notification-preferences', data: any(named: 'data')),
+      () => dio.put<Map<String, dynamic>>(
+        '/api/notification-preferences',
+        data: any(named: 'data'),
+      ),
     ).thenAnswer(
       (_) async => _response(prefs.toJson(), '/api/notification-preferences'),
     );
@@ -118,7 +130,10 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post('/api/devices/register', data: any(named: 'data')),
+      () => dio.post<Map<String, dynamic>>(
+        '/api/devices/register',
+        data: any(named: 'data'),
+      ),
     ).thenAnswer(
       (_) async => _response({'success': true}, '/api/devices/register'),
     );
@@ -137,22 +152,26 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get(
+      () => dio.get<List<dynamic>>(
         '/api/devices',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
-      (_) async => _response([
-        {
-          'id': 'd1',
-          'userId': 'u1',
-          'deviceId': 'device-1',
-          'pushToken': 'token',
-          'platform': 'fcm',
-          'createdAt': '2024-01-01T00:00:00Z',
-          'lastSeenAt': '2024-01-01T01:00:00Z',
-        },
-      ], '/api/devices'),
+      (_) async => Response<List<dynamic>>(
+        data: [
+          {
+            'id': 'd1',
+            'userId': 'u1',
+            'deviceId': 'device-1',
+            'pushToken': 'token',
+            'platform': 'fcm',
+            'createdAt': '2024-01-01T00:00:00Z',
+            'lastSeenAt': '2024-01-01T01:00:00Z',
+          },
+        ],
+        statusCode: 200,
+        requestOptions: RequestOptions(path: '/api/devices'),
+      ),
     );
 
     final devices = await service.getDevices();
@@ -165,7 +184,7 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get(
+      () => dio.get<Map<String, dynamic>>(
         '/api/notifications',
         queryParameters: any(named: 'queryParameters'),
       ),

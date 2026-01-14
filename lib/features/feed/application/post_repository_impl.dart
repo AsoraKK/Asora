@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA POST SERVICE IMPLEMENTATION
 ///
 /// 🎯 Purpose: HTTP client implementation for post repository
@@ -9,9 +11,9 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../../core/observability/asora_tracer.dart';
-import '../domain/post_repository.dart';
-import '../domain/models.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/features/feed/domain/models.dart';
 
 /// Post repository implementation using Dio HTTP client
 class PostRepositoryImpl implements PostRepository {
@@ -28,7 +30,7 @@ class PostRepositoryImpl implements PostRepository {
       'PostRepository.createPost',
       () async {
         try {
-          final response = await _dio.post(
+          final response = await _dio.post<Map<String, dynamic>>(
             '/api/posts',
             data: request.toJson(),
             options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -75,7 +77,7 @@ class PostRepositoryImpl implements PostRepository {
       'PostRepository.deletePost',
       () async {
         try {
-          final response = await _dio.delete(
+          final response = await _dio.delete<Map<String, dynamic>>(
             '/api/posts/$postId',
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
@@ -107,7 +109,7 @@ class PostRepositoryImpl implements PostRepository {
       'PostRepository.getPost',
       () async {
         try {
-          final response = await _dio.get(
+          final response = await _dio.get<Map<String, dynamic>>(
             '/api/posts/$postId',
             options: Options(
               headers: {if (token != null) 'Authorization': 'Bearer $token'},
@@ -116,7 +118,8 @@ class PostRepositoryImpl implements PostRepository {
 
           if (response.statusCode == 200) {
             final data = response.data as Map<String, dynamic>;
-            return _parsePost(data['post'] ?? data);
+            final postData = data['post'] as Map<String, dynamic>? ?? data;
+            return _parsePost(postData);
           }
 
           throw PostException(

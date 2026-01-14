@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../state/models/feed_models.dart';
-import '../theme/spacing.dart';
-import 'feed_card.dart';
-import 'tier_badge.dart';
+import 'package:asora/state/models/feed_models.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/components/feed_card.dart';
+import 'package:asora/ui/components/tier_badge.dart';
 
 class NewsCard extends StatelessWidget {
   const NewsCard({super.key, required this.item});

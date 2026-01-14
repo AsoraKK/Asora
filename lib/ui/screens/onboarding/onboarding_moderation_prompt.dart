@@ -1,9 +1,11 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 
-import '../../components/moderation_card.dart';
-import '../../theme/spacing.dart';
-import '../mod/moderation_case.dart';
-import '../../../state/models/moderation.dart';
+import 'package:asora/ui/components/moderation_card.dart';
+import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/screens/mod/moderation_case.dart';
+import 'package:asora/state/models/moderation.dart';
 
 class OnboardingModerationPrompt extends StatelessWidget {
   const OnboardingModerationPrompt({super.key});
@@ -46,7 +48,7 @@ class OnboardingModerationPrompt extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const ModerationCaseScreen(),
                   ),
                 );

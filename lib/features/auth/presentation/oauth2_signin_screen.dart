@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA OAUTH2 SIGN-IN SCREEN
 ///
 /// 🎯 Purpose: OAuth2 authentication UI with PKCE flow
@@ -10,8 +12,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../application/auth_providers.dart';
-import '../domain/auth_failure.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
 
 /// OAuth2 sign-in screen with PKCE authentication
 class OAuth2SignInScreen extends ConsumerWidget {
@@ -219,7 +221,7 @@ class OAuth2SignInScreen extends ConsumerWidget {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Email Sign In'),

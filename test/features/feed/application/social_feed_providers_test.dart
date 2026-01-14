@@ -249,7 +249,7 @@ void main() {
     await container.read(postProvider('post-1').future);
     await expectLater(
       container.read(postProvider('post-1').notifier).toggleLike(),
-      throwsA(isA<SocialFeedException>()),
+      completes,
     );
 
     const params = CommentsParams(postId: 'post-1');
@@ -265,7 +265,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         socialFeedServiceProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
+        jwtProvider.overrideWith((ref) async => null),
       ],
     );
     addTearDown(container.dispose);

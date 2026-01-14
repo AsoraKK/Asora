@@ -34,7 +34,7 @@ class MockAppealService {
   }
 
   Future<List<Appeal>> fetchAppeals() async {
-    await Future.delayed(_delay);
+    await Future<void>.delayed(_delay);
 
     if (_shouldReturnError) {
       throw Exception('Network error');

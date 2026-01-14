@@ -220,7 +220,7 @@ void main() {
         'version': 5,
         'updatedAt': '2025-01-01T00:00:00Z',
         'updatedBy': {'id': 'user-123', 'displayName': 'Test Admin'},
-        'payload': {},
+        'payload': <String, dynamic>{},
       };
 
       final result = AdminConfigEnvelope.fromJson(json);
@@ -234,7 +234,7 @@ void main() {
         'version': 1,
         'lastUpdatedAt': '2025-06-15T12:00:00Z',
         'lastUpdatedBy': 'system',
-        'payload': {},
+        'payload': <String, dynamic>{},
       };
 
       final result = AdminConfigEnvelope.fromJson(json);

@@ -9,13 +9,13 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:opentelemetry/api.dart';
-import '../core/network/dio_client.dart';
-import 'auth_service.dart';
-import 'post_service.dart';
-import 'moderation_service.dart';
-import 'oauth2_service.dart';
-import 'push/push_notification_service.dart';
-import 'push/device_token_service.dart';
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/services/auth_service.dart';
+import 'package:asora/services/post_service.dart';
+import 'package:asora/services/moderation_service.dart';
+import 'package:asora/services/oauth2_service.dart';
+import 'package:asora/services/push/push_notification_service.dart';
+import 'package:asora/services/push/device_token_service.dart';
 
 /// Flutter secure storage provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {

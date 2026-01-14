@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/appeal_provider.dart';
+import 'package:asora/services/appeal_provider.dart';
 
 class AppealSheet extends ConsumerStatefulWidget {
   final String postId;
@@ -31,7 +33,7 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            "Appeal decision",
+            'Appeal decision',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -39,7 +41,7 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
             controller: _ctrl,
             maxLines: 5,
             decoration: const InputDecoration(
-              hintText: "Explain why this was a mistake",
+              hintText: 'Explain why this was a mistake',
             ),
           ),
           const SizedBox(height: 12),
@@ -57,12 +59,12 @@ class _AppealSheetState extends ConsumerState<AppealSheet> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          ok ? "Appeal submitted" : "Failed to submit appeal",
+                          ok ? 'Appeal submitted' : 'Failed to submit appeal',
                         ),
                       ),
                     );
                   },
-            child: Text(_loading ? "Submitting..." : "Submit"),
+            child: Text(_loading ? 'Submitting...' : 'Submit'),
           ),
           const SizedBox(height: 12),
         ],
