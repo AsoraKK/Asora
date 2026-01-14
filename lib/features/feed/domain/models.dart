@@ -2,14 +2,14 @@
 
 library feed_models;
 
+import 'package:flutter/material.dart';
+
 /// ASORA FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
 /// 🏗️ Architecture: Domain layer - defines business entities
 /// 🔐 Dependency Rule: No dependencies on external layers
 /// 📱 Platform: Dart domain models
-
-import 'package:flutter/material.dart';
 
 class Post {
   final String id;
@@ -367,11 +367,17 @@ enum HumanConfidence {
 }
 
 extension HumanConfidenceExtension on HumanConfidence {
-  /// Get display color for the confidence chip
+  String get displayLabel => switch (this) {
+    HumanConfidence.high => 'High',
+    HumanConfidence.medium => 'Medium',
+    HumanConfidence.low => 'Low',
+    HumanConfidence.aiGen => 'AI Generated',
+  };
+
   Color get color => switch (this) {
-    HumanConfidence.high => const Color(0xFF4CAF50), // Green
-    HumanConfidence.medium => const Color(0xFFFF9800), // Orange
-    HumanConfidence.low => const Color(0xFFFF5722), // Deep Orange
-    HumanConfidence.aiGen => const Color(0xFFF44336), // Red
+    HumanConfidence.high => const Color(0xFF4CAF50),
+    HumanConfidence.medium => const Color(0xFFFF9800),
+    HumanConfidence.low => const Color(0xFFFF5722),
+    HumanConfidence.aiGen => const Color(0xFFF44336),
   };
 }

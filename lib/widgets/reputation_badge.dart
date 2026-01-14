@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+
 /// Size variants for the reputation badge
 enum ReputationBadgeSize {
   /// Small badge for inline use (e.g., post headers)
@@ -61,33 +63,6 @@ class ReputationBadge extends StatelessWidget {
   }
 
   /// Get the tier color based on score
-  static Color getTierColor(int score) {
-    if (score >= 1000) {
-      return const Color(0xFF60A5FA); // Platinum - light blue
-    }
-    if (score >= 500) {
-      return const Color(0xFFFBBF24); // Gold
-    }
-    if (score >= 100) {
-      return const Color(0xFF9CA3AF); // Silver
-    }
-    return const Color(0xFFD97706); // Bronze
-  }
-
-  /// Get the background color (lighter version of tier color)
-  static Color getBackgroundColor(int score) {
-    if (score >= 1000) {
-      return const Color(0xFF60A5FA).withValues(alpha: 0.15);
-    }
-    if (score >= 500) {
-      return const Color(0xFFFBBF24).withValues(alpha: 0.15);
-    }
-    if (score >= 100) {
-      return const Color(0xFF9CA3AF).withValues(alpha: 0.15);
-    }
-    return const Color(0xFFD97706).withValues(alpha: 0.15);
-  }
-
   /// Get the icon for the tier
   static IconData getTierIcon(int score) {
     if (score >= 1000) {
@@ -104,20 +79,36 @@ class ReputationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tierColor = getTierColor(score);
-    final backgroundColor = getBackgroundColor(score);
+    final scheme = context.colorScheme;
+    final tierColor = _tierColor(scheme, score);
+    final backgroundColor = tierColor.withValues(alpha: 0.12);
     final icon = getTierIcon(score);
 
     // Size-specific dimensions
     final (
       double iconSize,
-      double fontSize,
+      TextStyle? textStyle,
       double paddingH,
       double paddingV,
     ) = switch (size) {
-      ReputationBadgeSize.small => (12.0, 11.0, 6.0, 2.0),
-      ReputationBadgeSize.medium => (16.0, 13.0, 8.0, 4.0),
-      ReputationBadgeSize.large => (20.0, 15.0, 12.0, 6.0),
+      ReputationBadgeSize.small => (
+          12.0,
+          context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+          context.spacing.xs,
+          context.spacing.xs / 2,
+        ),
+      ReputationBadgeSize.medium => (
+          16.0,
+          context.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          context.spacing.sm,
+          context.spacing.xs,
+        ),
+      ReputationBadgeSize.large => (
+          20.0,
+          context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          context.spacing.md,
+          context.spacing.sm,
+        ),
     };
 
     return Tooltip(
@@ -126,26 +117,35 @@ class ReputationBadge extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.radius.pill),
           border: Border.all(color: tierColor.withValues(alpha: 0.3), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: iconSize, color: tierColor),
-            const SizedBox(width: 4),
+            SizedBox(width: context.spacing.xs),
             Text(
               showLabel ? 'Rep: $score' : '$score',
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w600,
-                color: tierColor,
-              ),
+              style: textStyle?.copyWith(color: tierColor),
             ),
           ],
         ),
       ),
     );
+  }
+
+  static Color _tierColor(ColorScheme scheme, int score) {
+    if (score >= 1000) {
+      return scheme.primary;
+    }
+    if (score >= 500) {
+      return scheme.onSurface.withValues(alpha: 0.82);
+    }
+    if (score >= 100) {
+      return scheme.onSurface.withValues(alpha: 0.7);
+    }
+    return scheme.onSurface.withValues(alpha: 0.58);
   }
 }
 
