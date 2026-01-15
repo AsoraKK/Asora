@@ -38,6 +38,7 @@ class AppealVotingCard extends ConsumerStatefulWidget {
 class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   bool _isVoting = false;
   String? _localUserVote;
+  String? _pendingVote; // Tracks which vote is currently being submitted
 
   @override
   void initState() {
@@ -541,7 +542,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               label: 'Approve',
               icon: Icons.thumb_up,
               onPressed: _isVoting ? null : () => _submitVote('approve'),
-              isLoading: _isVoting && _localUserVote == 'approve',
+              isLoading: _isVoting && _pendingVote == 'approve',
             ),
           ),
           SizedBox(width: spacing.md),
@@ -550,7 +551,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               label: 'Reject',
               icon: Icons.thumb_down,
               onPressed: _isVoting ? null : () => _submitVote('reject'),
-              isLoading: _isVoting && _localUserVote == 'reject',
+              isLoading: _isVoting && _pendingVote == 'reject',
             ),
           ),
         ],
@@ -561,6 +562,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   Future<void> _submitVote(String vote) async {
     setState(() {
       _isVoting = true;
+      _pendingVote = vote;
     });
 
     try {
@@ -598,6 +600,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
       if (mounted) {
         setState(() {
           _isVoting = false;
+          _pendingVote = null;
         });
       }
     }

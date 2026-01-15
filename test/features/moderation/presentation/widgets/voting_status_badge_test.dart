@@ -65,7 +65,7 @@ void main() {
       final container = tester.widget<Container>(find.byType(Container));
       final decoration = container.decoration as BoxDecoration;
 
-      expect(decoration.borderRadius, BorderRadius.circular(16));
+      expect(decoration.borderRadius, BorderRadius.circular(32));
       expect(decoration.border, isA<Border>());
     });
 

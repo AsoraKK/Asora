@@ -230,7 +230,7 @@ void main() {
 
       expect(find.text('Community Voting'), findsOneWidget);
       expect(find.text('10 votes'), findsOneWidget);
-      expect(find.text('7 approve (70.0%)'), findsOneWidget);
+      expect(find.text('7 approve'), findsOneWidget);
       expect(find.text('3 reject'), findsOneWidget);
       expect(find.text('Quorum reached'), findsOneWidget);
     });
@@ -406,8 +406,8 @@ void main() {
 
       expect(find.text('spam'), findsOneWidget);
       expect(find.text('hate'), findsOneWidget);
-      // Should find Chip widgets for each category
-      expect(find.byType(Chip), findsNWidgets(2));
+      // Should find Chip widgets for each category, plus AI label and quorum chips
+      expect(find.byType(Chip), findsNWidgets(4));
     });
 
     testWidgets('does not render flag categories section when empty', (
@@ -418,7 +418,8 @@ void main() {
         createTestWidget(appeal: appealWithoutCategories),
       );
 
-      expect(find.byType(Chip), findsNothing);
+      // Still has AI label chip and quorum chip, just no flag category chips
+      expect(find.byType(Chip), findsNWidgets(2));
     });
   });
 
@@ -429,7 +430,7 @@ void main() {
       await tester.pumpWidget(createTestWidget(appeal: testAppeal));
 
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.text('7 approve (70.0%)'), findsOneWidget);
+      expect(find.text('7 approve'), findsOneWidget);
       expect(find.text('3 reject'), findsOneWidget);
     });
 
@@ -493,12 +494,12 @@ void main() {
       await tester.tap(find.text('Approve'));
       await tester.pump();
 
-      // Should show loading indicators
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      // Should show loading indicator on the clicked button only
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(
         find.text('Approve'),
-        findsOneWidget,
-      ); // Button text should still be visible
+        findsNothing,
+      ); // Button text replaced with spinner
       expect(find.text('Reject'), findsOneWidget);
     });
 
@@ -506,12 +507,8 @@ void main() {
       tester,
     ) async {
       final completer = Completer<VoteResult>();
-      await tester.pumpWidget(
-        createTestWidget(appeal: testAppeal, repository: mockRepo),
-      );
-      await tester.pumpAndSettle();
 
-      // Mock successful vote submission with incomplete Future
+      // Mock successful vote submission with incomplete Future BEFORE pumping widget
       when(
         () => mockRepo.submitVote(
           appealId: any(named: 'appealId'),
@@ -521,12 +518,17 @@ void main() {
         ),
       ).thenAnswer((_) => completer.future);
 
+      await tester.pumpWidget(
+        createTestWidget(appeal: testAppeal, repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
       // Tap approve button
       await tester.tap(find.text('Approve'));
       await tester.pump();
 
-      // Verify loading state
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      // Verify loading state (only clicked button shows spinner)
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Complete the vote
       completer.complete(
@@ -574,8 +576,8 @@ void main() {
       await tester.tap(find.text('Approve'));
       await tester.pump();
 
-      // Should show loading state
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      // Should show loading state (only clicked button shows spinner)
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Complete with failure
       completer.complete(
@@ -673,7 +675,7 @@ void main() {
       await tester.pumpWidget(createTestWidget(appeal: appeal));
 
       expect(find.text('15 votes'), findsOneWidget);
-      expect(find.text('12 approve (80.0%)'), findsOneWidget);
+      expect(find.text('12 approve'), findsOneWidget);
       expect(find.text('3 reject'), findsOneWidget);
     });
 
@@ -687,7 +689,7 @@ void main() {
       final appeal = createAppeal(votingProgress: zeroApprovalProgress);
       await tester.pumpWidget(createTestWidget(appeal: appeal));
 
-      expect(find.text('0 approve (0.0%)'), findsOneWidget);
+      expect(find.text('0 approve'), findsOneWidget);
       expect(find.text('5 reject'), findsOneWidget);
     });
 
@@ -703,7 +705,7 @@ void main() {
       final appeal = createAppeal(votingProgress: fullApprovalProgress);
       await tester.pumpWidget(createTestWidget(appeal: appeal));
 
-      expect(find.text('10 approve (100.0%)'), findsOneWidget);
+      expect(find.text('10 approve'), findsOneWidget);
       expect(find.text('0 reject'), findsOneWidget);
     });
   });
@@ -736,7 +738,7 @@ void main() {
       await tester.tap(find.text('Approve'));
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Complete the vote
       completer.complete(

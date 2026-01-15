@@ -69,11 +69,11 @@ void main() {
       );
 
       await tester.enterText(
-        find.byType(TextFormField).at(0),
+        find.byType(TextField).at(0),
         'Valid reason that exceeds ten characters',
       );
       await tester.enterText(
-        find.byType(TextFormField).at(1),
+        find.byType(TextField).at(1),
         'Detailed statement that contains more than fifty characters for validation.',
       );
       await tester.pump();
