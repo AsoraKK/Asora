@@ -57,11 +57,28 @@ class _LythWordmarkState extends State<LythWordmark>
     with TickerProviderStateMixin {
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimation();
+    // Animation initialization moved to didChangeDependencies
+    // because we need MediaQuery context
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initializeAnimation();
+    } else {
+      // Check if reduce-motion setting changed
+      final disableAnimations = context.disableAnimations;
+      if (disableAnimations && _glowController.isAnimating) {
+        _glowController.stop();
+      }
+    }
   }
 
   void _initializeAnimation() {
@@ -105,16 +122,6 @@ class _LythWordmarkState extends State<LythWordmark>
         });
       }
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Check if reduce-motion setting changed
-    final disableAnimations = context.disableAnimations;
-    if (disableAnimations && _glowController.isAnimating) {
-      _glowController.stop();
-    }
   }
 
   @override

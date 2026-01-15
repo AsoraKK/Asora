@@ -6,5 +6,5 @@
     "typescript.preferences.tsconfig": {
         "functions/tests/**/*.test.ts": "functions/tsconfig.tests.json"
     },
-    "chat.agent.maxRequests": 100
+    "chat.agent.maxRequests": 1000
 }

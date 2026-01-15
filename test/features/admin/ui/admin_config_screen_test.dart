@@ -179,9 +179,10 @@ void main() {
         createTestWidget(state: AdminConfigEditorState.loaded(testEnvelope)),
       );
 
-      final saveButton = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Save'),
-      );
+      // Save button should not be tappable when not dirty
+      final saveButtonFinder = find.widgetWithText(ElevatedButton, 'Save');
+      expect(saveButtonFinder, findsOneWidget);
+      final saveButton = tester.widget<ElevatedButton>(saveButtonFinder);
       expect(saveButton.onPressed, isNull);
     });
 
@@ -190,9 +191,14 @@ void main() {
         createTestWidget(state: AdminConfigEditorState.loaded(testEnvelope)),
       );
 
-      final discardButton = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Discard'),
+      // Discard button should not be tappable when not dirty
+      // LythButton.secondary renders as OutlinedButton
+      final discardButtonFinder = find.widgetWithText(
+        OutlinedButton,
+        'Discard',
       );
+      expect(discardButtonFinder, findsOneWidget);
+      final discardButton = tester.widget<OutlinedButton>(discardButtonFinder);
       expect(discardButton.onPressed, isNull);
     });
 
@@ -211,9 +217,9 @@ void main() {
         ),
       );
 
-      final saveButton = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Save'),
-      );
+      final saveButtonFinder = find.widgetWithText(ElevatedButton, 'Save');
+      expect(saveButtonFinder, findsOneWidget);
+      final saveButton = tester.widget<ElevatedButton>(saveButtonFinder);
       expect(saveButton.onPressed, isNotNull);
     });
 
@@ -264,8 +270,8 @@ void main() {
         createTestWidget(state: AdminConfigEditorState.loaded(testEnvelope)),
       );
 
-      // Find the temperature value display (0.20)
-      expect(find.text('0.20'), findsWidgets);
+      // Find the temperature value display (0.2 formatted with toStringAsFixed(1))
+      expect(find.text('0.2'), findsWidgets);
     });
 
     testWidgets('maintenance mode switch is styled as destructive', (
