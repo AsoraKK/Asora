@@ -6,7 +6,7 @@ import 'package:asora/design_system/index.dart';
 
 void main() {
   setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = true;
+    GoogleFonts.config.allowRuntimeFetching = false;
   });
 
   testWidgets('LythWordmark uses onSurface and glow layer', (tester) async {
