@@ -23,18 +23,18 @@ Future<void> _pumpGolden(
 
 void main() {
   setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
+    GoogleFonts.config.allowRuntimeFetching = true;
   });
 
   testWidgets('LythButton variants - light', (tester) async {
     await _pumpGolden(
       tester,
       LythausTheme.light(),
-      Padding(
-        padding: const EdgeInsets.all(24),
+      const Padding(
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             LythButton(label: 'Primary', variant: LythButtonVariant.primary),
             SizedBox(height: 12),
             LythButton(
@@ -69,11 +69,11 @@ void main() {
     await _pumpGolden(
       tester,
       LythausTheme.dark(),
-      Padding(
-        padding: const EdgeInsets.all(24),
+      const Padding(
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             LythButton(label: 'Primary', variant: LythButtonVariant.primary),
             SizedBox(height: 12),
             LythButton(

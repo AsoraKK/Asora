@@ -67,7 +67,7 @@ class _CustomFeedCreationFlowState
       case 3:
         return _Step4Naming();
       case 4:
-        return _Step5Confirmation();
+        return const _Step5Confirmation();
       default:
         return const SizedBox();
     }

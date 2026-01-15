@@ -23,7 +23,7 @@ Future<void> _pumpGolden(
 
 void main() {
   setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
+    GoogleFonts.config.allowRuntimeFetching = true;
   });
 
   testWidgets('LythWordmark static - light', (tester) async {

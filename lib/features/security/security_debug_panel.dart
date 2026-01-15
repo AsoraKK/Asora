@@ -177,7 +177,7 @@ class SecurityDebugPanel extends ConsumerWidget {
                         : null,
                   ),
                   SizedBox(width: context.spacing.md),
-                  LythButton.secondary(
+                  const LythButton.secondary(
                     label: 'Clear overrides',
                     onPressed: kDebugMode
                         ? SecurityOverridesProvider.clear

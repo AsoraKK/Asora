@@ -2,8 +2,6 @@
 
 library feed_models;
 
-import 'package:flutter/material.dart';
-
 /// ASORA FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
