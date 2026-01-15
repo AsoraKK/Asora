@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'lyth_text_input.dart';
+import 'package:asora/design_system/components/lyth_text_input.dart';
 
 /// Semantic text field component
 class LythTextField extends FormField<String> {
@@ -30,13 +30,11 @@ class LythTextField extends FormField<String> {
     TextEditingController? controller,
     FocusNode? focusNode,
     TextInputAction? textInputAction,
-    FormFieldValidator<String>? validator,
-    AutovalidateMode? autovalidateMode,
+    super.validator,
+    super.autovalidateMode,
     super.key,
   }) : super(
          initialValue: controller?.text ?? value ?? initialValue,
-         validator: validator,
-         autovalidateMode: autovalidateMode,
          builder: (field) {
            return LythTextInput(
              label: label,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:asora/design_system/index.dart';
 import 'package:asora/widgets/reputation_badge.dart';
 
 void main() {
@@ -10,6 +11,7 @@ void main() {
       bool showLabel = false,
     }) {
       return MaterialApp(
+        theme: LythausTheme.light(),
         home: Scaffold(
           body: ReputationBadge(score: score, size: size, showLabel: showLabel),
         ),
@@ -111,7 +113,7 @@ void main() {
           find.byType(Container).first,
         );
         final decoration = container.decoration as BoxDecoration;
-        expect(decoration.borderRadius, BorderRadius.circular(12));
+        expect(decoration.borderRadius, BorderRadius.circular(32));
       });
 
       testWidgets('medium size renders correctly', (tester) async {

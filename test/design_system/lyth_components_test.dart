@@ -6,7 +6,7 @@ import 'package:asora/design_system/index.dart';
 
 void main() {
   setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
+    GoogleFonts.config.allowRuntimeFetching = true;
   });
 
   testWidgets('LythWordmark uses onSurface and glow layer', (tester) async {
@@ -46,7 +46,7 @@ void main() {
     final element = tester.element(find.byType(ElevatedButton));
     final scheme = Theme.of(element).colorScheme;
     final style = ElevatedButtonTheme.of(element).style;
-    final background = style?.backgroundColor?.resolve(<MaterialState>{});
+    final background = style?.backgroundColor?.resolve(<WidgetState>{});
 
     expect(background, scheme.primary);
   });
