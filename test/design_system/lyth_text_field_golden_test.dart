@@ -4,23 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/design_system/index.dart';
 import '../golden_test_utils.dart';
 
-Future<void> _pumpGolden(
-  WidgetTester tester,
-  ThemeData theme,
-  Widget child,
-) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: theme,
-      home: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        body: Center(child: child),
-      ),
-    ),
-  );
-  // Use pump with duration instead of pumpAndSettle to avoid animation timeout
-  await tester.pump(const Duration(milliseconds: 100));
-}
+/// Golden test surface size for LythTextField - tall enough for 3 text fields
+const Size _kTextFieldGoldenSize = Size(400, 350);
 
 void main() {
   setUpAll(() async {
@@ -28,10 +13,11 @@ void main() {
   });
 
   testWidgets('LythTextField states - light', (tester) async {
-    await _pumpGolden(
+    await pumpGoldenWidget(
       tester,
-      LythausTheme.light(),
-      Padding(
+      theme: LythausTheme.light(),
+      surfaceSize: _kTextFieldGoldenSize,
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -61,10 +47,11 @@ void main() {
   });
 
   testWidgets('LythTextField states - dark', (tester) async {
-    await _pumpGolden(
+    await pumpGoldenWidget(
       tester,
-      LythausTheme.dark(),
-      Padding(
+      theme: LythausTheme.dark(),
+      surfaceSize: _kTextFieldGoldenSize,
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
