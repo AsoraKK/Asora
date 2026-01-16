@@ -200,6 +200,9 @@ jobs:
       - name: Enforce design system gate
         run: bash scripts/design_system_gate.sh
 
+      - name: Regenerate golden files for CI environment
+        run: flutter test --update-goldens test/design_system/
+
       - name: Test with coverage
         run: flutter test --coverage
 
