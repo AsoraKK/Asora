@@ -32,7 +32,9 @@ class VotingStatusBreakdown extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.lg),
-          ...statusCounts.entries.map((entry) => _buildStatusRow(entry)),
+          ...statusCounts.entries.map(
+            (entry) => _buildStatusRow(context, entry),
+          ),
         ],
       ),
     );
