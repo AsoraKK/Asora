@@ -4,23 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/design_system/index.dart';
 import '../golden_test_utils.dart';
 
-Future<void> _pumpGolden(
-  WidgetTester tester,
-  ThemeData theme,
-  Widget child,
-) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: theme,
-      home: Scaffold(
-        backgroundColor: theme.colorScheme.surface,
-        body: Center(child: child),
-      ),
-    ),
-  );
-  // Use pump with duration instead of pumpAndSettle to avoid animation timeout
-  await tester.pump(const Duration(milliseconds: 100));
-}
+/// Golden test surface size for LythButton - tall enough for 5 button variants
+const Size _kButtonGoldenSize = Size(400, 350);
 
 void main() {
   setUpAll(() async {
@@ -28,10 +13,11 @@ void main() {
   });
 
   testWidgets('LythButton variants - light', (tester) async {
-    await _pumpGolden(
+    await pumpGoldenWidget(
       tester,
-      LythausTheme.light(),
-      const Padding(
+      theme: LythausTheme.light(),
+      surfaceSize: _kButtonGoldenSize,
+      child: const Padding(
         padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -67,10 +53,11 @@ void main() {
   });
 
   testWidgets('LythButton variants - dark', (tester) async {
-    await _pumpGolden(
+    await pumpGoldenWidget(
       tester,
-      LythausTheme.dark(),
-      const Padding(
+      theme: LythausTheme.dark(),
+      surfaceSize: _kButtonGoldenSize,
+      child: const Padding(
         padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
