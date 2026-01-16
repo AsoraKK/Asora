@@ -21,8 +21,6 @@ import 'package:asora/ui/screens/home/news_feed.dart';
 import 'package:asora/ui/screens/home/feed_search_screen.dart';
 import 'package:asora/ui/screens/home/trending_feed_screen.dart';
 
-const double _horizontalParallax = 50.0;
-
 class HomeFeedNavigator extends ConsumerStatefulWidget {
   const HomeFeedNavigator({super.key});
 

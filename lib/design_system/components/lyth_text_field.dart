@@ -7,8 +7,9 @@ import 'package:flutter/material.dart';
 
 import 'package:asora/design_system/components/lyth_text_input.dart';
 
-/// Semantic text field component
+/// Semantic text field component for user input with validation and theming support.
 class LythTextField extends FormField<String> {
+  /// Creates a [LythTextField].
   LythTextField({
     String? label,
     String? placeholder,
@@ -63,6 +64,7 @@ class LythTextField extends FormField<String> {
          },
        );
 
+  /// Creates a password text field variant with password visibility controls.
   factory LythTextField.password({
     required String label,
     String? placeholder,
@@ -100,6 +102,7 @@ class LythTextField extends FormField<String> {
     );
   }
 
+  /// Creates an email text field variant with email keyboard and validation.
   factory LythTextField.email({
     required String label,
     String? placeholder,
