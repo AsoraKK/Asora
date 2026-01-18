@@ -70,6 +70,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsGet**](doc/AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsList**](doc/AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsReject**](doc/AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
+[*AdminApi*](doc/AdminApi.md) | [**adminAuditList**](doc/AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
 [*AdminApi*](doc/AdminApi.md) | [**adminContentBlock**](doc/AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
 [*AdminApi*](doc/AdminApi.md) | [**adminContentPublish**](doc/AdminApi.md#admincontentpublish) | **POST** /_admin/content/{contentId}/publish | Publish content
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsGet**](doc/AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
@@ -104,6 +105,8 @@ Class | Method | HTTP request | Description
  - [AdminAppealQueueItem](doc/AdminAppealQueueItem.md)
  - [AdminAppealQueueResponse](doc/AdminAppealQueueResponse.md)
  - [AdminAppealStatus](doc/AdminAppealStatus.md)
+ - [AdminAuditEntry](doc/AdminAuditEntry.md)
+ - [AdminAuditListResponse](doc/AdminAuditListResponse.md)
  - [AdminContentActionRequest](doc/AdminContentActionRequest.md)
  - [AdminContentActionResponse](doc/AdminContentActionResponse.md)
  - [AdminContentState](doc/AdminContentState.md)

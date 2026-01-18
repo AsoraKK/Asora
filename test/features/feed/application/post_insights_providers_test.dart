@@ -15,7 +15,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.none),
+        appeal: const InsightAppeal(status: InsightAppealStatus.none),
       );
 
       final result = InsightsSuccess(insights);
@@ -33,7 +33,7 @@ void main() {
         reasonCodes: ['code1'],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.pending),
+        appeal: const InsightAppeal(status: InsightAppealStatus.pending),
       );
       final insights2 = PostInsights(
         postId: 'post2',
@@ -42,7 +42,7 @@ void main() {
         reasonCodes: [],
         configVersion: 2,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.approved),
+        appeal: const InsightAppeal(status: InsightAppealStatus.approved),
       );
 
       final result1 = InsightsSuccess(insights1);
@@ -105,7 +105,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.none),
+        appeal: const InsightAppeal(status: InsightAppealStatus.none),
       );
       final asyncResult = AsyncValue<InsightsResult>.data(
         InsightsSuccess(insights),
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('returns false when AsyncValue is in loading state', () {
-      final asyncResult = AsyncValue<InsightsResult>.loading();
+      const asyncResult = AsyncValue<InsightsResult>.loading();
 
       expect(isInsightsAvailable(asyncResult), isFalse);
     });
@@ -161,7 +161,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.none),
+        appeal: const InsightAppeal(status: InsightAppealStatus.none),
       );
       final asyncResult = AsyncValue<InsightsResult>.data(
         InsightsSuccess(insights),
@@ -203,7 +203,7 @@ void main() {
     });
 
     test('returns null when AsyncValue is in loading state', () {
-      final asyncResult = AsyncValue<InsightsResult>.loading();
+      const asyncResult = AsyncValue<InsightsResult>.loading();
 
       final result = getInsights(asyncResult);
 
@@ -229,7 +229,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.rejected),
+        appeal: const InsightAppeal(status: InsightAppealStatus.rejected),
       );
       final insights2 = PostInsights(
         postId: 'post2',
@@ -238,7 +238,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.pending),
+        appeal: const InsightAppeal(status: InsightAppealStatus.pending),
       );
 
       final result1 = getInsights(AsyncValue.data(InsightsSuccess(insights1)));
@@ -261,7 +261,7 @@ void main() {
           reasonCodes: [],
           configVersion: 1,
           decidedAt: DateTime.now(),
-          appeal: InsightAppeal(status: InsightAppealStatus.none),
+          appeal: const InsightAppeal(status: InsightAppealStatus.none),
         ),
       );
       final deniedResult = InsightsAccessDenied();
@@ -287,7 +287,7 @@ void main() {
                 reasonCodes: [],
                 configVersion: 1,
                 decidedAt: DateTime.now(),
-                appeal: InsightAppeal(status: InsightAppealStatus.none),
+                appeal: const InsightAppeal(status: InsightAppealStatus.none),
               ),
             )
             as InsightsResult,
@@ -326,7 +326,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.none),
+        appeal: const InsightAppeal(status: InsightAppealStatus.none),
       );
 
       final states = [
@@ -334,7 +334,7 @@ void main() {
         (AsyncValue.data(InsightsAccessDenied()), false),
         (AsyncValue.data(InsightsNotFound()), false),
         (AsyncValue.data(InsightsError('msg')), false),
-        (AsyncValue<InsightsResult>.loading(), false),
+        (const AsyncValue<InsightsResult>.loading(), false),
         (AsyncValue<InsightsResult>.error('err', StackTrace.current), false),
       ];
 
@@ -357,7 +357,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: InsightAppeal(status: InsightAppealStatus.pending),
+        appeal: const InsightAppeal(status: InsightAppealStatus.pending),
       );
       final asyncResult = AsyncValue<InsightsResult>.data(
         InsightsSuccess(insights),

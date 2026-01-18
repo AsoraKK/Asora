@@ -20,7 +20,6 @@ class ModerationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final confidence = (caseItem.aiConfidence * 100).round();
     return Card(
       margin: const EdgeInsets.symmetric(
         horizontal: Spacing.md,
@@ -41,7 +40,7 @@ class ModerationCard extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text('AI $confidence%'),
+                  label: const Text('Needs review'),
                   backgroundColor: theme.colorScheme.secondary.withValues(
                     alpha: 0.16,
                   ),

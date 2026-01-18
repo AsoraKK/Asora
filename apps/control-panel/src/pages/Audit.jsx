@@ -1,101 +1,90 @@
-const auditEvents = [
-  {
-    id: 'evt-1001',
-    timestamp: '2025-01-14 09:12 UTC',
-    actor: 'M. Patel',
-    action: 'Content blocked',
-    target: 'post_18e7'
-  },
-  {
-    id: 'evt-1002',
-    timestamp: '2025-01-14 08:54 UTC',
-    actor: 'R. Silva',
-    action: 'Appeal approved',
-    target: 'appeal_1024'
-  },
-  {
-    id: 'evt-1003',
-    timestamp: '2025-01-13 17:20 UTC',
-    actor: 'A. Brooks',
-    action: 'User disabled',
-    target: 'user_42f9'
-  },
-  {
-    id: 'evt-1004',
-    timestamp: '2025-01-13 16:02 UTC',
-    actor: 'S. Nguyen',
-    action: 'Invite revoked',
-    target: 'invite_q1x8'
-  },
-  {
-    id: 'evt-1005',
-    timestamp: '2025-01-13 14:45 UTC',
-    actor: 'N. Kim',
-    action: 'Content published',
-    target: 'comment_993a'
-  },
-  {
-    id: 'evt-1006',
-    timestamp: '2025-01-13 12:09 UTC',
-    actor: 'L. Garcia',
-    action: 'Invite created',
-    target: 'batch_17'
-  },
-  {
-    id: 'evt-1007',
-    timestamp: '2025-01-13 11:32 UTC',
-    actor: 'C. Martin',
-    action: 'Appeal rejected',
-    target: 'appeal_1011'
-  },
-  {
-    id: 'evt-1008',
-    timestamp: '2025-01-13 09:18 UTC',
-    actor: 'T. Zhang',
-    action: 'User enabled',
-    target: 'user_2bb1'
-  },
-  {
-    id: 'evt-1009',
-    timestamp: '2025-01-12 18:27 UTC',
-    actor: 'D. Rivera',
-    action: 'Flag resolved',
-    target: 'flag_704'
-  },
-  {
-    id: 'evt-1010',
-    timestamp: '2025-01-12 16:48 UTC',
-    actor: 'E. Carter',
-    action: 'Appeal reviewed',
-    target: 'appeal_993'
-  }
-];
+import { useEffect, useState } from 'react';
+import { adminRequest } from '../api/adminApi.js';
+import { formatDateTime } from '../utils/formatters.js';
+import LythButton from '../components/LythButton.jsx';
+import LythCard from '../components/LythCard.jsx';
+
+function formatActionLabel(entry) {
+  const action = entry.action || 'UNKNOWN';
+  const reason = entry.reasonCode ? ` (${entry.reasonCode})` : '';
+  return `${action}${reason}`;
+}
 
 function Audit() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadAudit = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await adminRequest('_admin/audit', {
+        query: { limit: 50 }
+      });
+      setItems(response?.items || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load audit entries.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAudit();
+  }, []);
+
   return (
     <section className="page">
       <div className="page-header">
         <h1>Audit</h1>
         <p className="page-subtitle">
-          Recent admin actions and configuration changes (placeholder data).
+          Recent admin actions with audit trail details.
         </p>
       </div>
-      <div className="audit-table">
-        <div className="audit-row header">
-          <span>Timestamp</span>
-          <span>Actor</span>
-          <span>Action</span>
-          <span>Target</span>
-        </div>
-        {auditEvents.map((event) => (
-          <div key={event.id} className="audit-row">
-            <span>{event.timestamp}</span>
-            <span>{event.actor}</span>
-            <span>{event.action}</span>
-            <span>{event.target}</span>
+      <LythCard variant="panel">
+        <div className="panel-header">
+          <h2>Recent activity</h2>
+          <div className="panel-actions">
+            <LythButton
+              variant="ghost"
+              type="button"
+              onClick={loadAudit}
+              disabled={loading}
+            >
+              Refresh
+            </LythButton>
           </div>
-        ))}
-      </div>
+        </div>
+        {error ? <div className="notice error">{error}</div> : null}
+        <div className="audit-table">
+          <div className="audit-row header">
+            <span>Timestamp</span>
+            <span>Actor</span>
+            <span>Action</span>
+            <span>Target</span>
+          </div>
+          {items.map((entry) => (
+            <div key={entry.id || entry.correlationId} className="audit-row">
+              <span>{formatDateTime(entry.timestamp)}</span>
+              <span>{entry.actorId || '-'}</span>
+              <span>
+                <strong>{formatActionLabel(entry)}</strong>
+                {entry.note ? <span className="muted">{entry.note}</span> : null}
+              </span>
+              <span>
+                <strong>{entry.subjectId || '-'}</strong>
+                {entry.targetType ? (
+                  <span className="muted">{entry.targetType}</span>
+                ) : null}
+              </span>
+            </div>
+          ))}
+        </div>
+        {!items.length && !loading ? (
+          <div className="empty-state">No audit entries found.</div>
+        ) : null}
+      </LythCard>
     </section>
   );
 }

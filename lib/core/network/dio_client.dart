@@ -29,9 +29,23 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   // Configure TLS pinning for HTTPS
   if (baseUrl.startsWith('https') && envConfig.security.tlsPins.enabled) {
-    final pinnedClient = PinnedHttpClientFactory.create(envConfig);
+    final uri = Uri.parse(baseUrl);
+    final pinnedHost = uri.host;
+    final validator = TlsPinningValidator(
+      config: envConfig.security.tlsPins,
+      environment: envConfig.environment,
+    );
+
     dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () => pinnedClient,
+      validateCertificate: (certificate, host, port) {
+        if (certificate == null) {
+          return false;
+        }
+        if (host != pinnedHost) {
+          return true;
+        }
+        return validator.validateCertificateChain(certificate, host);
+      },
     );
   }
 

@@ -169,7 +169,7 @@ void main() {
     });
 
     test('can be constructed with status only', () {
-      final appeal = InsightAppeal(status: InsightAppealStatus.none);
+      const appeal = InsightAppeal(status: InsightAppealStatus.none);
 
       expect(appeal.status, equals(InsightAppealStatus.none));
       expect(appeal.updatedAt, isNull);

@@ -9,6 +9,15 @@ const MAX_LIMIT = 100;
 
 type AppealStatusFilter = 'pending' | 'approved' | 'rejected' | 'all';
 
+interface VoteSummary {
+  votesFor: number;
+  votesAgainst: number;
+  totalVotes: number;
+  votingStatus: string | null;
+  expiresAt: string | null;
+  timeRemainingSeconds: number | null;
+}
+
 function parseLimit(value?: string | null): number {
   if (!value) {
     return DEFAULT_LIMIT;
@@ -31,6 +40,38 @@ function resolveStatusFilter(value?: string | null): AppealStatusFilter {
     default:
       return 'pending';
   }
+}
+
+function toSafeCount(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(parsed));
+}
+
+function buildVoteSummary(appeal: Record<string, unknown>): VoteSummary {
+  const votesFor = toSafeCount(appeal.votesFor);
+  const votesAgainst = toSafeCount(appeal.votesAgainst);
+  const totalRaw = Number(appeal.totalVotes);
+  const totalVotes = Number.isFinite(totalRaw)
+    ? Math.max(0, Math.floor(totalRaw))
+    : votesFor + votesAgainst;
+  const votingStatus = typeof appeal.votingStatus === 'string' ? appeal.votingStatus : null;
+  const expiresAt = typeof appeal.expiresAt === 'string' ? appeal.expiresAt : null;
+  let timeRemainingSeconds: number | null = null;
+  if (expiresAt) {
+    const diffMs = Date.parse(expiresAt) - Date.now();
+    timeRemainingSeconds = diffMs > 0 ? Math.ceil(diffMs / 1000) : 0;
+  }
+  return {
+    votesFor,
+    votesAgainst,
+    totalVotes,
+    votingStatus,
+    expiresAt,
+    timeRemainingSeconds,
+  };
 }
 
 function normalizeAppealStatus(status: string | undefined, finalDecision?: string): 'PENDING' | 'APPROVED' | 'REJECTED' {
@@ -97,6 +138,7 @@ export async function listAppealsQueue(
           (flagCategories[0] as string | undefined) ??
           (appeal.flagReason as string | undefined) ??
           null;
+        const voteSummary = buildVoteSummary(appeal as Record<string, unknown>);
 
         return {
           appealId: appeal.id,
@@ -106,6 +148,12 @@ export async function listAppealsQueue(
           status: normalizeAppealStatus(appeal.status as string | undefined, appeal.finalDecision as string | undefined),
           originalReasonCategory: reasonCategory,
           configVersionUsed: decision?.configVersionUsed ?? null,
+          votesFor: voteSummary.votesFor,
+          votesAgainst: voteSummary.votesAgainst,
+          totalVotes: voteSummary.totalVotes,
+          votingStatus: voteSummary.votingStatus,
+          expiresAt: voteSummary.expiresAt,
+          timeRemainingSeconds: voteSummary.timeRemainingSeconds,
         };
       })
     );

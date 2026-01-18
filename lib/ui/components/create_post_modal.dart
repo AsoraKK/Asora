@@ -8,6 +8,7 @@ import 'package:asora/design_system/components/lyth_chip.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/design_system/components/lyth_text_field.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/state/models/feed_models.dart';
@@ -45,30 +46,37 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   Future<void> _handleSubmit() async {
-    final notifier = ref.read(postCreationProvider.notifier);
-    notifier.updateText(controller.text);
-    notifier.setIsNews(isNews);
-    notifier.setContentType(selectedType.name);
+    await runWithDeviceGuard(
+      context,
+      ref,
+      IntegrityUseCase.postContent,
+      () async {
+        final notifier = ref.read(postCreationProvider.notifier);
+        notifier.updateText(controller.text);
+        notifier.setIsNews(isNews);
+        notifier.setContentType(selectedType.name);
 
-    final success = await notifier.submit();
-    if (!mounted) return;
-    final state = ref.read(postCreationProvider);
+        final success = await notifier.submit();
+        if (!mounted) return;
+        final state = ref.read(postCreationProvider);
 
-    if (state.isBlocked && state.blockedResult != null) {
-      _showAiScan(state.blockedResult!);
-      return;
-    }
+        if (state.isBlocked && state.blockedResult != null) {
+          _showAiScan(state.blockedResult!);
+          return;
+        }
 
-    if (state.isLimitExceeded && state.limitExceededResult != null) {
-      _showLimitSheet(state.limitExceededResult!);
-      return;
-    }
+        if (state.isLimitExceeded && state.limitExceededResult != null) {
+          _showLimitSheet(state.limitExceededResult!);
+          return;
+        }
 
-    if (success) {
-      LythSnackbar.success(context: context, message: 'Posted to Lythaus');
-      notifier.reset();
-      Navigator.of(context).maybePop();
-    }
+        if (success) {
+          LythSnackbar.success(context: context, message: 'Posted to Lythaus');
+          notifier.reset();
+          Navigator.of(context).maybePop();
+        }
+      },
+    );
   }
 
   @override

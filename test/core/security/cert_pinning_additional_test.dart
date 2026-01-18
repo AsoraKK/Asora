@@ -21,13 +21,13 @@ void main() {
       const testInfo = CertPinningInfo(
         enabled: true,
         pins: {
-          'test.com': ['sha256/testpin'],
+          'test.com': ['dGVzdHBpbg=='],
         },
         buildMode: 'test',
       );
 
       expect(testInfo.enabled, isTrue);
-      expect(testInfo.pins, containsPair('test.com', ['sha256/testpin']));
+      expect(testInfo.pins, containsPair('test.com', ['dGVzdHBpbg==']));
       expect(testInfo.buildMode, equals('test'));
 
       // Test JSON serialization
@@ -65,9 +65,10 @@ void main() {
           type: errorType,
         );
 
-        // Only connection and unknown errors should return true for pinned domains
+        // Only connection, unknown, and badCertificate errors should return true for pinned domains
         if (errorType == DioExceptionType.connectionError ||
-            errorType == DioExceptionType.unknown) {
+            errorType == DioExceptionType.unknown ||
+            errorType == DioExceptionType.badCertificate) {
           expect(isPinValidationError(pinnedError), isTrue);
         } else {
           expect(isPinValidationError(pinnedError), isFalse);
@@ -138,9 +139,7 @@ void main() {
         // Pins validation
         expect(pins, isNotEmpty);
         for (final pin in pins) {
-          expect(pin.startsWith('sha256/'), isTrue);
-          final hash = pin.substring(7);
-          expect(hash, isNotEmpty);
+          expect(pin, isNotEmpty);
         }
       }
     });
@@ -186,8 +185,8 @@ void main() {
       const multiInfo = CertPinningInfo(
         enabled: true,
         pins: {
-          'domain1.com': ['sha256/pin1'],
-          'domain2.com': ['sha256/pin2a', 'sha256/pin2b'],
+          'domain1.com': ['cGluMQ=='],
+          'domain2.com': ['cGluMmE=', 'cGluMmI='],
         },
         buildMode: 'debug',
       );

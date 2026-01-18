@@ -40,27 +40,35 @@ describe('HiveAIClient', () => {
     } as Response);
   }
 
-  // Helper to create a successful Hive response
+  // Helper to create a successful Hive response (v2 format)
   function createHiveResponse(
-    action: 'accept' | 'review' | 'reject' = 'accept',
-    score = 0.1,
     classes: { class: string; score: number }[] = []
   ) {
     return {
-      status: 'success' as const,
-      response: {
-        outputs: {
-          general_text_classification: {
-            summary: {
-              action,
-              action_reason: action === 'accept' ? '' : 'Policy violation detected',
-              score,
-            },
-            classes,
+      id: 'test-request-id-123',
+      code: 200,
+      project_id: 1108522403,
+      user_id: 4762,
+      created_on: new Date().toISOString(),
+      status: [
+        {
+          status: {
+            code: '0',
+            message: 'SUCCESS',
+          },
+          response: {
+            output: [
+              {
+                classes: classes.length > 0 ? classes : [
+                  { class: 'hate', score: 0 },
+                  { class: 'violence', score: 0 },
+                  { class: 'sexual', score: 0 },
+                ],
+              },
+            ],
           },
         },
-      },
-      request_id: 'test-request-id-123',
+      ],
     };
   }
 
@@ -86,7 +94,7 @@ describe('HiveAIClient', () => {
     it('returns ALLOW for safe content', async () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
-        mockFetchResponse(createHiveResponse('accept', 0.1, []))
+        mockFetchResponse(createHiveResponse([]))
       );
 
       const result = await client.moderateTextContent({
@@ -104,7 +112,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('review', 0.6, [{ class: 'harassment', score: 0.6 }])
+          createHiveResponse([{ class: 'harassment', score: 0.6 }])
         )
       );
 
@@ -122,7 +130,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('reject', 0.95, [
+          createHiveResponse([
             { class: 'hate_speech', score: 0.95 },
             { class: 'violence', score: 0.88 },
           ])
@@ -170,7 +178,7 @@ describe('HiveAIClient', () => {
     it('sends correct request body', async () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
-        mockFetchResponse(createHiveResponse())
+        mockFetchResponse(createHiveResponse([]))
       );
 
       await client.moderateTextContent({
@@ -185,7 +193,7 @@ describe('HiveAIClient', () => {
           method: 'POST',
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${testApiKey}`,
+            Authorization: `Token ${testApiKey}`,
             'X-Content-Id': 'content-456',
           }),
           body: expect.stringContaining('"user_id":"user-123"'),
@@ -196,7 +204,7 @@ describe('HiveAIClient', () => {
     it('uses custom models when provided', async () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
-        mockFetchResponse(createHiveResponse())
+        mockFetchResponse(createHiveResponse([]))
       );
 
       await client.moderateTextContent({
@@ -289,7 +297,7 @@ describe('HiveAIClient', () => {
       // First call: rate limited, second call: success
       mockFetch
         .mockResolvedValueOnce(mockFetchResponse({}, 429, 'Too Many Requests'))
-        .mockResolvedValueOnce(mockFetchResponse(createHiveResponse()));
+        .mockResolvedValueOnce(mockFetchResponse(createHiveResponse([])));
 
       const result = await client.moderateTextContent({
         text: 'Test content',
@@ -325,20 +333,27 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse({
-          status: 'success',
-          response: {},
-          request_id: 'test-123',
+          id: 'test-123',
+          code: 200,
+          project_id: 1108522403,
+          user_id: 4762,
+          created_on: new Date().toISOString(),
+          status: [
+            {
+              status: { code: '0', message: 'SUCCESS' },
+              response: { output: [] },  // Empty output
+            },
+          ],
         })
       );
 
-      await expect(
-        client.moderateTextContent({
-          text: 'Test content',
-          userId: 'user-123',
-        })
-      ).rejects.toMatchObject({
-        code: 'INVALID_RESPONSE',
+      const result = await client.moderateTextContent({
+        text: 'Test content',
+        userId: 'user-123',
       });
+
+      // Empty output should result in ALLOW action
+      expect(result.action).toBe(ModerationAction.ALLOW);
     });
 
     it('throws HiveAPIError on error status in response', async () => {
@@ -348,9 +363,17 @@ describe('HiveAIClient', () => {
       });
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse({
-          status: 'error',
-          response: { outputs: {} },
-          request_id: 'test-123',
+          id: 'test-123',
+          code: 500,
+          project_id: 1108522403,
+          user_id: 4762,
+          created_on: new Date().toISOString(),
+          status: [
+            {
+              status: { code: '1', message: 'ERROR' },
+              response: { output: [] },
+            },
+          ],
         })
       );
 
@@ -391,7 +414,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('reject', 0.9, [{ class: 'hate', score: 0.9 }])
+          createHiveResponse([{ class: 'hate', score: 0.9 }])
         )
       );
 
@@ -407,7 +430,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('reject', 0.9, [{ class: 'gore', score: 0.9 }])
+          createHiveResponse([{ class: 'gore', score: 0.9 }])
         )
       );
 
@@ -423,7 +446,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('reject', 0.9, [{ class: 'nudity', score: 0.9 }])
+          createHiveResponse([{ class: 'nudity', score: 0.9 }])
         )
       );
 
@@ -439,7 +462,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('reject', 0.9, [{ class: 'suicide', score: 0.9 }])
+          createHiveResponse([{ class: 'suicide', score: 0.9 }])
         )
       );
 
@@ -455,7 +478,7 @@ describe('HiveAIClient', () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
         mockFetchResponse(
-          createHiveResponse('review', 0.6, [
+          createHiveResponse([
             { class: 'unknown_category_xyz', score: 0.6 },
           ])
         )
@@ -474,29 +497,29 @@ describe('HiveAIClient', () => {
     it('maintains backwards compatibility', async () => {
       const client = new HiveAIClient(testApiKey);
       mockFetch.mockResolvedValueOnce(
-        mockFetchResponse(createHiveResponse())
+        mockFetchResponse(createHiveResponse([]))
       );
 
       const result = await client.moderateText('user-123', 'Test content');
 
-      expect(result).toHaveProperty('status', 'success');
-      expect(result).toHaveProperty('response');
-      expect(result).toHaveProperty('request_id');
+      expect(result).toHaveProperty('code', 200);
+      expect(result).toHaveProperty('status');
+      expect(result).toHaveProperty('id');
     });
   });
 
   describe('static parseModerationResult', () => {
     it('parses accept response correctly', () => {
-      const response = createHiveResponse('accept', 0.1, []);
+      const response = createHiveResponse([]);
       const result = HiveAIClient.parseModerationResult(response);
 
       expect(result.action).toBe('accept');
-      expect(result.confidence).toBe(0.1);
+      expect(result.confidence).toBe(0);
       expect(result.flaggedCategories).toHaveLength(0);
     });
 
     it('parses reject response with categories', () => {
-      const response = createHiveResponse('reject', 0.95, [
+      const response = createHiveResponse([
         { class: 'violence', score: 0.95 },
         { class: 'safe', score: 0.05 },
       ]);
@@ -504,9 +527,7 @@ describe('HiveAIClient', () => {
 
       expect(result.action).toBe('reject');
       expect(result.confidence).toBe(0.95);
-      expect(result.flaggedCategories).toContain(
-        'general_text_classification:violence'
-      );
+      expect(result.flaggedCategories).toContain('violence');
     });
   });
 

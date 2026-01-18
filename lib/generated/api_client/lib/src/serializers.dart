@@ -23,6 +23,8 @@ import 'package:asora_api_client/src/model/admin_appeal_original_decision.dart';
 import 'package:asora_api_client/src/model/admin_appeal_queue_item.dart';
 import 'package:asora_api_client/src/model/admin_appeal_queue_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_status.dart';
+import 'package:asora_api_client/src/model/admin_audit_entry.dart';
+import 'package:asora_api_client/src/model/admin_audit_list_response.dart';
 import 'package:asora_api_client/src/model/admin_content_action_request.dart';
 import 'package:asora_api_client/src/model/admin_content_action_response.dart';
 import 'package:asora_api_client/src/model/admin_content_state.dart';
@@ -87,6 +89,8 @@ part 'serializers.g.dart';
   AdminAppealQueueItem,
   AdminAppealQueueResponse,
   AdminAppealStatus,
+  AdminAuditEntry,
+  AdminAuditListResponse,
   AdminContentActionRequest,
   AdminContentActionResponse,
   AdminContentState,

@@ -2053,6 +2053,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /_admin/audit:
+    get:
+      tags:
+      - admin
+      summary: List admin audit log entries.
+      description: Returns recent admin audit entries.
+      operationId: admin_audit_list
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        description: Number of entries to return (1-200)
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+      responses:
+        '200':
+          description: Admin audit list response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuditListResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /_admin/users/search:
     get:
       tags:
@@ -3590,6 +3627,22 @@ components:
           type: string
         configVersionUsed:
           type: integer
+        votesFor:
+          type: integer
+        votesAgainst:
+          type: integer
+        totalVotes:
+          type: integer
+        votingStatus:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        timeRemainingSeconds:
+          type: integer
+          nullable: true
     AdminAppealQueueResponse:
       type: object
       required:
@@ -3630,6 +3683,22 @@ components:
             type: string
         internalNote:
           type: string
+        votesFor:
+          type: integer
+        votesAgainst:
+          type: integer
+        totalVotes:
+          type: integer
+        votingStatus:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        timeRemainingSeconds:
+          type: integer
+          nullable: true
     AdminAppealContent:
       type: object
       properties:
@@ -3687,6 +3756,51 @@ components:
           type: string
         contentStatus:
           $ref: '#/components/schemas/AdminContentState'
+    AdminAuditEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        actorId:
+          type: string
+        action:
+          type: string
+        targetType:
+          type: string
+        subjectId:
+          type: string
+        reasonCode:
+          type: string
+        note:
+          type: string
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        correlationId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    AdminAuditListResponse:
+      type: object
+      required:
+      - items
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAuditEntry'
+        count:
+          type: integer
+        nextCursor:
+          type: string
     AdminUserSummary:
       type: object
       properties:

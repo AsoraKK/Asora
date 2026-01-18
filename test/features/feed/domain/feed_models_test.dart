@@ -6,7 +6,7 @@ import 'package:asora/features/feed/domain/models.dart';
 void main() {
   group('FeedResponse', () {
     test('can be constructed with required fields', () {
-      final response = FeedResponse(
+      const response = FeedResponse(
         posts: [],
         totalCount: 0,
         hasMore: false,
@@ -23,7 +23,7 @@ void main() {
     });
 
     test('can include nextCursor for pagination', () {
-      final response = FeedResponse(
+      const response = FeedResponse(
         posts: [],
         totalCount: 100,
         hasMore: true,
@@ -139,7 +139,7 @@ void main() {
 
     test('tracks pagination state correctly', () {
       // First page
-      final page1 = FeedResponse(
+      const page1 = FeedResponse(
         posts: [],
         totalCount: 100,
         hasMore: true,
@@ -152,7 +152,7 @@ void main() {
       expect(page1.hasMore, isTrue);
 
       // Last page
-      final lastPage = FeedResponse(
+      const lastPage = FeedResponse(
         posts: [],
         totalCount: 100,
         hasMore: false,
@@ -169,7 +169,7 @@ void main() {
 
   group('FeedParams', () {
     test('can be constructed with defaults', () {
-      final params = FeedParams();
+      const params = FeedParams();
 
       expect(params.page, equals(1));
       expect(params.pageSize, equals(20));
@@ -181,7 +181,7 @@ void main() {
     });
 
     test('can be constructed with custom values', () {
-      final params = FeedParams(
+      const params = FeedParams(
         page: 2,
         pageSize: 50,
         type: FeedType.newest,
@@ -202,23 +202,29 @@ void main() {
 
     test('supports all FeedType values', () {
       expect(
-        FeedParams(type: FeedType.trending).type,
+        const FeedParams(type: FeedType.trending).type,
         equals(FeedType.trending),
       );
-      expect(FeedParams(type: FeedType.newest).type, equals(FeedType.newest));
-      expect(FeedParams(type: FeedType.local).type, equals(FeedType.local));
       expect(
-        FeedParams(type: FeedType.following).type,
+        const FeedParams(type: FeedType.newest).type,
+        equals(FeedType.newest),
+      );
+      expect(
+        const FeedParams(type: FeedType.local).type,
+        equals(FeedType.local),
+      );
+      expect(
+        const FeedParams(type: FeedType.following).type,
         equals(FeedType.following),
       );
       expect(
-        FeedParams(type: FeedType.newCreators).type,
+        const FeedParams(type: FeedType.newCreators).type,
         equals(FeedType.newCreators),
       );
     });
 
     test('can convert to JSON', () {
-      final params = FeedParams(
+      const params = FeedParams(
         page: 1,
         pageSize: 20,
         type: FeedType.local,
@@ -234,7 +240,7 @@ void main() {
     });
 
     test('toJson excludes null optional fields', () {
-      final params = FeedParams(page: 1, pageSize: 20, type: FeedType.trending);
+      const params = FeedParams(page: 1, pageSize: 20, type: FeedType.trending);
 
       final json = params.toJson();
 
@@ -245,7 +251,7 @@ void main() {
     });
 
     test('toJson includes provided optional fields', () {
-      final params = FeedParams(
+      const params = FeedParams(
         page: 1,
         pageSize: 20,
         type: FeedType.following,
@@ -262,9 +268,9 @@ void main() {
     });
 
     test('handles pagination correctly', () {
-      final params1 = FeedParams(page: 1, pageSize: 25);
-      final params2 = FeedParams(page: 2, pageSize: 25);
-      final params3 = FeedParams(page: 10, pageSize: 25);
+      const params1 = FeedParams(page: 1, pageSize: 25);
+      const params2 = FeedParams(page: 2, pageSize: 25);
+      const params3 = FeedParams(page: 10, pageSize: 25);
 
       expect(params1.page, equals(1));
       expect(params2.page, equals(2));
@@ -273,7 +279,7 @@ void main() {
     });
 
     test('supports cursor-based pagination', () {
-      final params = FeedParams(
+      const params = FeedParams(
         page: 1,
         pageSize: 20,
         type: FeedType.newest,

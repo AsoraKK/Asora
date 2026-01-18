@@ -9,8 +9,12 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:asora/core/security/spki_utils.dart';
 
 /// Enable/disable certificate pinning based on build configuration
 const bool kEnableCertPinning = bool.fromEnvironment(
@@ -31,13 +35,15 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 const Map<String, List<String>> kPinnedDomains = {
   // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
-    'sha256/8Yr68F+Il4QA1qJ0q3przJXW5zckEtwBjUB05FH5AMw=', // Azure leaf cert pattern
-    'sha256/ZkWBotC4nL+Ba/kXaVPx7TpoRSF9uwxEAuufz67J7sQ=', // Azure intermediate cert
+    'Z3AiGp9DlTnC3kBo2OuHwOQioV4d2JMmVyTYkhwrGJo=',
+    'vJ6M3i+5a+DFTIsiBT8oChn+90/pUsO3qQP9rkv0QdI=',
+    'oyz1YegTss9+AE696+KzxtEGe2KMUXvj1XUUGvsr2CA=',
   ],
   // Legacy/dev hostname (if still called by any client)
   'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
-    'sha256/8Yr68F+Il4QA1qJ0q3przJXW5zckEtwBjUB05FH5AMw=', // Azure leaf cert pattern
-    'sha256/ZkWBotC4nL+Ba/kXaVPx7TpoRSF9uwxEAuufz67J7sQ=', // Azure intermediate cert
+    'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
+    'sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
+    '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=',
   ],
 };
 
@@ -57,14 +63,26 @@ void _assertNoPlaceholders() {
   );
 }
 
+String _normalizePin(String pin) {
+  if (pin.startsWith('sha256/')) {
+    return pin.substring('sha256/'.length);
+  }
+  return pin;
+}
+
 /// Certificate pinning HTTP client adapter
 ///
 /// Validates peer certificates by computing SPKI SHA-256 and comparing
 /// against pinned values. Fails closed on mismatch.
 class PinnedCertHttpClientAdapter implements HttpClientAdapter {
-  final HttpClientAdapter _adapter;
+  final IOHttpClientAdapter _adapter;
 
-  PinnedCertHttpClientAdapter(this._adapter);
+  PinnedCertHttpClientAdapter(HttpClientAdapter adapter)
+    : _adapter = adapter is IOHttpClientAdapter
+          ? adapter
+          : IOHttpClientAdapter() {
+    _adapter.validateCertificate = _validateCertificate;
+  }
 
   @override
   Future<ResponseBody> fetch(
@@ -72,34 +90,40 @@ class PinnedCertHttpClientAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    if (!kEnableCertPinning) {
-      return _adapter.fetch(options, requestStream, cancelFuture);
-    }
-
-    try {
-      final response = await _adapter.fetch(
-        options,
-        requestStream,
-        cancelFuture,
-      );
-      final host = Uri.parse(options.uri.toString()).host;
-
-      if (kPinnedDomains.containsKey(host)) {
-        debugPrint('🔒 Certificate validated for pinned host: $host');
-      }
-
-      return response;
-    } catch (e) {
-      final host = Uri.parse(options.uri.toString()).host;
-      if (kPinnedDomains.containsKey(host)) {
-        _logCertPinViolation(host, 'fetch_failed: ${e.toString()}');
-      }
-      rethrow;
-    }
+    return _adapter.fetch(options, requestStream, cancelFuture);
   }
 
   @override
   void close({bool force = false}) => _adapter.close(force: force);
+}
+
+bool _validateCertificate(X509Certificate? certificate, String host, int port) {
+  if (!kEnableCertPinning) {
+    return true;
+  }
+
+  final pins = kPinnedDomains[host];
+  if (pins == null || pins.isEmpty) {
+    return true;
+  }
+
+  if (certificate == null) {
+    _logCertPinViolation(host, 'missing_certificate');
+    return false;
+  }
+
+  try {
+    final spkiBase64 = computeSpkiSha256Base64(certificate);
+    final normalizedPins = pins.map(_normalizePin).toSet();
+    final matched = normalizedPins.contains(spkiBase64);
+    if (!matched) {
+      _logCertPinViolation(host, 'pin_mismatch');
+    }
+    return matched;
+  } catch (e) {
+    _logCertPinViolation(host, 'validation_error: ${e.toString()}');
+    return false;
+  }
 }
 
 /// Create Dio instance with certificate pinning enabled
@@ -138,10 +162,7 @@ class _CertPinningInterceptor extends Interceptor {
 
     if (kPinnedDomains.containsKey(host)) {
       debugPrint('🔍 Certificate pinning check for: $host');
-      // Note: In Flutter, we rely on the HttpClientAdapter and platform
-      // certificate validation. The actual SPKI validation would need
-      // native platform code or a more sophisticated approach.
-      // This is a simplified implementation for demonstration.
+      // SPKI validation runs inside the HttpClientAdapter callback.
     }
 
     handler.next(options);
@@ -150,7 +171,8 @@ class _CertPinningInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.type == DioExceptionType.connectionError ||
-        err.type == DioExceptionType.unknown) {
+        err.type == DioExceptionType.unknown ||
+        err.type == DioExceptionType.badCertificate) {
       final host = Uri.parse(err.requestOptions.uri.toString()).host;
       if (kPinnedDomains.containsKey(host)) {
         _logCertPinViolation(host, 'connection_failed');
@@ -172,7 +194,8 @@ class _CertPinningInterceptor extends Interceptor {
 /// Utility to check if an error likely stems from pin validation failure.
 bool isPinValidationError(DioException err) {
   if (err.type == DioExceptionType.connectionError ||
-      err.type == DioExceptionType.unknown) {
+      err.type == DioExceptionType.unknown ||
+      err.type == DioExceptionType.badCertificate) {
     final host = Uri.parse(err.requestOptions.uri.toString()).host;
     return kPinnedDomains.containsKey(host);
   }

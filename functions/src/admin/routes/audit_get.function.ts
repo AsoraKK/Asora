@@ -1,114 +1,75 @@
-/**
- * Admin Audit Log GET Endpoint
- * 
- * GET /api/admin/audit
- * 
- * Returns audit log entries for admin configuration changes.
- * Protected by Cloudflare Access JWT validation.
- * 
- * Query parameters:
- * - limit: Number of entries to return (default: 50, max: 200)
- */
-
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { v4 as uuidv4 } from 'uuid';
-import { requireCloudflareAccess } from '../accessAuth';
-import { getAuditLog } from '../adminService';
-import { parseAuditLimit } from '../validation';
-import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
+import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import { requireActiveAdmin } from '../adminAuthUtils';
 
-async function adminAuditGetHandler(
-  request: HttpRequest,
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+
+function parseLimit(value?: string | null): number {
+  if (!value) {
+    return DEFAULT_LIMIT;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_LIMIT;
+  }
+  return Math.min(parsed, MAX_LIMIT);
+}
+
+export async function adminAuditGetHandler(
+  req: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
-  const correlationId = request.headers.get('X-Correlation-ID') || uuidv4();
-  const origin = request.headers.get('Origin');
-
-  context.log(`[admin/audit GET] Request received [${correlationId}]`);
-
-  // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
-    return createCorsPreflightResponse(origin);
+  const cors = handleCorsAndMethod(req.method ?? 'GET', ['GET']);
+  if (cors.shouldReturn && cors.response) {
+    return cors.response;
   }
 
-  // Verify Cloudflare Access with owner email enforcement
-  const authResult = await requireCloudflareAccess(request.headers, { requireOwner: true });
-
-  if ('error' in authResult) {
-    context.warn(`[admin/audit GET] Auth failed: ${authResult.error} [${correlationId}]`);
-    return withCorsHeaders(
-      {
-        status: authResult.status,
-        jsonBody: {
-          error: {
-            code: authResult.code || 'UNAUTHORIZED',
-            message: authResult.error,
-            correlationId,
-          },
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Correlation-ID': correlationId,
-        },
-      },
-      origin
-    );
-  }
+  const limit = parseLimit(req.query?.get?.('limit'));
 
   try {
-    // Parse and validate limit parameter
-    const limitStr = request.query.get('limit');
-    const limit = parseAuditLimit(limitStr);
+    const database = getCosmosDatabase();
+    const auditLogs = database.container('audit_logs');
 
-    const entries = await getAuditLog(limit);
+    const response = await auditLogs.items
+      .query(
+        {
+          query: 'SELECT * FROM c ORDER BY c.timestamp DESC',
+        },
+        { maxItemCount: limit }
+      )
+      .fetchNext();
 
-    context.log(`[admin/audit GET] Returning ${entries.length} entries [${correlationId}]`);
+    const items = response.resources.map((entry) => ({
+      id: entry.id ?? null,
+      timestamp: entry.timestamp ?? null,
+      actorId: entry.actorId ?? null,
+      action: entry.action ?? entry.eventType ?? null,
+      targetType: entry.targetType ?? null,
+      subjectId: entry.subjectId ?? null,
+      reasonCode: entry.reasonCode ?? null,
+      note: entry.note ?? null,
+      before: entry.before ?? null,
+      after: entry.after ?? null,
+      correlationId: entry.correlationId ?? null,
+      metadata: entry.metadata ?? null,
+    }));
 
-    return withCorsHeaders(
-      {
-        status: 200,
-        jsonBody: {
-          entries,
-          limit,
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store',
-          'X-Correlation-ID': correlationId,
-        },
-      },
-      origin
-    );
-  } catch (err) {
-    context.error(`[admin/audit GET] Error: ${err instanceof Error ? err.message : err} [${correlationId}]`);
-
-    return withCorsHeaders(
-      {
-        status: 500,
-        jsonBody: {
-          error: {
-            code: 'INTERNAL_ERROR',
-            message: 'Failed to retrieve audit log',
-            correlationId,
-          },
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Correlation-ID': correlationId,
-        },
-      },
-      origin
-    );
+    return createSuccessResponse({
+      items,
+      count: items.length,
+      nextCursor: response.continuationToken ?? null,
+    });
+  } catch (error) {
+    context.error('admin.audit.list_failed', error);
+    return createErrorResponse(500, 'internal_error', 'Failed to list audit entries');
   }
 }
 
-// Register HTTP trigger
-// NOTE: Using '_admin' prefix because Azure Functions reserves '/admin/' for runtime APIs
 app.http('admin_audit_get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/audit',
-  handler: adminAuditGetHandler,
+  handler: requireActiveAdmin(adminAuditGetHandler),
 });
-
-export { adminAuditGetHandler };

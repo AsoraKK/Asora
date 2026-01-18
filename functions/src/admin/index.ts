@@ -15,3 +15,8 @@ import './routes/appeals_get.function';
 import './routes/appeals_action.function';
 import './routes/users_search.function';
 import './routes/users_action.function';
+
+// Moderation class weight management endpoints
+import './get-moderation-classes.function';
+import './save-weight-override.function';
+import './reset-weight-override.function';

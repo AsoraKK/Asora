@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 
@@ -179,10 +180,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _handleSubmit() async {
-    final success = await ref.read(postCreationProvider.notifier).submit();
-    if (!success && mounted) {
-      // Error is shown via the banner
-    }
+    await runWithDeviceGuard(
+      context,
+      ref,
+      IntegrityUseCase.postContent,
+      () async {
+        final success = await ref.read(postCreationProvider.notifier).submit();
+        if (!success && mounted) {
+          // Error is shown via the banner
+        }
+      },
+    );
   }
 
   void _handleClose(BuildContext context) {

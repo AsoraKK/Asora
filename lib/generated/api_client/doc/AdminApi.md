@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**adminAppealsGet**](AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
 [**adminAppealsList**](AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
 [**adminAppealsReject**](AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
+[**adminAuditList**](AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
 [**adminContentBlock**](AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
 [**adminContentPublish**](AdminApi.md#admincontentpublish) | **POST** /_admin/content/{contentId}/publish | Publish content
 [**adminFlagsGet**](AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
@@ -204,6 +205,49 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAuditList**
+> AdminAuditListResponse adminAuditList(limit)
+
+List admin audit log entries
+
+Returns recent admin audit entries.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final int limit = 56; // int | Number of entries to return (1-200)
+
+try {
+    final response = api.adminAuditList(limit);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAuditList: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **limit** | **int**| Number of entries to return (1-200) | [optional] 
+
+### Return type
+
+[**AdminAuditListResponse**](AdminAuditListResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

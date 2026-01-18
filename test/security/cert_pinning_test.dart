@@ -13,7 +13,7 @@ void main() {
         reason: 'No hosts configured for pinning',
       );
 
-      final pinPattern = RegExp(r'^sha256/[A-Za-z0-9+/=]{43,44}$');
+      final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
 
       for (final entry in pinsMap.entries) {
         final host = entry.key;
@@ -39,11 +39,6 @@ void main() {
                 p.toUpperCase().contains('TODO'),
             false,
             reason: 'Generic placeholder token found in pin for host $host',
-          );
-          expect(
-            p.startsWith('sha256/'),
-            true,
-            reason: 'Pin must start with sha256/ for host $host',
           );
           expect(
             pinPattern.hasMatch(p),

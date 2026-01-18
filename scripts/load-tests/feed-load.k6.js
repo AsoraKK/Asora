@@ -35,12 +35,11 @@ export const options = {
   
   // Performance thresholds
   thresholds: {
-    'http_req_duration': ['p(95)<200'],        // p95 < 200ms (target)
-    'http_req_duration': ['p(99)<500'],        // p99 < 500ms
-    'feed_latency_ms': ['p(95)<200'],          // Custom feed p95 < 200ms
-    'feed_errors': ['rate<0.01'],              // Error rate < 1%
-    'feed_success': ['rate>0.99'],             // Success rate > 99%
-    'http_req_failed': ['rate<0.01'],          // k6 built-in failure rate
+    'http_req_duration': ['p(95)<200', 'p(99)<500'], // p95 < 200ms, p99 < 500ms
+    'feed_latency_ms': ['p(95)<200'],               // Custom feed p95 < 200ms
+    'feed_errors': ['rate<0.01'],                   // Error rate < 1%
+    'feed_success': ['rate>0.99'],                  // Success rate > 99%
+    'http_req_failed': ['rate<0.01'],               // k6 built-in failure rate
   },
   
   // Summary output
@@ -93,14 +92,13 @@ export default function (data) {
     'status is 200': (r) => r.status === 200,
     'response has items': (r) => {
       try {
-        const body = JSON.parse(r.body);
-        return Array.isArray(body.items) || Array.isArray(body.data) || Array.isArray(body);
+        const body = r.json();
+        const data = body?.data ?? body;
+        return Array.isArray(data?.items) || Array.isArray(data?.posts);
       } catch {
         return false;
       }
     },
-    'response time < 200ms': (r) => r.timings.duration < 200,
-    'response time < 500ms': (r) => r.timings.duration < 500,
   });
   
   feedSuccessRate.add(success);

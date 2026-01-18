@@ -30,6 +30,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   app_links: ^6.3.2 # Deep link handling for OAuth callbacks (replaces uni_links)
+  asn1lib: ^1.5.0 # ASN.1 parsing for SPKI extraction
   crypto: ^3.0.3 # For certificate pinning SPKI hashing
   cupertino_icons: ^1.0.8
   dio: ^5.4.0

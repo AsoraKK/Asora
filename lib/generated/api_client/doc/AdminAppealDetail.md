@@ -18,6 +18,12 @@ Name | Type | Description | Notes
 **userStatement** | **String** |  | [optional] 
 **evidenceUrls** | **BuiltList&lt;String&gt;** |  | [optional] 
 **internalNote** | **String** |  | [optional] 
+**votesFor** | **int** |  | [optional] 
+**votesAgainst** | **int** |  | [optional] 
+**totalVotes** | **int** |  | [optional] 
+**votingStatus** | **String** |  | [optional] 
+**expiresAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**timeRemainingSeconds** | **int** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

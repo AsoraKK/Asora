@@ -8,11 +8,10 @@
 /// 📱 Platform: Flutter with native TLS validation
 library;
 
-import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/spki_utils.dart';
 import 'package:asora/core/security/security_telemetry.dart';
 
 /// TLS pinning implementation with SPKI verification
@@ -47,8 +46,7 @@ class TlsPinningValidator {
 
     try {
       // Extract SPKI from certificate and compute SHA-256
-      final spkiHash = _extractSpkiHash(certificate);
-      final spkiBase64 = base64.encode(spkiHash);
+      final spkiBase64 = computeSpkiSha256Base64(certificate);
 
       // Check against configured pins
       final matched = _config.spkiPinsBase64.contains(spkiBase64);
@@ -88,39 +86,6 @@ class TlsPinningValidator {
       // On error: strict = block, warn-only = allow
       return !_config.strictMode;
     }
-  }
-
-  /// Extract SPKI (SubjectPublicKeyInfo) from X509 certificate and hash it
-  Uint8List _extractSpkiHash(X509Certificate cert) {
-    // Get DER-encoded certificate
-    final certDer = cert.der;
-
-    // Parse ASN.1 to extract SPKI
-    // X.509 structure: Certificate ::= SEQUENCE {
-    //   tbsCertificate       TBSCertificate,
-    //   signatureAlgorithm   AlgorithmIdentifier,
-    //   signatureValue       BIT STRING
-    // }
-    // TBSCertificate ::= SEQUENCE {
-    //   ... (version, serial, etc.)
-    //   subjectPublicKeyInfo SubjectPublicKeyInfo, <-- We want this
-    //   ...
-    // }
-    //
-    // For simplicity, we'll use a heuristic approach:
-    // The SPKI typically starts after the subject DN and before extensions.
-    // A full ASN.1 parser would be ideal, but for pinning purposes,
-    // we can use the public key bytes directly from the certificate.
-
-    // Dart's X509Certificate exposes limited info; we need native platform code
-    // or a package like asn1lib for proper SPKI extraction.
-    // For now, hash the entire certificate as a fallback (less ideal but functional)
-
-    // TODO: Implement proper SPKI extraction via platform channels or asn1lib
-    // For MVP, hash the certificate DER (not ideal but prevents some MITM)
-
-    final digest = sha256.convert(certDer);
-    return Uint8List.fromList(digest.bytes);
   }
 
   /// User-friendly error message for pinning failure
