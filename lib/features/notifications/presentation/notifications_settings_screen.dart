@@ -13,6 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart';
 import 'package:asora/features/notifications/application/notification_providers.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/components/lyth_snackbar.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsSettingsScreen extends ConsumerWidget {
   const NotificationsSettingsScreen({super.key});
@@ -26,7 +30,7 @@ class NotificationsSettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Notification Settings')),
       body: preferencesAsync.when(
         data: (preferences) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(context.spacing.lg),
           children: [
             _CategoryTogglesSection(
               preferences: preferences,
@@ -36,26 +40,23 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                       .read(preferencesControllerProvider.notifier)
                       .update(prefs);
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Preferences updated'),
-                        duration: Duration(seconds: 2),
-                      ),
+                    LythSnackbar.success(
+                      context: context,
+                      message: 'Preferences updated',
+                      duration: const Duration(seconds: 2),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to update: $e'),
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                      ),
+                    LythSnackbar.error(
+                      context: context,
+                      message: 'Failed to update: $e',
                     );
                   }
                 }
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: context.spacing.xxl),
             _QuietHoursSection(
               preferences: preferences,
               onUpdate: (prefs) async {
@@ -65,14 +66,15 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                       .update(prefs);
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to update: $e')),
+                    LythSnackbar.error(
+                      context: context,
+                      message: 'Failed to update: $e',
                     );
                   }
                 }
               },
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: context.spacing.xxl),
             devicesAsync.when(
               data: (devices) => _DevicesSection(
                 devices: devices,
@@ -82,14 +84,16 @@ class NotificationsSettingsScreen extends ConsumerWidget {
                         .read(devicesControllerProvider.notifier)
                         .revoke(deviceId);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Device removed')),
+                      LythSnackbar.success(
+                        context: context,
+                        message: 'Device removed',
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to remove: $e')),
+                      LythSnackbar.error(
+                        context: context,
+                        message: 'Failed to remove: $e',
                       );
                     }
                   }
@@ -106,12 +110,12 @@ class NotificationsSettingsScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Error loading preferences: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
+              SizedBox(height: context.spacing.lg),
+              LythButton.primary(
+                label: 'Retry',
                 onPressed: () {
                   ref.read(preferencesControllerProvider.notifier).load();
                 },
-                child: const Text('Retry'),
               ),
             ],
           ),
@@ -137,6 +141,7 @@ class _CategoryTogglesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,14 +152,14 @@ class _CategoryTogglesSection extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: spacing.xs),
         Text(
           'Choose which types of notifications you want to receive',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: spacing.lg),
         _CategoryToggle(
           icon: Icons.people_outline,
           title: 'Social Updates',
@@ -168,7 +173,7 @@ class _CategoryTogglesSection extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: spacing.md),
         _CategoryToggle(
           icon: Icons.article_outlined,
           title: 'News & Updates',
@@ -182,7 +187,7 @@ class _CategoryTogglesSection extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: spacing.md),
         _CategoryToggle(
           icon: Icons.campaign_outlined,
           title: 'Marketing',
@@ -196,13 +201,13 @@ class _CategoryTogglesSection extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
+        SizedBox(height: spacing.md),
+        LythCard(
+          padding: EdgeInsets.all(spacing.md),
+          backgroundColor: theme.colorScheme.primaryContainer.withValues(
+            alpha: 0.3,
           ),
+          borderColor: theme.colorScheme.primary.withValues(alpha: 0.4),
           child: Row(
             children: [
               Icon(
@@ -210,7 +215,7 @@ class _CategoryTogglesSection extends StatelessWidget {
                 size: 20,
                 color: theme.colorScheme.primary,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: spacing.md),
               Expanded(
                 child: Text(
                   'Safety and security notifications are always enabled',
@@ -246,11 +251,9 @@ class _CategoryToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return LythCard(
+      padding: EdgeInsets.zero,
+      borderColor: theme.colorScheme.outlineVariant,
       child: SwitchListTile(
         secondary: Icon(icon, color: theme.colorScheme.primary),
         title: Text(
@@ -280,6 +283,7 @@ class _QuietHoursSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,18 +294,18 @@ class _QuietHoursSection extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: spacing.xs),
         Text(
           'Tap hours to toggle quiet mode (safety alerts will still come through)',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: spacing.sm),
         Row(
           children: [
             Icon(Icons.access_time, size: 16, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
+            SizedBox(width: spacing.sm),
             Text(
               'Timezone: ${preferences.timezone}',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -310,7 +314,7 @@ class _QuietHoursSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: spacing.lg),
         _QuietHoursGrid(
           quietHours: preferences.quietHours,
           onHourToggled: (hour) {
@@ -338,25 +342,25 @@ class _QuietHoursGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return LythCard(
+      padding: EdgeInsets.all(spacing.lg),
+      backgroundColor: theme.colorScheme.surfaceContainerHigh,
       child: Column(
         children: [
           // Grid of 24 hour cells (4 rows x 6 columns)
           for (int row = 0; row < 4; row++)
             Padding(
-              padding: EdgeInsets.only(bottom: row < 3 ? 8 : 0),
+              padding: EdgeInsets.only(bottom: row < 3 ? spacing.sm : 0),
               child: Row(
                 children: [
                   for (int col = 0; col < 6; col++)
                     Expanded(
                       child: Padding(
-                        padding: EdgeInsets.only(right: col < 5 ? 8 : 0),
+                        padding: EdgeInsets.only(
+                          right: col < 5 ? spacing.sm : 0,
+                        ),
                         child: _HourCell(
                           hour: row * 6 + col,
                           isQuiet: quietHours.isQuietAt(row * 6 + col),
@@ -367,7 +371,7 @@ class _QuietHoursGrid extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing.lg),
           // Legend
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -380,9 +384,9 @@ class _QuietHoursGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: spacing.sm),
               Text('Quiet', style: theme.textTheme.bodySmall),
-              const SizedBox(width: 24),
+              SizedBox(width: spacing.xxl),
               Container(
                 width: 16,
                 height: 16,
@@ -392,7 +396,7 @@ class _QuietHoursGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: spacing.sm),
               Text('Active', style: theme.textTheme.bodySmall),
             ],
           ),
@@ -420,7 +424,7 @@ class _HourCell extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.radius.sm),
       child: Container(
         height: 48,
         decoration: BoxDecoration(
@@ -432,7 +436,7 @@ class _HourCell extends StatelessWidget {
                 ? theme.colorScheme.primary
                 : theme.colorScheme.outline,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(context.radius.sm),
         ),
         child: Center(
           child: Text(
@@ -463,6 +467,7 @@ class _DevicesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,21 +478,18 @@ class _DevicesSection extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: spacing.xs),
         Text(
           'Manage devices receiving push notifications (max 3)',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: spacing.lg),
         if (devices.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          LythCard(
+            padding: EdgeInsets.all(spacing.xxl),
+            borderColor: theme.colorScheme.outlineVariant,
             child: Center(
               child: Column(
                 children: [
@@ -496,7 +498,7 @@ class _DevicesSection extends StatelessWidget {
                     size: 48,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: spacing.md),
                   Text(
                     'No devices registered',
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -510,7 +512,7 @@ class _DevicesSection extends StatelessWidget {
         else
           ...devices.map(
             (device) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: spacing.md),
               child: _DeviceCard(device: device, onRevoke: onRevoke),
             ),
           ),
@@ -529,20 +531,18 @@ class _DeviceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final platform = device.platform == 'fcm' ? 'Android' : 'iOS';
+    final spacing = context.spacing;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return LythCard(
+      padding: EdgeInsets.all(spacing.lg),
+      borderColor: theme.colorScheme.outlineVariant,
       child: Row(
         children: [
           Icon(
             device.platform == 'fcm' ? Icons.phone_android : Icons.phone_iphone,
             color: theme.colorScheme.primary,
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,7 +553,7 @@ class _DeviceCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: spacing.xs),
                 Text(
                   'Last seen: ${_formatLastSeen(device.lastSeenAt)}',
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -563,9 +563,10 @@ class _DeviceCard extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(
+          LythButton.tertiary(
+            label: 'Remove',
             onPressed: () => onRevoke(device.id),
-            child: const Text('Remove'),
+            size: LythButtonSize.small,
           ),
         ],
       ),

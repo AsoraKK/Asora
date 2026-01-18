@@ -2,6 +2,10 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+
 /// Dialog that requires users to type DELETE before confirming.
 class DeleteConfirmationDialog extends StatefulWidget {
   const DeleteConfirmationDialog({super.key});
@@ -38,6 +42,7 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final spacing = context.spacing;
 
     return AlertDialog(
       title: const Text('Delete account'),
@@ -48,34 +53,31 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
           const Text(
             'This removes your profile and content. This action cannot be undone.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing.lg),
           Text(
             'Type DELETE to confirm',
             style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
-          TextField(
+          SizedBox(height: spacing.sm),
+          LythTextField(
+            label: null,
+            placeholder: 'DELETE',
             controller: _controller,
-            autofocus: true,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              hintText: 'DELETE',
-              border: OutlineInputBorder(),
-            ),
+            onChanged: (_) => _handleChanged(),
           ),
         ],
       ),
       actions: [
-        TextButton(
+        LythButton.secondary(
+          label: 'Cancel',
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
         ),
-        FilledButton(
+        LythButton(
+          label: 'Delete',
+          variant: LythButtonVariant.destructive,
           onPressed: _canConfirm ? () => Navigator.of(context).pop(true) : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-          child: const Text('Delete'),
+          disabled: !_canConfirm,
         ),
       ],
     );

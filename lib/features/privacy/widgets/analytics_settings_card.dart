@@ -7,6 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/analytics/analytics_consent.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 /// Analytics settings card for privacy settings screen.
 ///
@@ -20,154 +23,141 @@ class AnalyticsSettingsCard extends ConsumerWidget {
     final consent = ref.watch(analyticsConsentProvider);
     final consentNotifier = ref.read(analyticsConsentProvider.notifier);
     final analyticsClient = ref.read(analyticsClientProvider);
+    final spacing = context.spacing;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Analytics',
-                    style: GoogleFonts.sora(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Share anonymous usage data',
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Help us improve Lythaus by sharing anonymous usage patterns. '
-                        'No personal information is collected.',
-                        style: GoogleFonts.sora(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch(
-                  value: consent.enabled,
-                  onChanged: (enabled) async {
-                    if (enabled) {
-                      await consentNotifier.grantConsent(
-                        ConsentSource.privacySettings,
-                      );
-                      // Log consent granted event
-                      await analyticsClient.logEvent(
-                        AnalyticsEvents.analyticsConsentChanged,
-                        properties: {
-                          AnalyticsEvents.propEnabled: true,
-                          AnalyticsEvents.propSource: 'privacy_settings',
-                        },
-                      );
-                    } else {
-                      // Log consent revoked BEFORE revoking (while still enabled)
-                      await analyticsClient.logEvent(
-                        AnalyticsEvents.analyticsConsentChanged,
-                        properties: {
-                          AnalyticsEvents.propEnabled: false,
-                          AnalyticsEvents.propSource: 'privacy_settings',
-                        },
-                      );
-                      await consentNotifier.revokeConsent(
-                        ConsentSource.privacySettings,
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Data is anonymous and can be turned off at any time. '
-                    'See our Privacy Policy for details.',
-                    style: GoogleFonts.sora(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () {
-                // TODO: Navigate to privacy policy or open URL
-                // For now, show a simple dialog
-                showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Privacy Policy'),
-                    content: const Text(
-                      'Analytics data includes:\n'
-                      '• Screen views and navigation\n'
-                      '• Feature usage (anonymous)\n'
-                      '• Error and crash reports\n\n'
-                      'We NEVER collect:\n'
-                      '• Your email or name\n'
-                      '• Message content\n'
-                      '• Precise location\n'
-                      '• Device identifiers\n\n'
-                      'Full privacy policy: https://asora.com/privacy',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              icon: Icon(
-                Icons.open_in_new,
-                size: 14,
+    return LythCard(
+      padding: EdgeInsets.all(spacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
                 color: Theme.of(context).colorScheme.primary,
               ),
-              label: Text(
-                'Privacy Policy',
-                style: GoogleFonts.sora(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.primary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Analytics',
+                  style: GoogleFonts.sora(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Share anonymous usage data',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Help us improve Lythaus by sharing anonymous usage patterns. '
+                      'No personal information is collected.',
+                      style: GoogleFonts.sora(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: consent.enabled,
+                onChanged: (enabled) async {
+                  if (enabled) {
+                    await consentNotifier.grantConsent(
+                      ConsentSource.privacySettings,
+                    );
+                    // Log consent granted event
+                    await analyticsClient.logEvent(
+                      AnalyticsEvents.analyticsConsentChanged,
+                      properties: {
+                        AnalyticsEvents.propEnabled: true,
+                        AnalyticsEvents.propSource: 'privacy_settings',
+                      },
+                    );
+                  } else {
+                    // Log consent revoked BEFORE revoking (while still enabled)
+                    await analyticsClient.logEvent(
+                      AnalyticsEvents.analyticsConsentChanged,
+                      properties: {
+                        AnalyticsEvents.propEnabled: false,
+                        AnalyticsEvents.propSource: 'privacy_settings',
+                      },
+                    );
+                    await consentNotifier.revokeConsent(
+                      ConsentSource.privacySettings,
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Data is anonymous and can be turned off at any time. '
+                  'See our Privacy Policy for details.',
+                  style: GoogleFonts.sora(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LythButton.tertiary(
+            label: 'Privacy Policy',
+            onPressed: () {
+              // TODO: Navigate to privacy policy or open URL
+              // For now, show a simple dialog
+              showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Privacy Policy'),
+                  content: const Text(
+                    'Analytics data includes:\n'
+                    '• Screen views and navigation\n'
+                    '• Feature usage (anonymous)\n'
+                    '• Error and crash reports\n\n'
+                    'We NEVER collect:\n'
+                    '• Your email or name\n'
+                    '• Message content\n'
+                    '• Precise location\n'
+                    '• Device identifiers\n\n'
+                    'Full privacy policy: https://lythaus.co/privacy',
+                  ),
+                  actions: [
+                    LythButton.secondary(
+                      label: 'Close',
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              );
+            },
+            icon: Icons.open_in_new,
+            size: LythButtonSize.small,
+          ),
+        ],
       ),
     );
   }

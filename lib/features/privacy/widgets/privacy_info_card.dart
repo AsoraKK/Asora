@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
+
 class PrivacyInfoCard extends StatelessWidget {
   const PrivacyInfoCard({super.key});
 
@@ -28,53 +31,52 @@ class PrivacyInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final primary = Theme.of(context).colorScheme.primary;
+    final spacing = context.spacing;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return LythCard(
+      padding: EdgeInsets.all(spacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: primary),
+              SizedBox(width: spacing.md),
+              Text(
+                'Privacy resources',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: spacing.md),
+          for (var i = 0; i < _items.length; i++) ...[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, color: primary),
-                const SizedBox(width: 12),
-                Text(
-                  'Privacy resources',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+                Icon(_items[i].icon, size: 20),
+                SizedBox(width: spacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _items[i].title,
+                        style: textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: spacing.xs),
+                      Text(_items[i].body, style: textTheme.bodyMedium),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            for (var i = 0; i < _items.length; i++) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(_items[i].icon, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _items[i].title,
-                          style: textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(_items[i].body, style: textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (i < _items.length - 1) const SizedBox(height: 12),
-            ],
+            if (i < _items.length - 1) SizedBox(height: spacing.md),
           ],
-        ),
+        ],
       ),
     );
   }

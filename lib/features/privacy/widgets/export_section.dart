@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/privacy/widgets/cooldown_row.dart';
 
 /// Card widget for the privacy export flow.
@@ -27,79 +30,53 @@ class PrivacyExportSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final spacing = context.spacing;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.lock_person_outlined, color: colorScheme.primary),
-                const SizedBox(width: 12),
-                Text(
-                  'Export your data',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Request a copy of your account data. We email a download link.',
-              style: textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onRequest,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: _buildButtonChild(context),
-              ),
-            ),
-            const SizedBox(height: 12),
-            cooldownRow,
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh status'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButtonChild(BuildContext context) {
-    if (isBusy) {
-      return const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return LythCard(
+      padding: EdgeInsets.all(spacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
+          Row(
+            children: [
+              Icon(Icons.lock_person_outlined, color: colorScheme.primary),
+              SizedBox(width: spacing.md),
+              Text(
+                'Export your data',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: 12),
-          Text('Export requested'),
+          SizedBox(height: spacing.md),
+          Text(
+            'Request a copy of your account data. We email a download link.',
+            style: textTheme.bodyMedium,
+          ),
+          SizedBox(height: spacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: LythButton(
+              label: buttonLabel,
+              variant: LythButtonVariant.primary,
+              onPressed: onRequest,
+              isLoading: isBusy,
+              disabled: isCoolingDown,
+            ),
+          ),
+          SizedBox(height: spacing.md),
+          cooldownRow,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: LythButton.tertiary(
+              label: 'Refresh status',
+              onPressed: onRefresh,
+              icon: Icons.refresh,
+              size: LythButtonSize.small,
+            ),
+          ),
         ],
-      );
-    }
-
-    return Text(
-      buttonLabel,
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: isCoolingDown
-            ? Theme.of(context).colorScheme.onSurfaceVariant
-            : null,
       ),
     );
   }
