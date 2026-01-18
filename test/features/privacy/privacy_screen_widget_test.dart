@@ -7,6 +7,8 @@ import 'package:asora/features/privacy/state/privacy_controller.dart';
 import 'package:asora/features/privacy/state/privacy_state.dart';
 import 'package:asora/features/privacy/widgets/privacy_blocking_overlay.dart';
 import 'package:asora/features/privacy/widgets/privacy_error_banner.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_text_field.dart';
 import 'test_doubles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +29,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Try again in 02:30'), findsOneWidget);
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      final button = tester.widget<LythButton>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is LythButton && widget.label.startsWith('Try again in'),
+        ),
+      );
       expect(button.onPressed, isNull);
     });
 
@@ -47,13 +54,15 @@ void main() {
       await tester.tap(find.text('Delete account'));
       await tester.pumpAndSettle();
 
-      final confirmButton = find.widgetWithText(FilledButton, 'Delete');
-      expect(tester.widget<FilledButton>(confirmButton).onPressed, isNull);
+      final confirmButton = find.byWidgetPredicate(
+        (widget) => widget is LythButton && widget.label == 'Delete',
+      );
+      expect(tester.widget<LythButton>(confirmButton).onPressed, isNull);
 
-      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.enterText(find.byType(LythTextField), 'DELETE');
       await tester.pump();
 
-      expect(tester.widget<FilledButton>(confirmButton).onPressed, isNotNull);
+      expect(tester.widget<LythButton>(confirmButton).onPressed, isNotNull);
     });
 
     testWidgets('countdown label updates after tick', (tester) async {

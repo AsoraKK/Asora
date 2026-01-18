@@ -63,7 +63,6 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
             label: null,
             placeholder: 'DELETE',
             controller: _controller,
-            textCapitalization: TextCapitalization.characters,
             onChanged: (_) => _handleChanged(),
           ),
         ],
