@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/widgets/post_card.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
 
 void main() {
   testWidgets('PostCard does not render AI score badges', (tester) async {
-    const post = Post(
+    final post = Post(
       id: 'post-1',
       title: 'Test Post',
       content: 'Test content',
-      author: Author(
+      author: const Author(
         id: 'author-1',
         displayName: 'Tester',
         reputationScore: 120,
@@ -20,7 +21,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: MaterialApp(
           home: Scaffold(body: PostCard(post: post, showAiScores: true)),
         ),

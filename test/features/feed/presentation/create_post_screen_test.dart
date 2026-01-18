@@ -30,6 +30,19 @@ class FakeDeviceSecurityService implements DeviceSecurityService {
   void clearCache() {}
 }
 
+/// Wrapper that watches deviceSecurityStateProvider to trigger it in tests
+class _SecurityProviderWatcher extends ConsumerWidget {
+  const _SecurityProviderWatcher({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch to trigger the FutureProvider
+    ref.watch(deviceSecurityStateProvider);
+    return child;
+  }
+}
+
 /// Test user factory
 User createTestUser() {
   return User(
@@ -210,11 +223,13 @@ void main() {
               deviceSecurityServiceProvider.overrideWithValue(
                 FakeDeviceSecurityService(compromisedState),
               ),
-              deviceSecurityStateProvider.overrideWithValue(
-                AsyncData<DeviceSecurityState>(compromisedState),
+              deviceSecurityStateProvider.overrideWith(
+                (ref) async => compromisedState,
               ),
             ],
-            child: const MaterialApp(home: CreatePostScreen()),
+            child: const MaterialApp(
+              home: _SecurityProviderWatcher(child: CreatePostScreen()),
+            ),
           ),
         );
 
