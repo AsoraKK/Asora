@@ -149,5 +149,3 @@ lib/src/model/legal_hold_record.dart
 lib/src/model/rate_limit_error.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/admin_audit_entry_test.dart
-test/admin_audit_list_response_test.dart
