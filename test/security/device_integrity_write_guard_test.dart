@@ -30,10 +30,14 @@ class _GuardedActionWidgetState extends ConsumerState<_GuardedActionWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch the provider to ensure it resolves before interaction
+    final securityState = ref.watch(deviceSecurityStateProvider);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(executed ? 'executed' : 'blocked'),
+        Text(securityState.isLoading ? 'loading' : 'ready'),
         ElevatedButton(
           onPressed: () async {
             await runWithDeviceGuard(
@@ -82,8 +86,8 @@ void main() {
           deviceSecurityServiceProvider.overrideWithValue(
             _FakeDeviceSecurityService(compromisedState),
           ),
-          deviceSecurityStateProvider.overrideWithValue(
-            AsyncData<DeviceSecurityState>(compromisedState),
+          deviceSecurityStateProvider.overrideWith(
+            (ref) async => compromisedState,
           ),
         ],
         child: const MaterialApp(
@@ -91,6 +95,12 @@ void main() {
         ),
       ),
     );
+
+    // Allow FutureProvider to resolve before tapping
+    await tester.pumpAndSettle();
+
+    // Verify provider has resolved
+    expect(find.text('ready'), findsOneWidget);
 
     await tester.tap(find.text('Post'));
     await tester.pumpAndSettle();
