@@ -11,6 +11,8 @@ doc/AdminAppealOriginalDecision.md
 doc/AdminAppealQueueItem.md
 doc/AdminAppealQueueResponse.md
 doc/AdminAppealStatus.md
+doc/AdminAuditEntry.md
+doc/AdminAuditListResponse.md
 doc/AdminContentActionRequest.md
 doc/AdminContentActionResponse.md
 doc/AdminContentState.md
@@ -91,6 +93,8 @@ lib/src/model/admin_appeal_original_decision.dart
 lib/src/model/admin_appeal_queue_item.dart
 lib/src/model/admin_appeal_queue_response.dart
 lib/src/model/admin_appeal_status.dart
+lib/src/model/admin_audit_entry.dart
+lib/src/model/admin_audit_list_response.dart
 lib/src/model/admin_content_action_request.dart
 lib/src/model/admin_content_action_response.dart
 lib/src/model/admin_content_state.dart

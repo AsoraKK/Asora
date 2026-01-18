@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/notifications/application/notification_permission_service.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 class NotificationPermissionPrompt extends ConsumerStatefulWidget {
   final VoidCallback? onPermissionGranted;
@@ -62,24 +64,25 @@ class _NotificationPermissionPromptState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final spacing = context.spacing;
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(spacing.xxl),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight:
                   MediaQuery.of(context).size.height -
                   MediaQuery.of(context).padding.top -
                   MediaQuery.of(context).padding.bottom -
-                  48, // padding
+                  spacing.xxl * 2, // padding
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 32),
+                SizedBox(height: spacing.xxxl),
 
                 // Illustration
                 Icon(
@@ -88,7 +91,7 @@ class _NotificationPermissionPromptState
                   color: colorScheme.primary,
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: spacing.xxl),
 
                 // Title
                 Text(
@@ -99,7 +102,7 @@ class _NotificationPermissionPromptState
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing.md),
 
                 // Body text
                 Text(
@@ -111,7 +114,7 @@ class _NotificationPermissionPromptState
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: spacing.xxl),
 
                 // Benefits list
                 const _BenefitItem(
@@ -120,7 +123,7 @@ class _NotificationPermissionPromptState
                   subtitle: 'Comments, likes, and new followers',
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing.md),
 
                 const _BenefitItem(
                   icon: Icons.security_outlined,
@@ -128,7 +131,7 @@ class _NotificationPermissionPromptState
                   subtitle: 'Important account and safety notifications',
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing.md),
 
                 const _BenefitItem(
                   icon: Icons.tune_outlined,
@@ -136,35 +139,24 @@ class _NotificationPermissionPromptState
                   subtitle: 'Customize categories and quiet hours anytime',
                 ),
 
-                const SizedBox(height: 32),
+                SizedBox(height: spacing.xxxl),
 
                 // Enable button
-                FilledButton(
+                LythButton.primary(
+                  label: 'Enable Notifications',
                   onPressed: _isRequesting ? null : _handleEnableNotifications,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isRequesting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Enable Notifications'),
+                  isLoading: _isRequesting,
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing.md),
 
                 // Not now button
-                TextButton(
+                LythButton.tertiary(
+                  label: 'Not Now',
                   onPressed: _isRequesting ? null : _handleNotNow,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text('Not Now'),
                 ),
 
-                const SizedBox(height: 12),
+                SizedBox(height: spacing.md),
 
                 // Privacy note
                 Text(
@@ -175,7 +167,7 @@ class _NotificationPermissionPromptState
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: spacing.lg),
               ],
             ),
           ),

@@ -293,8 +293,11 @@ function Invites() {
           <div className="data-table">
             <div className="data-row header">
               <span>Invite</span>
+              <span>Created</span>
+              <span>Created by</span>
               <span>Status</span>
               <span>Usage</span>
+              <span>Max uses</span>
               <span>Last used</span>
               <span>Actions</span>
             </div>
@@ -305,13 +308,16 @@ function Invites() {
                   <span className="muted">{invite.label || '-'}</span>
                   <span className="muted">{invite.email || 'Any email'}</span>
                 </span>
+                <span>{formatDateTime(invite.createdAt)}</span>
+                <span>{invite.createdBy || '-'}</span>
                 <span>
                   <span className={`status-pill ${String(invite.status).toLowerCase()}`}>
                     {invite.status}
                   </span>
                 </span>
+                <span>{invite.usageCount}</span>
                 <span>
-                  {invite.usageCount}/{invite.maxUses}
+                  {invite.maxUses}
                 </span>
                 <span>{formatDateTime(invite.lastUsedAt)}</span>
                 <span>

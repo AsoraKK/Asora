@@ -23,6 +23,12 @@ part 'admin_appeal_detail.g.dart';
 /// * [userStatement] 
 /// * [evidenceUrls] 
 /// * [internalNote] 
+/// * [votesFor] 
+/// * [votesAgainst] 
+/// * [totalVotes] 
+/// * [votingStatus] 
+/// * [expiresAt] 
+/// * [timeRemainingSeconds] 
 @BuiltValue()
 abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -55,6 +61,24 @@ abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppeal
 
   @BuiltValueField(wireName: r'internalNote')
   String? get internalNote;
+
+  @BuiltValueField(wireName: r'votesFor')
+  int? get votesFor;
+
+  @BuiltValueField(wireName: r'votesAgainst')
+  int? get votesAgainst;
+
+  @BuiltValueField(wireName: r'totalVotes')
+  int? get totalVotes;
+
+  @BuiltValueField(wireName: r'votingStatus')
+  String? get votingStatus;
+
+  @BuiltValueField(wireName: r'expiresAt')
+  DateTime? get expiresAt;
+
+  @BuiltValueField(wireName: r'timeRemainingSeconds')
+  int? get timeRemainingSeconds;
 
   AdminAppealDetail._();
 
@@ -149,6 +173,48 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
         specifiedType: const FullType(String),
       );
     }
+    if (object.votesFor != null) {
+      yield r'votesFor';
+      yield serializers.serialize(
+        object.votesFor,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.votesAgainst != null) {
+      yield r'votesAgainst';
+      yield serializers.serialize(
+        object.votesAgainst,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.totalVotes != null) {
+      yield r'totalVotes';
+      yield serializers.serialize(
+        object.totalVotes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.votingStatus != null) {
+      yield r'votingStatus';
+      yield serializers.serialize(
+        object.votingStatus,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.expiresAt != null) {
+      yield r'expiresAt';
+      yield serializers.serialize(
+        object.expiresAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.timeRemainingSeconds != null) {
+      yield r'timeRemainingSeconds';
+      yield serializers.serialize(
+        object.timeRemainingSeconds,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
   }
 
   @override
@@ -241,6 +307,51 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
             specifiedType: const FullType(String),
           ) as String;
           result.internalNote = valueDes;
+          break;
+        case r'votesFor':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.votesFor = valueDes;
+          break;
+        case r'votesAgainst':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.votesAgainst = valueDes;
+          break;
+        case r'totalVotes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.totalVotes = valueDes;
+          break;
+        case r'votingStatus':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.votingStatus = valueDes;
+          break;
+        case r'expiresAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.expiresAt = valueDes;
+          break;
+        case r'timeRemainingSeconds':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.timeRemainingSeconds = valueDes;
           break;
         default:
           unhandled.add(key);

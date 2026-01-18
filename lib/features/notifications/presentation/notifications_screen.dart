@@ -15,6 +15,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart'
     as models;
 import 'package:asora/features/notifications/application/notification_providers.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
+import 'package:asora/design_system/components/lyth_card.dart';
+import 'package:asora/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -94,11 +97,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         title: const Text('Notifications'),
         actions: [
           if (state.notifications.any((n) => !n.read))
-            TextButton(
+            LythButton.tertiary(
+              size: LythButtonSize.small,
+              label: 'Mark all read',
               onPressed: () {
                 // TODO: Implement mark all as read
               },
-              child: const Text('Mark all read'),
             ),
         ],
       ),
@@ -161,17 +165,24 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
+    final scheme = theme.colorScheme;
+    final backgroundColor = notification.read
+        ? scheme.surface
+        : scheme.primaryContainer.withValues(alpha: 0.18);
 
     return Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.horizontal,
       background: _SwipeActionBackground(
-        color: theme.colorScheme.primary,
+        color: scheme.primary,
+        iconColor: scheme.onPrimary,
         icon: Icons.check,
         alignment: Alignment.centerLeft,
       ),
       secondaryBackground: _SwipeActionBackground(
-        color: theme.colorScheme.error,
+        color: scheme.error,
+        iconColor: scheme.onError,
         icon: Icons.delete_outline,
         alignment: Alignment.centerRight,
       ),
@@ -190,87 +201,79 @@ class _NotificationCard extends StatelessWidget {
           onDismiss();
         }
       },
-      child: InkWell(
+      child: LythCard.clickable(
         onTap: onTap,
-        child: Container(
-          color: notification.read
-              ? Colors.transparent
-              : theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category icon
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getCategoryColor(notification.category, theme),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _getCategoryIcon(notification.category),
-                  size: 20,
-                  color: theme.colorScheme.onPrimary,
-                ),
+        padding: EdgeInsets.all(spacing.lg),
+        backgroundColor: backgroundColor,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category icon
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _getCategoryColor(notification.category, scheme),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 16),
+              child: Icon(
+                _getCategoryIcon(notification.category),
+                size: 20,
+                color: _getCategoryIconColor(notification.category, scheme),
+              ),
+            ),
+            SizedBox(width: spacing.lg),
 
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: notification.read
-                                  ? FontWeight.normal
-                                  : FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: notification.read
+                                ? FontWeight.normal
+                                : FontWeight.bold,
                           ),
-                        ),
-                        if (!notification.read)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.body,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.7,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _formatTime(notification.createdAt),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.5,
+                      if (!notification.read)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
+                    ],
+                  ),
+                  SizedBox(height: spacing.xs),
+                  Text(
+                    notification.body,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
                     ),
-                  ],
-                ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: spacing.sm),
+                  Text(
+                    _formatTime(notification.createdAt),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -288,14 +291,27 @@ class _NotificationCard extends StatelessWidget {
 
   Color _getCategoryColor(
     models.NotificationCategory category,
-    ThemeData theme,
+    ColorScheme scheme,
   ) {
     return switch (category) {
-      models.NotificationCategory.social => theme.colorScheme.primary,
-      models.NotificationCategory.safety => Colors.orange,
-      models.NotificationCategory.security => Colors.red,
-      models.NotificationCategory.news => Colors.blue,
-      models.NotificationCategory.marketing => Colors.purple,
+      models.NotificationCategory.social => scheme.primary,
+      models.NotificationCategory.safety => scheme.tertiary,
+      models.NotificationCategory.security => scheme.error,
+      models.NotificationCategory.news => scheme.secondary,
+      models.NotificationCategory.marketing => scheme.secondaryContainer,
+    };
+  }
+
+  Color _getCategoryIconColor(
+    models.NotificationCategory category,
+    ColorScheme scheme,
+  ) {
+    return switch (category) {
+      models.NotificationCategory.social => scheme.onPrimary,
+      models.NotificationCategory.safety => scheme.onTertiary,
+      models.NotificationCategory.security => scheme.onError,
+      models.NotificationCategory.news => scheme.onSecondary,
+      models.NotificationCategory.marketing => scheme.onSecondaryContainer,
     };
   }
 
@@ -313,11 +329,13 @@ class _NotificationCard extends StatelessWidget {
 
 class _SwipeActionBackground extends StatelessWidget {
   final Color color;
+  final Color iconColor;
   final IconData icon;
   final Alignment alignment;
 
   const _SwipeActionBackground({
     required this.color,
+    required this.iconColor,
     required this.icon,
     required this.alignment,
   });
@@ -328,7 +346,7 @@ class _SwipeActionBackground extends StatelessWidget {
       color: color,
       alignment: alignment,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Icon(icon, color: Colors.white),
+      child: Icon(icon, color: iconColor),
     );
   }
 }
@@ -346,22 +364,23 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(spacing.xxxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 80, color: theme.colorScheme.error),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing.xxl),
             Text(
               'Something went wrong',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spacing.md),
             Text(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -369,11 +388,11 @@ class _ErrorState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
+            SizedBox(height: spacing.xxxl),
+            LythButton.primary(
+              label: 'Try Again',
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              icon: Icons.refresh,
             ),
           ],
         ),
@@ -394,10 +413,11 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = context.spacing;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(spacing.xxxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -406,14 +426,14 @@ class _EmptyState extends StatelessWidget {
               size: 120,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing.xxl),
             Text(
               'No Notifications',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spacing.md),
             Text(
               'When you get notifications, they will show up here',
               style: theme.textTheme.bodyLarge?.copyWith(
@@ -421,11 +441,11 @@ class _EmptyState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            OutlinedButton.icon(
+            SizedBox(height: spacing.xxxl),
+            LythButton.secondary(
+              label: 'Refresh',
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+              icon: Icons.refresh,
             ),
           ],
         ),

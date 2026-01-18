@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/features/feed/presentation/create_post_screen.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
@@ -14,6 +17,18 @@ import 'package:asora/features/auth/domain/user.dart';
 
 // Mock classes
 class MockPostRepository extends Mock implements PostRepository {}
+
+class FakeDeviceSecurityService implements DeviceSecurityService {
+  FakeDeviceSecurityService(this._state);
+
+  final DeviceSecurityState _state;
+
+  @override
+  Future<DeviceSecurityState> evaluateSecurity() async => _state;
+
+  @override
+  void clearCache() {}
+}
 
 /// Test user factory
 User createTestUser() {
@@ -162,6 +177,65 @@ void main() {
     });
 
     group('Form Submission', () {
+      testWidgets('blocks submission on compromised device', (tester) async {
+        final compromisedState = DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+        final guard = DeviceIntegrityGuard(
+          deviceSecurityService: FakeDeviceSecurityService(compromisedState),
+          config: const MobileSecurityConfig(
+            tlsPins: TlsPinConfig(
+              enabled: false,
+              strictMode: true,
+              spkiPinsBase64: [],
+            ),
+            strictDeviceIntegrity: true,
+            blockRootedDevices: true,
+          ),
+          environment: Environment.production,
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              postRepositoryProvider.overrideWithValue(mockRepository),
+              authStateProvider.overrideWith((ref) {
+                return MockAuthStateNotifier(createTestUser());
+              }),
+              jwtProvider.overrideWith((ref) async => 'test-token'),
+              deviceIntegrityGuardProvider.overrideWithValue(guard),
+              deviceSecurityServiceProvider.overrideWithValue(
+                FakeDeviceSecurityService(compromisedState),
+              ),
+              deviceSecurityStateProvider.overrideWithValue(
+                AsyncData<DeviceSecurityState>(compromisedState),
+              ),
+            ],
+            child: const MaterialApp(home: CreatePostScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final textField = find.byType(TextField);
+        await tester.enterText(textField, 'Blocked post');
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Security Notice'), findsOneWidget);
+        verifyNever(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        );
+      });
+
       testWidgets('shows loading indicator when submitting', (tester) async {
         // Setup mock to return immediately (no delay to avoid timer issues)
         when(

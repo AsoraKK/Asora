@@ -12,6 +12,22 @@ const STATUS_OPTIONS = [
   { value: 'all', label: 'All' }
 ];
 
+function formatTimeRemaining(seconds) {
+  if (seconds === null || seconds === undefined) {
+    return '-';
+  }
+  if (seconds <= 0) {
+    return '0m';
+  }
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
 function Appeals() {
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState('pending');
@@ -137,6 +153,8 @@ function Appeals() {
               <span>Author</span>
               <span>Status</span>
               <span>Reason</span>
+              <span>Votes</span>
+              <span>Time left</span>
               <span>Actions</span>
             </div>
             {items.map((item) => (
@@ -158,6 +176,14 @@ function Appeals() {
                   </span>
                 </span>
                 <span>{item.originalReasonCategory || '-'}</span>
+                <span>
+                  <strong>{item.votesFor ?? 0}/{item.votesAgainst ?? 0}</strong>
+                  <span className="muted">{item.totalVotes ?? 0} total</span>
+                </span>
+                <span>
+                  <strong>{formatTimeRemaining(item.timeRemainingSeconds)}</strong>
+                  <span className="muted">{formatDateTime(item.expiresAt)}</span>
+                </span>
                 <span>
                   <LythButton
                     variant="ghost"
@@ -218,6 +244,21 @@ function Appeals() {
                         <span className="detail-label">Appeal type</span>
                         <span>{detail.appeal.appealType || '-'}</span>
                       </div>
+                      <div>
+                        <span className="detail-label">Votes</span>
+                        <span>
+                          {detail.appeal.votesFor ?? 0}/{detail.appeal.votesAgainst ?? 0} (
+                          {detail.appeal.totalVotes ?? 0} total)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="detail-label">Time remaining</span>
+                        <span>{formatTimeRemaining(detail.appeal.timeRemainingSeconds)}</span>
+                      </div>
+                      <div>
+                        <span className="detail-label">Expires</span>
+                        <span>{formatDateTime(detail.appeal.expiresAt)}</span>
+                      </div>
                     </div>
                     <div className="preview-card">
                       {detail.appeal.userStatement || 'No user statement provided.'}
@@ -256,6 +297,9 @@ function Appeals() {
                       {detail.originalDecision.decidedAt
                         ? ` on ${formatDateTime(detail.originalDecision.decidedAt)}`
                         : ''}
+                    </div>
+                    <div className="detail-note">
+                      Config version: {detail.originalDecision.configVersionUsed ?? '-'}
                     </div>
                     <div className="pill-list">
                       {detail.originalDecision.reasonCodes?.length

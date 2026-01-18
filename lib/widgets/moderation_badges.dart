@@ -2,22 +2,18 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_icon_button.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// ASORA MODERATION BADGES
 ///
 /// 🎯 Purpose: Display moderation status and AI scores on content
-/// ✅ Features: Flagged warnings, AI confidence scores, appeal status
+/// ✅ Features: Flagged warnings, appeal status
 /// 🎨 Design: Subtle badges with color coding and icons
 /// 🔒 Privacy: Optional toggle for AI scores (user preference)
 
 class ModerationBadges extends StatelessWidget {
   final ModerationStatus status;
-  final double? aiScore;
-  final bool showAiScore;
   final String? appealStatus;
   final VoidCallback? onAppeal;
   final bool isOwnContent;
@@ -25,8 +21,6 @@ class ModerationBadges extends StatelessWidget {
   const ModerationBadges({
     super.key,
     required this.status,
-    this.aiScore,
-    this.showAiScore = false,
     this.appealStatus,
     this.onAppeal,
     this.isOwnContent = false,
@@ -40,11 +34,6 @@ class ModerationBadges extends StatelessWidget {
     final statusBadge = _buildStatusBadge(context);
     if (statusBadge != null) {
       badges.add(statusBadge);
-    }
-
-    // AI score badge (if enabled and available)
-    if (showAiScore && aiScore != null) {
-      badges.add(_buildAiScoreBadge(context));
     }
 
     // Appeal status badge (for own content)
@@ -106,50 +95,6 @@ class ModerationBadges extends StatelessWidget {
     );
   }
 
-  Widget _buildAiScoreBadge(BuildContext context) {
-    final score = aiScore!;
-    final scheme = context.colorScheme;
-
-    // Color coding based on AI confidence
-    Color backgroundColor;
-    Color textColor;
-    IconData icon;
-    String label;
-
-    if (score >= 0.8) {
-      // High confidence (likely violation)
-      backgroundColor = scheme.error.withValues(alpha: 0.14);
-      textColor = scheme.error;
-      icon = Icons.warning;
-      label = 'AI flagged';
-    } else if (score >= 0.6) {
-      // Medium confidence
-      backgroundColor = scheme.primary.withValues(alpha: 0.2);
-      textColor = scheme.onSurface;
-      icon = Icons.info;
-      label = 'AI review';
-    } else if (score >= 0.4) {
-      // Low-medium confidence
-      backgroundColor = scheme.surfaceContainerHigh;
-      textColor = scheme.onSurface;
-      icon = Icons.help_outline;
-      label = 'AI signal';
-    } else {
-      // Low confidence (likely clean)
-      backgroundColor = scheme.surfaceContainerHigh;
-      textColor = scheme.onSurface;
-      icon = Icons.check;
-      label = 'AI clear';
-    }
-
-    return _Badge(
-      icon: icon,
-      text: label,
-      backgroundColor: backgroundColor,
-      textColor: textColor,
-    );
-  }
-
   Widget _buildAppealBadge(BuildContext context) {
     final scheme = context.colorScheme;
     IconData icon;
@@ -157,9 +102,11 @@ class ModerationBadges extends StatelessWidget {
     Color textColor;
     String text;
 
-    switch (appealStatus) {
+    final normalized = appealStatus?.toLowerCase();
+    switch (normalized) {
       case 'pending':
       case 'under_review':
+      case 'underreview':
         icon = Icons.schedule;
         backgroundColor = scheme.surfaceContainerHigh;
         textColor = scheme.onSurface;

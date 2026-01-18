@@ -7,6 +7,8 @@
  * 📊 Models: Violence, hate speech, adult content, spam detection
  */
 
+import { getDefaultWeights, getClassByName } from './hive-classes-config';
+
 // ─────────────────────────────────────────────────────────────
 // Types and Enums
 // ─────────────────────────────────────────────────────────────
@@ -83,10 +85,22 @@ export interface HiveClientConfig {
   retries?: number;
   /** Retry delay in milliseconds (default: 1000) */
   retryDelayMs?: number;
-  /** Dynamic threshold for BLOCK action (overrides default 0.85) */
+  /** 
+   * Dynamic threshold for BLOCK action (overrides default 0.85)
+   * @deprecated Use classWeights for per-class control
+   */
   blockThreshold?: number;
-  /** Dynamic threshold for WARN action (overrides default 0.5) */
+  /** 
+   * Dynamic threshold for WARN action (overrides default 0.5)
+   * @deprecated Use classWeights for per-class control
+   */
   warnThreshold?: number;
+  /**
+   * Per-class weight overrides (e.g., { hate: 0.90, spam: 0.70 })
+   * If provided, individual class scores are compared against their specific weights
+   * Falls back to defaults from hive-classes-config.ts
+   */
+  classWeights?: Record<string, number>;
 }
 
 /**
@@ -105,32 +119,32 @@ export class HiveAPIError extends Error {
 }
 
 export interface HiveModerationRequest {
-  user_id: string;
-  content: {
-    text?: string;
-    url?: string; // For images/videos
-  };
+  text_data?: string;
+  image_url?: string;
   models?: string[];
+  user_id?: string;
 }
 
 export interface HiveModerationResponse {
-  status: 'success' | 'error';
-  response: {
-    outputs: {
-      [modelName: string]: {
-        summary: {
-          action: 'accept' | 'review' | 'reject';
-          action_reason: string;
-          score: number;
-        };
-        classes: {
+  id: string;
+  code: number;
+  project_id: number;
+  user_id: number;
+  created_on: string;
+  status: Array<{
+    status: {
+      code: string;
+      message: string;
+    };
+    response: {
+      output: Array<{
+        classes: Array<{
           class: string;
           score: number;
-        }[];
-      };
+        }>;
+      }>;
     };
-  };
-  request_id: string;
+  }>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -179,6 +193,7 @@ export class HiveAIClient {
   private readonly retryDelayMs: number;
   private readonly blockThreshold: number;
   private readonly warnThreshold: number;
+  private readonly classWeights: Record<string, number>;
   private readonly defaultModels = [
     'general_text_classification',
     'hate_speech_detection_text',
@@ -195,6 +210,7 @@ export class HiveAIClient {
       this.retryDelayMs = DEFAULT_RETRY_DELAY_MS;
       this.blockThreshold = DEFAULT_BLOCK_THRESHOLD;
       this.warnThreshold = DEFAULT_WARN_THRESHOLD;
+      this.classWeights = getDefaultWeights();
     } else {
       this.apiKey = config.apiKey;
       this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
@@ -203,6 +219,8 @@ export class HiveAIClient {
       this.retryDelayMs = config.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
       this.blockThreshold = config.blockThreshold ?? DEFAULT_BLOCK_THRESHOLD;
       this.warnThreshold = config.warnThreshold ?? DEFAULT_WARN_THRESHOLD;
+      // Use custom weights if provided, otherwise load defaults
+      this.classWeights = config.classWeights ?? getDefaultWeights();
     }
   }
 
@@ -226,9 +244,9 @@ export class HiveAIClient {
     }
 
     const request: HiveModerationRequest = {
-      user_id: userId,
-      content: { text },
+      text_data: text,
       models: models || this.defaultModels,
+      user_id: userId,
     };
 
     const response = await this.executeRequest(request, contentId);
@@ -244,9 +262,9 @@ export class HiveAIClient {
     customModels?: string[]
   ): Promise<HiveModerationResponse> {
     const request: HiveModerationRequest = {
-      user_id: userId,
-      content: { text },
+      text_data: text,
       models: customModels || this.defaultModels,
+      user_id: userId,
     };
 
     return this.executeRequest(request);
@@ -267,9 +285,9 @@ export class HiveAIClient {
     ];
 
     const request: HiveModerationRequest = {
-      user_id: userId,
-      content: { url: imageUrl },
+      image_url: imageUrl,
       models: imageModels,
+      user_id: userId,
     };
 
     return this.executeRequest(request);
@@ -294,7 +312,7 @@ export class HiveAIClient {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${this.apiKey}`,
+              Authorization: `Token ${this.apiKey}`,
               ...(contentId && { 'X-Content-Id': contentId }),
             },
             body: JSON.stringify(request),
@@ -336,17 +354,17 @@ export class HiveAIClient {
             );
           }
 
-          // Validate response structure
-          if (!data || data.status === 'error') {
+          // Validate response structure for v2 format
+          if (!data || data.code !== 200) {
             throw new HiveAPIError(
-              'Hive API returned error status',
+              `Hive API returned code ${data?.code || 'unknown'}`,
               'API_ERROR_STATUS',
               response.status,
               true
             );
           }
 
-          if (!data.response?.outputs) {
+          if (!data.status || !Array.isArray(data.status) || data.status.length === 0) {
             throw new HiveAPIError(
               'Invalid response structure from Hive API',
               'INVALID_RESPONSE',
@@ -410,48 +428,78 @@ export class HiveAIClient {
    * Parse Hive response to standardized ModerationResult
    */
   private parseToModerationResult(response: HiveModerationResponse): ModerationResult {
-    const outputs = response.response.outputs;
     let highestScore = 0;
-    let worstAction: 'accept' | 'review' | 'reject' = 'accept';
     const categories = new Set<ModerationCategory>();
     const reasons: string[] = [];
 
-    // Analyze each model's output
-    for (const [modelName, output] of Object.entries(outputs)) {
-      const { summary, classes } = output;
+    // Check API response status
+    if (response.code !== 200 || !response.status || response.status.length === 0) {
+      throw new HiveAPIError(
+        `Hive API error: code ${response.code}`,
+        'API_ERROR',
+        response.code,
+        false
+      );
+    }
 
-      // Track worst action and highest score
-      if (summary.action === 'reject') {
-        worstAction = 'reject';
-        highestScore = Math.max(highestScore, summary.score);
-        if (summary.action_reason) {
-          reasons.push(`${modelName}: ${summary.action_reason}`);
-        }
-      } else if (summary.action === 'review' && worstAction !== 'reject') {
-        worstAction = 'review';
-        highestScore = Math.max(highestScore, summary.score);
-        if (summary.action_reason) {
-          reasons.push(`${modelName}: ${summary.action_reason}`);
-        }
-      }
+    const firstStatus = response.status[0];
+    if (!firstStatus || firstStatus.status.code !== '0') {
+      throw new HiveAPIError(
+        `Hive moderation error: ${firstStatus?.status.message || 'Unknown error'}`,
+        'MODERATION_ERROR',
+        response.code,
+        false
+      );
+    }
 
-      // Collect flagged categories using dynamic thresholds
-      for (const cls of classes) {
-        if (cls.score > this.warnThreshold) {
-          const category = this.mapClassToCategory(cls.class);
-          categories.add(category);
-          if (cls.score > this.blockThreshold) {
-            reasons.push(`High ${cls.class} score: ${(cls.score * 100).toFixed(1)}%`);
+    // Parse the response output
+    const output = firstStatus.response?.output;
+    if (!output || output.length === 0) {
+      // No violations detected
+      return {
+        action: ModerationAction.ALLOW,
+        confidence: 0,
+        categories: [],
+        reasons: ['Content appears safe'],
+        raw: response,
+        requestId: response.id,
+      };
+    }
+
+    // Analyze classes from the output using per-class weights
+    let shouldBlock = false;
+    let shouldWarn = false;
+    
+    for (const item of output) {
+      if (item.classes && Array.isArray(item.classes)) {
+        for (const cls of item.classes) {
+          // Get the weight for this specific class (or fall back to global thresholds)
+          const classWeight = this.classWeights[cls.class] ?? this.blockThreshold;
+          const warnWeight = classWeight * 0.6; // Warn at 60% of block threshold
+          
+          highestScore = Math.max(highestScore, cls.score);
+          
+          // Check if this class exceeds its individual weight threshold
+          if (cls.score >= classWeight) {
+            shouldBlock = true;
+            const category = this.mapClassToCategory(cls.class);
+            categories.add(category);
+            reasons.push(`${cls.class}: ${(cls.score * 100).toFixed(1)}% (threshold: ${(classWeight * 100).toFixed(0)}%)`);
+          } else if (cls.score >= warnWeight) {
+            shouldWarn = true;
+            const category = this.mapClassToCategory(cls.class);
+            categories.add(category);
+            reasons.push(`${cls.class}: ${(cls.score * 100).toFixed(1)}% (warn level)`);
           }
         }
       }
     }
 
-    // Map Hive action to internal ModerationAction using dynamic thresholds
+    // Map to internal ModerationAction based on per-class decisions
     let action: ModerationAction;
-    if (worstAction === 'reject' || highestScore >= this.blockThreshold) {
+    if (shouldBlock) {
       action = ModerationAction.BLOCK;
-    } else if (worstAction === 'review' || highestScore >= this.warnThreshold) {
+    } else if (shouldWarn) {
       action = ModerationAction.WARN;
     } else {
       action = ModerationAction.ALLOW;
@@ -463,7 +511,7 @@ export class HiveAIClient {
       categories: Array.from(categories),
       reasons: reasons.length > 0 ? reasons : ['Content appears safe'],
       raw: response,
-      requestId: response.request_id,
+      requestId: response.id,
     };
   }
 
@@ -504,29 +552,43 @@ export class HiveAIClient {
     flaggedCategories: string[];
     details: any;
   } {
-    const outputs = response.response.outputs;
     let highestScore = 0;
     let finalAction: 'accept' | 'review' | 'reject' = 'accept';
     const flaggedCategories: string[] = [];
     const details: any = {};
 
-    // Analyze each model's output
-    for (const [modelName, output] of Object.entries(outputs)) {
-      const { summary, classes } = output;
-      details[modelName] = { summary, classes };
+    // Parse the new v2 response format
+    if (response.code === 200 && response.status && response.status.length > 0) {
+      const firstStatus = response.status[0];
+      const output = firstStatus?.response?.output;
 
-      // Track highest risk score
-      if (summary.score > highestScore) {
-        highestScore = summary.score;
-        finalAction = summary.action;
-      }
+      if (output && output.length > 0) {
+        const item = output[0];
+        if (item) {
+          details.output = item;
 
-      // Collect flagged categories (score > 0.5 threshold)
-      classes.forEach(cls => {
-        if (cls.score > 0.5) {
-          flaggedCategories.push(`${modelName}:${cls.class}`);
+          if (item.classes && Array.isArray(item.classes)) {
+            for (const cls of item.classes) {
+              if (cls.score > highestScore) {
+                highestScore = cls.score;
+              }
+              // Collect flagged categories (score > 0.5 threshold)
+              if (cls.score > 0.5) {
+                flaggedCategories.push(cls.class);
+              }
+            }
+          }
         }
-      });
+      }
+    }
+
+    // Map score to action
+    if (highestScore >= 0.85) {
+      finalAction = 'reject';
+    } else if (highestScore >= 0.5) {
+      finalAction = 'review';
+    } else {
+      finalAction = 'accept';
     }
 
     return {

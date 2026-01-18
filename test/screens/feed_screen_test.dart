@@ -153,7 +153,7 @@ void main() {
       ); // Background pattern and others
     });
 
-    testWidgets('renders confidence chips in posts', (tester) async {
+    testWidgets('does not render AI confidence chips in posts', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -165,15 +165,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify confidence level chips are displayed (at least some should be visible)
-      expect(find.byType(Chip), findsWidgets);
-      // Check for any confidence labels that might be visible
-      final chipTexts =
-          find.text('High').evaluate().isNotEmpty ||
-          find.text('Medium').evaluate().isNotEmpty ||
-          find.text('Low').evaluate().isNotEmpty ||
-          find.text('AI Gen').evaluate().isNotEmpty;
-      expect(chipTexts, isTrue);
+      expect(find.text('AI Gen'), findsNothing);
+      expect(find.text('High'), findsNothing);
+      expect(find.text('Medium'), findsNothing);
+      expect(find.text('Low'), findsNothing);
     });
 
     testWidgets('handles scroll and pagination', (tester) async {

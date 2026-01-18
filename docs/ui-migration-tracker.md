@@ -29,7 +29,7 @@ Spacing/radius token cleanup is tracked in notes until fully enforced.
 | Security | `lib/screens/security_debug_screen.dart` | Migrated | 0 | 0 | Tokens + Lyth buttons |
 | Paywall | `lib/features/paywall/upgrade_prompt.dart` | Migrated | 0 | 0 | Lyth cards + buttons |
 | Admin (Flutter) | `lib/features/admin/ui/admin_config_screen.dart` | Migrated | 0 | 0 | Lyth slider + buttons |
-| Profile | `lib/ui/screens/profile/settings_screen.dart` | Pending | 0 | 0 | Replace stock fields/buttons |
-| Notifications | `lib/features/notifications/presentation/*.dart` | Pending | 0 | 0 | Replace stock fields/buttons |
-| Privacy | `lib/features/privacy/widgets/*.dart` | Pending | 0 | 0 | Replace stock fields/buttons |
+| Profile | `lib/ui/screens/profile/settings_screen.dart` | Migrated | 0 | 0 | Uses standard toggles only |
+| Notifications | `lib/features/notifications/presentation/*.dart` | Migrated | 0 | 0 | Lyth buttons + cards |
+| Privacy | `lib/features/privacy/widgets/*.dart` | Migrated | 0 | 0 | Lyth buttons + cards |
 | Web control panel | `apps/control-panel/src/**` | Migrated | 0 | 0 | Tokens + Lyth components |

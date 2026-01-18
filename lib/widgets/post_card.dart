@@ -111,8 +111,6 @@ class _PostCardState extends ConsumerState<PostCard> {
                   // Moderation badges
                   ModerationBadges(
                     status: widget.post.moderationStatus,
-                    aiScore: widget.post.aiScore,
-                    showAiScore: widget.showAiScores,
                     appealStatus: widget.post.appealStatus,
                     onAppeal: widget.isOwnPost && _canAppeal()
                         ? _showAppealDialog
@@ -290,7 +288,9 @@ class _PostCardState extends ConsumerState<PostCard> {
         return 'Your post has been flagged by the community. It is still visible.';
       case ModerationStatus.hidden:
         final appealStatus = widget.post.appealStatus?.toLowerCase();
-        if (appealStatus == 'pending' || appealStatus == 'under_review') {
+        if (appealStatus == 'pending' ||
+            appealStatus == 'under_review' ||
+            appealStatus == 'underreview') {
           return 'Your post is blocked pending an appeal outcome.';
         }
         return 'Your post has been blocked. You can appeal this decision if you believe it was made in error.';

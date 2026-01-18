@@ -25,6 +25,8 @@ export 'package:asora_api_client/src/model/admin_appeal_original_decision.dart';
 export 'package:asora_api_client/src/model/admin_appeal_queue_item.dart';
 export 'package:asora_api_client/src/model/admin_appeal_queue_response.dart';
 export 'package:asora_api_client/src/model/admin_appeal_status.dart';
+export 'package:asora_api_client/src/model/admin_audit_entry.dart';
+export 'package:asora_api_client/src/model/admin_audit_list_response.dart';
 export 'package:asora_api_client/src/model/admin_content_action_request.dart';
 export 'package:asora_api_client/src/model/admin_content_action_response.dart';
 export 'package:asora_api_client/src/model/admin_content_state.dart';

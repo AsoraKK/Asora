@@ -121,10 +121,10 @@ const _devMobileSecurity = MobileSecurityConfig(
     enabled: true,
     strictMode: false, // warn-only in dev
     spkiPinsBase64: [
-      // Dev Function App SPKI pin (from infra notes)
+      // Dev Function App SPKI pins (primary + backups)
+      'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
       'sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
-      // Azure intermediate cert (backup)
-      'ZkWBotC4nL+Ba/kXaVPx7TpoRSF9uwxEAuufz67J7sQ=',
+      '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=',
     ],
   ),
   strictDeviceIntegrity: false,

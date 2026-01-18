@@ -8,7 +8,6 @@ import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/design_system/theme/lyth_theme.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/feed/domain/models.dart' as domain;
@@ -36,18 +35,6 @@ class AsoraTheme {
   static ThemeData light() {
     return LythausTheme.light();
   }
-}
-
-// ---- AI‑score labels -------------------------------------------------------
-enum HumanConfidence { high, medium, low, aiGen }
-
-extension ConfidenceProps on HumanConfidence {
-  String get label => switch (this) {
-    HumanConfidence.high => 'High',
-    HumanConfidence.medium => 'Medium',
-    HumanConfidence.low => 'Low',
-    HumanConfidence.aiGen => 'AI Gen',
-  };
 }
 
 // ---- Main screen -----------------------------------------------------------
@@ -235,14 +222,11 @@ class _FeedListState extends ConsumerState<_FeedList> {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final p = _posts[index];
-          final confidence =
-              HumanConfidence.values[index % HumanConfidence.values.length];
           return Align(
             alignment: Alignment.topLeft,
             child: _PostCard(
               username: 'User${p.authorId}',
               text: p.text,
-              confidence: confidence,
               isGuest: isGuest,
             ),
           );
@@ -256,12 +240,10 @@ class _FeedListState extends ConsumerState<_FeedList> {
 class _PostCard extends StatelessWidget {
   final String username;
   final String text;
-  final HumanConfidence confidence;
   final bool isGuest;
   const _PostCard({
     required this.username,
     required this.text,
-    required this.confidence,
     required this.isGuest,
   });
 
@@ -300,8 +282,6 @@ class _PostCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    _ConfidenceChip(confidence: confidence),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -361,46 +341,6 @@ void _promptSignIn(BuildContext context) {
     message: 'Sign in to like, comment, or report.',
     duration: const Duration(seconds: 2),
   );
-}
-
-class _ConfidenceChip extends StatelessWidget {
-  final HumanConfidence confidence;
-  const _ConfidenceChip({required this.confidence});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = _chipColor(scheme);
-
-    return Chip(
-      labelPadding: EdgeInsets.symmetric(horizontal: context.spacing.md),
-      shape: StadiumBorder(
-        side: BorderSide(color: color.withValues(alpha: 0.4)),
-      ),
-      label: Text(
-        confidence.label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-      backgroundColor: color.withValues(alpha: 0.14),
-      visualDensity: VisualDensity.compact,
-    );
-  }
-
-  Color _chipColor(ColorScheme scheme) {
-    switch (confidence) {
-      case HumanConfidence.high:
-        return scheme.primary;
-      case HumanConfidence.medium:
-        return scheme.tertiary;
-      case HumanConfidence.low:
-        return scheme.onSurface.withValues(alpha: 0.6);
-      case HumanConfidence.aiGen:
-        return scheme.error;
-    }
-  }
 }
 
 // ---- Bottom nav ------------------------------------------------------------

@@ -780,6 +780,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /_admin/audit:
+    get:
+      operationId: adminAuditList
+      summary: List admin audit log entries
+      description: Returns recent admin audit entries.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of entries to return (1-200)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Admin audit list response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuditListResponse'
+        '401':
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Authenticated caller lacks required permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Appeal or content not found
           content:
@@ -1607,6 +1644,12 @@ components:
           $ref: '#/components/schemas/AdminAppealStatus'
         originalReasonCategory: { type: string }
         configVersionUsed: { type: integer }
+        votesFor: { type: integer }
+        votesAgainst: { type: integer }
+        totalVotes: { type: integer }
+        votingStatus: { type: string, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        timeRemainingSeconds: { type: integer, nullable: true }
     AdminAppealQueueResponse:
       type: object
       required: [ items, count ]
@@ -1633,6 +1676,12 @@ components:
           type: array
           items: { type: string }
         internalNote: { type: string }
+        votesFor: { type: integer }
+        votesAgainst: { type: integer }
+        totalVotes: { type: integer }
+        votingStatus: { type: string, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        timeRemainingSeconds: { type: integer, nullable: true }
     AdminAppealContent:
       type: object
       properties:
@@ -1676,6 +1725,37 @@ components:
         contentId: { type: string }
         contentStatus:
           $ref: '#/components/schemas/AdminContentState'
+    AdminAuditEntry:
+      type: object
+      properties:
+        id: { type: string }
+        timestamp: { type: string, format: date-time }
+        actorId: { type: string }
+        action: { type: string }
+        targetType: { type: string }
+        subjectId: { type: string }
+        reasonCode: { type: string }
+        note: { type: string }
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        correlationId: { type: string }
+        metadata:
+          type: object
+          additionalProperties: true
+    AdminAuditListResponse:
+      type: object
+      required: [ items, count ]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAuditEntry'
+        count: { type: integer }
+        nextCursor: { type: string }
     AdminUserSummary:
       type: object
       properties:
