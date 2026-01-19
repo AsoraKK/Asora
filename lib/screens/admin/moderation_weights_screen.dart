@@ -2,24 +2,45 @@
 ///
 /// Allows admins to view and adjust per-class moderation thresholds.
 /// Each of the 29 Hive moderation classes can be independently configured.
+library;
 
+import 'package:asora/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Models
-class ModerationClass {
+/// Represents a moderation class configuration with threshold weights.
+class _ModerationClass {
+  /// Unique identifier for the moderation class.
   final String id;
+
+  /// Human-readable name of the class.
   final String name;
+
+  /// Description of what this class moderates.
   final String description;
-  final String apiType; // text | image | deepfake
+
+  /// API type: text, image, or deepfake.
+  final String apiType;
+
+  /// Default weight threshold (0.0-1.0).
   final double defaultWeight;
+
+  /// Currently configured weight threshold.
   final double currentWeight;
+
+  /// Minimum allowed weight value.
   final double minWeight;
+
+  /// Maximum allowed weight value.
   final double maxWeight;
+
+  /// Whether this class has been customized from defaults.
   final bool isCustomized;
+
+  /// Guidance text for blocking actions.
   final String blockingGuidance;
 
-  ModerationClass({
+  _ModerationClass({
     required this.id,
     required this.name,
     required this.description,
@@ -32,8 +53,8 @@ class ModerationClass {
     required this.blockingGuidance,
   });
 
-  factory ModerationClass.fromJson(Map<String, dynamic> json) {
-    return ModerationClass(
+  factory _ModerationClass.fromJson(Map<String, dynamic> json) {
+    return _ModerationClass(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
@@ -48,32 +69,25 @@ class ModerationClass {
   }
 }
 
-// API Provider
-final moderationClassesProvider = FutureProvider<List<ModerationClass>>((
+final _moderationClassesProvider = FutureProvider<List<_ModerationClass>>((
   ref,
 ) async {
-  final response = await ref
-      .watch(apiClientProvider)
-      .get('/api/admin/moderation-classes');
+  final dio = ref.watch(secureDioProvider);
+  final response = await dio.get<Map<String, dynamic>>(
+    '/api/admin/moderation-classes',
+  );
 
-  final classes = (response.data['data']['classes'] as List)
-      .map((cls) => ModerationClass.fromJson(cls as Map<String, dynamic>))
+  final classes = (response.data!['data']['classes'] as List)
+      .map((cls) => _ModerationClass.fromJson(cls as Map<String, dynamic>))
       .toList();
 
   return classes;
 });
 
-// Simple API client provider (you'd integrate with your existing Dio client)
-final apiClientProvider = Provider((ref) {
-  // TODO: Replace with your actual Dio client from services
-  throw UnimplementedError('Wire up with your actual HTTP client');
-});
+class _WeightAdjustmentNotifier extends StateNotifier<Map<String, double>> {
+  final void Function(String className, double newWeight) _onSave;
 
-// Notifier for weight adjustments
-class WeightAdjustmentNotifier extends StateNotifier<Map<String, double>> {
-  final void Function(String className, double newWeight) onSave;
-
-  WeightAdjustmentNotifier(this.onSave) : super({});
+  _WeightAdjustmentNotifier(this._onSave) : super({});
 
   void updateWeight(String className, double newWeight) {
     state = {...state, className: newWeight};
@@ -81,7 +95,7 @@ class WeightAdjustmentNotifier extends StateNotifier<Map<String, double>> {
 
   Future<void> saveWeight(String className, double newWeight) async {
     try {
-      await onSave(className, newWeight);
+      _onSave(className, newWeight);
       state = {...state, className: newWeight};
     } catch (e) {
       rethrow;
@@ -89,9 +103,11 @@ class WeightAdjustmentNotifier extends StateNotifier<Map<String, double>> {
   }
 }
 
-final weightAdjustmentProvider =
-    StateNotifierProvider<WeightAdjustmentNotifier, Map<String, double>>((ref) {
-      return WeightAdjustmentNotifier((className, newWeight) async {
+final _weightAdjustmentProvider =
+    StateNotifierProvider<_WeightAdjustmentNotifier, Map<String, double>>((
+      ref,
+    ) {
+      return _WeightAdjustmentNotifier((className, newWeight) async {
         // TODO: Call POST /api/admin/moderation-classes/weights
         // Body: { "className": className, "newWeight": newWeight }
       });
@@ -99,11 +115,11 @@ final weightAdjustmentProvider =
 
 // Main Control Panel Screen
 class ModerationWeightsScreen extends ConsumerWidget {
-  const ModerationWeightsScreen({Key? key}) : super(key: key);
+  const ModerationWeightsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final classesAsync = ref.watch(moderationClassesProvider);
+    final classesAsync = ref.watch(_moderationClassesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -123,7 +139,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
               Text('Error loading classes: $error'),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () => ref.refresh(moderationClassesProvider),
+                onPressed: () => ref.refresh(_moderationClassesProvider),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),
@@ -137,7 +153,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
   Widget _buildClassesList(
     BuildContext context,
     WidgetRef ref,
-    List<ModerationClass> classes,
+    List<_ModerationClass> classes,
   ) {
     // Group classes by API type
     final textClasses = classes.where((c) => c.apiType == 'text').toList();
@@ -151,7 +167,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSummaryCard(classes),
+          _buildSummaryCard(context, classes),
           const SizedBox(height: 24),
 
           // Text Classes
@@ -194,7 +210,10 @@ class ModerationWeightsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummaryCard(List<ModerationClass> classes) {
+  Widget _buildSummaryCard(
+    BuildContext context,
+    List<_ModerationClass> classes,
+  ) {
     final customized = classes.where((c) => c.isCustomized).length;
 
     return Card(
@@ -207,7 +226,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
             Text(
               'Overview',
               style: Theme.of(
-                _,
+                context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -253,7 +272,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
   Widget _buildClassGroup({
     required String title,
     required String description,
-    required List<ModerationClass> classes,
+    required List<_ModerationClass> classes,
     required Color color,
     required BuildContext context,
     required WidgetRef ref,
@@ -277,7 +296,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
   }
 
   Widget _buildClassCard(
-    ModerationClass cls,
+    _ModerationClass cls,
     BuildContext context,
     WidgetRef ref,
   ) {
@@ -302,7 +321,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
+                      color: Colors.orange.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -329,7 +348,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -347,7 +366,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeightSlider(ModerationClass cls, WidgetRef ref) {
+  Widget _buildWeightSlider(_ModerationClass cls, WidgetRef ref) {
     return StatefulBuilder(
       builder: (context, setState) {
         double tempWeight = cls.currentWeight;
@@ -419,7 +438,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeightInfo(ModerationClass cls) {
+  Widget _buildWeightInfo(_ModerationClass cls) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -446,7 +465,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: _getWeightColor(value).withOpacity(0.2),
+            color: _getWeightColor(value).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
@@ -462,7 +481,7 @@ class ModerationWeightsScreen extends ConsumerWidget {
   }
 
   Widget _buildActionButtons(
-    ModerationClass cls,
+    _ModerationClass cls,
     BuildContext context,
     WidgetRef ref,
   ) {
@@ -496,16 +515,4 @@ class ModerationWeightsScreen extends ConsumerWidget {
     if (weight >= 0.50) return Colors.amber;
     return Colors.green;
   }
-}
-
-// Placeholder for the actual implementation
-Widget _buildClassGroup({
-  required String title,
-  required String description,
-  required List<ModerationClass> classes,
-  required Color color,
-  required BuildContext context,
-  required WidgetRef ref,
-}) {
-  return SizedBox.shrink();
 }
