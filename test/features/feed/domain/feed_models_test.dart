@@ -113,7 +113,7 @@ void main() {
 
     test('fromJson handles empty posts', () {
       final json = {
-        'posts': [],
+        'posts': <Map<String, dynamic>>[],
         'totalCount': 0,
         'hasMore': false,
         'page': 1,
@@ -127,7 +127,7 @@ void main() {
     });
 
     test('fromJson handles missing fields with defaults', () {
-      final json = {'posts': []};
+      final json = {'posts': <Map<String, dynamic>>[]};
 
       final response = FeedResponse.fromJson(json);
 

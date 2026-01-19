@@ -75,14 +75,28 @@ String _normalizePin(String pin) {
 /// Validates peer certificates by computing SPKI SHA-256 and comparing
 /// against pinned values. Fails closed on mismatch.
 class PinnedCertHttpClientAdapter implements HttpClientAdapter {
-  final IOHttpClientAdapter _adapter;
+  final HttpClientAdapter _delegate;
+  final IOHttpClientAdapter? _ioAdapter;
 
+  /// Creates a pinned cert adapter.
+  ///
+  /// If [adapter] is an [IOHttpClientAdapter], certificate validation is
+  /// configured on it. Otherwise, the adapter is used as-is for delegation
+  /// (useful for testing).
   PinnedCertHttpClientAdapter(HttpClientAdapter adapter)
-    : _adapter = adapter is IOHttpClientAdapter
-          ? adapter
-          : IOHttpClientAdapter() {
-    _adapter.validateCertificate = _validateCertificate;
+    : _delegate = adapter,
+      _ioAdapter = adapter is IOHttpClientAdapter ? adapter : null {
+    _ioAdapter?.validateCertificate = _validateCertificate;
   }
+
+  /// Creates a production adapter with certificate pinning enabled.
+  factory PinnedCertHttpClientAdapter.production() {
+    final ioAdapter = IOHttpClientAdapter();
+    ioAdapter.validateCertificate = _validateCertificate;
+    return PinnedCertHttpClientAdapter._(ioAdapter, ioAdapter);
+  }
+
+  PinnedCertHttpClientAdapter._(this._delegate, this._ioAdapter);
 
   @override
   Future<ResponseBody> fetch(
@@ -90,11 +104,11 @@ class PinnedCertHttpClientAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    return _adapter.fetch(options, requestStream, cancelFuture);
+    return _delegate.fetch(options, requestStream, cancelFuture);
   }
 
   @override
-  void close({bool force = false}) => _adapter.close(force: force);
+  void close({bool force = false}) => _delegate.close(force: force);
 }
 
 bool _validateCertificate(X509Certificate? certificate, String host, int port) {
