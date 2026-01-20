@@ -3,7 +3,7 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_appeal_status.dart';
+import 'package:asora_api_client/src/model/admin_appeal_status_detail.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -18,7 +18,6 @@ part 'admin_appeal_queue_item.g.dart';
 /// * [submittedAt] 
 /// * [status] 
 /// * [originalReasonCategory] 
-/// * [configVersionUsed] 
 /// * [votesFor] 
 /// * [votesAgainst] 
 /// * [totalVotes] 
@@ -40,14 +39,11 @@ abstract class AdminAppealQueueItem implements Built<AdminAppealQueueItem, Admin
   DateTime? get submittedAt;
 
   @BuiltValueField(wireName: r'status')
-  AdminAppealStatus? get status;
-  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  };
+  AdminAppealStatusDetail? get status;
+  // enum statusEnum {  pending,  approved,  rejected,  overridden,  };
 
   @BuiltValueField(wireName: r'originalReasonCategory')
   String? get originalReasonCategory;
-
-  @BuiltValueField(wireName: r'configVersionUsed')
-  int? get configVersionUsed;
 
   @BuiltValueField(wireName: r'votesFor')
   int? get votesFor;
@@ -122,7 +118,7 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
       yield r'status';
       yield serializers.serialize(
         object.status,
-        specifiedType: const FullType(AdminAppealStatus),
+        specifiedType: const FullType(AdminAppealStatusDetail),
       );
     }
     if (object.originalReasonCategory != null) {
@@ -130,13 +126,6 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
       yield serializers.serialize(
         object.originalReasonCategory,
         specifiedType: const FullType(String),
-      );
-    }
-    if (object.configVersionUsed != null) {
-      yield r'configVersionUsed';
-      yield serializers.serialize(
-        object.configVersionUsed,
-        specifiedType: const FullType(int),
       );
     }
     if (object.votesFor != null) {
@@ -235,8 +224,8 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
         case r'status':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(AdminAppealStatus),
-          ) as AdminAppealStatus;
+            specifiedType: const FullType(AdminAppealStatusDetail),
+          ) as AdminAppealStatusDetail;
           result.status = valueDes;
           break;
         case r'originalReasonCategory':
@@ -245,13 +234,6 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
             specifiedType: const FullType(String),
           ) as String;
           result.originalReasonCategory = valueDes;
-          break;
-        case r'configVersionUsed':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.configVersionUsed = valueDes;
           break;
         case r'votesFor':
           final valueDes = serializers.deserialize(

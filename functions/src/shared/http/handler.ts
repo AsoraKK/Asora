@@ -34,6 +34,7 @@ export interface HttpHandlerContext<TRequest = unknown> {
   unauthorized(message: string, code?: string): HttpResponseInit;
   forbidden(message: string, code?: string): HttpResponseInit;
   notFound(message: string, code?: string): HttpResponseInit;
+  tooManyRequests(message: string, code?: string, details?: Record<string, unknown>): HttpResponseInit;
   notImplemented(operationId: string): HttpResponseInit;
   internalError(error: Error | string): HttpResponseInit;
 }
@@ -167,6 +168,19 @@ function createHandlerContext<TRequest>(
     },
   });
 
+  const tooManyRequests = (
+    message: string,
+    code = 'RATE_LIMIT_EXCEEDED',
+    details?: Record<string, unknown>
+  ): HttpResponseInit => ({
+    status: 429,
+    jsonBody: createErrorResponse(code, message, correlationId, details),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Correlation-ID': correlationId,
+    },
+  });
+
   const notImplemented = (operationId: string): HttpResponseInit => ({
     status: 501,
     jsonBody: createErrorResponse(
@@ -209,6 +223,7 @@ function createHandlerContext<TRequest>(
     unauthorized,
     forbidden,
     notFound,
+    tooManyRequests,
     notImplemented,
     internalError,
   };

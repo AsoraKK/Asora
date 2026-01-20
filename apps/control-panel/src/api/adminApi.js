@@ -72,10 +72,11 @@ async function parseJsonResponse(response) {
   }
 }
 
-export async function adminRequest(path, { method = 'GET', body, query } = {}) {
+export async function adminRequest(path, { method = 'GET', body, query, headers: extraHeaders } = {}) {
   const url = buildUrl(path, query);
   const headers = {
-    Accept: 'application/json'
+    Accept: 'application/json',
+    ...(extraHeaders || {})
   };
   const token = getAdminToken();
   if (token) {
@@ -83,7 +84,7 @@ export async function adminRequest(path, { method = 'GET', body, query } = {}) {
   }
   const options = { method, headers };
   if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
     options.body = JSON.stringify(body);
   }
 

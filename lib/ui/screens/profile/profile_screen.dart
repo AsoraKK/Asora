@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/features/admin/ui/control_panel_shell.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
@@ -149,6 +150,18 @@ class ProfileScreen extends ConsumerWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const ModerationHubScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined),
+            title: const Text('Control Panel'),
+            subtitle: const Text('Admin tools & app preview'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ControlPanelShell(),
                 ),
               );
             },

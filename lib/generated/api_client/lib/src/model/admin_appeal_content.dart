@@ -3,7 +3,7 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_content_type.dart';
+import 'package:asora_api_client/src/model/admin_appeal_target_type.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -22,8 +22,8 @@ abstract class AdminAppealContent implements Built<AdminAppealContent, AdminAppe
   String? get contentId;
 
   @BuiltValueField(wireName: r'type')
-  AdminContentType? get type;
-  // enum typeEnum {  post,  comment,  user,  };
+  AdminAppealTargetType? get type;
+  // enum typeEnum {  post,  comment,  profile,  };
 
   @BuiltValueField(wireName: r'createdAt')
   DateTime? get createdAt;
@@ -65,7 +65,7 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
       yield r'type';
       yield serializers.serialize(
         object.type,
-        specifiedType: const FullType(AdminContentType),
+        specifiedType: const FullType(AdminAppealTargetType),
       );
     }
     if (object.createdAt != null) {
@@ -115,8 +115,8 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
         case r'type':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(AdminContentType),
-          ) as AdminContentType;
+            specifiedType: const FullType(AdminAppealTargetType),
+          ) as AdminAppealTargetType;
           result.type = valueDes;
           break;
         case r'createdAt':

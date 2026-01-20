@@ -17,7 +17,7 @@ import {
   type RankingConfig,
 } from '@feed/ranking/rankingConfig';
 
-type FeedMode = 'home' | 'public' | 'profile';
+type FeedMode = 'home' | 'public' | 'profile' | 'test';
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 50;
@@ -40,6 +40,14 @@ export interface GetFeedOptions {
   limit?: string | number | null;
   authorId?: string | null;
   chaosContext?: ChaosContext;
+  
+  // ─────────────────────────────────────────────────────────────
+  // Test Mode Options - For Live Test Mode data isolation
+  // ─────────────────────────────────────────────────────────────
+  /** Include test posts (only for test mode sessions) */
+  includeTestPosts?: boolean;
+  /** Filter to specific test session (for test mode) */
+  testSessionId?: string | null;
 }
 
 interface FeedModeResult {
@@ -64,6 +72,8 @@ export async function getFeed({
   limit,
   authorId,
   chaosContext,
+  includeTestPosts = false,
+  testSessionId,
 }: GetFeedOptions): Promise<FeedResult> {
   const start = performance.now();
   context.log('feed.get.start', {
@@ -71,6 +81,8 @@ export async function getFeed({
     cursor: Boolean(cursor),
     since: Boolean(since),
     requestedAuthor: authorId ?? 'none',
+    includeTestPosts,
+    testSessionId: testSessionId ?? 'none',
   });
 
   // Validate mutually exclusive parameters
@@ -82,7 +94,16 @@ export async function getFeed({
   const cursorValue = cursor ? parseCursor(cursor) : null;
   const sinceValue = since ? parseSince(since) : null;
   const modeResult = await resolveFeedMode(principal, authorId, context);
-  const queryDefinition = buildQuery(cursorValue, sinceValue, modeResult.authorIds, modeResult.visibility);
+  
+  // Build query with test post filtering
+  const queryDefinition = buildQuery(
+    cursorValue, 
+    sinceValue, 
+    modeResult.authorIds, 
+    modeResult.visibility,
+    { includeTestPosts, testSessionId }  // Pass test mode options
+  );
+  
   const queryOptions = buildQueryOptions(
     resolvedLimit,
     queryDefinition.partitionKey
@@ -401,12 +422,23 @@ async function isFollowing(followerId: string, followeeId: string): Promise<bool
   }
 }
 
+/** Options for test post filtering in queries */
+interface TestPostFilterOptions {
+  /** Include test posts (default: false for production safety) */
+  includeTestPosts?: boolean;
+  /** Filter to specific test session */
+  testSessionId?: string | null;
+}
+
 function buildQuery(
   cursor: FeedCursor | null,
   since: FeedCursor | null,
   authorIds: string[] | null,
-  visibility: string[]
+  visibility: string[],
+  testOptions: TestPostFilterOptions = {}
 ): QueryDefinition {
+  const { includeTestPosts = false, testSessionId } = testOptions;
+  
   const parameters: SqlParameter[] = [
     { name: '@status', value: STATUS_PUBLISHED },
   ];
@@ -416,6 +448,23 @@ function buildQuery(
     // Filter out comments (they have type='comment', posts have no type or type='post')
     '(NOT IS_DEFINED(c.type) OR c.type = "post")',
   ];
+
+  // ─────────────────────────────────────────────────────────────
+  // CRITICAL: Test Post Filtering - Server-side enforcement
+  // By default, EXCLUDE all test posts from public feeds
+  // Only include test posts when explicitly requested AND scoped to session
+  // ─────────────────────────────────────────────────────────────
+  if (!includeTestPosts) {
+    // Production mode: Exclude ALL test posts (server-side enforcement)
+    clauses.push('(NOT IS_DEFINED(c.isTestPost) OR c.isTestPost = false)');
+  } else if (testSessionId) {
+    // Test mode with session: Only show test posts from THIS session
+    clauses.push('(c.isTestPost = true AND c.testSessionId = @testSessionId)');
+    parameters.push({ name: '@testSessionId', value: testSessionId });
+  } else {
+    // Test mode without session: Show all test posts (admin view)
+    clauses.push('c.isTestPost = true');
+  }
 
   // Cursor-based pagination (backward: fetch older items)
   if (cursor) {

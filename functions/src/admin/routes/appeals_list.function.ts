@@ -1,13 +1,12 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
-import { requireActiveAdmin } from '../adminAuthUtils';
-import { getLatestDecisionSummary } from '../moderationAdminUtils';
+import { requireActiveModerator } from '../adminAuthUtils';
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 
-type AppealStatusFilter = 'pending' | 'approved' | 'rejected' | 'all';
+type AppealStatusFilter = 'pending' | 'approved' | 'rejected' | 'overridden' | 'all';
 
 interface VoteSummary {
   votesFor: number;
@@ -35,6 +34,8 @@ function resolveStatusFilter(value?: string | null): AppealStatusFilter {
       return 'approved';
     case 'rejected':
       return 'rejected';
+    case 'overridden':
+      return 'overridden';
     case 'all':
       return 'all';
     default:
@@ -74,26 +75,33 @@ function buildVoteSummary(appeal: Record<string, unknown>): VoteSummary {
   };
 }
 
-function normalizeAppealStatus(status: string | undefined, finalDecision?: string): 'PENDING' | 'APPROVED' | 'REJECTED' {
+function normalizeAppealStatus(
+  status: string | undefined,
+  finalDecision?: string
+): 'pending' | 'approved' | 'rejected' | 'overridden' {
   const value = (status || '').toLowerCase();
+  if (value === 'overridden') {
+    return 'overridden';
+  }
   if (value === 'pending') {
-    return 'PENDING';
+    return 'pending';
   }
   if (value === 'approved' || value === 'upheld') {
-    return 'APPROVED';
+    return 'approved';
   }
   if (value === 'rejected' || value === 'denied' || value === 'expired') {
-    return 'REJECTED';
+    return 'rejected';
   }
   if (value === 'resolved') {
-    if ((finalDecision || '').toLowerCase() === 'approved') {
-      return 'APPROVED';
+    const decision = (finalDecision || '').toLowerCase();
+    if (decision === 'approved' || decision === 'allow') {
+      return 'approved';
     }
-    if ((finalDecision || '').toLowerCase() === 'rejected') {
-      return 'REJECTED';
+    if (decision === 'rejected' || decision === 'block') {
+      return 'rejected';
     }
   }
-  return 'REJECTED';
+  return 'rejected';
 }
 
 export async function listAppealsQueue(
@@ -132,7 +140,6 @@ export async function listAppealsQueue(
 
     const items = await Promise.all(
       response.resources.map(async (appeal) => {
-        const decision = await getLatestDecisionSummary(appeal.contentId);
         const flagCategories = Array.isArray(appeal.flagCategories) ? appeal.flagCategories : [];
         const reasonCategory =
           (flagCategories[0] as string | undefined) ??
@@ -147,7 +154,6 @@ export async function listAppealsQueue(
           submittedAt: appeal.submittedAt ?? null,
           status: normalizeAppealStatus(appeal.status as string | undefined, appeal.finalDecision as string | undefined),
           originalReasonCategory: reasonCategory,
-          configVersionUsed: decision?.configVersionUsed ?? null,
           votesFor: voteSummary.votesFor,
           votesAgainst: voteSummary.votesAgainst,
           totalVotes: voteSummary.totalVotes,
@@ -173,5 +179,5 @@ app.http('admin_appeals_list', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/appeals',
-  handler: requireActiveAdmin(listAppealsQueue),
+  handler: requireActiveModerator(listAppealsQueue),
 });

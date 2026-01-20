@@ -363,6 +363,11 @@ a {
   color: var(--on-surface-muted);
 }
 
+.status-pill.overridden {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
 .form-grid {
   display: grid;
   gap: 16px;
@@ -416,6 +421,11 @@ textarea.lyth-input {
   color: var(--danger);
 }
 
+.notice.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
 .empty-state {
   text-align: center;
   color: var(--on-surface-muted);
@@ -426,6 +436,24 @@ textarea.lyth-input {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
+}
+
+.detail-grid--secondary {
+  margin-top: 6px;
+}
+
+.detail-panel {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline);
+  display: grid;
+  gap: 12px;
+}
+
+.detail-panel h3,
+.override-header h3 {
+  margin: 0;
 }
 
 .detail-list {
@@ -458,6 +486,44 @@ textarea.lyth-input {
 .detail-note {
   margin-top: 12px;
   color: var(--on-surface-muted);
+}
+
+.tally-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.tally-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline);
+}
+
+.quorum-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quorum-badge.reached {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.quorum-badge.pending {
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .timeline {
@@ -501,6 +567,80 @@ textarea.lyth-input {
   margin: 0;
   font-size: 0.85rem;
   color: var(--on-surface-muted);
+}
+
+.override-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 60;
+}
+
+.modal {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--outline);
+  box-shadow: var(--shadow-strong);
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  animation: panelIn 0.4s ease both;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-body {
+  display: grid;
+  gap: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.radio-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline);
+  font-size: 0.9rem;
+}
+
+.radio-option input {
+  accent-color: var(--primary);
 }
 
 .audit-table {

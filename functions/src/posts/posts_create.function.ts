@@ -4,6 +4,7 @@
  * POST /api/posts
  * 
  * Create a new post with Hive AI content moderation.
+ * Supports Live Test Mode with automatic data isolation.
  * 
  * OpenAPI: posts_create
  */
@@ -14,9 +15,31 @@ import type { CreatePostRequest, Post } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
 import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
+import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
 
 export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => {
-  ctx.context.log(`[posts_create] Creating new post [${ctx.correlationId}]`);
+  // Extract test mode context FIRST (before any other processing)
+  const testContext = extractTestModeContext(ctx.request, ctx.context);
+  
+  if (testContext.isTestMode) {
+    ctx.context.log(`[posts_create] TEST MODE - Creating test post [session=${testContext.sessionId}] [${ctx.correlationId}]`);
+    
+    // Check rate limits for test mode
+    const rateLimit = await checkTestModeRateLimit(
+      testContext.sessionId || 'unknown',
+      'postsPerHour',
+      ctx.context
+    );
+    
+    if (!rateLimit.allowed) {
+      return ctx.tooManyRequests('Test mode rate limit exceeded', 'TEST_RATE_LIMIT', {
+        remaining: rateLimit.remaining,
+        resetAt: new Date(rateLimit.resetAt).toISOString(),
+      });
+    }
+  } else {
+    ctx.context.log(`[posts_create] Creating new post [${ctx.correlationId}]`);
+  }
 
   try {
     // Extract and verify JWT
@@ -59,6 +82,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       ctx.context.log('[posts_create] Content blocked by moderation', {
         postId,
         categories: moderationMeta.categories,
+        isTestMode: testContext.isTestMode,
       });
       return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
         categories: moderationMeta.categories,
@@ -66,8 +90,23 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       });
     }
 
-    // Create post using service with moderation metadata
-    const post = await postsService.createPost(auth.userId, ctx.body, postId, moderationMeta);
+    // Create post using service with moderation metadata and test context
+    const post = await postsService.createPost(
+      auth.userId, 
+      ctx.body, 
+      postId, 
+      moderationMeta,
+      testContext  // Pass test context for data isolation
+    );
+    
+    // Log test post creation for audit trail
+    if (testContext.isTestMode) {
+      ctx.context.log('[posts_create] TEST POST created', {
+        postId: post.id,
+        sessionId: testContext.sessionId,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      });
+    }
 
     return ctx.created(post);
   } catch (error) {

@@ -17,6 +17,8 @@ class AdminAppealStatus extends EnumClass {
   static const AdminAppealStatus APPROVED = _$APPROVED;
   @BuiltValueEnumConst(wireName: r'REJECTED')
   static const AdminAppealStatus REJECTED = _$REJECTED;
+  @BuiltValueEnumConst(wireName: r'OVERRIDDEN')
+  static const AdminAppealStatus OVERRIDDEN = _$OVERRIDDEN;
 
   static Serializer<AdminAppealStatus> get serializer => _$adminAppealStatusSerializer;
 

@@ -13,20 +13,12 @@ part 'admin_appeal_original_decision.g.dart';
 ///
 /// Properties:
 /// * [decision] 
-/// * [reasonCodes] 
-/// * [configVersionUsed] 
 /// * [decidedAt] 
 @BuiltValue()
 abstract class AdminAppealOriginalDecision implements Built<AdminAppealOriginalDecision, AdminAppealOriginalDecisionBuilder> {
   @BuiltValueField(wireName: r'decision')
   AdminAppealOriginalDecisionDecisionEnum? get decision;
   // enum decisionEnum {  BLOCKED,  };
-
-  @BuiltValueField(wireName: r'reasonCodes')
-  BuiltList<String>? get reasonCodes;
-
-  @BuiltValueField(wireName: r'configVersionUsed')
-  int? get configVersionUsed;
 
   @BuiltValueField(wireName: r'decidedAt')
   DateTime? get decidedAt;
@@ -59,20 +51,6 @@ class _$AdminAppealOriginalDecisionSerializer implements PrimitiveSerializer<Adm
       yield serializers.serialize(
         object.decision,
         specifiedType: const FullType(AdminAppealOriginalDecisionDecisionEnum),
-      );
-    }
-    if (object.reasonCodes != null) {
-      yield r'reasonCodes';
-      yield serializers.serialize(
-        object.reasonCodes,
-        specifiedType: const FullType(BuiltList, [FullType(String)]),
-      );
-    }
-    if (object.configVersionUsed != null) {
-      yield r'configVersionUsed';
-      yield serializers.serialize(
-        object.configVersionUsed,
-        specifiedType: const FullType(int),
       );
     }
     if (object.decidedAt != null) {
@@ -111,20 +89,6 @@ class _$AdminAppealOriginalDecisionSerializer implements PrimitiveSerializer<Adm
             specifiedType: const FullType(AdminAppealOriginalDecisionDecisionEnum),
           ) as AdminAppealOriginalDecisionDecisionEnum;
           result.decision = valueDes;
-          break;
-        case r'reasonCodes':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
-          result.reasonCodes.replace(valueDes);
-          break;
-        case r'configVersionUsed':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.configVersionUsed = valueDes;
           break;
         case r'decidedAt':
           final valueDes = serializers.deserialize(

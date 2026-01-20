@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_appeal_status.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:asora_api_client/src/model/admin_appeal_status_detail.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -44,8 +44,8 @@ abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppeal
   DateTime? get submittedAt;
 
   @BuiltValueField(wireName: r'status')
-  AdminAppealStatus? get status;
-  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  };
+  AdminAppealStatusDetail? get status;
+  // enum statusEnum {  pending,  approved,  rejected,  overridden,  };
 
   @BuiltValueField(wireName: r'appealType')
   String? get appealType;
@@ -135,7 +135,7 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
       yield r'status';
       yield serializers.serialize(
         object.status,
-        specifiedType: const FullType(AdminAppealStatus),
+        specifiedType: const FullType(AdminAppealStatusDetail),
       );
     }
     if (object.appealType != null) {
@@ -269,8 +269,8 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
         case r'status':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(AdminAppealStatus),
-          ) as AdminAppealStatus;
+            specifiedType: const FullType(AdminAppealStatusDetail),
+          ) as AdminAppealStatusDetail;
           result.status = valueDes;
           break;
         case r'appealType':

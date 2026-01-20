@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **contentId** | **String** |  | [optional] 
 **authorId** | **String** |  | [optional] 
 **submittedAt** | [**DateTime**](DateTime.md) |  | [optional] 
-**status** | [**AdminAppealStatus**](AdminAppealStatus.md) |  | [optional] 
+**status** | [**AdminAppealStatusDetail**](AdminAppealStatusDetail.md) |  | [optional] 
 **appealType** | **String** |  | [optional] 
 **appealReason** | **String** |  | [optional] 
 **userStatement** | **String** |  | [optional] 

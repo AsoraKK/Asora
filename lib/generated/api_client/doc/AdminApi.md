@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**adminAppealsApprove**](AdminApi.md#adminappealsapprove) | **POST** /_admin/appeals/{appealId}/approve | Approve an appeal
 [**adminAppealsGet**](AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
 [**adminAppealsList**](AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
+[**adminAppealsOverride**](AdminApi.md#adminappealsoverride) | **POST** /_admin/appeals/{appealId}/override | Override an appeal
 [**adminAppealsReject**](AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
 [**adminAuditList**](AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
 [**adminContentBlock**](AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
@@ -160,6 +161,53 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAppealsOverride**
+> AdminAppealOverrideResponse adminAppealsOverride(appealId, adminAppealOverrideRequest, idempotencyKey)
+
+Override an appeal
+
+Moderator override for appeal outcomes. Idempotent per appeal.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String appealId = appealId_example; // String | Appeal identifier
+final AdminAppealOverrideRequest adminAppealOverrideRequest = ; // AdminAppealOverrideRequest | 
+final String idempotencyKey = idempotencyKey_example; // String | Idempotency key for safe retries
+
+try {
+    final response = api.adminAppealsOverride(appealId, adminAppealOverrideRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAppealsOverride: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**| Appeal identifier | 
+ **adminAppealOverrideRequest** | [**AdminAppealOverrideRequest**](AdminAppealOverrideRequest.md)|  | 
+ **idempotencyKey** | **String**| Idempotency key for safe retries | [optional] 
+
+### Return type
+
+[**AdminAppealOverrideResponse**](AdminAppealOverrideResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
