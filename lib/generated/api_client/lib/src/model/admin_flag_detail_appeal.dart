@@ -23,7 +23,7 @@ abstract class AdminFlagDetailAppeal implements Built<AdminFlagDetailAppeal, Adm
 
   @BuiltValueField(wireName: r'status')
   AdminAppealStatus? get status;
-  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  };
+  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  OVERRIDDEN,  };
 
   @BuiltValueField(wireName: r'submittedAt')
   DateTime? get submittedAt;

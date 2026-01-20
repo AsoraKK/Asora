@@ -1,6 +1,6 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
-import { requireAdmin, type Principal } from '@shared/middleware/auth';
+import { requireAdmin, requireModerator, type Principal } from '@shared/middleware/auth';
 
 type AdminHandler = (
   req: HttpRequest & { principal: Principal },
@@ -37,6 +37,33 @@ export function requireActiveAdmin(handler: AdminHandler): (
       }
     } catch (error) {
       context.log('auth.requireActiveAdmin.error', {
+        userId,
+        message: (error as Error).message,
+      });
+      return buildInactiveResponse();
+    }
+
+    return handler(req as HttpRequest & { principal: Principal }, context);
+  });
+}
+
+export function requireActiveModerator(handler: AdminHandler): (
+  req: HttpRequest,
+  context: InvocationContext
+) => Promise<HttpResponseInit> {
+  return requireModerator(async (req, context) => {
+    const userId = (req as HttpRequest & { principal: Principal }).principal.sub;
+
+    try {
+      const database = getCosmosDatabase();
+      const users = database.container('users');
+      const { resource } = await users.item(userId, userId).read();
+      if (!resource || resource.isActive === false) {
+        context.log('auth.requireActiveModerator.disabled', { userId });
+        return buildInactiveResponse();
+      }
+    } catch (error) {
+      context.log('auth.requireActiveModerator.error', {
         userId,
         message: (error as Error).message,
       });

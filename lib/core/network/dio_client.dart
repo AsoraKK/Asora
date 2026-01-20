@@ -5,6 +5,7 @@
 /// 🎯 Purpose: Secure HTTP client with certificate pinning and integrity checks
 /// 🔐 Security: SPKI pinning, device integrity validation, secure headers
 /// 📡 Network: Azure Functions integration with proper error handling
+/// 🧪 Testing: Live Test Mode header injection for data isolation
 /// 📱 Platform: Flutter with Riverpod dependency injection
 library;
 
@@ -18,6 +19,7 @@ import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/device_integrity.dart';
 import 'package:asora/core/security/security_overrides.dart';
 import 'package:asora/core/security/security_telemetry.dart';
+import 'package:asora/features/admin/application/test_mode_interceptor.dart';
 
 /// Secure Dio client provider with certificate pinning and integrity checks
 final secureDioProvider = Provider<Dio>((ref) {
@@ -63,6 +65,10 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   // Add device integrity interceptor
   dio.interceptors.add(_DeviceIntegrityInterceptor(ref));
+
+  // Add test mode interceptor for Live Test Mode header injection
+  // This MUST be added AFTER auth interceptors but BEFORE logging
+  dio.interceptors.add(TestModeInterceptor(ref));
 
   // Add logging in debug mode
   if (kDebugMode) {

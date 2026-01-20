@@ -957,6 +957,7 @@
                 "pending",
                 "approved",
                 "rejected",
+                "overridden",
                 "all"
               ]
             }
@@ -1239,6 +1240,113 @@
           },
           "403": {
             "description": "Authenticated caller lacks required permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_admin/appeals/{appealId}/override": {
+      "post": {
+        "operationId": "adminAppealsOverride",
+        "summary": "Override an appeal",
+        "description": "Moderator override for appeal outcomes. Idempotent per appeal.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "appealId",
+            "in": "path",
+            "description": "Appeal identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Idempotency key for safe retries",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAppealOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Appeal overridden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAppealOverrideResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks required permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Appeal or content not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Override already processed or not allowed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2401,7 +2509,32 @@
         "enum": [
           "PENDING",
           "APPROVED",
-          "REJECTED"
+          "REJECTED",
+          "OVERRIDDEN"
+        ]
+      },
+      "AdminAppealStatusDetail": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "overridden"
+        ]
+      },
+      "AdminAppealTargetType": {
+        "type": "string",
+        "enum": [
+          "post",
+          "comment",
+          "profile"
+        ]
+      },
+      "AdminAppealFinalDecision": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "block"
         ]
       },
       "AdminUserStatus": {
@@ -2781,13 +2914,10 @@
             "format": "date-time"
           },
           "status": {
-            "$ref": "#/components/schemas/AdminAppealStatus"
+            "$ref": "#/components/schemas/AdminAppealStatusDetail"
           },
           "originalReasonCategory": {
             "type": "string"
-          },
-          "configVersionUsed": {
-            "type": "integer"
           },
           "votesFor": {
             "type": "integer"
@@ -2851,7 +2981,7 @@
             "format": "date-time"
           },
           "status": {
-            "$ref": "#/components/schemas/AdminAppealStatus"
+            "$ref": "#/components/schemas/AdminAppealStatusDetail"
           },
           "appealType": {
             "type": "string"
@@ -2902,7 +3032,7 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/AdminContentType"
+            "$ref": "#/components/schemas/AdminAppealTargetType"
           },
           "createdAt": {
             "type": "string",
@@ -2922,16 +3052,66 @@
               "BLOCKED"
             ]
           },
-          "reasonCodes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "configVersionUsed": {
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminAppealVoteSummary": {
+        "type": "object",
+        "required": [
+          "for",
+          "against",
+          "total"
+        ],
+        "properties": {
+          "for": {
             "type": "integer"
           },
-          "decidedAt": {
+          "against": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "AdminAppealQuorumSummary": {
+        "type": "object",
+        "required": [
+          "required",
+          "reached"
+        ],
+        "properties": {
+          "required": {
+            "type": "integer"
+          },
+          "reached": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AdminAppealAuditSummary": {
+        "type": "object",
+        "required": [
+          "lastActorRole",
+          "lastAction",
+          "lastActionAt"
+        ],
+        "properties": {
+          "lastActorRole": {
+            "type": "string",
+            "enum": [
+              "system",
+              "community",
+              "moderator"
+            ]
+          },
+          "lastAction": {
+            "type": "string"
+          },
+          "lastActionAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -2940,6 +3120,42 @@
       "AdminAppealDetailResponse": {
         "type": "object",
         "properties": {
+          "appealId": {
+            "type": "string"
+          },
+          "targetType": {
+            "$ref": "#/components/schemas/AdminAppealTargetType"
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AdminAppealStatusDetail"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "votes": {
+            "$ref": "#/components/schemas/AdminAppealVoteSummary"
+          },
+          "quorum": {
+            "$ref": "#/components/schemas/AdminAppealQuorumSummary"
+          },
+          "moderatorOverrideAllowed": {
+            "type": "boolean"
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AdminAppealFinalDecision",
+            "nullable": true
+          },
+          "auditSummary": {
+            "$ref": "#/components/schemas/AdminAppealAuditSummary"
+          },
           "appeal": {
             "$ref": "#/components/schemas/AdminAppealDetail"
           },
@@ -2948,6 +3164,48 @@
           },
           "originalDecision": {
             "$ref": "#/components/schemas/AdminAppealOriginalDecision"
+          }
+        }
+      },
+      "AdminAppealOverrideRequest": {
+        "type": "object",
+        "required": [
+          "decision",
+          "reasonCode"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/AdminAppealFinalDecision"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "policy_exception",
+              "false_positive",
+              "safety_risk",
+              "other"
+            ]
+          },
+          "reasonNote": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "AdminAppealOverrideResponse": {
+        "type": "object",
+        "properties": {
+          "appealId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "overridden"
+            ]
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AdminAppealFinalDecision"
           }
         }
       },

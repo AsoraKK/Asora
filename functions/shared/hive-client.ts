@@ -101,6 +101,14 @@ export interface HiveClientConfig {
    * Falls back to defaults from hive-classes-config.ts
    */
   classWeights?: Record<string, number>;
+  
+  // ─────────────────────────────────────────────────────────────
+  // Test Mode Options - For cost tracking and monitoring separation
+  // ─────────────────────────────────────────────────────────────
+  /** Whether this is a test mode request (for monitoring separation) */
+  isTestMode?: boolean;
+  /** Test session ID for grouping (for monitoring separation) */
+  testSessionId?: string;
 }
 
 /**
@@ -194,6 +202,8 @@ export class HiveAIClient {
   private readonly blockThreshold: number;
   private readonly warnThreshold: number;
   private readonly classWeights: Record<string, number>;
+  private readonly isTestMode: boolean;
+  private readonly testSessionId: string | null;
   private readonly defaultModels = [
     'general_text_classification',
     'hate_speech_detection_text',
@@ -211,6 +221,8 @@ export class HiveAIClient {
       this.blockThreshold = DEFAULT_BLOCK_THRESHOLD;
       this.warnThreshold = DEFAULT_WARN_THRESHOLD;
       this.classWeights = getDefaultWeights();
+      this.isTestMode = false;
+      this.testSessionId = null;
     } else {
       this.apiKey = config.apiKey;
       this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
@@ -221,6 +233,9 @@ export class HiveAIClient {
       this.warnThreshold = config.warnThreshold ?? DEFAULT_WARN_THRESHOLD;
       // Use custom weights if provided, otherwise load defaults
       this.classWeights = config.classWeights ?? getDefaultWeights();
+      // Test mode tracking for monitoring separation
+      this.isTestMode = config.isTestMode ?? false;
+      this.testSessionId = config.testSessionId ?? null;
     }
   }
 
@@ -308,13 +323,29 @@ export class HiveAIClient {
         const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
         try {
+          // Build headers with test mode tracking
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Authorization: `Token ${this.apiKey}`,
+          };
+          
+          // Add content tracking header
+          if (contentId) {
+            headers['X-Content-Id'] = contentId;
+          }
+          
+          // Add test mode headers for monitoring separation
+          // NOTE: These are custom headers for our own tracking, not Hive-specific
+          if (this.isTestMode) {
+            headers['X-Test-Mode'] = 'true';
+            if (this.testSessionId) {
+              headers['X-Test-Session-Id'] = this.testSessionId;
+            }
+          }
+          
           const response = await fetch(this.baseUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${this.apiKey}`,
-              ...(contentId && { 'X-Content-Id': contentId }),
-            },
+            headers,
             body: JSON.stringify(request),
             signal: controller.signal,
           });

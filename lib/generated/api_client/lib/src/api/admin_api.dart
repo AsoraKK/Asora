@@ -11,6 +11,8 @@ import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/admin_appeal_decision_request.dart';
 import 'package:asora_api_client/src/model/admin_appeal_decision_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_detail_response.dart';
+import 'package:asora_api_client/src/model/admin_appeal_override_request.dart';
+import 'package:asora_api_client/src/model/admin_appeal_override_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_queue_response.dart';
 import 'package:asora_api_client/src/model/admin_audit_list_response.dart';
 import 'package:asora_api_client/src/model/admin_content_action_request.dart';
@@ -305,6 +307,112 @@ class AdminApi {
     }
 
     return Response<AdminAppealQueueResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Override an appeal
+  /// Moderator override for appeal outcomes. Idempotent per appeal.
+  ///
+  /// Parameters:
+  /// * [appealId] - Appeal identifier
+  /// * [adminAppealOverrideRequest] 
+  /// * [idempotencyKey] - Idempotency key for safe retries
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AdminAppealOverrideResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AdminAppealOverrideResponse>> adminAppealsOverride({ 
+    required String appealId,
+    required AdminAppealOverrideRequest adminAppealOverrideRequest,
+    String? idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/_admin/appeals/{appealId}/override'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AdminAppealOverrideRequest);
+      _bodyData = _serializers.serialize(adminAppealOverrideRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AdminAppealOverrideResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealOverrideResponse),
+      ) as AdminAppealOverrideResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AdminAppealOverrideResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

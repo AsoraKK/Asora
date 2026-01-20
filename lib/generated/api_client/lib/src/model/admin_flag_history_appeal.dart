@@ -25,7 +25,7 @@ abstract class AdminFlagHistoryAppeal implements Built<AdminFlagHistoryAppeal, A
 
   @BuiltValueField(wireName: r'status')
   AdminAppealStatus? get status;
-  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  };
+  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  OVERRIDDEN,  };
 
   AdminFlagHistoryAppeal._();
 

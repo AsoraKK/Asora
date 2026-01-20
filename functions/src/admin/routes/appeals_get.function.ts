@@ -1,8 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
-import { requireActiveAdmin } from '../adminAuthUtils';
-import { extractPreview, fetchContentById, getLatestDecisionSummary } from '../moderationAdminUtils';
+import { requireActiveModerator } from '../adminAuthUtils';
+import { extractPreview, fetchContentById } from '../moderationAdminUtils';
 
 interface VoteSummary {
   votesFor: number;
@@ -11,6 +11,21 @@ interface VoteSummary {
   votingStatus: string | null;
   expiresAt: string | null;
   timeRemainingSeconds: number | null;
+}
+
+interface QuorumSummary {
+  required: number;
+  reached: boolean;
+}
+
+type AppealStatus = 'pending' | 'approved' | 'rejected' | 'overridden';
+
+type AuditActorRole = 'system' | 'community' | 'moderator';
+
+interface AuditSummary {
+  lastActorRole: AuditActorRole;
+  lastAction: string;
+  lastActionAt: string;
 }
 
 function toSafeCount(value: unknown): number {
@@ -45,26 +60,171 @@ function buildVoteSummary(appeal: Record<string, unknown>): VoteSummary {
   };
 }
 
-function normalizeAppealStatus(status: string | undefined, finalDecision?: string): 'PENDING' | 'APPROVED' | 'REJECTED' {
+function resolveIsoTimestamp(...values: Array<unknown>): string | null {
+  for (const value of values) {
+    if (typeof value !== 'string') {
+      continue;
+    }
+    if (!Number.isNaN(Date.parse(value))) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function normalizeAppealStatus(status: string | undefined, finalDecision?: string): AppealStatus {
   const value = (status || '').toLowerCase();
+  if (value === 'overridden') {
+    return 'overridden';
+  }
   if (value === 'pending') {
-    return 'PENDING';
+    return 'pending';
   }
   if (value === 'approved' || value === 'upheld') {
-    return 'APPROVED';
+    return 'approved';
   }
   if (value === 'rejected' || value === 'denied' || value === 'expired') {
-    return 'REJECTED';
+    return 'rejected';
   }
   if (value === 'resolved') {
-    if ((finalDecision || '').toLowerCase() === 'approved') {
-      return 'APPROVED';
+    const decision = (finalDecision || '').toLowerCase();
+    if (decision === 'approved' || decision === 'allow') {
+      return 'approved';
     }
-    if ((finalDecision || '').toLowerCase() === 'rejected') {
-      return 'REJECTED';
+    if (decision === 'rejected' || decision === 'block') {
+      return 'rejected';
     }
   }
-  return 'REJECTED';
+  return 'rejected';
+}
+
+function normalizeFinalDecision(value: unknown, status: AppealStatus): 'allow' | 'block' | null {
+  const decision = typeof value === 'string' ? value.toLowerCase() : '';
+  if (decision === 'allow' || decision === 'approved' || decision === 'upheld') {
+    return 'allow';
+  }
+  if (decision === 'block' || decision === 'rejected' || decision === 'denied') {
+    return 'block';
+  }
+  if (status === 'approved') {
+    return 'allow';
+  }
+  if (status === 'rejected') {
+    return 'block';
+  }
+  return null;
+}
+
+function mapTargetType(value: string | undefined): 'post' | 'comment' | 'profile' {
+  if (value === 'comment') {
+    return 'comment';
+  }
+  if (value === 'user' || value === 'profile') {
+    return 'profile';
+  }
+  return 'post';
+}
+
+function buildQuorumSummary(appeal: Record<string, unknown>, voteSummary: VoteSummary): QuorumSummary {
+  const required = toSafeCount(appeal.requiredVotes);
+  const reachedFlag = typeof appeal.hasReachedQuorum === 'boolean' ? appeal.hasReachedQuorum : null;
+  const reachedByVotes = required > 0 && voteSummary.totalVotes >= required;
+  return {
+    required,
+    reached: reachedFlag ?? reachedByVotes,
+  };
+}
+
+function parseRoles(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((role): role is string => typeof role === 'string');
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(' ')
+      .map((role) => role.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function canOverrideAppeal(principal: { roles?: string[] | string } | undefined): boolean {
+  const roles = parseRoles(principal?.roles);
+  return roles.includes('moderator') || roles.includes('admin');
+}
+
+function normalizeAuditRole(record: Record<string, unknown>): AuditActorRole {
+  const rawRole = typeof record.actorRole === 'string' ? record.actorRole.toLowerCase() : '';
+  if (rawRole === 'moderator' || rawRole === 'system' || rawRole === 'community') {
+    return rawRole as AuditActorRole;
+  }
+  const source = typeof record.source === 'string' ? record.source.toLowerCase() : '';
+  const actorId = typeof record.actorId === 'string' ? record.actorId : '';
+  if (source === 'appeal_vote' || actorId === 'community_vote') {
+    return 'community';
+  }
+  if (record.provider) {
+    return 'system';
+  }
+  return 'system';
+}
+
+async function fetchAppealAuditSummary(
+  appealId: string,
+  db: ReturnType<typeof getTargetDatabase>
+): Promise<AuditSummary | null> {
+  const { resources } = await db.moderationDecisions.items
+    .query(
+      {
+        query: `
+          SELECT TOP 1 c.action, c.decision, c.actorRole, c.actorId, c.source, c.createdAt, c.decidedAt, c.provider
+          FROM c
+          WHERE c.appealId = @appealId
+          ORDER BY c.createdAt DESC
+        `,
+        parameters: [{ name: '@appealId', value: appealId }],
+      },
+      { maxItemCount: 1 }
+    )
+    .fetchAll();
+
+  const record = resources[0] as Record<string, unknown> | undefined;
+  if (!record) {
+    return null;
+  }
+
+  const lastAction =
+    (typeof record.action === 'string' && record.action.trim()) ||
+    (typeof record.decision === 'string' && record.decision.trim()) ||
+    'appeal_update';
+
+  const lastActionAt =
+    resolveIsoTimestamp(record.createdAt, record.decidedAt) ?? new Date().toISOString();
+
+  return {
+    lastActorRole: normalizeAuditRole(record),
+    lastAction,
+    lastActionAt,
+  };
+}
+
+function buildFallbackAuditSummary(appeal: Record<string, unknown>, status: AppealStatus): AuditSummary {
+  const resolvedBy = typeof appeal.resolvedBy === 'string' ? appeal.resolvedBy : '';
+  const lastActorRole: AuditActorRole = resolvedBy
+    ? resolvedBy === 'community_vote'
+      ? 'community'
+      : 'moderator'
+    : 'community';
+
+  const lastActionAt =
+    resolveIsoTimestamp(appeal.updatedAt, appeal.resolvedAt, appeal.submittedAt, appeal.createdAt) ??
+    new Date().toISOString();
+
+  return {
+    lastActorRole,
+    lastAction: status === 'pending' ? 'appeal_submitted' : status,
+    lastActionAt,
+  };
 }
 
 export async function getAppealDetail(
@@ -100,20 +260,52 @@ export async function getAppealDetail(
 
     const contentType = appeal.contentType as 'post' | 'comment' | 'user';
     const contentId = appeal.contentId as string;
+    const targetType = mapTargetType(contentType);
 
     const content = await fetchContentById(contentType, contentId);
     const doc = content?.document ?? null;
 
-    const decision = await getLatestDecisionSummary(contentId);
     const voteSummary = buildVoteSummary(appeal as Record<string, unknown>);
+    const quorum = buildQuorumSummary(appeal as Record<string, unknown>, voteSummary);
+    const status = normalizeAppealStatus(
+      appeal.status as string | undefined,
+      appeal.finalDecision as string | undefined
+    );
+    const finalDecision = normalizeFinalDecision(appeal.finalDecision, status);
+    const createdAt =
+      resolveIsoTimestamp(appeal.createdAt, appeal.submittedAt) ?? new Date().toISOString();
+    const lastUpdatedAt =
+      resolveIsoTimestamp(appeal.updatedAt, appeal.resolvedAt, appeal.submittedAt, appeal.createdAt) ??
+      createdAt;
+    const auditSummary =
+      (await fetchAppealAuditSummary(appeal.id, db)) ??
+      buildFallbackAuditSummary(appeal as Record<string, unknown>, status);
+    const principal = (req as HttpRequest & { principal?: { roles?: string[] | string } }).principal;
+    const moderatorOverrideAllowed =
+      canOverrideAppeal(principal) && (status === 'pending' || (quorum.reached && finalDecision === null));
 
     return createSuccessResponse({
+      appealId: appeal.id,
+      targetType,
+      targetId: contentId,
+      status,
+      createdAt,
+      lastUpdatedAt,
+      votes: {
+        for: voteSummary.votesFor,
+        against: voteSummary.votesAgainst,
+        total: voteSummary.totalVotes,
+      },
+      quorum,
+      moderatorOverrideAllowed,
+      finalDecision,
+      auditSummary,
       appeal: {
         appealId: appeal.id,
         contentId,
         authorId: appeal.submitterId ?? null,
         submittedAt: appeal.submittedAt ?? null,
-        status: normalizeAppealStatus(appeal.status as string | undefined, appeal.finalDecision as string | undefined),
+        status,
         appealType: appeal.appealType ?? null,
         appealReason: appeal.appealReason ?? null,
         userStatement: appeal.userStatement ?? null,
@@ -128,15 +320,13 @@ export async function getAppealDetail(
       },
       content: {
         contentId,
-        type: contentType,
+        type: targetType,
         createdAt: doc?.createdAt ?? null,
         preview: doc ? extractPreview(contentType, doc) : null,
       },
       originalDecision: {
         decision: 'BLOCKED',
-        reasonCodes: decision?.reasonCodes ?? [],
-        configVersionUsed: decision?.configVersionUsed ?? null,
-        decidedAt: decision?.decidedAt ?? null,
+        decidedAt: appeal.submittedAt ?? null,
       },
     });
   } catch (error) {
@@ -149,5 +339,5 @@ app.http('admin_appeals_get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/appeals/{appealId}',
-  handler: requireActiveAdmin(getAppealDetail),
+  handler: requireActiveModerator(getAppealDetail),
 });

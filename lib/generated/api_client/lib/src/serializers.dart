@@ -14,15 +14,23 @@ import 'package:built_value/iso_8601_date_time_serializer.dart';
 import 'package:asora_api_client/src/date_serializer.dart';
 import 'package:asora_api_client/src/model/date.dart';
 
+import 'package:asora_api_client/src/model/admin_appeal_audit_summary.dart';
 import 'package:asora_api_client/src/model/admin_appeal_content.dart';
 import 'package:asora_api_client/src/model/admin_appeal_decision_request.dart';
 import 'package:asora_api_client/src/model/admin_appeal_decision_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_detail.dart';
 import 'package:asora_api_client/src/model/admin_appeal_detail_response.dart';
+import 'package:asora_api_client/src/model/admin_appeal_final_decision.dart';
 import 'package:asora_api_client/src/model/admin_appeal_original_decision.dart';
+import 'package:asora_api_client/src/model/admin_appeal_override_request.dart';
+import 'package:asora_api_client/src/model/admin_appeal_override_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_queue_item.dart';
 import 'package:asora_api_client/src/model/admin_appeal_queue_response.dart';
+import 'package:asora_api_client/src/model/admin_appeal_quorum_summary.dart';
 import 'package:asora_api_client/src/model/admin_appeal_status.dart';
+import 'package:asora_api_client/src/model/admin_appeal_status_detail.dart';
+import 'package:asora_api_client/src/model/admin_appeal_target_type.dart';
+import 'package:asora_api_client/src/model/admin_appeal_vote_summary.dart';
 import 'package:asora_api_client/src/model/admin_audit_entry.dart';
 import 'package:asora_api_client/src/model/admin_audit_list_response.dart';
 import 'package:asora_api_client/src/model/admin_content_action_request.dart';
@@ -80,15 +88,23 @@ import 'package:asora_api_client/src/model/rate_limit_error.dart';
 part 'serializers.g.dart';
 
 @SerializersFor([
+  AdminAppealAuditSummary,
   AdminAppealContent,
   AdminAppealDecisionRequest,
   AdminAppealDecisionResponse,
   AdminAppealDetail,
   AdminAppealDetailResponse,
+  AdminAppealFinalDecision,
   AdminAppealOriginalDecision,
+  AdminAppealOverrideRequest,
+  AdminAppealOverrideResponse,
   AdminAppealQueueItem,
   AdminAppealQueueResponse,
+  AdminAppealQuorumSummary,
   AdminAppealStatus,
+  AdminAppealStatusDetail,
+  AdminAppealTargetType,
+  AdminAppealVoteSummary,
   AdminAuditEntry,
   AdminAuditListResponse,
   AdminContentActionRequest,

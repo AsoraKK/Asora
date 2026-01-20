@@ -24,7 +24,7 @@ abstract class AdminAppealDecisionResponse implements Built<AdminAppealDecisionR
 
   @BuiltValueField(wireName: r'status')
   AdminAppealStatus? get status;
-  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  };
+  // enum statusEnum {  PENDING,  APPROVED,  REJECTED,  OVERRIDDEN,  };
 
   @BuiltValueField(wireName: r'contentId')
   String? get contentId;

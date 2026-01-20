@@ -9,7 +9,7 @@ import 'package:asora_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **contentId** | **String** |  | [optional] 
-**type** | [**AdminContentType**](AdminContentType.md) |  | [optional] 
+**type** | [**AdminAppealTargetType**](AdminAppealTargetType.md) |  | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **preview** | **String** |  | [optional] 
 

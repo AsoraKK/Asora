@@ -69,6 +69,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsApprove**](doc/AdminApi.md#adminappealsapprove) | **POST** /_admin/appeals/{appealId}/approve | Approve an appeal
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsGet**](doc/AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsList**](doc/AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
+[*AdminApi*](doc/AdminApi.md) | [**adminAppealsOverride**](doc/AdminApi.md#adminappealsoverride) | **POST** /_admin/appeals/{appealId}/override | Override an appeal
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsReject**](doc/AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
 [*AdminApi*](doc/AdminApi.md) | [**adminAuditList**](doc/AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
 [*AdminApi*](doc/AdminApi.md) | [**adminContentBlock**](doc/AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
@@ -96,15 +97,23 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AdminAppealAuditSummary](doc/AdminAppealAuditSummary.md)
  - [AdminAppealContent](doc/AdminAppealContent.md)
  - [AdminAppealDecisionRequest](doc/AdminAppealDecisionRequest.md)
  - [AdminAppealDecisionResponse](doc/AdminAppealDecisionResponse.md)
  - [AdminAppealDetail](doc/AdminAppealDetail.md)
  - [AdminAppealDetailResponse](doc/AdminAppealDetailResponse.md)
+ - [AdminAppealFinalDecision](doc/AdminAppealFinalDecision.md)
  - [AdminAppealOriginalDecision](doc/AdminAppealOriginalDecision.md)
+ - [AdminAppealOverrideRequest](doc/AdminAppealOverrideRequest.md)
+ - [AdminAppealOverrideResponse](doc/AdminAppealOverrideResponse.md)
  - [AdminAppealQueueItem](doc/AdminAppealQueueItem.md)
  - [AdminAppealQueueResponse](doc/AdminAppealQueueResponse.md)
+ - [AdminAppealQuorumSummary](doc/AdminAppealQuorumSummary.md)
  - [AdminAppealStatus](doc/AdminAppealStatus.md)
+ - [AdminAppealStatusDetail](doc/AdminAppealStatusDetail.md)
+ - [AdminAppealTargetType](doc/AdminAppealTargetType.md)
+ - [AdminAppealVoteSummary](doc/AdminAppealVoteSummary.md)
  - [AdminAuditEntry](doc/AdminAuditEntry.md)
  - [AdminAuditListResponse](doc/AdminAuditListResponse.md)
  - [AdminContentActionRequest](doc/AdminContentActionRequest.md)

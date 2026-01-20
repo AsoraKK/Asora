@@ -5,6 +5,7 @@ import type { CreatePostRequest, Post, PostView, PublicUserProfile } from '@shar
 import type { ModerationMeta } from '@feed/types';
 import { profileService } from '@users/service/profileService';
 import { usersService } from '@auth/service/usersService';
+import { TEST_DATA_EXPIRY, type TestModeContext } from '@shared/testMode/testModeContext';
 
 interface PostDocument {
   id: string;
@@ -20,6 +21,17 @@ interface PostDocument {
   status: string;
   createdAt: number;
   updatedAt: number;
+  
+  // ─────────────────────────────────────────────────────────────
+  // Test Mode Fields - CRITICAL for data isolation
+  // ─────────────────────────────────────────────────────────────
+  /** Whether this is a test post (excluded from public feeds) */
+  isTestPost?: boolean;
+  /** Test session ID for grouping/cleanup */
+  testSessionId?: string;
+  /** Auto-expiry timestamp for test posts */
+  testExpiresAt?: number;
+  
   stats: {
     likes: number;
     comments: number;
@@ -40,12 +52,19 @@ interface PostDocument {
 class PostsService {
   /**
    * Create a new post with moderation metadata
+   * 
+   * @param authorId - User ID of the post author
+   * @param request - Post creation request
+   * @param postId - Optional pre-generated post ID
+   * @param moderationMeta - Moderation result metadata
+   * @param testContext - Optional test mode context for data isolation
    */
   async createPost(
     authorId: string,
     request: CreatePostRequest,
     postId?: string,
-    moderationMeta?: ModerationMeta
+    moderationMeta?: ModerationMeta,
+    testContext?: TestModeContext
   ): Promise<Post> {
     const now = Date.now();
     const id = postId || uuidv7();
@@ -63,6 +82,16 @@ class PostsService {
       status: 'published',
       createdAt: now,
       updatedAt: now,
+      
+      // ─────────────────────────────────────────────────────────────
+      // Test Mode Fields - Enforced server-side for data isolation
+      // ─────────────────────────────────────────────────────────────
+      ...(testContext?.isTestMode && {
+        isTestPost: true,
+        testSessionId: testContext.sessionId ?? undefined,
+        testExpiresAt: TEST_DATA_EXPIRY.getExpiryTimestamp(now),
+      }),
+      
       stats: {
         likes: 0,
         comments: 0,
