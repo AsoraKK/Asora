@@ -23,8 +23,16 @@ class CreatePostModal extends ConsumerStatefulWidget {
 }
 
 class _CreatePostModalState extends ConsumerState<CreatePostModal> {
+  static const String _policyReminderMessage =
+      'AI-generated content is blocked at publish time.\n'
+      "If content is blocked, you'll see a neutral notice.\n"
+      'You can appeal decisions. Appeals are reviewed by the community and moderators.\n'
+      'This is an invite-only beta focused on authentic human content.';
+
   ContentType selectedType = ContentType.text;
   bool isNews = false;
+  bool _policyReminderShown = false;
+  final GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
   late final TextEditingController controller;
   late final TextEditingController mediaController;
 
@@ -46,6 +54,11 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   }
 
   Future<void> _handleSubmit() async {
+    if (!_policyReminderShown) {
+      _policyReminderShown = true;
+      _policyTooltipKey.currentState?.ensureTooltipVisible();
+    }
+
     await runWithDeviceGuard(
       context,
       ref,
@@ -182,12 +195,18 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               ),
               SizedBox(width: spacing.md),
               Expanded(
-                child: LythButton.primary(
-                  label: canCreate ? 'Post' : 'Sign in first',
-                  onPressed: state.isSubmitting || !canCreate
-                      ? null
-                      : _handleSubmit,
-                  isLoading: state.isSubmitting,
+                child: Tooltip(
+                  key: _policyTooltipKey,
+                  message: _policyReminderMessage,
+                  triggerMode: TooltipTriggerMode.manual,
+                  showDuration: const Duration(seconds: 6),
+                  child: LythButton.primary(
+                    label: canCreate ? 'Post' : 'Sign in first',
+                    onPressed: state.isSubmitting || !canCreate
+                        ? null
+                        : _handleSubmit,
+                    isLoading: state.isSubmitting,
+                  ),
                 ),
               ),
             ],

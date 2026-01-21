@@ -11,6 +11,13 @@ class FirstPostLockScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    const policyLines = [
+      'AI-generated content is blocked at publish time.',
+      "If content is blocked, you'll see a neutral notice.",
+      'You can appeal decisions. Appeals are reviewed by the community and moderators.',
+      'This is an invite-only beta focused on authentic human content.',
+    ];
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -33,9 +40,28 @@ class FirstPostLockScreen extends ConsumerWidget {
               ),
               SizedBox(height: context.spacing.md),
               Text(
-                'New users need to create their first post within 48 hours to continue using Lythaus.',
+                'New users need to create their first post promptly to continue using Lythaus.',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
+              ),
+              SizedBox(height: context.spacing.lg),
+              Text(
+                'Before you post',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: context.spacing.sm),
+              ...policyLines.map(
+                (line) => Padding(
+                  padding: EdgeInsets.only(bottom: context.spacing.xs),
+                  child: Text(
+                    line,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
               SizedBox(height: context.spacing.xl),
               LythButton.primary(
