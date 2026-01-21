@@ -49,7 +49,7 @@ function HiveApiTest() {
     try {
       if (liveMode) {
         // Real API call via backend proxy
-        const response = await adminRequest('/api/moderation/test', {
+        const response = await adminRequest('/moderation/test', {
           method: 'POST',
           body: {
             type: 'text',
@@ -82,7 +82,7 @@ function HiveApiTest() {
 
     try {
       if (liveMode) {
-        const response = await adminRequest('/api/moderation/test', {
+        const response = await adminRequest('/moderation/test', {
           method: 'POST',
           body: {
             type: 'image',
