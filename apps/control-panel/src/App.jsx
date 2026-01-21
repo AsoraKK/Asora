@@ -6,6 +6,8 @@ import Appeals from './pages/Appeals.jsx';
 import Flags from './pages/Flags.jsx';
 import Invites from './pages/Invites.jsx';
 import Users from './pages/Users.jsx';
+import AppPreview from './pages/AppPreview.jsx';
+import HiveApiTest from './pages/HiveApiTest.jsx';
 
 const NotFound = () => (
   <section className="page">
@@ -32,6 +34,8 @@ function App() {
             <Route path="/invites" element={<Invites />} />
             <Route path="/moderation" element={<Flags />} />
             <Route path="/audit" element={<Audit />} />
+            <Route path="/preview" element={<AppPreview />} />
+            <Route path="/hive-test" element={<HiveApiTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

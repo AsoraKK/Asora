@@ -24,8 +24,16 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
+  static const String _policyReminderMessage =
+      'AI-generated content is blocked at publish time.\n'
+      "If content is blocked, you'll see a neutral notice.\n"
+      'You can appeal decisions. Appeals are reviewed by the community and moderators.\n'
+      'This is an invite-only beta focused on authentic human content.';
+
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
+  bool _policyReminderShown = false;
+  final GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
 
   @override
   void initState() {
@@ -69,20 +77,26 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilledButton(
-              onPressed: state.isSubmitting || !state.isValid || !canCreate
-                  ? null
-                  : _handleSubmit,
-              child: state.isSubmitting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text('Post', style: GoogleFonts.sora()),
+            child: Tooltip(
+              key: _policyTooltipKey,
+              message: _policyReminderMessage,
+              triggerMode: TooltipTriggerMode.manual,
+              showDuration: const Duration(seconds: 6),
+              child: FilledButton(
+                onPressed: state.isSubmitting || !state.isValid || !canCreate
+                    ? null
+                    : _handleSubmit,
+                child: state.isSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text('Post', style: GoogleFonts.sora()),
+              ),
             ),
           ),
         ],
@@ -180,6 +194,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _handleSubmit() async {
+    if (!_policyReminderShown) {
+      _policyReminderShown = true;
+      _policyTooltipKey.currentState?.ensureTooltipVisible();
+    }
+
     await runWithDeviceGuard(
       context,
       ref,

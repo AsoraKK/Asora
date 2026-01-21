@@ -6,7 +6,9 @@ const links = [
   { to: '/appeals', label: 'Appeals' },
   { to: '/users', label: 'Users' },
   { to: '/invites', label: 'Invites' },
-  { to: '/audit', label: 'Audit' }
+  { to: '/audit', label: 'Audit' },
+  { to: '/preview', label: 'Preview' },
+  { to: '/hive-test', label: 'Hive AI' }
 ];
 
 function Nav() {
