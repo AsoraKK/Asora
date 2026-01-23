@@ -12,11 +12,11 @@ import {
   type RateLimitRule,
 } from '../http/withRateLimit';
 
-const GLOBAL_IP_LIMIT = { limit: 120, windowSeconds: 60 } as const;
-const GLOBAL_USER_LIMIT = { limit: 240, windowSeconds: 60 } as const;
-const WRITE_USER_LIMIT = { limit: 30, windowSeconds: 60, burst: 10 } as const;
-const ANON_IP_LIMIT = { limit: 60, windowSeconds: 60 } as const;
-const AUTH_BASE_LIMIT = { limit: 20, windowSeconds: 60 } as const;
+const GLOBAL_IP_LIMIT = { limit: 120, windowSeconds: 60 };
+const GLOBAL_USER_LIMIT = { limit: 240, windowSeconds: 60 };
+const WRITE_USER_LIMIT = { limit: 30, windowSeconds: 60, burst: 10 };
+const ANON_IP_LIMIT = { limit: 60, windowSeconds: 60 };
+const AUTH_BASE_LIMIT = { limit: 20, windowSeconds: 60 };
 // Auth endpoints rely on this base limit. Increasing it gives attackers more retries and should only happen after a security review.
 const AUTH_FAILURE_WINDOW_SECONDS = 30 * 60;
 // This window bounds how long failure lockouts persist. Lengthening it decreases protection and needs explicit review.

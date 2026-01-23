@@ -3277,12 +3277,7 @@
             "type": "boolean"
           },
           "finalDecision": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AdminAppealFinalDecision"
-              }
-            ]
+            "$ref": "#/components/schemas/AdminAppealFinalDecision"
           },
           "auditSummary": {
             "$ref": "#/components/schemas/AdminAppealAuditSummary"

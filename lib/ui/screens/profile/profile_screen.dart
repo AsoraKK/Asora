@@ -9,6 +9,7 @@ import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/application/follow_providers.dart';
+import 'package:asora/features/profile/application/follow_service.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';

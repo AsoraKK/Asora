@@ -171,6 +171,3 @@ lib/src/model/legal_hold_record.dart
 lib/src/model/rate_limit_error.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/auth_api_test.dart
-test/invite_validation_payload_test.dart
-test/invite_validation_response_test.dart
