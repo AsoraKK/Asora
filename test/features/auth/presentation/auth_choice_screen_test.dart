@@ -8,6 +8,10 @@ import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 
 void main() {
   testWidgets('auth choice screen renders primary actions', (tester) async {
+    // Use a taller surface to prevent overflow
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
