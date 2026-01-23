@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+
 /// Deep-link router for handling notification navigation
 /// Parses deep-link URIs and navigates to appropriate screens
 class DeeplinkRouter {
@@ -9,6 +11,7 @@ class DeeplinkRouter {
   /// - asora://user/{userId} - Navigate to user profile
   /// - asora://comment/{commentId} - Navigate to comment thread
   /// - asora://settings/notifications - Navigate to notification settings
+  /// - asora://invite/{code} - Navigate to invite redemption
   static Future<void> navigate(BuildContext context, String deeplink) async {
     final uri = Uri.parse(deeplink);
 
@@ -42,6 +45,9 @@ class DeeplinkRouter {
         if (id == 'notifications') {
           await _navigateToNotificationSettings(context);
         }
+        break;
+      case 'invite':
+        await _navigateToInvite(context, id, uri.queryParameters['code']);
         break;
       default:
         debugPrint('[DeepLink] Unknown deeplink type: $type');
@@ -81,6 +87,19 @@ class DeeplinkRouter {
     // TODO: Implement settings navigation
     // Navigator.pushNamed(context, '/settings/notifications');
     debugPrint('[DeepLink] Navigate to notification settings');
+  }
+
+  static Future<void> _navigateToInvite(
+    BuildContext context,
+    String? codeFromPath,
+    String? codeFromQuery,
+  ) async {
+    final code = codeFromPath ?? codeFromQuery;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => InviteRedeemScreen(inviteCode: code),
+      ),
+    );
   }
 
   /// Handle notification tap from system tray or in-app

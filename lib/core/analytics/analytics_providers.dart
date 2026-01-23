@@ -15,6 +15,7 @@ import 'package:asora/core/providers/repository_providers.dart';
 import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/analytics/analytics_consent.dart';
 import 'package:asora/core/analytics/analytics_consent_storage.dart';
+import 'package:asora/core/analytics/analytics_event_tracker.dart';
 import 'package:asora/core/analytics/consent_aware_analytics_client.dart';
 import 'package:asora/core/analytics/http_analytics_client.dart';
 
@@ -23,6 +24,11 @@ final analyticsConsentStorageProvider = Provider<AnalyticsConsentStorage>((
   ref,
 ) {
   return AnalyticsConsentStorage(storage: const FlutterSecureStorage());
+});
+
+/// Provider for one-time analytics event tracking
+final analyticsEventTrackerProvider = Provider<AnalyticsEventTracker>((ref) {
+  return AnalyticsEventTracker(storage: const FlutterSecureStorage());
 });
 
 /// Provider for current analytics consent state

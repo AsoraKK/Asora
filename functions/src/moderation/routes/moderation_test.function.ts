@@ -176,11 +176,24 @@ function analyzeImageResponse(raw: unknown): { action: string; confidence: numbe
   const categories: string[] = [];
   const reasons: string[] = [];
   
-  let maxScore = 0;
+  let maxConcerningScore = 0;
+  let overallMaxScore = 0;
   
   // Check each class score against thresholds
   for (const [className, score] of Object.entries(scores)) {
-    if (score > maxScore) maxScore = score;
+    if (score > overallMaxScore) overallMaxScore = score;
+    
+    // Check if this is a concerning class (not safe/general/benign)
+    const isConcerning = className.includes('nsfw') || 
+                         className.includes('nude') || 
+                         className.includes('sexual') ||
+                         className.includes('violence') || 
+                         className.includes('gore') ||
+                         className.includes('hate');
+    
+    if (isConcerning && score > maxConcerningScore) {
+      maxConcerningScore = score;
+    }
     
     if (score >= 0.85) {
       // High confidence violation
@@ -194,18 +207,16 @@ function analyzeImageResponse(raw: unknown): { action: string; confidence: numbe
         categories.push('hate_speech');
         reasons.push(`High ${className} score: ${(score * 100).toFixed(1)}%`);
       }
-    } else if (score >= 0.5) {
-      // Borderline - flag for review
-      if (className.includes('nsfw') || className.includes('nude') || className.includes('violence')) {
-        reasons.push(`Borderline ${className} score: ${(score * 100).toFixed(1)}%`);
-      }
+    } else if (score >= 0.5 && isConcerning) {
+      // Borderline - flag for review (only for concerning classes)
+      reasons.push(`Borderline ${className} score: ${(score * 100).toFixed(1)}%`);
     }
   }
   
   let action = 'ALLOW';
-  if (categories.length > 0 && maxScore >= 0.85) {
+  if (categories.length > 0 && maxConcerningScore >= 0.85) {
     action = 'BLOCK';
-  } else if (maxScore >= 0.5) {
+  } else if (maxConcerningScore >= 0.5) {
     action = 'WARN';
   }
   
@@ -215,7 +226,7 @@ function analyzeImageResponse(raw: unknown): { action: string; confidence: numbe
   
   return {
     action,
-    confidence: maxScore,
+    confidence: overallMaxScore,
     categories: [...new Set(categories)],
     reasons,
   };

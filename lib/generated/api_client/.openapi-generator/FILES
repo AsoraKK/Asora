@@ -58,6 +58,7 @@ doc/AdminUserEnableRequest.md
 doc/AdminUserSearchResponse.md
 doc/AdminUserStatus.md
 doc/AdminUserSummary.md
+doc/AuthApi.md
 doc/CreatePost201Response.md
 doc/CreatePostRequest.md
 doc/DsrRequestInput.md
@@ -70,6 +71,8 @@ doc/GetFeed200Response.md
 doc/GetFeed200ResponseMeta.md
 doc/GetHealth200Response.md
 doc/HealthApi.md
+doc/InviteValidationPayload.md
+doc/InviteValidationResponse.md
 doc/LegalHoldClear.md
 doc/LegalHoldInput.md
 doc/LegalHoldRecord.md
@@ -80,6 +83,7 @@ doc/RateLimitError.md
 lib/asora_api_client.dart
 lib/src/api.dart
 lib/src/api/admin_api.dart
+lib/src/api/auth_api.dart
 lib/src/api/feed_api.dart
 lib/src/api/health_api.dart
 lib/src/api/moderation_api.dart
@@ -159,9 +163,14 @@ lib/src/model/flag_content_request.dart
 lib/src/model/get_feed200_response.dart
 lib/src/model/get_feed200_response_meta.dart
 lib/src/model/get_health200_response.dart
+lib/src/model/invite_validation_payload.dart
+lib/src/model/invite_validation_response.dart
 lib/src/model/legal_hold_clear.dart
 lib/src/model/legal_hold_input.dart
 lib/src/model/legal_hold_record.dart
 lib/src/model/rate_limit_error.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/auth_api_test.dart
+test/invite_validation_payload_test.dart
+test/invite_validation_response_test.dart

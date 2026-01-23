@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="Waitlist"
+  description="Join the Lythaus waitlist for the invite-only beta."
+>
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="pill">Invite-only beta</span>
+      <h1>Human-first publishing with clarity, not chaos.</h1>
+      <p>
+        Lythaus is a calm space for real voices and thoughtful posts. We keep
+        the beta small so every signal matters.
+      </p>
+      <p class="hero-footnote">
+        Invites roll out in small batches. Timing is not guaranteed.
+      </p>
+    </div>
+    <div class="hero-card" id="waitlist">
+      <h2>Join the waitlist</h2>
+      <p>
+        Leave your email and we will reach out when invites open again.
+      </p>
+      <form class="waitlist-form" data-waitlist>
+        <input type="email" placeholder="you@example.com" required />
+        <button class="button primary" type="submit">Request invite</button>
+        <span class="hero-footnote" data-waitlist-note>
+          We do not promise access timing.
+        </span>
+      </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <h3>What to expect</h3>
+    <div class="grid">
+      <div class="card">
+        <h4>Invite-only by design</h4>
+        <p>We keep the beta small to protect thoughtful discussion.</p>
+      </div>
+      <div class="card">
+        <h4>Appeals exist for every decision</h4>
+        <p>Community reviewers and moderators handle appeals together.</p>
+      </div>
+      <div class="card">
+        <h4>Calm, consistent moderation</h4>
+        <p>Decisions are transparent and logged for accountability.</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const form = document.querySelector('[data-waitlist]');
+    const note = document.querySelector('[data-waitlist-note]');
+    if (form && note) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        note.textContent = 'Thanks. We will reach out when invites open again.';
+      });
+    }
+  </script>
+</BaseLayout>

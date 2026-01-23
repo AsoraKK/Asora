@@ -9,8 +9,11 @@ import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/design_system/components/lyth_text_field.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/state/models/feed_models.dart';
 
 class CreatePostModal extends ConsumerStatefulWidget {
@@ -84,6 +87,16 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
         }
 
         if (success) {
+          final user = ref.read(currentUserProvider);
+          if (user != null) {
+            await ref
+                .read(analyticsEventTrackerProvider)
+                .logEventOnce(
+                  ref.read(analyticsClientProvider),
+                  AnalyticsEvents.firstPost,
+                  userId: user.id,
+                );
+          }
           LythSnackbar.success(context: context, message: 'Posted to Lythaus');
           notifier.reset();
           Navigator.of(context).maybePop();

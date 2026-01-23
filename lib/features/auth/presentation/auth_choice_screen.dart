@@ -14,6 +14,7 @@ import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/screens/security_debug_screen.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
   const AuthChoiceScreen({super.key});
@@ -146,6 +147,17 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                         );
                       },
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  LythButton.tertiary(
+                    label: 'Redeem invite',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const InviteRedeemScreen(),
+                        ),
+                      );
+                    },
                   ),
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),

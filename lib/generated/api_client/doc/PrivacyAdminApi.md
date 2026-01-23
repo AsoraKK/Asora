@@ -20,6 +20,8 @@ Method | HTTP request | Description
 
 Clear an existing legal hold
 
+Removes a previously placed legal hold, allowing normal data lifecycle operations (including deletion) to resume.
+
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
@@ -59,6 +61,8 @@ void (empty response body)
 > DsrRequestSummary enqueueDsrDelete(dsrRequestInput)
 
 Enqueue a Data Subject Request delete
+
+Queues a deletion job for a user's data as part of GDPR/CCPA right-to-erasure compliance. Returns immediately with job tracking info.
 
 ### Example
 ```dart
@@ -101,6 +105,8 @@ Name | Type | Description  | Notes
 
 Enqueue a Data Subject Request export
 
+Queues an export job for a user's data as part of GDPR/CCPA compliance. Returns immediately with job tracking info.
+
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
@@ -141,6 +147,8 @@ Name | Type | Description  | Notes
 > LegalHoldRecord placeLegalHold(legalHoldInput)
 
 Place a legal hold
+
+Places a legal hold on a user's data, preventing deletion until the hold is cleared. Used for litigation or regulatory preservation.
 
 ### Example
 ```dart

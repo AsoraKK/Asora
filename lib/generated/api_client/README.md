@@ -85,6 +85,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersDisable**](doc/AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersEnable**](doc/AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersSearch**](doc/AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
+[*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [*FeedApi*](doc/FeedApi.md) | [**getFeed**](doc/FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
@@ -163,6 +164,8 @@ Class | Method | HTTP request | Description
  - [GetFeed200Response](doc/GetFeed200Response.md)
  - [GetFeed200ResponseMeta](doc/GetFeed200ResponseMeta.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
+ - [InviteValidationPayload](doc/InviteValidationPayload.md)
+ - [InviteValidationResponse](doc/InviteValidationResponse.md)
  - [LegalHoldClear](doc/LegalHoldClear.md)
  - [LegalHoldInput](doc/LegalHoldInput.md)
  - [LegalHoldRecord](doc/LegalHoldRecord.md)

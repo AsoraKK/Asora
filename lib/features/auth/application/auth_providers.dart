@@ -17,6 +17,8 @@ import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
+import 'package:asora/features/auth/application/invite_redeem_service.dart';
+import 'package:asora/core/network/dio_client.dart';
 
 /// OAuth2Service provider - manages OAuth2 PKCE flow
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
@@ -32,6 +34,11 @@ final enhancedAuthServiceProvider = Provider<AuthService>((ref) {
     secureStorage: const FlutterSecureStorage(),
     httpClient: http.Client(),
   );
+});
+
+/// Invite redemption service provider
+final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
+  return InviteRedeemService(ref.watch(secureDioProvider));
 });
 
 /// Token version provider used to invalidate cached JWT reads when the
