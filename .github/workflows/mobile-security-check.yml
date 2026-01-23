@@ -30,7 +30,9 @@ jobs:
           done
 
   check-pins-and-integrity:
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
+    # Only run on push to main/release branches - skip for pull_request events
+    # because Azure federated identity doesn't have pull_request subject claim
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: ubuntu-latest
     needs: verify-secrets
     permissions:

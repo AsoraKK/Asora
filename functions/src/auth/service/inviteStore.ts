@@ -113,6 +113,16 @@ function isInviteExhausted(invite: InviteDocument): boolean {
   return usageCount >= maxUses;
 }
 
+export function isInviteActive(invite: InviteDocument): boolean {
+  if (invite.revokedAt) {
+    return false;
+  }
+  if (invite.expiresAt && new Date(invite.expiresAt) < new Date()) {
+    return false;
+  }
+  return !isInviteExhausted(invite);
+}
+
 /**
  * Create a new invite code.
  */

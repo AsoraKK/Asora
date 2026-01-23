@@ -14,6 +14,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 
 /// Screen for creating a new post
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -257,6 +260,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
+    final user = ref.read(currentUserProvider);
+    if (user != null) {
+      ref
+          .read(analyticsEventTrackerProvider)
+          .logEventOnce(
+            ref.read(analyticsClientProvider),
+            AnalyticsEvents.firstPost,
+            userId: user.id,
+          );
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Post created successfully!', style: GoogleFonts.sora()),

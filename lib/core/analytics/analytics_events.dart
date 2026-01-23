@@ -47,6 +47,32 @@ class AnalyticsEvents {
   /// User signed out
   static const String authSignedOut = 'auth_signed_out';
 
+  // ===== Onboarding Funnel =====
+
+  /// First launch after install
+  static const String onboardingStart = 'onboarding_start';
+
+  /// Invite entry screen viewed
+  static const String inviteScreenView = 'invite_screen_view';
+
+  /// Invite redeemed successfully
+  static const String inviteRedeemSuccess = 'invite_redeem_success';
+
+  /// Invite redemption failed
+  ///
+  /// Properties:
+  /// - reason: string (InviteRedeemFailureReason.value)
+  static const String inviteRedeemFail = 'invite_redeem_fail';
+
+  /// Profile completion confirmed (required fields saved)
+  static const String profileComplete = 'profile_complete';
+
+  /// First follow action completed
+  static const String firstFollow = 'first_follow';
+
+  /// First post published successfully
+  static const String firstPost = 'first_post';
+
   // ===== Content Creation =====
 
   /// User created a post
@@ -144,4 +170,51 @@ class AnalyticsEvents {
   static const String propCaseType = 'case_type';
   static const String propErrorType = 'error_type';
   static const String propRecoverable = 'recoverable';
+  static const String propInviteRedeemReason = 'reason';
+}
+
+enum InviteRedeemFailureReason {
+  invalidCode,
+  expired,
+  alreadyUsed,
+  exhausted,
+  revoked,
+  emailMismatch,
+  alreadyActive,
+  missingEmail,
+  invalidRequest,
+  unauthorized,
+  network,
+  unknown,
+}
+
+extension InviteRedeemFailureReasonX on InviteRedeemFailureReason {
+  String get value {
+    switch (this) {
+      case InviteRedeemFailureReason.invalidCode:
+        return 'invalid_code';
+      case InviteRedeemFailureReason.expired:
+        return 'expired';
+      case InviteRedeemFailureReason.alreadyUsed:
+        return 'already_used';
+      case InviteRedeemFailureReason.exhausted:
+        return 'exhausted';
+      case InviteRedeemFailureReason.revoked:
+        return 'revoked';
+      case InviteRedeemFailureReason.emailMismatch:
+        return 'email_mismatch';
+      case InviteRedeemFailureReason.alreadyActive:
+        return 'already_active';
+      case InviteRedeemFailureReason.missingEmail:
+        return 'missing_email';
+      case InviteRedeemFailureReason.invalidRequest:
+        return 'invalid_request';
+      case InviteRedeemFailureReason.unauthorized:
+        return 'unauthorized';
+      case InviteRedeemFailureReason.network:
+        return 'network';
+      case InviteRedeemFailureReason.unknown:
+        return 'unknown';
+    }
+  }
 }

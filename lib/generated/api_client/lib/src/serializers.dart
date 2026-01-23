@@ -80,6 +80,8 @@ import 'package:asora_api_client/src/model/flag_content_request.dart';
 import 'package:asora_api_client/src/model/get_feed200_response.dart';
 import 'package:asora_api_client/src/model/get_feed200_response_meta.dart';
 import 'package:asora_api_client/src/model/get_health200_response.dart';
+import 'package:asora_api_client/src/model/invite_validation_payload.dart';
+import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/legal_hold_clear.dart';
 import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
@@ -154,6 +156,8 @@ part 'serializers.g.dart';
   GetFeed200Response,
   GetFeed200ResponseMeta,
   GetHealth200Response,
+  InviteValidationPayload,
+  InviteValidationResponse,
   LegalHoldClear,
   LegalHoldInput,
   LegalHoldRecord,

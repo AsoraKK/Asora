@@ -217,7 +217,8 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
       return createAuthenticatedPolicy('auth/userinfo');
     case 'auth/b2c-config':
     case 'auth/ping':
-      return createAnonymousPolicy(path);
+    case 'auth/invite/validate':
+      return createAnonymousPolicy(path, 30);
     case 'health':
   return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
     default:
@@ -263,6 +264,8 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
     case 'auth-config':
     case 'auth-ping':
       return createAnonymousPolicy(routeId);
+    case 'auth-invite-validate':
+      return createAnonymousPolicy('auth/invite/validate', 30);
     case 'health':
   return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
     default:

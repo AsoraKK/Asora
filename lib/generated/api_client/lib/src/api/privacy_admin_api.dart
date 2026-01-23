@@ -23,7 +23,7 @@ class PrivacyAdminApi {
   const PrivacyAdminApi(this._dio, this._serializers);
 
   /// Clear an existing legal hold
-  /// 
+  /// Removes a previously placed legal hold, allowing normal data lifecycle operations (including deletion) to resume.
   ///
   /// Parameters:
   /// * [legalHoldClear] 
@@ -96,7 +96,7 @@ class PrivacyAdminApi {
   }
 
   /// Enqueue a Data Subject Request delete
-  /// 
+  /// Queues a deletion job for a user&#39;s data as part of GDPR/CCPA right-to-erasure compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
   /// * [dsrRequestInput] 
@@ -197,7 +197,7 @@ class PrivacyAdminApi {
   }
 
   /// Enqueue a Data Subject Request export
-  /// 
+  /// Queues an export job for a user&#39;s data as part of GDPR/CCPA compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
   /// * [dsrRequestInput] 
@@ -298,7 +298,7 @@ class PrivacyAdminApi {
   }
 
   /// Place a legal hold
-  /// 
+  /// Places a legal hold on a user&#39;s data, preventing deletion until the hold is cleared. Used for litigation or regulatory preservation.
   ///
   /// Parameters:
   /// * [legalHoldInput] 

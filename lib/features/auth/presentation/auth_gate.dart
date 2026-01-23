@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/ui/screens/app_shell.dart';
@@ -24,8 +25,18 @@ class _AuthGateState extends ConsumerState<AuthGate> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _appStartedLogged) return;
-      ref.read(analyticsClientProvider).logEvent(AnalyticsEvents.appStarted);
+      final analytics = ref.read(analyticsClientProvider);
+      analytics.logEvent(AnalyticsEvents.appStarted);
+      ref
+          .read(analyticsEventTrackerProvider)
+          .logEventOnce(analytics, AnalyticsEvents.onboardingStart);
       _appStartedLogged = true;
+    });
+
+    ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+      final analytics = ref.read(analyticsClientProvider);
+      final user = next.valueOrNull;
+      analytics.setUserId(user?.id);
     });
   }
 

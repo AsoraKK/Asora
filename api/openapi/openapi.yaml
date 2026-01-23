@@ -19,6 +19,8 @@ tags:
     description: Feed retrieval endpoints.
   - name: Health
     description: Liveness monitoring endpoints.
+  - name: Auth
+    description: Authentication and invite access endpoints.
   - name: Posts
     description: Post authoring endpoints.
   - name: Moderation
@@ -187,6 +189,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
+  /auth/invite/validate:
+    get:
+      operationId: authInviteValidate
+      summary: Validate an invite code
+      description: Validates an invite code without revealing status details.
+      tags:
+        - Auth
+      security: []
+      parameters:
+        - name: code
+          in: query
+          description: Invite code (format XXXX-XXXX)
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invite validation response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteValidationResponse'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              description: Seconds until the client may retry
+              schema:
+                type: integer
+                minimum: 0
+            X-RateLimit-Limit:
+              description: Maximum requests allowed in the enforced window
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Remaining requests before hitting the limit
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Unix epoch seconds when the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+        '500':
+          description: Validation unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /post:
     post:
       operationId: createPost
@@ -1264,6 +1318,7 @@ paths:
     post:
       operationId: enqueueDsrExport
       summary: Enqueue a Data Subject Request export
+      description: Queues an export job for a user's data as part of GDPR/CCPA compliance. Returns immediately with job tracking info.
       tags:
         - Privacy Admin
       security:
@@ -1309,6 +1364,7 @@ paths:
     post:
       operationId: enqueueDsrDelete
       summary: Enqueue a Data Subject Request delete
+      description: Queues a deletion job for a user's data as part of GDPR/CCPA right-to-erasure compliance. Returns immediately with job tracking info.
       tags:
         - Privacy Admin
       security:
@@ -1354,6 +1410,7 @@ paths:
     post:
       operationId: placeLegalHold
       summary: Place a legal hold
+      description: Places a legal hold on a user's data, preventing deletion until the hold is cleared. Used for litigation or regulatory preservation.
       tags:
         - Privacy Admin
       security:
@@ -1399,6 +1456,7 @@ paths:
     post:
       operationId: clearLegalHold
       summary: Clear an existing legal hold
+      description: Removes a previously placed legal hold, allowing normal data lifecycle operations (including deletion) to resume.
       tags:
         - Privacy Admin
       security:
@@ -1476,6 +1534,32 @@ components:
           description: Additional context for specialized scopes (e.g. auth backoff)
           enum:
             - auth_backoff
+    InviteValidationPayload:
+      type: object
+      required:
+        - valid
+      properties:
+        valid:
+          type: boolean
+          description: True when the invite code is active and redeemable.
+    InviteValidationResponse:
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: '#/components/schemas/InviteValidationPayload'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
     DsrRequestSummary:
       type: object
       properties:
@@ -1811,7 +1895,6 @@ components:
         moderatorOverrideAllowed: { type: boolean }
         finalDecision:
           $ref: '#/components/schemas/AdminAppealFinalDecision'
-          nullable: true
         auditSummary:
           $ref: '#/components/schemas/AdminAppealAuditSummary'
         appeal:
