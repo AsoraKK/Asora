@@ -19,6 +19,7 @@ class AuthGate extends ConsumerStatefulWidget {
 
 class _AuthGateState extends ConsumerState<AuthGate> {
   bool _appStartedLogged = false;
+  ProviderSubscription<AsyncValue<User?>>? _authStateSub;
 
   @override
   void initState() {
@@ -33,11 +34,20 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       _appStartedLogged = true;
     });
 
-    ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+    _authStateSub = ref.listenManual<AsyncValue<User?>>(authStateProvider, (
+      previous,
+      next,
+    ) {
       final analytics = ref.read(analyticsClientProvider);
       final user = next.valueOrNull;
       analytics.setUserId(user?.id);
     });
+  }
+
+  @override
+  void dispose() {
+    _authStateSub?.close();
+    super.dispose();
   }
 
   @override

@@ -1,12 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_event_tracker.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/profile/application/follow_providers.dart';
+import 'package:asora/features/profile/application/follow_service.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
+
+class _MockFollowService extends Mock implements FollowService {}
+
+class _FakeAnalyticsEventTracker implements AnalyticsEventTracker {
+  final List<String> loggedOnce = [];
+
+  @override
+  Future<bool> logEventOnce(
+    AnalyticsClient client,
+    String eventName, {
+    String? userId,
+    Map<String, Object?>? properties,
+  }) async {
+    loggedOnce.add(eventName);
+    return true;
+  }
+
+  @override
+  Future<bool> wasLogged(String eventName, {String? userId}) async {
+    return loggedOnce.contains(eventName);
+  }
+}
 
 void main() {
   testWidgets('profile screen prompts sign in when unauthenticated', (
@@ -94,5 +123,113 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Unable to load profile'), findsOneWidget);
+  });
+
+  testWidgets('profile screen follows another user', (tester) async {
+    final currentUser = User(
+      id: 'user-1',
+      email: 'ada@example.com',
+      role: UserRole.user,
+      tier: UserTier.gold,
+      reputationScore: 120,
+      createdAt: DateTime(2024, 1, 1),
+      lastLoginAt: DateTime(2024, 1, 2),
+    );
+    const profile = PublicUser(
+      id: 'user-2',
+      displayName: 'Grace Hopper',
+      handle: '@grace',
+      tier: 'gold',
+      reputationScore: 80,
+    );
+    final followService = _MockFollowService();
+    final tracker = _FakeAnalyticsEventTracker();
+
+    when(
+      () => followService.follow(targetUserId: 'user-2', accessToken: 'token'),
+    ).thenAnswer(
+      (_) async => const FollowStatus(following: true, followerCount: 6),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => currentUser),
+          publicUserProvider(
+            profile.id,
+          ).overrideWith((ref) => Future.value(profile)),
+          followServiceProvider.overrideWith((ref) => followService),
+          followStatusProvider(profile.id).overrideWith(
+            (ref) => Future.value(
+              const FollowStatus(following: false, followerCount: 5),
+            ),
+          ),
+          jwtProvider.overrideWith((ref) async => 'token'),
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          analyticsEventTrackerProvider.overrideWithValue(tracker),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('5 followers'), findsOneWidget);
+    await tester.tap(find.text('Follow'));
+    await tester.pumpAndSettle();
+
+    verify(
+      () => followService.follow(targetUserId: 'user-2', accessToken: 'token'),
+    ).called(1);
+    expect(tracker.loggedOnce, contains(AnalyticsEvents.firstFollow));
+  });
+
+  testWidgets('profile screen shows auth error when token missing', (
+    tester,
+  ) async {
+    final currentUser = User(
+      id: 'user-1',
+      email: 'ada@example.com',
+      role: UserRole.user,
+      tier: UserTier.gold,
+      reputationScore: 120,
+      createdAt: DateTime(2024, 1, 1),
+      lastLoginAt: DateTime(2024, 1, 2),
+    );
+    const profile = PublicUser(
+      id: 'user-2',
+      displayName: 'Grace Hopper',
+      handle: '@grace',
+      tier: 'gold',
+      reputationScore: 80,
+    );
+    final followService = _MockFollowService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => currentUser),
+          publicUserProvider(
+            profile.id,
+          ).overrideWith((ref) => Future.value(profile)),
+          followServiceProvider.overrideWith((ref) => followService),
+          followStatusProvider(profile.id).overrideWith(
+            (ref) => Future.value(
+              const FollowStatus(following: false, followerCount: 5),
+            ),
+          ),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Follow'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign in to follow accounts.'), findsOneWidget);
   });
 }

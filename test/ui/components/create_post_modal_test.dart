@@ -7,6 +7,7 @@ import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/ui/components/create_post_modal.dart';
 import 'package:asora/ui/screens/create/create_modal.dart';
+import 'package:asora/ui/screens/create/create_screen.dart';
 
 class _FakePostCreationNotifier extends PostCreationNotifier {
   _FakePostCreationNotifier({required this.submitFn, required Ref ref})
@@ -219,6 +220,21 @@ void main() {
     await tester.tap(find.text('Open modal'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(CreatePostModal), findsOneWidget);
+  });
+
+  testWidgets('CreateScreen renders app bar and modal content', (tester) async {
+    final harness = _buildHarness(submitFn: (n) async => false);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: harness.container,
+        child: const MaterialApp(home: CreateScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(CreatePostModal), findsOneWidget);
   });
 }

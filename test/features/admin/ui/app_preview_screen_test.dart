@@ -10,8 +10,14 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.5;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
 
     final container = ProviderContainer();
+    container.read(previewFlowProvider.notifier).state =
+        PreviewFlow.onboardingFeed;
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
@@ -24,10 +30,13 @@ void main() {
 
     expect(find.text('Flow Selector'), findsOneWidget);
 
-    await tester.tap(find.text('Profile').first);
+    await tester.tap(find.text('Create Post').first);
     await tester.pumpAndSettle();
-    expect(container.read(previewFlowProvider), PreviewFlow.profile);
-    expect(find.text('@preview_user'), findsOneWidget);
+    expect(container.read(previewFlowProvider), PreviewFlow.createPost);
+    expect(
+      find.textContaining('Simulating Hive AI moderation'),
+      findsOneWidget,
+    );
 
     final beforeReset = container.read(previewResetKeyProvider);
     await tester.tap(find.byTooltip('Reset preview state'));
@@ -42,8 +51,14 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.5;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
 
     final container = ProviderContainer();
+    container.read(previewFlowProvider.notifier).state =
+        PreviewFlow.onboardingFeed;
     addTearDown(container.dispose);
 
     await tester.pumpWidget(

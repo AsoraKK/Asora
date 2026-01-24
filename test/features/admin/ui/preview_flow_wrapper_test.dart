@@ -6,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('preview create post blocks spam content', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -20,6 +23,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'buy now spam');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Post'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 900));
@@ -32,6 +36,9 @@ void main() {
   testWidgets('preview create post warns and shows moderated profile', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -46,6 +53,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'hate');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Post'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 900));
@@ -71,6 +79,9 @@ void main() {
   });
 
   testWidgets('preview onboarding flows respond to input', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final container = ProviderContainer();
     addTearDown(container.dispose);
 

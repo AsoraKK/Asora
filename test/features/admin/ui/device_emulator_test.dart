@@ -8,6 +8,10 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
 
     await tester.pumpWidget(
       const MaterialApp(
@@ -38,6 +42,10 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
 
     await tester.pumpWidget(
       const MaterialApp(

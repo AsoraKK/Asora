@@ -1,11 +1,31 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/auth_service.dart';
+import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/feed/application/post_insights_providers.dart';
 import 'package:asora/features/feed/domain/post_insights.dart';
 
+class _MockDio extends Mock implements Dio {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
+    with Mock
+    implements AuthStateNotifier {
+  _MockAuthStateNotifier(super.initialState);
+}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(RequestOptions(path: ''));
+    registerFallbackValue(Options());
+  });
+
   group('InsightsResult - Result Classes', () {
     test('InsightsSuccess stores insights correctly', () {
       final insights = PostInsights(
@@ -278,7 +298,7 @@ void main() {
     });
 
     test('all result types are subclasses of InsightsResult', () {
-      final results = [
+      final List<InsightsResult> results = [
         InsightsSuccess(
               PostInsights(
                 postId: 'p',
@@ -396,6 +416,210 @@ void main() {
 
       expect(isInsightsAvailable(asyncResult), isFalse);
       expect(getInsights(asyncResult), isNull);
+    });
+  });
+
+  group('postInsightsProvider', () {
+    final user = User(
+      id: 'u1',
+      email: 'test@example.com',
+      role: UserRole.user,
+      tier: UserTier.bronze,
+      reputationScore: 0,
+      createdAt: DateTime.utc(2024, 1, 1),
+      lastLoginAt: DateTime.utc(2024, 1, 2),
+      isTemporary: false,
+    );
+
+    test('returns access denied when unauthenticated', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      final notifier = _MockAuthStateNotifier(const AsyncValue.data(null));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(result, isA<InsightsAccessDenied>());
+      verifyNever(() => authService.getJwtToken());
+    });
+
+    test('returns access denied when token missing', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      when(() => authService.getJwtToken()).thenAnswer((_) async => null);
+      final notifier = _MockAuthStateNotifier(AsyncValue.data(user));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(result, isA<InsightsAccessDenied>());
+    });
+
+    test('returns InsightsSuccess when API succeeds', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      when(() => authService.getJwtToken()).thenAnswer((_) async => 'token');
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/posts/post-1/insights',
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer(
+        (_) async => Response<Map<String, dynamic>>(
+          data: {
+            'postId': 'post-1',
+            'riskBand': 'LOW',
+            'decision': 'ALLOW',
+            'reasonCodes': const <String>[],
+            'configVersion': 1,
+            'decidedAt': '2024-01-01T00:00:00Z',
+            'appeal': {'status': 'NONE'},
+          },
+          statusCode: 200,
+          requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+        ),
+      );
+      final notifier = _MockAuthStateNotifier(AsyncValue.data(user));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(result, isA<InsightsSuccess>());
+      expect((result as InsightsSuccess).insights.postId, 'post-1');
+    });
+
+    test('maps 403 response to access denied', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      when(() => authService.getJwtToken()).thenAnswer((_) async => 'token');
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/posts/post-1/insights',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+            statusCode: 403,
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      final notifier = _MockAuthStateNotifier(AsyncValue.data(user));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final denied = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(denied, isA<InsightsAccessDenied>());
+    });
+
+    test('maps 404 response to not found', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      when(() => authService.getJwtToken()).thenAnswer((_) async => 'token');
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/posts/post-1/insights',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+            statusCode: 404,
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      final notifier = _MockAuthStateNotifier(AsyncValue.data(user));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notFound = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(notFound, isA<InsightsNotFound>());
+    });
+
+    test('returns InsightsError on unexpected error', () async {
+      final dio = _MockDio();
+      final authService = _MockAuthService();
+      when(() => authService.getJwtToken()).thenAnswer((_) async => 'token');
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/posts/post-1/insights',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/api/posts/post-1/insights'),
+            statusCode: 500,
+          ),
+          type: DioExceptionType.badResponse,
+          message: 'server exploded',
+        ),
+      );
+      final notifier = _MockAuthStateNotifier(AsyncValue.data(user));
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => notifier),
+          enhancedAuthServiceProvider.overrideWithValue(authService),
+          secureDioProvider.overrideWithValue(dio),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        postInsightsProvider('post-1').future,
+      );
+      expect(result, isA<InsightsError>());
+      expect(
+        (result as InsightsError).message,
+        contains('Failed to fetch insights'),
+      );
     });
   });
 }

@@ -31,6 +31,7 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   static const double _horizontalParallax = 12;
   late final PageController _pageController;
+  late final ProviderSubscription<int> _feedIndexSub;
 
   @override
   void initState() {
@@ -38,7 +39,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     final initialIndex = ref.read(currentFeedIndexProvider);
     _pageController = PageController(initialPage: initialIndex);
 
-    ref.listen<int>(currentFeedIndexProvider, (previous, next) {
+    _feedIndexSub = ref.listenManual<int>(currentFeedIndexProvider, (
+      previous,
+      next,
+    ) {
       if (_pageController.hasClients &&
           (_pageController.page?.round() ?? _pageController.initialPage) !=
               next) {
@@ -49,6 +53,13 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _feedIndexSub.close();
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override

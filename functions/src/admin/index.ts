@@ -25,3 +25,6 @@ import './reset-weight-override.function';
 // Test data management (GDPR/POPIA compliance)
 import './test_data_cleanup.function';
 import './admin_test_data_purge.function';
+
+// Control panel proxy for Hive AI testing (same-origin proxy with CF Access injection)
+import './routes/proxy_moderation_test.function';

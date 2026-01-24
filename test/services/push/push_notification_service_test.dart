@@ -101,11 +101,14 @@ void main() {
 
     final tapFuture = expectLater(
       service.onNotificationTapped,
-      emits(
+      emitsInOrder([
         predicate<Map<String, dynamic>>(
           (data) => data['deeplink'] == 'asora://test',
         ),
-      ),
+        predicate<Map<String, dynamic>>(
+          (data) => data['deeplink'] == 'asora://local',
+        ),
+      ]),
     );
 
     await service.initialize();
@@ -113,8 +116,6 @@ void main() {
     onMessageOpenedController.add(
       const RemoteMessage(data: {'deeplink': 'asora://test'}),
     );
-
-    await tapFuture;
 
     onMessageController.add(
       const RemoteMessage(
@@ -139,21 +140,14 @@ void main() {
     await refreshFuture;
     expect(service.currentToken, 'token-2');
 
+    expect(responseCallback, isNotNull);
     responseCallback?.call(
       const NotificationResponse(
         notificationResponseType: NotificationResponseType.selectedNotification,
         payload: 'asora://local',
       ),
     );
-
-    await expectLater(
-      service.onNotificationTapped,
-      emits(
-        predicate<Map<String, dynamic>>(
-          (data) => data['deeplink'] == 'asora://local',
-        ),
-      ),
-    );
+    await tapFuture;
 
     service.dispose();
     await onMessageController.close();

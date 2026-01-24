@@ -1,5 +1,7 @@
+// Use same-origin proxy by default (/api/* routes to Functions App)
+// Falls back to direct API URL if explicitly configured
 const DEFAULT_ADMIN_API_URL =
-  import.meta.env.VITE_ADMIN_API_URL || 'https://admin-api.asora.co.za';
+  import.meta.env.VITE_ADMIN_API_URL || '/api/admin';
 
 const STORAGE_KEYS = {
   apiUrl: 'controlPanelAdminApiUrl',

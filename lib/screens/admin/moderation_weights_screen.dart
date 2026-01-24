@@ -103,6 +103,7 @@ class _WeightAdjustmentNotifier extends StateNotifier<Map<String, double>> {
   }
 }
 
+// ignore: unused_element
 final _weightAdjustmentProvider =
     StateNotifierProvider<_WeightAdjustmentNotifier, Map<String, double>>((
       ref,

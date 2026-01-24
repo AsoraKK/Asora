@@ -87,6 +87,21 @@ void main() {
     ).called(1);
   });
 
+  test('dismissNotification posts to endpoint', () async {
+    final dio = MockDio();
+    final service = NotificationApiService(dioClient: dio);
+
+    when(
+      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/dismiss'),
+    ).thenAnswer((_) async => _response({}, '/api/notifications/n1/dismiss'));
+
+    await service.dismissNotification('n1');
+
+    verify(
+      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/dismiss'),
+    ).called(1);
+  });
+
   test('preferences endpoints round trip', () async {
     final dio = MockDio();
     final service = NotificationApiService(dioClient: dio);
@@ -177,6 +192,73 @@ void main() {
     final devices = await service.getDevices();
     expect(devices.length, 1);
     expect(devices.first.platform, 'fcm');
+  });
+
+  test('revokeDevice posts to endpoint', () async {
+    final dio = MockDio();
+    final service = NotificationApiService(dioClient: dio);
+
+    when(
+      () => dio.post<Map<String, dynamic>>('/api/devices/d1/revoke'),
+    ).thenAnswer((_) async => _response({}, '/api/devices/d1/revoke'));
+
+    await service.revokeDevice('d1');
+
+    verify(
+      () => dio.post<Map<String, dynamic>>('/api/devices/d1/revoke'),
+    ).called(1);
+  });
+
+  test('getDevices throws on null response', () async {
+    final dio = MockDio();
+    final service = NotificationApiService(dioClient: dio);
+
+    when(
+      () => dio.get<List<dynamic>>(
+        '/api/devices',
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer(
+      (_) async => Response<List<dynamic>>(
+        data: null,
+        statusCode: 200,
+        requestOptions: RequestOptions(path: '/api/devices'),
+      ),
+    );
+
+    await expectLater(service.getDevices(), throwsA(isA<Exception>()));
+  });
+
+  test('getUnreadCount surfaces default error message', () async {
+    final dio = MockDio();
+    final service = NotificationApiService(dioClient: dio);
+
+    when(
+      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/api/notifications/unread-count'),
+        response: Response(
+          requestOptions: RequestOptions(
+            path: '/api/notifications/unread-count',
+          ),
+          statusCode: 500,
+          data: {'message': 'fail'},
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+
+    await expectLater(
+      service.getUnreadCount(),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Failed to fetch unread count (HTTP 500)'),
+        ),
+      ),
+    );
   });
 
   test('getNotifications surfaces error payload', () async {

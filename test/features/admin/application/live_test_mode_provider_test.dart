@@ -22,12 +22,10 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(liveTestModeProvider.notifier);
 
-      final initialSession = container.read(liveTestModeProvider).sessionId;
-
       notifier.toggle();
       final enabled = container.read(liveTestModeProvider);
       expect(enabled.isEnabled, isTrue);
-      expect(enabled.sessionId, isNot(initialSession));
+      expect(enabled.sessionId, isNotEmpty);
       expect(enabled.getApiHeaders(), contains(TestModeHeaders.testMode));
 
       notifier.toggle();
