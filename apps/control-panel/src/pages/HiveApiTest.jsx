@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import { adminRequest, getAdminToken } from '../api/adminApi.js';
 
 const HIVE_API_URL = import.meta.env.VITE_HIVE_API_URL || 'https://api.thehive.ai/api/v2/task/sync';
+
+// Local storage key for analysis logs
+const ANALYSIS_LOG_KEY = 'hive_analysis_logs';
 
 /**
  * Test moderation categories with their Hive class names
@@ -31,10 +34,101 @@ function HiveApiTest() {
   const [testMode, setTestMode] = useState('text');
   const [inputText, setInputText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [analysisLogs, setAnalysisLogs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(ANALYSIS_LOG_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [showLogs, setShowLogs] = useState(false);
+  
+  const fileInputRef = useRef(null);
+
+  // Save log entry
+  const saveLogEntry = useCallback((type, input, result) => {
+    const entry = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type,
+      input: type === 'text' ? input : (uploadedFile?.name || input),
+      liveMode,
+      result
+    };
+    const updatedLogs = [entry, ...analysisLogs].slice(0, 100); // Keep last 100
+    setAnalysisLogs(updatedLogs);
+    localStorage.setItem(ANALYSIS_LOG_KEY, JSON.stringify(updatedLogs));
+  }, [analysisLogs, liveMode, uploadedFile]);
+
+  // File handling for drag & drop
+  const handleFileSelect = useCallback((file) => {
+    if (!file) return;
+    
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime'];
+    if (!validTypes.includes(file.type)) {
+      setError('Invalid file type. Supported: JPG, PNG, GIF, WebP, MP4, MOV');
+      return;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File too large. Maximum size is 50MB');
+      return;
+    }
+    
+    setUploadedFile(file);
+    setImageUrl(''); // Clear URL when file is uploaded
+    setError(null);
+    
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setUploadPreview(e.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setUploadPreview(null);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    handleFileSelect(file);
+  }, [handleFileSelect]);
+
+  const handleFileInputChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    handleFileSelect(file);
+  }, [handleFileSelect]);
+
+  const clearUpload = useCallback(() => {
+    setUploadedFile(null);
+    setUploadPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
 
   const handleTestText = async () => {
     if (!inputText.trim()) {
@@ -47,9 +141,10 @@ function HiveApiTest() {
     setResult(null);
 
     try {
+      let response;
       if (liveMode) {
         // Real API call via backend proxy
-        const response = await adminRequest('/moderation/test', {
+        response = await adminRequest('/moderation/test', {
           method: 'POST',
           body: {
             type: 'text',
@@ -57,12 +152,13 @@ function HiveApiTest() {
             isTestMode: true
           }
         });
-        setResult(response);
       } else {
         // Mock response for demo
         await new Promise(resolve => setTimeout(resolve, 800));
-        setResult(generateMockTextResult(inputText));
+        response = generateMockTextResult(inputText);
       }
+      setResult(response);
+      saveLogEntry('text', inputText, response);
     } catch (err) {
       setError(err.message || 'Failed to analyze content');
     } finally {
@@ -71,8 +167,9 @@ function HiveApiTest() {
   };
 
   const handleTestImage = async () => {
-    if (!imageUrl.trim()) {
-      setError('Please enter an image URL to test');
+    const hasInput = uploadedFile || imageUrl.trim();
+    if (!hasInput) {
+      setError('Please upload an image or enter an image URL');
       return;
     }
 
@@ -81,21 +178,37 @@ function HiveApiTest() {
     setResult(null);
 
     try {
+      let response;
       if (liveMode) {
-        const response = await adminRequest('/moderation/test', {
-          method: 'POST',
-          body: {
-            type: 'image',
-            url: imageUrl,
-            isTestMode: true
-          }
-        });
-        setResult(response);
+        if (uploadedFile) {
+          // Upload file to backend for analysis
+          const formData = new FormData();
+          formData.append('file', uploadedFile);
+          formData.append('type', testMode === 'deepfake' ? 'deepfake' : 'image');
+          formData.append('isTestMode', 'true');
+          
+          response = await adminRequest('/moderation/test/upload', {
+            method: 'POST',
+            body: formData,
+            isFormData: true
+          });
+        } else {
+          response = await adminRequest('/moderation/test', {
+            method: 'POST',
+            body: {
+              type: testMode === 'deepfake' ? 'deepfake' : 'image',
+              url: imageUrl,
+              isTestMode: true
+            }
+          });
+        }
       } else {
         // Mock response for demo
         await new Promise(resolve => setTimeout(resolve, 1200));
-        setResult(generateMockImageResult(imageUrl));
+        response = generateMockImageResult(uploadedFile?.name || imageUrl);
       }
+      setResult(response);
+      saveLogEntry(testMode, uploadedFile?.name || imageUrl, response);
     } catch (err) {
       setError(err.message || 'Failed to analyze image');
     } finally {
@@ -210,18 +323,71 @@ function HiveApiTest() {
         <LythCard variant="panel">
           <h3>Image Content Analysis</h3>
           <p className="card-desc">
-            Provide an image URL to analyze for visual policy violations.
+            Drag & drop an image, or provide a URL to analyze for visual policy violations.
           </p>
 
-          <input
-            type="url"
-            className="test-input"
-            placeholder="https://example.com/image.jpg"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-          />
+          {/* Drag & Drop Zone */}
+          <div
+            className={`drop-zone ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime"
+              onChange={handleFileInputChange}
+              style={{ display: 'none' }}
+            />
+            {uploadedFile ? (
+              <div className="upload-preview-container">
+                {uploadPreview && (
+                  <img src={uploadPreview} alt="Preview" className="upload-preview-img" />
+                )}
+                <div className="upload-file-info">
+                  <span className="upload-file-name">{uploadedFile.name}</span>
+                  <span className="upload-file-size">
+                    {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                  <button
+                    type="button"
+                    className="clear-upload-btn"
+                    onClick={(e) => { e.stopPropagation(); clearUpload(); }}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="drop-zone-content">
+                <span className="drop-icon">📁</span>
+                <span className="drop-text">
+                  Drag & drop an image here, or click to browse
+                </span>
+                <span className="drop-hint">Supports JPG, PNG, GIF, WebP (max 50MB)</span>
+              </div>
+            )}
+          </div>
 
-          {imageUrl && (
+          {/* OR Divider */}
+          {!uploadedFile && (
+            <>
+              <div className="or-divider">
+                <span>or enter URL</span>
+              </div>
+              <input
+                type="url"
+                className="test-input"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+            </>
+          )}
+
+          {imageUrl && !uploadedFile && (
             <div className="image-preview">
               <img
                 src={imageUrl}
@@ -235,7 +401,7 @@ function HiveApiTest() {
             <LythButton
               type="button"
               onClick={handleTestImage}
-              disabled={loading || !imageUrl.trim()}
+              disabled={loading || (!imageUrl.trim() && !uploadedFile)}
             >
               {loading ? 'Analyzing...' : 'Analyze Image'}
             </LythButton>
@@ -248,16 +414,69 @@ function HiveApiTest() {
         <LythCard variant="panel">
           <h3>Deepfake Detection</h3>
           <p className="card-desc">
-            Analyze media for AI-generated or manipulated content.
+            Drag & drop media or provide a URL to analyze for AI-generated or manipulated content.
           </p>
 
-          <input
-            type="url"
-            className="test-input"
-            placeholder="https://example.com/video.mp4 or image URL"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-          />
+          {/* Drag & Drop Zone */}
+          <div
+            className={`drop-zone ${isDragging ? 'dragging' : ''} ${uploadedFile ? 'has-file' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime"
+              onChange={handleFileInputChange}
+              style={{ display: 'none' }}
+            />
+            {uploadedFile ? (
+              <div className="upload-preview-container">
+                {uploadPreview && (
+                  <img src={uploadPreview} alt="Preview" className="upload-preview-img" />
+                )}
+                <div className="upload-file-info">
+                  <span className="upload-file-name">{uploadedFile.name}</span>
+                  <span className="upload-file-size">
+                    {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                  <button
+                    type="button"
+                    className="clear-upload-btn"
+                    onClick={(e) => { e.stopPropagation(); clearUpload(); }}
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="drop-zone-content">
+                <span className="drop-icon">🎭</span>
+                <span className="drop-text">
+                  Drag & drop an image or video here, or click to browse
+                </span>
+                <span className="drop-hint">Supports JPG, PNG, MP4, MOV (max 50MB)</span>
+              </div>
+            )}
+          </div>
+
+          {/* OR Divider */}
+          {!uploadedFile && (
+            <>
+              <div className="or-divider">
+                <span>or enter URL</span>
+              </div>
+              <input
+                type="url"
+                className="test-input"
+                placeholder="https://example.com/video.mp4 or image URL"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+            </>
+          )}
 
           <div className="deepfake-info">
             <span className="info-icon">ℹ️</span>
@@ -268,7 +487,7 @@ function HiveApiTest() {
             <LythButton
               type="button"
               onClick={handleTestImage}
-              disabled={loading || !imageUrl.trim()}
+              disabled={loading || (!imageUrl.trim() && !uploadedFile)}
             >
               {loading ? 'Analyzing...' : 'Detect Deepfake'}
             </LythButton>
@@ -364,6 +583,134 @@ function HiveApiTest() {
           )}
         </LythCard>
       )}
+
+      {/* Analysis Logs Section */}
+      <LythCard variant="panel" className="logs-section">
+        <div className="logs-header">
+          <h3>📋 Analysis Logs</h3>
+          <div className="logs-actions">
+            <button
+              type="button"
+              className="logs-toggle-btn"
+              onClick={() => setShowLogs(!showLogs)}
+            >
+              {showLogs ? 'Hide Logs' : `Show Logs (${analysisLogs.length})`}
+            </button>
+            {analysisLogs.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  className="logs-export-btn"
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(analysisLogs, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `hive-analysis-logs-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  📥 Export JSON
+                </button>
+                <button
+                  type="button"
+                  className="logs-export-btn"
+                  onClick={() => {
+                    const csvRows = [
+                      ['Timestamp', 'Type', 'Input', 'Mode', 'Action', 'Confidence', 'Categories', 'Request ID']
+                    ];
+                    analysisLogs.forEach(log => {
+                      csvRows.push([
+                        log.timestamp,
+                        log.type,
+                        log.input,
+                        log.liveMode ? 'LIVE' : 'MOCK',
+                        log.result?.action || '',
+                        log.result?.confidence ? (log.result.confidence * 100).toFixed(1) + '%' : '',
+                        log.result?.categories?.join('; ') || '',
+                        log.result?.requestId || ''
+                      ]);
+                    });
+                    const csv = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `hive-analysis-logs-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  📊 Export CSV
+                </button>
+                <button
+                  type="button"
+                  className="logs-clear-btn"
+                  onClick={() => {
+                    if (window.confirm('Clear all analysis logs?')) {
+                      setAnalysisLogs([]);
+                      localStorage.removeItem(ANALYSIS_LOG_KEY);
+                    }
+                  }}
+                >
+                  🗑️ Clear
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {showLogs && (
+          <div className="logs-list">
+            {analysisLogs.length === 0 ? (
+              <p className="logs-empty">No analysis logs yet. Run some tests to start logging.</p>
+            ) : (
+              <table className="logs-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Input</th>
+                    <th>Mode</th>
+                    <th>Result</th>
+                    <th>Confidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysisLogs.map(log => (
+                    <tr key={log.id} className={`log-row action-${log.result?.action?.toLowerCase() || 'allow'}`}>
+                      <td className="log-time">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                      <td className="log-type">
+                        {log.type === 'text' ? '📝' : log.type === 'deepfake' ? '🎭' : '🖼️'}
+                        {log.type}
+                      </td>
+                      <td className="log-input" title={log.input}>
+                        {log.input.length > 40 ? log.input.slice(0, 40) + '...' : log.input}
+                      </td>
+                      <td className="log-mode">
+                        <span className={`mode-badge ${log.liveMode ? 'live' : 'mock'}`}>
+                          {log.liveMode ? 'LIVE' : 'MOCK'}
+                        </span>
+                      </td>
+                      <td className="log-result">
+                        <span className={`result-badge ${log.result?.action?.toLowerCase() || 'allow'}`}>
+                          {log.result?.action || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="log-confidence">
+                        {log.result?.confidence ? `${(log.result.confidence * 100).toFixed(1)}%` : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </LythCard>
     </section>
   );
 }
