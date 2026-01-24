@@ -166,9 +166,16 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: apps/marketing-site/package-lock.json
 
-      - name: npm install
-        run: npm install
+      - name: Install dependencies
+        run: |
+          # Retry npm ci up to 3 times to handle esbuild ETXTBSY race condition
+          for i in 1 2 3; do
+            rm -rf node_modules
+            npm cache clean --force
+            npm ci && break || sleep 5
+          done
 
       - name: Build
         env:
