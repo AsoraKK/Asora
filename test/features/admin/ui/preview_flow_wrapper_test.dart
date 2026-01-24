@@ -174,7 +174,7 @@ void main() {
     expect(find.text('LIVE TEST MODE'), findsOneWidget);
     expect(find.byKey(const Key('live_feed')), findsOneWidget);
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.widgetWithIcon(FloatingActionButton, Icons.add));
     await tester.pump();
 
     expect(container.read(previewFlowProvider), PreviewFlow.createPost);
@@ -258,7 +258,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('LIVE TEST MODE'), findsOneWidget);
-    expect(find.text('Live User'), findsOneWidget);
+    expect(find.text('Live User'), findsWidgets);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(

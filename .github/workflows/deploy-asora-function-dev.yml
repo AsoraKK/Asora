@@ -485,6 +485,54 @@ jobs:
             echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
           fi
 
+      - name: Configure Cloudflare Access credentials (control-panel proxy)
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          # Extract CF Access credentials from GitHub Actions secrets
+          # Note: Secret names use underscores due to GitHub Actions naming constraints
+          CF_CLIENT_ID="${{ secrets.CF_Access_Client_Id }}"
+          CF_CLIENT_SECRET="${{ secrets.CF_Access_Client_Secret }}"
+          
+          if [ -z "$CF_CLIENT_ID" ] || [ -z "$CF_CLIENT_SECRET" ]; then
+            echo "⚠️  Cloudflare Access credentials not configured in GitHub Actions secrets"
+            echo "ℹ️  Add CF_Access_Client_Id and CF_Access_Client_Secret to enable CORS proxy"
+            echo "ℹ️  Control-panel tests will fail without these credentials"
+            exit 0
+          fi
+          
+          echo "Configuring Cloudflare Access credentials in Function App..."
+          
+          # Store client ID directly (non-sensitive)
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+          
+          # Store secret via Key Vault reference (secure approach)
+          # Requires: Key Vault must exist with write access via managed identity
+          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$KEY_VAULT" ]; then
+            echo "Setting CF_ACCESS_CLIENT_SECRET via Key Vault reference..."
+            az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
+              --value "$CF_CLIENT_SECRET" --output none
+            
+            # Reference the Key Vault secret in Function App Settings
+            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+              --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+              --output none
+          else
+            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
+            echo "ℹ️  Setting CF_ACCESS_CLIENT_SECRET as plain app setting (less secure)"
+            echo "ℹ️  Recommended: Create Azure Key Vault and use Key Vault reference instead"
+            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+              --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+          fi
+          
+          echo "✅ Cloudflare Access credentials configured"
+
       - name: Configure DSR environment variables (optional)
         continue-on-error: true
         run: |

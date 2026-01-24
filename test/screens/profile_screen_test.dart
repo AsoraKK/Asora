@@ -156,7 +156,7 @@ void main() {
         overrides: [
           currentUserProvider.overrideWith((ref) => currentUser),
           publicUserProvider(
-            profile.id,
+            currentUser.id,
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
@@ -174,11 +174,12 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('5 followers'), findsOneWidget);
     await tester.tap(find.text('Follow'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 50));
 
     verify(
       () => followService.follow(targetUserId: 'user-2', accessToken: 'token'),
@@ -212,7 +213,7 @@ void main() {
         overrides: [
           currentUserProvider.overrideWith((ref) => currentUser),
           publicUserProvider(
-            profile.id,
+            currentUser.id,
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
@@ -226,9 +227,10 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     await tester.tap(find.text('Follow'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('Sign in to follow accounts.'), findsOneWidget);
   });
