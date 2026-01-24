@@ -171,10 +171,17 @@ jobs:
       - name: Install dependencies
         run: |
           # Retry npm ci up to 3 times to handle esbuild ETXTBSY race condition
-          for i in 1 2 3; do
+          attempt=0
+          until npm ci; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 3 ]; then
+              echo "npm ci failed after 3 attempts"
+              exit 1
+            fi
+            echo "Retry $attempt: clearing cache and node_modules..."
             rm -rf node_modules
             npm cache clean --force
-            npm ci && break || sleep 5
+            sleep 5
           done
 
       - name: Build
