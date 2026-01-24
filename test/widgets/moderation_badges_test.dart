@@ -8,7 +8,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: ModerationBadges(
             status: ModerationStatus.flagged,

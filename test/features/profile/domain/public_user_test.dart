@@ -24,7 +24,7 @@ void main() {
   });
 
   test('fromJson applies defaults for optional fields', () {
-    final user = PublicUser.fromJson({'id': 'u1', 'displayName': 'Test'});
+    final user = PublicUser.fromJson(const {'id': 'u1', 'displayName': 'Test'});
 
     expect(user.tier, 'free');
     expect(user.reputationScore, 0);

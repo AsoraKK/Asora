@@ -237,10 +237,13 @@ class _PreviewAuthChoice extends StatelessWidget {
                           color: Colors.amber,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Preview Mode - Tap to continue',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.amber[800]),
+                        Flexible(
+                          child: Text(
+                            'Preview Mode - Tap to continue',
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.amber[800]),
+                          ),
                         ),
                       ],
                     ),
@@ -1463,10 +1466,13 @@ class _LiveModeBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            '• Real APIs • Real Moderation',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.red.withValues(alpha: 0.7),
+          Flexible(
+            child: Text(
+              '• Real APIs • Real Moderation',
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.red.withValues(alpha: 0.7),
+              ),
             ),
           ),
         ],

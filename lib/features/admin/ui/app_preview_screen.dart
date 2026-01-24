@@ -152,6 +152,9 @@ class _LiveModeToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final liveTestMode = ref.watch(liveTestModeProvider);
     final theme = Theme.of(context);
+    final sessionLabel = liveTestMode.sessionId.length > 20
+        ? '${liveTestMode.sessionId.substring(0, 20)}...'
+        : liveTestMode.sessionId;
 
     return PopupMenuButton<String>(
       icon: Icon(
@@ -241,7 +244,7 @@ class _LiveModeToggle extends ConsumerWidget {
                   children: [
                     const Text('New Session'),
                     Text(
-                      'Session: ${liveTestMode.sessionId.substring(0, 20)}...',
+                      'Session: $sessionLabel',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 10,

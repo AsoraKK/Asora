@@ -97,7 +97,7 @@ void main() {
               id: 'p3',
               title: 'Title',
               content: 'Hidden content',
-              author: Author(id: 'a1', displayName: 'Alice'),
+              author: const Author(id: 'a1', displayName: 'Alice'),
               createdAt: DateTime(2024, 1, 1),
               moderationStatus: ModerationStatus.hidden,
             ),

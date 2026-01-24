@@ -123,13 +123,13 @@ void main() {
     const profile = PublicUser(id: 'u1', displayName: 'Tester', tier: 'bronze');
 
     final feeds = [
-      FeedModel(
+      const FeedModel(
         id: 'discover',
         name: 'Discover',
         type: FeedType.discover,
-        contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
+        contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
         sorting: SortingRule.hot,
-        refinements: const FeedRefinements(),
+        refinements: FeedRefinements(),
         subscriptionLevelRequired: 0,
         isHome: true,
       ),

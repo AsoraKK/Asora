@@ -17,32 +17,32 @@ void main() {
     );
 
     final feeds = [
-      FeedModel(
+      const FeedModel(
         id: 'discover',
         name: 'Discover',
         type: FeedType.discover,
-        contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
+        contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
         sorting: SortingRule.hot,
-        refinements: const FeedRefinements(),
+        refinements: FeedRefinements(),
         subscriptionLevelRequired: 0,
         isHome: true,
       ),
-      FeedModel(
+      const FeedModel(
         id: 'news',
         name: 'News',
         type: FeedType.news,
-        contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
+        contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
         sorting: SortingRule.newest,
-        refinements: const FeedRefinements(),
+        refinements: FeedRefinements(),
         subscriptionLevelRequired: 0,
       ),
-      FeedModel(
+      const FeedModel(
         id: 'custom',
         name: 'Custom',
         type: FeedType.custom,
-        contentFilters: const ContentFilters(allowedTypes: {ContentType.mixed}),
+        contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
         sorting: SortingRule.relevant,
-        refinements: const FeedRefinements(includeKeywords: ['health']),
+        refinements: FeedRefinements(includeKeywords: ['health']),
         subscriptionLevelRequired: 0,
         isCustom: true,
       ),

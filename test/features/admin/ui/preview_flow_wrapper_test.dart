@@ -272,4 +272,135 @@ void main() {
 
     expect(find.text('Settings'), findsOneWidget);
   });
+
+  testWidgets('preview auth choice continues to onboarding intro', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.authChoice),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pump();
+
+    expect(container.read(previewFlowProvider), PreviewFlow.onboardingIntro);
+  });
+
+  testWidgets('preview home feed navigates to create post', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.homeFeed),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+
+    await tester.tap(find.widgetWithIcon(FloatingActionButton, Icons.add));
+    await tester.pump();
+
+    expect(container.read(previewFlowProvider), PreviewFlow.createPost);
+  });
+
+  testWidgets('preview create post allows safe content', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.createPost),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Hello preview');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 900));
+
+    expect(find.textContaining('Post created! (Preview mode)'), findsOneWidget);
+    expect(container.read(previewUserPostsProvider), isNotEmpty);
+    expect(container.read(previewFlowProvider), PreviewFlow.homeFeed);
+  });
+
+  testWidgets('preview profile empty state routes to create post', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.profile),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No posts yet'), findsOneWidget);
+    await tester.tap(find.text('Create your first post'));
+    await tester.pump();
+
+    expect(container.read(previewFlowProvider), PreviewFlow.createPost);
+  });
+
+  testWidgets('preview settings back button routes to profile', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.settings),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pump();
+
+    expect(container.read(previewFlowProvider), PreviewFlow.profile);
+  });
 }

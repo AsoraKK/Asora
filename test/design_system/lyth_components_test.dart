@@ -51,4 +51,81 @@ void main() {
 
     expect(background, scheme.primary);
   });
+
+  testWidgets('LythButton shows icon before label by default', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: LythausTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: LythButton.secondary(
+              label: 'Secure',
+              icon: Icons.lock,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Secure'), findsOneWidget);
+    expect(find.byIcon(Icons.lock), findsOneWidget);
+
+    final row = tester.widget<Row>(
+      find.descendant(
+        of: find.byType(OutlinedButton),
+        matching: find.byType(Row),
+      ),
+    );
+    expect(row.children.first, isA<Icon>());
+  });
+
+  testWidgets('LythButton supports iconAfter layout', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: LythausTheme.light(),
+        home: Scaffold(
+          body: Center(
+            child: LythButton.secondary(
+              label: 'Next',
+              icon: Icons.arrow_forward,
+              iconAfter: true,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final row = tester.widget<Row>(
+      find.descendant(
+        of: find.byType(OutlinedButton),
+        matching: find.byType(Row),
+      ),
+    );
+    expect(row.children.first, isA<Text>());
+  });
+
+  testWidgets('LythButton loading replaces label with spinner', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: LythausTheme.light(),
+        home: const Scaffold(
+          body: Center(
+            child: LythButton(
+              label: 'Loading',
+              variant: LythButtonVariant.primary,
+              isLoading: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Loading'), findsNothing);
+  });
 }
