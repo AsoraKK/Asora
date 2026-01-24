@@ -17,9 +17,33 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 /// Apple Push Notification Service (APNS). Handles token registration,
 /// foreground/background message processing, and deep-link routing.
 class PushNotificationService {
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  PushNotificationService({
+    FirebaseMessaging? firebaseMessaging,
+    FlutterLocalNotificationsPlugin? localNotifications,
+    Stream<RemoteMessage>? onMessageStream,
+    Stream<RemoteMessage>? onMessageOpenedAppStream,
+    Future<RemoteMessage?> Function()? getInitialMessage,
+    void Function()? initializeTimeZones,
+    bool enableHandlers = true,
+  }) : _firebaseMessaging = firebaseMessaging ?? FirebaseMessaging.instance,
+       _localNotifications =
+           localNotifications ?? FlutterLocalNotificationsPlugin(),
+       _onMessageStream = onMessageStream ?? FirebaseMessaging.onMessage,
+       _onMessageOpenedAppStream =
+           onMessageOpenedAppStream ?? FirebaseMessaging.onMessageOpenedApp,
+       _initializeTimeZones = initializeTimeZones ?? tz.initializeTimeZones,
+       _enableHandlers = enableHandlers {
+    _getInitialMessage =
+        getInitialMessage ?? _firebaseMessaging.getInitialMessage;
+  }
+
+  final FirebaseMessaging _firebaseMessaging;
+  final FlutterLocalNotificationsPlugin _localNotifications;
+  final Stream<RemoteMessage> _onMessageStream;
+  final Stream<RemoteMessage> _onMessageOpenedAppStream;
+  late final Future<RemoteMessage?> Function() _getInitialMessage;
+  final void Function() _initializeTimeZones;
+  final bool _enableHandlers;
 
   // Stream controllers for handling notifications
   final _notificationTapController =
@@ -39,7 +63,7 @@ class PushNotificationService {
   /// Call this once during app startup
   Future<void> initialize() async {
     // Initialize timezone database for scheduled notifications
-    tz.initializeTimeZones();
+    _initializeTimeZones();
 
     // Configure local notifications
     await _initializeLocalNotifications();
@@ -58,7 +82,9 @@ class PushNotificationService {
     });
 
     // Configure message handlers
-    _configureMessageHandlers();
+    if (_enableHandlers) {
+      _configureMessageHandlers();
+    }
   }
 
   /// Get current FCM/APNS token
@@ -121,13 +147,13 @@ class PushNotificationService {
 
   void _configureMessageHandlers() {
     // Foreground messages - display local notification
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    _onMessageStream.listen(_handleForegroundMessage);
 
     // Background message opened (app in background, user tapped notification)
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
+    _onMessageOpenedAppStream.listen(_handleMessageOpenedApp);
 
     // Check if app was opened from terminated state via notification
-    _firebaseMessaging.getInitialMessage().then((message) {
+    _getInitialMessage().then((message) {
       if (message != null) {
         _handleMessageOpenedApp(message);
       }

@@ -2617,3 +2617,132 @@ textarea.lyth-input {
   font-family: var(--font-mono);
   font-size: 0.8rem;
 }
+
+/* ================================================
+   DEBUG PANEL
+   ================================================ */
+
+.debug-card {
+  background: var(--surface-container);
+  border-color: var(--warning);
+}
+
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.debug-header h3 {
+  margin: 0;
+}
+
+.debug-toggle-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.debug-toggle-btn:hover {
+  background: var(--surface-container);
+  border-color: var(--primary);
+}
+
+.debug-content {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.debug-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.debug-table tr {
+  border-bottom: 1px solid var(--outline);
+}
+
+.debug-table tr:last-child {
+  border-bottom: none;
+}
+
+.debug-key {
+  padding: 12px;
+  font-weight: 600;
+  color: var(--on-surface);
+  width: 150px;
+  min-width: 150px;
+  vertical-align: top;
+  background: var(--surface-container);
+}
+
+.debug-value {
+  padding: 12px;
+  color: var(--on-surface-muted);
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.debug-json {
+  margin: 0;
+  padding: 8px;
+  background: var(--surface-container);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--outline);
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.copy-debug-btn,
+.check-browser-console-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.copy-debug-btn:hover,
+.check-browser-console-btn:hover {
+  background: var(--surface-container);
+  border-color: var(--primary);
+}
+
+.debug-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: var(--info-soft);
+  border-radius: var(--radius-md);
+  color: var(--info);
+  font-size: 0.85rem;
+}
+
+.debug-hint span {
+  font-size: 1rem;
+  flex-shrink: 0;
+}

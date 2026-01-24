@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
-import { adminRequest, getAdminToken } from '../api/adminApi.js';
+import { adminRequest, getAdminApiUrl } from '../api/adminApi.js';
 
 const HIVE_API_URL = import.meta.env.VITE_HIVE_API_URL || 'https://api.thehive.ai/api/v2/task/sync';
 
@@ -49,6 +49,8 @@ function HiveApiTest() {
     }
   });
   const [showLogs, setShowLogs] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
   
   const fileInputRef = useRef(null);
 
@@ -139,25 +141,57 @@ function HiveApiTest() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setDebugInfo(null);
 
     try {
       let response;
+      const startTime = performance.now();
+      
       if (liveMode) {
         // Real API call via backend proxy
-        response = await adminRequest('/moderation/test', {
-          method: 'POST',
-          body: {
-            type: 'text',
-            content: inputText,
-            isTestMode: true
-          }
-        });
+        try {
+          response = await adminRequest('/moderation/test', {
+            method: 'POST',
+            body: {
+              type: 'text',
+              content: inputText,
+              isTestMode: true
+            }
+          });
+        } catch (apiError) {
+          const endTime = performance.now();
+          const debugData = {
+            mode: 'live',
+            endpoint: '/moderation/test',
+            method: 'POST',
+            duration: `${(endTime - startTime).toFixed(2)}ms`,
+            error: {
+              message: apiError.message,
+              status: apiError.status,
+              payload: apiError.payload
+            },
+            timestamp: new Date().toISOString(),
+            apiUrl: adminRequest.__getApiUrl?.() || getAdminApiUrl?.() || 'unknown'
+          };
+          setDebugInfo(debugData);
+          console.error('Hive AI API Error:', debugData);
+          throw apiError;
+        }
       } else {
         // Mock response for demo
         await new Promise(resolve => setTimeout(resolve, 800));
         response = generateMockTextResult(inputText);
       }
+      
+      const endTime = performance.now();
       setResult(response);
+      setDebugInfo({
+        mode: liveMode ? 'live' : 'mock',
+        endpoint: '/moderation/test',
+        duration: `${(endTime - startTime).toFixed(2)}ms`,
+        timestamp: new Date().toISOString(),
+        responseSize: `${JSON.stringify(response).length} bytes`
+      });
       saveLogEntry('text', inputText, response);
     } catch (err) {
       setError(err.message || 'Failed to analyze content');
@@ -176,38 +210,71 @@ function HiveApiTest() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setDebugInfo(null);
 
     try {
       let response;
+      const startTime = performance.now();
+      
       if (liveMode) {
-        if (uploadedFile) {
-          // Upload file to backend for analysis
-          const formData = new FormData();
-          formData.append('file', uploadedFile);
-          formData.append('type', testMode === 'deepfake' ? 'deepfake' : 'image');
-          formData.append('isTestMode', 'true');
-          
-          response = await adminRequest('/moderation/test/upload', {
+        try {
+          if (uploadedFile) {
+            // Upload file to backend for analysis
+            const formData = new FormData();
+            formData.append('file', uploadedFile);
+            formData.append('type', testMode === 'deepfake' ? 'deepfake' : 'image');
+            formData.append('isTestMode', 'true');
+            
+            response = await adminRequest('/moderation/test/upload', {
+              method: 'POST',
+              body: formData,
+              isFormData: true
+            });
+          } else {
+            response = await adminRequest('/moderation/test', {
+              method: 'POST',
+              body: {
+                type: testMode === 'deepfake' ? 'deepfake' : 'image',
+                url: imageUrl,
+                isTestMode: true
+              }
+            });
+          }
+        } catch (apiError) {
+          const endTime = performance.now();
+          const debugData = {
+            mode: 'live',
+            endpoint: uploadedFile ? '/moderation/test/upload' : '/moderation/test',
             method: 'POST',
-            body: formData,
-            isFormData: true
-          });
-        } else {
-          response = await adminRequest('/moderation/test', {
-            method: 'POST',
-            body: {
-              type: testMode === 'deepfake' ? 'deepfake' : 'image',
-              url: imageUrl,
-              isTestMode: true
-            }
-          });
+            duration: `${(endTime - startTime).toFixed(2)}ms`,
+            contentType: uploadedFile ? 'file' : 'url',
+            error: {
+              message: apiError.message,
+              status: apiError.status,
+              payload: apiError.payload
+            },
+            timestamp: new Date().toISOString(),
+            apiUrl: getAdminApiUrl?.() || 'unknown'
+          };
+          setDebugInfo(debugData);
+          console.error('Hive AI API Error:', debugData);
+          throw apiError;
         }
       } else {
         // Mock response for demo
         await new Promise(resolve => setTimeout(resolve, 1200));
         response = generateMockImageResult(uploadedFile?.name || imageUrl);
       }
+      
+      const endTime = performance.now();
       setResult(response);
+      setDebugInfo({
+        mode: liveMode ? 'live' : 'mock',
+        endpoint: uploadedFile ? '/moderation/test/upload' : '/moderation/test',
+        duration: `${(endTime - startTime).toFixed(2)}ms`,
+        timestamp: new Date().toISOString(),
+        responseSize: `${JSON.stringify(response).length} bytes`
+      });
       saveLogEntry(testMode, uploadedFile?.name || imageUrl, response);
     } catch (err) {
       setError(err.message || 'Failed to analyze image');
@@ -502,6 +569,69 @@ function HiveApiTest() {
             <span className="error-icon">❌</span>
             <span>{error}</span>
           </div>
+        </LythCard>
+      )}
+
+      {/* Debug Info Panel */}
+      {debugInfo && (
+        <LythCard variant="panel" className="debug-card">
+          <div className="debug-header">
+            <h3>🔧 Debug Information</h3>
+            <button
+              type="button"
+              className="debug-toggle-btn"
+              onClick={() => setShowDebug(!showDebug)}
+            >
+              {showDebug ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          
+          {showDebug && (
+            <div className="debug-content">
+              <table className="debug-table">
+                <tbody>
+                  {Object.entries(debugInfo).map(([key, value]) => (
+                    <tr key={key}>
+                      <td className="debug-key">{key}</td>
+                      <td className="debug-value">
+                        {typeof value === 'object' ? (
+                          <pre className="debug-json">{JSON.stringify(value, null, 2)}</pre>
+                        ) : (
+                          String(value)
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              <div className="debug-actions">
+                <button
+                  type="button"
+                  className="copy-debug-btn"
+                  onClick={() => {
+                    const text = JSON.stringify(debugInfo, null, 2);
+                    navigator.clipboard.writeText(text);
+                    alert('Debug info copied to clipboard');
+                  }}
+                >
+                  📋 Copy JSON
+                </button>
+                <button
+                  type="button"
+                  className="check-browser-console-btn"
+                  onClick={() => console.log('Full Debug Info:', debugInfo)}
+                >
+                  🖥️ Log to Console
+                </button>
+              </div>
+              
+              <div className="debug-hint">
+                <span>💡</span>
+                Open browser DevTools (F12) → Console tab to see detailed error logs
+              </div>
+            </div>
+          )}
         </LythCard>
       )}
 

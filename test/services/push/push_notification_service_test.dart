@@ -1,72 +1,177 @@
+import 'dart:async';
+
 import 'package:asora/services/push/push_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
-// Fake implementation for testing basic interface contracts
-class FakePushNotificationService extends Fake
-    implements PushNotificationService {
-  @override
-  String? get currentToken => null;
+class MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
-  @override
-  String get platform => 'fcm';
+class MockFlutterLocalNotificationsPlugin extends Mock
+    implements FlutterLocalNotificationsPlugin {}
 
-  @override
-  Stream<Map<String, dynamic>> get onNotificationTapped => const Stream.empty();
-
-  @override
-  Stream<String> get onTokenRefresh => const Stream.empty();
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<void> subscribeToTopic(String topic) async {}
-
-  @override
-  Future<void> unsubscribeFromTopic(String topic) async {}
-
-  @override
-  void dispose() {}
+NotificationSettings _settings() {
+  return const NotificationSettings(
+    authorizationStatus: AuthorizationStatus.authorized,
+    alert: AppleNotificationSetting.notSupported,
+    announcement: AppleNotificationSetting.notSupported,
+    badge: AppleNotificationSetting.notSupported,
+    carPlay: AppleNotificationSetting.notSupported,
+    lockScreen: AppleNotificationSetting.notSupported,
+    notificationCenter: AppleNotificationSetting.notSupported,
+    showPreviews: AppleShowPreviewSetting.notSupported,
+    timeSensitive: AppleNotificationSetting.notSupported,
+    criticalAlert: AppleNotificationSetting.notSupported,
+    sound: AppleNotificationSetting.notSupported,
+    providesAppNotificationSettings: AppleNotificationSetting.notSupported,
+  );
 }
 
 void main() {
-  group('PushNotificationService', () {
-    late FakePushNotificationService service;
+  setUpAll(() {
+    registerFallbackValue(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      ),
+    );
+    registerFallbackValue(
+      const NotificationDetails(
+        android: AndroidNotificationDetails('test', 'test'),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+  });
 
-    setUp(() {
-      service = FakePushNotificationService();
-    });
+  test('initialize wires streams and emits deeplink events', () async {
+    final messaging = MockFirebaseMessaging();
+    final localNotifications = MockFlutterLocalNotificationsPlugin();
+    final onMessageController = StreamController<RemoteMessage>();
+    final onMessageOpenedController = StreamController<RemoteMessage>();
+    final tokenRefreshController = StreamController<String>();
 
-    test('currentToken returns null initially', () {
-      expect(service.currentToken, isNull);
-    });
+    void Function(NotificationResponse response)? responseCallback;
 
-    test('platform returns expected identifier', () {
-      expect(service.platform, equals('fcm'));
-    });
+    when(() => messaging.getToken()).thenAnswer((_) async => 'token-1');
+    when(
+      () => messaging.requestPermission(
+        alert: any(named: 'alert'),
+        badge: any(named: 'badge'),
+        sound: any(named: 'sound'),
+        provisional: any(named: 'provisional'),
+      ),
+    ).thenAnswer((_) async => _settings());
+    when(
+      () => messaging.onTokenRefresh,
+    ).thenAnswer((_) => tokenRefreshController.stream);
+    when(() => messaging.getInitialMessage()).thenAnswer((_) async => null);
 
-    test('onNotificationTapped returns a valid stream', () {
-      expect(service.onNotificationTapped, isNotNull);
+    when(
+      () => localNotifications.initialize(
+        any(),
+        onDidReceiveNotificationResponse: any(
+          named: 'onDidReceiveNotificationResponse',
+        ),
+      ),
+    ).thenAnswer((invocation) async {
+      responseCallback =
+          invocation.namedArguments[#onDidReceiveNotificationResponse]
+              as void Function(NotificationResponse)?;
+      return true;
     });
+    when(
+      () => localNotifications.show(
+        any(),
+        any(),
+        any(),
+        any(),
+        payload: any(named: 'payload'),
+      ),
+    ).thenAnswer((_) async {});
 
-    test('onTokenRefresh returns a valid stream', () {
-      expect(service.onTokenRefresh, isNotNull);
-    });
+    final service = PushNotificationService(
+      firebaseMessaging: messaging,
+      localNotifications: localNotifications,
+      onMessageStream: onMessageController.stream,
+      onMessageOpenedAppStream: onMessageOpenedController.stream,
+      getInitialMessage: () async => null,
+      initializeTimeZones: () {},
+    );
 
-    test('dispose completes without error', () async {
-      expect(() => service.dispose(), returnsNormally);
-    });
+    final tapFuture = expectLater(
+      service.onNotificationTapped,
+      emits(
+        predicate<Map<String, dynamic>>(
+          (data) => data['deeplink'] == 'asora://test',
+        ),
+      ),
+    );
 
-    test('initialize completes without error', () async {
-      await expectLater(service.initialize(), completes);
-    });
+    await service.initialize();
 
-    test('subscribeToTopic completes without error', () async {
-      await expectLater(service.subscribeToTopic('test_topic'), completes);
-    });
+    onMessageOpenedController.add(
+      const RemoteMessage(data: {'deeplink': 'asora://test'}),
+    );
 
-    test('unsubscribeFromTopic completes without error', () async {
-      await expectLater(service.unsubscribeFromTopic('test_topic'), completes);
-    });
+    await tapFuture;
+
+    onMessageController.add(
+      const RemoteMessage(
+        data: {'deeplink': 'asora://notice'},
+        notification: RemoteNotification(title: 'Hello', body: 'World'),
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    verify(
+      () => localNotifications.show(
+        any(),
+        'Hello',
+        'World',
+        any(),
+        payload: 'asora://notice',
+      ),
+    ).called(1);
+
+    final refreshFuture = expectLater(service.onTokenRefresh, emits('token-2'));
+    tokenRefreshController.add('token-2');
+    await refreshFuture;
+    expect(service.currentToken, 'token-2');
+
+    responseCallback?.call(
+      const NotificationResponse(
+        notificationResponseType: NotificationResponseType.selectedNotification,
+        payload: 'asora://local',
+      ),
+    );
+
+    await expectLater(
+      service.onNotificationTapped,
+      emits(
+        predicate<Map<String, dynamic>>(
+          (data) => data['deeplink'] == 'asora://local',
+        ),
+      ),
+    );
+
+    service.dispose();
+    await onMessageController.close();
+    await onMessageOpenedController.close();
+    await tokenRefreshController.close();
+  });
+
+  test('platform returns expected identifier', () {
+    final service = PushNotificationService(
+      firebaseMessaging: MockFirebaseMessaging(),
+      localNotifications: MockFlutterLocalNotificationsPlugin(),
+      onMessageStream: const Stream.empty(),
+      onMessageOpenedAppStream: const Stream.empty(),
+      getInitialMessage: () async => null,
+      initializeTimeZones: () {},
+      enableHandlers: false,
+    );
+
+    expect(service.platform, equals('fcm'));
   });
 }
