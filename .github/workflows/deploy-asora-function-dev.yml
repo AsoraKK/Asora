@@ -516,13 +516,23 @@ jobs:
           
           if [ -n "$KEY_VAULT" ]; then
             echo "Setting CF_ACCESS_CLIENT_SECRET via Key Vault reference..."
-            az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
-              --value "$CF_CLIENT_SECRET" --output none
-            
-            # Reference the Key Vault secret in Function App Settings
-            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-              --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
-              --output none
+            if az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
+              --value "$CF_CLIENT_SECRET" --output none; then
+              # Reference the Key Vault secret in Function App Settings
+              if az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+                --output none; then
+                echo "✅ Key Vault reference configured"
+              else
+                echo "⚠️  Key Vault reference failed; falling back to plain app setting"
+                az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                  --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+              fi
+            else
+              echo "⚠️  Key Vault secret write failed; falling back to plain app setting"
+              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+            fi
           else
             echo "⚠️  No Key Vault found in RG $RG_CLEAN"
             echo "ℹ️  Setting CF_ACCESS_CLIENT_SECRET as plain app setting (less secure)"
