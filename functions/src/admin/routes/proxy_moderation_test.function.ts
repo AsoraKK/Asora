@@ -97,6 +97,19 @@ async function proxyModerationTest(
     `[proxy/moderation/test ${method}] ${clientIp} [${correlationId}]`
   );
 
+  // Handle OPTIONS preflight requests for endpoint availability check
+  if (method === 'OPTIONS') {
+    return {
+      status: 204,
+      headers: {
+        'Allow': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Correlation-ID',
+        'X-Correlation-ID': correlationId,
+      },
+    };
+  }
+
   // Rate limit check
   if (!checkRateLimit(clientIp)) {
     context.warn(
@@ -319,7 +332,7 @@ async function proxyModerationTest(
 
 app.http('moderation-test-proxy', {
   route: 'admin/moderation/test/{*path}',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   authLevel: 'anonymous', // We validate admin JWT manually
   handler: proxyModerationTest,
 });

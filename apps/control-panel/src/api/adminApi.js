@@ -128,7 +128,42 @@ async function parseJsonResponse(response) {
   }
 }
 
-export async function adminRequest(path, { method = 'GET', body, query, headers: extraHeaders } = {}) {
+/**
+ * Check if an endpoint is available before making a request.
+ * Uses OPTIONS (preflight) to verify the route exists without triggering full request.
+ * @param {string} path - The API endpoint path
+ * @returns {Promise<{available: boolean, methods?: string[], error?: string}>}
+ */
+export async function checkEndpointAvailable(path) {
+  try {
+    const url = buildUrl(path);
+    const response = await fetch(url, {
+      method: 'OPTIONS',
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    // 200-299 = route exists and accepts OPTIONS
+    // 405 = route exists but doesn't accept OPTIONS (still valid endpoint)
+    // 404 = route doesn't exist
+    if (response.ok || response.status === 405) {
+      const allow = response.headers.get('Allow') || response.headers.get('Access-Control-Allow-Methods');
+      return { 
+        available: true, 
+        methods: allow ? allow.split(',').map(m => m.trim()) : undefined 
+      };
+    }
+    
+    if (response.status === 404) {
+      return { available: false, error: 'Endpoint not found (404). The function may not be deployed.' };
+    }
+    
+    return { available: false, error: `Unexpected status: ${response.status}` };
+  } catch (err) {
+    return { available: false, error: err.message || 'Network error' };
+  }
+}
+
+export async function adminRequest(path, { method = 'GET', body, query, headers: extraHeaders, isFormData = false } = {}) {
   const url = buildUrl(path, query);
   const headers = {
     Accept: 'application/json',
@@ -139,9 +174,15 @@ export async function adminRequest(path, { method = 'GET', body, query, headers:
     headers.Authorization = `Bearer ${token}`;
   }
   const options = { method, headers };
+  
   if (body !== undefined) {
-    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
-    options.body = JSON.stringify(body);
+    if (isFormData) {
+      // FormData sets its own Content-Type with boundary
+      options.body = body;
+    } else {
+      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+      options.body = JSON.stringify(body);
+    }
   }
 
   const response = await fetch(url, options);
