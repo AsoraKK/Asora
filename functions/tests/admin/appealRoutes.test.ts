@@ -160,6 +160,46 @@ describe('Admin Appeal Routes', () => {
       const response = await approveAppeal(req as any, contextStub);
       expect(response.status).toBe(404);
     });
+
+    it('applies moderation metadata patch when present', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [{ id: 'appeal-200', contentType: 'post', contentId: 'post-200' }],
+        }),
+      })) as any;
+
+      fetchContentByIdMock.mockResolvedValueOnce({
+        container: { item: jest.fn(() => ({ patch: jest.fn().mockResolvedValue({}) })) },
+        document: { id: 'post-200', status: 'blocked', moderation: { status: 'blocked' } },
+        partitionKey: 'post-200',
+      });
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-200' },
+        body: { reasonCode: 'CONTENT_RESTORED' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBeGreaterThanOrEqual(200);
+    });
+
+    it('returns 500 when the database query fails', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockRejectedValue(new Error('boom')),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-123' },
+        body: { reasonCode: 'CONTENT_RESTORED' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await approveAppeal(req as any, contextStub);
+      expect(response.status).toBe(500);
+    });
   });
 
   describe('rejectAppeal', () => {
@@ -174,9 +214,73 @@ describe('Admin Appeal Routes', () => {
       const response = await rejectAppeal(req as any, contextStub);
       expect(response.status).toBeGreaterThanOrEqual(200);
     });
+
+    it('patches blocked status and moderation metadata', async () => {
+      const contentPatch = jest.fn().mockResolvedValue({});
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [{ id: 'appeal-200', contentType: 'post', contentId: 'post-200' }],
+        }),
+      })) as any;
+
+      fetchContentByIdMock.mockResolvedValueOnce({
+        container: { item: jest.fn(() => ({ patch: contentPatch })) },
+        document: { id: 'post-200', status: 'blocked', updatedAt: 1700000000000, moderation: { status: 'blocked' } },
+        partitionKey: 'post-200',
+      });
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-200' },
+        body: { reasonCode: 'INVALID_APPEAL' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await rejectAppeal(req as any, contextStub);
+      expect(response.status).toBeGreaterThanOrEqual(200);
+
+      const operations = contentPatch.mock.calls[0][0] as Array<{ path: string; value: unknown }>;
+      expect(operations.find((op) => op.path === '/blockedAt')).toBeTruthy();
+      expect(typeof operations.find((op) => op.path === '/updatedAt')?.value).toBe('number');
+      expect(operations.find((op) => op.path === '/moderation/status')?.value).toBe('blocked');
+    });
   });
 
   describe('overrideAppeal', () => {
+    it('handles CORS OPTIONS', async () => {
+      const req = httpReqMock({
+        method: 'OPTIONS',
+        params: { appealId: 'appeal-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(200);
+    });
+
+    it('requires appealId', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: {},
+        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('rejects invalid reason codes', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-129' },
+        body: { decision: 'allow', reasonCode: 'bad_code' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
     it('handles override requests and records audit', async () => {
       mockDb.appeals.items.query = jest.fn(() => ({
         fetchAll: jest.fn().mockResolvedValue({
@@ -205,6 +309,41 @@ describe('Admin Appeal Routes', () => {
       expect(mockDb.moderationDecisions.items.create).toHaveBeenCalled();
     });
 
+    it('accepts overrides when quorum reached flag is true', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-126',
+              status: 'pending',
+              contentType: 'post',
+              contentId: 'post-126',
+              hasReachedQuorum: true,
+              totalVotes: 3,
+            },
+          ],
+        }),
+      })) as any;
+
+      const contentPatch = jest.fn().mockResolvedValue({});
+      fetchContentByIdMock.mockResolvedValueOnce({
+        container: { item: jest.fn(() => ({ patch: contentPatch })) },
+        document: { id: 'post-126', status: 'blocked' },
+        partitionKey: 'post-126',
+      });
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-126' },
+        body: { decision: 'allow', reasonCode: 'false_positive' },
+        headers: { 'Idempotency-Key': 'override-126' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBeGreaterThanOrEqual(200);
+    });
+
     it('returns 409 for non-pending appeals without quorum', async () => {
       mockDb.appeals.items.query = jest.fn(() => ({
         fetchAll: jest.fn().mockResolvedValue({
@@ -224,6 +363,34 @@ describe('Admin Appeal Routes', () => {
         method: 'POST',
         params: { appealId: 'appeal-124' },
         body: { decision: 'block', reasonCode: 'safety_risk' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(409);
+    });
+
+    it('returns 409 when overridden idempotency key mismatches', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-126',
+              status: 'overridden',
+              finalDecision: 'allow',
+              contentType: 'post',
+              contentId: 'post-126',
+              overrideIdempotencyKey: 'override-126',
+            },
+          ],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-126' },
+        body: { decision: 'allow', reasonCode: 'false_positive' },
+        headers: { 'Idempotency-Key': 'override-999' },
         principal: { sub: 'admin-123' },
       });
 
@@ -257,6 +424,147 @@ describe('Admin Appeal Routes', () => {
 
       const response = await overrideAppeal(req as any, contextStub);
       expect(response.status).toBeGreaterThanOrEqual(200);
+    });
+
+    it('returns 409 when resolved appeal is not eligible', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-127',
+              status: 'resolved',
+              finalDecision: 'allow',
+              contentType: 'post',
+              contentId: 'post-127',
+            },
+          ],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-127' },
+        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(409);
+    });
+
+    it('rejects overrides with invalid decision values', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-130',
+              status: 'pending',
+              contentType: 'post',
+              contentId: 'post-130',
+            },
+          ],
+        }),
+      })) as any;
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-130' },
+        body: { decision: 'invalid', reasonCode: 'policy_exception' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('requires reasonCode for overrides', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-130' },
+        body: { decision: 'block' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('rejects overly long reason notes', async () => {
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-130' },
+        body: {
+          decision: 'block',
+          reasonCode: 'safety_risk',
+          reasonNote: 'x'.repeat(501),
+        },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 404 when override content is missing', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-131',
+              status: 'pending',
+              contentType: 'post',
+              contentId: 'post-131',
+            },
+          ],
+        }),
+      })) as any;
+
+      fetchContentByIdMock.mockResolvedValueOnce(null);
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-131' },
+        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(404);
+    });
+
+    it('returns conflict when patch hits optimistic lock failure', async () => {
+      mockDb.appeals.items.query = jest.fn(() => ({
+        fetchAll: jest.fn().mockResolvedValue({
+          resources: [
+            {
+              id: 'appeal-132',
+              status: 'pending',
+              contentType: 'post',
+              contentId: 'post-132',
+              _etag: 'etag-1',
+            },
+          ],
+        }),
+      })) as any;
+
+      mockDb.appeals.item = jest.fn(() => ({
+        patch: jest.fn().mockRejectedValue({ statusCode: 412 }),
+      })) as any;
+      fetchContentByIdMock.mockResolvedValueOnce({
+        container: { item: jest.fn(() => ({ patch: jest.fn().mockResolvedValue({}) })) },
+        document: { id: 'post-132', status: 'blocked' },
+        partitionKey: 'post-132',
+      });
+
+      const req = httpReqMock({
+        method: 'POST',
+        params: { appealId: 'appeal-132' },
+        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        principal: { sub: 'admin-123' },
+      });
+
+      const response = await overrideAppeal(req as any, contextStub);
+      expect(response.status).toBe(409);
     });
   });
 

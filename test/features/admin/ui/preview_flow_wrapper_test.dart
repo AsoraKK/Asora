@@ -403,4 +403,171 @@ void main() {
 
     expect(container.read(previewFlowProvider), PreviewFlow.profile);
   });
+
+  testWidgets('navigation interceptor surfaces route details', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.homeFeed),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final innerNavigatorFinder = find.descendant(
+      of: find.byType(PreviewFlowWrapper),
+      matching: find.byType(Navigator),
+    );
+    expect(innerNavigatorFinder, findsOneWidget);
+
+    final navigator = tester.state<NavigatorState>(innerNavigatorFinder);
+
+    navigator.pushNamed('profile');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Navigation Intercepted'), findsOneWidget);
+    expect(find.textContaining('Route: profile'), findsOneWidget);
+    expect(container.read(previewFlowProvider), PreviewFlow.authChoice);
+
+    navigator.pop();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('onboarding feed disables and re-enables continue action', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.onboardingFeed),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tech & Innovation'));
+    await tester.tap(find.text('Art & Design'));
+    await tester.pumpAndSettle();
+
+    final disabledContinue = find.widgetWithText(
+      FilledButton,
+      'Continue (0 selected)',
+    );
+    expect(tester.widget<FilledButton>(disabledContinue).onPressed, isNull);
+
+    await tester.tap(find.text('Music'));
+    await tester.pumpAndSettle();
+
+    final enabledContinue = find.widgetWithText(
+      FilledButton,
+      'Continue (1 selected)',
+    );
+    expect(tester.widget<FilledButton>(enabledContinue).onPressed, isNotNull);
+
+    await tester.tap(enabledContinue);
+    await tester.pump();
+
+    expect(container.read(previewFlowProvider), PreviewFlow.homeFeed);
+  });
+
+  testWidgets('live create post displays session banner', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.6;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
+
+    final container = ProviderContainer();
+    container.read(liveTestModeProvider.notifier).enable();
+    container.read(previewFlowProvider.notifier).state = PreviewFlow.createPost;
+    addTearDown(container.dispose);
+
+    final sessionId = container.read(liveTestModeProvider).sessionId;
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.createPost),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('LIVE TEST MODE'), findsOneWidget);
+    expect(find.textContaining('Real Hive AI moderation'), findsOneWidget);
+    expect(find.textContaining('Posts marked as test'), findsOneWidget);
+    expect(find.textContaining('Session:'), findsOneWidget);
+
+    final sessionText = find.textContaining('Session:');
+    expect(sessionText, findsOneWidget);
+    final widgets = tester.widgetList(sessionText);
+    expect(widgets.length, greaterThan(0));
+  });
+
+  testWidgets('preview create post edit after moderation warning', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: PreviewFlowWrapper(flow: PreviewFlow.createPost),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'hate');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Review Suggested'), findsOneWidget);
+
+    final editButton = find.text('Edit');
+    expect(editButton, findsOneWidget);
+    await tester.tap(editButton);
+    await tester.pump();
+
+    expect(find.text('Review Suggested'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'hate',
+    );
+
+    await tester.enterText(find.byType(TextField), 'hello world');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Post created! (Preview mode)'), findsOneWidget);
+    expect(container.read(previewFlowProvider), PreviewFlow.homeFeed);
+  });
 }

@@ -65,6 +65,88 @@ void main() {
     expect(appealTapped, isTrue);
     expect(dismissed, isTrue);
   });
+
+  testWidgets('renders hidden badge for hidden content', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ModerationBadges(
+            status: ModerationStatus.hidden,
+            isOwnContent: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Blocked'), findsOneWidget);
+  });
+
+  testWidgets('appeal badge shows approved status', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ModerationBadges(
+            status: ModerationStatus.flagged,
+            appealStatus: 'approved',
+            isOwnContent: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Appeal Approved'), findsOneWidget);
+  });
+
+  testWidgets('appeal badge shows rejected status', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ModerationBadges(
+            status: ModerationStatus.hidden,
+            appealStatus: 'rejected',
+            isOwnContent: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Appeal Rejected'), findsOneWidget);
+  });
+
+  testWidgets('does not show appeal badge for non-own content', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ModerationBadges(
+            status: ModerationStatus.flagged,
+            appealStatus: 'pending',
+            isOwnContent: false,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Appeal Pending'), findsNothing);
+    expect(find.text('Flagged'), findsOneWidget);
+  });
+
+  testWidgets('moderation banner without appeal callback hides appeal button', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ModerationInfoBanner(
+            status: ModerationStatus.flagged,
+            message: 'Flagged for review',
+            onDismiss: _noop,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Appeal decision'), findsNothing);
+  });
 }
 
 void _noop() {}

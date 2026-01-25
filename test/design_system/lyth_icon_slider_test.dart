@@ -6,7 +6,7 @@ import 'package:asora/design_system/components/lyth_slider.dart';
 import 'package:asora/design_system/index.dart';
 
 void main() {
-  Widget _wrap(Widget child) {
+  Widget wrap(Widget child) {
     return MaterialApp(
       theme: LythausTheme.light(),
       home: Scaffold(body: Center(child: child)),
@@ -18,7 +18,7 @@ void main() {
   ) async {
     var triggered = false;
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         LythIconButton(
           icon: Icons.star,
           tooltip: 'Favorite',
@@ -36,9 +36,7 @@ void main() {
 
   testWidgets('LythIconButton disabled renders null onPressed', (tester) async {
     await tester.pumpWidget(
-      _wrap(
-        LythIconButton(icon: Icons.close, onPressed: () {}, disabled: true),
-      ),
+      wrap(LythIconButton(icon: Icons.close, onPressed: () {}, disabled: true)),
     );
 
     await tester.pumpAndSettle();
@@ -49,7 +47,7 @@ void main() {
   testWidgets('LythSlider displays label and updates value', (tester) async {
     double sliderValue = 20;
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         StatefulBuilder(
           builder: (context, setState) {
             return LythSlider(
@@ -81,7 +79,7 @@ void main() {
   ) async {
     var range = const RangeValues(10, 40);
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         StatefulBuilder(
           builder: (context, setState) {
             return LythRangeSlider(

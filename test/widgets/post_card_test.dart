@@ -87,8 +87,6 @@ void main() {
   testWidgets('shows hidden placeholder for non-own hidden post', (
     tester,
   ) async {
-    final post = _buildPost(id: 'p3', status: ModerationStatus.hidden);
-
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -128,5 +126,117 @@ void main() {
     );
 
     expect(find.byType(Image), findsNWidgets(2));
+  });
+
+  testWidgets('renders single media image preview', (tester) async {
+    final post = _buildPost(
+      id: 'p5',
+      status: ModerationStatus.clean,
+      mediaUrls: const ['https://example.com/a.jpg'],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: PostCard(post: post)),
+      ),
+    );
+
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('shows community approved banner without appeal action', (
+    tester,
+  ) async {
+    final post = _buildPost(
+      id: 'p6',
+      status: ModerationStatus.communityApproved,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: PostCard(post: post, isOwnPost: true)),
+        ),
+      ),
+    );
+
+    expect(
+      find.textContaining('community voted to approve'),
+      findsOneWidget,
+    );
+    expect(find.text('Appeal decision'), findsNothing);
+  });
+
+  testWidgets('hides appeal action when appeal status is set', (tester) async {
+    final post = _buildPost(
+      id: 'p7',
+      status: ModerationStatus.communityRejected,
+      appealStatus: 'pending',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: PostCard(post: post, isOwnPost: true)),
+        ),
+      ),
+    );
+
+    expect(
+      find.textContaining('community voted to keep'),
+      findsOneWidget,
+    );
+    expect(find.text('Appeal decision'), findsNothing);
+  });
+
+  testWidgets('formats time ago for days and minutes', (tester) async {
+    final now = DateTime.now();
+    final dayPost = _buildPost(
+      id: 'p8',
+      status: ModerationStatus.clean,
+      createdAt: now.subtract(const Duration(days: 2)),
+    );
+    final minutePost = _buildPost(
+      id: 'p9',
+      status: ModerationStatus.clean,
+      createdAt: now.subtract(const Duration(minutes: 5)),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              PostCard(post: dayPost),
+              PostCard(post: minutePost),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('2d ago'), findsOneWidget);
+    expect(find.text('5m ago'), findsOneWidget);
+  });
+
+  testWidgets('dismisses moderation banner when close pressed', (tester) async {
+    final post = _buildPost(
+      id: 'p10',
+      status: ModerationStatus.flagged,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: PostCard(post: post, isOwnPost: true)),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('flagged by the community'), findsOneWidget);
+    await tester.tap(find.byTooltip('Dismiss'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('flagged by the community'), findsNothing);
   });
 }

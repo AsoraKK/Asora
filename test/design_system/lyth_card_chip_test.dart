@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/design_system/components/lyth_chip.dart';
 import 'package:asora/design_system/index.dart';
 
 void main() {
-  Widget _wrap(Widget child) {
+  Widget wrap(Widget child) {
     return MaterialApp(
       theme: LythausTheme.light(),
       home: Scaffold(body: Center(child: child)),
@@ -16,7 +15,7 @@ void main() {
   testWidgets('LythCard returns plain container when not clickable', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(const LythCard(child: Text('Static card'))));
+    await tester.pumpWidget(wrap(const LythCard(child: Text('Static card'))));
 
     await tester.pumpAndSettle();
     expect(find.byType(InkWell), findsNothing);
@@ -28,7 +27,7 @@ void main() {
   ) async {
     var tapped = false;
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         LythCard.clickable(
           child: const Text('Tap card'),
           onTap: () => tapped = true,
@@ -46,7 +45,7 @@ void main() {
   ) async {
     var selected = false;
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         LythChip.filter(
           label: 'Filter',
           selected: false,
@@ -66,7 +65,7 @@ void main() {
   ) async {
     var deleted = false;
     await tester.pumpWidget(
-      _wrap(LythChip.input(label: 'Input', onDeleted: () => deleted = true)),
+      wrap(LythChip.input(label: 'Input', onDeleted: () => deleted = true)),
     );
 
     await tester.pumpAndSettle();
@@ -78,7 +77,7 @@ void main() {
   testWidgets('LythChip defaults to static Chip when no callbacks', (
     tester,
   ) async {
-    await tester.pumpWidget(_wrap(const LythChip(label: 'Static')));
+    await tester.pumpWidget(wrap(const LythChip(label: 'Static')));
 
     await tester.pumpAndSettle();
     expect(find.byType(Chip), findsOneWidget);

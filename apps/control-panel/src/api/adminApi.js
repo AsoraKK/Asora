@@ -8,6 +8,32 @@ const STORAGE_KEYS = {
   token: 'controlPanelAdminToken'
 };
 
+/**
+ * Resolve a potentially relative URL to an absolute URL.
+ * Handles both relative paths like "/api/admin" and absolute URLs like "https://...".
+ * @param {string} urlOrPath - The URL or path to resolve
+ * @returns {string} - An absolute URL suitable for use with new URL()
+ */
+function resolveToAbsoluteUrl(urlOrPath) {
+  // If it's already absolute, return as-is
+  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+    return urlOrPath;
+  }
+  // In browser context, resolve against current origin
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    // Ensure we have a trailing slash for proper path joining
+    const origin = window.location.origin;
+    // Use URL constructor to properly join origin and path
+    return new URL(urlOrPath, origin).toString();
+  }
+  // SSR fallback - return as-is (will fail on server, which is expected)
+  return urlOrPath;
+}
+
+/**
+ * Get the raw (potentially relative) admin API URL from config/storage.
+ * Use getAbsoluteAdminApiUrl() for URL construction.
+ */
 export function getAdminApiUrl() {
   if (typeof window !== 'undefined') {
     const stored = window.localStorage.getItem(STORAGE_KEYS.apiUrl);
@@ -16,6 +42,14 @@ export function getAdminApiUrl() {
     }
   }
   return DEFAULT_ADMIN_API_URL;
+}
+
+/**
+ * Get the absolute admin API URL, resolving relative paths against window.location.origin.
+ * This is the correct base URL for new URL() construction.
+ */
+export function getAbsoluteAdminApiUrl() {
+  return resolveToAbsoluteUrl(getAdminApiUrl());
 }
 
 export function setAdminApiUrl(value) {
@@ -49,8 +83,28 @@ export function setAdminToken(value) {
   window.localStorage.setItem(STORAGE_KEYS.token, trimmed);
 }
 
+/**
+ * Build a full URL from a path and optional query parameters.
+ * Properly handles both relative and absolute base URLs.
+ * @param {string} path - The API endpoint path (e.g., "/moderation/test/upload")
+ * @param {Object} query - Optional query parameters
+ * @returns {string} - The full absolute URL
+ */
 function buildUrl(path, query) {
-  const url = new URL(path, getAdminApiUrl());
+  // Get the absolute base URL (resolves relative paths against origin)
+  const baseUrl = getAbsoluteAdminApiUrl();
+  
+  // Ensure proper path joining:
+  // - baseUrl: "https://control.asora.co.za/api/admin" 
+  // - path: "/moderation/test/upload"
+  // - result: "https://control.asora.co.za/api/admin/moderation/test/upload"
+  
+  // Normalize: remove trailing slash from base, ensure path starts with /
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  const url = new URL(`${normalizedBase}${normalizedPath}`);
+  
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '') {

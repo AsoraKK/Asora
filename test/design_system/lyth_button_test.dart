@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/index.dart';
 
 void main() {
   const label = 'Continue';
 
-  Widget _wrap(Widget child) {
+  Widget wrap(Widget child) {
     return MaterialApp(
       theme: LythausTheme.light(),
       home: Scaffold(body: Center(child: child)),
@@ -19,7 +18,7 @@ void main() {
   ) async {
     var tapped = false;
     await tester.pumpWidget(
-      _wrap(LythButton.primary(label: label, onPressed: () => tapped = true)),
+      wrap(LythButton.primary(label: label, onPressed: () => tapped = true)),
     );
 
     await tester.pump();
@@ -31,7 +30,7 @@ void main() {
 
   testWidgets('secondary variant uses OutlinedButton', (tester) async {
     await tester.pumpWidget(
-      _wrap(LythButton.secondary(label: 'Cancel', onPressed: () {})),
+      wrap(LythButton.secondary(label: 'Cancel', onPressed: () {})),
     );
 
     await tester.pump();
@@ -42,7 +41,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(LythButton(label: 'Saving', onPressed: () {}, isLoading: true)),
+      wrap(LythButton(label: 'Saving', onPressed: () {}, isLoading: true)),
     );
 
     await tester.pump();
@@ -52,7 +51,7 @@ void main() {
 
   testWidgets('iconAfter renders icon after label', (tester) async {
     await tester.pumpWidget(
-      _wrap(
+      wrap(
         LythButton(
           label: 'Upload',
           icon: Icons.cloud_upload,
@@ -76,7 +75,7 @@ void main() {
 
   testWidgets('tooltip wraps button when provided', (tester) async {
     await tester.pumpWidget(
-      _wrap(LythButton(label: 'Info', onPressed: () {}, tooltip: 'More info')),
+      wrap(LythButton(label: 'Info', onPressed: () {}, tooltip: 'More info')),
     );
 
     await tester.pumpAndSettle();

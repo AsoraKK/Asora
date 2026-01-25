@@ -32,6 +32,13 @@ const updateAdminConfigMock = updateAdminConfig as jest.Mock;
 describe('Admin Config Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+    getAdminConfigMock.mockResolvedValue(null);
+    updateAdminConfigMock.mockResolvedValue({
+      success: true,
+      version: 2,
+      updatedAt: '2024-01-01T00:00:00Z',
+    });
   });
 
   describe('adminConfigHandler', () => {
@@ -74,6 +81,47 @@ describe('Admin Config Routes', () => {
       expect(response.status).toBe(404);
     });
 
+    it('returns config when it exists', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+      getAdminConfigMock.mockResolvedValue({
+        schemaVersion: 1,
+        version: 3,
+        updatedAt: '2024-01-01T00:00:00Z',
+        payload: { feature: 'enabled' },
+      });
+
+      const req = httpReqMock({
+        method: 'GET',
+        headers: { Origin: 'http://localhost:3000' },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(200);
+    });
+
+    it('returns 405 for unsupported methods', async () => {
+      const req = httpReqMock({
+        method: 'DELETE',
+        headers: { Origin: 'http://localhost:3000' },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(405);
+    });
+
+    it('returns 500 when GET throws', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+      getAdminConfigMock.mockRejectedValue(new Error('boom'));
+
+      const req = httpReqMock({
+        method: 'GET',
+        headers: { Origin: 'http://localhost:3000' },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(500);
+    });
+
     it('rejects invalid JSON body', async () => {
       requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
 
@@ -105,6 +153,66 @@ describe('Admin Config Routes', () => {
 
       const response = await adminConfigHandler(req as any, contextStub);
       expect(response.status).toBe(200);
+    });
+
+    it('rejects payloads that exceed size limits', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+
+      const req = httpReqMock({
+        method: 'PUT',
+        headers: { Origin: 'http://localhost:3000' },
+        body: {
+          schemaVersion: 1,
+          payload: { blob: 'x'.repeat(70 * 1024) },
+        },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(413);
+    });
+
+    it('returns validation errors for invalid payloads', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+
+      const req = httpReqMock({
+        method: 'PUT',
+        headers: { Origin: 'http://localhost:3000' },
+        body: { schemaVersion: 0 },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(400);
+    });
+
+    it('returns 500 when update returns failure', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+      updateAdminConfigMock.mockResolvedValue({
+        success: false,
+        error: 'Version conflict',
+      });
+
+      const req = httpReqMock({
+        method: 'PUT',
+        headers: { Origin: 'http://localhost:3000' },
+        body: { schemaVersion: 1, payload: { feature: 'flag' } },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(500);
+    });
+
+    it('returns 500 when update throws', async () => {
+      requireCloudflareAccessMock.mockResolvedValue({ actor: 'admin-123' });
+      updateAdminConfigMock.mockRejectedValue(new Error('boom'));
+
+      const req = httpReqMock({
+        method: 'PUT',
+        headers: { Origin: 'http://localhost:3000' },
+        body: { schemaVersion: 1, payload: { feature: 'flag' } },
+      });
+
+      const response = await adminConfigHandler(req as any, contextStub);
+      expect(response.status).toBe(500);
     });
   });
 

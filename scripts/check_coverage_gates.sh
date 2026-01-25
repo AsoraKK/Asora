@@ -44,6 +44,7 @@ P2_PATTERNS=(
   "lib/core/observability/"
   "lib/core/initialization/"
   "lib/services/push/"
+  "lib/design_system/"
 )
 
 P3_PATTERNS=(
@@ -51,9 +52,6 @@ P3_PATTERNS=(
   "lib/ui/screens/rewards/"
   "lib/state/models/reputation.dart"
   "lib/state/providers/reputation_providers.dart"
-)
-
-SHARED_PATTERNS=(
   "lib/widgets/"
   "lib/ui/components/"
   "lib/ui/theme/"
@@ -71,6 +69,9 @@ SHARED_PATTERNS=(
   "lib/main.dart"
   "lib/state/models/settings.dart"
   "lib/state/providers/settings_providers.dart"
+)
+
+SHARED_PATTERNS=(
 )
 
 # Colors for output
@@ -101,6 +102,7 @@ read_baseline_value() {
   local value
   value=$(grep -o "\"$key\"[[:space:]]*:[[:space:]]*[0-9]*" "$BASELINE_FILE" | grep -o '[0-9]*$' || true)
   if [[ -z "$value" ]]; then
+    local p3_min=$4
     fail "Could not parse $key from $BASELINE_FILE"
   fi
   echo "$value"
@@ -126,6 +128,7 @@ update_baseline() {
   total_min=$(read_baseline_value "total_min_percent")
   p1_min=$(read_baseline_value "p1_min_percent")
   p2_min=$(read_baseline_value "p2_min_percent")
+  p3_min=$(read_baseline_value "p3_min_percent")
 
   case "$scope" in
     total)
@@ -140,6 +143,10 @@ update_baseline() {
       current=$p2_min
       p2_min=$new_value
       ;;
+    p3)
+      current=$p3_min
+      p3_min=$new_value
+      ;;
     *)
       fail "Unknown scope: $scope (use total|p1|p2)"
       ;;
@@ -149,7 +156,7 @@ update_baseline() {
     fail "New baseline ($new_value%) must be greater than current ($current%)."
   fi
 
-  write_baseline "$total_min" "$p1_min" "$p2_min"
+  write_baseline "$total_min" "$p1_min" "$p2_min" "$p3_min"
   pass "Baseline updated for $scope: $current% → $new_value%"
 }
 
@@ -296,6 +303,7 @@ main() {
   total_min=$(read_baseline_value "total_min_percent")
   p1_min=$(read_baseline_value "p1_min_percent")
   p2_min=$(read_baseline_value "p2_min_percent")
+  p3_min=$(read_baseline_value "p3_min_percent")
 
   total_percent=$(calc_percent "$total_hit" "$total_lines")
   p1_percent=$(calc_percent "$p1_hit" "$p1_lines")
@@ -348,7 +356,27 @@ main() {
     printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P2" "$p2_lines" "$p2_hit" "$p2_percent" "$p2_min"
   fi
 
-  printf "%-12s | %8d | %8d | %8d%% | %9s | %s\n" "P3" "$p3_lines" "$p3_hit" "$p3_percent" "-" "INFO"
+  if [[ $p3_lines -eq 0 ]]; then
+    if [[ $p3_min -gt 0 ]]; then
+      result="${RED}FAIL${NC}"
+      failures+=("P3 patterns matched 0 instrumented lines. Check P3_PATTERNS.")
+    else
+      result="${YELLOW}SKIP${NC}"
+      warn "P3 patterns matched 0 lines; P3 baseline is 0 so gate is skipped."
+    fi
+    printf "%-12s | %8d | %8d | %8s | %9d%% | $result\n" "P3" "$p3_lines" "$p3_hit" "N/A" "$p3_min"
+  elif [[ $p3_percent -ge $p3_min ]]; then
+    result="${GREEN}PASS${NC}"
+    printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P3" "$p3_lines" "$p3_hit" "$p3_percent" "$p3_min"
+    if [[ $p3_percent -lt 85 ]]; then
+      warn "P3 coverage ($p3_percent%) is below target headroom (85%)."
+    fi
+  else
+    result="${RED}FAIL${NC}"
+    failures+=("P3 coverage ($p3_percent%) is below threshold ($p3_min%)")
+    printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P3" "$p3_lines" "$p3_hit" "$p3_percent" "$p3_min"
+  fi
+
   printf "%-12s | %8d | %8d | %8d%% | %9s | %s\n" "Shared" "$shared_lines" "$shared_hit" "$shared_percent" "-" "INFO"
   printf "%-12s | %8d | %8d | %8d%% | %9s | %s\n" "Unknown" "$unknown_lines" "$unknown_hit" "$unknown_percent" "-" "INFO"
 
@@ -395,6 +423,11 @@ main() {
   if [[ $p2_lines -gt 0 && $p2_percent -gt $p2_min ]]; then
     echo "Tip: P2 coverage ($p2_percent%) exceeds baseline ($p2_min%)."
     echo "  bash scripts/check_coverage_gates.sh update-baseline p2 $p2_percent"
+    echo ""
+  fi
+  if [[ $p3_lines -gt 0 && $p3_percent -gt $p3_min ]]; then
+    echo "Tip: P3 coverage ($p3_percent%) exceeds baseline ($p3_min%)."
+    echo "  bash scripts/check_coverage_gates.sh update-baseline p3 $p3_percent"
     echo ""
   fi
 }
