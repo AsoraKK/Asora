@@ -53,6 +53,8 @@ function HiveApiTest() {
   const [debugInfo, setDebugInfo] = useState(null);
   
   const fileInputRef = useRef(null);
+  const liveModeBlocksUpload = liveMode && !!uploadedFile;
+  const liveModeBlocksDeepfake = liveMode && testMode === 'deepfake';
 
   // Save log entry
   const saveLogEntry = useCallback((type, input, result) => {
@@ -72,6 +74,11 @@ function HiveApiTest() {
   // File handling for drag & drop
   const handleFileSelect = useCallback((file) => {
     if (!file) return;
+
+    if (liveMode) {
+      setError('Live mode supports URL-only tests. Switch to mock mode to upload files.');
+      return;
+    }
     
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime'];
     if (!validTypes.includes(file.type)) {
@@ -96,7 +103,7 @@ function HiveApiTest() {
     } else {
       setUploadPreview(null);
     }
-  }, []);
+  }, [liveMode]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -207,6 +214,16 @@ function HiveApiTest() {
       return;
     }
 
+    if (liveModeBlocksUpload) {
+      setError('Live mode only supports URL-based tests. Remove the upload and provide a URL.');
+      return;
+    }
+
+    if (liveModeBlocksDeepfake) {
+      setError('Live deepfake testing is not wired yet. Use mock mode or Image Moderation.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -244,7 +261,7 @@ function HiveApiTest() {
           const endTime = performance.now();
           const debugData = {
             mode: 'live',
-            endpoint: uploadedFile ? '/moderation/test/upload' : '/moderation/test',
+            endpoint: '/moderation/test',
             method: 'POST',
             duration: `${(endTime - startTime).toFixed(2)}ms`,
             contentType: uploadedFile ? 'file' : 'url',
@@ -270,7 +287,7 @@ function HiveApiTest() {
       setResult(response);
       setDebugInfo({
         mode: liveMode ? 'live' : 'mock',
-        endpoint: uploadedFile ? '/moderation/test/upload' : '/moderation/test',
+        endpoint: liveMode ? '/moderation/test' : (uploadedFile ? '/moderation/test/upload' : '/moderation/test'),
         duration: `${(endTime - startTime).toFixed(2)}ms`,
         timestamp: new Date().toISOString(),
         responseSize: `${JSON.stringify(response).length} bytes`
@@ -304,14 +321,20 @@ function HiveApiTest() {
               <input
                 type="checkbox"
                 checked={liveMode}
-                onChange={(e) => setLiveMode(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setLiveMode(next);
+                  if (next) {
+                    clearUpload();
+                  }
+                }}
               />
               <span className={`live-badge ${liveMode ? 'active' : ''}`}>
                 {liveMode ? '🔴 LIVE' : '🔵 MOCK'}
               </span>
             </label>
             <span className="live-hint">
-              {liveMode ? 'Using real Hive AI API' : 'Using mock responses'}
+              {liveMode ? 'Using real Hive AI API (URL-only)' : 'Using mock responses'}
             </span>
           </div>
         </div>
@@ -468,7 +491,7 @@ function HiveApiTest() {
             <LythButton
               type="button"
               onClick={handleTestImage}
-              disabled={loading || (!imageUrl.trim() && !uploadedFile)}
+              disabled={loading || (!imageUrl.trim() && !uploadedFile) || liveModeBlocksUpload}
             >
               {loading ? 'Analyzing...' : 'Analyze Image'}
             </LythButton>
@@ -554,7 +577,7 @@ function HiveApiTest() {
             <LythButton
               type="button"
               onClick={handleTestImage}
-              disabled={loading || (!imageUrl.trim() && !uploadedFile)}
+              disabled={loading || (!imageUrl.trim() && !uploadedFile) || liveModeBlocksUpload || liveModeBlocksDeepfake}
             >
               {loading ? 'Analyzing...' : 'Detect Deepfake'}
             </LythButton>

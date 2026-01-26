@@ -12,7 +12,9 @@ Note: Single-page app routing requires Pages redirect rules.
 
 By default, the control-panel uses same-origin proxy routing:
 - `GET /api/admin/config` → proxied to `https://admin-api.asora.co.za/config`
-- `POST /api/admin/moderation/test/upload` → proxied to `https://admin-api.asora.co.za/moderation/test/upload`
+- `POST /api/admin/moderation/test` → proxied to `https://admin-api.asora.co.za/moderation/test` (URL-based tests)
+
+Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 
 **Benefits:**
 - Eliminates CORS issues (browser never directly calls cross-origin)

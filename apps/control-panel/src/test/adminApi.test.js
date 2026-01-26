@@ -62,7 +62,7 @@ describe('adminApi URL construction', () => {
   });
 
   describe('buildUrl via adminRequest', () => {
-    it('should build correct URL for moderation test upload', async () => {
+    it('should build correct URL for moderation test', async () => {
       window.localStorage.getItem = vi.fn((key) => {
         if (key === 'controlPanelAdminApiUrl') return null;
         if (key === 'controlPanelAdminToken') return 'test-token';
@@ -80,9 +80,9 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('/moderation/test/upload', { method: 'POST' });
+      await adminRequest('/moderation/test', { method: 'POST' });
 
-      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test/upload`);
+      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test`);
     });
 
     it('should handle paths without leading slash', async () => {
