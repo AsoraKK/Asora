@@ -9,6 +9,7 @@ import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/design_system/components/lyth_text_field.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
@@ -112,6 +113,16 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     final notifier = ref.read(postCreationProvider.notifier);
     final spacing = context.spacing;
 
+    ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      final errorCode = next.errorResult?.code;
+      if (errorCode != null &&
+          errorCode != previous?.errorResult?.code &&
+          isDeviceIntegrityBlockedCode(errorCode)) {
+        showDeviceIntegrityBlockedDialog(context);
+        ref.read(postCreationProvider.notifier).clearError();
+      }
+    });
+
     return Padding(
       padding: EdgeInsets.all(spacing.lg),
       child: Column(
@@ -185,7 +196,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               },
             ),
           ],
-          if (state.hasError && state.errorResult != null)
+          if (state.hasError &&
+              state.errorResult != null &&
+              state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
             Padding(
               padding: EdgeInsets.only(top: spacing.sm),
               child: Text(

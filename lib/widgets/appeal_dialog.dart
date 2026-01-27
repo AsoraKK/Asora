@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/utils/daily_limit_message.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
@@ -392,6 +393,19 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       _isSubmitting = true;
     });
 
+    // Guard: Block appeals on compromised devices
+    await runWithDeviceGuard(context, ref, IntegrityUseCase.appeal, () async {
+      await _doSubmitAppeal();
+    });
+
+    if (mounted) {
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
+
+  Future<void> _doSubmitAppeal() async {
     try {
       final client = ref.read(moderationClientProvider);
       final token = await ref.read(jwtProvider.future);
@@ -442,18 +456,19 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
             errorMessage = data['error'] as String;
           }
         } else if (error is ModerationException) {
+          final handled = await showDeviceIntegrityBlockedForCode(
+            context,
+            code: error.code,
+          );
+          if (handled) {
+            return;
+          }
           errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }
 
         LythSnackbar.error(context: context, message: errorMessage);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
       }
     }
   }

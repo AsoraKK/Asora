@@ -109,6 +109,25 @@ describe('submitAppeal route', () => {
     expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
+  it('returns 403 when device integrity headers indicate compromised', async () => {
+    const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
+    const response = await submitAppealRoute(
+      httpReqMock({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer valid-token',
+          'x-device-emulator': 'true',
+        },
+        body: { reason: 'please review' },
+      }),
+      contextStub
+    );
+    expect(handler).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+    const body = JSON.parse(response.body as string);
+    expect(body.code).toBe('DEVICE_INTEGRITY_BLOCKED');
+  });
+
   it('delegates to handler for authorized requests', async () => {
     const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
     handler.mockResolvedValueOnce({ status: 201, jsonBody: { id: 'appeal-1' } });

@@ -17,6 +17,7 @@ import 'package:asora/features/moderation/domain/moderation_decision.dart';
 import 'package:asora/features/moderation/domain/moderation_filters.dart';
 import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 /// Concrete implementation of [ModerationRepository]
 ///
@@ -29,6 +30,33 @@ class ModerationService implements ModerationRepository {
   final Dio _dio;
 
   ModerationService(this._dio);
+
+  ModerationException _mapDioException(DioException error) {
+    final data = error.response?.data;
+    String? code;
+    if (data is Map<String, dynamic>) {
+      if (data['code'] is String) {
+        code = data['code'] as String;
+      } else if (data['error'] is Map<String, dynamic>) {
+        final nested = data['error'] as Map<String, dynamic>;
+        if (nested['code'] is String) {
+          code = nested['code'] as String;
+        }
+      }
+      if (code == ErrorCodes.deviceIntegrityBlocked) {
+        return ModerationException(
+          ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+          code: ErrorCodes.deviceIntegrityBlocked,
+          originalError: error,
+        );
+      }
+    }
+    return ModerationException(
+      'Network error: ${error.message}',
+      code: 'NETWORK_ERROR',
+      originalError: error,
+    );
+  }
 
   @override
   Future<List<Appeal>> getMyAppeals({required String token}) async {
@@ -50,11 +78,7 @@ class ModerationService implements ModerationRepository {
         );
       }
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -98,11 +122,7 @@ class ModerationService implements ModerationRepository {
         );
       }
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -141,11 +161,7 @@ class ModerationService implements ModerationRepository {
       }
       return data;
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -182,11 +198,7 @@ class ModerationService implements ModerationRepository {
       }
       return VoteResult.fromJson(data);
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',

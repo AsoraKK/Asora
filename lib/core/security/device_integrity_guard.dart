@@ -1,25 +1,44 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA DEVICE INTEGRITY GUARD
+/// LYTHAUS DEVICE INTEGRITY GUARD
 ///
 /// 🎯 Purpose: Policy-based device integrity enforcement per use-case
 /// 🔐 Security: Block/warn for high-risk operations on compromised devices
 /// 📱 Platform: Flutter with Riverpod integration
+///
+/// Error Code: Returns [ErrorCodes.deviceIntegrityBlocked] for blocked
+/// operations. This stable code allows unified client error handling.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/security_overrides.dart';
 import 'package:asora/core/security/security_telemetry.dart';
 
 /// Use cases for integrity checks
+///
+/// All write operations are blocked on compromised devices.
+/// Read-only operations are allowed with a warning.
 enum IntegrityUseCase {
+  // Authentication (high-risk writes)
   signIn,
   signUp,
+
+  // Content creation (writes - always blocked on compromised devices)
   postContent,
-  privacyDsr, // privacy/export/delete flows
+  comment,
+  like,
+  flag,
+  appeal,
+  uploadMedia,
+
+  // Privacy/data operations (high-risk writes)
+  privacyDsr,
+
+  // Read-only operations (allowed with warning)
   readFeed,
 }
 
@@ -28,12 +47,14 @@ class DeviceIntegrityDecision {
   final bool allow;
   final bool showBlockingUi;
   final String? messageKey; // for localization
+  final String? errorCode; // API error code for client handling
   final bool warnOnly;
 
   const DeviceIntegrityDecision({
     required this.allow,
     required this.showBlockingUi,
     this.messageKey,
+    this.errorCode,
     this.warnOnly = false,
   });
 
@@ -59,6 +80,7 @@ class DeviceIntegrityDecision {
       allow: false,
       showBlockingUi: true,
       messageKey: messageKey,
+      errorCode: ErrorCodes.deviceIntegrityBlocked,
       warnOnly: false,
     );
   }
@@ -154,20 +176,28 @@ class DeviceIntegrityGuard {
     }
 
     // Production and staging (without QA override):
-    // High-risk operations: block
-    // Low-risk operations: warn-only
+    // Write operations: block on compromised devices
+    // Read-only operations: warn-only
+    //
+    // Policy: Compromised devices are read-only by design.
+    // All state-mutating actions are blocked.
 
-    final isHighRisk = [
+    final isWriteOperation = [
       IntegrityUseCase.signIn,
       IntegrityUseCase.signUp,
       IntegrityUseCase.postContent,
+      IntegrityUseCase.comment,
+      IntegrityUseCase.like,
+      IntegrityUseCase.flag,
+      IntegrityUseCase.appeal,
+      IntegrityUseCase.uploadMedia,
       IntegrityUseCase.privacyDsr,
     ].contains(useCase);
 
     if (state.isCompromised || (state.isEmulator && _environment.isProd)) {
-      if (isHighRisk && _config.blockRootedDevices) {
+      if (isWriteOperation && _config.blockRootedDevices) {
         return DeviceIntegrityDecision.block(
-          'security.device_compromised_blocked',
+          'security.device_integrity_blocked',
         );
       } else {
         return DeviceIntegrityDecision.warnOnly(
@@ -236,23 +266,10 @@ Future<void> runWithDeviceGuard(
   }
 
   if (!decision.allow && decision.showBlockingUi) {
-    // Show blocking dialog
     if (context.mounted) {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Security Notice'),
-          content: Text(
-            _getLocalizedMessage(decision.messageKey ?? 'security.default'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      await showDeviceIntegrityBlockedDialog(
+        context,
+        messageKey: decision.messageKey,
       );
     }
     return; // Do not proceed
@@ -296,21 +313,61 @@ Future<void> runWithDeviceGuard(
 String _getLocalizedMessage(String key) {
   // TODO: Integrate with proper localization system
   const messages = {
+    // Primary message for blocked write operations (no technical details)
+    'security.device_integrity_blocked':
+        'Posting is disabled on this device for security reasons.\n\n'
+        'You can still browse content normally.',
+    // Legacy key - redirect to new message
     'security.device_compromised_blocked':
-        'For security reasons, this action cannot be performed on rooted or jailbroken devices. '
-        'Please use a secure device to continue.',
+        'Posting is disabled on this device for security reasons.\n\n'
+        'You can still browse content normally.',
     'security.device_compromised_warning':
-        'Warning: Your device appears to be rooted or jailbroken. '
-        'Some security features may be limited.',
+        'Some features may be limited on this device.',
     'security.device_compromised_dev':
-        '[DEV] Device integrity check failed, but action allowed in development mode.',
+        '[DEV] Device integrity check skipped in development mode.',
     'security.device_compromised_staging_qa':
-        '[STAGING] Device integrity check failed, allowed for QA testing.',
+        '[STAGING] Device integrity check skipped for QA testing.',
     'security.device_compromised_override':
-        'Device integrity override active. Proceeding with caution.',
+        'Security override active. Proceeding with caution.',
     'security.default':
-        'A security check prevented this action. Please contact support if this issue persists.',
+        'This action is currently unavailable. Please contact support if this issue persists.',
   };
 
   return messages[key] ?? messages['security.default']!;
+}
+
+bool isDeviceIntegrityBlockedCode(String? code) {
+  return code == ErrorCodes.deviceIntegrityBlocked;
+}
+
+Future<void> showDeviceIntegrityBlockedDialog(
+  BuildContext context, {
+  String? messageKey,
+}) async {
+  if (!context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      title: const Text('Security Notice'),
+      content: Text(
+        _getLocalizedMessage(messageKey ?? 'security.device_integrity_blocked'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<bool> showDeviceIntegrityBlockedForCode(
+  BuildContext context, {
+  required String? code,
+}) async {
+  if (!isDeviceIntegrityBlockedCode(code)) return false;
+  await showDeviceIntegrityBlockedDialog(context);
+  return true;
 }

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
@@ -330,8 +331,11 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   void _handleLike() {
-    // Implement like functionality
-    debugPrint('Like pressed for post ${widget.post.id}');
+    // Guard: Block likes on compromised devices
+    runWithDeviceGuard(context, ref, IntegrityUseCase.like, () async {
+      // TODO: Implement like functionality with postStateProvider
+      debugPrint('Like pressed for post ${widget.post.id}');
+    });
   }
 
   void _handleComment() {

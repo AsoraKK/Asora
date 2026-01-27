@@ -180,6 +180,23 @@ describe('createPost route', () => {
     expect(contextStub.log).toHaveBeenCalledWith('posts.create.success', expect.any(Object));
   });
 
+  it('returns 403 when device integrity headers indicate compromised', async () => {
+    const response = await createPostRoute(
+      httpReqMock({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer valid-token',
+          'x-device-rooted': 'true',
+        },
+        body: { text: 'hello world' },
+      }),
+      contextStub
+    );
+    expect(response.status).toBe(403);
+    const body = JSON.parse(response.body as string);
+    expect(body.code).toBe('DEVICE_INTEGRITY_BLOCKED');
+  });
+
   it('returns 400 when JSON body is invalid', async () => {
     const request = userRequest();
     Object.assign(request, {

@@ -24,8 +24,11 @@ type AuditActorRole = 'system' | 'community' | 'moderator';
 
 interface AuditSummary {
   lastActorRole: AuditActorRole;
+  lastActorId: string | null;
   lastAction: string;
   lastActionAt: string;
+  lastReasonCode: string | null;
+  lastReasonNote: string | null;
 }
 
 function toSafeCount(value: unknown): number {
@@ -70,6 +73,14 @@ function resolveIsoTimestamp(...values: Array<unknown>): string | null {
     }
   }
   return null;
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 function normalizeAppealStatus(status: string | undefined, finalDecision?: string): AppealStatus {
@@ -177,7 +188,8 @@ async function fetchAppealAuditSummary(
     .query(
       {
         query: `
-          SELECT TOP 1 c.action, c.decision, c.actorRole, c.actorId, c.source, c.createdAt, c.decidedAt, c.provider
+          SELECT TOP 1 c.action, c.decision, c.actorRole, c.actorId, c.source, c.createdAt, c.decidedAt, c.provider,
+            c.reasonCode, c.reasonNote
           FROM c
           WHERE c.appealId = @appealId
           ORDER BY c.createdAt DESC
@@ -201,10 +213,17 @@ async function fetchAppealAuditSummary(
   const lastActionAt =
     resolveIsoTimestamp(record.createdAt, record.decidedAt) ?? new Date().toISOString();
 
+  const actorId = normalizeOptionalString(record.actorId);
+  const reasonCode = normalizeOptionalString(record.reasonCode);
+  const reasonNote = normalizeOptionalString(record.reasonNote);
+
   return {
     lastActorRole: normalizeAuditRole(record),
+    lastActorId: actorId,
     lastAction,
     lastActionAt,
+    lastReasonCode: reasonCode,
+    lastReasonNote: reasonNote,
   };
 }
 
@@ -222,8 +241,11 @@ function buildFallbackAuditSummary(appeal: Record<string, unknown>, status: Appe
 
   return {
     lastActorRole,
+    lastActorId: normalizeOptionalString(resolvedBy),
     lastAction: status === 'pending' ? 'appeal_submitted' : status,
     lastActionAt,
+    lastReasonCode: normalizeOptionalString(appeal.decisionReasonCode),
+    lastReasonNote: normalizeOptionalString(appeal.decisionNote),
   };
 }
 

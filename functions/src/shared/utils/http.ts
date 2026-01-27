@@ -23,6 +23,7 @@ export const serverError = (msg = 'internal') => jsonResponse(500, { error: msg 
 
 interface ErrorResponse {
   success: false;
+  code?: string;
   message: string;
   error?: string;
   timestamp: string;
@@ -74,6 +75,36 @@ export function createErrorResponse(
     success: false,
     message,
     error: process.env.NODE_ENV === 'development' ? error : undefined,
+    timestamp: new Date().toISOString(),
+  };
+
+  return {
+    status: statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+      'Access-Control-Max-Age': '86400',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      ...additionalHeaders,
+    },
+    body: JSON.stringify(response),
+  };
+}
+
+export function createErrorResponseWithCode(
+  statusCode: number,
+  code: string,
+  message: string,
+  additionalHeaders: Record<string, string> = {}
+) {
+  const response: ErrorResponse = {
+    success: false,
+    code,
+    message,
     timestamp: new Date().toISOString(),
   };
 

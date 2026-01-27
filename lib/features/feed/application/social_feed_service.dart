@@ -12,6 +12,7 @@ library social_feed_service;
 import 'package:dio/dio.dart';
 import 'package:asora/features/feed/domain/social_feed_repository.dart';
 import 'package:asora/features/feed/domain/models.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/core/observability/asora_tracer.dart';
 
 /// Concrete implementation of [SocialFeedRepository]
@@ -605,6 +606,25 @@ class SocialFeedService implements SocialFeedRepository {
   /// Helper method to handle and convert errors
   Never _handleError(dynamic error) {
     if (error is DioException) {
+      final data = error.response?.data;
+      String? code;
+      if (data is Map<String, dynamic>) {
+        if (data['code'] is String) {
+          code = data['code'] as String;
+        } else if (data['error'] is Map<String, dynamic>) {
+          final nested = data['error'] as Map<String, dynamic>;
+          if (nested['code'] is String) {
+            code = nested['code'] as String;
+          }
+        }
+      }
+      if (code == ErrorCodes.deviceIntegrityBlocked) {
+        throw SocialFeedException(
+          ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+          code: ErrorCodes.deviceIntegrityBlocked,
+          originalError: error,
+        );
+      }
       throw SocialFeedException(
         'Network error: ${error.message}',
         code: 'NETWORK_ERROR',

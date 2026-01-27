@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
@@ -62,6 +63,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      final errorCode = next.errorResult?.code;
+      if (errorCode != null &&
+          errorCode != previous?.errorResult?.code &&
+          isDeviceIntegrityBlockedCode(errorCode)) {
+        showDeviceIntegrityBlockedDialog(context);
+        ref.read(postCreationProvider.notifier).clearError();
+        return;
+      }
       if (next.isSuccess && previous?.isSuccess != true) {
         _onPostCreated(context, next.successResult!);
       }
@@ -113,7 +122,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               _ContentBlockedBanner(result: state.blockedResult!),
             if (state.isLimitExceeded)
               _LimitExceededBanner(result: state.limitExceededResult!),
-            if (state.hasError) _ErrorBanner(result: state.errorResult!),
+            if (state.hasError &&
+                state.errorResult?.code !=
+                    ErrorCodes.deviceIntegrityBlocked)
+              _ErrorBanner(result: state.errorResult!),
 
             // Main content
             Expanded(

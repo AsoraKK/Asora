@@ -138,6 +138,26 @@ Future migration from `com.asora.app` to `com.lythaus.app` will require:
 
 ---
 
+## Grep Checklist
+
+Run these quick checks before shipping UI changes:
+
+```bash
+# UI strings should say Lythaus, not Asora
+rg -n "Asora" lib ui apps
+
+# Infra/ops should not introduce Lythaus names
+rg -n "Lythaus" infrastructure functions database scripts
+
+# Marketing/site content should say Lythaus
+rg -n "Asora" apps/marketing-site
+```
+
+If any results appear, confirm the string is in the correct context
+(user-facing vs internal) before merging.
+
+---
+
 ## Related Documents
 
 - [Lythaus Transition Guide](../branding/lythaus-transition.md) - Full brand transition details

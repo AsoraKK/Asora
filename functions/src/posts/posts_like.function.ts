@@ -14,6 +14,11 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostLiked, revokePostLiked } from '@shared/services/reputationService';
+import {
+  DEVICE_INTEGRITY_BLOCKED_CODE,
+  DEVICE_INTEGRITY_BLOCKED_MESSAGE,
+  isDeviceIntegrityBlocked,
+} from '@shared/middleware/deviceIntegrity';
 
 interface LikeDocument {
   id: string; // Composite key: `${postId}:${userId}`
@@ -63,6 +68,10 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
     try {
       const auth = await extractAuthContext(ctx);
       const start = performance.now();
+
+      if (isDeviceIntegrityBlocked(ctx.request)) {
+        return ctx.forbidden(DEVICE_INTEGRITY_BLOCKED_MESSAGE, DEVICE_INTEGRITY_BLOCKED_CODE);
+      }
 
       const db = getTargetDatabase();
       const postsContainer = db.posts;
@@ -162,6 +171,10 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
     try {
       const auth = await extractAuthContext(ctx);
       const start = performance.now();
+
+      if (isDeviceIntegrityBlocked(ctx.request)) {
+        return ctx.forbidden(DEVICE_INTEGRITY_BLOCKED_MESSAGE, DEVICE_INTEGRITY_BLOCKED_CODE);
+      }
 
       const db = getTargetDatabase();
       const postsContainer = db.posts;

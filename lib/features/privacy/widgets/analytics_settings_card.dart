@@ -115,7 +115,7 @@ class AnalyticsSettingsCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Data is anonymous and can be turned off at any time. '
-                  'See our Privacy Policy for details.',
+                  'See our Privacy Policy and Terms of Service for details.',
                   style: GoogleFonts.sora(
                     fontSize: 11,
                     color: Colors.grey[600],
@@ -125,16 +125,33 @@ class AnalyticsSettingsCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          LythButton.tertiary(
-            label: 'Privacy Policy',
-            onPressed: () async {
-              final uri = Uri.parse('https://lythaus.co/privacy');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-            icon: Icons.open_in_new,
-            size: LythButtonSize.small,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              LythButton.tertiary(
+                label: 'Privacy Policy',
+                onPressed: () async {
+                  final uri = Uri.parse('https://lythaus.co/privacy');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: Icons.open_in_new,
+                size: LythButtonSize.small,
+              ),
+              LythButton.tertiary(
+                label: 'Terms of Service',
+                onPressed: () async {
+                  final uri = Uri.parse('https://lythaus.co/terms');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: Icons.open_in_new,
+                size: LythButtonSize.small,
+              ),
+            ],
           ),
         ],
       ),

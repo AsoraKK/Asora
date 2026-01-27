@@ -184,6 +184,9 @@ function Appeals() {
     reached: detail?.appeal?.hasReachedQuorum ?? false
   };
   const auditSummary = detail?.auditSummary || null;
+  const auditReason = auditSummary
+    ? [auditSummary.lastReasonCode, auditSummary.lastReasonNote].filter(Boolean).join(' — ')
+    : '';
   const overrideAllowed = detail?.moderatorOverrideAllowed ?? false;
   const finalDecisionLabel =
     detail?.finalDecision === 'allow' ? 'Allow' : detail?.finalDecision === 'block' ? 'Block' : '-';
@@ -404,8 +407,16 @@ function Appeals() {
                             <span>{auditSummary.lastActorRole}</span>
                           </div>
                           <div>
+                            <span className="detail-label">Actor id</span>
+                            <span>{auditSummary.lastActorId || '-'}</span>
+                          </div>
+                          <div>
                             <span className="detail-label">Last action</span>
                             <span>{auditSummary.lastAction}</span>
+                          </div>
+                          <div>
+                            <span className="detail-label">Reason</span>
+                            <span>{auditReason || '-'}</span>
                           </div>
                           <div>
                             <span className="detail-label">Last action at</span>

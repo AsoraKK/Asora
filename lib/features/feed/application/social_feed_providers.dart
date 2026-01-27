@@ -12,6 +12,8 @@ import 'package:asora/features/feed/domain/models.dart';
 import 'package:asora/features/feed/application/social_feed_service.dart';
 import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 /// Provider for the social feed service implementation
 final socialFeedServiceProvider = Provider<SocialFeedRepository>((ref) {
@@ -81,6 +83,17 @@ final authTokenProvider = FutureProvider<String?>((ref) async {
   final oauth2Service = ref.read(oauth2ServiceProvider);
   return await oauth2Service.getAccessToken();
 });
+
+Future<void> _enforceWriteIntegrity(Ref ref, IntegrityUseCase useCase) async {
+  final guard = ref.read(deviceIntegrityGuardProvider);
+  final decision = await guard.evaluate(useCase);
+  if (!decision.allow && decision.errorCode != null) {
+    throw SocialFeedException(
+      ErrorMessages.forCode(decision.errorCode),
+      code: decision.errorCode,
+    );
+  }
+}
 
 /// Parameters for local feed
 class LocalFeedParams {
@@ -381,6 +394,8 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.like);
+
     final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
@@ -408,6 +423,8 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.like);
+
     final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
@@ -432,6 +449,8 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
   /// Flag post for moderation (requires authentication when implemented)
   Future<void> flagPost({required String reason, String? details}) async {
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.flag);
+
     final token = await ref.read(jwtProvider.future);
 
     if (token == null) {

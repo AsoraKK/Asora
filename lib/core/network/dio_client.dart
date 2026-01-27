@@ -19,6 +19,7 @@ import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/device_integrity.dart';
 import 'package:asora/core/security/security_overrides.dart';
 import 'package:asora/core/security/security_telemetry.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/features/admin/application/test_mode_interceptor.dart';
 
 /// Secure Dio client provider with certificate pinning and integrity checks
@@ -181,10 +182,19 @@ class _DeviceIntegrityInterceptor extends Interceptor {
         securityState.isCompromised &&
         envConfig.security.blockRootedDevices &&
         envConfig.environment.isProd) {
+      final payload = {
+        'code': ErrorCodes.deviceIntegrityBlocked,
+        'message': ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+      };
       final error = DioException(
         requestOptions: options,
+        response: Response<Map<String, dynamic>>(
+          requestOptions: options,
+          statusCode: 403,
+          data: payload,
+        ),
         type: DioExceptionType.badResponse,
-        message: 'Device integrity violation: compromised device detected',
+        message: payload['message'],
       );
       handler.reject(error);
       return;

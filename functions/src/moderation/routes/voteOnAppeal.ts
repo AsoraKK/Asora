@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { requireModerator } from '@shared/middleware/auth';
+import { withDeviceIntegrity } from '@shared/middleware/deviceIntegrity';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -14,22 +15,24 @@ type AuthenticatedRequest = HttpRequest & { principal: Principal };
  * This endpoint allows moderators to vote on content appeals.
  * Returns 401 if not authenticated, 403 if lacking moderator/admin role.
  */
-const protectedVoteOnAppeal = requireModerator(async (req: AuthenticatedRequest, context: InvocationContext) => {
-  try {
-    const appealId = req.params.appealId as string | undefined;
-    const { voteOnAppealHandler } = await import('@moderation/service/voteService');
-    return await voteOnAppealHandler({
-      request: req,
-      context,
-      userId: req.principal.sub,
-      claims: req.principal.raw,
-      appealId,
-    });
-  } catch (error) {
-    context.log('moderation.appeal.vote.error', { message: (error as Error).message });
-    return serverError();
-  }
-});
+const protectedVoteOnAppeal = requireModerator(
+  withDeviceIntegrity(async (req: AuthenticatedRequest, context: InvocationContext) => {
+    try {
+      const appealId = req.params.appealId as string | undefined;
+      const { voteOnAppealHandler } = await import('@moderation/service/voteService');
+      return await voteOnAppealHandler({
+        request: req,
+        context,
+        userId: req.principal.sub,
+        claims: req.principal.raw,
+        appealId,
+      });
+    } catch (error) {
+      context.log('moderation.appeal.vote.error', { message: (error as Error).message });
+      return serverError();
+    }
+  })
+);
 
 export async function voteOnAppealRoute(
   req: HttpRequest,

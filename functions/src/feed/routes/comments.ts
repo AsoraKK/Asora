@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { requireActiveUser } from '@shared/middleware/activeUser';
+import { withDeviceIntegrity } from '@shared/middleware/deviceIntegrity';
 import type { Principal } from '@shared/middleware/auth';
 import { ok, badRequest, notFound, created, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -114,10 +115,11 @@ function validateCommentText(
 // POST /posts/{postId}/comments - Create a comment
 // ─────────────────────────────────────────────────────────────
 
-export const createComment = requireActiveUser(async (req: AuthenticatedRequest, context: InvocationContext) => {
-  const principal = req.principal;
-  const postId = req.params?.postId;
-  const start = performance.now();
+export const createComment = requireActiveUser(
+  withDeviceIntegrity(async (req: AuthenticatedRequest, context: InvocationContext) => {
+    const principal = req.principal;
+    const postId = req.params?.postId;
+    const start = performance.now();
 
   if (!postId) {
     context.log('comments.create.missing_post_id');
@@ -216,7 +218,8 @@ export const createComment = requireActiveUser(async (req: AuthenticatedRequest,
     context.log('comments.create.error', { postId, message: (error as Error).message });
     return serverError();
   }
-});
+  })
+);
 
 // ─────────────────────────────────────────────────────────────
 // GET /posts/{postId}/comments - List comments with pagination

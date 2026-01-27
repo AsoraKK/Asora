@@ -14,6 +14,8 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/core/providers/repository_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure
@@ -32,6 +34,20 @@ Future<String> _requireJwtToken(Ref ref) async {
     throw const ModerationException('User not authenticated');
   }
   return token;
+}
+
+Future<void> _enforceModerationWriteIntegrity(
+  Ref ref,
+  IntegrityUseCase useCase,
+) async {
+  final guard = ref.read(deviceIntegrityGuardProvider);
+  final decision = await guard.evaluate(useCase);
+  if (!decision.allow && decision.errorCode != null) {
+    throw ModerationException(
+      ErrorMessages.forCode(decision.errorCode),
+      code: decision.errorCode,
+    );
+  }
 }
 
 /// Provider for user's appeals list
@@ -64,6 +80,7 @@ final submitVoteProvider = FutureProvider.family<VoteResult, VoteSubmission>((
   ref,
   submission,
 ) async {
+  await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.appeal);
   final repository = ref.watch(moderationRepositoryProvider);
   final token = await _requireJwtToken(ref);
 
@@ -80,6 +97,7 @@ final submitAppealProvider = FutureProvider.family<Appeal, AppealSubmission>((
   ref,
   submission,
 ) async {
+  await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.appeal);
   final repository = ref.watch(moderationRepositoryProvider);
   final token = await _requireJwtToken(ref);
 
@@ -99,6 +117,7 @@ final flagContentProvider =
       ref,
       submission,
     ) async {
+      await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.flag);
       final repository = ref.watch(moderationRepositoryProvider);
       final token = await _requireJwtToken(ref);
 

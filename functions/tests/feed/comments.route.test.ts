@@ -197,6 +197,25 @@ describe('comments route', () => {
       expect(response.body).toContain('Invalid JSON');
     });
 
+    it('returns 403 when device integrity headers indicate compromised', async () => {
+      const response = await createComment(
+        httpReqMock({
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer valid-token',
+            'x-device-emulator': 'true',
+            'content-type': 'application/json',
+          },
+          params: { postId: 'post-123' },
+          body: { text: 'Hello' },
+        }),
+        contextStub
+      );
+      expect(response.status).toBe(403);
+      const body = JSON.parse(response.body as string);
+      expect(body.code).toBe('DEVICE_INTEGRITY_BLOCKED');
+    });
+
     it('returns 400 for empty comment text', async () => {
       const response = await createComment(userRequest('POST', 'post-123', { text: '' }), contextStub);
       expect(response.status).toBe(400);

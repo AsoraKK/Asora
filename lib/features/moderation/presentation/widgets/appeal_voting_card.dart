@@ -8,7 +8,9 @@ import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/design_system/components/lyth_chip.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 
 /// ASORA APPEAL VOTING CARD
@@ -591,6 +593,15 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
       }
     } catch (error) {
       if (mounted) {
+        if (error is ModerationException) {
+          final handled = await showDeviceIntegrityBlockedForCode(
+            context,
+            code: error.code,
+          );
+          if (handled) {
+            return;
+          }
+        }
         LythSnackbar.error(
           context: context,
           message: 'Failed to submit vote: $error',

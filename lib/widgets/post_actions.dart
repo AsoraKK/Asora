@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
@@ -263,7 +264,13 @@ class _FlagButton extends ConsumerWidget {
     );
 
     if (result == true && context.mounted) {
-      await _submitFlag(context, ref, selectedReason, additionalDetails);
+      // Guard: Block flag reports on compromised devices
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.flag,
+        () => _submitFlag(context, ref, selectedReason, additionalDetails),
+      );
     }
   }
 
@@ -321,6 +328,13 @@ class _FlagButton extends ConsumerWidget {
             errorMessage = (error.response!.data as Map)['error'] as String;
           }
         } else if (error is ModerationException) {
+          final handled = await showDeviceIntegrityBlockedForCode(
+            context,
+            code: error.code,
+          );
+          if (handled) {
+            return;
+          }
           errorMessage = error.message;
         } else {
           errorMessage = error.toString();

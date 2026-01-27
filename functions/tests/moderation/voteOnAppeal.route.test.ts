@@ -69,6 +69,26 @@ describe('voteOnAppeal route', () => {
     expect(JSON.parse(response.body)).toMatchObject({ error: 'invalid_request' });
   });
 
+  it('returns 403 when device integrity headers indicate compromised', async () => {
+    const handler = voteOnAppealHandler as jest.MockedFunction<typeof voteOnAppealHandler>;
+    const response = await voteOnAppealRoute(
+      httpReqMock({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer valid-token',
+          'x-device-rooted': 'true',
+        },
+        params: { appealId: 'appeal-42' },
+        body: { vote: 'approve' },
+      }),
+      contextStub
+    );
+    expect(handler).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+    const body = JSON.parse(response.body as string);
+    expect(body.code).toBe('DEVICE_INTEGRITY_BLOCKED');
+  });
+
   it('delegates to handler with parsed parameters', async () => {
     const handler = voteOnAppealHandler as jest.MockedFunction<typeof voteOnAppealHandler>;
     handler.mockResolvedValueOnce({ status: 201, jsonBody: { voteId: 'vote-1' } });

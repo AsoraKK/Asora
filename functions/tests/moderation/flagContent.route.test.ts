@@ -57,6 +57,25 @@ describe('flagContent route', () => {
     expect(response.body).toBe(JSON.stringify({ error: 'invalid_request' }));
   });
 
+  it('returns 403 when device integrity headers indicate compromised', async () => {
+    const handler = flagContentHandler as jest.MockedFunction<typeof flagContentHandler>;
+    const response = await flagContentRoute(
+      httpReqMock({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer valid-token',
+          'x-device-rooted': 'true',
+        },
+        body: { reason: 'spam' },
+      }),
+      contextStub
+    );
+    expect(handler).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+    const body = JSON.parse(response.body as string);
+    expect(body.code).toBe('DEVICE_INTEGRITY_BLOCKED');
+  });
+
   it('delegates to handler for authorized requests', async () => {
     const handler = flagContentHandler as jest.MockedFunction<typeof flagContentHandler>;
     handler.mockResolvedValueOnce({ status: 204 });

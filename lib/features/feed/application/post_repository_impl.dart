@@ -12,6 +12,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/features/feed/domain/models.dart';
 
@@ -212,6 +213,13 @@ class PostRepositoryImpl implements PostRepository {
     }
 
     if (statusCode == 403) {
+      if (code == ErrorCodes.deviceIntegrityBlocked) {
+        return CreatePostError(
+          message: ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+          code: ErrorCodes.deviceIntegrityBlocked,
+          originalError: e,
+        );
+      }
       return CreatePostError(
         message: 'You are not allowed to create posts',
         code: 'forbidden',

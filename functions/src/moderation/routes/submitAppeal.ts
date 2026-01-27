@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { requireActiveUser } from '@shared/middleware/activeUser';
+import { withDeviceIntegrity } from '@shared/middleware/deviceIntegrity';
 import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, serverError } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
@@ -10,15 +11,17 @@ import { withDailyAppealLimit } from '@shared/middleware/dailyPostLimit';
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
 const tierLimitedSubmitAppeal = requireActiveUser(
-  withDailyAppealLimit(async (req: AuthenticatedRequest, context: InvocationContext) => {
-    try {
-      const { submitAppealHandler } = await import('@moderation/service/appealService');
-      return await submitAppealHandler({ request: req, context, userId: req.principal.sub });
-    } catch (error) {
-      context.log('moderation.appeal.submit.error', { message: (error as Error).message });
-      return serverError();
-    }
-  })
+  withDeviceIntegrity(
+    withDailyAppealLimit(async (req: AuthenticatedRequest, context: InvocationContext) => {
+      try {
+        const { submitAppealHandler } = await import('@moderation/service/appealService');
+        return await submitAppealHandler({ request: req, context, userId: req.principal.sub });
+      } catch (error) {
+        context.log('moderation.appeal.submit.error', { message: (error as Error).message });
+        return serverError();
+      }
+    })
+  )
 );
 
 export async function submitAppealRoute(

@@ -36,29 +36,26 @@ class DeviceSecurityState {
 
 ## Use Cases and Risk Levels
 
-### High-Risk Operations (Strict Enforcement)
+### Write Operations (Blocked on Compromised Devices)
 
-These operations are **blocked** on compromised devices in production:
+All state-mutating operations are **blocked** on compromised devices in production.
+**Compromised devices are read-only by design.**
 
-1. **Sign In** (`IntegrityUseCase.signIn`)
-   - Authenticating users with Azure B2C
-   - Risk: Account takeover, credential theft
+| Operation | `IntegrityUseCase` | Guard Location |
+|-----------|-------------------|----------------|
+| Sign In | `signIn` | `sign_in_page.dart` |
+| Sign Up | `signUp` | `auth_choice_screen.dart` |
+| Create Post | `postContent` | `create_post_screen.dart`, `create_post_modal.dart` |
+| Create Comment | `comment` | Comment input widget |
+| Like/Unlike | `like` | `post_card.dart` |
+| Flag/Report | `flag` | `post_actions.dart` |
+| Submit Appeal | `appeal` | `appeal_dialog.dart` |
+| Upload Media | `uploadMedia` | Media upload widget |
+| Privacy DSR | `privacyDsr` | `privacy_settings_screen.dart` |
 
-2. **Sign Up** (`IntegrityUseCase.signUp`)
-   - Creating new accounts
-   - Risk: Fake accounts, abuse
+### Read-Only Operations (Allowed with Warning)
 
-3. **Post Content** (`IntegrityUseCase.postContent`)
-   - Creating posts, comments, reactions
-   - Risk: Spam, automated abuse, moderation bypass
-
-4. **Privacy DSR** (`IntegrityUseCase.privacyDsr`)
-   - Export data, delete account
-   - Risk: Unauthorized data access, account deletion
-
-### Low-Risk Operations (Warn-Only)
-
-These operations are **allowed with warning** even on compromised devices:
+These operations are **allowed with warning** on compromised devices:
 
 1. **Read Feed** (`IntegrityUseCase.readFeed`)
    - Browsing posts, viewing content
@@ -68,23 +65,27 @@ These operations are **allowed with warning** even on compromised devices:
 
 ### Production Environment
 
-| Device State | High-Risk Operations | Low-Risk Operations |
-|--------------|---------------------|---------------------|
+| Device State | Write Operations | Read Operations |
+|--------------|-----------------|-----------------|
 | Clean | ✅ Allow | ✅ Allow |
 | Rooted/Jailbroken | ❌ Block + UI | ⚠️ Warn-only |
 | Emulator | ❌ Block + UI | ⚠️ Warn-only |
 | Debug Build | ✅ Allow | ✅ Allow |
 
-**Block UI Message:**
-> "For security reasons, this action cannot be performed on rooted or jailbroken devices. Please use a secure device to continue."
+**Error Code:** `DEVICE_INTEGRITY_BLOCKED`
+
+**Block UI Message (user-friendly, no technical leakage):**
+> "Posting is disabled on this device for security reasons.
+>
+> You can still browse content normally."
 
 **Warning Message:**
-> "Warning: Your device appears to be rooted or jailbroken. Some security features may be limited."
+> "Some features may be limited on this device."
 
 ### Staging Environment
 
-| Device State | High-Risk Operations | Low-Risk Operations |
-|--------------|---------------------|---------------------|
+| Device State | Write Operations | Read Operations |
+|--------------|-----------------|-----------------|
 | Clean | ✅ Allow | ✅ Allow |
 | Rooted/Jailbroken | ⚠️ Warn-only (QA flag) | ⚠️ Warn-only |
 | Emulator | ⚠️ Warn-only (QA flag) | ⚠️ Warn-only |
@@ -92,7 +93,7 @@ These operations are **allowed with warning** even on compromised devices:
 **QA Override:** When `allowRootedInStagingForQa: true`, compromised devices are allowed with warnings.
 
 **Warning Message:**
-> "[STAGING] Device integrity check failed, allowed for QA testing."
+> "[STAGING] Device integrity check skipped for QA testing."
 
 ### Development Environment
 
@@ -124,20 +125,37 @@ class DeviceIntegrityGuard {
       return DeviceIntegrityDecision.warnOnly('security.device_compromised_staging_qa');
     }
 
-    // Production: enforce policies
-    final isHighRisk = [
+    // Production: block ALL write operations, warn for read-only
+    final isWriteOperation = [
       IntegrityUseCase.signIn,
       IntegrityUseCase.signUp,
       IntegrityUseCase.postContent,
+      IntegrityUseCase.comment,
+      IntegrityUseCase.like,
+      IntegrityUseCase.flag,
+      IntegrityUseCase.appeal,
+      IntegrityUseCase.uploadMedia,
       IntegrityUseCase.privacyDsr,
     ].contains(useCase);
 
-    if (state.isCompromised && isHighRisk) {
-      return DeviceIntegrityDecision.block('security.device_compromised_blocked');
+    if (state.isCompromised && isWriteOperation) {
+      // Block with stable error code (no technical leakage)
+      return DeviceIntegrityDecision.block('security.device_integrity_blocked');
     }
 
     return DeviceIntegrityDecision.warnOnly('security.device_compromised_warning');
   }
+}
+```
+
+### Error Codes
+
+Centralized in `lib/core/error/error_codes.dart`:
+
+```dart
+abstract final class ErrorCodes {
+  /// Write operation blocked due to device integrity check failure.
+  static const String deviceIntegrityBlocked = 'DEVICE_INTEGRITY_BLOCKED';
 }
 ```
 

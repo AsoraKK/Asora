@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/security_overrides.dart';
@@ -45,18 +46,16 @@ void main() {
       expect(decision.messageKey, equals('security.device_compromised_dev'));
     });
 
-    test('should create block decision', () {
+    test('should create block decision with error code', () {
       final decision = DeviceIntegrityDecision.block(
-        'security.device_compromised_blocked',
+        'security.device_integrity_blocked',
       );
 
       expect(decision.allow, isFalse);
       expect(decision.showBlockingUi, isTrue);
       expect(decision.warnOnly, isFalse);
-      expect(
-        decision.messageKey,
-        equals('security.device_compromised_blocked'),
-      );
+      expect(decision.messageKey, equals('security.device_integrity_blocked'));
+      expect(decision.errorCode, equals(ErrorCodes.deviceIntegrityBlocked));
     });
   });
 
@@ -156,10 +155,8 @@ void main() {
 
       expect(decision.allow, isFalse);
       expect(decision.showBlockingUi, isTrue);
-      expect(
-        decision.messageKey,
-        equals('security.device_compromised_blocked'),
-      );
+      expect(decision.messageKey, equals('security.device_integrity_blocked'));
+      expect(decision.errorCode, equals(ErrorCodes.deviceIntegrityBlocked));
     });
 
     test(
@@ -355,6 +352,143 @@ void main() {
       // Expired override: should block
       expect(decision.allow, isFalse);
       expect(decision.showBlockingUi, isTrue);
+    });
+  });
+
+  group('DeviceIntegrityGuard - All Write Operations Blocked', () {
+    /// All write use cases that MUST be blocked on compromised devices
+    final writeUseCases = [
+      IntegrityUseCase.signIn,
+      IntegrityUseCase.signUp,
+      IntegrityUseCase.postContent,
+      IntegrityUseCase.comment,
+      IntegrityUseCase.like,
+      IntegrityUseCase.flag,
+      IntegrityUseCase.appeal,
+      IntegrityUseCase.uploadMedia,
+      IntegrityUseCase.privacyDsr,
+    ];
+
+    /// Read-only use cases that should be allowed with warning
+    final readOnlyUseCases = [IntegrityUseCase.readFeed];
+
+    test('blocks ALL write operations on compromised device in prod', () async {
+      final mockService = MockDeviceSecurityService(() {
+        return DeviceSecurityState(
+          isRootedOrJailbroken: true,
+          isEmulator: false,
+          isDebugBuild: false,
+          lastCheckedAt: DateTime.now(),
+        );
+      });
+
+      final guard = DeviceIntegrityGuard(
+        deviceSecurityService: mockService,
+        config: const MobileSecurityConfig(
+          tlsPins: TlsPinConfig(
+            enabled: true,
+            strictMode: true,
+            spkiPinsBase64: ['pin=='],
+          ),
+          strictDeviceIntegrity: true,
+          blockRootedDevices: true,
+          allowRootedInStagingForQa: false,
+        ),
+        environment: Environment.production,
+      );
+
+      for (final useCase in writeUseCases) {
+        final decision = await guard.evaluate(useCase);
+        expect(
+          decision.allow,
+          isFalse,
+          reason:
+              'Write operation $useCase should be blocked on compromised device',
+        );
+        expect(
+          decision.showBlockingUi,
+          isTrue,
+          reason: '$useCase should show blocking UI',
+        );
+        expect(
+          decision.errorCode,
+          equals(ErrorCodes.deviceIntegrityBlocked),
+          reason: '$useCase should return DEVICE_INTEGRITY_BLOCKED error code',
+        );
+        expect(
+          decision.messageKey,
+          equals('security.device_integrity_blocked'),
+          reason: '$useCase should use device_integrity_blocked message',
+        );
+      }
+    });
+
+    test(
+      'allows read-only operations with warning on compromised device',
+      () async {
+        final mockService = MockDeviceSecurityService(() {
+          return DeviceSecurityState(
+            isRootedOrJailbroken: true,
+            isEmulator: false,
+            isDebugBuild: false,
+            lastCheckedAt: DateTime.now(),
+          );
+        });
+
+        final guard = DeviceIntegrityGuard(
+          deviceSecurityService: mockService,
+          config: const MobileSecurityConfig(
+            tlsPins: TlsPinConfig(
+              enabled: true,
+              strictMode: true,
+              spkiPinsBase64: ['pin=='],
+            ),
+            strictDeviceIntegrity: true,
+            blockRootedDevices: true,
+            allowRootedInStagingForQa: false,
+          ),
+          environment: Environment.production,
+        );
+
+        for (final useCase in readOnlyUseCases) {
+          final decision = await guard.evaluate(useCase);
+          expect(
+            decision.allow,
+            isTrue,
+            reason: 'Read-only operation $useCase should be allowed',
+          );
+          expect(
+            decision.warnOnly,
+            isTrue,
+            reason: '$useCase should show warning',
+          );
+          expect(
+            decision.errorCode,
+            isNull,
+            reason: 'Read-only operations should not have error code',
+          );
+        }
+      },
+    );
+  });
+
+  group('ErrorCodes', () {
+    test('deviceIntegrityBlocked has stable value', () {
+      // This test ensures the error code value never changes accidentally
+      expect(
+        ErrorCodes.deviceIntegrityBlocked,
+        equals('DEVICE_INTEGRITY_BLOCKED'),
+      );
+    });
+
+    test('ErrorMessages.forCode returns user-friendly message', () {
+      final message = ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked);
+      expect(message, contains('Posting is disabled'));
+      expect(message, contains('security reasons'));
+      // Must NOT contain technical details
+      expect(message.toLowerCase(), isNot(contains('root')));
+      expect(message.toLowerCase(), isNot(contains('jailbreak')));
+      expect(message.toLowerCase(), isNot(contains('emulator')));
     });
   });
 }
