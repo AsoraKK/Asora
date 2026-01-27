@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/analytics/analytics_consent.dart';
@@ -126,33 +127,11 @@ class AnalyticsSettingsCard extends ConsumerWidget {
           const SizedBox(height: 8),
           LythButton.tertiary(
             label: 'Privacy Policy',
-            onPressed: () {
-              // TODO: Navigate to privacy policy or open URL
-              // For now, show a simple dialog
-              showDialog<void>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Privacy Policy'),
-                  content: const Text(
-                    'Analytics data includes:\n'
-                    '• Screen views and navigation\n'
-                    '• Feature usage (anonymous)\n'
-                    '• Error and crash reports\n\n'
-                    'We NEVER collect:\n'
-                    '• Your email or name\n'
-                    '• Message content\n'
-                    '• Precise location\n'
-                    '• Device identifiers\n\n'
-                    'Full privacy policy: https://lythaus.co/privacy',
-                  ),
-                  actions: [
-                    LythButton.secondary(
-                      label: 'Close',
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              );
+            onPressed: () async {
+              final uri = Uri.parse('https://lythaus.co/privacy');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
             },
             icon: Icons.open_in_new,
             size: LythButtonSize.small,

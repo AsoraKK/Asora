@@ -1,7 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
@@ -115,11 +117,50 @@ class SignInPage extends ConsumerWidget {
               SizedBox(height: spacing.huge),
 
               // Terms and Privacy
-              Text(
-                'By continuing, you agree to our Terms of Service and Privacy Policy',
+              RichText(
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.6),
+                text: TextSpan(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  children: [
+                    const TextSpan(text: 'By continuing, you agree to our '),
+                    TextSpan(
+                      text: 'Terms of Service',
+                      style: TextStyle(
+                        decoration: TextDecoration.underline,
+                        color: scheme.primary,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final uri = Uri.parse('https://lythaus.co/terms');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                    ),
+                    const TextSpan(text: ' and '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: TextStyle(
+                        decoration: TextDecoration.underline,
+                        color: scheme.primary,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final uri = Uri.parse('https://lythaus.co/privacy');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                    ),
+                  ],
                 ),
               ),
             ],
