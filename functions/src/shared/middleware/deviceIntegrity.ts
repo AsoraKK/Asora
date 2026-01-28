@@ -28,10 +28,10 @@ export function buildDeviceIntegrityBlockedResponse(): HttpResponseInit {
   );
 }
 
-export function withDeviceIntegrity(
-  handler: (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit> | HttpResponseInit
+export function withDeviceIntegrity<T extends HttpRequest>(
+  handler: (req: T, context: InvocationContext) => Promise<HttpResponseInit> | HttpResponseInit
 ) {
-  return async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+  return async (req: T, context: InvocationContext): Promise<HttpResponseInit> => {
     if (isDeviceIntegrityBlocked(req)) {
       context.log('security.device_integrity_blocked', {
         rooted: isTrueHeader(req.headers.get('x-device-rooted')),

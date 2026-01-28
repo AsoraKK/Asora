@@ -8,6 +8,9 @@ import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/core/providers/repository_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/security/device_security_service.dart';
+import 'package:asora/core/config/environment_config.dart';
 
 // ASORA APPEAL VOTING CARD WIDGET TESTS
 //
@@ -17,6 +20,38 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 // 📱 Platform: Flutter widget testing framework
 
 class _MockModerationRepository extends Mock implements ModerationRepository {}
+
+/// Fake device security service that reports a clean device state
+class _CleanDeviceSecurityService implements DeviceSecurityService {
+  @override
+  Future<DeviceSecurityState> evaluateSecurity() async => DeviceSecurityState(
+        isRootedOrJailbroken: false,
+        isEmulator: false,
+        isDebugBuild: false,
+        lastCheckedAt: DateTime.now(),
+      );
+
+  @override
+  void clearCache() {}
+}
+
+/// Creates a DeviceIntegrityGuard that always allows operations
+DeviceIntegrityGuard _createCleanGuard() {
+  return DeviceIntegrityGuard(
+    deviceSecurityService: _CleanDeviceSecurityService(),
+    config: const MobileSecurityConfig(
+      tlsPins: TlsPinConfig(
+        enabled: false,
+        strictMode: false,
+        spkiPinsBase64: [],
+      ),
+      strictDeviceIntegrity: false,
+      blockRootedDevices: false,
+      allowRootedInStagingForQa: true,
+    ),
+    environment: Environment.staging,
+  );
+}
 
 // Helper function to create Appeal instances with modified fields
 const _sentinel = Object();
@@ -164,6 +199,7 @@ void main() {
           repository ?? _MockModerationRepository(),
         ),
         jwtProvider.overrideWith((ref) => Future.value('mock-jwt-token')),
+        deviceIntegrityGuardProvider.overrideWithValue(_createCleanGuard()),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -538,7 +574,9 @@ void main() {
           tallyTriggered: false,
         ),
       );
-      await tester.pumpAndSettle();
+      // Use pump() instead of pumpAndSettle() to avoid waiting for snackbar timer
+      await tester.pump();
+      await tester.pump();
     });
 
     testWidgets('shows success snackbar on successful vote', (tester) async {
@@ -587,7 +625,11 @@ void main() {
           tallyTriggered: false,
         ),
       );
-      await tester.pumpAndSettle();
+      // Use pump() instead of pumpAndSettle() to avoid waiting for snackbar timer
+      // We need multiple pumps to process microtasks and allow the async chain to complete
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
 
       // Should show error snackbar
       expect(
@@ -748,7 +790,9 @@ void main() {
           tallyTriggered: false,
         ),
       );
-      await tester.pumpAndSettle();
+      // Use pump() instead of pumpAndSettle() to avoid waiting for snackbar timer
+      await tester.pump();
+      await tester.pump();
     });
 
     testWidgets('maintains voted state across rebuilds', (tester) async {
