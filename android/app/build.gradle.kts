@@ -41,6 +41,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -57,6 +58,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.asora.app"
     }
 
     buildTypes {
@@ -81,13 +83,15 @@ android {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
     
-    // Firebase Cloud Messaging (versions managed by BoM)
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    // Firebase Crashlytics (versions managed by BoM)
-    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    // Firebase Cloud Messaging and Crashlytics (versions managed by BoM)
+    // Use non-KTX artifacts; KTX modules are no longer published in recent BoMs.
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-crashlytics")
     
     // Note: firebase_messaging and firebase_core Flutter packages
     // are already in pubspec.yaml and will be linked automatically

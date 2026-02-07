@@ -18,6 +18,22 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Install Android native SDK components
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT"
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "cmake;3.22.1" "ndk;27.0.12077973"
+
       # --- Android release signing ---
       - name: Validate Android signing secrets
         env:
