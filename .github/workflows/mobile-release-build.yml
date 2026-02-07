@@ -35,13 +35,25 @@ jobs:
           # Ignore preflight license exit and fail only if package install fails.
           set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          yes | "$SDKMANAGER" "cmake;3.22.1" "ndk;27.0.12077973"
+          yes | "$SDKMANAGER" "cmake;3.22.1" "ndk;28.2.13676358"
           INSTALL_EXIT=$?
           set -o pipefail
           if [ "$INSTALL_EXIT" -ne 0 ]; then
             echo "sdkmanager package install failed with exit code $INSTALL_EXIT"
             exit "$INSTALL_EXIT"
           fi
+
+      # --- Firebase config (gitignored) ---
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
+            echo "Missing required secret: GOOGLE_SERVICES_JSON"; exit 1
+          fi
+          echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+          test -s android/app/google-services.json || { echo "Decoded google-services.json is empty"; exit 1; }
 
       # --- Android release signing ---
       - name: Validate Android signing secrets
@@ -90,7 +102,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          rm -f "$KEYSTORE_PATH" "$KEY_PROPERTIES_PATH"
+          rm -f "$KEYSTORE_PATH" "$KEY_PROPERTIES_PATH" android/app/google-services.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.4.0
