@@ -304,7 +304,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Post'
+                $ref: '#/components/schemas/PostView'
         '400':
           description: Bad request - invalid input
           content:
@@ -405,7 +405,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Post'
+                $ref: '#/components/schemas/PostView'
         '400':
           description: Bad request - invalid input or blocked content
           content:
@@ -3151,11 +3151,6 @@ components:
           enum:
           - human
           - generated
-    PostResponse:
-      type: object
-      properties:
-        post:
-          $ref: '#/components/schemas/PostView'
     CursorPaginatedPostView:
       type: object
       properties:

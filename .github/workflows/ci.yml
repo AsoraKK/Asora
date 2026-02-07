@@ -225,6 +225,25 @@ jobs:
             [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
           done
 
+  pin_verification:
+    name: Verify TLS certificate pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install OpenSSL (already available on ubuntu-latest)
+        run: which openssl
+
+      - name: Verify certificate pins
+        env:
+          BASE_URL: 'https://asora-function-dev.azurewebsites.net'
+          EXTRA_PIN_HOSTS: 'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net'
+        run: python3 scripts/verify_pins.py
+
   flutter_tests:
     name: Flutter tests + coverage
     runs-on: ubuntu-latest
