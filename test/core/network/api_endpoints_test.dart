@@ -24,18 +24,18 @@ void main() {
 
     group('Privacy endpoints', () {
       test('exportUser is correct', () {
-        expect(ApiEndpoints.exportUser, equals('/api/privacy/exportUser'));
+        expect(ApiEndpoints.exportUser, equals('/api/user/export'));
       });
 
       test('exportStatus is correct', () {
         expect(
           ApiEndpoints.exportStatus,
-          equals('/api/privacy/exportUser/status'),
+          equals('/api/user/export/status'),
         );
       });
 
       test('deleteUser is correct', () {
-        expect(ApiEndpoints.deleteUser, equals('/api/privacy/deleteUser'));
+        expect(ApiEndpoints.deleteUser, equals('/api/user/delete'));
       });
     });
 

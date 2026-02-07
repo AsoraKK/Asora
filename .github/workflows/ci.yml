@@ -54,6 +54,15 @@ jobs:
           fi
           echo "✅ New markdown file placement OK"
 
+  legal_register_validation:
+    name: Validate legal operation registers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate legal register files
+        run: bash scripts/check_legal_registers.sh
+
   workflow_lint:
     name: Lint workflows (actionlint + shellcheck)
     runs-on: ubuntu-latest

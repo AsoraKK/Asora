@@ -30,6 +30,9 @@
     "AZURE_APP_CONFIG_CONNECTION_STRING": "USE_AZURE_KEY_VAULT_OR_ENV_VAR",
     "HIVE_API_URL": "https://hive.example/v1/classify",
     "HIVE_API_KEY": "USE_AZURE_KEY_VAULT_OR_ENV_VAR",
+    "MEDIA_STORAGE_ACCOUNT": "yourstorageaccount",
+    "MEDIA_CONTAINER": "user-media",
+    "MEDIA_UPLOAD_SAS_TTL_MINUTES": "15",
     "FEED_WEIGHTS_JSON": "{\"discovery\":{\"freshness\":0.35,\"rep\":0.35,\"engagement\":0.2,\"consistency\":0.1},\"personalized\":{\"freshness\":0.3,\"rep\":0.4,\"engagement\":0.2,\"consistency\":0.1}}",
     "FEED_FAIRNESS_JSON": "{\"floors\":[[5,0],[4,3],[3,2],[2,1],[1,1]],\"caps\":[[5,10],[4,6],[3,4],[2,3],[1,2]],\"perAuthorPageCap\":2,\"exploreRatio\":0.15}",
     "FEED_FRESHNESS_LAMBDA": "0.08"

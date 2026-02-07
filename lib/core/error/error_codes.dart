@@ -5,6 +5,7 @@
 /// 🎯 Purpose: Centralized error codes for consistent API/UI error handling
 /// 🔐 Security: Error codes do not expose implementation details
 /// 📱 UX: Maps to user-friendly messages without technical leakage
+library;
 
 /// Stable error codes for client error handling.
 ///
@@ -46,6 +47,12 @@ abstract final class ErrorCodes {
   /// Content was blocked by AI moderation.
   static const String contentBlocked = 'CONTENT_BLOCKED';
 
+  /// AI-generated content cannot be published.
+  static const String aiContentBlocked = 'AI_CONTENT_BLOCKED';
+
+  /// AI-signaled content requires explicit label and remains non-publishable.
+  static const String aiLabelRequired = 'AI_LABEL_REQUIRED';
+
   /// Appeal already exists for this content.
   static const String appealExists = 'APPEAL_EXISTS';
 
@@ -77,6 +84,12 @@ abstract final class ErrorMessages {
         'You have reached your daily appeal limit. Please try again tomorrow.',
     ErrorCodes.contentBlocked:
         'This content cannot be posted as it may violate our community guidelines.',
+    ErrorCodes.aiContentBlocked:
+        'AI-generated content cannot be published on Lythaus.\n'
+        'You can appeal this decision.',
+    ErrorCodes.aiLabelRequired:
+        'Potential AI-generated content must be labeled and cannot be published.\n'
+        'You can appeal this decision.',
     ErrorCodes.appealExists:
         'You have already submitted an appeal for this content.',
     ErrorCodes.validationFailed: 'Please check your input and try again.',

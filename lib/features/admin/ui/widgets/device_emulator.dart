@@ -133,7 +133,7 @@ class _DeviceEmulatorState extends State<DeviceEmulator> {
             Text('Device', style: theme.textTheme.labelMedium),
             const SizedBox(height: 4),
             DropdownButtonFormField<DevicePreset>(
-              value: _selectedDevice,
+              initialValue: _selectedDevice,
               isExpanded: true,
               decoration: const InputDecoration(
                 isDense: true,

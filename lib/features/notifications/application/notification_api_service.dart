@@ -3,7 +3,7 @@
 /// Notification API Service
 ///
 /// HTTP client for notification-related REST endpoints.
-/// Handles GET/POST to /api/notifications, /api/notification-preferences, /api/devices
+/// Handles GET/POST to /api/notifications and /api/notifications/* endpoints.
 library;
 
 import 'package:dio/dio.dart';
@@ -76,7 +76,9 @@ class NotificationApiService {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/notifications/unread-count',
       );
-      return (response.data?['count'] as num?)?.toInt() ?? 0;
+      return (response.data?['unreadCount'] as num?)?.toInt() ??
+          (response.data?['count'] as num?)?.toInt() ??
+          0;
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to fetch unread count');
     }
@@ -110,12 +112,12 @@ class NotificationApiService {
   // PREFERENCES API
   // ========================================================================
 
-  /// GET /api/notification-preferences
+  /// GET /api/notifications/preferences
   /// Fetch user notification preferences
   Future<UserNotificationPreferences> getPreferences() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notification-preferences',
+        '/api/notifications/preferences',
       );
       final data = response.data;
       if (data == null) {
@@ -127,14 +129,14 @@ class NotificationApiService {
     }
   }
 
-  /// PUT /api/notification-preferences
+  /// PUT /api/notifications/preferences
   /// Update user notification preferences
   Future<UserNotificationPreferences> updatePreferences(
     UserNotificationPreferences preferences,
   ) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
-        '/api/notification-preferences',
+        '/api/notifications/preferences',
         data: preferences.toJson(),
       );
       final data = response.data;
@@ -151,18 +153,24 @@ class NotificationApiService {
   // DEVICES API
   // ========================================================================
 
-  /// POST /api/devices/register
+  /// POST /api/notifications/devices
   /// Register a push token (enforces 3-device cap)
-  /// Returns {"success": true, "evictedDevice": {...}?} if another device was removed
+  /// Returns {"device": {...}, "evictedDevice": {...}?}
   Future<Map<String, dynamic>> registerDevice({
+    required String deviceId,
     required String pushToken,
     required String platform,
     required String label,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/devices/register',
-        data: {'pushToken': pushToken, 'platform': platform, 'label': label},
+        '/api/notifications/devices',
+        data: {
+          'deviceId': deviceId,
+          'pushToken': pushToken,
+          'platform': platform,
+          'label': label,
+        },
       );
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -170,19 +178,23 @@ class NotificationApiService {
     }
   }
 
-  /// GET /api/devices
+  /// GET /api/notifications/devices
   /// Fetch list of registered devices
   Future<List<UserDeviceToken>> getDevices({bool activeOnly = true}) async {
     try {
-      final response = await _dio.get<List<dynamic>>(
-        '/api/devices',
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/notifications/devices',
         queryParameters: {'activeOnly': activeOnly},
       );
       final data = response.data;
       if (data == null) {
         throw Exception('Invalid devices response');
       }
-      return data
+      final devices = data['devices'];
+      if (devices is! List) {
+        throw Exception('Invalid devices response');
+      }
+      return devices
           .whereType<Map<String, dynamic>>()
           .map(
             (item) => UserDeviceToken.fromJson(Map<String, dynamic>.from(item)),
@@ -193,11 +205,13 @@ class NotificationApiService {
     }
   }
 
-  /// POST /api/devices/:id/revoke
+  /// POST /api/notifications/devices/:id/revoke
   /// Revoke (soft-delete) a device token
   Future<void> revokeDevice(String deviceId) async {
     try {
-      await _dio.post<Map<String, dynamic>>('/api/devices/$deviceId/revoke');
+      await _dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/$deviceId/revoke',
+      );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to revoke device');
     }

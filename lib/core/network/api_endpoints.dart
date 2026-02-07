@@ -21,9 +21,9 @@ class ApiEndpoints {
   static const String getUserAuth = '$_baseApi/users/auth';
 
   // Privacy & GDPR endpoints
-  static const String exportUser = '$_baseApi/privacy/exportUser';
-  static const String exportStatus = '$_baseApi/privacy/exportUser/status';
-  static const String deleteUser = '$_baseApi/privacy/deleteUser';
+  static const String exportUser = '$_baseApi/user/export';
+  static const String exportStatus = '$_baseApi/user/export/status';
+  static const String deleteUser = '$_baseApi/user/delete';
 
   // Feed & Posts
   static const String getFeed = '$_baseApi/feed';

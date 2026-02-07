@@ -8,6 +8,7 @@
 import type { InvocationContext } from '@azure/functions';
 import {
   createHiveClient,
+  HiveAIClient,
   ModerationAction,
   HiveAPIError,
   type ModerationResult,
@@ -31,6 +32,28 @@ export interface ExtendedModerationResult {
   result: ModerationResult | null;
   error?: string;
   configEnvelope: ModerationConfigEnvelope;
+}
+
+const AI_SIGNAL_PATTERNS = [
+  /\bai\b/i,
+  /generated/i,
+  /synthetic/i,
+  /deepfake/i,
+];
+
+export interface MediaModerationSummary {
+  status: ModerationStatus;
+  checkedAt: number;
+  confidence?: number;
+  categories: string[];
+  aiDetected: boolean;
+  error?: string;
+}
+
+export function hasAiSignal(categories: string[] = []): boolean {
+  return categories.some((category) =>
+    AI_SIGNAL_PATTERNS.some((pattern) => pattern.test(category))
+  );
 }
 
 /**
@@ -248,5 +271,78 @@ export function buildModerationMeta(
     confidence: result.confidence,
     categories: result.categories,
     reasons: result.reasons,
+  };
+}
+
+/**
+ * Moderate image URLs attached to a post.
+ * Uses Hive image moderation and collapses results into a single summary.
+ */
+export async function moderatePostMediaUrls(
+  mediaUrls: string[] | undefined,
+  userId: string,
+  contentId: string,
+  context: InvocationContext
+): Promise<MediaModerationSummary> {
+  const now = Date.now();
+  if (!mediaUrls || mediaUrls.length === 0) {
+    return {
+      status: 'clean',
+      checkedAt: now,
+      categories: [],
+      aiDetected: false,
+    };
+  }
+
+  if (!process.env.HIVE_API_KEY) {
+    return {
+      status: 'clean',
+      checkedAt: now,
+      categories: [],
+      aiDetected: false,
+    };
+  }
+
+  const categories = new Set<string>();
+  let highestConfidence = 0;
+  let blocked = false;
+
+  try {
+    const hiveClient = createHiveClient();
+    for (const mediaUrl of mediaUrls) {
+      const response = await hiveClient.moderateImage(userId, mediaUrl);
+      const parsed = HiveAIClient.parseModerationResult(response);
+
+      highestConfidence = Math.max(highestConfidence, parsed.confidence || 0);
+      for (const category of parsed.flaggedCategories ?? []) {
+        categories.add(category);
+      }
+
+      if (parsed.action === 'reject') {
+        blocked = true;
+      }
+    }
+  } catch (error) {
+    context.log('[moderation] Image moderation failed', {
+      contentId,
+      message: (error as Error).message,
+    });
+    return {
+      status: 'warned',
+      checkedAt: now,
+      confidence: highestConfidence || undefined,
+      categories: Array.from(categories),
+      aiDetected: hasAiSignal(Array.from(categories)),
+      error: (error as Error).message,
+    };
+  }
+
+  const categoryList = Array.from(categories);
+  return {
+    status: blocked ? 'blocked' : 'clean',
+    checkedAt: now,
+    confidence: highestConfidence || undefined,
+    categories: categoryList,
+    aiDetected: hasAiSignal(categoryList),
   };
 }

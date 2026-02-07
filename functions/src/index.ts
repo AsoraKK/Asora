@@ -42,5 +42,11 @@ trySyncImport('notifications/preferences', () => require('./notifications/http/p
 trySyncImport('notifications/api', () => require('./notifications/http/notificationsApi.function'));
 trySyncImport('notifications/processPendingNotifications', () => require('./notifications/timers/processPendingNotifications.function'));
 
+// Media API - upload URL generation for Azure Blob Storage
+trySyncImport('media', () => require('./media'));
+
+// Payments API - subscription status and webhook (architecture placeholder)
+trySyncImport('payments', () => require('./payments'));
+
 // Admin API - configuration and audit endpoints (Cloudflare Access protected)
 trySyncImport('admin', () => require('./admin'));

@@ -43,6 +43,14 @@ function claimsHasRole(claims: JWTPayload | undefined, role: string): boolean {
   return false;
 }
 
+function normalizeRequiredVotes(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 3;
+  }
+  return Math.max(1, Math.floor(parsed));
+}
+
 export async function voteOnAppealHandler({
   request,
   context,
@@ -242,12 +250,23 @@ export async function voteOnAppealHandler({
 
     appealDoc.totalVotes = (appealDoc.votesFor || 0) + (appealDoc.votesAgainst || 0);
     appealDoc.updatedAt = now.toISOString();
-    appealDoc.hasReachedQuorum = false;
     appealDoc.votingStatus = 'in_progress';
 
-    const requiredVotes = appealDoc.requiredVotes ?? 0;
-    const hasQuorum = false;
-    const finalDecision: 'approved' | 'rejected' | null = null;
+    const requiredVotes = normalizeRequiredVotes(appealDoc.requiredVotes);
+    const hasQuorum = Number(appealDoc.totalVotes ?? 0) >= requiredVotes;
+    appealDoc.requiredVotes = requiredVotes;
+    appealDoc.hasReachedQuorum = hasQuorum;
+
+    let finalDecision: 'approved' | 'rejected' | null = null;
+    if (hasQuorum) {
+      finalDecision = await resolveAppealFromVotes({
+        database,
+        appealDoc,
+        context,
+        resolvedBy: 'community_vote',
+        resolvedAt: now.toISOString(),
+      });
+    }
 
     await appealsContainer.item(targetAppealId, appealPartitionKey).replace(appealDoc);
 
@@ -300,9 +319,11 @@ export async function resolveAppealFromVotes({
   const votesAgainst = Number(appealDoc.votesAgainst ?? 0);
   const finalDecision = votesFor > votesAgainst ? 'approved' : 'rejected';
   const resolvedAtValue = resolvedAt ?? new Date().toISOString();
+  const requiredVotes = normalizeRequiredVotes(appealDoc.requiredVotes);
 
   appealDoc.totalVotes = votesFor + votesAgainst;
-  appealDoc.hasReachedQuorum = false;
+  appealDoc.requiredVotes = requiredVotes;
+  appealDoc.hasReachedQuorum = true;
   appealDoc.votingStatus = 'completed';
   appealDoc.resolvedAt = resolvedAtValue;
   appealDoc.resolvedBy = resolvedBy;

@@ -16,7 +16,11 @@
       "@moderation/*": ["src/moderation/*"],
       "@privacy/*": ["src/privacy/*"],
       "@rate-limit/*": ["src/rate-limit/*"],
-      "@http/*": ["src/http/*"]
+      "@http/*": ["src/http/*"],
+      "@posts/*": ["src/posts/*"],
+      "@admin/*": ["src/admin/*"],
+      "@media/*": ["src/media/*"],
+      "@payments/*": ["src/payments/*"]
     }
   },
   "include": ["src/**/*.ts", "tests/**/*.test.ts", "tests/**/__tests__/**/*.ts"]

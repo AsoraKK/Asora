@@ -1,0 +1,4 @@
+vendor,service,purpose,data_categories,transfer_mechanism,dpa_status,scc_or_idta_status,operator_agreement_status,last_reviewed_utc,owner,status,notes
+Azure,Hosting and data platform,App hosting and storage,account identifiers|content metadata|moderation records,To be confirmed,unknown,unknown,unknown,2026-02-05,privacy-engineering,open,Populate contract references and effective dates
+Cloudflare,Edge and CDN,Static and anonymous edge delivery,ip_hashes|request metadata,To be confirmed,unknown,unknown,unknown,2026-02-05,platform,open,Confirm personalized feed bypass controls and transfer terms
+Hive,AI safety moderation,AI-generated content screening,text snippets|image hashes|moderation decisions,To be confirmed,unknown,unknown,unknown,2026-02-05,moderation-ops,open,Confirm moderation payload minimization and agreement status

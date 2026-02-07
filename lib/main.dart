@@ -5,9 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/design_system/index.dart';
 import 'package:asora/features/auth/presentation/auth_gate.dart';
+import 'package:asora/core/logging/app_logger.dart';
+import 'package:asora/core/observability/crash_reporting.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final crashReporting = CrashReportingService(
+    sink: FirebaseCrashSink(),
+    logger: AppLogger('CrashReporting'),
+  );
+  await crashReporting.initialize();
   runApp(const ProviderScope(child: AsoraApp()));
 }
 

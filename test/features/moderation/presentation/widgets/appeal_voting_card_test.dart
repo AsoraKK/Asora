@@ -25,11 +25,11 @@ class _MockModerationRepository extends Mock implements ModerationRepository {}
 class _CleanDeviceSecurityService implements DeviceSecurityService {
   @override
   Future<DeviceSecurityState> evaluateSecurity() async => DeviceSecurityState(
-        isRootedOrJailbroken: false,
-        isEmulator: false,
-        isDebugBuild: false,
-        lastCheckedAt: DateTime.now(),
-      );
+    isRootedOrJailbroken: false,
+    isEmulator: false,
+    isDebugBuild: false,
+    lastCheckedAt: DateTime.now(),
+  );
 
   @override
   void clearCache() {}

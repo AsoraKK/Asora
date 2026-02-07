@@ -78,14 +78,21 @@ class PostRepositoryImpl implements PostRepository {
       'PostRepository.deletePost',
       () async {
         try {
-          final response = await _dio.delete<Map<String, dynamic>>(
+          final response = await _dio.delete<dynamic>(
             '/api/posts/$postId',
             options: Options(headers: {'Authorization': 'Bearer $token'}),
           );
 
+          if (response.statusCode == 204) {
+            return true;
+          }
+
           if (response.statusCode == 200) {
-            final data = response.data as Map<String, dynamic>;
-            return data['success'] == true;
+            final data = response.data;
+            if (data is Map<String, dynamic>) {
+              return data['success'] == true;
+            }
+            return false;
           }
 
           throw PostException(
@@ -168,7 +175,10 @@ class PostRepositoryImpl implements PostRepository {
     final details = payload?['details'] as Map<String, dynamic>?;
 
     if ((statusCode == 400 || statusCode == 422) &&
-        (code == 'CONTENT_BLOCKED' || code == 'content_blocked')) {
+        (code == 'CONTENT_BLOCKED' ||
+            code == 'content_blocked' ||
+            code == ErrorCodes.aiContentBlocked ||
+            code == ErrorCodes.aiLabelRequired)) {
       final categories =
           (details?['categories'] as List<dynamic>?)
               ?.whereType<String>()

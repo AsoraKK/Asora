@@ -568,3 +568,28 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_PURGE_WINDOW_DAYS="30" --output none
           
           echo "✅ DSR environment variables configured"
+
+      - name: Configure media storage environment variables
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+
+          # Look for a storage account tagged purpose=media-storage, or fall back to explicit name
+          MEDIA_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='media-storage'].name | [0]" -o tsv)
+          if [ -z "$MEDIA_SA" ]; then
+            # Try well-known name
+            MEDIA_SA="asoramediadev"
+            if ! az storage account show -n "$MEDIA_SA" -g "$RG_CLEAN" --query "name" -o tsv 2>/dev/null; then
+              echo "⚠️  Media storage account not found, skipping media environment variable configuration"
+              echo "ℹ️  Run scripts/setup-media-storage.sh to create media storage account"
+              exit 0
+            fi
+          fi
+
+          echo "Setting media storage environment variables (account: $MEDIA_SA)..."
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_STORAGE_ACCOUNT="$MEDIA_SA" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_CONTAINER="user-media" --output none
+
+          echo "✅ Media storage environment variables configured"

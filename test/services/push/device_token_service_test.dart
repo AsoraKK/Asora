@@ -2,10 +2,12 @@ import 'package:asora/features/notifications/domain/notification_models.dart';
 import 'package:asora/services/push/device_token_service.dart';
 import 'package:asora/services/push/push_notification_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockDio extends Mock implements Dio {}
+class MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
 class FakePushNotificationService implements PushNotificationService {
   FakePushNotificationService({this.token, this.platformValue = 'fcm'});
@@ -58,9 +60,11 @@ void main() {
 
   test('registerDeviceToken throws when token missing', () async {
     final dio = MockDio();
+    final storage = MockSecureStorage();
     final service = DeviceTokenService(
       dioClient: dio,
       pushService: FakePushNotificationService(token: null),
+      storage: storage,
     );
 
     await expectLater(service.registerDeviceToken(), throwsA(isA<Exception>()));
@@ -68,14 +72,20 @@ void main() {
 
   test('registerDeviceToken posts and returns response data', () async {
     final dio = MockDio();
+    final storage = MockSecureStorage();
     final service = DeviceTokenService(
       dioClient: dio,
       pushService: FakePushNotificationService(token: 'token'),
+      storage: storage,
+    );
+
+    when(() => storage.read(key: any(named: 'key'))).thenAnswer(
+      (_) async => 'device-1',
     );
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/devices/register',
+        '/api/notifications/devices',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
@@ -86,12 +96,12 @@ void main() {
           'userId': 'u1',
           'deviceId': 'device-1',
           'pushToken': 'token',
-          'platform': 'fcm',
+          'platform': 'android',
           'label': 'Pixel',
           'createdAt': '2024-01-01T00:00:00Z',
           'lastSeenAt': '2024-01-01T01:00:00Z',
         },
-      }, '/api/devices/register'),
+      }, '/api/notifications/devices'),
     );
 
     final result = await service.registerDeviceToken();
@@ -102,26 +112,31 @@ void main() {
 
   test('getRegisteredDevices parses response list', () async {
     final dio = MockDio();
+    final storage = MockSecureStorage();
     final service = DeviceTokenService(
       dioClient: dio,
       pushService: FakePushNotificationService(token: 'token'),
+      storage: storage,
     );
 
-    when(() => dio.get<List<dynamic>>('/api/devices')).thenAnswer(
-      (_) async => Response<List<dynamic>>(
-        data: [
-          {
-            'id': 'd1',
-            'userId': 'u1',
-            'deviceId': 'device-1',
-            'pushToken': 'token',
-            'platform': 'fcm',
-            'createdAt': '2024-01-01T00:00:00Z',
-            'lastSeenAt': '2024-01-01T01:00:00Z',
-          },
-        ],
+    when(() => dio.get<Map<String, dynamic>>('/api/notifications/devices'))
+        .thenAnswer(
+      (_) async => Response<Map<String, dynamic>>(
+        data: {
+          'devices': [
+            {
+              'id': 'd1',
+              'userId': 'u1',
+              'deviceId': 'device-1',
+              'pushToken': 'token',
+              'platform': 'android',
+              'createdAt': '2024-01-01T00:00:00Z',
+              'lastSeenAt': '2024-01-01T01:00:00Z',
+            },
+          ],
+        },
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/devices'),
+        requestOptions: RequestOptions(path: '/api/notifications/devices'),
       ),
     );
 
@@ -132,19 +147,27 @@ void main() {
 
   test('revokeDevice posts to revoke endpoint', () async {
     final dio = MockDio();
+    final storage = MockSecureStorage();
     final service = DeviceTokenService(
       dioClient: dio,
       pushService: FakePushNotificationService(token: 'token'),
+      storage: storage,
     );
 
     when(
-      () => dio.post<Map<String, dynamic>>('/api/devices/device-1/revoke'),
-    ).thenAnswer((_) async => _response({}, '/api/devices/device-1/revoke'));
+      () => dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/device-1/revoke',
+      ),
+    ).thenAnswer(
+      (_) async => _response({}, '/api/notifications/devices/device-1/revoke'),
+    );
 
     await service.revokeDevice('device-1');
 
     verify(
-      () => dio.post<Map<String, dynamic>>('/api/devices/device-1/revoke'),
+      () => dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/device-1/revoke',
+      ),
     ).called(1);
   });
 }

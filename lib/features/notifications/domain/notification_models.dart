@@ -301,7 +301,7 @@ class UserDeviceToken {
   final String userId;
   final String deviceId;
   final String pushToken;
-  final String platform; // 'fcm' or 'apns'
+  final String platform; // 'android', 'ios', or 'web'
   final String? label;
   final DateTime createdAt;
   final DateTime lastSeenAt;

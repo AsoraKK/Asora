@@ -69,6 +69,11 @@ class PostService {
         );
 
         final data = response.data;
+        if (response.statusCode == 204) {
+          debugPrint('✅ Post deleted successfully: $postId');
+          return {'success': true, 'postId': postId};
+        }
+
         if (response.statusCode == 200 && data?['success'] == true) {
           debugPrint('✅ Post deleted successfully: $postId');
           return data!;

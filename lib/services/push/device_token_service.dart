@@ -2,19 +2,27 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:uuid/uuid.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart';
 import 'package:asora/services/push/push_notification_service.dart';
 
 /// Service for registering and managing device tokens with backend
 class DeviceTokenService {
+  static const String _deviceIdStorageKey = 'push_device_id_v1';
+  static const Uuid _uuid = Uuid();
+
   final Dio _dio;
   final PushNotificationService _pushService;
+  final FlutterSecureStorage _storage;
 
   DeviceTokenService({
     required Dio dioClient,
     required PushNotificationService pushService,
+    required FlutterSecureStorage storage,
   }) : _dio = dioClient,
-       _pushService = pushService;
+       _pushService = pushService,
+       _storage = storage;
 
   /// Register current device token with backend
   /// Should be called on app launch and whenever token refreshes
@@ -29,14 +37,20 @@ class DeviceTokenService {
     }
 
     final platform = _pushService.platform;
+    final deviceId = await _getOrCreateDeviceId();
 
     // Generate device label if not provided
     final deviceLabel = label ?? _generateDeviceLabel();
 
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/devices/register',
-        data: {'pushToken': token, 'platform': platform, 'label': deviceLabel},
+        '/api/notifications/devices',
+        data: {
+          'deviceId': deviceId,
+          'pushToken': token,
+          'platform': platform,
+          'label': deviceLabel,
+        },
       );
 
       debugPrint('[DeviceToken] Device token registered successfully');
@@ -60,9 +74,16 @@ class DeviceTokenService {
   /// Get list of registered devices for current user
   Future<List<UserDeviceToken>> getRegisteredDevices() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/devices');
-      final devices = (response.data as List)
-          .map((json) => UserDeviceToken.fromJson(json as Map<String, dynamic>))
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/notifications/devices',
+      );
+      final payload = response.data?['devices'];
+      if (payload is! List) {
+        throw Exception('Invalid devices response');
+      }
+      final devices = payload
+          .whereType<Map<String, dynamic>>()
+          .map((json) => UserDeviceToken.fromJson(json))
           .toList();
       return devices;
     } catch (e) {
@@ -74,12 +95,25 @@ class DeviceTokenService {
   /// Revoke a device token (user manually removes device)
   Future<void> revokeDevice(String deviceId) async {
     try {
-      await _dio.post<Map<String, dynamic>>('/api/devices/$deviceId/revoke');
+      await _dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/$deviceId/revoke',
+      );
       debugPrint('[DeviceToken] Device revoked successfully');
     } catch (e) {
       debugPrint('[DeviceToken] Failed to revoke device: $e');
       rethrow;
     }
+  }
+
+  Future<String> _getOrCreateDeviceId() async {
+    final existing = await _storage.read(key: _deviceIdStorageKey);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+
+    final generated = _uuid.v4();
+    await _storage.write(key: _deviceIdStorageKey, value: generated);
+    return generated;
   }
 
   String _generateDeviceLabel() {

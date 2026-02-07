@@ -16,6 +16,8 @@ import 'package:asora/services/moderation_service.dart';
 import 'package:asora/services/oauth2_service.dart';
 import 'package:asora/services/push/push_notification_service.dart';
 import 'package:asora/services/push/device_token_service.dart';
+import 'package:asora/services/media/media_upload_service.dart';
+import 'package:asora/services/subscription/subscription_service.dart';
 
 /// Flutter secure storage provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -63,6 +65,23 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((
 final deviceTokenServiceProvider = Provider<DeviceTokenService>((ref) {
   final dio = ref.watch(secureDioProvider);
   final pushService = ref.watch(pushNotificationServiceProvider);
+  final storage = ref.watch(secureStorageProvider);
 
-  return DeviceTokenService(dioClient: dio, pushService: pushService);
+  return DeviceTokenService(
+    dioClient: dio,
+    pushService: pushService,
+    storage: storage,
+  );
+});
+
+/// Media upload service provider
+final mediaUploadServiceProvider = Provider<MediaUploadService>((ref) {
+  final dio = ref.watch(secureDioProvider);
+  return MediaUploadService(apiDio: dio);
+});
+
+/// Subscription service provider (backend-only until IAP is wired)
+final subscriptionServiceProvider = Provider<BackendSubscriptionService>((ref) {
+  final dio = ref.watch(secureDioProvider);
+  return BackendSubscriptionService(dio: dio);
 });

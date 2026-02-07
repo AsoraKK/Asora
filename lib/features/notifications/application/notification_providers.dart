@@ -9,6 +9,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart';
 import 'package:asora/features/notifications/application/notification_api_service.dart';
 
@@ -19,9 +20,7 @@ import 'package:asora/features/notifications/application/notification_api_servic
 /// Dio client provider (assumed to exist in core network layer)
 /// This should be provided by the app-level dependency injection
 final dioProvider = Provider<Dio>((ref) {
-  throw UnimplementedError(
-    'dioProvider must be overridden at app startup with authenticated Dio client',
-  );
+  return ref.watch(secureDioProvider);
 });
 
 /// Notification API service provider

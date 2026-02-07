@@ -16,7 +16,9 @@
       "@privacy/*": ["src/privacy/*"],
       "@rate-limit/*": ["src/rate-limit/*"],
       "@http/*": ["src/http/*"],
-      "@admin/*": ["src/admin/*"]
+      "@admin/*": ["src/admin/*"],
+      "@media/*": ["src/media/*"],
+      "@payments/*": ["src/payments/*"]
     },
     "lib": ["ES2020"],
     "strict": true,

@@ -6,7 +6,6 @@ import './routes/userinfo';
 import './routes/invite_validate.function';
 
 // OpenAPI v1 handlers
-import './routes/auth_token_exchange.function';
 import './routes/auth_token_refresh.function';
 
 // Admin endpoints

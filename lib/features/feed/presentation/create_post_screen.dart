@@ -18,6 +18,8 @@ import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/services/service_providers.dart';
+import 'package:asora/services/media/media_upload_service.dart';
 
 /// Screen for creating a new post
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -30,6 +32,7 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   static const String _policyReminderMessage =
       'AI-generated content is blocked at publish time.\n'
+      'AI-signaled content must be labeled and cannot be published.\n'
       "If content is blocked, you'll see a neutral notice.\n"
       'You can appeal decisions. Appeals are reviewed by the community and moderators.\n'
       'This is an invite-only beta focused on authentic human content.';
@@ -123,8 +126,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             if (state.isLimitExceeded)
               _LimitExceededBanner(result: state.limitExceededResult!),
             if (state.hasError &&
-                state.errorResult?.code !=
-                    ErrorCodes.deviceIntegrityBlocked)
+                state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
               _ErrorBanner(result: state.errorResult!),
 
             // Main content
@@ -162,6 +164,39 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         },
                       ),
                     ),
+                    if (state.mediaUrl != null && state.mediaUrl!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Chip(
+                              avatar: const Icon(
+                                Icons.image_outlined,
+                                size: 16,
+                              ),
+                              label: SizedBox(
+                                width: 220,
+                                child: Text(
+                                  state.mediaUrl!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.sora(fontSize: 12),
+                                ),
+                              ),
+                              onDeleted: () {
+                                ref
+                                    .read(postCreationProvider.notifier)
+                                    .updateMediaUrl(null);
+                                ref
+                                    .read(postCreationProvider.notifier)
+                                    .setContentType('text');
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -264,11 +299,158 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
-  void _handleAddMedia() {
-    // TODO: Implement media picker
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Media upload coming soon')));
+  Future<void> _handleAddMedia() async {
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text('Choose from gallery', style: GoogleFonts.sora()),
+                onTap: () => Navigator.of(context).pop('gallery'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: Text('Take a photo', style: GoogleFonts.sora()),
+                onTap: () => Navigator.of(context).pop('camera'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: Text('Paste image URL', style: GoogleFonts.sora()),
+                onTap: () => Navigator.of(context).pop('url'),
+              ),
+              if (ref.read(postCreationProvider).mediaUrl != null)
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    'Remove media',
+                    style: GoogleFonts.sora(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  onTap: () => Navigator.of(context).pop('remove'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || source == null) return;
+
+    if (source == 'remove') {
+      ref.read(postCreationProvider.notifier).updateMediaUrl(null);
+      ref.read(postCreationProvider.notifier).setContentType('text');
+      return;
+    }
+
+    if (source == 'url') {
+      await _handleAddMediaUrl();
+      return;
+    }
+
+    // Gallery or Camera — use image picker + upload
+    final uploadService = ref.read(mediaUploadServiceProvider);
+    final file = source == 'camera'
+        ? await uploadService.pickFromCamera()
+        : await uploadService.pickFromGallery();
+
+    if (file == null || !mounted) return;
+
+    // Show uploading state
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Text('Uploading image...', style: GoogleFonts.sora()),
+          ],
+        ),
+        duration: const Duration(seconds: 30),
+      ),
+    );
+
+    final token = await ref.read(jwtProvider.future);
+    if (token == null || !mounted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+      return;
+    }
+
+    final result = await uploadService.uploadFile(file: file, token: token);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    switch (result) {
+      case MediaUploadSuccess(:final blobUrl):
+        ref.read(postCreationProvider.notifier).updateMediaUrl(blobUrl);
+        ref.read(postCreationProvider.notifier).setContentType('image');
+      case MediaUploadError(:final message):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $message', style: GoogleFonts.sora()),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+    }
+  }
+
+  Future<void> _handleAddMediaUrl() async {
+    final current = ref.read(postCreationProvider).mediaUrl ?? '';
+    final controller = TextEditingController(text: current);
+    final submitted = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Attach media URL', style: GoogleFonts.sora()),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'https://...',
+            labelText: 'Image URL',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: GoogleFonts.sora()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text('Attach', style: GoogleFonts.sora()),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (!mounted || submitted == null) {
+      return;
+    }
+
+    if (submitted.isEmpty) {
+      ref.read(postCreationProvider.notifier).updateMediaUrl(null);
+      ref.read(postCreationProvider.notifier).setContentType('text');
+      return;
+    }
+
+    ref.read(postCreationProvider.notifier).updateMediaUrl(submitted);
+    ref.read(postCreationProvider.notifier).setContentType('image');
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {

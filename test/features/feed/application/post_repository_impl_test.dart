@@ -140,20 +140,20 @@ void main() {
 
   test('deletePost success and failure', () async {
     when(
-      () => dio.delete<Map<String, dynamic>>(
+      () => dio.delete<dynamic>(
         '/api/posts/p1',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async =>
-          _response({'success': true}, '/api/posts/p1', statusCode: 200),
+          _response(<String, dynamic>{}, '/api/posts/p1', statusCode: 204),
     );
 
     final ok = await repo.deletePost(postId: 'p1', token: 't1');
     expect(ok, isTrue);
 
     when(
-      () => dio.delete<Map<String, dynamic>>(
+      () => dio.delete<dynamic>(
         '/api/posts/p2',
         options: any(named: 'options'),
       ),

@@ -4,6 +4,7 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { requireActiveModerator } from '../adminAuthUtils';
 import { fetchContentById } from '../moderationAdminUtils';
+import { recordAdminAudit } from '../auditLogger';
 
 type OverrideDecision = 'allow' | 'block';
 type OverrideReasonCode = 'policy_exception' | 'false_positive' | 'safety_risk' | 'other';
@@ -267,6 +268,31 @@ export async function overrideAppeal(
       decidedAt: nowIso,
       _partitionKey: contentId,
       idempotencyKey: idempotencyKey ?? null,
+    });
+
+    await recordAdminAudit({
+      actorId,
+      action: 'APPEAL_OVERRIDE',
+      subjectId: appealId,
+      targetType: 'appeal',
+      reasonCode,
+      note: reasonNote || null,
+      before: {
+        status,
+        finalDecision: storedDecision,
+        totalVotes,
+        quorumReached,
+      },
+      after: {
+        status: 'overridden',
+        finalDecision: decision,
+      },
+      correlationId: context.invocationId,
+      metadata: {
+        contentId,
+        contentType,
+        idempotencyKey: idempotencyKey ?? null,
+      },
     });
 
     return buildSuccessResponse(appealId, decision);

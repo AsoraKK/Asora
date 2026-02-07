@@ -7,22 +7,30 @@ const List<ReputationTier> mockReputationTiers = [
     id: 'free',
     name: 'Free',
     minXP: 0,
-    privileges: ['1 custom feed', 'Community voting'],
+    privileges: [
+      'Discovery + News feeds',
+      '1 custom feed with personalized filters',
+      '1 reputation reward available',
+    ],
   ),
   ReputationTier(
     id: 'premium',
     name: 'Premium',
     minXP: 1200,
-    privileges: ['3 custom feeds', 'Priority support', 'Early features'],
+    privileges: [
+      'Discovery + News feeds',
+      '2 custom feeds with personalized filters',
+      '5 reputation rewards available',
+    ],
   ),
   ReputationTier(
     id: 'black',
     name: 'Black',
     minXP: 3200,
     privileges: [
-      '10 custom feeds',
-      'Pro newsroom tools',
-      'Advanced moderation panel',
+      'Discovery + News feeds',
+      '5 custom feeds with personalized filters',
+      'All reputation rewards',
     ],
   ),
 ];

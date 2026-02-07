@@ -72,6 +72,23 @@ void main() {
     expect(count, 0);
   });
 
+  test('getUnreadCount reads unreadCount key', () async {
+    final dio = MockDio();
+    final service = NotificationApiService(dioClient: dio);
+
+    when(
+      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
+    ).thenAnswer(
+      (_) async => _response(
+        {'unreadCount': 4},
+        '/api/notifications/unread-count',
+      ),
+    );
+
+    final count = await service.getUnreadCount();
+    expect(count, 4);
+  });
+
   test('markAsRead posts to endpoint', () async {
     final dio = MockDio();
     final service = NotificationApiService(dioClient: dio);
@@ -119,18 +136,18 @@ void main() {
     );
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notification-preferences'),
+      () => dio.get<Map<String, dynamic>>('/api/notifications/preferences'),
     ).thenAnswer(
-      (_) async => _response(prefs.toJson(), '/api/notification-preferences'),
+      (_) async => _response(prefs.toJson(), '/api/notifications/preferences'),
     );
 
     when(
       () => dio.put<Map<String, dynamic>>(
-        '/api/notification-preferences',
+        '/api/notifications/preferences',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
-      (_) async => _response(prefs.toJson(), '/api/notification-preferences'),
+      (_) async => _response(prefs.toJson(), '/api/notifications/preferences'),
     );
 
     final fetched = await service.getPreferences();
@@ -146,14 +163,15 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/devices/register',
+        '/api/notifications/devices',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
-      (_) async => _response({'success': true}, '/api/devices/register'),
+      (_) async => _response({'success': true}, '/api/notifications/devices'),
     );
 
     final result = await service.registerDevice(
+      deviceId: 'device-1',
       pushToken: 'token',
       platform: 'fcm',
       label: 'Pixel',
@@ -167,31 +185,33 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get<List<dynamic>>(
-        '/api/devices',
+      () => dio.get<Map<String, dynamic>>(
+        '/api/notifications/devices',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
-      (_) async => Response<List<dynamic>>(
-        data: [
-          {
-            'id': 'd1',
-            'userId': 'u1',
-            'deviceId': 'device-1',
-            'pushToken': 'token',
-            'platform': 'fcm',
-            'createdAt': '2024-01-01T00:00:00Z',
-            'lastSeenAt': '2024-01-01T01:00:00Z',
-          },
-        ],
+      (_) async => Response<Map<String, dynamic>>(
+        data: {
+          'devices': [
+            {
+              'id': 'd1',
+              'userId': 'u1',
+              'deviceId': 'device-1',
+              'pushToken': 'token',
+              'platform': 'android',
+              'createdAt': '2024-01-01T00:00:00Z',
+              'lastSeenAt': '2024-01-01T01:00:00Z',
+            },
+          ],
+        },
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/devices'),
+        requestOptions: RequestOptions(path: '/api/notifications/devices'),
       ),
     );
 
     final devices = await service.getDevices();
     expect(devices.length, 1);
-    expect(devices.first.platform, 'fcm');
+    expect(devices.first.platform, 'android');
   });
 
   test('revokeDevice posts to endpoint', () async {
@@ -199,13 +219,19 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post<Map<String, dynamic>>('/api/devices/d1/revoke'),
-    ).thenAnswer((_) async => _response({}, '/api/devices/d1/revoke'));
+      () => dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/d1/revoke',
+      ),
+    ).thenAnswer(
+      (_) async => _response({}, '/api/notifications/devices/d1/revoke'),
+    );
 
     await service.revokeDevice('d1');
 
     verify(
-      () => dio.post<Map<String, dynamic>>('/api/devices/d1/revoke'),
+      () => dio.post<Map<String, dynamic>>(
+        '/api/notifications/devices/d1/revoke',
+      ),
     ).called(1);
   });
 
@@ -214,15 +240,15 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get<List<dynamic>>(
-        '/api/devices',
+      () => dio.get<Map<String, dynamic>>(
+        '/api/notifications/devices',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
-      (_) async => Response<List<dynamic>>(
+      (_) async => Response<Map<String, dynamic>>(
         data: null,
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/devices'),
+        requestOptions: RequestOptions(path: '/api/notifications/devices'),
       ),
     );
 

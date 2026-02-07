@@ -29,6 +29,7 @@ const SubmitAppealSchema = z.object({
 });
 
 const APPEAL_WINDOW_MINUTES = 5;
+const DEFAULT_REQUIRED_VOTES = 3;
 
 interface SubmitAppealParams {
   request: HttpRequest;
@@ -237,7 +238,7 @@ export async function submitAppealHandler({
       votesFor: 0,
       votesAgainst: 0,
       totalVotes: 0,
-      requiredVotes: 0,
+      requiredVotes: DEFAULT_REQUIRED_VOTES,
       hasReachedQuorum: false,
 
       // Timestamps

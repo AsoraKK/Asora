@@ -1,7 +1,13 @@
 import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { withClient } from '@shared/clients/postgres';
-import type { CreatePostRequest, Post, PostView, PublicUserProfile } from '@shared/types/openapi';
+import type {
+  CreatePostRequest,
+  Post,
+  PostView,
+  PublicUserProfile,
+  UpdatePostRequest,
+} from '@shared/types/openapi';
 import type { ModerationMeta } from '@feed/types';
 import { profileService } from '@users/service/profileService';
 import { usersService } from '@auth/service/usersService';
@@ -47,6 +53,8 @@ interface PostDocument {
     reasons?: string[];
     error?: string;
   };
+  aiLabel?: 'human' | 'generated';
+  aiDetected?: boolean;
 }
 
 class PostsService {
@@ -64,7 +72,8 @@ class PostsService {
     request: CreatePostRequest,
     postId?: string,
     moderationMeta?: ModerationMeta,
-    testContext?: TestModeContext
+    testContext?: TestModeContext,
+    aiContext?: { aiLabel?: 'human' | 'generated'; aiDetected?: boolean }
   ): Promise<Post> {
     const now = Date.now();
     const id = postId || uuidv7();
@@ -112,12 +121,57 @@ class PostsService {
             status: 'clean',
             checkedAt: now,
           },
+      aiLabel: aiContext?.aiLabel ?? request.aiLabel ?? 'human',
+      aiDetected: aiContext?.aiDetected ?? false,
     };
 
     const container = getTargetDatabase().posts;
     await container.items.create<PostDocument>(postDocument);
 
     return this.mapToPost(postDocument);
+  }
+
+  /**
+   * Update an existing post.
+   */
+  async updatePost(
+    postId: string,
+    updates: UpdatePostRequest,
+    moderationMeta?: ModerationMeta,
+    aiContext?: { aiLabel?: 'human' | 'generated'; aiDetected?: boolean }
+  ): Promise<Post | null> {
+    const existing = await this.getPostById(postId);
+    if (!existing) {
+      return null;
+    }
+
+    const now = Date.now();
+    const updated: PostDocument = {
+      ...existing,
+      content: updates.content ?? existing.content,
+      contentType: updates.contentType ?? existing.contentType,
+      mediaUrls: updates.mediaUrls ?? existing.mediaUrls,
+      topics: updates.topics ?? existing.topics,
+      visibility: updates.visibility ?? existing.visibility,
+      isNews: updates.isNews ?? existing.isNews,
+      updatedAt: now,
+      moderation: moderationMeta
+        ? {
+            status: moderationMeta.status,
+            checkedAt: moderationMeta.checkedAt,
+            confidence: moderationMeta.confidence,
+            categories: moderationMeta.categories,
+            reasons: moderationMeta.reasons,
+            error: moderationMeta.error,
+          }
+        : existing.moderation,
+      aiLabel: aiContext?.aiLabel ?? updates.aiLabel ?? existing.aiLabel ?? 'human',
+      aiDetected: aiContext?.aiDetected ?? existing.aiDetected ?? false,
+    };
+
+    const container = getTargetDatabase().posts;
+    await container.item(postId, postId).replace(updated);
+    return this.mapToPost(updated);
   }
 
   /**

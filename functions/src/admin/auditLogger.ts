@@ -4,6 +4,7 @@ import { getCosmosDatabase } from '@shared/clients/cosmos';
 export type AdminAuditAction =
   | 'CONTENT_BLOCK'
   | 'CONTENT_PUBLISH'
+  | 'APPEAL_OVERRIDE'
   | 'APPEAL_APPROVE'
   | 'APPEAL_REJECT'
   | 'USER_DISABLE'

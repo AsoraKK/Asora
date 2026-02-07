@@ -84,12 +84,16 @@ void main() {
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async =>
-          _response({'success': true}, '/api/posts/post-1', statusCode: 200),
+      (_) async => _response(
+        <String, dynamic>{},
+        '/api/posts/post-1',
+        statusCode: 204,
+      ),
     );
 
     final result = await service.deletePost(postId: 'post-1', token: 'token');
     expect(result['success'], true);
+    expect(result['postId'], 'post-1');
   });
 
   test('PostService deletePost throws on failure', () async {

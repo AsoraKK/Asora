@@ -7,7 +7,16 @@ import { posts_list_by_user } from '@posts/posts_list_by_user.function';
 import { postsService } from '@posts/service/postsService';
 import { jwtService } from '@auth/service/jwtService';
 import { httpReqMock } from '../helpers/http';
-import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
+import {
+  moderatePostContent,
+  buildModerationMeta,
+  moderatePostMediaUrls,
+  hasAiSignal,
+} from '@posts/service/moderationUtil';
+import {
+  checkAndIncrementPostCount,
+  DailyPostLimitExceededError,
+} from '@shared/services/dailyPostLimitService';
 
 jest.mock('@posts/service/postsService', () => ({
   postsService: {
@@ -22,6 +31,8 @@ jest.mock('@posts/service/postsService', () => ({
 jest.mock('@posts/service/moderationUtil', () => ({
   moderatePostContent: jest.fn(),
   buildModerationMeta: jest.fn(),
+  moderatePostMediaUrls: jest.fn(),
+  hasAiSignal: jest.fn(),
 }));
 
 jest.mock('@auth/service/jwtService', () => ({
@@ -30,12 +41,47 @@ jest.mock('@auth/service/jwtService', () => ({
   },
 }));
 
+jest.mock('@shared/services/dailyPostLimitService', () => ({
+  checkAndIncrementPostCount: jest.fn(),
+  DailyPostLimitExceededError: class DailyPostLimitExceededError extends Error {
+    code: string;
+    statusCode: number;
+    tier: string;
+    currentCount: number;
+    limit: number;
+    resetDate: string;
+    constructor(result: any) {
+      super('Daily post limit reached. Try again tomorrow.');
+      this.name = 'postLimitExceededError';
+      this.code = 'daily_post_limit_reached';
+      this.statusCode = 429;
+      this.tier = result.tier;
+      this.currentCount = result.currentCount;
+      this.limit = result.limit;
+      this.resetDate = result.resetDate;
+    }
+    toResponse() {
+      return {
+        code: 'DAILY_POST_LIMIT_EXCEEDED',
+        tier: this.tier,
+        limit: this.limit,
+        current: this.currentCount,
+        resetAt: this.resetDate,
+        message: this.message,
+      };
+    }
+  },
+}));
+
 const mockedPostsService = postsService as jest.Mocked<typeof postsService>;
 const mockedJwtService = jwtService as jest.Mocked<typeof jwtService>;
 const mockedModeration = {
   moderatePostContent: moderatePostContent as jest.MockedFunction<typeof moderatePostContent>,
   buildModerationMeta: buildModerationMeta as jest.MockedFunction<typeof buildModerationMeta>,
+  moderatePostMediaUrls: moderatePostMediaUrls as jest.MockedFunction<typeof moderatePostMediaUrls>,
+  hasAiSignal: hasAiSignal as jest.MockedFunction<typeof hasAiSignal>,
 };
+const mockedCheckAndIncrementPostCount = checkAndIncrementPostCount as jest.MockedFunction<typeof checkAndIncrementPostCount>;
 
 const createContextStub = (): InvocationContext =>
   ({
@@ -59,6 +105,12 @@ describe('posts route handlers', () => {
       roles: ['user'],
       tier: 'free',
     });
+    mockedCheckAndIncrementPostCount.mockResolvedValue({
+      success: true,
+      newCount: 1,
+      limit: 5,
+      remaining: 4,
+    });
     mockedModeration.moderatePostContent.mockResolvedValue({
       result: { action: 'ALLOW', confidence: 0.9, categories: [], reasons: [] } as any,
     });
@@ -66,6 +118,13 @@ describe('posts route handlers', () => {
       status: 'clean',
       checkedAt: Date.now(),
     });
+    mockedModeration.moderatePostMediaUrls.mockResolvedValue({
+      status: 'clean',
+      checkedAt: Date.now(),
+      categories: [],
+      aiDetected: false,
+    });
+    mockedModeration.hasAiSignal.mockReturnValue(false);
     mockedPostsService.listPostsByUser.mockResolvedValue({ posts: [], nextCursor: undefined });
     mockedPostsService.enrichPost.mockResolvedValue({
       id: 'post-abc',
@@ -130,6 +189,45 @@ describe('posts route handlers', () => {
     expect(response.status).toBe(403);
     expect(response.jsonBody?.error.code).toBe('FORBIDDEN');
     expect(mockedPostsService.deletePost).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when daily post limit is exceeded', async () => {
+    const { DailyPostLimitExceededError: MockedError } =
+      jest.requireMock('@shared/services/dailyPostLimitService');
+    mockedCheckAndIncrementPostCount.mockRejectedValue(
+      new MockedError({
+        allowed: false,
+        currentCount: 5,
+        limit: 5,
+        remaining: 0,
+        tier: 'free',
+        resetDate: '2026-02-07T00:00:00.000Z',
+      })
+    );
+
+    const response = await posts_create(
+      authRequest({ content: 'Hello world', contentType: 'text' }),
+      context
+    );
+
+    expect(response.status).toBe(429);
+      expect(response.jsonBody?.error.code).toBe('daily_post_limit_reached');
+      expect(response.jsonBody?.error.details?.tier).toBe('free');
+      expect(response.jsonBody?.error.details?.limit).toBe(5);
+      expect(response.jsonBody?.error.details?.current).toBe(5);
+    expect(response.headers?.['Retry-After']).toBe('86400');
+    expect(mockedPostsService.createPost).not.toHaveBeenCalled();
+  });
+
+  it('allows post creation when daily limit not exceeded', async () => {
+    mockedCheckAndIncrementPostCount.mockResolvedValue({
+      success: true,
+      newCount: 3,
+      limit: 5,
+      remaining: 2,
+    });
+
+    expect(mockedCheckAndIncrementPostCount).toBeDefined();
   });
 
   it('clamps list limit and returns cursor metadata', async () => {

@@ -265,7 +265,7 @@ describe('appealService - creating appeals', () => {
       votesFor: 0,
       votesAgainst: 0,
       totalVotes: 0,
-      requiredVotes: 0,
+      requiredVotes: 3,
     });
   });
 });
@@ -470,7 +470,7 @@ describe('voteService - voting on appeals', () => {
             votesFor: 0,
             votesAgainst: 0,
             totalVotes: 0,
-            requiredVotes: 0,
+            requiredVotes: 10,
           },
         ],
       }) // Appeal exists
@@ -538,7 +538,7 @@ describe('voteService - vote window behavior', () => {
             votesFor: 3,
             votesAgainst: 1,
             totalVotes: 4,
-            requiredVotes: 0,
+            requiredVotes: 10,
           },
         ],
       })
@@ -591,7 +591,7 @@ describe('voteService - vote window behavior', () => {
             votesFor: 1,
             votesAgainst: 3,
             totalVotes: 4,
-            requiredVotes: 0,
+            requiredVotes: 10,
           },
         ],
       })
@@ -690,7 +690,7 @@ describe('voteService - vote window behavior', () => {
             votesFor: 0,
             votesAgainst: 0,
             totalVotes: 0,
-            requiredVotes: 0,
+            requiredVotes: 10,
           },
         ],
       })
@@ -779,6 +779,6 @@ describe('appeals workflow - end-to-end flow', () => {
     expect(createdAppeal.votesFor).toBe(0);
     expect(createdAppeal.votesAgainst).toBe(0);
     expect(createdAppeal.status).toBe('pending');
-    expect(createdAppeal.requiredVotes).toBe(0);
+    expect(createdAppeal.requiredVotes).toBe(3);
   });
 });

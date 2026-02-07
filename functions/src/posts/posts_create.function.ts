@@ -14,8 +14,32 @@ import { httpHandler } from '@shared/http/handler';
 import type { CreatePostRequest, Post } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
-import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
+import {
+  moderatePostContent,
+  buildModerationMeta,
+  moderatePostMediaUrls,
+  hasAiSignal,
+} from '@posts/service/moderationUtil';
 import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
+import {
+  checkAndIncrementPostCount,
+  DailyPostLimitExceededError,
+} from '@shared/services/dailyPostLimitService';
+
+function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
+  if (label === undefined || label === null) {
+    return undefined;
+  }
+  if (typeof label !== 'string') {
+    return undefined;
+  }
+
+  const normalized = label.trim().toLowerCase();
+  if (normalized === 'human' || normalized === 'generated') {
+    return normalized;
+  }
+  return undefined;
+}
 
 export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => {
   // Extract test mode context FIRST (before any other processing)
@@ -45,6 +69,51 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     // Extract and verify JWT
     const auth = await extractAuthContext(ctx);
 
+    // ─────────────────────────────────────────────────────────────
+    // Daily Post Limit Enforcement
+    // ─────────────────────────────────────────────────────────────
+    if (!testContext.isTestMode) {
+      try {
+        const limitResult = await checkAndIncrementPostCount(auth.userId, auth.tier);
+        ctx.context.log('[posts_create] Daily post limit check passed', {
+          userId: auth.userId.slice(0, 8),
+          tier: auth.tier,
+          newCount: limitResult.newCount,
+          remaining: limitResult.remaining,
+        });
+      } catch (limitError) {
+        if (
+          limitError instanceof DailyPostLimitExceededError ||
+          (limitError !== null &&
+            typeof limitError === 'object' &&
+            'code' in limitError &&
+            (limitError as any).code === 'daily_post_limit_reached')
+        ) {
+          const err = limitError as DailyPostLimitExceededError;
+          ctx.context.warn?.('[posts_create] Daily post limit exceeded', {
+            userId: auth.userId.slice(0, 8),
+            tier: auth.tier,
+          });
+            const response = ctx.tooManyRequests(
+              err.message,
+              'daily_post_limit_reached',
+              {
+                tier: err.toResponse().tier,
+                limit: err.toResponse().limit,
+                current: err.toResponse().current,
+                resetAt: err.toResponse().resetAt,
+              }
+            );
+            response.headers = {
+              ...response.headers,
+              'Retry-After': '86400',
+            };
+            return response;
+        }
+        throw limitError;
+      }
+    }
+
     // Validate request body
     if (!ctx.body) {
       return ctx.badRequest('Request body is required', 'INVALID_REQUEST');
@@ -60,6 +129,13 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     if (!contentType) {
       return ctx.badRequest('Content type is required', 'INVALID_CONTENT_TYPE');
     }
+
+    const rawAiLabel = (ctx.body as unknown as Record<string, unknown>).aiLabel;
+    if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
+      return ctx.badRequest('aiLabel must be "human" or "generated"', 'INVALID_AI_LABEL');
+    }
+
+    const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? 'human');
 
     // Generate post ID for moderation tracking
     const postId = crypto.randomUUID();
@@ -90,13 +166,74 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       });
     }
 
+    const mediaModeration = await moderatePostMediaUrls(
+      ctx.body.mediaUrls,
+      auth.userId,
+      postId,
+      ctx.context
+    );
+
+    if (mediaModeration.status === 'blocked') {
+      return ctx.badRequest('Media violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        categories: mediaModeration.categories,
+        confidence: mediaModeration.confidence,
+      });
+    }
+
+    const aiDetected =
+      hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
+
+    if (effectiveAiLabel === 'generated') {
+      return ctx.badRequest(
+        'AI-generated content cannot be published. You can appeal this decision.',
+        'AI_CONTENT_BLOCKED',
+        { appealEligible: true }
+      );
+    }
+
+    if (aiDetected && effectiveAiLabel !== 'generated') {
+      return ctx.badRequest(
+        'Potential AI-generated content must be labeled and is not publishable.',
+        'AI_LABEL_REQUIRED',
+        {
+          appealEligible: true,
+          categories: [
+            ...(moderationMeta.categories ?? []),
+            ...mediaModeration.categories,
+          ],
+        }
+      );
+    }
+
+    const mergedCategories = Array.from(
+      new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
+    );
+    const mergedConfidence = Math.max(
+      moderationMeta.confidence ?? 0,
+      mediaModeration.confidence ?? 0
+    );
+    const mergedStatus =
+      moderationMeta.status === 'warned' || mediaModeration.status === 'warned'
+        ? 'warned'
+        : moderationMeta.status;
+
     // Create post using service with moderation metadata and test context
     const post = await postsService.createPost(
       auth.userId, 
       ctx.body, 
       postId, 
-      moderationMeta,
-      testContext  // Pass test context for data isolation
+      {
+        ...moderationMeta,
+        status: mergedStatus,
+        categories: mergedCategories.length > 0 ? mergedCategories : undefined,
+        confidence: mergedConfidence > 0 ? mergedConfidence : undefined,
+        error: moderationMeta.error ?? mediaModeration.error,
+      },
+      testContext,  // Pass test context for data isolation
+      {
+        aiLabel: effectiveAiLabel === 'generated' ? 'generated' : 'human',
+        aiDetected,
+      }
     );
     
     // Log test post creation for audit trail

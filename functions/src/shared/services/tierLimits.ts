@@ -22,6 +22,10 @@ export interface TierLimits {
   dailyAppeals: number;
   /** Minimum cooldown between exports, in days */
   exportCooldownDays: number;
+  /** Maximum media file size in MB */
+  maxMediaSizeMB: number;
+  /** Maximum media attachments per post */
+  maxMediaPerPost: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,6 +43,8 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyLikes: parseInt(process.env.TIER_FREE_DAILY_LIKES ?? '100', 10),
     dailyAppeals: parseInt(process.env.TIER_FREE_DAILY_APPEALS ?? '1', 10),
     exportCooldownDays: parseInt(process.env.TIER_FREE_EXPORT_COOLDOWN_DAYS ?? '30', 10),
+    maxMediaSizeMB: 10,
+    maxMediaPerPost: 1,
   },
   premium: {
     dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '20', 10),
@@ -46,6 +52,8 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyLikes: parseInt(process.env.TIER_PREMIUM_DAILY_LIKES ?? '1000', 10),
     dailyAppeals: parseInt(process.env.TIER_PREMIUM_DAILY_APPEALS ?? '3', 10),
     exportCooldownDays: parseInt(process.env.TIER_PREMIUM_EXPORT_COOLDOWN_DAYS ?? '7', 10),
+    maxMediaSizeMB: 25,
+    maxMediaPerPost: 4,
   },
   black: {
     dailyPosts: parseInt(process.env.TIER_BLACK_DAILY_POSTS ?? '50', 10),
@@ -53,6 +61,8 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyLikes: parseInt(process.env.TIER_BLACK_DAILY_LIKES ?? '1500', 10),
     dailyAppeals: parseInt(process.env.TIER_BLACK_DAILY_APPEALS ?? '10', 10),
     exportCooldownDays: parseInt(process.env.TIER_BLACK_EXPORT_COOLDOWN_DAYS ?? '1', 10),
+    maxMediaSizeMB: 25,
+    maxMediaPerPost: 5,
   },
   admin: {
     // Admins have effectively unlimited (very high) limits
@@ -61,6 +71,8 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyLikes: 10000,
     dailyAppeals: 10000,
     exportCooldownDays: 0,
+    maxMediaSizeMB: 50,
+    maxMediaPerPost: 10,
   },
 };
 
@@ -155,4 +167,20 @@ export function getDailyAppealLimit(tier: string | undefined | null): number {
 export function getExportCooldownDays(tier: string | undefined | null): number {
   const normalizedTier = normalizeTier(tier);
   return TIER_LIMITS[normalizedTier].exportCooldownDays;
+}
+
+/**
+ * Get the maximum media file size in MB for a tier
+ */
+export function getMaxMediaSizeMB(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].maxMediaSizeMB;
+}
+
+/**
+ * Get the maximum number of media attachments per post for a tier
+ */
+export function getMaxMediaPerPost(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].maxMediaPerPost;
 }

@@ -52,6 +52,8 @@ const config: Config = {
     '^@rate-limit/(.*)$': '<rootDir>/src/rate-limit/$1',
     '^@http/(.*)$': '<rootDir>/src/http/$1',
     '^@admin/(.*)$': '<rootDir>/src/admin/$1',
+    '^@media/(.*)$': '<rootDir>/src/media/$1',
+    '^@payments/(.*)$': '<rootDir>/src/payments/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts', '<rootDir>/tests/jest.setup.ts'],
   verbose: false,

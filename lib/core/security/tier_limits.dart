@@ -9,7 +9,10 @@ class TierLimits {
 
 const Map<String, TierLimits> kTierLimits = {
   'free': TierLimits(500, 1, 5),
-  'pro': TierLimits(2000, 4, 20),
+  'premium': TierLimits(2000, 2, 20),
+  'black': TierLimits(5000, 5, 50),
+  // Legacy alias retained for backwards compatibility.
+  'pro': TierLimits(2000, 2, 20),
   'admin': TierLimits(5000, 10, 100),
   'dev': TierLimits(5000, 10, 100),
 };

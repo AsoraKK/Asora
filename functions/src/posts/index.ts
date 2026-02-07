@@ -9,6 +9,7 @@ import './posts_get_by_id.function';
 import './posts_get_insights.function';
 import './posts_delete.function';
 import './posts_list_by_user.function';
+import './posts_update.function';
 import './posts_like.function';
 import './posts_bookmark.function';
 import './posts_view.function';

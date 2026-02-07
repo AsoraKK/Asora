@@ -25,11 +25,12 @@ export interface ErrorResponse {
 // ============================================================================
 
 export interface AuthTokenRequest {
-  grant_type: 'authorization_code' | 'magic_link';
+  grant_type: 'authorization_code' | 'refresh_token';
+  client_id: string;
   code?: string;
-  provider?: 'google' | 'apple' | 'email';
   redirect_uri?: string;
   code_verifier?: string;
+  refresh_token?: string;
 }
 
 export interface AuthTokenResponse {
@@ -98,6 +99,17 @@ export interface CreatePostRequest {
   topics?: string[];
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
+  aiLabel?: 'human' | 'generated';
+}
+
+export interface UpdatePostRequest {
+  content?: string;
+  contentType?: 'text' | 'image' | 'video' | 'mixed';
+  mediaUrls?: string[];
+  topics?: string[];
+  visibility?: 'public' | 'followers' | 'private';
+  isNews?: boolean;
+  aiLabel?: 'human' | 'generated';
 }
 
 export interface Post {
