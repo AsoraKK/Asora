@@ -35,15 +35,16 @@ const bool kEnableCertPinning = bool.fromEnvironment(
 const Map<String, List<String>> kPinnedDomains = {
   // Dev Function App origin
   'asora-function-dev.azurewebsites.net': [
+    'Eii21xSYPiPq5Qk1dN8OSAum+Q5Rm/fVuT0lG6nqBuk=',
     'Z3AiGp9DlTnC3kBo2OuHwOQioV4d2JMmVyTYkhwrGJo=',
     'vJ6M3i+5a+DFTIsiBT8oChn+90/pUsO3qQP9rkv0QdI=',
     'oyz1YegTss9+AE696+KzxtEGe2KMUXvj1XUUGvsr2CA=',
   ],
   // Legacy/dev hostname (if still called by any client)
   'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net': [
-    'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
     'sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
     '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=',
+    'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
   ],
 };
 
