@@ -6,6 +6,11 @@
 // All functions must be imported synchronously for the programmatic model to work.
 // Async imports can cause functions to not be registered if the host scans before they load.
 
+// Bootstrap: environment validation and observability
+import './shared/appInsights'; // initialize App Insights early
+import { validateStartupEnvironment } from './shared/startup-validation';
+validateStartupEnvironment();
+
 // Health endpoint - must load synchronously for reliability
 import './health/health.function';
 import './shared/routes/ready';

@@ -198,46 +198,39 @@ class _FeedPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (feed.type == FeedType.discover ||
-        feed.type == FeedType.news ||
-        feed.type == FeedType.custom) {
-      final liveState = ref.watch(liveFeedStateProvider(feed));
-      if (liveState.isInitialLoading) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (liveState.errorMessage != null && liveState.items.isEmpty) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(liveState.errorMessage!, textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () =>
-                      ref.read(liveFeedStateProvider(feed).notifier).refresh(),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-      return _buildLiveFeed(
-        context,
-        ref,
-        items: liveState.items,
-        hasMore: liveState.hasMore,
-        isLoadingMore: liveState.isLoadingMore,
-      );
+    if (feed.type == FeedType.moderation) {
+      return const Center(child: Text('Moderation feed not in carousel.'));
     }
 
-    final asyncItems = ref.watch(liveFeedItemsProvider(feed));
-    return asyncItems.when(
-      data: (items) => _buildFeed(items),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => _buildFeed(ref.read(feedItemsProvider(feed.id))),
+    final liveState = ref.watch(liveFeedStateProvider(feed));
+    if (liveState.isInitialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (liveState.errorMessage != null && liveState.items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(liveState.errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () =>
+                    ref.read(liveFeedStateProvider(feed).notifier).refresh(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return _buildLiveFeed(
+      context,
+      ref,
+      items: liveState.items,
+      hasMore: liveState.hasMore,
+      isLoadingMore: liveState.isLoadingMore,
     );
   }
 
@@ -383,19 +376,6 @@ class _FeedPage extends ConsumerWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
-
-  Widget _buildFeed(List<FeedItem> items) {
-    switch (feed.type) {
-      case FeedType.discover:
-        return DiscoverFeed(feed: feed, items: items);
-      case FeedType.news:
-        return NewsFeed(feed: feed, items: items);
-      case FeedType.custom:
-        return CustomFeedView(feed: feed, items: items);
-      case FeedType.moderation:
-        return const Center(child: Text('Moderation feed not in carousel.'));
     }
   }
 }

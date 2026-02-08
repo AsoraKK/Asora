@@ -65,7 +65,7 @@ void main() {
     await tester.tap(historyTab);
     await tester.pumpAndSettle();
     expect(
-      find.text('History feed coming with backend wiring.'),
+      find.text('No moderation history yet'),
       findsOneWidget,
     );
 

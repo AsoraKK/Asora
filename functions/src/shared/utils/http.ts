@@ -37,6 +37,32 @@ interface SuccessResponse<T> {
   requestId?: string;
 }
 
+/**
+ * Allowed CORS origins. In production, restrict to known front-end origins.
+ */
+const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
+  : ['*'];
+
+function getAllowedOrigin(requestOrigin?: string): string {
+  if (ALLOWED_ORIGINS.includes('*')) return '*';
+  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
+  return ALLOWED_ORIGINS[0] ?? '*';
+}
+
+/**
+ * Standard security headers applied to every response.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
 export function createSuccessResponse<T>(
   data: T,
   additionalHeaders: Record<string, string> = {},
@@ -52,13 +78,11 @@ export function createSuccessResponse<T>(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
       'Access-Control-Max-Age': '86400',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
+      ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
     body: JSON.stringify(response),
@@ -82,13 +106,11 @@ export function createErrorResponse(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
       'Access-Control-Max-Age': '86400',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
+      ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
     body: JSON.stringify(response),
@@ -112,13 +134,11 @@ export function createErrorResponseWithCode(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
       'Access-Control-Max-Age': '86400',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
+      ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
     body: JSON.stringify(response),
@@ -129,7 +149,7 @@ export function createCorsResponse() {
   return {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getAllowedOrigin(),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
       'Access-Control-Max-Age': '86400',

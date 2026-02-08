@@ -151,6 +151,42 @@ class AnalyticsEvents {
   /// - recoverable: bool
   static const String errorEncountered = 'error_encountered';
 
+  // ===== Social Actions =====
+
+  /// User followed or unfollowed another user
+  ///
+  /// Properties:
+  /// - action: string (follow, unfollow)
+  static const String socialFollowToggle = 'social_follow_toggle';
+
+  /// User shared content
+  ///
+  /// Properties:
+  /// - method: string (clipboard, external)
+  /// - content_type: string (post, profile)
+  static const String contentShared = 'content_shared';
+
+  /// User opened or changed notification preferences
+  static const String notificationPrefsChanged = 'notification_prefs_changed';
+
+  /// User edited their profile
+  ///
+  /// Properties:
+  /// - fields_changed: int (number of fields updated)
+  static const String profileEdited = 'profile_edited';
+
+  /// User completed a search
+  ///
+  /// Properties:
+  /// - result_count: int
+  static const String searchPerformed = 'search_performed';
+
+  /// Deep link was triggered
+  ///
+  /// Properties:
+  /// - type: string (post, profile, invite, settings)
+  static const String deepLinkNavigated = 'deep_link_navigated';
+
   // ===== Property Keys (for consistency) =====
 
   static const String propScreenName = 'screen_name';

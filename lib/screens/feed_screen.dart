@@ -150,7 +150,8 @@ class _FeedListState extends ConsumerState<_FeedList> {
         },
       );
     });
-    // seed mock data
+    // seed mock data — this screen is used only in admin preview flow
+    // (see preview_flow_wrapper.dart). Production feed uses HomeFeedNavigator.
     _posts = List.generate(20, (i) {
       return domain.Post(
         id: 'p$i',

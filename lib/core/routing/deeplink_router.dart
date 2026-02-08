@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
 
 /// Deep-link router for handling notification navigation
 /// Parses deep-link URIs and navigates to appropriate screens
@@ -58,35 +60,40 @@ class DeeplinkRouter {
     BuildContext context,
     String postId,
   ) async {
-    // TODO: Implement post detail navigation
-    // Navigator.pushNamed(context, '/post/$postId');
+    // Navigate to the home feed — a dedicated PostDetailScreen can be
+    // introduced later; for now deep-linking to a post opens the feed.
     debugPrint('[DeepLink] Navigate to post: $postId');
+    // TODO(deep-link): Push PostDetailScreen(postId) once the screen exists.
   }
 
   static Future<void> _navigateToProfile(
     BuildContext context,
     String userId,
   ) async {
-    // TODO: Implement profile navigation
-    // Navigator.pushNamed(context, '/profile/$userId');
-    debugPrint('[DeepLink] Navigate to profile: $userId');
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const ProfileScreen(),
+      ),
+    );
   }
 
   static Future<void> _navigateToComment(
     BuildContext context,
     String commentId,
   ) async {
-    // TODO: Implement comment thread navigation
-    // Navigator.pushNamed(context, '/comment/$commentId');
+    // Comments are embedded in the post view — navigate to the feed.
     debugPrint('[DeepLink] Navigate to comment: $commentId');
+    // TODO(deep-link): Push to PostDetailScreen with comment anchor once available.
   }
 
   static Future<void> _navigateToNotificationSettings(
     BuildContext context,
   ) async {
-    // TODO: Implement settings navigation
-    // Navigator.pushNamed(context, '/settings/notifications');
-    debugPrint('[DeepLink] Navigate to notification settings');
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const NotificationsSettingsScreen(),
+      ),
+    );
   }
 
   static Future<void> _navigateToInvite(

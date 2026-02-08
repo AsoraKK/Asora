@@ -2,15 +2,22 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/data/mock/mock_moderation.dart';
 import 'package:asora/state/models/moderation.dart';
 
+/// Moderation queue — starts empty; populate via API calls from
+/// the moderation console providers
+/// (see [moderation_console_providers.dart] for the API-backed equivalents).
 final moderationQueueProvider = StateProvider<List<ModerationCase>>(
-  (ref) => mockModerationQueue,
+  (ref) => <ModerationCase>[],
 );
 
-final appealsProvider = StateProvider<List<AppealCase>>((ref) => mockAppeals);
+final appealsProvider =
+    StateProvider<List<AppealCase>>((ref) => <AppealCase>[]);
 
 final moderationStatsProvider = Provider<ModerationStats>(
-  (ref) => mockModerationStats,
+  (ref) => const ModerationStats(
+    queueSize: 0,
+    appealOpen: 0,
+    decisionsToday: 0,
+  ),
 );

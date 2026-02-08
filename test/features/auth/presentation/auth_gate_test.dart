@@ -174,7 +174,6 @@ void main() {
             (ref, _) => _StaticLiveFeedNotifier(items),
           ),
           liveFeedItemsProvider.overrideWith((ref, _) async => items),
-          feedItemsProvider.overrideWith((ref, _) => items),
           publicUserProvider('u1').overrideWith((ref) => Future.value(profile)),
         ],
         child: MaterialApp(

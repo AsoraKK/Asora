@@ -39,8 +39,7 @@ class ModerationCaseScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: Spacing.xs),
                 Text(
-                  'Anonymized content with evidence placeholders. Live data will '
-                  'attach media and reporter notes.',
+                  caseItem.anonymizedContent,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],

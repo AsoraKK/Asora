@@ -1,12 +1,14 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/feed/presentation/post_insights_panel.dart';
+import 'package:asora/features/feed/application/social_feed_providers.dart';
 import 'package:asora/widgets/post_actions.dart';
 import 'package:asora/widgets/moderation_badges.dart';
 import 'package:asora/widgets/appeal_dialog.dart';
@@ -333,19 +335,55 @@ class _PostCardState extends ConsumerState<PostCard> {
   void _handleLike() {
     // Guard: Block likes on compromised devices
     runWithDeviceGuard(context, ref, IntegrityUseCase.like, () async {
-      // TODO: Implement like functionality with postStateProvider
-      debugPrint('Like pressed for post ${widget.post.id}');
+      try {
+        await ref.read(postProvider(widget.post.id).notifier).toggleLike();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not like post: $e')),
+          );
+        }
+      }
     });
   }
 
   void _handleComment() {
-    // Navigate to comments or show comment sheet
-    debugPrint('Comment pressed for post ${widget.post.id}');
+    // Navigate to comment input — currently a bottom sheet placeholder.
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Comments', style: Theme.of(ctx).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            Text(
+              'Comments coming soon.',
+              style: Theme.of(ctx).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
   }
 
   void _handleShare() {
-    // Implement share functionality
-    debugPrint('Share pressed for post ${widget.post.id}');
+    // Copy shareable link to clipboard
+    final link = 'https://lythaus.app/post/${widget.post.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Link copied to clipboard')),
+      );
+    }
   }
 
   String _formatTimeAgo(DateTime dateTime) {

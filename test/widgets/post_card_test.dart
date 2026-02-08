@@ -160,10 +160,7 @@ void main() {
       ),
     );
 
-    expect(
-      find.textContaining('community voted to approve'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('community voted to approve'), findsOneWidget);
     expect(find.text('Appeal decision'), findsNothing);
   });
 
@@ -182,10 +179,7 @@ void main() {
       ),
     );
 
-    expect(
-      find.textContaining('community voted to keep'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('community voted to keep'), findsOneWidget);
     expect(find.text('Appeal decision'), findsNothing);
   });
 
@@ -220,10 +214,7 @@ void main() {
   });
 
   testWidgets('dismisses moderation banner when close pressed', (tester) async {
-    final post = _buildPost(
-      id: 'p10',
-      status: ModerationStatus.flagged,
-    );
+    final post = _buildPost(id: 'p10', status: ModerationStatus.flagged);
 
     await tester.pumpWidget(
       ProviderScope(

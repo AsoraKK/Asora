@@ -1,13 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-
-final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio();
-  // NOTE(asora-appeals): configure baseUrl and auth header via interceptors when auth wiring is complete.
-  return dio;
-});
+import 'package:asora/core/network/dio_client.dart';
 
 final appealProvider = Provider<AppealService>((ref) => AppealService(ref));
 
@@ -16,9 +10,9 @@ class AppealService {
   AppealService(this.ref);
   Future<bool> submit(String postId, String reason) async {
     try {
-      final dio = ref.read(dioProvider);
+      final dio = ref.read(secureDioProvider);
       await dio.post<void>(
-        '/api/appeals',
+        '/appeals',
         data: {'postId': postId, 'reason': reason},
       );
       return true;

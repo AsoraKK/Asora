@@ -64,18 +64,6 @@ void main() {
       ),
     ];
 
-    final items = [
-      FeedItem(
-        id: 'i1',
-        feedId: 'discover',
-        author: 'Alex',
-        contentType: ContentType.text,
-        title: 'Title',
-        body: 'Body',
-        publishedAt: DateTime(2024, 1, 1),
-      ),
-    ];
-
     final container = ProviderContainer(
       overrides: [
         feedListProvider.overrideWith((ref) => feeds),
@@ -92,7 +80,6 @@ void main() {
             ),
           ]),
         ),
-        feedItemsProvider.overrideWith((ref, _) => items),
       ],
     );
     addTearDown(container.dispose);

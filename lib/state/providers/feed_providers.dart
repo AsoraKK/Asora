@@ -31,30 +31,6 @@ const List<FeedModel> _systemFeeds = [
   ),
 ];
 
-final List<FeedItem> _fallbackFeedItems = [
-  FeedItem(
-    id: 'fallback-discover-1',
-    feedId: 'discover',
-    author: 'Lythaus Team',
-    contentType: ContentType.text,
-    title: 'Discover updates are loading',
-    body: 'Pull to refresh while we reconnect to live feed data.',
-    publishedAt: DateTime(2026, 1, 1),
-    tags: ['discover'],
-  ),
-  FeedItem(
-    id: 'fallback-news-1',
-    feedId: 'news',
-    author: 'Lythaus Newsroom',
-    contentType: ContentType.text,
-    title: 'News updates are loading',
-    body: 'Latest trusted coverage will appear after reconnect.',
-    publishedAt: DateTime(2026, 1, 1),
-    isNews: true,
-    tags: ['news'],
-  ),
-];
-
 final customFeedServiceProvider = Provider<CustomFeedService>((ref) {
   final dio = ref.watch(secureDioProvider);
   return CustomFeedService(dio);
@@ -85,13 +61,6 @@ final feedListProvider = Provider<List<FeedModel>>((ref) {
   }
 
   return merged;
-});
-
-final feedItemsProvider = Provider.family<List<FeedItem>, String>((
-  ref,
-  feedId,
-) {
-  return _fallbackFeedItemsFor(feedId);
 });
 
 final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
@@ -149,10 +118,6 @@ final currentFeedProvider = Provider<FeedModel>((ref) {
   final index = ref.watch(currentFeedIndexProvider);
   final safeIndex = index.clamp(0, feeds.length - 1);
   return feeds[safeIndex];
-});
-
-final newsFeedProvider = Provider<List<FeedItem>>((ref) {
-  return ref.watch(feedItemsProvider('news'));
 });
 
 class LiveFeedState {
@@ -366,23 +331,4 @@ FeedItem _mapPostToFeedItem(domain.Post post) {
     isNews: post.isNews,
     isPinned: post.metadata?.isPinned ?? false,
   );
-}
-
-List<FeedItem> _fallbackFeedItemsFor(String feedId) {
-  final items = _fallbackFeedItems.where((item) => item.feedId == feedId).toList();
-  if (items.isNotEmpty) {
-    return items;
-  }
-
-  return [
-    FeedItem(
-      id: 'fallback-generic-1',
-      feedId: 'fallback',
-      author: 'Lythaus Team',
-      contentType: ContentType.text,
-      title: 'Feed temporarily unavailable',
-      body: 'Retry in a moment to load live content.',
-      publishedAt: DateTime(2026, 1, 1),
-    ),
-  ];
 }

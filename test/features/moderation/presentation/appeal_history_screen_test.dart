@@ -64,7 +64,9 @@ VotingProgress _progress({
 }
 
 void main() {
-  testWidgets('AppealHistoryScreen renders data, tabs, and details', (tester) async {
+  testWidgets('AppealHistoryScreen renders data, tabs, and details', (
+    tester,
+  ) async {
     final now = DateTime.now();
     final appeals = [
       _appeal(
@@ -102,9 +104,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          myAppealsProvider.overrideWith((ref) async => appeals),
-        ],
+        overrides: [myAppealsProvider.overrideWith((ref) async => appeals)],
         child: const MaterialApp(home: AppealHistoryScreen()),
       ),
     );
@@ -138,9 +138,7 @@ void main() {
   testWidgets('AppealHistoryScreen shows empty state', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          myAppealsProvider.overrideWith((ref) async => []),
-        ],
+        overrides: [myAppealsProvider.overrideWith((ref) async => [])],
         child: const MaterialApp(home: AppealHistoryScreen()),
       ),
     );

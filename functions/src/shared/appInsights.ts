@@ -28,12 +28,12 @@ function ensureClient(): TelemetryClient | null {
     if (!appInsights.defaultClient) {
       appInsights
         .setup(INSTRUMENTATION_CONNECTION_STRING!)
-        .setAutoCollectConsole(false)
-        .setAutoCollectDependencies(false)
-        .setAutoCollectPerformance(false)
-        .setAutoCollectRequests(false)
-        .setAutoCollectExceptions(false)
-        .setSendLiveMetrics(false)
+        .setAutoCollectConsole(true)
+        .setAutoCollectDependencies(true)
+        .setAutoCollectPerformance(true, true)
+        .setAutoCollectRequests(true)
+        .setAutoCollectExceptions(true)
+        .setSendLiveMetrics(true)
         .start();
     }
 
@@ -96,6 +96,49 @@ export function trackAppEvent(event: AppEvent): void {
   client.trackEvent({
     name: event.name,
     properties: normalizeProperties(event.properties),
+  });
+}
+
+/**
+ * Track an exception in Application Insights.
+ */
+export function trackException(error: Error, properties?: Record<string, string | number | boolean | undefined>): void {
+  const client = ensureClient();
+  if (!client) {
+    return;
+  }
+
+  client.trackException({
+    exception: error,
+    properties: normalizeProperties(properties),
+  });
+}
+
+/**
+ * Track outbound dependency calls (Cosmos, Redis, external HTTP).
+ */
+export function trackDependency(opts: {
+  dependencyTypeName: string;
+  name: string;
+  data: string;
+  duration: number;
+  resultCode: number;
+  success: boolean;
+  target?: string;
+}): void {
+  const client = ensureClient();
+  if (!client) {
+    return;
+  }
+
+  client.trackDependency({
+    dependencyTypeName: opts.dependencyTypeName,
+    name: opts.name,
+    data: opts.data,
+    duration: opts.duration,
+    resultCode: opts.resultCode,
+    success: opts.success,
+    target: opts.target,
   });
 }
 

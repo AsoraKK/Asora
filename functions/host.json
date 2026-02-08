@@ -8,8 +8,18 @@
   "logging": {
     "applicationInsights": {
       "samplingSettings": {
-        "isEnabled": true
-      }
+        "isEnabled": true,
+        "maxTelemetryItemsPerSecond": 20,
+        "excludedTypes": "Request;Dependency;Trace;Exception"
+      },
+      "enableLiveMetrics": true,
+      "enableDependencyTracking": true,
+      "enablePerformanceCountersCollection": true
+    },
+    "logLevel": {
+      "default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
     }
   }
 }
