@@ -120,6 +120,7 @@ final List<FeedItem> mockFeedItems = [
     id: 'f3',
     feedId: 'news',
     author: 'Lythaus Newsdesk',
+    sourceName: 'Lythaus Newsdesk',
     contentType: ContentType.text,
     title: 'Hybrid model explainer',
     body: 'Verified journalists pair with high-rep locals for layered context.',
@@ -132,6 +133,8 @@ final List<FeedItem> mockFeedItems = [
     id: 'f4',
     feedId: 'news',
     author: 'Reuters (synd.)',
+    sourceName: 'Reuters',
+    sourceUrl: 'https://www.reuters.com/',
     contentType: ContentType.image,
     title: 'Infrastructure bill edges forward',
     body:

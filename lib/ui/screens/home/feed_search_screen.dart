@@ -110,6 +110,8 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
       id: post.id,
       feedId: 'search',
       author: post.authorUsername,
+      sourceName: post.source?.name,
+      sourceUrl: post.source?.url,
       contentType: type,
       title: post.metadata?.category ?? 'Result',
       body: post.text,
@@ -118,7 +120,7 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
           : null,
       publishedAt: post.createdAt,
       tags: post.metadata?.tags ?? const [],
-      isNews: post.metadata?.category == 'news',
+      isNews: post.isNews,
       isPinned: post.metadata?.isPinned ?? false,
     );
   }

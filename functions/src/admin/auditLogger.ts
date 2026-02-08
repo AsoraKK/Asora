@@ -12,7 +12,8 @@ export type AdminAuditAction =
   | 'INVITE_CREATE'
   | 'INVITE_BATCH_CREATE'
   | 'INVITE_REVOKE'
-  | 'FLAG_RESOLVE';
+  | 'FLAG_RESOLVE'
+  | 'NEWS_INGEST';
 
 export type AdminAuditTargetType = 'content' | 'appeal' | 'user' | 'invite' | 'flag';
 

@@ -117,4 +117,33 @@ void main() {
 
     expect(find.text('Mixed'), findsOneWidget);
   });
+
+  testWidgets('shows source metadata label and link indicator for news item', (
+    tester,
+  ) async {
+    final feedItem = FeedItem(
+      id: 'feed-5',
+      feedId: 'news',
+      author: 'Reporter Name',
+      sourceName: 'Reuters',
+      sourceUrl: 'https://www.reuters.com/world/',
+      contentType: ContentType.text,
+      title: 'News headline',
+      body: 'News body',
+      publishedAt: DateTime.utc(2025, 1, 5),
+      isNews: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: FeedCard(item: feedItem, onTap: () {})),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reuters'), findsOneWidget);
+    expect(find.text('Reporter Name'), findsNothing);
+    expect(find.byIcon(Icons.link), findsOneWidget);
+  });
 }

@@ -3,6 +3,7 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 export interface CosmosUserProfile {
   id: string;
   displayName: string;
+  username?: string;
   bio?: string;
   avatarUrl?: string;
   location?: string;
@@ -39,12 +40,14 @@ class ProfileService {
   async createProfile(
     userId: string,
     displayName: string,
-    avatarUrl?: string
+    avatarUrl?: string,
+    username?: string
   ): Promise<CosmosUserProfile> {
     const now = new Date().toISOString();
     const profile: CosmosUserProfile = {
       id: userId,
       displayName,
+      username,
       avatarUrl,
       bio: '',
       location: '',
@@ -88,14 +91,15 @@ class ProfileService {
   async ensureProfile(
     userId: string,
     displayName: string,
-    avatarUrl?: string
+    avatarUrl?: string,
+    username?: string
   ): Promise<CosmosUserProfile> {
     const existing = await this.getProfile(userId);
     if (existing) {
       return existing;
     }
 
-    return this.createProfile(userId, displayName, avatarUrl);
+    return this.createProfile(userId, displayName, avatarUrl, username);
   }
 
   /**

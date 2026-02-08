@@ -24,6 +24,9 @@ class FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    final sourceLabel = (item.sourceName != null && item.sourceName!.trim().isNotEmpty)
+        ? item.sourceName!.trim()
+        : item.author;
     final headline = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
     );
@@ -52,7 +55,21 @@ class FeedCard extends StatelessWidget {
                   ),
                 Expanded(child: Text(item.title, style: headline)),
                 if (showSource)
-                  Text(item.author, style: theme.textTheme.labelMedium),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(sourceLabel, style: theme.textTheme.labelMedium),
+                      if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(left: spacing.xs),
+                          child: Icon(
+                            Icons.link,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ),
             SizedBox(height: spacing.xs),

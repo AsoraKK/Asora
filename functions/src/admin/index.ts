@@ -16,6 +16,7 @@ import './routes/appeals_action.function';
 import './routes/appeals_override.function';
 import './routes/users_search.function';
 import './routes/users_action.function';
+import './routes/news_ingest.function';
 
 // Moderation class weight management endpoints
 import './get-moderation-classes.function';

@@ -95,6 +95,8 @@ class FeedItem {
   final String id;
   final String feedId;
   final String author;
+  final String? sourceName;
+  final String? sourceUrl;
   final ContentType contentType;
   final String title;
   final String body;
@@ -109,6 +111,8 @@ class FeedItem {
     required this.id,
     required this.feedId,
     required this.author,
+    this.sourceName,
+    this.sourceUrl,
     required this.contentType,
     required this.title,
     required this.body,

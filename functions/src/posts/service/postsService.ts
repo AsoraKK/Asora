@@ -3,6 +3,7 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { withClient } from '@shared/clients/postgres';
 import type {
   CreatePostRequest,
+  NewsSourceMetadata,
   Post,
   PostView,
   PublicUserProfile,
@@ -23,6 +24,7 @@ interface PostDocument {
   topics?: string[];
   visibility: 'public' | 'followers' | 'private';
   isNews: boolean;
+  source?: NewsSourceMetadata;
   clusterId?: string;
   status: string;
   createdAt: number;
@@ -399,6 +401,7 @@ class PostsService {
       topics: post.topics,
       visibility: post.visibility,
       isNews: post.isNews,
+      source: post.source,
       clusterId: post.clusterId,
       createdAt: new Date(post.createdAt).toISOString(),
       updatedAt: new Date(post.updatedAt).toISOString(),
@@ -430,6 +433,7 @@ class PostsService {
       topics: doc.topics,
       visibility: doc.visibility,
       isNews: doc.isNews,
+      source: doc.source,
       clusterId: doc.clusterId,
       createdAt: new Date(doc.createdAt).toISOString(),
       updatedAt: new Date(doc.updatedAt).toISOString(),

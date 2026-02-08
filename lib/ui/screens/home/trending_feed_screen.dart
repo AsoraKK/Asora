@@ -53,6 +53,8 @@ class TrendingFeedScreen extends ConsumerWidget {
       id: post.id,
       feedId: 'trending',
       author: post.authorUsername,
+      sourceName: post.source?.name,
+      sourceUrl: post.source?.url,
       contentType: type,
       title: post.metadata?.category ?? 'Update',
       body: post.text,
@@ -61,7 +63,7 @@ class TrendingFeedScreen extends ConsumerWidget {
           : null,
       publishedAt: post.createdAt,
       tags: post.metadata?.tags ?? const [],
-      isNews: post.metadata?.category == 'news',
+      isNews: post.isNews,
       isPinned: post.metadata?.isPinned ?? false,
     );
   }

@@ -107,13 +107,15 @@ FeedItem _mapPostToFeedItem(domain.Post post) {
     id: post.id,
     feedId: 'live',
     author: post.authorUsername,
+    sourceName: post.source?.name,
+    sourceUrl: post.source?.url,
     contentType: type,
     title: post.metadata?.category ?? 'Update',
     body: post.text,
     imageUrl: post.mediaUrls?.isNotEmpty == true ? post.mediaUrls!.first : null,
     publishedAt: post.createdAt,
     tags: post.metadata?.tags ?? const [],
-    isNews: post.metadata?.category == 'news',
+    isNews: post.isNews,
     isPinned: post.metadata?.isPinned ?? false,
   );
 }

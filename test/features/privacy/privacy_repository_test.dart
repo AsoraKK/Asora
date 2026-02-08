@@ -89,6 +89,15 @@ void main() {
       },
     );
 
+    test('loadPersistedSnapshot ignores malformed timestamp', () async {
+      store['privacy.lastExportAt'] = 'not-a-date';
+
+      final snapshot = await repository.loadPersistedSnapshot();
+
+      expect(snapshot.lastExportAt, isNull);
+      expect(snapshot.remainingCooldown, Duration.zero);
+    });
+
     test('fetchRemoteStatus prefers server acceptedAt', () async {
       final acceptedAt = now;
       when(
@@ -106,6 +115,26 @@ void main() {
       expect(snapshot.remainingCooldown, const Duration(hours: 24));
       expect(snapshot.serverState, 'queued');
     });
+
+    test(
+      'fetchRemoteStatus falls back to persisted timestamp when server empty',
+      () async {
+        final stored = DateTime.utc(2024, 1, 1, 7);
+        store['privacy.lastExportAt'] = stored.toIso8601String();
+        when(
+          () => api.getExportStatus(authToken: any(named: 'authToken')),
+        ).thenAnswer((_) async {
+          return const ExportStatusDTO(
+            state: 'idle',
+            acceptedAt: null,
+            retryAfterSeconds: null,
+          );
+        });
+
+        final snapshot = await repository.fetchRemoteStatus(authToken: 'token');
+        expect(snapshot.lastExportAt, stored.toLocal());
+      },
+    );
 
     test(
       'fetchRemoteStatus derives timestamp from retryAfterSeconds',
@@ -126,6 +155,21 @@ void main() {
         expect(snapshot.lastExportAt, isNotNull);
       },
     );
+
+    test('requestExport clamps retryAfter to cooldown window', () async {
+      final acceptedAt = DateTime.utc(2024, 1, 1, 10);
+      when(
+        () => api.requestExport(authToken: any(named: 'authToken')),
+      ).thenAnswer((_) async {
+        return ExportRequestResult(
+          acceptedAt: acceptedAt,
+          retryAfter: const Duration(hours: 48),
+        );
+      });
+
+      final snapshot = await repository.requestExport(authToken: 'token');
+      expect(snapshot.remainingCooldown, const Duration(hours: 24));
+    });
 
     test('deleteAccount clears persisted export timestamp', () async {
       when(
@@ -158,6 +202,63 @@ void main() {
                 (e) => e.retryAfter,
                 'retryAfter',
                 const Duration(hours: 1),
+              ),
+        ),
+      );
+    });
+
+    test('maps unauthorized api exception to sign-in message', () async {
+      when(
+        () => api.requestExport(authToken: any(named: 'authToken')),
+      ).thenThrow(const PrivacyApiException(PrivacyErrorType.unauthorized));
+
+      await expectLater(
+        repository.requestExport(authToken: 'token'),
+        throwsA(
+          isA<PrivacyException>()
+              .having((e) => e.type, 'type', PrivacyErrorType.unauthorized)
+              .having(
+                (e) => e.message,
+                'message',
+                'Session expired. Please sign in.',
+              ),
+        ),
+      );
+    });
+
+    test('maps network api exception to generic retry message', () async {
+      when(
+        () => api.requestExport(authToken: any(named: 'authToken')),
+      ).thenThrow(const PrivacyApiException(PrivacyErrorType.network));
+
+      await expectLater(
+        repository.requestExport(authToken: 'token'),
+        throwsA(
+          isA<PrivacyException>()
+              .having((e) => e.type, 'type', PrivacyErrorType.network)
+              .having(
+                (e) => e.message,
+                'message',
+                'Something went wrong. Try again.',
+              ),
+        ),
+      );
+    });
+
+    test('maps server api exception to generic retry message', () async {
+      when(
+        () => api.requestExport(authToken: any(named: 'authToken')),
+      ).thenThrow(const PrivacyApiException(PrivacyErrorType.server));
+
+      await expectLater(
+        repository.requestExport(authToken: 'token'),
+        throwsA(
+          isA<PrivacyException>()
+              .having((e) => e.type, 'type', PrivacyErrorType.server)
+              .having(
+                (e) => e.message,
+                'message',
+                'Something went wrong. Try again.',
               ),
         ),
       );

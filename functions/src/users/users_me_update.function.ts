@@ -14,6 +14,7 @@ import type { UpdateUserProfileRequest, UserProfile } from '@shared/types/openap
 import { extractAuthContext } from '@shared/http/authContext';
 import { usersService } from '@auth/service/usersService';
 import { profileService } from '@users/service/profileService';
+import { moderateProfileUpdates } from '@users/service/profileModerationService';
 
 export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile>(async (ctx) => {
   ctx.context.log(`[users_me_update] Updating current user profile [${ctx.correlationId}]`);
@@ -34,11 +35,36 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
       return ctx.notFound('User not found', 'USER_NOT_FOUND');
     }
 
+    const moderation = await moderateProfileUpdates(
+      auth.userId,
+      {
+        displayName: updates.displayName,
+        username: updates.username,
+        bio: updates.bio,
+      },
+      ctx.context
+    );
+
+    if (!moderation.allowed) {
+      return ctx.badRequest(
+        'Profile update violates policy and cannot be published right now.',
+        'PROFILE_CONTENT_BLOCKED',
+        {
+          fields: moderation.blockedFields,
+          categories: moderation.categories,
+          appealEligible: true,
+        }
+      );
+    }
+
     // Update Cosmos profile
     const profileUpdates: Record<string, unknown> = {};
 
     if (updates.displayName !== undefined) {
       profileUpdates.displayName = updates.displayName;
+    }
+    if (updates.username !== undefined) {
+      profileUpdates.username = updates.username;
     }
     if (updates.bio !== undefined) {
       profileUpdates.bio = updates.bio;
@@ -56,7 +82,8 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
       cosmosProfile = await profileService.createProfile(
         auth.userId,
         updates.displayName || 'User',
-        updates.avatarUrl
+        updates.avatarUrl,
+        updates.username
       );
     } else if (Object.keys(profileUpdates).length > 0) {
       // Update existing profile
@@ -70,6 +97,7 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
     const userProfile: UserProfile = {
       id: pgUser.id,
       displayName: cosmosProfile.displayName,
+      username: cosmosProfile.username,
       bio: cosmosProfile.bio,
       avatarUrl: cosmosProfile.avatarUrl,
       tier: pgUser.tier,

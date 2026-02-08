@@ -45,6 +45,7 @@ const config: Config = {
   moduleNameMapper: {
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^@auth/(.*)$': '<rootDir>/src/auth/$1',
+    '^@users/(.*)$': '<rootDir>/src/users/$1',
     '^@feed/(.*)$': '<rootDir>/src/feed/$1',
     '^@posts/(.*)$': '<rootDir>/src/posts/$1',
     '^@moderation/(.*)$': '<rootDir>/src/moderation/$1',

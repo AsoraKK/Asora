@@ -3024,6 +3024,8 @@ components:
           $ref: '#/components/schemas/PublicUser'
         isNews:
           type: boolean
+        source:
+          $ref: '#/components/schemas/NewsSourceMetadata'
         authorRole:
           type: string
           enum:
@@ -3032,6 +3034,46 @@ components:
           - user
         promotedForTopic:
           type: string
+    NewsSourceMetadata:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - journalist
+          - curated
+          - partner
+          - wire
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        feedUrl:
+          type: string
+          format: uri
+        externalId:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        ingestedAt:
+          type: string
+          format: date-time
+        ingestedBy:
+          type: string
+        ingestMethod:
+          type: string
+          enum:
+          - admin_api
+          - timer
+      required:
+      - type
+      - name
+      - publishedAt
+      - ingestedAt
+      - ingestedBy
+      - ingestMethod
     SubscriptionStatus:
       type: object
       description: Current subscription state for the authenticated user.

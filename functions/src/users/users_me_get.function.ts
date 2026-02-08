@@ -38,6 +38,7 @@ export const users_me_get = httpHandler<void, UserProfile>(async (ctx) => {
     const userProfile: UserProfile = {
       id: pgUser.id,
       displayName: cosmosProfile.displayName,
+      username: cosmosProfile.username,
       bio: cosmosProfile.bio,
       avatarUrl: cosmosProfile.avatarUrl,
       tier: pgUser.tier,

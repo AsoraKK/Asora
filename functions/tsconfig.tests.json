@@ -12,6 +12,7 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@auth/*": ["src/auth/*"],
+      "@users/*": ["src/users/*"],
       "@feed/*": ["src/feed/*"],
       "@moderation/*": ["src/moderation/*"],
       "@privacy/*": ["src/privacy/*"],

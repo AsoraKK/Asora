@@ -22,6 +22,8 @@ class Post {
   final List<String>? mediaUrls;
   final PostModerationData? moderation;
   final PostMetadata? metadata;
+  final NewsSource? source;
+  final bool isNews;
   final bool userLiked;
   final bool userDisliked;
 
@@ -38,6 +40,8 @@ class Post {
     this.mediaUrls,
     this.moderation,
     this.metadata,
+    this.source,
+    this.isNews = false,
     this.userLiked = false,
     this.userDisliked = false,
   });
@@ -48,6 +52,7 @@ class Post {
     final metadata = _extractMetadata(json);
     final media = json['mediaUrls'];
     final moderation = json['moderation'];
+    final sourceJson = json['source'];
     final username =
         json['authorUsername'] as String? ??
         author?['username'] as String? ??
@@ -71,6 +76,12 @@ class Post {
           ? PostModerationData.fromJson(Map<String, dynamic>.from(moderation))
           : null,
       metadata: metadata,
+      source: sourceJson is Map<String, dynamic>
+          ? NewsSource.fromJson(sourceJson)
+          : sourceJson is Map
+              ? NewsSource.fromJson(Map<String, dynamic>.from(sourceJson))
+              : null,
+      isNews: json['isNews'] as bool? ?? metadata?.category == 'news',
       userLiked:
           json['userLiked'] as bool? ??
           json['viewerHasLiked'] as bool? ??
@@ -96,6 +107,8 @@ class Post {
       if (mediaUrls != null) 'mediaUrls': mediaUrls,
       if (moderation != null) 'moderation': moderation!.toJson(),
       if (metadata != null) 'metadata': metadata!.toJson(),
+      if (source != null) 'source': source!.toJson(),
+      'isNews': isNews,
       'userLiked': userLiked,
       'userDisliked': userDisliked,
     };
@@ -120,6 +133,69 @@ class Post {
       return PostMetadata(location: location, tags: tags, category: category);
     }
     return null;
+  }
+}
+
+class NewsSource {
+  final String type;
+  final String name;
+  final String? url;
+  final String? feedUrl;
+  final String? externalId;
+  final DateTime? publishedAt;
+  final DateTime? ingestedAt;
+  final String? ingestedBy;
+  final String? ingestMethod;
+
+  const NewsSource({
+    required this.type,
+    required this.name,
+    this.url,
+    this.feedUrl,
+    this.externalId,
+    this.publishedAt,
+    this.ingestedAt,
+    this.ingestedBy,
+    this.ingestMethod,
+  });
+
+  factory NewsSource.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(Object? value) {
+      if (value is! String || value.isEmpty) {
+        return null;
+      }
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return NewsSource(
+      type: json['type'] as String? ?? 'curated',
+      name: json['name'] as String? ?? 'Unknown source',
+      url: json['url'] as String?,
+      feedUrl: json['feedUrl'] as String?,
+      externalId: json['externalId'] as String?,
+      publishedAt: parseDate(json['publishedAt']),
+      ingestedAt: parseDate(json['ingestedAt']),
+      ingestedBy: json['ingestedBy'] as String?,
+      ingestMethod: json['ingestMethod'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'name': name,
+      if (url != null) 'url': url,
+      if (feedUrl != null) 'feedUrl': feedUrl,
+      if (externalId != null) 'externalId': externalId,
+      if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
+      if (ingestedAt != null) 'ingestedAt': ingestedAt!.toIso8601String(),
+      if (ingestedBy != null) 'ingestedBy': ingestedBy,
+      if (ingestMethod != null) 'ingestMethod': ingestMethod,
+    };
   }
 }
 

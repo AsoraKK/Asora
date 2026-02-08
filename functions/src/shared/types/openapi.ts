@@ -102,6 +102,18 @@ export interface CreatePostRequest {
   aiLabel?: 'human' | 'generated';
 }
 
+export interface NewsSourceMetadata {
+  type: 'journalist' | 'curated' | 'partner' | 'wire';
+  name: string;
+  url?: string;
+  feedUrl?: string;
+  externalId?: string;
+  publishedAt: string;
+  ingestedAt: string;
+  ingestedBy: string;
+  ingestMethod: 'admin_api' | 'timer';
+}
+
 export interface UpdatePostRequest {
   content?: string;
   contentType?: 'text' | 'image' | 'video' | 'mixed';
@@ -121,6 +133,7 @@ export interface Post {
   topics?: string[];
   visibility: 'public' | 'followers' | 'private';
   isNews: boolean;
+  source?: NewsSourceMetadata;
   clusterId?: string;
   createdAt: string;
   updatedAt: string;

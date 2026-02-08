@@ -57,6 +57,7 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
     const publicProfile: PublicUserProfile = {
       id: pgUser.id,
       displayName: cosmosProfile.displayName,
+      username: cosmosProfile.username,
       bio: cosmosProfile.bio,
       avatarUrl: cosmosProfile.avatarUrl,
       tier: pgUser.tier,

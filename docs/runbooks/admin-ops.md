@@ -118,6 +118,44 @@ curl -s -H "Authorization: Bearer $ADMIN_JWT" \
   "https://<function-host>/api/_admin/audit?limit=50"
 ```
 
+## Curated News Ingestion
+### Manual ingest (admin-triggered)
+```bash
+curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content":"Headline and summary text",
+    "sourceType":"partner",
+    "sourceName":"Reuters",
+    "sourceUrl":"https://www.reuters.com/world/...",
+    "sourceFeedUrl":"https://www.reuters.com/world/rss",
+    "externalId":"reuters:article-id",
+    "publishedAt":"2026-02-08T09:00:00.000Z"
+  }' \
+  "https://<function-host>/api/_admin/news/ingest"
+```
+
+### Automated scheduled pull
+- Function: `curatedNewsIngest` (every 15 minutes).
+- Required env vars:
+  - `CURATED_NEWS_AUTHOR_ID`: user ID used as author for automated ingests.
+  - `CURATED_NEWS_SOURCES_JSON`: JSON array of feed sources.
+- Example `CURATED_NEWS_SOURCES_JSON`:
+```json
+[
+  {
+    "id": "reuters-world",
+    "name": "Reuters",
+    "url": "https://www.reuters.com/world/rss",
+    "format": "rss",
+    "sourceType": "partner",
+    "topics": ["world", "policy"],
+    "maxItems": 10,
+    "enabled": true
+  }
+]
+```
+
 ## Guardrails
 - Admin decisions only flip `PUBLISHED` <-> `BLOCKED`.
 - Appeals are the only review mechanism (no queued or held state).

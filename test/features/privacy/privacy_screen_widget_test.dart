@@ -1,6 +1,7 @@
 import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/presentation/auth_gate.dart';
 import 'package:asora/features/privacy/privacy_settings_screen.dart';
 import 'package:asora/features/privacy/services/privacy_repository.dart';
 import 'package:asora/features/privacy/state/privacy_controller.dart';
@@ -129,6 +130,51 @@ void main() {
       await tester.pump();
 
       expect(find.byType(PrivacyBlockingOverlay), findsOneWidget);
+    });
+
+    testWidgets('shows export success snackbar on email sent state', (
+      tester,
+    ) async {
+      final harness = _buildHarness(state: const PrivacyState());
+      await tester.pumpWidget(harness.widget);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PrivacySettingsScreen)),
+      );
+      final controller = container.read(privacyControllerProvider.notifier);
+
+      controller.state = controller.state.copyWith(
+        exportStatus: ExportStatus.emailSent,
+      );
+      await tester.pump();
+
+      expect(find.text('Export requested. Check your email.'), findsOneWidget);
+    });
+
+    testWidgets('navigates to auth gate when account deletion completes', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final harness = _buildHarness(state: const PrivacyState());
+      await tester.pumpWidget(harness.widget);
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PrivacySettingsScreen)),
+      );
+      final controller = container.read(privacyControllerProvider.notifier);
+
+      controller.state = controller.state.copyWith(
+        deleteStatus: DeleteStatus.deleted,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AuthGate), findsOneWidget);
     });
   });
 }
