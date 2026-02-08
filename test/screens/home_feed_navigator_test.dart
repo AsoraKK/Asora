@@ -1,11 +1,27 @@
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/state/providers/moderation_providers.dart';
 import 'package:asora/ui/components/feed_card.dart';
 import 'package:asora/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _StaticLiveFeedNotifier extends LiveFeedController {
+  _StaticLiveFeedNotifier(List<FeedItem> items)
+    : super(
+        LiveFeedState(
+          items: items,
+          isInitialLoading: false,
+          isLoadingMore: false,
+        ),
+      );
+
+  @override
+  Future<void> loadMore() async {}
+
+  @override
+  Future<void> refresh() async {}
+}
 
 void main() {
   testWidgets('home feed navigator switches feeds and renders views', (
@@ -63,9 +79,20 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         feedListProvider.overrideWith((ref) => feeds),
-        liveFeedItemsProvider.overrideWith((ref, feed) async => items),
+        liveFeedStateProvider.overrideWith(
+          (ref, feed) => _StaticLiveFeedNotifier([
+            FeedItem(
+              id: '${feed.id}-1',
+              feedId: feed.id,
+              author: 'Alex',
+              contentType: ContentType.text,
+              title: 'Title',
+              body: 'Body',
+              publishedAt: DateTime(2024, 1, 1),
+            ),
+          ]),
+        ),
         feedItemsProvider.overrideWith((ref, _) => items),
-        appealsProvider.overrideWith((ref) => []),
       ],
     );
     addTearDown(container.dispose);
@@ -91,7 +118,8 @@ void main() {
     expect(find.byType(FeedCard), findsWidgets);
 
     container.read(currentFeedIndexProvider.notifier).state = 1;
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(
       find.text('Hybrid newsroom + high reputation contributors.'),
@@ -99,8 +127,9 @@ void main() {
     );
 
     container.read(currentFeedIndexProvider.notifier).state = 2;
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Custom feed'), findsOneWidget);
+    expect(container.read(currentFeedProvider).id, 'custom');
   });
 }

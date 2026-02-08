@@ -12,15 +12,21 @@ import type { PatchOperation } from '@azure/cosmos';
 import { z } from 'zod';
 import { createHiveClient, HiveAIClient } from '@shared/clients/hive';
 import { getTargetDatabase } from '@shared/clients/cosmos';
-import { createRateLimiter, endpointKeyGenerator, defaultKeyGenerator } from '@shared/utils/rateLimiter';
+import {
+  createRateLimiter,
+  endpointKeyGenerator,
+  defaultKeyGenerator,
+} from '@shared/utils/rateLimiter';
 import { getChaosContext } from '@shared/chaos/chaosConfig';
 import { ChaosError, withCosmosChaos, withHiveChaos } from '@shared/chaos/chaosInjectors';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
-import { 
-  getFlagAutoHideThreshold, 
-  getReasonPriorityScore, 
-  getUrgencyMultiplier 
+import {
+  getFlagAutoHideThreshold,
+  getReasonPriorityScore,
+  getUrgencyMultiplier,
 } from '../config/moderationConfigProvider';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../../notifications/types';
 
 // ─────────────────────────────────────────────────────────────
 // Constants (legacy - kept for fallback, dynamic values from admin_config preferred)
@@ -131,7 +137,7 @@ async function calculatePriorityScore(reason: string, urgency: string): Promise<
   // Get dynamic scores from admin config (or use fallback)
   let baseScore: number;
   let multiplier: number;
-  
+
   try {
     baseScore = await getReasonPriorityScore(reason);
     multiplier = await getUrgencyMultiplier(urgency);
@@ -139,7 +145,7 @@ async function calculatePriorityScore(reason: string, urgency: string): Promise<
     baseScore = FALLBACK_REASON_PRIORITY_SCORES[reason] ?? 2;
     multiplier = FALLBACK_URGENCY_MULTIPLIERS[urgency] ?? 1;
   }
-  
+
   return baseScore * multiplier;
 }
 
@@ -314,7 +320,7 @@ export async function flagContentHandler({
 
     // 9. Update content with flag count and flagged status (atomic patch)
     const currentFlagCount = (contentDoc.flagCount ?? 0) + 1;
-    
+
     // Get dynamic threshold from admin config (or use fallback)
     let flagAutoHideThreshold: number;
     try {
@@ -332,7 +338,11 @@ export async function flagContentHandler({
 
     if (shouldAutoHide && contentDoc.status !== 'blocked') {
       patchOperations.push({ op: 'set', path: '/status', value: 'blocked' });
-      context.log('moderation.flag.auto_hidden', { contentId, flagCount: currentFlagCount, threshold: flagAutoHideThreshold });
+      context.log('moderation.flag.auto_hidden', {
+        contentId,
+        flagCount: currentFlagCount,
+        threshold: flagAutoHideThreshold,
+      });
     }
 
     try {
@@ -349,7 +359,33 @@ export async function flagContentHandler({
       });
     } catch (patchError) {
       // Log but don't fail - flag was created successfully
-      context.log('moderation.flag.patch_failed', { contentId, error: (patchError as Error).message });
+      context.log('moderation.flag.patch_failed', {
+        contentId,
+        error: (patchError as Error).message,
+      });
+    }
+
+    if (shouldAutoHide) {
+      const ownerId =
+        contentType === 'user'
+          ? contentId
+          : typeof contentDoc.authorId === 'string'
+            ? contentDoc.authorId
+            : undefined;
+      if (ownerId && ownerId !== userId) {
+        void enqueueUserNotification({
+          context,
+          userId: ownerId,
+          eventType: NotificationEventType.MODERATION_CONTENT_BLOCKED,
+          payload: {
+            targetId: contentId,
+            targetType: contentType,
+            snippet: `Content was blocked after ${currentFlagCount} reports.`,
+            reason,
+          },
+          dedupeKey: `moderation_blocked:${contentId}:${currentFlagCount}`,
+        });
+      }
     }
 
     // 10. Track event and return success

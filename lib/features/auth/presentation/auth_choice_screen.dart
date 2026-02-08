@@ -80,6 +80,40 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     }
   }
 
+  Future<void> _handleCreateAccount(BuildContext context) async {
+    final analytics = _analyticsClient;
+    await analytics.logEvent(
+      AnalyticsEvents.authStarted,
+      properties: {AnalyticsEvents.propMethod: 'create_account'},
+    );
+    try {
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.signUp,
+        () => ref.read(authStateProvider.notifier).signInWithOAuth2(),
+      );
+      if (!mounted) return;
+      await analytics.logEvent(
+        AnalyticsEvents.authCompleted,
+        properties: {
+          AnalyticsEvents.propMethod: 'create_account',
+          AnalyticsEvents.propIsNewUser: true,
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+      await analytics.logEvent(
+        AnalyticsEvents.errorEncountered,
+        properties: {
+          AnalyticsEvents.propErrorType: 'auth',
+          AnalyticsEvents.propRecoverable: true,
+        },
+      );
+      rethrow;
+    }
+  }
+
   void _handleGuestContinue() {
     _analyticsClient.logEvent(
       AnalyticsEvents.authCompleted,
@@ -134,19 +168,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                   const SizedBox(height: 24),
                   LythButton.tertiary(
                     label: 'Create account',
-                    onPressed: () => runWithDeviceGuard(
-                      context,
-                      ref,
-                      IntegrityUseCase.signUp,
-                      () async {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Create account flow coming soon.'),
-                          ),
-                        );
-                      },
-                    ),
+                    onPressed: () => _handleCreateAccount(context),
                   ),
                   const SizedBox(height: 12),
                   LythButton.tertiary(

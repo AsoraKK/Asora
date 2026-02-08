@@ -11,12 +11,12 @@ import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/application/follow_providers.dart';
 import 'package:asora/features/profile/application/follow_service.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 import 'package:asora/ui/theme/spacing.dart';
 import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
-import 'package:asora/ui/screens/mod/moderation_hub.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -167,7 +167,7 @@ class ProfileScreen extends ConsumerWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const ModerationHubScreen(),
+                  builder: (_) => const ModerationConsoleScreen(),
                 ),
               );
             },
@@ -202,7 +202,7 @@ class ProfileScreen extends ConsumerWidget {
     if (!_isProfileComplete(profile)) {
       return;
     }
-    Future<void>(() async {
+    Future<void>.microtask(() async {
       await ref
           .read(analyticsEventTrackerProvider)
           .logEventOnce(

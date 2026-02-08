@@ -2,24 +2,22 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/ui/components/create_post_modal.dart';
+import 'package:asora/features/feed/presentation/create_post_screen.dart';
 
 class CreateModalScreen extends StatelessWidget {
   const CreateModalScreen({super.key});
 
   static Future<void> show(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const Padding(
-        padding: EdgeInsets.only(bottom: 24),
-        child: CreatePostModal(),
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const CreatePostScreen(),
+        fullscreenDialog: true,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const CreatePostModal();
+    return const CreatePostScreen();
   }
 }

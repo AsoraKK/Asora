@@ -2,19 +2,96 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/data/mock/mock_feeds.dart';
+import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/feed/application/custom_feed_service.dart';
 import 'package:asora/features/feed/application/social_feed_providers.dart';
 import 'package:asora/features/feed/domain/models.dart' as domain;
 import 'package:asora/state/models/feed_models.dart';
 
-final feedListProvider = Provider<List<FeedModel>>((ref) => mockFeeds);
+const List<FeedModel> _systemFeeds = [
+  FeedModel(
+    id: 'discover',
+    name: 'Discover',
+    type: FeedType.discover,
+    contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
+    sorting: SortingRule.hot,
+    refinements: FeedRefinements(),
+    subscriptionLevelRequired: 0,
+    isHome: true,
+  ),
+  FeedModel(
+    id: 'news',
+    name: 'News',
+    type: FeedType.news,
+    contentFilters: ContentFilters(allowedTypes: {ContentType.text, ContentType.image}),
+    sorting: SortingRule.newest,
+    refinements: FeedRefinements(),
+    subscriptionLevelRequired: 0,
+  ),
+];
+
+final List<FeedItem> _fallbackFeedItems = [
+  FeedItem(
+    id: 'fallback-discover-1',
+    feedId: 'discover',
+    author: 'Lythaus Team',
+    contentType: ContentType.text,
+    title: 'Discover updates are loading',
+    body: 'Pull to refresh while we reconnect to live feed data.',
+    publishedAt: DateTime(2026, 1, 1),
+    tags: ['discover'],
+  ),
+  FeedItem(
+    id: 'fallback-news-1',
+    feedId: 'news',
+    author: 'Lythaus Newsroom',
+    contentType: ContentType.text,
+    title: 'News updates are loading',
+    body: 'Latest trusted coverage will appear after reconnect.',
+    publishedAt: DateTime(2026, 1, 1),
+    isNews: true,
+    tags: ['news'],
+  ),
+];
+
+final customFeedServiceProvider = Provider<CustomFeedService>((ref) {
+  final dio = ref.watch(secureDioProvider);
+  return CustomFeedService(dio);
+});
+
+final customFeedsProvider = FutureProvider<List<FeedModel>>((ref) async {
+  try {
+    final token = await ref.read(jwtProvider.future);
+    if (token == null || token.isEmpty) {
+      return const [];
+    }
+    return ref
+        .read(customFeedServiceProvider)
+        .listCustomFeeds(token: token, limit: 20);
+  } catch (_) {
+    return const [];
+  }
+});
+
+final feedListProvider = Provider<List<FeedModel>>((ref) {
+  final systemFeeds = _systemFeeds;
+  final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
+
+  final merged = <FeedModel>[...systemFeeds, ...customFeeds];
+
+  if (merged.isNotEmpty && merged.every((feed) => !feed.isHome)) {
+    merged[0] = merged[0].copyWith(isHome: true);
+  }
+
+  return merged;
+});
 
 final feedItemsProvider = Provider.family<List<FeedItem>, String>((
   ref,
   feedId,
 ) {
-  return feedItemsFor(feedId);
+  return _fallbackFeedItemsFor(feedId);
 });
 
 final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
@@ -38,14 +115,26 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
         posts = (await service.getNewsFeed(limit: 25, token: authToken)).posts;
         break;
       case FeedType.custom:
-        return feedItemsFor(feed.id);
+        if (authToken == null) {
+          return const [];
+        }
+        posts =
+            (await ref
+                    .read(customFeedServiceProvider)
+                    .getCustomFeedItems(
+                      token: authToken,
+                      feedId: feed.id,
+                      limit: 25,
+                    ))
+                .posts;
+        break;
       case FeedType.moderation:
         return const [];
     }
 
     return posts.map(_mapPostToFeedItem).toList();
   } catch (_) {
-    return feedItemsFor(feed.id);
+    return const [];
   }
 });
 
@@ -65,6 +154,164 @@ final currentFeedProvider = Provider<FeedModel>((ref) {
 final newsFeedProvider = Provider<List<FeedItem>>((ref) {
   return ref.watch(feedItemsProvider('news'));
 });
+
+class LiveFeedState {
+  const LiveFeedState({
+    this.items = const [],
+    this.nextCursor,
+    this.isInitialLoading = false,
+    this.isLoadingMore = false,
+    this.errorMessage,
+  });
+
+  final List<FeedItem> items;
+  final String? nextCursor;
+  final bool isInitialLoading;
+  final bool isLoadingMore;
+  final String? errorMessage;
+
+  bool get hasMore => nextCursor != null && nextCursor!.isNotEmpty;
+
+  LiveFeedState copyWith({
+    List<FeedItem>? items,
+    String? nextCursor,
+    bool? isInitialLoading,
+    bool? isLoadingMore,
+    String? errorMessage,
+    bool clearCursor = false,
+    bool clearError = false,
+  }) {
+    return LiveFeedState(
+      items: items ?? this.items,
+      nextCursor: clearCursor ? null : (nextCursor ?? this.nextCursor),
+      isInitialLoading: isInitialLoading ?? this.isInitialLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    );
+  }
+}
+
+abstract class LiveFeedController extends StateNotifier<LiveFeedState> {
+  LiveFeedController(super.state);
+
+  Future<void> refresh();
+  Future<void> loadMore();
+}
+
+class LiveFeedNotifier extends LiveFeedController {
+  LiveFeedNotifier(this._ref, this._feed)
+    : super(const LiveFeedState(isInitialLoading: true)) {
+    Future<void>.microtask(_loadInitial);
+  }
+
+  final Ref _ref;
+  final FeedModel _feed;
+
+  Future<void> _loadInitial() async {
+    try {
+      if (_feed.type == FeedType.moderation) {
+        state = state.copyWith(
+          items: const [],
+          clearCursor: true,
+          isInitialLoading: false,
+          isLoadingMore: false,
+          clearError: true,
+        );
+        return;
+      }
+
+      final response = await _fetchRemote();
+      state = state.copyWith(
+        items: response.posts.map(_mapPostToFeedItem).toList(),
+        nextCursor: response.nextCursor,
+        clearCursor: response.nextCursor == null,
+        isInitialLoading: false,
+        isLoadingMore: false,
+        clearError: true,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isInitialLoading: false,
+        isLoadingMore: false,
+        errorMessage: 'Unable to load feed right now.',
+      );
+    }
+  }
+
+  Future<void> refresh() async {
+    state = state.copyWith(isInitialLoading: true, clearError: true);
+    await _loadInitial();
+  }
+
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || state.isInitialLoading || !state.hasMore) {
+      return;
+    }
+
+    final cursor = state.nextCursor;
+    if (cursor == null || cursor.isEmpty) {
+      return;
+    }
+
+    state = state.copyWith(isLoadingMore: true, clearError: true);
+    try {
+      final response = await _fetchRemote(cursor: cursor);
+      state = state.copyWith(
+        items: [...state.items, ...response.posts.map(_mapPostToFeedItem)],
+        nextCursor: response.nextCursor,
+        clearCursor: response.nextCursor == null,
+        isLoadingMore: false,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        errorMessage: 'Unable to load more items.',
+      );
+    }
+  }
+
+  Future<domain.FeedResponse> _fetchRemote({String? cursor}) async {
+    final service = _ref.read(socialFeedServiceProvider);
+    final token = await _ref.read(jwtProvider.future);
+    final authToken = token?.isNotEmpty == true ? token : null;
+
+    switch (_feed.type) {
+      case FeedType.discover:
+        return service.getDiscoverFeed(
+          cursor: cursor,
+          limit: 25,
+          token: authToken,
+        );
+      case FeedType.news:
+        return service.getNewsFeed(cursor: cursor, limit: 25, token: authToken);
+      case FeedType.custom:
+        if (authToken == null) {
+          throw StateError('Sign in to access custom feeds');
+        }
+        return _ref
+            .read(customFeedServiceProvider)
+            .getCustomFeedItems(
+              token: authToken,
+              feedId: _feed.id,
+              cursor: cursor,
+              limit: 25,
+            );
+      case FeedType.moderation:
+        return const domain.FeedResponse(
+          posts: [],
+          totalCount: 0,
+          hasMore: false,
+          page: 1,
+          pageSize: 25,
+        );
+    }
+  }
+}
+
+final liveFeedStateProvider =
+    StateNotifierProvider.family<LiveFeedController, LiveFeedState, FeedModel>(
+      (ref, feed) => LiveFeedNotifier(ref, feed),
+    );
 
 class CustomFeedDraftNotifier extends StateNotifier<CustomFeedDraft> {
   CustomFeedDraftNotifier() : super(const CustomFeedDraft());
@@ -107,6 +354,7 @@ FeedItem _mapPostToFeedItem(domain.Post post) {
     id: post.id,
     feedId: 'live',
     author: post.authorUsername,
+    authorId: post.authorId,
     sourceName: post.source?.name,
     sourceUrl: post.source?.url,
     contentType: type,
@@ -118,4 +366,23 @@ FeedItem _mapPostToFeedItem(domain.Post post) {
     isNews: post.isNews,
     isPinned: post.metadata?.isPinned ?? false,
   );
+}
+
+List<FeedItem> _fallbackFeedItemsFor(String feedId) {
+  final items = _fallbackFeedItems.where((item) => item.feedId == feedId).toList();
+  if (items.isNotEmpty) {
+    return items;
+  }
+
+  return [
+    FeedItem(
+      id: 'fallback-generic-1',
+      feedId: 'fallback',
+      author: 'Lythaus Team',
+      contentType: ContentType.text,
+      title: 'Feed temporarily unavailable',
+      body: 'Retry in a moment to load live content.',
+      publishedAt: DateTime(2026, 1, 1),
+    ),
+  ];
 }

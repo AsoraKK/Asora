@@ -10,7 +10,6 @@ import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/state/providers/moderation_providers.dart';
 import 'package:asora/ui/screens/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +61,24 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     with Mock
     implements AuthStateNotifier {
   _MockAuthStateNotifier(super.initialState);
+}
+
+class _StaticLiveFeedNotifier extends LiveFeedController {
+  _StaticLiveFeedNotifier(List<FeedItem> items)
+    : super(
+        LiveFeedState(
+          items: items,
+          nextCursor: null,
+          isInitialLoading: false,
+          isLoadingMore: false,
+        ),
+      );
+
+  @override
+  Future<void> loadMore() async {}
+
+  @override
+  Future<void> refresh() async {}
 }
 
 void main() {
@@ -153,9 +170,11 @@ void main() {
           analyticsClientProvider.overrideWithValue(analytics),
           analyticsEventTrackerProvider.overrideWithValue(tracker),
           feedListProvider.overrideWith((ref) => feeds),
+          liveFeedStateProvider.overrideWith(
+            (ref, _) => _StaticLiveFeedNotifier(items),
+          ),
           liveFeedItemsProvider.overrideWith((ref, _) async => items),
           feedItemsProvider.overrideWith((ref, _) => items),
-          appealsProvider.overrideWith((ref) => []),
           publicUserProvider('u1').overrideWith((ref) => Future.value(profile)),
         ],
         child: MaterialApp(

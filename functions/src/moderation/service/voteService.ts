@@ -12,6 +12,8 @@ import type { JWTPayload } from 'jose';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { penalizeContentRemoval } from '@shared/services/reputationService';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../../notifications/types';
 
 // Request validation schema - appealId is optional in body since it comes from route param
 const VoteOnAppealSchema = z.object({
@@ -270,7 +272,9 @@ export async function voteOnAppealHandler({
 
     await appealsContainer.item(targetAppealId, appealPartitionKey).replace(appealDoc);
 
-    context.log(`Vote cast on appeal ${targetAppealId} by ${userId}: ${vote} (weight: ${voterWeight})`);
+    context.log(
+      `Vote cast on appeal ${targetAppealId} by ${userId}: ${vote} (weight: ${voterWeight})`
+    );
 
     return {
       status: 200,
@@ -345,6 +349,25 @@ export async function resolveAppealFromVotes({
     finalDecision,
     context,
   });
+
+  const submitterId = typeof appealDoc.submitterId === 'string' ? appealDoc.submitterId : undefined;
+  if (submitterId) {
+    void enqueueUserNotification({
+      context,
+      userId: submitterId,
+      eventType: NotificationEventType.MODERATION_APPEAL_DECIDED,
+      payload: {
+        targetId: String(appealDoc.id ?? appealDoc.contentId ?? ''),
+        targetType: 'appeal',
+        snippet:
+          finalDecision === 'approved'
+            ? 'Your appeal was approved and content was restored.'
+            : 'Your appeal was rejected and content remains blocked.',
+        decision: finalDecision,
+      },
+      dedupeKey: `appeal_decision:${String(appealDoc.id ?? appealDoc.contentId ?? '')}:${finalDecision}`,
+    });
+  }
 
   return finalDecision;
 }
@@ -435,8 +458,9 @@ async function updateContentBasedOnDecision(
       const authorId = content.authorId || content.userId;
       if (authorId && (contentType === 'post' || contentType === 'comment')) {
         // Use flagReason or moderationCategory if available for severity-based penalty
-        const violationType = content.flagReason || content.moderationCategory || content.moderation?.categories?.[0];
-        
+        const violationType =
+          content.flagReason || content.moderationCategory || content.moderation?.categories?.[0];
+
         penalizeContentRemoval(
           authorId,
           contentId,

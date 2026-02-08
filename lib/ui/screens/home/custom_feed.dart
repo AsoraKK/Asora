@@ -8,10 +8,26 @@ import 'package:asora/ui/components/feed_card.dart';
 import 'package:asora/ui/theme/spacing.dart';
 
 class CustomFeedView extends ConsumerWidget {
-  const CustomFeedView({super.key, required this.feed, required this.items});
+  const CustomFeedView({
+    super.key,
+    required this.feed,
+    required this.items,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.onLoadMore,
+    this.onRefresh,
+    this.currentUserId,
+    this.onEditItem,
+  });
 
   final FeedModel feed;
   final List<FeedItem> items;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final VoidCallback? onLoadMore;
+  final Future<void> Function()? onRefresh;
+  final String? currentUserId;
+  final Future<void> Function(FeedItem item)? onEditItem;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,43 +35,84 @@ class CustomFeedView extends ConsumerWidget {
       ...feed.refinements.includeKeywords.map((k) => '+$k'),
       ...feed.refinements.excludeKeywords.map((k) => '-$k'),
     ];
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.md,
-              vertical: Spacing.sm,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Custom feed',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+    return RefreshIndicator(
+      onRefresh: onRefresh ?? () async {},
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (onLoadMore == null || !hasMore || isLoadingMore) {
+            return false;
+          }
+          if (notification.metrics.pixels >=
+              notification.metrics.maxScrollExtent - 200) {
+            onLoadMore!.call();
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.md,
+                  vertical: Spacing.sm,
                 ),
-                const SizedBox(height: Spacing.xs),
-                Wrap(
-                  spacing: Spacing.xs,
-                  children: filters
-                      .map(
-                        (f) => Chip(label: Text(f), padding: EdgeInsets.zero),
-                      )
-                      .toList(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Custom feed',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    Wrap(
+                      spacing: Spacing.xs,
+                      children: filters
+                          .map(
+                            (f) =>
+                                Chip(label: Text(f), padding: EdgeInsets.zero),
+                          )
+                          .toList(),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            SliverList.separated(
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final canEdit =
+                    currentUserId != null && currentUserId == item.authorId;
+                return FeedCard(
+                  item: item,
+                  canEdit: canEdit,
+                  onEdit: canEdit && onEditItem != null
+                      ? () => onEditItem!(item)
+                      : null,
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
+              itemCount: items.length,
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+                child: Center(
+                  child: isLoadingMore
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: Spacing.xl)),
+          ],
         ),
-        SliverList.separated(
-          itemBuilder: (context, index) => FeedCard(item: items[index]),
-          separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
-          itemCount: items.length,
-        ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: Spacing.xl)),
-      ],
+      ),
     );
   }
 }

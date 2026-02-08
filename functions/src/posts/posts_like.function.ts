@@ -1,10 +1,10 @@
 /**
  * Like Post Function (v1 REST)
- * 
+ *
  * POST /api/posts/{id}/like - Like a post
  * DELETE /api/posts/{id}/like - Unlike a post
  * GET /api/posts/{id}/like - Check like status
- * 
+ *
  * OpenAPI: posts_like_create, posts_like_delete, posts_like_get
  */
 
@@ -14,6 +14,8 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostLiked, revokePostLiked } from '@shared/services/reputationService';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../notifications/types';
 import {
   DEVICE_INTEGRITY_BLOCKED_CODE,
   DEVICE_INTEGRITY_BLOCKED_MESSAGE,
@@ -57,7 +59,7 @@ function isNotFoundError(error: unknown): boolean {
  * POST /api/posts/{id}/like - Like a post
  */
 export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: number }>(
-  async (ctx) => {
+  async ctx => {
     const postId = ctx.params.id;
     ctx.context.log(`[posts_like_create] Liking post ${postId} [${ctx.correlationId}]`);
 
@@ -97,7 +99,9 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
       // Check if already liked (idempotent)
       let alreadyLiked = false;
       try {
-        const { resource: existing } = await likesContainer.item(likeId, postId).read<LikeDocument>();
+        const { resource: existing } = await likesContainer
+          .item(likeId, postId)
+          .read<LikeDocument>();
         if (existing) {
           alreadyLiked = true;
         }
@@ -119,14 +123,31 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
         await likesContainer.items.create(likeDoc);
 
         // Increment like count
-        await postsContainer.item(postId, postId).patch([
-          { op: 'incr', path: '/stats/likes', value: 1 },
-        ]);
+        await postsContainer
+          .item(postId, postId)
+          .patch([{ op: 'incr', path: '/stats/likes', value: 1 }]);
 
         // Award reputation to post author (fire and forget)
         if (postDoc.authorId !== auth.userId) {
-          awardPostLiked(postDoc.authorId, postId, auth.userId).catch((err) => {
+          awardPostLiked(postDoc.authorId, postId, auth.userId).catch(err => {
             ctx.context.error(`[posts_like_create] Reputation error: ${err.message}`);
+          });
+
+          const tokenName = (auth.token as unknown as Record<string, unknown>)['name'];
+          const actorName =
+            typeof tokenName === 'string' && tokenName.trim().length > 0 ? tokenName : undefined;
+          void enqueueUserNotification({
+            context: ctx.context,
+            userId: postDoc.authorId,
+            eventType: NotificationEventType.POST_LIKED,
+            payload: {
+              actorId: auth.userId,
+              actorName,
+              targetId: postId,
+              targetType: 'post',
+              snippet: 'Your post received a new like.',
+            },
+            dedupeKey: `post_like:${postId}:${auth.userId}`,
           });
         }
       }
@@ -143,10 +164,15 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
         likeCount: postDoc.stats.likes + (alreadyLiked ? 0 : 1),
       });
     } catch (error) {
-      ctx.context.error(`[posts_like_create] Error: ${error}`, { correlationId: ctx.correlationId });
+      ctx.context.error(`[posts_like_create] Error: ${error}`, {
+        correlationId: ctx.correlationId,
+      });
 
       if (error instanceof Error) {
-        if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
+        if (
+          error.message.includes('JWT verification failed') ||
+          error.message.includes('Missing Authorization')
+        ) {
           return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
         }
       }
@@ -160,7 +186,7 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
  * DELETE /api/posts/{id}/like - Unlike a post
  */
 export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: number }>(
-  async (ctx) => {
+  async ctx => {
     const postId = ctx.params.id;
     ctx.context.log(`[posts_like_delete] Unliking post ${postId} [${ctx.correlationId}]`);
 
@@ -214,13 +240,13 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
 
         // Decrement like count (floor at 0)
         const newCount = Math.max(0, postDoc.stats.likes - 1);
-        await postsContainer.item(postId, postId).patch([
-          { op: 'set', path: '/stats/likes', value: newCount },
-        ]);
+        await postsContainer
+          .item(postId, postId)
+          .patch([{ op: 'set', path: '/stats/likes', value: newCount }]);
 
         // Revoke reputation from post author (fire and forget)
         if (postDoc.authorId !== auth.userId) {
-          revokePostLiked(postDoc.authorId, postId, auth.userId).catch((err) => {
+          revokePostLiked(postDoc.authorId, postId, auth.userId).catch(err => {
             ctx.context.error(`[posts_like_delete] Reputation error: ${err.message}`);
           });
         }
@@ -239,10 +265,15 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
         likeCount: finalCount,
       });
     } catch (error) {
-      ctx.context.error(`[posts_like_delete] Error: ${error}`, { correlationId: ctx.correlationId });
+      ctx.context.error(`[posts_like_delete] Error: ${error}`, {
+        correlationId: ctx.correlationId,
+      });
 
       if (error instanceof Error) {
-        if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
+        if (
+          error.message.includes('JWT verification failed') ||
+          error.message.includes('Missing Authorization')
+        ) {
           return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
         }
       }
@@ -255,65 +286,70 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
 /**
  * GET /api/posts/{id}/like - Check like status
  */
-export const posts_like_get = httpHandler<void, { liked: boolean; likeCount: number }>(async (ctx) => {
-  const postId = ctx.params.id;
-  ctx.context.log(`[posts_like_get] Checking like status for ${postId} [${ctx.correlationId}]`);
+export const posts_like_get = httpHandler<void, { liked: boolean; likeCount: number }>(
+  async ctx => {
+    const postId = ctx.params.id;
+    ctx.context.log(`[posts_like_get] Checking like status for ${postId} [${ctx.correlationId}]`);
 
-  if (!postId) {
-    return ctx.badRequest('Post ID is required', 'INVALID_REQUEST');
-  }
-
-  try {
-    const auth = await extractAuthContext(ctx);
-
-    const db = getTargetDatabase();
-    const postsContainer = db.posts;
-    const likesContainer = db.reactions;
-
-    // Verify post exists and get like count
-    let postDoc: PostDocument;
-    try {
-      const { resource } = await postsContainer.item(postId, postId).read<PostDocument>();
-      if (!resource) {
-        return ctx.notFound('Post not found', 'POST_NOT_FOUND');
-      }
-      postDoc = resource;
-    } catch (error) {
-      if (isNotFoundError(error)) {
-        return ctx.notFound('Post not found', 'POST_NOT_FOUND');
-      }
-      throw error;
+    if (!postId) {
+      return ctx.badRequest('Post ID is required', 'INVALID_REQUEST');
     }
 
-    const likeId = getLikeId(postId, auth.userId);
-
-    // Check if viewer has liked
-    let viewerHasLiked = false;
     try {
-      const { resource } = await likesContainer.item(likeId, postId).read<LikeDocument>();
-      viewerHasLiked = !!resource;
-    } catch (error) {
-      if (!isNotFoundError(error)) {
+      const auth = await extractAuthContext(ctx);
+
+      const db = getTargetDatabase();
+      const postsContainer = db.posts;
+      const likesContainer = db.reactions;
+
+      // Verify post exists and get like count
+      let postDoc: PostDocument;
+      try {
+        const { resource } = await postsContainer.item(postId, postId).read<PostDocument>();
+        if (!resource) {
+          return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+        }
+        postDoc = resource;
+      } catch (error) {
+        if (isNotFoundError(error)) {
+          return ctx.notFound('Post not found', 'POST_NOT_FOUND');
+        }
         throw error;
       }
-    }
 
-    return ctx.ok({
-      liked: viewerHasLiked,
-      likeCount: postDoc.stats.likes,
-    });
-  } catch (error) {
-    ctx.context.error(`[posts_like_get] Error: ${error}`, { correlationId: ctx.correlationId });
+      const likeId = getLikeId(postId, auth.userId);
 
-    if (error instanceof Error) {
-      if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
-        return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+      // Check if viewer has liked
+      let viewerHasLiked = false;
+      try {
+        const { resource } = await likesContainer.item(likeId, postId).read<LikeDocument>();
+        viewerHasLiked = !!resource;
+      } catch (error) {
+        if (!isNotFoundError(error)) {
+          throw error;
+        }
       }
-    }
 
-    return ctx.internalError(error as Error);
+      return ctx.ok({
+        liked: viewerHasLiked,
+        likeCount: postDoc.stats.likes,
+      });
+    } catch (error) {
+      ctx.context.error(`[posts_like_get] Error: ${error}`, { correlationId: ctx.correlationId });
+
+      if (error instanceof Error) {
+        if (
+          error.message.includes('JWT verification failed') ||
+          error.message.includes('Missing Authorization')
+        ) {
+          return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+        }
+      }
+
+      return ctx.internalError(error as Error);
+    }
   }
-});
+);
 
 // Register HTTP triggers
 app.http('posts_like_create', {

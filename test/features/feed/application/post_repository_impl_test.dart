@@ -138,12 +138,59 @@ void main() {
     expect(result, isA<CreatePostError>());
   });
 
-  test('deletePost success and failure', () async {
+  test('updatePost returns success and maps blocked errors', () async {
     when(
-      () => dio.delete<dynamic>(
+      () => dio.patch<Map<String, dynamic>>(
         '/api/posts/p1',
+        data: any(named: 'data'),
         options: any(named: 'options'),
       ),
+    ).thenAnswer(
+      (_) async => _response(_postJson('p1'), '/api/posts/p1', statusCode: 200),
+    );
+
+    final success = await repo.updatePost(
+      postId: 'p1',
+      request: const UpdatePostRequest(text: 'updated'),
+      token: 't1',
+    );
+    expect(success, isA<CreatePostSuccess>());
+
+    when(
+      () => dio.patch<Map<String, dynamic>>(
+        '/api/posts/p1',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/api/posts/p1'),
+        response: _response(
+          {
+            'code': 'AI_LABEL_REQUIRED',
+            'message': 'Potential AI-generated content must be labeled.',
+            'details': {
+              'categories': ['ai_generated'],
+            },
+          },
+          '/api/posts/p1',
+          statusCode: 400,
+        ),
+      ),
+    );
+
+    final blocked = await repo.updatePost(
+      postId: 'p1',
+      request: const UpdatePostRequest(text: 'bad'),
+      token: 't1',
+    );
+    expect(blocked, isA<CreatePostBlocked>());
+  });
+
+  test('deletePost success and failure', () async {
+    when(
+      () =>
+          dio.delete<dynamic>('/api/posts/p1', options: any(named: 'options')),
     ).thenAnswer(
       (_) async =>
           _response(<String, dynamic>{}, '/api/posts/p1', statusCode: 204),
@@ -153,10 +200,8 @@ void main() {
     expect(ok, isTrue);
 
     when(
-      () => dio.delete<dynamic>(
-        '/api/posts/p2',
-        options: any(named: 'options'),
-      ),
+      () =>
+          dio.delete<dynamic>('/api/posts/p2', options: any(named: 'options')),
     ).thenAnswer(
       (_) async =>
           _response({'success': false}, '/api/posts/p2', statusCode: 500),

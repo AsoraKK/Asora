@@ -82,6 +82,38 @@ class CreatePostRequest {
   };
 }
 
+/// Request model for editing an existing post
+class UpdatePostRequest {
+  final String? text;
+  final String? mediaUrl;
+  final bool? isNews;
+  final String? contentType;
+  final String? aiLabel;
+
+  const UpdatePostRequest({
+    this.text,
+    this.mediaUrl,
+    this.isNews,
+    this.contentType,
+    this.aiLabel,
+  });
+
+  bool get isEmpty =>
+      text == null &&
+      mediaUrl == null &&
+      isNews == null &&
+      contentType == null &&
+      aiLabel == null;
+
+  Map<String, dynamic> toJson() => {
+    if (text != null) 'content': text,
+    if (mediaUrl != null) 'mediaUrls': [mediaUrl],
+    if (isNews != null) 'isNews': isNews,
+    if (contentType != null) 'contentType': contentType,
+    if (aiLabel != null) 'aiLabel': aiLabel,
+  };
+}
+
 /// Abstract repository defining post domain operations
 abstract class PostRepository {
   /// Create a new post with content moderation
@@ -96,6 +128,13 @@ abstract class PostRepository {
   /// - [CreatePostError] on other failures
   Future<CreatePostResult> createPost({
     required CreatePostRequest request,
+    required String token,
+  });
+
+  /// Update an existing post with moderation checks
+  Future<CreatePostResult> updatePost({
+    required String postId,
+    required UpdatePostRequest request,
     required String token,
   });
 

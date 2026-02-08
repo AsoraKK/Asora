@@ -8,16 +8,28 @@ import 'package:asora/ui/components/feed_card.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 
 class NewsCard extends StatelessWidget {
-  const NewsCard({super.key, required this.item});
+  const NewsCard({
+    super.key,
+    required this.item,
+    this.canEdit = false,
+    this.onEdit,
+  });
 
   final FeedItem item;
+  final bool canEdit;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Stack(
       children: [
-        FeedCard(item: item, showSource: true),
+        FeedCard(
+          item: item,
+          showSource: true,
+          canEdit: canEdit,
+          onEdit: onEdit,
+        ),
         const Positioned(
           top: Spacing.sm,
           right: Spacing.lg,

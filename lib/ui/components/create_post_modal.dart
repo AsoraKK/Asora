@@ -330,8 +330,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
             LythTextField(
               controller: mediaController,
               label: 'Media URL',
-              helperText:
-                  'Paste an image/video URL. Native picker hooks in later.',
+              helperText: 'Paste an image or video URL.',
             ),
             SizedBox(height: context.spacing.lg),
             LythButton.primary(

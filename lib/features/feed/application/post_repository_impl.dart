@@ -4,7 +4,7 @@
 ///
 /// 🎯 Purpose: HTTP client implementation for post repository
 /// 🏗️ Architecture: Application layer - implements domain contracts
-/// 📡 Endpoints: POST /post, DELETE /posts/{id}, GET /posts/{id}
+/// 📡 Endpoints: POST/PATCH /posts, DELETE /posts/{id}, GET /posts/{id}
 /// 🔐 Authentication: Bearer token from secure storage
 /// 📱 Platform: Flutter with Dio HTTP client
 library;
@@ -66,6 +66,59 @@ class PostRepositoryImpl implements PostRepository {
               'request.is_news': request.isNews,
               'request.content_type': request.contentType,
             }),
+    );
+  }
+
+  @override
+  Future<CreatePostResult> updatePost({
+    required String postId,
+    required UpdatePostRequest request,
+    required String token,
+  }) async {
+    if (request.isEmpty) {
+      return const CreatePostError(
+        message: 'No post updates were provided',
+        code: 'invalid_request',
+      );
+    }
+
+    return AsoraTracer.traceOperation(
+      'PostRepository.updatePost',
+      () async {
+        try {
+          final response = await _dio.patch<Map<String, dynamic>>(
+            '/api/posts/$postId',
+            data: request.toJson(),
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+
+          if (response.statusCode == 200) {
+            final data = response.data as Map<String, dynamic>;
+            final postData = data['post'] as Map<String, dynamic>? ?? data;
+            return CreatePostSuccess(_parsePost(postData));
+          }
+
+          return CreatePostError(
+            message: 'Unexpected response status: ${response.statusCode}',
+            code: 'unexpected_status',
+          );
+        } on DioException catch (e) {
+          return _handleDioError(e);
+        } catch (e) {
+          return CreatePostError(
+            message: 'Failed to update post: ${e.toString()}',
+            originalError: e,
+          );
+        }
+      },
+      attributes:
+          AsoraTracer.httpRequestAttributes(
+            method: 'PATCH',
+            url: '/api/posts/$postId',
+          )..addAll({
+            'request.post_id': postId,
+            'request.updates': request.toJson().keys.join(','),
+          }),
     );
   }
 

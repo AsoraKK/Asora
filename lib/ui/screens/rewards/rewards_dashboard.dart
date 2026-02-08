@@ -14,77 +14,102 @@ class RewardsDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reputation = ref.watch(reputationProvider);
     final tiers = ref.watch(reputationTiersProvider);
-    final nextTier = tiers
-        .where((tier) => tier.minXP > reputation.xp)
-        .fold<ReputationTier?>(null, (prev, tier) {
-          if (prev == null) return tier;
-          return tier.minXP < prev.minXP ? tier : prev;
-        });
-    final progress = nextTier == null
-        ? 1.0
-        : (reputation.xp / nextTier.minXP).clamp(0.0, 1.0).toDouble();
+    final reputationAsync = ref.watch(reputationProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rewards & XP')),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.lg),
-        children: [
-          Center(
-            child: XPProgressRing(
-              progress: progress,
-              tierLabel: reputation.tier.name,
-            ),
-          ),
-          const SizedBox(height: Spacing.lg),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return reputationAsync.when(
+      loading: () => Scaffold(
+        appBar: AppBar(title: const Text('Rewards & XP')),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => Scaffold(
+        appBar: AppBar(title: const Text('Rewards & XP')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Missions',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              const Text('Unable to load rewards right now.'),
+              const SizedBox(height: Spacing.sm),
+              FilledButton(
+                onPressed: () => ref.invalidate(reputationProvider),
+                child: const Text('Retry'),
               ),
-              Text('${reputation.xp} XP'),
             ],
           ),
-          const SizedBox(height: Spacing.sm),
-          ...reputation.missions.map(
-            (mission) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                mission.completed
-                    ? Icons.check_circle
-                    : Icons.timelapse_outlined,
-              ),
-              title: Text(mission.title),
-              trailing: Text('+${mission.xpReward} XP'),
-            ),
-          ),
-          const SizedBox(height: Spacing.lg),
-          Text(
-            'Upcoming rewards',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: Spacing.sm),
-          if (nextTier != null) _tierTile(nextTier),
-          const SizedBox(height: Spacing.lg),
-          Text(
-            'History',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: Spacing.sm),
-          ...reputation.recentAchievements.map(
-            (item) => ListTile(title: Text(item)),
-          ),
-        ],
+        ),
       ),
+      data: (reputation) {
+        final nextTier = tiers
+            .where((tier) => tier.minXP > reputation.xp)
+            .fold<ReputationTier?>(null, (prev, tier) {
+              if (prev == null) return tier;
+              return tier.minXP < prev.minXP ? tier : prev;
+            });
+        final progress = nextTier == null
+            ? 1.0
+            : (reputation.xp / nextTier.minXP).clamp(0.0, 1.0).toDouble();
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('Rewards & XP')),
+          body: ListView(
+            padding: const EdgeInsets.all(Spacing.lg),
+            children: [
+              Center(
+                child: XPProgressRing(
+                  progress: progress,
+                  tierLabel: reputation.tier.name,
+                ),
+              ),
+              const SizedBox(height: Spacing.lg),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Missions',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text('${reputation.xp} XP'),
+                ],
+              ),
+              const SizedBox(height: Spacing.sm),
+              ...reputation.missions.map(
+                (mission) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    mission.completed
+                        ? Icons.check_circle
+                        : Icons.timelapse_outlined,
+                  ),
+                  title: Text(mission.title),
+                  trailing: Text('+${mission.xpReward} XP'),
+                ),
+              ),
+              const SizedBox(height: Spacing.lg),
+              Text(
+                'Upcoming rewards',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Spacing.sm),
+              if (nextTier != null) _tierTile(nextTier),
+              const SizedBox(height: Spacing.lg),
+              Text(
+                'History',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Spacing.sm),
+              ...reputation.recentAchievements.map(
+                (item) => ListTile(title: Text(item)),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

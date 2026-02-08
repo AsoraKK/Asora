@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
 import 'package:asora/ui/components/filter_modal.dart';
@@ -20,6 +21,7 @@ class CustomFeedCreationFlow extends ConsumerStatefulWidget {
 class _CustomFeedCreationFlowState
     extends ConsumerState<CustomFeedCreationFlow> {
   int _currentStep = 0;
+  bool _isCreating = false;
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +47,14 @@ class _CustomFeedCreationFlowState
               if (_currentStep > 0) const SizedBox(width: Spacing.sm),
               Expanded(
                 child: FilledButton(
-                  onPressed: _currentStep < 4 ? _nextStep : null,
-                  child: Text(_currentStep >= 4 ? 'Create' : 'Next'),
+                  onPressed: _isCreating ? null : _handlePrimaryAction,
+                  child: _isCreating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(_currentStep >= 4 ? 'Create' : 'Next'),
                 ),
               ),
             ],
@@ -82,6 +90,74 @@ class _CustomFeedCreationFlowState
   void _previousStep() {
     if (_currentStep > 0) {
       setState(() => _currentStep--);
+    }
+  }
+
+  Future<void> _handlePrimaryAction() async {
+    if (_currentStep < 4) {
+      _nextStep();
+      return;
+    }
+
+    final draft = ref.read(customFeedDraftProvider);
+    if (draft.name.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Choose a name before creating the feed.'),
+        ),
+      );
+      return;
+    }
+
+    final token = await ref.read(jwtProvider.future);
+    if (token == null || token.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to create a custom feed.')),
+      );
+      return;
+    }
+
+    setState(() => _isCreating = true);
+    try {
+      final created = await ref
+          .read(customFeedServiceProvider)
+          .createCustomFeed(token: token, draft: draft);
+
+      ref.read(customFeedDraftProvider.notifier).reset();
+      ref.invalidate(customFeedsProvider);
+      try {
+        await ref.refresh(customFeedsProvider.future);
+      } catch (_) {
+        // The feed is already created server-side; UI can still proceed.
+      }
+
+      final feeds = ref.read(feedListProvider);
+      final index = feeds.indexWhere((feed) => feed.id == created.id);
+      if (index >= 0) {
+        ref.read(currentFeedIndexProvider.notifier).state = index;
+      }
+
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Created "${created.name}"')));
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not create feed: ${error.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isCreating = false);
+      }
     }
   }
 }

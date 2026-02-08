@@ -1,7 +1,38 @@
 name: deploy-asora-function-dev
 
 on:
+  workflow_call:
+    inputs:
+      target_environment:
+        description: "Deployment environment"
+        required: false
+        type: string
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Deployment environment"
+        type: choice
+        required: true
+        default: dev
+        options:
+          - dev
+          - staging
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
   push:
     branches: [ "main" ]
     paths:
@@ -16,13 +47,15 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  RG: asora-psql-flex
-  FUNC_APP: asora-function-dev
+  TARGET_ENV: ${{ github.event.inputs.target_environment || 'dev' }}
+  RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
+  FUNC_APP: ${{ github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
   NODE_VERSION: 20
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target_environment || 'dev' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -377,6 +410,7 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     needs: deploy
+    environment: ${{ github.event.inputs.target_environment || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 

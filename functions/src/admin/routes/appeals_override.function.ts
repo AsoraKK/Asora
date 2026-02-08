@@ -1,10 +1,16 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
-import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
+import {
+  handleCorsAndMethod,
+  createErrorResponse,
+  createSuccessResponse,
+} from '@shared/utils/http';
 import { requireActiveModerator } from '../adminAuthUtils';
 import { fetchContentById } from '../moderationAdminUtils';
 import { recordAdminAudit } from '../auditLogger';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../../notifications/types';
 
 type OverrideDecision = 'allow' | 'block';
 type OverrideReasonCode = 'policy_exception' | 'false_positive' | 'safety_risk' | 'other';
@@ -169,15 +175,23 @@ export async function overrideAppeal(
     const quorumReached = hasReachedQuorum(appeal, totalVotes);
 
     if (status === 'overridden') {
-      const storedKey = typeof appeal.overrideIdempotencyKey === 'string' ? appeal.overrideIdempotencyKey : null;
-      if (storedDecision === decision && (!storedKey || (idempotencyKey && storedKey === idempotencyKey))) {
+      const storedKey =
+        typeof appeal.overrideIdempotencyKey === 'string' ? appeal.overrideIdempotencyKey : null;
+      if (
+        storedDecision === decision &&
+        (!storedKey || (idempotencyKey && storedKey === idempotencyKey))
+      ) {
         return buildSuccessResponse(appealId, decision);
       }
       return createErrorResponse(409, 'appeal_overridden', 'Appeal already overridden');
     }
 
     if (!(status === 'pending' || (quorumReached && storedDecision === null))) {
-      return createErrorResponse(409, 'override_not_allowed', 'Override is not allowed for this appeal');
+      return createErrorResponse(
+        409,
+        'override_not_allowed',
+        'Override is not allowed for this appeal'
+      );
     }
 
     const contentLookup = await fetchContentById(
@@ -228,7 +242,11 @@ export async function overrideAppeal(
     ];
 
     if (idempotencyKey) {
-      appealPatch.push({ op: 'set' as const, path: '/overrideIdempotencyKey', value: idempotencyKey });
+      appealPatch.push({
+        op: 'set' as const,
+        path: '/overrideIdempotencyKey',
+        value: idempotencyKey,
+      });
     }
 
     const appealItem = db.appeals.item(appealId, contentId);
@@ -294,6 +312,26 @@ export async function overrideAppeal(
         idempotencyKey: idempotencyKey ?? null,
       },
     });
+
+    const submitterId = typeof appeal.submitterId === 'string' ? appeal.submitterId : undefined;
+    if (submitterId) {
+      void enqueueUserNotification({
+        context,
+        userId: submitterId,
+        eventType: NotificationEventType.MODERATION_APPEAL_DECIDED,
+        payload: {
+          targetId: appealId,
+          targetType: 'appeal',
+          snippet:
+            decision === 'allow'
+              ? 'A moderator approved your appeal and restored the content.'
+              : 'A moderator denied your appeal and content remains blocked.',
+          decision,
+          overridden: true,
+        },
+        dedupeKey: `appeal_override:${appealId}:${decision}`,
+      });
+    }
 
     return buildSuccessResponse(appealId, decision);
   } catch (error) {

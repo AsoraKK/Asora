@@ -9,6 +9,8 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 import { withDailyCommentLimit } from '@shared/middleware/dailyPostLimit';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../../notifications/types';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -104,8 +106,14 @@ function validateCommentText(
   }
 
   if (trimmed.length > COMMENT_MAX_LENGTH) {
-    context.log('comments.create.validation_failed', { reason: 'text_too_long', length: trimmed.length });
-    return { valid: false, error: `Comment text exceeds maximum length of ${COMMENT_MAX_LENGTH} characters` };
+    context.log('comments.create.validation_failed', {
+      reason: 'text_too_long',
+      length: trimmed.length,
+    });
+    return {
+      valid: false,
+      error: `Comment text exceeds maximum length of ${COMMENT_MAX_LENGTH} characters`,
+    };
   }
 
   return { valid: true, text: trimmed };
@@ -121,103 +129,123 @@ export const createComment = requireActiveUser(
     const postId = req.params?.postId;
     const start = performance.now();
 
-  if (!postId) {
-    context.log('comments.create.missing_post_id');
-    return badRequest('Post ID is required');
-  }
-
-  // Parse body
-  const payload = (await req.json().catch(() => null)) as CreateCommentBody | null;
-  if (!payload || typeof payload !== 'object') {
-    context.log('comments.create.invalid_json');
-    return badRequest('Invalid JSON payload');
-  }
-
-  // Validate text
-  const validation = validateCommentText(payload.text, context);
-  if (!validation.valid) {
-    return badRequest(validation.error);
-  }
-
-  try {
-    const db = getTargetDatabase();
-
-    // Verify post exists (binary content states: only check blocked/deleted)
-    const { resource: post } = await db.posts.item(postId, postId).read();
-    if (!post || post.status === 'blocked' || post.status === 'deleted') {
-      context.log('comments.create.post_not_found', { postId });
-      return notFound();
+    if (!postId) {
+      context.log('comments.create.missing_post_id');
+      return badRequest('Post ID is required');
     }
 
-    const now = Date.now();
-    const commentId = crypto.randomUUID();
+    // Parse body
+    const payload = (await req.json().catch(() => null)) as CreateCommentBody | null;
+    if (!payload || typeof payload !== 'object') {
+      context.log('comments.create.invalid_json');
+      return badRequest('Invalid JSON payload');
+    }
 
-    // Create comment document in posts container with type='comment'
-    const commentDocument: CommentDocument = {
-      id: commentId,
-      commentId,
-      postId,
-      authorId: principal.sub,
-      text: validation.text,
-      status: STATUS_PUBLISHED,
-      createdAt: now,
-      updatedAt: now,
-      _partitionKey: postId,
-      type: 'comment',
-    };
+    // Validate text
+    const validation = validateCommentText(payload.text, context);
+    if (!validation.valid) {
+      return badRequest(validation.error);
+    }
 
-    const { resource: createdComment, requestCharge: createRU } = await db.posts.items.create<CommentDocument>(
-      commentDocument
-    );
+    try {
+      const db = getTargetDatabase();
 
-    // Increment comment count on post (atomic)
-    const { requestCharge: patchRU } = await db.posts.item(postId, postId).patch([
-      { op: 'incr', path: '/stats/comments', value: 1 },
-    ]);
+      // Verify post exists (binary content states: only check blocked/deleted)
+      const { resource: post } = await db.posts.item(postId, postId).read();
+      if (!post || post.status === 'blocked' || post.status === 'deleted') {
+        context.log('comments.create.post_not_found', { postId });
+        return notFound();
+      }
 
-    const duration = performance.now() - start;
-    const totalRU = (createRU ?? 0) + (patchRU ?? 0);
+      const now = Date.now();
+      const commentId = crypto.randomUUID();
 
-    trackAppMetric({
-      name: 'cosmos_ru_comment_create',
-      value: totalRU,
-      properties: { postId, authorId: principal.sub },
-    });
-
-    trackAppEvent({
-      name: 'comment_created',
-      properties: {
+      // Create comment document in posts container with type='comment'
+      const commentDocument: CommentDocument = {
+        id: commentId,
         commentId,
         postId,
         authorId: principal.sub,
-        textLength: validation.text.length,
-        durationMs: duration,
-      },
-    });
+        text: validation.text,
+        status: STATUS_PUBLISHED,
+        createdAt: now,
+        updatedAt: now,
+        _partitionKey: postId,
+        type: 'comment',
+      };
 
-    context.log('comments.create.success', {
-      commentId,
-      postId,
-      authorId: principal.sub,
-      durationMs: duration.toFixed(2),
-      ru: totalRU.toFixed(2),
-    });
+      const { resource: createdComment, requestCharge: createRU } =
+        await db.posts.items.create<CommentDocument>(commentDocument);
 
-    return created({
-      status: 'success',
-      comment: {
-        commentId: createdComment?.commentId ?? commentId,
-        postId: createdComment?.postId ?? postId,
-        authorId: createdComment?.authorId ?? principal.sub,
-        text: createdComment?.text ?? validation.text,
-        createdAt: new Date(createdComment?.createdAt ?? now).toISOString(),
-        updatedAt: new Date(createdComment?.updatedAt ?? now).toISOString(),
-      },
-    });
-  } catch (error) {
-    context.log('comments.create.error', { postId, message: (error as Error).message });
-    return serverError();
-  }
+      // Increment comment count on post (atomic)
+      const { requestCharge: patchRU } = await db.posts
+        .item(postId, postId)
+        .patch([{ op: 'incr', path: '/stats/comments', value: 1 }]);
+
+      const duration = performance.now() - start;
+      const totalRU = (createRU ?? 0) + (patchRU ?? 0);
+
+      trackAppMetric({
+        name: 'cosmos_ru_comment_create',
+        value: totalRU,
+        properties: { postId, authorId: principal.sub },
+      });
+
+      trackAppEvent({
+        name: 'comment_created',
+        properties: {
+          commentId,
+          postId,
+          authorId: principal.sub,
+          textLength: validation.text.length,
+          durationMs: duration,
+        },
+      });
+
+      const postAuthorId = typeof post.authorId === 'string' ? post.authorId : undefined;
+      if (postAuthorId && postAuthorId !== principal.sub) {
+        const actorName =
+          typeof principal.name === 'string' && principal.name.trim().length > 0
+            ? principal.name
+            : undefined;
+        void enqueueUserNotification({
+          context,
+          userId: postAuthorId,
+          eventType: NotificationEventType.COMMENT_CREATED,
+          payload: {
+            actorId: principal.sub,
+            actorName,
+            targetId: postId,
+            targetType: 'post',
+            snippet: validation.text.slice(0, 140),
+          },
+          dedupeKey: `comment:${postId}:${commentId}`,
+        });
+      }
+
+      context.log('comments.create.success', {
+        commentId,
+        postId,
+        authorId: principal.sub,
+        durationMs: duration.toFixed(2),
+        ru: totalRU.toFixed(2),
+      });
+
+      return created({
+        status: 'success',
+        comment: {
+          commentId: createdComment?.commentId ?? commentId,
+          postId: createdComment?.postId ?? postId,
+          authorId: createdComment?.authorId ?? principal.sub,
+          text: createdComment?.text ?? validation.text,
+          createdAt: new Date(createdComment?.createdAt ?? now).toISOString(),
+          updatedAt: new Date(createdComment?.updatedAt ?? now).toISOString(),
+        },
+      });
+    } catch (error) {
+      context.log('comments.create.error', { postId, message: (error as Error).message });
+      return serverError();
+    }
   })
 );
 
@@ -289,9 +317,8 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
     const items = hasMore ? comments.slice(0, limit) : comments;
     const lastItem = items[items.length - 1];
 
-    const nextCursor = hasMore && lastItem
-      ? encodeCursor({ ts: lastItem.createdAt, id: lastItem.commentId })
-      : null;
+    const nextCursor =
+      hasMore && lastItem ? encodeCursor({ ts: lastItem.createdAt, id: lastItem.commentId }) : null;
 
     const duration = performance.now() - start;
 
@@ -310,7 +337,7 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
     });
 
     // Format response with ISO timestamps
-    const formattedComments = items.map((c) => ({
+    const formattedComments = items.map(c => ({
       commentId: c.commentId,
       postId: c.postId,
       authorId: c.authorId,
@@ -340,12 +367,17 @@ export async function listComments(req: HttpRequest, context: InvocationContext)
 /* istanbul ignore next */
 const commentWithTierLimit = withDailyCommentLimit(createComment);
 const rateLimitedCreateComment = withRateLimit(
-  commentWithTierLimit as (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>,
+  commentWithTierLimit as (
+    req: HttpRequest,
+    context: InvocationContext
+  ) => Promise<HttpResponseInit>,
   () => getPolicyForFunction('createComment')
 );
 
 /* istanbul ignore next */
-const rateLimitedListComments = withRateLimit(listComments, () => getPolicyForFunction('listComments'));
+const rateLimitedListComments = withRateLimit(listComments, () =>
+  getPolicyForFunction('listComments')
+);
 
 app.http('createComment', {
   methods: ['POST'],

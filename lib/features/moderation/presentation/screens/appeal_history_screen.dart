@@ -766,7 +766,11 @@ class _AppealHistoryScreenState extends ConsumerState<AppealHistoryScreen>
 
   void _showNewAppealDialog() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('New appeal submission coming soon')),
+      const SnackBar(
+        content: Text(
+          'Open a blocked post and tap Appeal to submit a new case.',
+        ),
+      ),
     );
   }
 }

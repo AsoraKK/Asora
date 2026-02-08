@@ -2,6 +2,8 @@ import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { withClient } from '@shared/clients/postgres';
+import { enqueueUserNotification } from '@shared/services/notificationEvents';
+import { NotificationEventType } from '../notifications/types';
 
 interface FollowStatus {
   following: boolean;
@@ -13,7 +15,7 @@ function badTarget(userId: string, targetId?: string): boolean {
 }
 
 async function getFollowerCount(targetId: string): Promise<number> {
-  const count = await withClient(async (client) => {
+  const count = await withClient(async client => {
     const result = await client.query({
       text: 'SELECT COUNT(*) as count FROM follows WHERE followee_uuid = $1',
       values: [targetId],
@@ -23,7 +25,7 @@ async function getFollowerCount(targetId: string): Promise<number> {
   return count;
 }
 
-export const follow_create = httpHandler<void, FollowStatus>(async (ctx) => {
+export const follow_create = httpHandler<void, FollowStatus>(async ctx => {
   const targetId = ctx.params.id;
   const auth = await extractAuthContext(ctx);
 
@@ -31,18 +33,33 @@ export const follow_create = httpHandler<void, FollowStatus>(async (ctx) => {
     return ctx.badRequest('Invalid follow target', 'INVALID_TARGET');
   }
 
-  await withClient(async (client) => {
-    await client.query({
+  const inserted = await withClient(async client => {
+    const result = await client.query({
       text: 'INSERT INTO follows (follower_uuid, followee_uuid, created_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING',
       values: [auth.userId, targetId],
     });
+    return (result.rowCount ?? 0) > 0;
   });
+
+  if (inserted) {
+    void enqueueUserNotification({
+      context: ctx.context,
+      userId: targetId,
+      eventType: NotificationEventType.USER_FOLLOWED,
+      payload: {
+        actorId: auth.userId,
+        targetId: auth.userId,
+        targetType: 'user',
+      },
+      dedupeKey: `follow:${auth.userId}:${targetId}`,
+    });
+  }
 
   const followerCount = await getFollowerCount(targetId);
   return ctx.ok({ following: true, followerCount });
 });
 
-export const follow_delete = httpHandler<void, FollowStatus>(async (ctx) => {
+export const follow_delete = httpHandler<void, FollowStatus>(async ctx => {
   const targetId = ctx.params.id;
   const auth = await extractAuthContext(ctx);
 
@@ -50,7 +67,7 @@ export const follow_delete = httpHandler<void, FollowStatus>(async (ctx) => {
     return ctx.badRequest('Invalid follow target', 'INVALID_TARGET');
   }
 
-  await withClient(async (client) => {
+  await withClient(async client => {
     await client.query({
       text: 'DELETE FROM follows WHERE follower_uuid = $1 AND followee_uuid = $2',
       values: [auth.userId, targetId],
@@ -61,7 +78,7 @@ export const follow_delete = httpHandler<void, FollowStatus>(async (ctx) => {
   return ctx.ok({ following: false, followerCount });
 });
 
-export const follow_get = httpHandler<void, FollowStatus>(async (ctx) => {
+export const follow_get = httpHandler<void, FollowStatus>(async ctx => {
   const targetId = ctx.params.id;
   const auth = await extractAuthContext(ctx);
 
@@ -69,7 +86,7 @@ export const follow_get = httpHandler<void, FollowStatus>(async (ctx) => {
     return ctx.badRequest('Invalid follow target', 'INVALID_TARGET');
   }
 
-  const following = await withClient(async (client) => {
+  const following = await withClient(async client => {
     const result = await client.query({
       text: 'SELECT 1 FROM follows WHERE follower_uuid = $1 AND followee_uuid = $2 LIMIT 1',
       values: [auth.userId, targetId],

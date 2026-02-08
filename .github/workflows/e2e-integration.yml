@@ -2,8 +2,26 @@
 name: E2E Integration Test
 
 on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Target environment for smoke checks"
+        type: choice
+        required: true
+        default: dev
+        options:
+          - dev
+          - staging
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
   workflow_run:
-    workflows: ["Deploy to asora-function-dev"]
+    workflows: ["deploy-asora-function-dev", "deploy-asora-function-staging"]
     types: [completed]
     branches: [main]
 
@@ -15,6 +33,7 @@ jobs:
   verify-secrets:
     name: Verify Required Variables
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
     steps:
       - name: Ensure required variables
         env:
@@ -28,16 +47,17 @@ jobs:
           done
 
   e2e:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     needs: verify-secrets
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      APP: asora-function-dev
-      RG: asora-psql-flex
+      TARGET_ENV: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
+      APP: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'asora-function-staging' || github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
+      RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
     permissions:
       id-token: write
       contents: read
@@ -85,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           az cloud set -n AzureCloud
-          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
           az account show -o table
 
       - name: Auth sanity

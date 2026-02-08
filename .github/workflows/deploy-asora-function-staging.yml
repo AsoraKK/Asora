@@ -1,0 +1,26 @@
+name: deploy-asora-function-staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-staging:
+    uses: ./.github/workflows/deploy-asora-function-dev.yml
+    with:
+      target_environment: staging
+      function_app_name: ${{ github.event.inputs.function_app_name || 'asora-function-staging' }}
+      resource_group: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
+    secrets: inherit

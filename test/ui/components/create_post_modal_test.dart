@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/feed/domain/models.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:asora/features/feed/presentation/create_post_screen.dart';
 import 'package:asora/ui/components/create_post_modal.dart';
 import 'package:asora/ui/screens/create/create_modal.dart';
 import 'package:asora/ui/screens/create/create_screen.dart';
@@ -198,7 +199,9 @@ void main() {
     expect(harness.notifier.state.mediaUrl, 'https://example.com/img.jpg');
   });
 
-  testWidgets('CreateModalScreen.show opens bottom sheet', (tester) async {
+  testWidgets('CreateModalScreen.show opens create post screen', (
+    tester,
+  ) async {
     final harness = _buildHarness(submitFn: (n) async => false);
 
     await tester.pumpWidget(
@@ -220,10 +223,10 @@ void main() {
     await tester.tap(find.text('Open modal'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(CreatePostModal), findsOneWidget);
+    expect(find.byType(CreatePostScreen), findsOneWidget);
   });
 
-  testWidgets('CreateScreen renders app bar and modal content', (tester) async {
+  testWidgets('CreateScreen renders create post screen', (tester) async {
     final harness = _buildHarness(submitFn: (n) async => false);
 
     await tester.pumpWidget(
@@ -235,6 +238,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AppBar), findsOneWidget);
-    expect(find.byType(CreatePostModal), findsOneWidget);
+    expect(find.byType(CreatePostScreen), findsOneWidget);
   });
 }

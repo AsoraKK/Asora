@@ -14,17 +14,22 @@ class FeedCard extends StatelessWidget {
     required this.item,
     this.onTap,
     this.showSource = true,
+    this.canEdit = false,
+    this.onEdit,
   });
 
   final FeedItem item;
   final VoidCallback? onTap;
   final bool showSource;
+  final bool canEdit;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
-    final sourceLabel = (item.sourceName != null && item.sourceName!.trim().isNotEmpty)
+    final sourceLabel =
+        (item.sourceName != null && item.sourceName!.trim().isNotEmpty)
         ? item.sourceName!.trim()
         : item.author;
     final headline = theme.textTheme.titleMedium?.copyWith(
@@ -69,6 +74,22 @@ class FeedCard extends StatelessWidget {
                           ),
                         ),
                     ],
+                  ),
+                if (canEdit && onEdit != null)
+                  PopupMenuButton<String>(
+                    tooltip: 'Post actions',
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        onEdit!.call();
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Text('Edit post'),
+                      ),
+                    ],
+                    icon: const Icon(Icons.more_vert, size: 18),
                   ),
               ],
             ),
