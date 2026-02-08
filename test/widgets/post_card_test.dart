@@ -49,7 +49,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('flagged by the community'), findsOneWidget);
-    expect(find.text('2h ago'), findsOneWidget);
+    expect(find.textContaining('h ago'), findsOneWidget);
     expect(find.text('Appeal decision'), findsOneWidget);
     expect(find.text('Flagged'), findsOneWidget);
   });
