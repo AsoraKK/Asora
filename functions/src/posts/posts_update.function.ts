@@ -19,6 +19,7 @@ import {
   moderatePostMediaUrls,
   hasAiSignal,
 } from '@posts/service/moderationUtil';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 
 function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
   if (label === undefined || label === null) {
@@ -110,7 +111,6 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
     if (moderationMeta.status === 'blocked') {
       return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
         categories: moderationMeta.categories,
-        confidence: moderationMeta.confidence,
       });
     }
 
@@ -124,7 +124,6 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
     if (mediaModeration.status === 'blocked') {
       return ctx.badRequest('Media violates policy and cannot be posted', 'CONTENT_BLOCKED', {
         categories: mediaModeration.categories,
-        confidence: mediaModeration.confidence,
       });
     }
 
@@ -192,6 +191,54 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
     if (!updated) {
       return ctx.notFound('Post not found', 'POST_NOT_FOUND');
     }
+
+    const policyLinks = [
+      { title: 'Moderation policy', url: 'https://lythaus.app/policies/moderation' },
+    ];
+    const proofSignals = {
+      captureHashProvided: Boolean((ctx.body.proofSignals?.captureMetadataHash) || existing.proofSignals?.captureMetadataHash),
+      editHashProvided: Boolean((ctx.body.proofSignals?.editHistoryHash) || existing.proofSignals?.editHistoryHash),
+      sourceAttestationProvided: Boolean((ctx.body.proofSignals?.sourceAttestationUrl) || existing.proofSignals?.sourceAttestationUrl),
+    };
+
+    if ((effectiveMediaUrls?.length ?? 0) > 0) {
+      void appendReceiptEvent({
+        postId,
+        actorType: 'system',
+        type: 'MEDIA_CHECKED',
+        summary: 'Media checked',
+        reason: 'Attached media passed safety checks after your edit.',
+        policyLinks,
+        actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      }).catch((error) => {
+        ctx.context.warn?.('[posts_update] Failed to append MEDIA_CHECKED event', {
+          postId,
+          message: (error as Error).message,
+        });
+      });
+    }
+
+    void appendReceiptEvent({
+      postId,
+      actorType: 'system',
+      type: 'MODERATION_DECIDED',
+      summary: 'Moderation completed',
+      reason:
+        mergedStatus === 'warned'
+          ? 'Automated checks completed and marked this post for closer review.'
+          : 'Automated checks completed and no moderation action was applied.',
+      policyLinks,
+      actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      metadata: {
+        moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
+        proofSignals,
+      },
+    }).catch((error) => {
+      ctx.context.warn?.('[posts_update] Failed to append MODERATION_DECIDED event', {
+        postId,
+        message: (error as Error).message,
+      });
+    });
 
     return ctx.ok(updated);
   } catch (error) {

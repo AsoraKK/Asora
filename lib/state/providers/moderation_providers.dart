@@ -11,13 +11,11 @@ final moderationQueueProvider = StateProvider<List<ModerationCase>>(
   (ref) => <ModerationCase>[],
 );
 
-final appealsProvider =
-    StateProvider<List<AppealCase>>((ref) => <AppealCase>[]);
+final appealsProvider = StateProvider<List<AppealCase>>(
+  (ref) => <AppealCase>[],
+);
 
 final moderationStatsProvider = Provider<ModerationStats>(
-  (ref) => const ModerationStats(
-    queueSize: 0,
-    appealOpen: 0,
-    decisionsToday: 0,
-  ),
+  (ref) =>
+      const ModerationStats(queueSize: 0, appealOpen: 0, decisionsToday: 0),
 );

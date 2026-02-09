@@ -36,8 +36,8 @@ class AiFlagExplanationBanner extends StatelessWidget {
         color: isBlocked
             ? scheme.errorContainer
             : (isLight
-                ? Colors.amber.shade50
-                : Colors.amber.shade900.withValues(alpha: 0.3)),
+                  ? Colors.amber.shade50
+                  : Colors.amber.shade900.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isBlocked
@@ -61,9 +61,9 @@ class AiFlagExplanationBanner extends StatelessWidget {
                   isBlocked
                       ? 'Content blocked by automated review'
                       : 'Content flagged for review',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               if (onDismiss != null)
@@ -81,11 +81,11 @@ class AiFlagExplanationBanner extends StatelessWidget {
           Text(
             isBlocked
                 ? 'Our automated system determined this content may violate '
-                    'community guidelines. This decision was made by an AI and '
-                    'may be incorrect. You can appeal for a human review.'
+                      'community guidelines. This decision was made by an AI and '
+                      'may be incorrect. You can appeal for a human review.'
                 : 'Our automated system flagged this content for additional '
-                    'review. Your post is still visible while under review. '
-                    'If you believe this is an error, you can submit an appeal.',
+                      'review. Your post is still visible while under review. '
+                      'If you believe this is an error, you can submit an appeal.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -99,7 +99,9 @@ class AiFlagExplanationBanner extends StatelessWidget {
                 icon: const Icon(Icons.gavel, size: 16),
                 label: const Text('Appeal this decision'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: isBlocked ? scheme.error : Colors.amber.shade800,
+                  foregroundColor: isBlocked
+                      ? scheme.error
+                      : Colors.amber.shade800,
                   side: BorderSide(
                     color: isBlocked
                         ? scheme.error.withValues(alpha: 0.4)

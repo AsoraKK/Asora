@@ -70,11 +70,9 @@ class DeeplinkRouter {
     BuildContext context,
     String userId,
   ) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const ProfileScreen(),
-      ),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ProfileScreen()));
   }
 
   static Future<void> _navigateToComment(

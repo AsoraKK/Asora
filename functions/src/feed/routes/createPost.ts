@@ -53,6 +53,11 @@ interface ContentBlockedResponse {
   details?: Record<string, unknown>;
 }
 
+function sanitizeModerationForResponse(moderationMeta: ModerationMeta): ModerationMeta {
+  const { confidence: _ignored, ...safeMeta } = moderationMeta;
+  return safeMeta;
+}
+
 // Note: moderatePostContent and buildModerationMeta are now imported from @posts/service/moderationUtil
 // to ensure dynamic config loading, decision logging, and consistent threshold handling across all entrypoints.
 
@@ -161,7 +166,6 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
         error: 'Content cannot be posted as it violates our community guidelines',
         categories: moderationMeta.categories,
         details: {
-          confidence: moderationMeta.confidence ?? undefined,
           reasons: moderationMeta.reasons ?? undefined,
         },
       };
@@ -247,7 +251,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       createdAt: new Date(resource?.createdAt ?? now).toISOString(),
       updatedAt: new Date(resource?.updatedAt ?? now).toISOString(),
       stats: resource?.stats ?? { likes: 0, comments: 0, replies: 0 },
-      moderation: moderationMeta,
+      moderation: sanitizeModerationForResponse(moderationMeta),
     };
 
     const result: CreatePostResult = {

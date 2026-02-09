@@ -11,6 +11,7 @@ import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { z } from 'zod';
 import type { Container } from '@azure/cosmos';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 
 // Request validation schema
 const SubmitAppealSchema = z.object({
@@ -226,8 +227,6 @@ export async function submitAppealHandler({
 
       // Original moderation info
       flagReason: contentDoc.flagReason || 'unknown',
-      aiScore: contentDoc.moderation?.hiveResponse?.confidence || null,
-      aiAnalysis: contentDoc.moderation?.hiveResponse?.details || null,
       flagCategories: contentDoc.moderation?.hiveResponse?.flaggedCategories || [],
       flagCount,
 
@@ -262,6 +261,28 @@ export async function submitAppealHandler({
     } catch (error) {
       context.log('Failed to update content with appeal reference:', error);
     }
+
+    void appendReceiptEvent({
+      postId: contentId,
+      actorType: 'user',
+      actorId: userId,
+      type: 'APPEAL_OPENED',
+      summary: 'Appeal opened',
+      reason: 'You requested a review of this moderation action.',
+      policyLinks: [{ title: 'Appeals policy', url: 'https://lythaus.app/policies/appeals' }],
+      actions: [
+        { key: 'LEARN_MORE', label: 'Learn more', enabled: true },
+      ],
+      metadata: {
+        appealId,
+      },
+    }).catch((error) => {
+      context.log('moderation.appeal.receipt_append_failed', {
+        appealId,
+        contentId,
+        message: (error as Error).message,
+      });
+    });
 
     context.log(`Appeal ${appealId} submitted for content ${contentId} by ${userId}`);
 

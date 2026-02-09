@@ -24,7 +24,9 @@ const List<FeedModel> _systemFeeds = [
     id: 'news',
     name: 'News',
     type: FeedType.news,
-    contentFilters: ContentFilters(allowedTypes: {ContentType.text, ContentType.image}),
+    contentFilters: ContentFilters(
+      allowedTypes: {ContentType.text, ContentType.image},
+    ),
     sorting: SortingRule.newest,
     refinements: FeedRefinements(),
     subscriptionLevelRequired: 0,
@@ -51,7 +53,7 @@ final customFeedsProvider = FutureProvider<List<FeedModel>>((ref) async {
 });
 
 final feedListProvider = Provider<List<FeedModel>>((ref) {
-  final systemFeeds = _systemFeeds;
+  const systemFeeds = _systemFeeds;
   final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
 
   final merged = <FeedModel>[...systemFeeds, ...customFeeds];
@@ -203,11 +205,13 @@ class LiveFeedNotifier extends LiveFeedController {
     }
   }
 
+  @override
   Future<void> refresh() async {
     state = state.copyWith(isInitialLoading: true, clearError: true);
     await _loadInitial();
   }
 
+  @override
   Future<void> loadMore() async {
     if (state.isLoadingMore || state.isInitialLoading || !state.hasMore) {
       return;

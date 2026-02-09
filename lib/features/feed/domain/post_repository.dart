@@ -66,12 +66,14 @@ class CreatePostRequest {
   final String? mediaUrl;
   final bool isNews;
   final String contentType;
+  final ProofSignals proofSignals;
 
   const CreatePostRequest({
     required this.text,
     this.mediaUrl,
     this.isNews = false,
     this.contentType = 'text',
+    this.proofSignals = const ProofSignals(),
   });
 
   Map<String, dynamic> toJson() => {
@@ -79,6 +81,7 @@ class CreatePostRequest {
     if (mediaUrl != null) 'mediaUrls': [mediaUrl],
     'isNews': isNews,
     'contentType': contentType,
+    if (proofSignals.hasAny) 'proofSignals': proofSignals.toJson(),
   };
 }
 
@@ -89,6 +92,7 @@ class UpdatePostRequest {
   final bool? isNews;
   final String? contentType;
   final String? aiLabel;
+  final ProofSignals? proofSignals;
 
   const UpdatePostRequest({
     this.text,
@@ -96,6 +100,7 @@ class UpdatePostRequest {
     this.isNews,
     this.contentType,
     this.aiLabel,
+    this.proofSignals,
   });
 
   bool get isEmpty =>
@@ -103,7 +108,8 @@ class UpdatePostRequest {
       mediaUrl == null &&
       isNews == null &&
       contentType == null &&
-      aiLabel == null;
+      aiLabel == null &&
+      proofSignals == null;
 
   Map<String, dynamic> toJson() => {
     if (text != null) 'content': text,
@@ -111,6 +117,34 @@ class UpdatePostRequest {
     if (isNews != null) 'isNews': isNews,
     if (contentType != null) 'contentType': contentType,
     if (aiLabel != null) 'aiLabel': aiLabel,
+    if (proofSignals != null && proofSignals!.hasAny)
+      'proofSignals': proofSignals!.toJson(),
+  };
+}
+
+class ProofSignals {
+  final String? captureMetadataHash;
+  final String? editHistoryHash;
+  final String? sourceAttestationUrl;
+
+  const ProofSignals({
+    this.captureMetadataHash,
+    this.editHistoryHash,
+    this.sourceAttestationUrl,
+  });
+
+  bool get hasAny =>
+      (captureMetadataHash?.trim().isNotEmpty ?? false) ||
+      (editHistoryHash?.trim().isNotEmpty ?? false) ||
+      (sourceAttestationUrl?.trim().isNotEmpty ?? false);
+
+  Map<String, dynamic> toJson() => {
+    if (captureMetadataHash?.trim().isNotEmpty ?? false)
+      'captureMetadataHash': captureMetadataHash!.trim(),
+    if (editHistoryHash?.trim().isNotEmpty ?? false)
+      'editHistoryHash': editHistoryHash!.trim(),
+    if (sourceAttestationUrl?.trim().isNotEmpty ?? false)
+      'sourceAttestationUrl': sourceAttestationUrl!.trim(),
   };
 }
 

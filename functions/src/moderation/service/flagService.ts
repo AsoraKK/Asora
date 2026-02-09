@@ -27,6 +27,7 @@ import {
 } from '../config/moderationConfigProvider';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 
 // ─────────────────────────────────────────────────────────────
 // Constants (legacy - kept for fallback, dynamic values from admin_config preferred)
@@ -366,6 +367,27 @@ export async function flagContentHandler({
     }
 
     if (shouldAutoHide) {
+      void appendReceiptEvent({
+        postId: contentId,
+        actorType: 'system',
+        type: 'MODERATION_DECIDED',
+        summary: 'Moderation action applied',
+        reason: 'Content was actioned after repeated community reports and moved to blocked state.',
+        policyLinks: [{ title: 'Moderation policy', url: 'https://lythaus.app/policies/moderation' }],
+        actions: [
+          { key: 'APPEAL', label: 'Appeal', enabled: true },
+          { key: 'LEARN_MORE', label: 'Learn more', enabled: true },
+        ],
+        metadata: {
+          moderationAction: 'blocked',
+        },
+      }).catch((error) => {
+        context.log('moderation.flag.receipt_append_failed', {
+          contentId,
+          message: (error as Error).message,
+        });
+      });
+
       const ownerId =
         contentType === 'user'
           ? contentId
@@ -424,13 +446,7 @@ export async function flagContentHandler({
         priorityScore,
         flagCount: currentFlagCount,
         autoHidden: shouldAutoHide,
-        aiAnalysis: aiAnalysis
-          ? {
-              confidence: aiAnalysis.confidence,
-              action: aiAnalysis.action,
-              categories: aiAnalysis.flaggedCategories,
-            }
-          : null,
+        reviewRecorded: Boolean(aiAnalysis),
       },
     };
   } catch (error) {

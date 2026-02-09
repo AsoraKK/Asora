@@ -64,10 +64,7 @@ void main() {
     final historyTab = find.widgetWithText(Tab, 'History');
     await tester.tap(historyTab);
     await tester.pumpAndSettle();
-    expect(
-      find.text('No moderation history yet'),
-      findsOneWidget,
-    );
+    expect(find.text('No moderation history yet'), findsOneWidget);
 
     final statsTab = find.widgetWithText(Tab, 'Stats');
     await tester.tap(statsTab);

@@ -125,7 +125,9 @@ class _HistoryStub extends StatelessWidget {
             Icon(
               Icons.history,
               size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             SizedBox(height: context.spacing.md),
             Text(
@@ -136,7 +138,9 @@ class _HistoryStub extends StatelessWidget {
             Text(
               'Completed reviews will appear here.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],

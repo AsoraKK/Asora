@@ -44,6 +44,11 @@ module "cosmos_sql" {
       index_file    = "appeals.index.json"
     },
     {
+      name          = "receipt_events"
+      partition_key = "/postId"
+      index_file    = "receipt_events.index.json"
+    },
+    {
       name          = "appeal_votes"
       partition_key = "/appealId"
       index_file    = "votes.index.json"

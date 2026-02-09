@@ -7,6 +7,8 @@ import 'package:asora/design_system/components/lyth_chip.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/ui/components/tier_badge.dart';
+import 'package:asora/ui/components/trust_strip_row.dart';
+import 'package:asora/ui/components/receipt_drawer.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({
@@ -111,6 +113,10 @@ class FeedCard extends StatelessWidget {
                 TierBadge(label: _contentLabel(item.contentType)),
                 ...item.tags.map((tag) => LythChip(label: tag)),
               ],
+            ),
+            TrustStripRow(
+              summary: item.trustSummary,
+              onTap: () => ReceiptDrawer.show(context, item.id),
             ),
           ],
         ),

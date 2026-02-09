@@ -100,6 +100,7 @@ export interface CreatePostRequest {
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
   aiLabel?: 'human' | 'generated';
+  proofSignals?: PostProofSignals;
 }
 
 export interface NewsSourceMetadata {
@@ -122,6 +123,26 @@ export interface UpdatePostRequest {
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
   aiLabel?: 'human' | 'generated';
+  proofSignals?: PostProofSignals;
+}
+
+export interface PostProofSignals {
+  captureMetadataHash?: string;
+  editHistoryHash?: string;
+  sourceAttestationUrl?: string;
+}
+
+export type PostTrustStatus =
+  | 'verified_signals_attached'
+  | 'no_extra_signals'
+  | 'under_appeal'
+  | 'actioned';
+
+export interface PostTrustTimeline {
+  created: 'complete';
+  mediaChecked: 'complete' | 'none';
+  moderation: 'complete' | 'warn' | 'actioned' | 'none';
+  appeal?: 'open' | 'resolved';
 }
 
 export interface Post {
@@ -157,6 +178,12 @@ export interface PostView extends Post {
     createdAt: string;
   }>;
   badges?: string[];
+  trustStatus: PostTrustStatus;
+  timeline: PostTrustTimeline;
+  hasAppeal: boolean;
+  proofSignalsProvided: boolean;
+  verifiedContextBadgeEligible: boolean;
+  featuredEligible: boolean;
 }
 
 export interface CursorPaginatedPostView {

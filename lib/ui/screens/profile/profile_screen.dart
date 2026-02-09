@@ -11,6 +11,7 @@ import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/features/profile/application/follow_providers.dart';
 import 'package:asora/features/profile/application/follow_service.dart';
 import 'package:asora/features/profile/domain/public_user.dart';
+import 'package:asora/features/profile/domain/trust_passport.dart';
 import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
@@ -193,6 +194,8 @@ class ProfileScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: Spacing.lg),
+          _TrustPassportCard(userId: profile.id),
         ],
       ),
     );
@@ -215,6 +218,125 @@ class ProfileScreen extends ConsumerWidget {
 
   bool _isProfileComplete(PublicUser profile) {
     return profile.displayName.trim().isNotEmpty;
+  }
+}
+
+class _TrustPassportCard extends ConsumerWidget {
+  const _TrustPassportCard({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final passportState = ref.watch(trustPassportProvider(userId));
+    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: passportState.when(
+          data: (passport) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trust Passport', style: titleStyle),
+              const SizedBox(height: Spacing.sm),
+              _PassportRow(
+                label: 'Transparency streak',
+                value: passport.transparencyStreakCategory,
+              ),
+              _PassportRow(
+                label: 'Appeals outcomes',
+                value: passport.appealsResolvedFairlyLabel,
+                onTap: () => _showCounts(context, passport),
+              ),
+              _PassportRow(
+                label: 'Juror reliability tier',
+                value: passport.jurorReliabilityTier,
+              ),
+            ],
+          ),
+          loading: () => const SizedBox(
+            height: 52,
+            child: Center(child: Text('Loading trust passport...')),
+          ),
+          error: (_, __) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trust Passport', style: titleStyle),
+              const SizedBox(height: Spacing.xs),
+              Text(
+                'Unavailable right now.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              TextButton(
+                onPressed: () => ref.invalidate(trustPassportProvider(userId)),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCounts(BuildContext context, TrustPassport passport) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Trust Passport details',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Posts with signals: ${passport.counts.postsWithSignals}/${passport.counts.totalPosts}',
+            ),
+            Text(
+              'Appeals resolved: ${passport.counts.appealsResolved} '
+              '(approved ${passport.counts.appealsApproved}, rejected ${passport.counts.appealsRejected})',
+            ),
+            Text(
+              'Juror alignment: ${passport.counts.alignedVotes}/${passport.counts.votesCast}',
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PassportRow extends StatelessWidget {
+  const _PassportRow({
+    required this.label,
+    required this.value,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(label),
+      subtitle: Text(value),
+      trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
+      onTap: onTap,
+    );
   }
 }
 

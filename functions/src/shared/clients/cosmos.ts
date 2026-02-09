@@ -63,6 +63,7 @@ export function getTargetDatabase(
     appeals: database.container('appeals'),
     appealVotes: database.container('appeal_votes'),
     moderationDecisions: database.container('moderation_decisions'),
+    receiptEvents: database.container('receipt_events'),
     comments: database.container('comments'),
     messages: database.container('messages'),
     invites: database.container('invites'),

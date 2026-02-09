@@ -31,10 +31,14 @@ EXPECTED_CONTAINERS=(
   "likes"
   "content_flags"
   "appeals"
+  "receipt_events"
   "appeal_votes"
   "users"
   "config"
   "moderation_decisions"
+  "privacy_requests"
+  "legal_holds"
+  "audit_logs"
 )
 
 echo ""

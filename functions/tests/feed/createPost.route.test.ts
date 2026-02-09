@@ -323,7 +323,7 @@ describe('createPost route', () => {
       const body = JSON.parse(response.body as string);
       expect(body.status).toBe('success');
       expect(body.post.moderation.status).toBe('clean');
-      expect(body.post.moderation.confidence).toBe(0.98);
+      expect(body.post.moderation.confidence).toBeUndefined();
     });
 
     it('creates post with warned status when moderation returns WARN', async () => {
@@ -339,7 +339,7 @@ describe('createPost route', () => {
       const body = JSON.parse(response.body as string);
       expect(body.status).toBe('success');
       expect(body.post.moderation.status).toBe('warned');
-      expect(body.post.moderation.confidence).toBe(0.65);
+      expect(body.post.moderation.confidence).toBeUndefined();
       expect(body.post.moderation.categories).toContain(ModerationCategory.HARASSMENT);
       expect(body.post.moderation.reasons).toContain('Potentially harassing language');
     });

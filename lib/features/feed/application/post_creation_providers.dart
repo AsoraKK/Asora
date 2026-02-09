@@ -30,6 +30,7 @@ class PostCreationState {
   final String? validationError;
   final bool isNews;
   final String contentType;
+  final ProofSignals proofSignals;
 
   const PostCreationState({
     this.text = '',
@@ -39,6 +40,7 @@ class PostCreationState {
     this.validationError,
     this.isNews = false,
     this.contentType = 'text',
+    this.proofSignals = const ProofSignals(),
   });
 
   PostCreationState copyWith({
@@ -49,6 +51,7 @@ class PostCreationState {
     String? validationError,
     bool? isNews,
     String? contentType,
+    ProofSignals? proofSignals,
     bool clearMediaUrl = false,
     bool clearResult = false,
     bool clearValidationError = false,
@@ -63,6 +66,7 @@ class PostCreationState {
           : (validationError ?? this.validationError),
       isNews: isNews ?? this.isNews,
       contentType: contentType ?? this.contentType,
+      proofSignals: proofSignals ?? this.proofSignals,
     );
   }
 
@@ -138,6 +142,39 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     state = state.copyWith(contentType: value, clearResult: true);
   }
 
+  void updateCaptureMetadataHash(String? value) {
+    state = state.copyWith(
+      proofSignals: ProofSignals(
+        captureMetadataHash: value,
+        editHistoryHash: state.proofSignals.editHistoryHash,
+        sourceAttestationUrl: state.proofSignals.sourceAttestationUrl,
+      ),
+      clearResult: true,
+    );
+  }
+
+  void updateEditHistoryHash(String? value) {
+    state = state.copyWith(
+      proofSignals: ProofSignals(
+        captureMetadataHash: state.proofSignals.captureMetadataHash,
+        editHistoryHash: value,
+        sourceAttestationUrl: state.proofSignals.sourceAttestationUrl,
+      ),
+      clearResult: true,
+    );
+  }
+
+  void updateSourceAttestationUrl(String? value) {
+    state = state.copyWith(
+      proofSignals: ProofSignals(
+        captureMetadataHash: state.proofSignals.captureMetadataHash,
+        editHistoryHash: state.proofSignals.editHistoryHash,
+        sourceAttestationUrl: value,
+      ),
+      clearResult: true,
+    );
+  }
+
   /// Update the media URL
   void updateMediaUrl(String? url) {
     state = state.copyWith(
@@ -203,6 +240,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
           mediaUrl: state.mediaUrl,
           isNews: state.isNews,
           contentType: state.contentType,
+          proofSignals: state.proofSignals,
         ),
         token: token,
       );

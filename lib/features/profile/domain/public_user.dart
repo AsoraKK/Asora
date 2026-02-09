@@ -37,7 +37,10 @@ class PublicUser {
       handle: json['handle'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       tier: json['tier'] as String? ?? 'free',
-      reputationScore: (json['reputationScore'] as num?)?.toInt() ?? 0,
+      reputationScore:
+          (json['reputationScore'] as num?)?.toInt() ??
+          (json['reputation'] as num?)?.toInt() ??
+          0,
       journalistVerified: json['journalistVerified'] as bool? ?? false,
       badges:
           (json['badges'] as List<dynamic>?)?.whereType<String>().toList() ??

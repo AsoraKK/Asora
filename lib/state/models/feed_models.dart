@@ -107,6 +107,7 @@ class FeedItem {
   final DateTime publishedAt;
   final bool isNews;
   final bool isPinned;
+  final FeedTrustSummary trustSummary;
 
   const FeedItem({
     required this.id,
@@ -124,6 +125,39 @@ class FeedItem {
     this.tags = const [],
     this.isNews = false,
     this.isPinned = false,
+    this.trustSummary = const FeedTrustSummary(),
+  });
+}
+
+class FeedTrustSummary {
+  final String trustStatus;
+  final FeedTrustTimeline timeline;
+  final bool hasAppeal;
+  final bool proofSignalsProvided;
+  final bool verifiedContextBadgeEligible;
+  final bool featuredEligible;
+
+  const FeedTrustSummary({
+    this.trustStatus = 'no_extra_signals',
+    this.timeline = const FeedTrustTimeline(),
+    this.hasAppeal = false,
+    this.proofSignalsProvided = false,
+    this.verifiedContextBadgeEligible = false,
+    this.featuredEligible = false,
+  });
+}
+
+class FeedTrustTimeline {
+  final String created;
+  final String mediaChecked;
+  final String moderation;
+  final String? appeal;
+
+  const FeedTrustTimeline({
+    this.created = 'complete',
+    this.mediaChecked = 'none',
+    this.moderation = 'none',
+    this.appeal,
   });
 }
 

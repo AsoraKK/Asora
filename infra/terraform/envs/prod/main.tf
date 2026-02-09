@@ -50,6 +50,12 @@ module "cosmos_sql" {
       max_throughput = 2000
     },
     {
+      name           = "receipt_events"
+      partition_key  = "/postId"
+      index_file     = "receipt_events.index.json"
+      max_throughput = 2000
+    },
+    {
       name           = "appeal_votes"
       partition_key  = "/appealId"
       index_file     = "votes.index.json"

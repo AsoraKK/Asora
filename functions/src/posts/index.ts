@@ -13,3 +13,4 @@ import './posts_update.function';
 import './posts_like.function';
 import './posts_bookmark.function';
 import './posts_view.function';
+import './posts_receipt.function';

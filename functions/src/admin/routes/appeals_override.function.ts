@@ -11,6 +11,7 @@ import { fetchContentById } from '../moderationAdminUtils';
 import { recordAdminAudit } from '../auditLogger';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 
 type OverrideDecision = 'allow' | 'block';
 type OverrideReasonCode = 'policy_exception' | 'false_positive' | 'safety_risk' | 'other';
@@ -311,6 +312,32 @@ export async function overrideAppeal(
         contentType,
         idempotencyKey: idempotencyKey ?? null,
       },
+    });
+
+    void appendReceiptEvent({
+      postId: contentId,
+      actorType: 'moderator',
+      actorId,
+      type: 'OVERRIDE_APPLIED',
+      summary: 'Moderator override applied',
+      reason:
+        decision === 'allow'
+          ? 'A moderator restored this content after manual review.'
+          : 'A moderator confirmed this action after manual review.',
+      policyLinks: [{ title: 'Moderation policy', url: 'https://lythaus.app/policies/moderation' }],
+      actions: [
+        { key: 'LEARN_MORE', label: 'Learn more', enabled: true },
+      ],
+      metadata: {
+        appealId,
+        moderationAction: decision === 'allow' ? 'none' : 'blocked',
+      },
+    }).catch((error) => {
+      context.error('admin.appeals.override_receipt_failed', {
+        appealId,
+        contentId,
+        message: (error as Error).message,
+      });
     });
 
     const submitterId = typeof appeal.submitterId === 'string' ? appeal.submitterId : undefined;

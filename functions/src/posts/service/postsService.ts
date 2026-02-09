@@ -5,6 +5,7 @@ import type {
   CreatePostRequest,
   NewsSourceMetadata,
   Post,
+  PostProofSignals,
   PostView,
   PublicUserProfile,
   UpdatePostRequest,
@@ -13,6 +14,11 @@ import type { ModerationMeta } from '@feed/types';
 import { profileService } from '@users/service/profileService';
 import { usersService } from '@auth/service/usersService';
 import { TEST_DATA_EXPIRY, type TestModeContext } from '@shared/testMode/testModeContext';
+import {
+  computeProofSignalState,
+  deriveTrustSummary,
+  getReceiptEventsForPost,
+} from '@shared/services/receiptEvents';
 
 interface PostDocument {
   id: string;
@@ -57,6 +63,18 @@ interface PostDocument {
   };
   aiLabel?: 'human' | 'generated';
   aiDetected?: boolean;
+  proofSignals?: {
+    captureMetadataHash?: string;
+    editHistoryHash?: string;
+    sourceAttestationUrl?: string;
+    captureHashProvided: boolean;
+    editHashProvided: boolean;
+    sourceAttestationProvided: boolean;
+  };
+  proofSignalsProvided?: boolean;
+  verifiedContextBadgeEligible?: boolean;
+  featuredEligible?: boolean;
+  appealStatus?: string;
 }
 
 class PostsService {
@@ -79,6 +97,7 @@ class PostsService {
   ): Promise<Post> {
     const now = Date.now();
     const id = postId || uuidv7();
+    const proofSignals = computeProofSignalState(request.proofSignals as PostProofSignals | undefined);
 
     const postDocument: PostDocument = {
       id,
@@ -125,6 +144,17 @@ class PostsService {
           },
       aiLabel: aiContext?.aiLabel ?? request.aiLabel ?? 'human',
       aiDetected: aiContext?.aiDetected ?? false,
+      proofSignals: {
+        captureMetadataHash: proofSignals.captureMetadataHash,
+        editHistoryHash: proofSignals.editHistoryHash,
+        sourceAttestationUrl: proofSignals.sourceAttestationUrl,
+        captureHashProvided: proofSignals.captureHashProvided,
+        editHashProvided: proofSignals.editHashProvided,
+        sourceAttestationProvided: proofSignals.sourceAttestationProvided,
+      },
+      proofSignalsProvided: proofSignals.proofSignalsProvided,
+      verifiedContextBadgeEligible: proofSignals.verifiedContextBadgeEligible,
+      featuredEligible: proofSignals.featuredEligible,
     };
 
     const container = getTargetDatabase().posts;
@@ -148,6 +178,18 @@ class PostsService {
     }
 
     const now = Date.now();
+    const mergedProofSignalsInput: PostProofSignals = {
+      captureMetadataHash:
+        updates.proofSignals?.captureMetadataHash ??
+        existing.proofSignals?.captureMetadataHash,
+      editHistoryHash:
+        updates.proofSignals?.editHistoryHash ??
+        existing.proofSignals?.editHistoryHash,
+      sourceAttestationUrl:
+        updates.proofSignals?.sourceAttestationUrl ??
+        existing.proofSignals?.sourceAttestationUrl,
+    };
+    const proofSignals = computeProofSignalState(mergedProofSignalsInput);
     const updated: PostDocument = {
       ...existing,
       content: updates.content ?? existing.content,
@@ -169,6 +211,17 @@ class PostsService {
         : existing.moderation,
       aiLabel: aiContext?.aiLabel ?? updates.aiLabel ?? existing.aiLabel ?? 'human',
       aiDetected: aiContext?.aiDetected ?? existing.aiDetected ?? false,
+      proofSignals: {
+        captureMetadataHash: proofSignals.captureMetadataHash,
+        editHistoryHash: proofSignals.editHistoryHash,
+        sourceAttestationUrl: proofSignals.sourceAttestationUrl,
+        captureHashProvided: proofSignals.captureHashProvided,
+        editHashProvided: proofSignals.editHashProvided,
+        sourceAttestationProvided: proofSignals.sourceAttestationProvided,
+      },
+      proofSignalsProvided: proofSignals.proofSignalsProvided,
+      verifiedContextBadgeEligible: proofSignals.verifiedContextBadgeEligible,
+      featuredEligible: proofSignals.featuredEligible,
     };
 
     const container = getTargetDatabase().posts;
@@ -392,6 +445,29 @@ class PostsService {
       // Non-blocking enrichment
     }
 
+    let trustSummary = deriveTrustSummary([], {
+      hasMedia: (post.mediaUrls?.length ?? 0) > 0,
+      isActioned: post.status === 'blocked',
+      appealStatus: post.appealStatus,
+      proofSignalsProvided: Boolean(post.proofSignalsProvided),
+      verifiedContextBadgeEligible: Boolean(post.verifiedContextBadgeEligible),
+      featuredEligible: Boolean(post.featuredEligible),
+    });
+
+    try {
+      const receiptEvents = await getReceiptEventsForPost(post.postId);
+      trustSummary = deriveTrustSummary(receiptEvents, {
+        hasMedia: (post.mediaUrls?.length ?? 0) > 0,
+        isActioned: post.status === 'blocked',
+        appealStatus: post.appealStatus,
+        proofSignalsProvided: Boolean(post.proofSignalsProvided),
+        verifiedContextBadgeEligible: Boolean(post.verifiedContextBadgeEligible),
+        featuredEligible: Boolean(post.featuredEligible),
+      });
+    } catch (error) {
+      // Non-blocking: trust summary falls back to post fields.
+    }
+
     return {
       id: post.postId,
       authorId: post.authorId,
@@ -417,6 +493,12 @@ class PostsService {
       authorFollowerCount,
       recentComments,
       badges: [],
+      trustStatus: trustSummary.trustStatus,
+      timeline: trustSummary.timeline,
+      hasAppeal: trustSummary.hasAppeal,
+      proofSignalsProvided: trustSummary.proofSignalsProvided,
+      verifiedContextBadgeEligible: trustSummary.verifiedContextBadgeEligible,
+      featuredEligible: trustSummary.featuredEligible,
     };
   }
 

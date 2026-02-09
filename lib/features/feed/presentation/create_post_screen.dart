@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
@@ -133,19 +134,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Auth required message
-                    if (!canCreate) _AuthRequiredCard(theme: theme),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Auth required message
+                      if (!canCreate) _AuthRequiredCard(theme: theme),
 
-                    // Text input
-                    Expanded(
-                      child: TextField(
+                      // Text input
+                      TextField(
                         controller: _textController,
                         focusNode: _focusNode,
-                        maxLines: null,
-                        expands: true,
+                        minLines: 8,
+                        maxLines: 12,
                         textAlignVertical: TextAlignVertical.top,
                         enabled: canCreate && !state.isSubmitting,
                         style: GoogleFonts.sora(fontSize: 16),
@@ -163,7 +164,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               .updateText(value);
                         },
                       ),
-                    ),
                     if (state.mediaUrl != null && state.mediaUrl!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
@@ -197,7 +197,101 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           ],
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Challenge Mode: Proof of origin (optional)',
+                        style: GoogleFonts.sora(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Optional. No penalty if not provided.',
+                        style: GoogleFonts.sora(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _ProofTile(
+                        title: 'Capture metadata hash',
+                        subtitle: 'Device-captured media fingerprint',
+                        value: state.proofSignals.captureMetadataHash,
+                        onAdd: () => _editProofValue(
+                              title: 'Capture metadata hash',
+                              helper: 'Paste a hash generated from device capture metadata.',
+                              currentValue: state.proofSignals.captureMetadataHash,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateCaptureMetadataHash,
+                            ),
+                        onViewDetails: () => _showProofDetails(
+                          kind: _ProofTileKind.captureHash,
+                          value: state.proofSignals.captureMetadataHash!,
+                          onEdit: () => _editProofValue(
+                            title: 'Capture metadata hash',
+                            helper:
+                                'Paste a hash generated from device capture metadata.',
+                            currentValue: state.proofSignals.captureMetadataHash,
+                            onSave: ref
+                                .read(postCreationProvider.notifier)
+                                .updateCaptureMetadataHash,
+                          ),
+                        ),
+                      ),
+                      _ProofTile(
+                        title: 'Edit history hash',
+                        subtitle: 'Edit sequence fingerprint',
+                        value: state.proofSignals.editHistoryHash,
+                        onAdd: () => _editProofValue(
+                              title: 'Edit history hash',
+                              helper: 'Paste a hash generated from edit history.',
+                              currentValue: state.proofSignals.editHistoryHash,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateEditHistoryHash,
+                            ),
+                        onViewDetails: () => _showProofDetails(
+                          kind: _ProofTileKind.editHash,
+                          value: state.proofSignals.editHistoryHash!,
+                          onEdit: () => _editProofValue(
+                            title: 'Edit history hash',
+                            helper: 'Paste a hash generated from edit history.',
+                            currentValue: state.proofSignals.editHistoryHash,
+                            onSave: ref
+                                .read(postCreationProvider.notifier)
+                                .updateEditHistoryHash,
+                          ),
+                        ),
+                      ),
+                      _ProofTile(
+                        title: 'Source attestation',
+                        subtitle: 'Source link or signed statement URL',
+                        value: state.proofSignals.sourceAttestationUrl,
+                        onAdd: () => _editProofValue(
+                              title: 'Source attestation URL',
+                              helper: 'Provide a source URL that supports this post.',
+                              currentValue: state.proofSignals.sourceAttestationUrl,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateSourceAttestationUrl,
+                            ),
+                        onViewDetails: () => _showProofDetails(
+                          kind: _ProofTileKind.sourceAttestation,
+                          value: state.proofSignals.sourceAttestationUrl!,
+                          onEdit: () => _editProofValue(
+                            title: 'Source attestation URL',
+                            helper: 'Provide a source URL that supports this post.',
+                            currentValue: state.proofSignals.sourceAttestationUrl,
+                            onSave: ref
+                                .read(postCreationProvider.notifier)
+                                .updateSourceAttestationUrl,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -475,6 +569,247 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     // Reset and close
     ref.read(postCreationProvider.notifier).reset();
     Navigator.of(context).pop(result.post);
+  }
+
+  Future<void> _editProofValue({
+    required String title,
+    required String helper,
+    required String? currentValue,
+    required void Function(String?) onSave,
+  }) async {
+    final controller = TextEditingController(text: currentValue ?? '');
+    final next = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: GoogleFonts.sora()),
+        content: TextField(
+          controller: controller,
+          minLines: 1,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: helper,
+            helperText: 'Optional',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted) {
+      return;
+    }
+    onSave(next == null || next.isEmpty ? null : next);
+  }
+
+  Future<void> _showProofDetails({
+    required _ProofTileKind kind,
+    required String value,
+    required VoidCallback onEdit,
+  }) async {
+    final trimmed = value.trim();
+    final hashPreview = _truncateProofValue(trimmed);
+    final domain = _extractDomain(trimmed);
+    final isHash =
+        kind == _ProofTileKind.captureHash || kind == _ProofTileKind.editHash;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                kind.title,
+                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Status: Provided',
+                style: GoogleFonts.sora(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (isHash) ...[
+                Text(
+                  'Hash preview',
+                  style: GoogleFonts.sora(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  hashPreview,
+                  style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ] else ...[
+                Text(
+                  'Domain: $domain',
+                  style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                SelectableText(
+                  trimmed,
+                  style: GoogleFonts.sora(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: trimmed));
+                      if (!sheetContext.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(sheetContext).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isHash ? 'Hash copied' : 'Link copied',
+                            style: GoogleFonts.sora(),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    label: Text(isHash ? 'Copy hash' : 'Copy link'),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      onEdit();
+                    },
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Edit'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _truncateProofValue(String value) {
+    if (value.length <= 16) {
+      return value;
+    }
+    return '${value.substring(0, 8)}...${value.substring(value.length - 8)}';
+  }
+
+  String _extractDomain(String value) {
+    final uri = Uri.tryParse(value);
+    final host = uri?.host.trim();
+    if (host == null || host.isEmpty) {
+      return 'Unknown domain';
+    }
+    return host;
+  }
+}
+
+enum _ProofTileKind { captureHash, editHash, sourceAttestation }
+
+extension on _ProofTileKind {
+  String get title {
+    switch (this) {
+      case _ProofTileKind.captureHash:
+        return 'Capture metadata hash';
+      case _ProofTileKind.editHash:
+        return 'Edit history hash';
+      case _ProofTileKind.sourceAttestation:
+        return 'Source attestation';
+    }
+  }
+}
+
+class _ProofTile extends StatelessWidget {
+  const _ProofTile({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onAdd,
+    required this.onViewDetails,
+  });
+
+  final String title;
+  final String subtitle;
+  final String? value;
+  final VoidCallback onAdd;
+  final VoidCallback onViewDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final provided = value != null && value!.trim().isNotEmpty;
+    final safePreview = provided ? _preview(value!) : null;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        title: Text(
+          title,
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(subtitle, style: GoogleFonts.sora(fontSize: 11)),
+            const SizedBox(height: 4),
+            Text(
+              provided ? 'Provided' : 'Not provided',
+              style: GoogleFonts.sora(
+                fontSize: 12,
+                color: provided
+                    ? Theme.of(context).colorScheme.tertiary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (safePreview != null)
+              Text(
+                safePreview,
+                style: GoogleFonts.sora(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+        trailing: TextButton(
+          onPressed: provided ? onViewDetails : onAdd,
+          child: Text(provided ? 'View details' : 'Add'),
+        ),
+      ),
+    );
+  }
+
+  String _preview(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.length <= 16) {
+      return trimmed;
+    }
+    return '${trimmed.substring(0, 8)}...${trimmed.substring(trimmed.length - 8)}';
   }
 }
 

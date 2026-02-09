@@ -339,9 +339,9 @@ class _PostCardState extends ConsumerState<PostCard> {
         await ref.read(postProvider(widget.post.id).notifier).toggleLike();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not like post: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Could not like post: $e')));
         }
       }
     });
@@ -380,9 +380,9 @@ class _PostCardState extends ConsumerState<PostCard> {
     final link = 'https://lythaus.app/post/${widget.post.id}';
     Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Link copied to clipboard')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
     }
   }
 

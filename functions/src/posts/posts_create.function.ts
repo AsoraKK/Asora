@@ -20,6 +20,7 @@ import {
   moderatePostMediaUrls,
   hasAiSignal,
 } from '@posts/service/moderationUtil';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
 import {
   checkAndIncrementPostCount,
@@ -162,7 +163,6 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       });
       return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
         categories: moderationMeta.categories,
-        confidence: moderationMeta.confidence,
       });
     }
 
@@ -176,7 +176,6 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     if (mediaModeration.status === 'blocked') {
       return ctx.badRequest('Media violates policy and cannot be posted', 'CONTENT_BLOCKED', {
         categories: mediaModeration.categories,
-        confidence: mediaModeration.confidence,
       });
     }
 
@@ -235,6 +234,71 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         aiDetected,
       }
     );
+
+    const policyLinks = [
+      { title: 'Moderation policy', url: 'https://lythaus.app/policies/moderation' },
+    ];
+    const proofSignals = {
+      captureHashProvided: Boolean(ctx.body.proofSignals?.captureMetadataHash),
+      editHashProvided: Boolean(ctx.body.proofSignals?.editHistoryHash),
+      sourceAttestationProvided: Boolean(ctx.body.proofSignals?.sourceAttestationUrl),
+    };
+
+    void appendReceiptEvent({
+      postId: post.id,
+      actorType: 'user',
+      actorId: auth.userId,
+      type: 'RECEIPT_CREATED',
+      summary: 'Post created',
+      reason: 'Your content was published and recorded in the trust timeline.',
+      policyLinks,
+      actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      metadata: { proofSignals },
+    }).catch((error) => {
+      ctx.context.warn?.('[posts_create] Failed to append RECEIPT_CREATED event', {
+        postId: post.id,
+        message: (error as Error).message,
+      });
+    });
+
+    if ((ctx.body.mediaUrls?.length ?? 0) > 0) {
+      void appendReceiptEvent({
+        postId: post.id,
+        actorType: 'system',
+        type: 'MEDIA_CHECKED',
+        summary: 'Media checked',
+        reason: 'Attached media passed safety checks before publish.',
+        policyLinks,
+        actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      }).catch((error) => {
+        ctx.context.warn?.('[posts_create] Failed to append MEDIA_CHECKED event', {
+          postId: post.id,
+          message: (error as Error).message,
+        });
+      });
+    }
+
+    void appendReceiptEvent({
+      postId: post.id,
+      actorType: 'system',
+      type: 'MODERATION_DECIDED',
+      summary: 'Moderation completed',
+      reason:
+        mergedStatus === 'warned'
+          ? 'Automated checks completed and marked this post for closer review.'
+          : 'Automated checks completed and no moderation action was applied.',
+      policyLinks,
+      actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      metadata: {
+        moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
+        proofSignals,
+      },
+    }).catch((error) => {
+      ctx.context.warn?.('[posts_create] Failed to append MODERATION_DECIDED event', {
+        postId: post.id,
+        message: (error as Error).message,
+      });
+    });
     
     // Log test post creation for audit trail
     if (testContext.isTestMode) {

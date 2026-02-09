@@ -26,6 +26,12 @@ class Post {
   final bool isNews;
   final bool userLiked;
   final bool userDisliked;
+  final String trustStatus;
+  final PostTrustTimeline timeline;
+  final bool hasAppeal;
+  final bool proofSignalsProvided;
+  final bool verifiedContextBadgeEligible;
+  final bool featuredEligible;
 
   const Post({
     required this.id,
@@ -44,6 +50,12 @@ class Post {
     this.isNews = false,
     this.userLiked = false,
     this.userDisliked = false,
+    this.trustStatus = 'no_extra_signals',
+    this.timeline = const PostTrustTimeline(),
+    this.hasAppeal = false,
+    this.proofSignalsProvided = false,
+    this.verifiedContextBadgeEligible = false,
+    this.featuredEligible = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -90,6 +102,19 @@ class Post {
           json['userDisliked'] as bool? ??
           json['viewerHasDisliked'] as bool? ??
           false,
+      trustStatus: json['trustStatus'] as String? ?? 'no_extra_signals',
+      timeline: PostTrustTimeline.fromJson(
+        json['timeline'] is Map<String, dynamic>
+            ? json['timeline'] as Map<String, dynamic>
+            : json['timeline'] is Map
+                ? Map<String, dynamic>.from(json['timeline'] as Map)
+                : null,
+      ),
+      hasAppeal: json['hasAppeal'] as bool? ?? false,
+      proofSignalsProvided: json['proofSignalsProvided'] as bool? ?? false,
+      verifiedContextBadgeEligible:
+          json['verifiedContextBadgeEligible'] as bool? ?? false,
+      featuredEligible: json['featuredEligible'] as bool? ?? false,
     );
   }
 
@@ -111,6 +136,12 @@ class Post {
       'isNews': isNews,
       'userLiked': userLiked,
       'userDisliked': userDisliked,
+      'trustStatus': trustStatus,
+      'timeline': timeline.toJson(),
+      'hasAppeal': hasAppeal,
+      'proofSignalsProvided': proofSignalsProvided,
+      'verifiedContextBadgeEligible': verifiedContextBadgeEligible,
+      'featuredEligible': featuredEligible,
     };
   }
 
@@ -133,6 +164,42 @@ class Post {
       return PostMetadata(location: location, tags: tags, category: category);
     }
     return null;
+  }
+}
+
+class PostTrustTimeline {
+  final String created;
+  final String mediaChecked;
+  final String moderation;
+  final String? appeal;
+
+  const PostTrustTimeline({
+    this.created = 'complete',
+    this.mediaChecked = 'none',
+    this.moderation = 'none',
+    this.appeal,
+  });
+
+  factory PostTrustTimeline.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const PostTrustTimeline();
+    }
+
+    return PostTrustTimeline(
+      created: json['created'] as String? ?? 'complete',
+      mediaChecked: json['mediaChecked'] as String? ?? 'none',
+      moderation: json['moderation'] as String? ?? 'none',
+      appeal: json['appeal'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'created': created,
+      'mediaChecked': mediaChecked,
+      'moderation': moderation,
+      if (appeal != null) 'appeal': appeal,
+    };
   }
 }
 

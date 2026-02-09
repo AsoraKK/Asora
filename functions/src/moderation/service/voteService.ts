@@ -11,9 +11,11 @@ import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import type { JWTPayload } from 'jose';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { usersService } from '@auth/service/usersService';
 import { penalizeContentRemoval } from '@shared/services/reputationService';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
+import { appendReceiptEvent } from '@shared/services/receiptEvents';
 
 // Request validation schema - appealId is optional in body since it comes from route param
 const VoteOnAppealSchema = z.object({
@@ -31,6 +33,10 @@ interface VoteOnAppealParams {
   claims?: JWTPayload;
   appealId?: string;
 }
+
+const DAILY_VOTE_LIMIT = Number.parseInt(process.env.APPEAL_VOTE_DAILY_LIMIT || '25', 10);
+
+type JurorTier = 'bronze' | 'silver' | 'gold';
 
 function claimsHasRole(claims: JWTPayload | undefined, role: string): boolean {
   if (!claims) {
@@ -51,6 +57,28 @@ function normalizeRequiredVotes(value: unknown): number {
     return 3;
   }
   return Math.max(1, Math.floor(parsed));
+}
+
+function jurorTierFromReputation(reputationScore: number): JurorTier {
+  if (reputationScore >= 1000) {
+    return 'gold';
+  }
+  if (reputationScore >= 300) {
+    return 'silver';
+  }
+  return 'bronze';
+}
+
+function weightForJurorTier(tier: JurorTier): number {
+  switch (tier) {
+    case 'gold':
+      return 3;
+    case 'silver':
+      return 2;
+    case 'bronze':
+    default:
+      return 1;
+  }
 }
 
 export async function voteOnAppealHandler({
@@ -194,6 +222,37 @@ export async function voteOnAppealHandler({
       };
     }
 
+    const dayStart = new Date(now);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    try {
+      const dailyVoteCountQuery = {
+        query: 'SELECT VALUE COUNT(1) FROM c WHERE c.voterId = @voterId AND c.createdAt >= @dayStart',
+        parameters: [
+          { name: '@voterId', value: userId },
+          { name: '@dayStart', value: dayStart.toISOString() },
+        ],
+      };
+      const { resources: dailyVoteCounts } = await votesContainer.items
+        .query<number>(dailyVoteCountQuery)
+        .fetchAll();
+      const votesToday = Number(dailyVoteCounts[0] ?? 0);
+      if (votesToday >= DAILY_VOTE_LIMIT) {
+        return {
+          status: 429,
+          jsonBody: {
+            error: 'Daily voting limit reached',
+            limit: DAILY_VOTE_LIMIT,
+            resetAt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+          },
+        };
+      }
+    } catch (error) {
+      context.log('Daily vote limit check unavailable, continuing without limit enforcement', {
+        voterId: userId,
+        message: (error as Error).message,
+      });
+    }
+
     // 8. Prevent users from voting on their own appeals
     if (appealDoc.submitterId === userId) {
       return {
@@ -207,22 +266,22 @@ export async function voteOnAppealHandler({
     // 9. Get voter information
     const usersContainer = database.container('users');
     let voterName = 'Anonymous';
-    let voterWeight = 1; // Default weight
+    let voterWeight = 1;
+    let jurorTier: JurorTier = 'bronze';
+    let reputationScore = 0;
 
     try {
       const { resource: voter } = await usersContainer.item(userId, userId).read();
       voterName = voter?.name || voter?.displayName || 'Anonymous';
-
-      // Assign voting weight based on role/reputation
-      if (claimsHasRole(claims, 'admin')) {
-        voterWeight = 3;
-      } else if (claimsHasRole(claims, 'moderator')) {
-        voterWeight = 2;
-      } else {
-        voterWeight = 1;
-      }
+      const pgUser = await usersService.getUserById(userId);
+      reputationScore = Number(pgUser?.reputation_score ?? 0);
+      jurorTier = jurorTierFromReputation(reputationScore);
+      voterWeight = weightForJurorTier(jurorTier);
     } catch (error) {
       context.log('Could not fetch voter info:', error);
+    }
+    if (claimsHasRole(claims, 'admin')) {
+      voterWeight = Math.max(voterWeight, 3);
     }
 
     // 10. Create vote record
@@ -237,11 +296,33 @@ export async function voteOnAppealHandler({
       confidence,
       notes: notes || null,
       weight: voterWeight,
+      jurorTier,
+      voterReputation: reputationScore,
       isModerator,
       createdAt: now.toISOString(),
     };
 
     await votesContainer.items.create(voteDocument);
+
+    void appendReceiptEvent({
+      postId: String(appealDoc.contentId ?? ''),
+      actorType: 'user',
+      actorId: userId,
+      type: 'VOTE_CAST',
+      summary: 'Community vote cast',
+      reason: 'A community juror voted on this appeal.',
+      policyLinks: [{ title: 'Appeals policy', url: 'https://lythaus.app/policies/appeals' }],
+      actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+      metadata: {
+        appealId: targetAppealId,
+        vote: { choice: vote === 'approve' ? 'for' : 'against' },
+      },
+    }).catch((error) => {
+      context.log('moderation.vote.receipt_append_failed', {
+        appealId: targetAppealId,
+        message: (error as Error).message,
+      });
+    });
 
     // 11. Update appeal vote counts
     if (vote === 'approve') {
@@ -348,6 +429,28 @@ export async function resolveAppealFromVotes({
     appealDoc,
     finalDecision,
     context,
+  });
+
+  void appendReceiptEvent({
+    postId: String(appealDoc.contentId ?? ''),
+    actorType: 'system',
+    type: 'APPEAL_RESOLVED',
+    summary: 'Appeal resolved',
+    reason:
+      finalDecision === 'approved'
+        ? 'Community voting resolved the appeal and restored the content.'
+        : 'Community voting resolved the appeal and kept the content actioned.',
+    policyLinks: [{ title: 'Appeals policy', url: 'https://lythaus.app/policies/appeals' }],
+    actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
+    metadata: {
+      appealId: String(appealDoc.id ?? ''),
+      moderationAction: finalDecision === 'approved' ? 'none' : 'blocked',
+    },
+  }).catch((error) => {
+    context.log('moderation.appeal.resolve_receipt_append_failed', {
+      appealId: String(appealDoc.id ?? ''),
+      message: (error as Error).message,
+    });
   });
 
   const submitterId = typeof appealDoc.submitterId === 'string' ? appealDoc.submitterId : undefined;
