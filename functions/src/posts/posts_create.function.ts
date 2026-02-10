@@ -21,6 +21,7 @@ import {
   hasAiSignal,
 } from '@posts/service/moderationUtil';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
+import { awardPostCreated } from '@shared/services/reputationService';
 import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
 import {
   checkAndIncrementPostCount,
@@ -273,6 +274,16 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       }).catch((error) => {
         ctx.context.warn?.('[posts_create] Failed to append MEDIA_CHECKED event', {
           postId: post.id,
+          message: (error as Error).message,
+        });
+      });
+    }
+
+    if (!aiDetected && effectiveAiLabel !== 'generated') {
+      void awardPostCreated(auth.userId, post.id).catch((error) => {
+        ctx.context.warn?.('[posts_create] Failed to award post-created reputation', {
+          postId: post.id,
+          userId: auth.userId.slice(0, 8),
           message: (error as Error).message,
         });
       });

@@ -13,7 +13,11 @@ import { awardPostCreated } from '@shared/services/reputationService';
 import { ModerationAction } from '@shared/clients/hive';
 import { withChaos } from '@shared/middleware/chaos';
 import { withDailyPostLimit } from '@shared/middleware/dailyPostLimit';
-import { moderatePostContent, buildModerationMeta } from '@posts/service/moderationUtil';
+import {
+  moderatePostContent,
+  buildModerationMeta,
+  hasAiSignal,
+} from '@posts/service/moderationUtil';
 
 import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta, ModerationStatus } from '@feed/types';
 
@@ -51,6 +55,20 @@ interface ContentBlockedResponse {
   error?: string;
   categories?: string[];
   details?: Record<string, unknown>;
+}
+
+function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
+  if (label === undefined || label === null) {
+    return undefined;
+  }
+  if (typeof label !== 'string') {
+    return undefined;
+  }
+  const normalized = label.trim().toLowerCase();
+  if (normalized === 'human' || normalized === 'generated') {
+    return normalized;
+  }
+  return undefined;
 }
 
 function sanitizeModerationForResponse(moderationMeta: ModerationMeta): ModerationMeta {
@@ -120,6 +138,23 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     return badRequest(validation.error);
   }
 
+  const effectiveAiLabel = normalizeAiLabel(payload.aiLabel) ?? 'human';
+  if (payload.aiLabel !== undefined && normalizeAiLabel(payload.aiLabel) === undefined) {
+    return badRequest('aiLabel must be "human" or "generated"');
+  }
+
+  if (effectiveAiLabel === 'generated') {
+    return {
+      status: 422,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: 'ai_content_blocked',
+        message: 'AI-generated content cannot be published. You can appeal this decision.',
+        appealEligible: true,
+      }),
+    };
+  }
+
   try {
     const now = Date.now();
     const postId = crypto.randomUUID();
@@ -140,6 +175,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
 
     // Build moderation metadata
     const moderationMeta = buildModerationMeta(moderationResult, moderationError);
+    const aiDetected = hasAiSignal(moderationMeta.categories ?? []);
 
     // If content is blocked, reject the post immediately
     if (moderationMeta.status === 'blocked') {
@@ -174,6 +210,20 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
         status: 422,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(blockedResponse),
+      };
+    }
+
+    if (aiDetected) {
+      return {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: 'ai_label_required',
+          message:
+            'Potential AI-generated content must be labeled and is not publishable.',
+          appealEligible: true,
+          categories: moderationMeta.categories ?? [],
+        }),
       };
     }
 
@@ -235,13 +285,15 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     // ─────────────────────────────────────────────────────────────
     // Award Reputation - Fire and forget (don't block response)
     // ─────────────────────────────────────────────────────────────
-    awardPostCreated(principal.sub, postId).catch(err => {
-      context.log('posts.create.reputation_error', {
-        postId,
-        authorId: principal.sub,
-        error: err.message,
+    if (!aiDetected) {
+      awardPostCreated(principal.sub, postId).catch(err => {
+        context.log('posts.create.reputation_error', {
+          postId,
+          authorId: principal.sub,
+          error: err.message,
+        });
       });
-    });
+    }
 
     const postRecord: PostRecord = {
       postId: resource?.postId ?? postId,

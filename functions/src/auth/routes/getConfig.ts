@@ -18,6 +18,8 @@ export type AuthConfig = {
   };
   knownAuthorities: string[];
   googleIdpHint?: string;
+  appleIdpHint?: string;
+  worldIdpHint?: string;
 };
 
 export async function getAuthConfig(
@@ -35,7 +37,7 @@ export async function getAuthConfig(
     const client = new SecretClient(kvUrl, credential);
 
     // Fetch all B2C config secrets in parallel
-    const [tenant, clientId, policy, authorityHost, scopes, androidRedirect, iosRedirect, googleIdp] =
+    const [tenant, clientId, policy, authorityHost, scopes, androidRedirect, iosRedirect, googleIdp, appleIdp, worldIdp] =
       await Promise.all([
         client.getSecret('b2c-tenant').then((s) => s.value!),
         client.getSecret('b2c-mobile-client-id').then((s) => s.value!),
@@ -46,6 +48,14 @@ export async function getAuthConfig(
         client.getSecret('b2c-redirect-uri-ios').then((s) => s.value!),
         client
           .getSecret('b2c-google-idp-hint')
+          .then((s) => s.value)
+          .catch(() => undefined),
+        client
+          .getSecret('b2c-apple-idp-hint')
+          .then((s) => s.value)
+          .catch(() => undefined),
+        client
+          .getSecret('b2c-world-idp-hint')
           .then((s) => s.value)
           .catch(() => undefined),
       ]);
@@ -62,6 +72,8 @@ export async function getAuthConfig(
       },
       knownAuthorities: [authorityHost],
       googleIdpHint: googleIdp,
+      appleIdpHint: appleIdp,
+      worldIdpHint: worldIdp,
     };
 
     context.log('auth.config.fetched', { tenant, policy, clientId: clientId.substring(0, 8) + '...' });

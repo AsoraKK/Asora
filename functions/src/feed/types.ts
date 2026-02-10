@@ -25,6 +25,7 @@ export interface CreatePostBody {
   text?: string;
   mediaUrl?: string | null;
   authorId?: string | null;
+  aiLabel?: 'human' | 'generated';
 }
 
 export interface PostStats {

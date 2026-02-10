@@ -44,6 +44,6 @@ Lythaus is a social platform centered on authentic human-created content and new
 
 ## 9. Contact
 
-- Support: support@lythaus.app (replace before publication).
+- Support: support@lythaus.app.
 
 Approval: CEO approved for publication readiness.

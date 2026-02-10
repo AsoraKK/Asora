@@ -43,6 +43,6 @@ Product: Lythaus (formerly Asora)
 
 ## 7. Contact
 
-- Privacy contact: privacy@lythaus.app (replace before publication).
+- Privacy contact: privacy@lythaus.app.
 
 Approval: CEO approved for publication readiness.
