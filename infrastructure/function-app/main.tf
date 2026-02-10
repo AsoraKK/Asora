@@ -48,15 +48,15 @@ resource "azurerm_linux_function_app_slot" "main" {
       RATE_LIMITS_ENABLED = "true"
 
       # Key Vault references for secrets
-      EMAIL_HASH_SALT           = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/email-hash-salt/)"
-      COSMOS_CONNECTION_STRING  = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/COSMOS-CONN/)"
+      EMAIL_HASH_SALT          = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/email-hash-salt/)"
+      COSMOS_CONNECTION_STRING = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/COSMOS-CONN/)"
 
       # Runtime settings (do NOT set FUNCTIONS_WORKER_RUNTIME for Flex)
       WEBSITE_NODE_DEFAULT_VERSION = "~20"
       FUNCTIONS_EXTENSION_VERSION  = "~4"
 
       # Observability
-      APPINSIGHTS_INSTRUMENTATIONKEY = data.azurerm_linux_function_app.target.app_settings["APPINSIGHTS_INSTRUMENTATIONKEY"]
+      APPINSIGHTS_INSTRUMENTATIONKEY        = data.azurerm_linux_function_app.target.app_settings["APPINSIGHTS_INSTRUMENTATIONKEY"]
       APPLICATIONINSIGHTS_CONNECTION_STRING = data.azurerm_linux_function_app.target.app_settings["APPLICATIONINSIGHTS_CONNECTION_STRING"]
     }
   )
@@ -120,8 +120,8 @@ output "function_app_identity" {
 output "enforced_settings" {
   description = "App settings enforced by IaC"
   value = {
-    rate_limits_enabled           = "true"
-    email_hash_salt_source        = "Key Vault: email-hash-salt"
+    rate_limits_enabled             = "true"
+    email_hash_salt_source          = "Key Vault: email-hash-salt"
     cosmos_connection_string_source = "Key Vault: COSMOS-CONN"
   }
   sensitive = false

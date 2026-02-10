@@ -1,7 +1,7 @@
 variable "resource_group_name" {
   description = "Name of the Azure resource group containing the function app"
   type        = string
-  default     = "asora-psql-flex"  # Note: env-agnostic; override per environment
+  default     = "asora-psql-flex" # Note: env-agnostic; override per environment
 }
 
 variable "function_app_name" {

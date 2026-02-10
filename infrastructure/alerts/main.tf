@@ -224,8 +224,8 @@ output "action_group_id" {
 output "alert_ids" {
   description = "IDs of created alerts"
   value = {
-    error_rate_alert   = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate.id
-    health_fail_alert  = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure.id
+    error_rate_alert  = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate.id
+    health_fail_alert = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure.id
   }
 }
 

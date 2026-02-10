@@ -11,9 +11,9 @@ variable "environment" {
 
 locals {
   env_name = (
-    var.environment == "prod"  ? "prod"  :
+    var.environment == "prod" ? "prod" :
     var.environment == "stage" ? "stage" :
-    var.environment == "dev"   ? "dev"   :
+    var.environment == "dev" ? "dev" :
     var.environment
   )
 

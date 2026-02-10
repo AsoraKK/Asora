@@ -260,7 +260,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.35.3'
 
       - name: Pub get
         run: flutter pub get
@@ -269,7 +269,9 @@ jobs:
         run: bash scripts/design_system_gate.sh
 
       - name: Regenerate golden files for CI environment
-        run: flutter test --update-goldens test/design_system/
+        run: |
+          flutter test --update-goldens test/design_system/
+          flutter test --update-goldens test/ui/screens/onboarding/
 
       - name: Test with coverage
         run: flutter test --coverage
