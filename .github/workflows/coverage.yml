@@ -85,7 +85,7 @@ jobs:
           path: coverage-artifacts
           run-id: ${{ github.event.workflow_run.id }}
       - name: Get PR number
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prs = ${{ toJSON(github.event.workflow_run.pull_requests) }};
@@ -147,7 +147,7 @@ jobs:
           thresholds: '80 80'
           fail_below_min: false
       - name: Comment coverage on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
