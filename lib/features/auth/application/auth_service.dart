@@ -252,7 +252,7 @@ class AuthService {
 
       // Use OAuth2/OIDC flow that goes through B2C
       // B2C will handle Google authentication and return a B2C token
-      final user = await signInWithOAuth2();
+      final user = await signInWithOAuth2(provider: OAuth2Provider.google);
 
       dev.log('B2C sign-in succeeded (Google IdP): ${user.id}', name: 'auth');
       return user;
@@ -266,6 +266,44 @@ class AuthService {
       );
       if (e is AuthFailure) rethrow;
       throw AuthFailure.serverError('B2C sign-in failed: ${e.toString()}');
+    }
+  }
+
+  Future<User> signInWithApple() async {
+    try {
+      dev.log('Starting B2C sign-in (Apple IdP)', name: 'auth');
+      return await signInWithOAuth2(provider: OAuth2Provider.apple);
+    } catch (e, st) {
+      dev.log(
+        'B2C sign-in failed (Apple IdP): $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError(
+        'B2C Apple sign-in failed: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<User> signInWithWorld() async {
+    try {
+      dev.log('Starting B2C sign-in (World IdP)', name: 'auth');
+      return await signInWithOAuth2(provider: OAuth2Provider.world);
+    } catch (e, st) {
+      dev.log(
+        'B2C sign-in failed (World IdP): $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError(
+        'B2C World sign-in failed: ${e.toString()}',
+      );
     }
   }
 
@@ -285,11 +323,13 @@ class AuthService {
   // OAuth2 Authentication Methods
 
   /// Sign in using OAuth2 PKCE flow
-  Future<User> signInWithOAuth2() async {
+  Future<User> signInWithOAuth2({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) async {
     try {
       dev.log('Starting OAuth2 sign-in', name: 'auth');
 
-      final user = await _oauth2Service.signInWithOAuth2();
+      final user = await _oauth2Service.signInWithOAuth2(provider: provider);
 
       // Get fresh token from OAuth2Service secure storage
       final token = await _oauth2Service.getAccessToken();

@@ -28,10 +28,7 @@ void main() {
       });
 
       test('exportStatus is correct', () {
-        expect(
-          ApiEndpoints.exportStatus,
-          equals('/api/user/export/status'),
-        );
+        expect(ApiEndpoints.exportStatus, equals('/api/user/export/status'));
       });
 
       test('deleteUser is correct', () {

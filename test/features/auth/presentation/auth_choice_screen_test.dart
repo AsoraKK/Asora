@@ -10,6 +10,7 @@ import 'package:asora/core/config/environment_config.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 
@@ -121,7 +122,9 @@ void main() {
 
     final analytics = _FakeAnalyticsClient();
     final notifier = _MockAuthStateNotifier();
-    when(() => notifier.signInWithOAuth2()).thenAnswer((_) async {});
+    when(
+      () => notifier.signInWithProvider(OAuth2Provider.google),
+    ).thenAnswer((_) async {});
 
     await tester.pumpWidget(
       ProviderScope(
@@ -141,9 +144,11 @@ void main() {
 
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign in'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Google'));
+    await tester.pumpAndSettle();
 
-    verify(() => notifier.signInWithOAuth2()).called(1);
+    verify(() => notifier.signInWithProvider(OAuth2Provider.google)).called(1);
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authStarted));
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });

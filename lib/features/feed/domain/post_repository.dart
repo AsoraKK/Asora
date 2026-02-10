@@ -66,6 +66,7 @@ class CreatePostRequest {
   final String? mediaUrl;
   final bool isNews;
   final String contentType;
+  final String aiLabel;
   final ProofSignals proofSignals;
 
   const CreatePostRequest({
@@ -73,6 +74,7 @@ class CreatePostRequest {
     this.mediaUrl,
     this.isNews = false,
     this.contentType = 'text',
+    this.aiLabel = 'human',
     this.proofSignals = const ProofSignals(),
   });
 
@@ -81,6 +83,7 @@ class CreatePostRequest {
     if (mediaUrl != null) 'mediaUrls': [mediaUrl],
     'isNews': isNews,
     'contentType': contentType,
+    'aiLabel': aiLabel,
     if (proofSignals.hasAny) 'proofSignals': proofSignals.toJson(),
   };
 }

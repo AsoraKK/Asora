@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockDio extends Mock implements Dio {}
+
 class MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
 class FakePushNotificationService implements PushNotificationService {
@@ -79,9 +80,9 @@ void main() {
       storage: storage,
     );
 
-    when(() => storage.read(key: any(named: 'key'))).thenAnswer(
-      (_) async => 'device-1',
-    );
+    when(
+      () => storage.read(key: any(named: 'key')),
+    ).thenAnswer((_) async => 'device-1');
 
     when(
       () => dio.post<Map<String, dynamic>>(
@@ -119,8 +120,9 @@ void main() {
       storage: storage,
     );
 
-    when(() => dio.get<Map<String, dynamic>>('/api/notifications/devices'))
-        .thenAnswer(
+    when(
+      () => dio.get<Map<String, dynamic>>('/api/notifications/devices'),
+    ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
         data: {
           'devices': [

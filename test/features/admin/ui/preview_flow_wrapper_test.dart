@@ -513,6 +513,7 @@ void main() {
     expect(find.textContaining('Real Hive AI moderation'), findsOneWidget);
     expect(find.textContaining('Posts marked as test'), findsOneWidget);
     expect(find.textContaining('Session:'), findsOneWidget);
+    expect(find.textContaining(sessionId), findsOneWidget);
 
     final sessionText = find.textContaining('Session:');
     expect(sessionText, findsOneWidget);

@@ -91,8 +91,8 @@ class Post {
       source: sourceJson is Map<String, dynamic>
           ? NewsSource.fromJson(sourceJson)
           : sourceJson is Map
-              ? NewsSource.fromJson(Map<String, dynamic>.from(sourceJson))
-              : null,
+          ? NewsSource.fromJson(Map<String, dynamic>.from(sourceJson))
+          : null,
       isNews: json['isNews'] as bool? ?? metadata?.category == 'news',
       userLiked:
           json['userLiked'] as bool? ??
@@ -107,8 +107,8 @@ class Post {
         json['timeline'] is Map<String, dynamic>
             ? json['timeline'] as Map<String, dynamic>
             : json['timeline'] is Map
-                ? Map<String, dynamic>.from(json['timeline'] as Map)
-                : null,
+            ? Map<String, dynamic>.from(json['timeline'] as Map)
+            : null,
       ),
       hasAppeal: json['hasAppeal'] as bool? ?? false,
       proofSignalsProvided: json['proofSignalsProvided'] as bool? ?? false,

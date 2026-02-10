@@ -94,6 +94,22 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
+  Future<void> signInWithProvider(OAuth2Provider provider) async {
+    try {
+      state = const AsyncValue.loading();
+      final user = await _authService.signInWithOAuth2(provider: provider);
+      state = AsyncValue.data(user);
+      _bumpTokenVersion();
+    } on AuthFailure catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(
+        AuthFailure.serverError('OAuth2 sign-in failed: ${error.toString()}'),
+        stackTrace,
+      );
+    }
+  }
+
   /// Sign in with email and password
   Future<void> signInWithEmail(String email, String password) async {
     try {

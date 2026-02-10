@@ -30,6 +30,7 @@ class PostCreationState {
   final String? validationError;
   final bool isNews;
   final String contentType;
+  final String aiLabel;
   final ProofSignals proofSignals;
 
   const PostCreationState({
@@ -40,6 +41,7 @@ class PostCreationState {
     this.validationError,
     this.isNews = false,
     this.contentType = 'text',
+    this.aiLabel = 'human',
     this.proofSignals = const ProofSignals(),
   });
 
@@ -51,6 +53,7 @@ class PostCreationState {
     String? validationError,
     bool? isNews,
     String? contentType,
+    String? aiLabel,
     ProofSignals? proofSignals,
     bool clearMediaUrl = false,
     bool clearResult = false,
@@ -66,6 +69,7 @@ class PostCreationState {
           : (validationError ?? this.validationError),
       isNews: isNews ?? this.isNews,
       contentType: contentType ?? this.contentType,
+      aiLabel: aiLabel ?? this.aiLabel,
       proofSignals: proofSignals ?? this.proofSignals,
     );
   }
@@ -142,6 +146,10 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     state = state.copyWith(contentType: value, clearResult: true);
   }
 
+  void setAiLabel(String value) {
+    state = state.copyWith(aiLabel: value, clearResult: true);
+  }
+
   void updateCaptureMetadataHash(String? value) {
     state = state.copyWith(
       proofSignals: ProofSignals(
@@ -200,6 +208,10 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       return 'Post text cannot exceed $postTextMaxLength characters';
     }
 
+    if (state.aiLabel == 'generated') {
+      return 'AI-generated content cannot be published on Lythaus';
+    }
+
     return null;
   }
 
@@ -240,6 +252,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
           mediaUrl: state.mediaUrl,
           isNews: state.isNews,
           contentType: state.contentType,
+          aiLabel: state.aiLabel,
           proofSignals: state.proofSignals,
         ),
         token: token,

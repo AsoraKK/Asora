@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -229,9 +231,9 @@ class _TrustPassportCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final passportState = ref.watch(trustPassportProvider(userId));
-    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w700,
-    );
+    final titleStyle = Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
 
     return Card(
       child: Padding(
@@ -293,9 +295,9 @@ class _TrustPassportCard extends ConsumerWidget {
           children: [
             Text(
               'Trust Passport details',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Text(
@@ -317,11 +319,7 @@ class _TrustPassportCard extends ConsumerWidget {
 }
 
 class _PassportRow extends StatelessWidget {
-  const _PassportRow({
-    required this.label,
-    required this.value,
-    this.onTap,
-  });
+  const _PassportRow({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;

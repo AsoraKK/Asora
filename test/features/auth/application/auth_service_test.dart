@@ -193,7 +193,9 @@ class MockOAuth2Service implements OAuth2Service {
   }
 
   @override
-  Future<User> signInWithOAuth2() async {
+  Future<User> signInWithOAuth2({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) async {
     if (_signInException != null) {
       throw _signInException!;
     }

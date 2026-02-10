@@ -129,7 +129,10 @@ class _CustomFeedCreationFlowState
       ref.read(customFeedDraftProvider.notifier).reset();
       ref.invalidate(customFeedsProvider);
       try {
-        await ref.refresh(customFeedsProvider.future);
+        final refreshedFeeds = await ref.refresh(customFeedsProvider.future);
+        if (refreshedFeeds.isEmpty) {
+          ref.invalidate(customFeedsProvider);
+        }
       } catch (_) {
         // The feed is already created server-side; UI can still proceed.
       }

@@ -164,39 +164,97 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               .updateText(value);
                         },
                       ),
-                    if (state.mediaUrl != null && state.mediaUrl!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Chip(
-                              avatar: const Icon(
-                                Icons.image_outlined,
-                                size: 16,
-                              ),
-                              label: SizedBox(
-                                width: 220,
-                                child: Text(
-                                  state.mediaUrl!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.sora(fontSize: 12),
-                                ),
-                              ),
-                              onDeleted: () {
-                                ref
-                                    .read(postCreationProvider.notifier)
-                                    .updateMediaUrl(null);
-                                ref
-                                    .read(postCreationProvider.notifier)
-                                    .setContentType('text');
-                              },
-                            ),
-                          ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'AI disclosure',
+                        style: GoogleFonts.sora(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tell us if this post contains AI-generated content. AI-generated posts are blocked at publish time.',
+                        style: GoogleFonts.sora(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: Text(
+                              'Human-authored',
+                              style: GoogleFonts.sora(fontSize: 12),
+                            ),
+                            selected: state.aiLabel == 'human',
+                            onSelected: canCreate && !state.isSubmitting
+                                ? (_) => ref
+                                      .read(postCreationProvider.notifier)
+                                      .setAiLabel('human')
+                                : null,
+                          ),
+                          ChoiceChip(
+                            label: Text(
+                              'Contains AI',
+                              style: GoogleFonts.sora(fontSize: 12),
+                            ),
+                            selected: state.aiLabel == 'generated',
+                            onSelected: canCreate && !state.isSubmitting
+                                ? (_) => ref
+                                      .read(postCreationProvider.notifier)
+                                      .setAiLabel('generated')
+                                : null,
+                          ),
+                        ],
+                      ),
+                      if (state.aiLabel == 'generated')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Lythaus blocks AI-generated content at publish time. Switch to Human-authored to continue.',
+                            style: GoogleFonts.sora(
+                              fontSize: 12,
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      if (state.mediaUrl != null && state.mediaUrl!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              Chip(
+                                avatar: const Icon(
+                                  Icons.image_outlined,
+                                  size: 16,
+                                ),
+                                label: SizedBox(
+                                  width: 220,
+                                  child: Text(
+                                    state.mediaUrl!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.sora(fontSize: 12),
+                                  ),
+                                ),
+                                onDeleted: () {
+                                  ref
+                                      .read(postCreationProvider.notifier)
+                                      .updateMediaUrl(null);
+                                  ref
+                                      .read(postCreationProvider.notifier)
+                                      .setContentType('text');
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       Text(
                         'Challenge Mode: Proof of origin (optional)',
@@ -219,13 +277,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         subtitle: 'Device-captured media fingerprint',
                         value: state.proofSignals.captureMetadataHash,
                         onAdd: () => _editProofValue(
-                              title: 'Capture metadata hash',
-                              helper: 'Paste a hash generated from device capture metadata.',
-                              currentValue: state.proofSignals.captureMetadataHash,
-                              onSave: ref
-                                  .read(postCreationProvider.notifier)
-                                  .updateCaptureMetadataHash,
-                            ),
+                          title: 'Capture metadata hash',
+                          helper:
+                              'Paste a hash generated from device capture metadata.',
+                          currentValue: state.proofSignals.captureMetadataHash,
+                          onSave: ref
+                              .read(postCreationProvider.notifier)
+                              .updateCaptureMetadataHash,
+                        ),
                         onViewDetails: () => _showProofDetails(
                           kind: _ProofTileKind.captureHash,
                           value: state.proofSignals.captureMetadataHash!,
@@ -233,7 +292,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             title: 'Capture metadata hash',
                             helper:
                                 'Paste a hash generated from device capture metadata.',
-                            currentValue: state.proofSignals.captureMetadataHash,
+                            currentValue:
+                                state.proofSignals.captureMetadataHash,
                             onSave: ref
                                 .read(postCreationProvider.notifier)
                                 .updateCaptureMetadataHash,
@@ -245,13 +305,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         subtitle: 'Edit sequence fingerprint',
                         value: state.proofSignals.editHistoryHash,
                         onAdd: () => _editProofValue(
-                              title: 'Edit history hash',
-                              helper: 'Paste a hash generated from edit history.',
-                              currentValue: state.proofSignals.editHistoryHash,
-                              onSave: ref
-                                  .read(postCreationProvider.notifier)
-                                  .updateEditHistoryHash,
-                            ),
+                          title: 'Edit history hash',
+                          helper: 'Paste a hash generated from edit history.',
+                          currentValue: state.proofSignals.editHistoryHash,
+                          onSave: ref
+                              .read(postCreationProvider.notifier)
+                              .updateEditHistoryHash,
+                        ),
                         onViewDetails: () => _showProofDetails(
                           kind: _ProofTileKind.editHash,
                           value: state.proofSignals.editHistoryHash!,
@@ -270,20 +330,23 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         subtitle: 'Source link or signed statement URL',
                         value: state.proofSignals.sourceAttestationUrl,
                         onAdd: () => _editProofValue(
-                              title: 'Source attestation URL',
-                              helper: 'Provide a source URL that supports this post.',
-                              currentValue: state.proofSignals.sourceAttestationUrl,
-                              onSave: ref
-                                  .read(postCreationProvider.notifier)
-                                  .updateSourceAttestationUrl,
-                            ),
+                          title: 'Source attestation URL',
+                          helper:
+                              'Provide a source URL that supports this post.',
+                          currentValue: state.proofSignals.sourceAttestationUrl,
+                          onSave: ref
+                              .read(postCreationProvider.notifier)
+                              .updateSourceAttestationUrl,
+                        ),
                         onViewDetails: () => _showProofDetails(
                           kind: _ProofTileKind.sourceAttestation,
                           value: state.proofSignals.sourceAttestationUrl!,
                           onEdit: () => _editProofValue(
                             title: 'Source attestation URL',
-                            helper: 'Provide a source URL that supports this post.',
-                            currentValue: state.proofSignals.sourceAttestationUrl,
+                            helper:
+                                'Provide a source URL that supports this post.',
+                            currentValue:
+                                state.proofSignals.sourceAttestationUrl,
                             onSave: ref
                                 .read(postCreationProvider.notifier)
                                 .updateSourceAttestationUrl,
@@ -586,10 +649,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           controller: controller,
           minLines: 1,
           maxLines: 3,
-          decoration: InputDecoration(
-            hintText: helper,
-            helperText: 'Optional',
-          ),
+          decoration: InputDecoration(hintText: helper, helperText: 'Optional'),
         ),
         actions: [
           TextButton(
@@ -633,7 +693,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             children: [
               Text(
                 kind.title,
-                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700),
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -656,12 +719,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 const SizedBox(height: 4),
                 SelectableText(
                   hashPreview,
-                  style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ] else ...[
                 Text(
                   'Domain: $domain',
-                  style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(

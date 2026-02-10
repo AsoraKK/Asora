@@ -68,6 +68,21 @@ class OAuth2Config {
     defaultValue: 'openid email profile offline_access',
   );
 
+  static const String googleIdpHint = String.fromEnvironment(
+    'OAUTH2_GOOGLE_IDP_HINT',
+    defaultValue: 'Google',
+  );
+
+  static const String appleIdpHint = String.fromEnvironment(
+    'OAUTH2_APPLE_IDP_HINT',
+    defaultValue: 'Apple',
+  );
+
+  static const String worldIdpHint = String.fromEnvironment(
+    'OAUTH2_WORLD_IDP_HINT',
+    defaultValue: 'World',
+  );
+
   static List<String> get scopes {
     return scopeString
         .split(RegExp(r'\s+'))
@@ -115,6 +130,8 @@ class OAuth2Config {
   }
 }
 
+enum OAuth2Provider { google, apple, world, email }
+
 /// OAuth2 service backed by flutter_appauth.
 typedef LauncherFn = Future<bool> Function(Uri uri, {LaunchMode mode});
 
@@ -149,7 +166,9 @@ class OAuth2Service {
 
   /// Initiates the OAuth2 Authorization Code flow via AppAuth and returns the
   /// authenticated [User].
-  Future<User> signInWithOAuth2() async {
+  Future<User> signInWithOAuth2({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) async {
     if (kIsWeb) {
       throw AuthFailure.platformError(
         'Microsoft Entra sign-in is not supported on web builds yet.',
@@ -157,12 +176,16 @@ class OAuth2Service {
     }
 
     try {
+      final additionalParameters = _buildAdditionalParameters(provider);
       final response = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
           OAuth2Config.clientId,
           OAuth2Config.redirectUri,
           scopes: OAuth2Config.scopes,
           promptValues: const ['login'],
+          additionalParameters: additionalParameters.isEmpty
+              ? null
+              : additionalParameters,
           serviceConfiguration: OAuth2Config.discoveryUrl.isEmpty
               ? OAuth2Config.serviceConfiguration
               : null,
@@ -198,6 +221,22 @@ class OAuth2Service {
       throw AuthFailure.platformError(
         'OAuth2 sign-in failed: ${error.toString()}',
       );
+    }
+  }
+
+  Map<String, String> _buildAdditionalParameters(OAuth2Provider provider) {
+    switch (provider) {
+      case OAuth2Provider.google:
+        if (OAuth2Config.googleIdpHint.isEmpty) return const {};
+        return {'idp': OAuth2Config.googleIdpHint};
+      case OAuth2Provider.apple:
+        if (OAuth2Config.appleIdpHint.isEmpty) return const {};
+        return {'idp': OAuth2Config.appleIdpHint};
+      case OAuth2Provider.world:
+        if (OAuth2Config.worldIdpHint.isEmpty) return const {};
+        return {'idp': OAuth2Config.worldIdpHint};
+      case OAuth2Provider.email:
+        return const {};
     }
   }
 

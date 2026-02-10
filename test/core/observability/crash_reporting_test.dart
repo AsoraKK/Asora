@@ -95,4 +95,3 @@ void main() {
     await expectLater(service.initialize(), completes);
   });
 }
-

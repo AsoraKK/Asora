@@ -14,6 +14,7 @@ import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/screens/security_debug_screen.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
@@ -47,23 +48,27 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleSignIn(BuildContext context) async {
+    final provider = await _showProviderPicker(context, isCreateFlow: false);
+    if (provider == null) {
+      return;
+    }
     final analytics = _analyticsClient;
     await analytics.logEvent(
       AnalyticsEvents.authStarted,
-      properties: {AnalyticsEvents.propMethod: 'google'},
+      properties: {AnalyticsEvents.propMethod: provider.name},
     );
     try {
       await runWithDeviceGuard(
         context,
         ref,
         IntegrityUseCase.signIn,
-        () => ref.read(authStateProvider.notifier).signInWithOAuth2(),
+        () => ref.read(authStateProvider.notifier).signInWithProvider(provider),
       );
       if (!mounted) return;
       await analytics.logEvent(
         AnalyticsEvents.authCompleted,
         properties: {
-          AnalyticsEvents.propMethod: 'google',
+          AnalyticsEvents.propMethod: provider.name,
           AnalyticsEvents.propIsNewUser: false,
         },
       );
@@ -81,23 +86,27 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleCreateAccount(BuildContext context) async {
+    final provider = await _showProviderPicker(context, isCreateFlow: true);
+    if (provider == null) {
+      return;
+    }
     final analytics = _analyticsClient;
     await analytics.logEvent(
       AnalyticsEvents.authStarted,
-      properties: {AnalyticsEvents.propMethod: 'create_account'},
+      properties: {AnalyticsEvents.propMethod: '${provider.name}_create'},
     );
     try {
       await runWithDeviceGuard(
         context,
         ref,
         IntegrityUseCase.signUp,
-        () => ref.read(authStateProvider.notifier).signInWithOAuth2(),
+        () => ref.read(authStateProvider.notifier).signInWithProvider(provider),
       );
       if (!mounted) return;
       await analytics.logEvent(
         AnalyticsEvents.authCompleted,
         properties: {
-          AnalyticsEvents.propMethod: 'create_account',
+          AnalyticsEvents.propMethod: '${provider.name}_create',
           AnalyticsEvents.propIsNewUser: true,
         },
       );
@@ -112,6 +121,51 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
       );
       rethrow;
     }
+  }
+
+  Future<OAuth2Provider?> _showProviderPicker(
+    BuildContext context, {
+    required bool isCreateFlow,
+  }) {
+    final title = isCreateFlow ? 'Create account with' : 'Sign in with';
+    return showModalBottomSheet<OAuth2Provider>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(sheetContext).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.g_mobiledata),
+              title: const Text('Google'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(OAuth2Provider.google),
+            ),
+            ListTile(
+              leading: const Icon(Icons.apple),
+              title: const Text('Apple'),
+              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.apple),
+            ),
+            ListTile(
+              leading: const Icon(Icons.public),
+              title: const Text('World ID'),
+              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.world),
+            ),
+            ListTile(
+              leading: const Icon(Icons.email_outlined),
+              title: const Text('Email'),
+              subtitle: const Text('Uses your configured B2C email flow'),
+              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.email),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _handleGuestContinue() {

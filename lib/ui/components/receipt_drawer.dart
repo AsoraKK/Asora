@@ -51,7 +51,9 @@ class _ReceiptDrawerSheetState extends ConsumerState<ReceiptDrawerSheet> {
     final events = eventsJson is List
         ? eventsJson
               .whereType<Map<String, dynamic>>()
-              .map((raw) => _ReceiptEvent.fromJson(Map<String, dynamic>.from(raw)))
+              .map(
+                (raw) => _ReceiptEvent.fromJson(Map<String, dynamic>.from(raw)),
+              )
               .toList()
         : const <_ReceiptEvent>[];
 
@@ -98,7 +100,8 @@ class _ReceiptContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasAppealEvent = payload.events.any(
-      (event) => event.type == 'APPEAL_OPENED' || event.type == 'APPEAL_RESOLVED',
+      (event) =>
+          event.type == 'APPEAL_OPENED' || event.type == 'APPEAL_RESOLVED',
     );
 
     return Column(
@@ -110,9 +113,9 @@ class _ReceiptContent extends StatelessWidget {
             children: [
               Text(
                 'Post Receipt',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               IconButton(
@@ -174,22 +177,21 @@ class _ReceiptEventTile extends StatelessWidget {
         children: [
           Text(
             event.summary,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
-          Text(
-            event.reason,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          Text(event.reason, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               for (final action in event.actions)
-                if (action.key == 'APPEAL' && action.enabled && allowAppealAction)
+                if (action.key == 'APPEAL' &&
+                    action.enabled &&
+                    allowAppealAction)
                   OutlinedButton.icon(
                     onPressed: () => showAppealDialog(
                       context: context,
@@ -221,10 +223,11 @@ class _ReceiptEventTile extends StatelessWidget {
                       onTap: () => _launchUrl(link.url),
                       child: Text(
                         link.title,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: scheme.primary,
-                          decoration: TextDecoration.underline,
-                        ),
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: scheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
                       ),
                     ),
                   )
@@ -303,10 +306,7 @@ class _ReceiptError extends StatelessWidget {
           children: [
             Text(message),
             const SizedBox(height: 8),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

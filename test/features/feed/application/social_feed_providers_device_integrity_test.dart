@@ -149,7 +149,11 @@ DeviceIntegrityGuard _guardFor(DeviceSecurityState state) {
   return DeviceIntegrityGuard(
     deviceSecurityService: _FakeDeviceSecurityService(state),
     config: const MobileSecurityConfig(
-      tlsPins: TlsPinConfig(enabled: false, strictMode: false, spkiPinsBase64: []),
+      tlsPins: TlsPinConfig(
+        enabled: false,
+        strictMode: false,
+        spkiPinsBase64: [],
+      ),
       strictDeviceIntegrity: true,
       blockRootedDevices: true,
       allowRootedInStagingForQa: false,

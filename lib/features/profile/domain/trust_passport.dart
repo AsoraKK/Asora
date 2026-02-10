@@ -31,8 +31,8 @@ class TrustPassport {
         json['counts'] is Map<String, dynamic>
             ? json['counts'] as Map<String, dynamic>
             : json['counts'] is Map
-                ? Map<String, dynamic>.from(json['counts'] as Map)
-                : const <String, dynamic>{},
+            ? Map<String, dynamic>.from(json['counts'] as Map)
+            : const <String, dynamic>{},
       ),
     );
   }
@@ -76,4 +76,3 @@ class TrustPassportCounts {
     );
   }
 }
-

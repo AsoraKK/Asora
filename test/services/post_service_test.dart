@@ -84,11 +84,8 @@ void main() {
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async => _response(
-        <String, dynamic>{},
-        '/api/posts/post-1',
-        statusCode: 204,
-      ),
+      (_) async =>
+          _response(<String, dynamic>{}, '/api/posts/post-1', statusCode: 204),
     );
 
     final result = await service.deletePost(postId: 'post-1', token: 'token');

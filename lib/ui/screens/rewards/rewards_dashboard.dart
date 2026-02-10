@@ -66,9 +66,9 @@ class RewardsDashboardScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Missions',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text('${reputation.xp} XP'),
                 ],

@@ -79,10 +79,8 @@ void main() {
     when(
       () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
     ).thenAnswer(
-      (_) async => _response(
-        {'unreadCount': 4},
-        '/api/notifications/unread-count',
-      ),
+      (_) async =>
+          _response({'unreadCount': 4}, '/api/notifications/unread-count'),
     );
 
     final count = await service.getUnreadCount();

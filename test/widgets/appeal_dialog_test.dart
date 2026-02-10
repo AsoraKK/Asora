@@ -140,10 +140,12 @@ void main() {
       find.byWidgetPredicate(
         (widget) =>
             widget is RichText &&
-          widget.text.toPlainText().contains('This content was rejected by community vote'),
-        ),
-        findsOneWidget,
-      );
+            widget.text.toPlainText().contains(
+              'This content was rejected by community vote',
+            ),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Content Preview:'), findsOneWidget);
     expect(find.text('Sample preview text'), findsOneWidget);
   });
@@ -174,14 +176,8 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Appeal'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Please provide a reason for your appeal'),
-      findsWidgets,
-    );
-    expect(
-      find.text('Please provide a detailed statement'),
-      findsWidgets,
-    );
+    expect(find.text('Please provide a reason for your appeal'), findsWidgets);
+    expect(find.text('Please provide a detailed statement'), findsWidgets);
 
     await tester.enterText(find.byType(TextField).at(0), 'short');
     await tester.enterText(
@@ -196,10 +192,7 @@ void main() {
       find.text('Appeal reason must be at least 10 characters'),
       findsWidgets,
     );
-    expect(
-      find.text('Statement must be at least 50 characters'),
-      findsWidgets,
-    );
+    expect(find.text('Statement must be at least 50 characters'), findsWidgets);
   });
 
   testWidgets('submits appeal and shows success feedback', (tester) async {
@@ -254,7 +247,10 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Submit Appeal'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Appeal submitted successfully'), findsOneWidget);
+    expect(
+      find.textContaining('Appeal submitted successfully'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows login prompt on 401 response', (tester) async {

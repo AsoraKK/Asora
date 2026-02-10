@@ -13,6 +13,7 @@ import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/features/feed/domain/models.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
 // Mock classes
@@ -595,6 +596,9 @@ class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
 
   @override
   Future<void> signInWithOAuth2() async {}
+
+  @override
+  Future<void> signInWithProvider(OAuth2Provider provider) async {}
 
   @override
   Future<void> signOut() async {

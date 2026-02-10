@@ -22,7 +22,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: FeedCard(item: feedItem, onTap: () {})),
+        home: Scaffold(
+          body: FeedCard(item: feedItem, onTap: () {}),
+        ),
       ),
     );
 
@@ -33,42 +35,41 @@ void main() {
     expect(find.text('Alice'), findsOneWidget);
   });
 
-  testWidgets('hides source text when requested and shows video preview badge', (
-    tester,
-  ) async {
-    final feedItem = FeedItem(
-      id: 'feed-2',
-      feedId: 'news',
-      author: 'Bob',
-      contentType: ContentType.video,
-      title: 'Stream highlight',
-      body: 'Short video recap',
-      publishedAt: DateTime.utc(2025, 1, 2),
-      videoThumbnailUrl: 'https://example.com/thumb.jpg',
-      tags: const ['video'],
-      isPinned: false,
-    );
+  testWidgets(
+    'hides source text when requested and shows video preview badge',
+    (tester) async {
+      final feedItem = FeedItem(
+        id: 'feed-2',
+        feedId: 'news',
+        author: 'Bob',
+        contentType: ContentType.video,
+        title: 'Stream highlight',
+        body: 'Short video recap',
+        publishedAt: DateTime.utc(2025, 1, 2),
+        videoThumbnailUrl: 'https://example.com/thumb.jpg',
+        tags: const ['video'],
+        isPinned: false,
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: FeedCard(
-            item: feedItem,
-            onTap: () {},
-            showSource: false,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FeedCard(item: feedItem, onTap: () {}, showSource: false),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.text('Preview'), findsOneWidget);
-    expect(find.text('Bob'), findsNothing);
-    expect(find.text('Video'), findsOneWidget);
-  });
+      expect(find.text('Preview'), findsOneWidget);
+      expect(find.text('Bob'), findsNothing);
+      expect(find.text('Video'), findsOneWidget);
+    },
+  );
 
-  testWidgets('renders text content label and tags without media', (tester) async {
+  testWidgets('renders text content label and tags without media', (
+    tester,
+  ) async {
     final feedItem = FeedItem(
       id: 'feed-3',
       feedId: 'home',
@@ -83,7 +84,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: FeedCard(item: feedItem, onTap: () {})),
+        home: Scaffold(
+          body: FeedCard(item: feedItem, onTap: () {}),
+        ),
       ),
     );
 
@@ -109,7 +112,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: FeedCard(item: feedItem, onTap: () {})),
+        home: Scaffold(
+          body: FeedCard(item: feedItem, onTap: () {}),
+        ),
       ),
     );
 
@@ -136,7 +141,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: FeedCard(item: feedItem, onTap: () {})),
+        home: Scaffold(
+          body: FeedCard(item: feedItem, onTap: () {}),
+        ),
       ),
     );
 

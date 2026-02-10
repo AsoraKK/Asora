@@ -42,10 +42,10 @@ void main() {
             'name': 'Policy Desk',
             'contentType': 'text',
             'sorting': 'newest',
-            'includeKeywords': ['policy'],
-            'excludeKeywords': ['spam'],
-            'includeAccounts': ['u1'],
-            'excludeAccounts': [],
+            'includeKeywords': <String>['policy'],
+            'excludeKeywords': <String>['spam'],
+            'includeAccounts': <String>['u1'],
+            'excludeAccounts': <String>[],
             'isHome': true,
           },
         ],
@@ -58,7 +58,7 @@ void main() {
     expect(feeds.first.id, 'custom::1');
     expect(feeds.first.type, FeedType.custom);
     expect(feeds.first.sorting, SortingRule.newest);
-    expect(feeds.first.refinements.includeKeywords, ['policy']);
+    expect(feeds.first.refinements.includeKeywords, <String>['policy']);
     expect(feeds.first.isHome, isTrue);
   });
 
@@ -109,10 +109,10 @@ void main() {
           'name': 'My Feed',
           'contentType': 'mixed',
           'sorting': 'relevant',
-          'includeKeywords': ['ai'],
-          'excludeKeywords': [],
-          'includeAccounts': [],
-          'excludeAccounts': [],
+          'includeKeywords': <String>['ai'],
+          'excludeKeywords': <String>[],
+          'includeAccounts': <String>[],
+          'excludeAccounts': <String>[],
           'isHome': false,
         },
         '/api/custom-feeds',
@@ -126,7 +126,7 @@ void main() {
         name: 'My Feed',
         contentType: ContentType.mixed,
         sorting: SortingRule.relevant,
-        refinements: FeedRefinements(includeKeywords: ['ai']),
+        refinements: FeedRefinements(includeKeywords: <String>['ai']),
       ),
     );
 

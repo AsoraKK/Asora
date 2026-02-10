@@ -111,7 +111,8 @@ resource "azurerm_cosmosdb_sql_container" "container" {
   lifecycle {
     ignore_changes = [
       throughput,
-      indexing_policy # Prevent drift from JSON↔API normalization
+      indexing_policy,          # Prevent drift from JSON↔API normalization
+      partition_key_version     # Existing v1 containers must not be force-replaced to v2
     ]
 
     # Enforce serverless/autoscale throughput rules

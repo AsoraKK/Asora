@@ -48,7 +48,9 @@ final reputationProvider = FutureProvider<UserReputation>((ref) async {
   SubscriptionStatus? status;
   if (token != null && token.isNotEmpty) {
     try {
-      status = await ref.read(subscriptionServiceProvider).checkStatus(token: token);
+      status = await ref
+          .read(subscriptionServiceProvider)
+          .checkStatus(token: token);
     } catch (_) {
       status = null;
     }
@@ -74,7 +76,9 @@ final reputationTiersProvider = Provider<List<ReputationTier>>(
 
 String _resolveTierId(String? subscriptionTier, User? user) {
   final normalized = (subscriptionTier ?? '').toLowerCase().trim();
-  if (normalized == 'free' || normalized == 'premium' || normalized == 'black') {
+  if (normalized == 'free' ||
+      normalized == 'premium' ||
+      normalized == 'black') {
     return normalized;
   }
 
@@ -94,7 +98,9 @@ String _resolveTierId(String? subscriptionTier, User? user) {
   }
 }
 
-List<Mission> _buildEntitlementMissions(SubscriptionEntitlements? entitlements) {
+List<Mission> _buildEntitlementMissions(
+  SubscriptionEntitlements? entitlements,
+) {
   if (entitlements == null) {
     return const [];
   }

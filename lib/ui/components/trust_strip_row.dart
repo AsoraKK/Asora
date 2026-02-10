@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:asora/state/models/feed_models.dart';
 
 class TrustStripRow extends StatelessWidget {
-  const TrustStripRow({
-    super.key,
-    required this.summary,
-    required this.onTap,
-  });
+  const TrustStripRow({super.key, required this.summary, required this.onTap});
 
   final FeedTrustSummary summary;
   final VoidCallback onTap;
@@ -180,4 +176,3 @@ _ChipColors _colorsForState(BuildContext context, String state) {
       );
   }
 }
-
