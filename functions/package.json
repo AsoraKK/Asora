@@ -52,7 +52,7 @@
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.1",
     "tsc-alias": "^1.8.8",
-    "tsx": "^3.12.6",
+    "tsx": "^4.21.0",
     "typescript": "5.5.4"
   },
   "overrides": {
