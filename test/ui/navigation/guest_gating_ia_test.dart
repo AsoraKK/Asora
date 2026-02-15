@@ -10,9 +10,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          canCreatePostProvider.overrideWithValue(false),
-        ],
+        overrides: [canCreatePostProvider.overrideWithValue(false)],
         child: const MaterialApp(home: CreatePostScreen()),
       ),
     );
@@ -30,9 +28,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          canCreatePostProvider.overrideWithValue(true),
-        ],
+        overrides: [canCreatePostProvider.overrideWithValue(true)],
         child: const MaterialApp(home: CreatePostScreen()),
       ),
     );
@@ -44,9 +40,6 @@ void main() {
 
     final postButton = find.widgetWithText(FilledButton, 'Post');
     expect(postButton, findsOneWidget);
-    expect(
-      tester.widget<FilledButton>(postButton).onPressed,
-      isNotNull,
-    );
+    expect(tester.widget<FilledButton>(postButton).onPressed, isNotNull);
   });
 }

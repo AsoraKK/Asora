@@ -48,9 +48,7 @@ void main() {
     expect(state.leftHandedMode, isTrue);
     expect(state.hapticsEnabled, isFalse);
     expect(
-      find.text(
-        'Sign in to manage what others see on your Trust Passport.',
-      ),
+      find.text('Sign in to manage what others see on your Trust Passport.'),
       findsOneWidget,
     );
   });
@@ -117,9 +115,6 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(SettingsScreen)),
     );
-    expect(
-      container.read(settingsProvider).trustPassportVisibility,
-      'private',
-    );
+    expect(container.read(settingsProvider).trustPassportVisibility, 'private');
   });
 }

@@ -9,9 +9,7 @@ void main() {
   Future<void> pumpRouterHost(WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(body: Text('Home host')),
-        ),
+        child: MaterialApp(home: Scaffold(body: Text('Home host'))),
       ),
     );
   }

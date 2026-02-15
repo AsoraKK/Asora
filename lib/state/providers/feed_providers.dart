@@ -391,13 +391,14 @@ FeedRestoreResult computeFeedRestoreResult({
 final feedRestoreSnapshotsProvider =
     StateProvider<Map<String, FeedRestoreSnapshot>>((ref) => const {});
 
-final feedRestoreResultProvider =
-    Provider.family<FeedRestoreResult, FeedModel>((ref, feed) {
-      final snapshots = ref.watch(feedRestoreSnapshotsProvider);
-      final snapshot = snapshots[feed.id];
-      final feedState = ref.watch(liveFeedStateProvider(feed));
-      return computeFeedRestoreResult(items: feedState.items, snapshot: snapshot);
-    });
+final feedRestoreResultProvider = Provider.family<FeedRestoreResult, FeedModel>(
+  (ref, feed) {
+    final snapshots = ref.watch(feedRestoreSnapshotsProvider);
+    final snapshot = snapshots[feed.id];
+    final feedState = ref.watch(liveFeedStateProvider(feed));
+    return computeFeedRestoreResult(items: feedState.items, snapshot: snapshot);
+  },
+);
 
 FeedItem _mapPostToFeedItem(domain.Post post) {
   final type = (post.mediaUrls?.isNotEmpty ?? false)

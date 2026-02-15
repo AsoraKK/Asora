@@ -26,7 +26,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final profileState = currentUser == null
         ? null
         : ref.watch(publicUserProvider(currentUser.id));
-    final profileVisibility = profileState?.valueOrNull?.trustPassportVisibility;
+    final profileVisibility =
+        profileState?.valueOrNull?.trustPassportVisibility;
     final selectedVisibility =
         profileVisibility ?? settings.trustPassportVisibility;
 
@@ -79,8 +80,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
             selected: {selectedVisibility},
-            onSelectionChanged:
-                currentUser == null || _savingTrustVisibility
+            onSelectionChanged: currentUser == null || _savingTrustVisibility
                 ? null
                 : (selection) {
                     final next = selection.first;
@@ -125,7 +125,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             accessToken: token,
             visibility: visibility,
           );
-      ref.read(settingsProvider.notifier).setTrustPassportVisibility(visibility);
+      ref
+          .read(settingsProvider.notifier)
+          .setTrustPassportVisibility(visibility);
       ref.invalidate(publicUserProvider(user.id));
       ref.invalidate(trustPassportProvider(user.id));
     } catch (_) {

@@ -34,21 +34,21 @@ void main() {
   });
 
   test('fromJson uses username fallback for handle', () {
-    final user = PublicUser.fromJson(
-      const {'id': 'u2', 'displayName': 'Test', 'username': '@u2'},
-    );
+    final user = PublicUser.fromJson(const {
+      'id': 'u2',
+      'displayName': 'Test',
+      'username': '@u2',
+    });
 
     expect(user.handleLabel, '@u2');
   });
 
   test('fromJson falls back to public_minimal for unknown visibility', () {
-    final user = PublicUser.fromJson(
-      const {
-        'id': 'u3',
-        'displayName': 'Visibility User',
-        'trustPassportVisibility': 'friends_only',
-      },
-    );
+    final user = PublicUser.fromJson(const {
+      'id': 'u3',
+      'displayName': 'Visibility User',
+      'trustPassportVisibility': 'friends_only',
+    });
 
     expect(user.trustPassportVisibility, 'public_minimal');
   });

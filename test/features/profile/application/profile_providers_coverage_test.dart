@@ -295,10 +295,9 @@ void main() {
         adapter.lastRequestOptions?.headers['Authorization'],
         'Bearer token-1',
       );
-      expect(
-        adapter.lastRequestOptions?.data,
-        {'trustPassportVisibility': 'public_expanded'},
-      );
+      expect(adapter.lastRequestOptions?.data, {
+        'trustPassportVisibility': 'public_expanded',
+      });
     });
 
     test('rejects unsupported trust passport visibility values', () async {

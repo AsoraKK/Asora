@@ -125,7 +125,9 @@ void main() {
       expect(loadMoreCalled, isFalse);
     });
 
-    testWidgets('shows New posts pill and handles tap callback', (tester) async {
+    testWidgets('shows New posts pill and handles tap callback', (
+      tester,
+    ) async {
       var tapped = false;
       await tester.pumpWidget(
         wrap(
