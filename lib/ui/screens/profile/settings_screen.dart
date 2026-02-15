@@ -3,16 +3,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/theme/spacing.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _savingTrustVisibility = false;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
+    final currentUser = ref.watch(currentUserProvider);
+    final profileState = currentUser == null
+        ? null
+        : ref.watch(publicUserProvider(currentUser.id));
+    final profileVisibility = profileState?.valueOrNull?.trustPassportVisibility;
+    final selectedVisibility =
+        profileVisibility ?? settings.trustPassportVisibility;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -25,17 +41,103 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (_) => controller.toggleLeftHanded(),
           ),
           SwitchListTile(
-            title: const Text('Horizontal swipe between feeds'),
-            value: settings.horizontalSwipeEnabled,
-            onChanged: (_) => controller.toggleSwipeEnabled(),
-          ),
-          SwitchListTile(
             title: const Text('Haptics'),
             value: settings.hapticsEnabled,
             onChanged: (_) => controller.toggleHaptics(),
           ),
+          const Divider(height: Spacing.xl),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Trust Passport visibility'),
+            subtitle: Text(
+              currentUser == null
+                  ? 'Sign in to manage what others see on your Trust Passport.'
+                  : 'Choose how your Trust Passport appears to other users.',
+            ),
+          ),
+          if (profileState?.isLoading == true)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: Spacing.sm),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(
+                value: 'public_expanded',
+                label: Text('Public'),
+                icon: Icon(Icons.visibility_outlined),
+              ),
+              ButtonSegment<String>(
+                value: 'public_minimal',
+                label: Text('Minimal'),
+                icon: Icon(Icons.visibility_off_outlined),
+              ),
+              ButtonSegment<String>(
+                value: 'private',
+                label: Text('Private'),
+                icon: Icon(Icons.lock_outline),
+              ),
+            ],
+            selected: {selectedVisibility},
+            onSelectionChanged:
+                currentUser == null || _savingTrustVisibility
+                ? null
+                : (selection) {
+                    final next = selection.first;
+                    if (next == selectedVisibility) {
+                      return;
+                    }
+                    _updateTrustVisibility(next);
+                  },
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(
+            'This setting changes profile presentation only. It does not change core feed ranking.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _updateTrustVisibility(String visibility) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      return;
+    }
+
+    final token = await ref.read(jwtProvider.future);
+    if (token == null || token.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to update trust visibility.')),
+      );
+      return;
+    }
+
+    setState(() => _savingTrustVisibility = true);
+    try {
+      await ref
+          .read(profilePreferencesServiceProvider)
+          .updateTrustPassportVisibility(
+            accessToken: token,
+            visibility: visibility,
+          );
+      ref.read(settingsProvider.notifier).setTrustPassportVisibility(visibility);
+      ref.invalidate(publicUserProvider(user.id));
+      ref.invalidate(trustPassportProvider(user.id));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update trust visibility.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _savingTrustVisibility = false);
+      }
+    }
   }
 }

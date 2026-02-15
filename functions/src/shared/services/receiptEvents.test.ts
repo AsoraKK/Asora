@@ -398,6 +398,7 @@ describe('receiptEvents', () => {
     );
 
     expect(summary.timeline.moderation).toBe('warn');
+    expect(summary.trustStatus).toBe('actioned');
   });
 
   it('derives verified_signals_attached when proof signals provided', () => {
@@ -550,4 +551,3 @@ describe('receiptEvents', () => {
     expect(summary.timeline.appeal).toBe('resolved');
   });
 });
-

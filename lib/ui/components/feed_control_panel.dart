@@ -10,13 +10,13 @@ import 'package:asora/ui/theme/spacing.dart';
 class FeedControlPanel extends ConsumerWidget {
   const FeedControlPanel({
     super.key,
-    required this.onSelect,
+    this.onSelect,
     required this.onCreateCustom,
     this.onOpenModerationHub,
     this.onOpenAppeals,
   });
 
-  final ValueChanged<FeedModel> onSelect;
+  final ValueChanged<FeedModel>? onSelect;
   final VoidCallback onCreateCustom;
   final VoidCallback? onOpenModerationHub;
   final VoidCallback? onOpenAppeals;
@@ -25,6 +25,7 @@ class FeedControlPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feeds = ref.watch(feedListProvider);
     final current = ref.watch(currentFeedProvider);
+    final allowFeedSwitching = onSelect != null;
 
     return Padding(
       padding: const EdgeInsets.all(Spacing.md),
@@ -33,26 +34,32 @@ class FeedControlPanel extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Feeds',
+            allowFeedSwitching ? 'Feeds' : 'Feed tools',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: Spacing.sm),
-          ...feeds.map(
-            (feed) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: Spacing.sm,
+          if (allowFeedSwitching)
+            ...feeds.map(
+              (feed) => ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm,
+                ),
+                title: Text(feed.name),
+                subtitle: Text(_subtitle(feed)),
+                trailing: feed.isHome
+                    ? const Icon(Icons.home_filled, size: 18)
+                    : null,
+                selected: feed.id == current.id,
+                onTap: () => onSelect?.call(feed),
               ),
-              title: Text(feed.name),
-              subtitle: Text(_subtitle(feed)),
-              trailing: feed.isHome
-                  ? const Icon(Icons.home_filled, size: 18)
-                  : null,
-              selected: feed.id == current.id,
-              onTap: () => onSelect(feed),
             ),
-          ),
+          if (!allowFeedSwitching)
+            Text(
+              'Switch feeds from the Discover rail at the top of the home screen.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           const SizedBox(height: Spacing.sm),
           FilledButton.icon(
             onPressed: onCreateCustom,

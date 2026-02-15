@@ -126,3 +126,7 @@ Reliability alignment uses final adjudication state, including moderator overrid
 - Override actions append `OVERRIDE_APPLIED`.
 - APIs and UI avoid exposing moderation confidence values.
 - Policy links and appeal actions are always explicit in receipt records.
+- Telemetry never includes receipt event IDs.
+- Telemetry never includes proof hashes.
+- Telemetry never includes full source attestation URLs.
+- Telemetry uses coarse enums/booleans and aggregate counts only.

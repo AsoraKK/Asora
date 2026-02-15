@@ -11,7 +11,10 @@ import type {
   UpdatePostRequest,
 } from '@shared/types/openapi';
 import type { ModerationMeta } from '@feed/types';
-import { profileService } from '@users/service/profileService';
+import {
+  profileService,
+  resolveTrustPassportVisibility,
+} from '@users/service/profileService';
 import { usersService } from '@auth/service/usersService';
 import { TEST_DATA_EXPIRY, type TestModeContext } from '@shared/testMode/testModeContext';
 import {
@@ -344,6 +347,9 @@ class PostsService {
       tier: pgUser?.tier || 'free',
       reputation: pgUser?.reputation_score || 0,
       badges: [],
+      trustPassportVisibility: resolveTrustPassportVisibility(
+        cosmosProfile?.settings
+      ),
     };
 
     // Determine author role based on tier/roles
@@ -447,7 +453,9 @@ class PostsService {
 
     let trustSummary = deriveTrustSummary([], {
       hasMedia: (post.mediaUrls?.length ?? 0) > 0,
-      isActioned: post.status === 'blocked',
+      isActioned: ['limited', 'blocked', 'removed', 'hidden'].includes(
+        post.status
+      ),
       appealStatus: post.appealStatus,
       proofSignalsProvided: Boolean(post.proofSignalsProvided),
       verifiedContextBadgeEligible: Boolean(post.verifiedContextBadgeEligible),
@@ -458,7 +466,9 @@ class PostsService {
       const receiptEvents = await getReceiptEventsForPost(post.postId);
       trustSummary = deriveTrustSummary(receiptEvents, {
         hasMedia: (post.mediaUrls?.length ?? 0) > 0,
-        isActioned: post.status === 'blocked',
+        isActioned: ['limited', 'blocked', 'removed', 'hidden'].includes(
+          post.status
+        ),
         appealStatus: post.appealStatus,
         proofSignalsProvided: Boolean(post.proofSignalsProvided),
         verifiedContextBadgeEligible: Boolean(post.verifiedContextBadgeEligible),

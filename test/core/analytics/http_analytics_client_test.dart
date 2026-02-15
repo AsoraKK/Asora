@@ -370,6 +370,53 @@ void main() {
           ),
         ).called(1);
       });
+
+      test('strips trust-sensitive telemetry keys from event payload', () async {
+        final mockDio = MockDio();
+        when(
+          mockDio.post<Map<String, dynamic>>(
+            any,
+            data: anyNamed('data'),
+            options: anyNamed('options'),
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/api/analytics/events'),
+            statusCode: 200,
+          ),
+        );
+
+        final client = HttpAnalyticsClient(dio: mockDio);
+
+        await client.logEvent(
+          'receipt_loaded',
+          properties: {
+            'event_id': 'evt-1',
+            'capture_metadata_hash': 'abc123',
+            'source_attestation_url': 'https://example.com/attestation',
+            'status': 'ok',
+          },
+        );
+        await client.flush();
+
+        final verification = verify(
+          mockDio.post<Map<String, dynamic>>(
+            '/api/analytics/events',
+            data: captureAnyNamed('data'),
+            options: anyNamed('options'),
+          ),
+        );
+        verification.called(1);
+
+        final data = verification.captured.first as Map<String, dynamic>;
+        final events = (data['events'] as List).cast<Map<String, dynamic>>();
+        final props = events.first['props'] as Map<String, dynamic>;
+
+        expect(props.containsKey('event_id'), isFalse);
+        expect(props.containsKey('capture_metadata_hash'), isFalse);
+        expect(props.containsKey('source_attestation_url'), isFalse);
+        expect(props['status'], 'ok');
+      });
     });
   });
 }

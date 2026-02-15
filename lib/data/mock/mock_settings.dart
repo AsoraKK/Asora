@@ -6,4 +6,5 @@ const SettingsState defaultSettings = SettingsState(
   leftHandedMode: false,
   horizontalSwipeEnabled: true,
   hapticsEnabled: true,
+  trustPassportVisibility: 'public_minimal',
 );

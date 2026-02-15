@@ -12,7 +12,10 @@ import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { PublicUserProfile } from '@shared/types/openapi';
 import { usersService } from '@auth/service/usersService';
-import { profileService } from '@users/service/profileService';
+import {
+  profileService,
+  resolveTrustPassportVisibility,
+} from '@users/service/profileService';
 
 export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) => {
   const userId = ctx.params.id;
@@ -63,6 +66,9 @@ export const users_get_by_id = httpHandler<void, PublicUserProfile>(async (ctx) 
       tier: pgUser.tier,
       reputation: pgUser.reputation_score,
       badges: [], // TODO: Fetch from badges service if available
+      trustPassportVisibility: resolveTrustPassportVisibility(
+        cosmosProfile.settings
+      ),
     };
 
     ctx.context.log(`[users_get_by_id] Successfully built profile for ${userId}`);

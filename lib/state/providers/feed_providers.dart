@@ -315,6 +315,90 @@ final customFeedDraftProvider =
       (ref) => CustomFeedDraftNotifier(),
     );
 
+class FeedRestoreSnapshot {
+  const FeedRestoreSnapshot({
+    required this.lastVisibleItemId,
+    required this.offset,
+    this.showNewPostsPill = false,
+  });
+
+  final String? lastVisibleItemId;
+  final double offset;
+  final bool showNewPostsPill;
+
+  FeedRestoreSnapshot copyWith({
+    String? lastVisibleItemId,
+    double? offset,
+    bool? showNewPostsPill,
+  }) {
+    return FeedRestoreSnapshot(
+      lastVisibleItemId: lastVisibleItemId ?? this.lastVisibleItemId,
+      offset: offset ?? this.offset,
+      showNewPostsPill: showNewPostsPill ?? this.showNewPostsPill,
+    );
+  }
+}
+
+class FeedRestoreResult {
+  const FeedRestoreResult({
+    required this.offset,
+    required this.usedFallback,
+    required this.showNewPostsPill,
+  });
+
+  final double offset;
+  final bool usedFallback;
+  final bool showNewPostsPill;
+}
+
+FeedRestoreResult computeFeedRestoreResult({
+  required List<FeedItem> items,
+  FeedRestoreSnapshot? snapshot,
+}) {
+  if (snapshot == null) {
+    return const FeedRestoreResult(
+      offset: 0,
+      usedFallback: false,
+      showNewPostsPill: false,
+    );
+  }
+
+  final itemId = snapshot.lastVisibleItemId;
+  if (itemId == null || itemId.isEmpty) {
+    return FeedRestoreResult(
+      offset: snapshot.offset,
+      usedFallback: false,
+      showNewPostsPill: snapshot.showNewPostsPill,
+    );
+  }
+
+  final itemStillPresent = items.any((item) => item.id == itemId);
+  if (itemStillPresent) {
+    return FeedRestoreResult(
+      offset: snapshot.offset,
+      usedFallback: false,
+      showNewPostsPill: snapshot.showNewPostsPill,
+    );
+  }
+
+  return const FeedRestoreResult(
+    offset: 0,
+    usedFallback: true,
+    showNewPostsPill: true,
+  );
+}
+
+final feedRestoreSnapshotsProvider =
+    StateProvider<Map<String, FeedRestoreSnapshot>>((ref) => const {});
+
+final feedRestoreResultProvider =
+    Provider.family<FeedRestoreResult, FeedModel>((ref, feed) {
+      final snapshots = ref.watch(feedRestoreSnapshotsProvider);
+      final snapshot = snapshots[feed.id];
+      final feedState = ref.watch(liveFeedStateProvider(feed));
+      return computeFeedRestoreResult(items: feedState.items, snapshot: snapshot);
+    });
+
 FeedItem _mapPostToFeedItem(domain.Post post) {
   final type = (post.mediaUrls?.isNotEmpty ?? false)
       ? ContentType.image

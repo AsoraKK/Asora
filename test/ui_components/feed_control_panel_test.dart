@@ -142,4 +142,29 @@ void main() {
     expect(find.text('Hybrid news'), findsOneWidget);
     expect(find.text('Moderation only'), findsOneWidget);
   });
+
+  testWidgets('hides feed switching list when onSelect is not provided', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedListProvider.overrideWithValue(feeds),
+          currentFeedProvider.overrideWithValue(feeds.first),
+        ],
+        child: MaterialApp(
+          home: Scaffold(body: FeedControlPanel(onCreateCustom: () {})),
+        ),
+      ),
+    );
+
+    expect(find.text('Feed tools'), findsOneWidget);
+    expect(find.text('Home Feed'), findsNothing);
+    expect(
+      find.text(
+        'Switch feeds from the Discover rail at the top of the home screen.',
+      ),
+      findsOneWidget,
+    );
+  });
 }

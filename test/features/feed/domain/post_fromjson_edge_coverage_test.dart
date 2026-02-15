@@ -39,7 +39,7 @@ void main() {
       'timeline': untypedTimeline,
     };
     final post = Post.fromJson(json);
-    expect(post.timeline.moderation, 'flagged');
+    expect(post.timeline.moderation, 'none');
   });
 
   test('Post.fromJson with fallback metadata from top-level keys', () {

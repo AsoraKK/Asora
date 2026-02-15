@@ -75,6 +75,7 @@ export interface UpdateUserProfileRequest {
   bio?: string;
   avatarUrl?: string;
   preferences?: Record<string, unknown>;
+  trustPassportVisibility?: TrustPassportVisibility;
 }
 
 export interface PublicUserProfile {
@@ -86,7 +87,13 @@ export interface PublicUserProfile {
   tier: string;
   reputation?: number;
   badges?: string[];
+  trustPassportVisibility?: TrustPassportVisibility;
 }
+
+export type TrustPassportVisibility =
+  | 'public_expanded'
+  | 'public_minimal'
+  | 'private';
 
 // ============================================================================
 // Posts Domain

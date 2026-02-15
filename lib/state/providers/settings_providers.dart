@@ -21,6 +21,10 @@ class SettingsController extends StateNotifier<SettingsState> {
   void toggleHaptics() {
     state = state.copyWith(hapticsEnabled: !state.hapticsEnabled);
   }
+
+  void setTrustPassportVisibility(String visibility) {
+    state = state.copyWith(trustPassportVisibility: visibility);
+  }
 }
 
 final settingsProvider =
@@ -34,4 +38,8 @@ final leftHandedModeProvider = Provider<bool>(
 
 final horizontalSwipeEnabledProvider = Provider<bool>(
   (ref) => ref.watch(settingsProvider).horizontalSwipeEnabled,
+);
+
+final trustPassportVisibilityProvider = Provider<String>(
+  (ref) => ref.watch(settingsProvider).trustPassportVisibility,
 );

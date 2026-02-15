@@ -36,20 +36,19 @@ void main() {
     await tester.pumpWidget(
       _buildNav(
         settings: defaultSettings.copyWith(leftHandedMode: false),
-        currentIndex: 2,
+        currentIndex: 1,
         onTap: (index) => tappedIndex = index,
       ),
     );
 
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Rewards'), findsOneWidget);
+    expect(find.text('Discover'), findsOneWidget);
     expect(find.text('Create'), findsOneWidget);
     expect(find.text('Alerts'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
 
     await tester.tap(find.text('Alerts'));
     await tester.pump();
-    expect(tappedIndex, 3);
+    expect(tappedIndex, 2);
   });
 
   testWidgets('mirrors order and tap mapping in left-handed mode', (
@@ -69,13 +68,13 @@ void main() {
       find.byType(BottomNavigationBar),
     );
 
-    expect(nav.currentIndex, 4);
+    expect(nav.currentIndex, 3);
     expect(nav.items.first.label, 'Profile');
-    expect(nav.items.last.label, 'Home');
+    expect(nav.items.last.label, 'Discover');
 
     await tester.tap(find.text('Profile'));
     await tester.pump();
-    expect(tappedIndex, 4);
+    expect(tappedIndex, 3);
   });
 }
 

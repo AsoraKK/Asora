@@ -1,10 +1,12 @@
 import { getTargetDatabase } from '@shared/clients/cosmos';
+import type { TrustPassportVisibility } from './profileService';
 
 export type TransparencyStreakCategory = 'Consistent' | 'Occasional' | 'Rare';
 export type JurorReliabilityTier = 'Bronze' | 'Silver' | 'Gold';
 
 export interface TrustPassportSummary {
   userId: string;
+  visibility?: TrustPassportVisibility;
   transparencyStreakCategory: TransparencyStreakCategory;
   appealsResolvedFairlyLabel: string;
   jurorReliabilityTier: JurorReliabilityTier;
@@ -192,4 +194,3 @@ class TrustPassportService {
 }
 
 export const trustPassportService = new TrustPassportService();
-

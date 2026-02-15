@@ -197,7 +197,11 @@ class ProfileScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: Spacing.lg),
-          _TrustPassportCard(userId: profile.id),
+          _TrustPassportCard(
+            userId: profile.id,
+            visibility: profile.trustPassportVisibility,
+            isOwner: currentUser != null && currentUser.id == profile.id,
+          ),
         ],
       ),
     );
@@ -224,12 +228,42 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _TrustPassportCard extends ConsumerWidget {
-  const _TrustPassportCard({required this.userId});
+  const _TrustPassportCard({
+    required this.userId,
+    required this.visibility,
+    required this.isOwner,
+  });
 
   final String userId;
+  final String visibility;
+  final bool isOwner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!isOwner && visibility == 'private') {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Trust Passport',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Spacing.xs),
+              Text(
+                'This user keeps trust passport details private.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final passportState = ref.watch(trustPassportProvider(userId));
     final titleStyle = Theme.of(
       context,
@@ -251,7 +285,9 @@ class _TrustPassportCard extends ConsumerWidget {
               _PassportRow(
                 label: 'Appeals outcomes',
                 value: passport.appealsResolvedFairlyLabel,
-                onTap: () => _showCounts(context, passport),
+                onTap: isOwner || visibility == 'public_expanded'
+                    ? () => _showCounts(context, passport)
+                    : null,
               ),
               _PassportRow(
                 label: 'Juror reliability tier',

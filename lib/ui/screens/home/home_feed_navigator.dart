@@ -10,9 +10,7 @@ import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/components/asora_top_bar.dart';
-import 'package:asora/ui/components/feed_carousel_indicator.dart';
 import 'package:asora/ui/components/feed_control_panel.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/design_system/tokens/motion.dart';
@@ -33,7 +31,6 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 }
 
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
-  static const double _horizontalParallax = 12;
   late final PageController _pageController;
   late final ProviderSubscription<int> _feedIndexSub;
 
@@ -71,7 +68,6 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     final feeds = ref.watch(feedListProvider);
     final activeIndex = ref.watch(currentFeedIndexProvider);
     final activeFeed = feeds[activeIndex];
-    final swipeEnabled = ref.watch(horizontalSwipeEnabledProvider);
     final spacing = context.spacing;
 
     return Scaffold(
@@ -87,41 +83,21 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               useWordmark: true,
             ),
             SizedBox(height: spacing.xs),
-            FeedCarouselIndicator(
-              count: feeds.length,
+            _FeedSwitchRail(
+              feeds: feeds,
               activeIndex: activeIndex,
+              onSelect: _onFeedSelected,
             ),
             SizedBox(height: spacing.xs),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                physics: swipeEnabled
-                    ? const PageScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (index) {
                   ref.read(currentFeedIndexProvider.notifier).state = index;
                 },
                 itemCount: feeds.length,
-                itemBuilder: (context, index) {
-                  final feed = feeds[index];
-                  return AnimatedBuilder(
-                    animation: _pageController,
-                    builder: (context, child) {
-                      double offset = 0;
-                      if (_pageController.hasClients &&
-                          _pageController.position.haveDimensions) {
-                        final currentPage =
-                            _pageController.page ?? index.toDouble();
-                        offset = (currentPage - index).toDouble();
-                      }
-                      return Transform.translate(
-                        offset: Offset(offset * _horizontalParallax, 0),
-                        child: child,
-                      );
-                    },
-                    child: _FeedPage(feed: feed),
-                  );
-                },
+                itemBuilder: (context, index) => _FeedPage(feed: feeds[index]),
               ),
             ),
           ],
@@ -130,24 +106,20 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
+  void _onFeedSelected(int index) {
+    ref.read(currentFeedIndexProvider.notifier).state = index;
+    _pageController.animateToPage(
+      index,
+      duration: LythMotion.standard,
+      curve: LythMotion.emphasisCurve,
+    );
+  }
+
   void _openFeedControl() {
-    final feeds = ref.read(feedListProvider);
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       builder: (_) => FeedControlPanel(
-        onSelect: (feed) {
-          final index = feeds.indexWhere((f) => f.id == feed.id);
-          if (index != -1) {
-            ref.read(currentFeedIndexProvider.notifier).state = index;
-            _pageController.animateToPage(
-              index,
-              duration: LythMotion.standard,
-              curve: LythMotion.emphasisCurve,
-            );
-          }
-          Navigator.of(context).maybePop();
-        },
         onCreateCustom: () {
           Navigator.of(context).maybePop();
           Navigator.of(context).push(
@@ -193,18 +165,81 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 }
 
-class _FeedPage extends ConsumerWidget {
+class _FeedSwitchRail extends StatelessWidget {
+  const _FeedSwitchRail({
+    required this.feeds,
+    required this.activeIndex,
+    required this.onSelect,
+  });
+
+  final List<FeedModel> feeds;
+  final int activeIndex;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: spacing.md),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(feeds.length, (index) {
+          final feed = feeds[index];
+          return Padding(
+            padding: EdgeInsets.only(right: spacing.xs),
+            child: ChoiceChip(
+              label: Text(feed.name),
+              selected: index == activeIndex,
+              onSelected: (_) => onSelect(index),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _FeedPage extends ConsumerStatefulWidget {
   const _FeedPage({required this.feed});
 
   final FeedModel feed;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FeedPage> createState() => _FeedPageState();
+}
+
+class _FeedPageState extends ConsumerState<_FeedPage> {
+  static const double _estimatedCardExtent = 340;
+  late final ScrollController _scrollController;
+  bool _restoreApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_persistRestoreSnapshot);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_persistRestoreSnapshot);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final feed = widget.feed;
     if (feed.type == FeedType.moderation) {
       return const Center(child: Text('Moderation feed not in carousel.'));
     }
 
     final liveState = ref.watch(liveFeedStateProvider(feed));
+    final restoreResult = ref.watch(feedRestoreResultProvider(feed));
+
+    _applyRestoreIfReady(liveState: liveState, restoreResult: restoreResult);
+
     if (liveState.isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -233,6 +268,9 @@ class _FeedPage extends ConsumerWidget {
       items: liveState.items,
       hasMore: liveState.hasMore,
       isLoadingMore: liveState.isLoadingMore,
+      showNewPostsPill: restoreResult.showNewPostsPill,
+      onNewPostsPillTap: _onNewPostsPillTap,
+      controller: _scrollController,
     );
   }
 
@@ -242,18 +280,25 @@ class _FeedPage extends ConsumerWidget {
     required List<FeedItem> items,
     required bool hasMore,
     required bool isLoadingMore,
+    required bool showNewPostsPill,
+    required VoidCallback onNewPostsPillTap,
+    required ScrollController controller,
   }) {
     final currentUserId = ref.watch(currentUserProvider)?.id;
+    final feed = widget.feed;
 
     switch (feed.type) {
       case FeedType.discover:
         return DiscoverFeed(
+          controller: controller,
           feed: feed,
           items: items,
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
           isLoadingMore: isLoadingMore,
+          showNewPostsPill: showNewPostsPill,
+          onNewPostsPillTap: onNewPostsPillTap,
           onLoadMore: () =>
               ref.read(liveFeedStateProvider(feed).notifier).loadMore(),
           onRefresh: () =>
@@ -261,12 +306,15 @@ class _FeedPage extends ConsumerWidget {
         );
       case FeedType.news:
         return NewsFeed(
+          controller: controller,
           feed: feed,
           items: items,
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
           isLoadingMore: isLoadingMore,
+          showNewPostsPill: showNewPostsPill,
+          onNewPostsPillTap: onNewPostsPillTap,
           onLoadMore: () =>
               ref.read(liveFeedStateProvider(feed).notifier).loadMore(),
           onRefresh: () =>
@@ -274,12 +322,15 @@ class _FeedPage extends ConsumerWidget {
         );
       case FeedType.custom:
         return CustomFeedView(
+          controller: controller,
           feed: feed,
           items: items,
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
           isLoadingMore: isLoadingMore,
+          showNewPostsPill: showNewPostsPill,
+          onNewPostsPillTap: onNewPostsPillTap,
           onLoadMore: () =>
               ref.read(liveFeedStateProvider(feed).notifier).loadMore(),
           onRefresh: () =>
@@ -288,6 +339,91 @@ class _FeedPage extends ConsumerWidget {
       case FeedType.moderation:
         return const Center(child: Text('Moderation feed not in carousel.'));
     }
+  }
+
+  void _applyRestoreIfReady({
+    required LiveFeedState liveState,
+    required FeedRestoreResult restoreResult,
+  }) {
+    if (_restoreApplied || liveState.isInitialLoading) {
+      return;
+    }
+
+    _restoreApplied = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      final targetOffset = restoreResult.offset.clamp(0, maxExtent).toDouble();
+      if (targetOffset > 0) {
+        _scrollController.jumpTo(targetOffset);
+      }
+
+      if (restoreResult.usedFallback) {
+        _setRestoreSnapshot(
+          lastVisibleItemId: null,
+          offset: 0,
+          showNewPostsPill: true,
+        );
+      }
+    });
+  }
+
+  void _persistRestoreSnapshot() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final feedState = ref.read(liveFeedStateProvider(widget.feed));
+    final items = feedState.items;
+
+    String? itemId;
+    if (items.isNotEmpty) {
+      final index = (_scrollController.offset / _estimatedCardExtent).floor();
+      final safeIndex = index.clamp(0, items.length - 1);
+      itemId = items[safeIndex].id;
+    }
+
+    final existing = ref.read(feedRestoreSnapshotsProvider)[widget.feed.id];
+    _setRestoreSnapshot(
+      lastVisibleItemId: itemId,
+      offset: _scrollController.offset,
+      showNewPostsPill: existing?.showNewPostsPill ?? false,
+    );
+  }
+
+  void _setRestoreSnapshot({
+    required String? lastVisibleItemId,
+    required double offset,
+    required bool showNewPostsPill,
+  }) {
+    final snapshots = ref.read(feedRestoreSnapshotsProvider);
+    ref.read(feedRestoreSnapshotsProvider.notifier).state = {
+      ...snapshots,
+      widget.feed.id: FeedRestoreSnapshot(
+        lastVisibleItemId: lastVisibleItemId,
+        offset: offset,
+        showNewPostsPill: showNewPostsPill,
+      ),
+    };
+  }
+
+  void _onNewPostsPillTap() {
+    _setRestoreSnapshot(
+      lastVisibleItemId: null,
+      offset: 0,
+      showNewPostsPill: false,
+    );
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _showEditPostDialog(
@@ -365,7 +501,7 @@ class _FeedPage extends ConsumerWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Post updated')));
-        await ref.read(liveFeedStateProvider(feed).notifier).refresh();
+        await ref.read(liveFeedStateProvider(widget.feed).notifier).refresh();
       case CreatePostBlocked(:final message):
         ScaffoldMessenger.of(
           context,

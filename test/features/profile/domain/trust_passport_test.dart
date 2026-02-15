@@ -6,12 +6,14 @@ void main() {
     test('can be constructed with required fields', () {
       const passport = TrustPassport(
         userId: 'u1',
+        visibility: 'public_expanded',
         transparencyStreakCategory: 'Gold',
         appealsResolvedFairlyLabel: 'Most resolved',
         jurorReliabilityTier: 'Silver',
         counts: TrustPassportCounts(),
       );
       expect(passport.userId, 'u1');
+      expect(passport.visibility, 'public_expanded');
       expect(passport.transparencyStreakCategory, 'Gold');
       expect(passport.appealsResolvedFairlyLabel, 'Most resolved');
       expect(passport.jurorReliabilityTier, 'Silver');
@@ -20,6 +22,7 @@ void main() {
     test('fromJson parses full payload', () {
       final json = {
         'userId': 'user-123',
+        'visibility': 'private',
         'transparencyStreakCategory': 'Legendary',
         'appealsResolvedFairlyLabel': 'Top resolver',
         'jurorReliabilityTier': 'Diamond',
@@ -31,6 +34,7 @@ void main() {
       };
       final passport = TrustPassport.fromJson(json);
       expect(passport.userId, 'user-123');
+      expect(passport.visibility, 'private');
       expect(passport.transparencyStreakCategory, 'Legendary');
       expect(passport.appealsResolvedFairlyLabel, 'Top resolver');
       expect(passport.jurorReliabilityTier, 'Diamond');
@@ -46,9 +50,20 @@ void main() {
     test('fromJson uses defaults for missing optional fields', () {
       final json = {'userId': 'u2', 'counts': <String, dynamic>{}};
       final passport = TrustPassport.fromJson(json);
+      expect(passport.visibility, 'public_minimal');
       expect(passport.transparencyStreakCategory, 'Rare');
       expect(passport.appealsResolvedFairlyLabel, 'Appeals resolved fairly');
       expect(passport.jurorReliabilityTier, 'Bronze');
+    });
+
+    test('fromJson falls back to public_minimal for unknown visibility', () {
+      final passport = TrustPassport.fromJson({
+        'userId': 'u5',
+        'visibility': 'friends_only',
+        'counts': <String, dynamic>{},
+      });
+
+      expect(passport.visibility, 'public_minimal');
     });
 
     test('fromJson handles counts not being a Map<String, dynamic>', () {

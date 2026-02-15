@@ -192,10 +192,76 @@ void main() {
 
       expect(find.text('Moderation feed not in carousel.'), findsOneWidget);
     });
+
+    testWidgets('shows and clears New posts pill on restore fallback', (
+      tester,
+    ) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      final discoverFeed = _feeds.first;
+      final container = ProviderContainer(
+        overrides: [
+          feedListProvider.overrideWith((ref) => [discoverFeed]),
+          liveFeedStateProvider.overrideWith(
+            (ref, feed) => _StaticLiveFeedNotifier(
+              LiveFeedState(
+                items: [
+                  FeedItem(
+                    id: 'discover-live-1',
+                    feedId: feed.id,
+                    author: 'Alex',
+                    contentType: ContentType.text,
+                    title: 'T',
+                    body: 'B',
+                    publishedAt: DateTime(2024),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          feedRestoreSnapshotsProvider.overrideWith(
+            (ref) => {
+              discoverFeed.id: const FeedRestoreSnapshot(
+                lastVisibleItemId: 'missing-item',
+                offset: 180,
+                showNewPostsPill: false,
+              ),
+            },
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const HomeFeedNavigator(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('New posts'), findsOneWidget);
+      await tester.tap(find.text('New posts'));
+      await tester.pumpAndSettle();
+
+      final snapshot = container.read(feedRestoreSnapshotsProvider)[
+          discoverFeed.id];
+      expect(snapshot?.showNewPostsPill, isFalse);
+      expect(snapshot?.lastVisibleItemId, isNull);
+    });
   });
 
-  group('Feed switching via PageView', () {
-    testWidgets('PageView onPageChanged updates currentFeedIndex', (
+  group('Feed switching via Discover rail', () {
+    testWidgets('rail taps update currentFeedIndex', (
       tester,
     ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
@@ -241,11 +307,77 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Swipe left to go to News
-      await tester.fling(find.byType(PageView), const Offset(-300, 0), 800);
+      await tester.tap(find.text('News'));
       await tester.pumpAndSettle();
 
       expect(container.read(currentFeedIndexProvider), 1);
+    });
+
+    testWidgets('PageView disables swipe gestures by design', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final pageView = tester.widget<PageView>(find.byType(PageView));
+      expect(pageView.physics, isA<NeverScrollableScrollPhysics>());
+    });
+
+    testWidgets('feed control panel no longer switches feeds', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Feed tools'), findsOneWidget);
+      expect(
+        find.text(
+          'Switch feeds from the Discover rail at the top of the home screen.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Curated discover'), findsNothing);
     });
   });
 }

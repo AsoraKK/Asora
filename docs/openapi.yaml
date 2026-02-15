@@ -242,8 +242,7 @@ paths:
       summary: Public profile view without sensitive fields.
       description: Retrieve public profile information for any user by ID, excluding sensitive fields like email and auth tokens.
       operationId: users_get_by_id
-      security:
-      - bearerAuth: []
+      security: []
       parameters:
       - name: id
         in: path
@@ -271,6 +270,41 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/users/{id}/trust-passport:
+    get:
+      tags:
+      - users
+      summary: Public trust passport summary for a user.
+      description: Returns trust passport summary. Private visibility can restrict access for non-owners.
+      operationId: users_trust_passport_get
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Trust passport summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustPassportSummary'
+        '403':
+          description: Trust passport is private for this profile.
           content:
             application/json:
               schema:
@@ -2929,6 +2963,14 @@ components:
         preferences:
           type: object
           additionalProperties: true
+        trustPassportVisibility:
+          $ref: '#/components/schemas/TrustPassportVisibility'
+    TrustPassportVisibility:
+      type: string
+      enum:
+      - public_expanded
+      - public_minimal
+      - private
     PublicUser:
       type: object
       properties:
@@ -2955,11 +2997,60 @@ components:
           type: array
           items:
             type: string
+        trustPassportVisibility:
+          $ref: '#/components/schemas/TrustPassportVisibility'
     PublicUserResponse:
       type: object
       properties:
         user:
           $ref: '#/components/schemas/PublicUser'
+    TrustPassportSummary:
+      type: object
+      properties:
+        userId:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/TrustPassportVisibility'
+        transparencyStreakCategory:
+          type: string
+          enum:
+          - Consistent
+          - Occasional
+          - Rare
+        appealsResolvedFairlyLabel:
+          type: string
+        jurorReliabilityTier:
+          type: string
+          enum:
+          - Bronze
+          - Silver
+          - Gold
+        counts:
+          type: object
+          properties:
+            transparency:
+              type: object
+              properties:
+                totalPosts:
+                  type: integer
+                postsWithSignals:
+                  type: integer
+            appeals:
+              type: object
+              properties:
+                resolved:
+                  type: integer
+                approved:
+                  type: integer
+                rejected:
+                  type: integer
+            juror:
+              type: object
+              properties:
+                votesCast:
+                  type: integer
+                alignedVotes:
+                  type: integer
     PostContent:
       type: object
       properties:

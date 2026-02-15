@@ -124,6 +124,26 @@ void main() {
 
       expect(loadMoreCalled, isFalse);
     });
+
+    testWidgets('shows New posts pill and handles tap callback', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        wrap(
+          DiscoverFeed(
+            feed: feed,
+            items: items,
+            showNewPostsPill: true,
+            onNewPostsPillTap: () => tapped = true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('New posts'), findsOneWidget);
+      await tester.tap(find.text('New posts'));
+      await tester.pump();
+      expect(tapped, isTrue);
+    });
   });
 
   group('NewsFeed', () {

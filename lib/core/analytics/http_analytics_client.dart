@@ -72,6 +72,43 @@ class HttpAnalyticsClient implements AnalyticsClient {
   Timer? _flushTimer;
   bool _isFlushing = false;
 
+  static bool _isSensitiveTelemetryKey(String key) {
+    final normalized = key.toLowerCase();
+    if (normalized == 'event_id' ||
+        normalized == 'receipt_event_id' ||
+        normalized == 'receipt_event_ids') {
+      return true;
+    }
+    if ((normalized.contains('capture') || normalized.contains('edit')) &&
+        normalized.contains('hash')) {
+      return true;
+    }
+    if (normalized.contains('proof') && normalized.contains('hash')) {
+      return true;
+    }
+    if (normalized.contains('attestation') && normalized.contains('url')) {
+      return true;
+    }
+    return false;
+  }
+
+  static Map<String, Object?>? _sanitizeProperties(
+    Map<String, Object?>? properties,
+  ) {
+    if (properties == null || properties.isEmpty) {
+      return properties;
+    }
+
+    final sanitized = <String, Object?>{};
+    for (final entry in properties.entries) {
+      if (_isSensitiveTelemetryKey(entry.key)) {
+        continue;
+      }
+      sanitized[entry.key] = entry.value;
+    }
+    return sanitized;
+  }
+
   /// Generate a random session ID (simple UUID v4 alternative)
   static String _generateSessionId() {
     final random = Random.secure();
@@ -87,16 +124,18 @@ class HttpAnalyticsClient implements AnalyticsClient {
       return;
     }
 
+    final sanitizedProperties = _sanitizeProperties(properties);
+
     // Validate properties (max 20 keys, scalar values only)
-    if (properties != null) {
-      if (properties.length > 20) {
+    if (sanitizedProperties != null) {
+      if (sanitizedProperties.length > 20) {
         debugPrint(
-          '⚠️ Analytics: Too many properties (${properties.length}) for event: $name',
+          '⚠️ Analytics: Too many properties (${sanitizedProperties.length}) for event: $name',
         );
         return;
       }
 
-      for (final entry in properties.entries) {
+      for (final entry in sanitizedProperties.entries) {
         final value = entry.value;
         if (value != null &&
             value is! String &&
@@ -115,7 +154,7 @@ class HttpAnalyticsClient implements AnalyticsClient {
       _AnalyticsEvent(
         name: name,
         timestamp: DateTime.now(),
-        properties: properties,
+        properties: sanitizedProperties,
       ),
     );
 

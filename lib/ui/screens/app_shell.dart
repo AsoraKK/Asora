@@ -6,14 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/features/notifications/presentation/notifications_screen.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
 import 'package:asora/services/service_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/components/asora_bottom_nav.dart';
 import 'package:asora/ui/screens/create/create_screen.dart';
 import 'package:asora/ui/screens/home/home_feed_navigator.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
-import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
 
 class AsoraAppShell extends ConsumerStatefulWidget {
   const AsoraAppShell({super.key});
@@ -63,7 +61,6 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
     ); // trigger rebuild on mirror toggle
     const tabs = <Widget>[
       HomeFeedNavigator(),
-      RewardsDashboardScreen(),
       CreateScreen(),
       NotificationsScreen(),
       ProfileScreen(),
@@ -80,12 +77,6 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
       bottomNavigationBar: AsoraBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (index == 2) {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const CreatePostScreen()),
-            );
-            return;
-          }
           setState(() => _currentIndex = index);
         },
       ),

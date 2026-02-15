@@ -71,6 +71,19 @@ class Post {
         author?['displayName'] as String? ??
         json['authorId'] as String;
 
+    String normalizeTrustStatus(Object? value) {
+      const allowed = {
+        'verified_signals_attached',
+        'no_extra_signals',
+        'under_appeal',
+        'actioned',
+      };
+      if (value is String && allowed.contains(value)) {
+        return value;
+      }
+      return 'no_extra_signals';
+    }
+
     return Post(
       id: json['id'] as String,
       authorId: json['authorId'] as String,
@@ -102,7 +115,7 @@ class Post {
           json['userDisliked'] as bool? ??
           json['viewerHasDisliked'] as bool? ??
           false,
-      trustStatus: json['trustStatus'] as String? ?? 'no_extra_signals',
+      trustStatus: normalizeTrustStatus(json['trustStatus']),
       timeline: PostTrustTimeline.fromJson(
         json['timeline'] is Map<String, dynamic>
             ? json['timeline'] as Map<String, dynamic>
@@ -181,15 +194,41 @@ class PostTrustTimeline {
   });
 
   factory PostTrustTimeline.fromJson(Map<String, dynamic>? json) {
+    String normalizeCreated(Object? _) => 'complete';
+
+    String normalizeMediaChecked(Object? value) {
+      if (value == 'complete' || value == 'none') {
+        return value as String;
+      }
+      return 'none';
+    }
+
+    String normalizeModeration(Object? value) {
+      if (value == 'complete' ||
+          value == 'warn' ||
+          value == 'actioned' ||
+          value == 'none') {
+        return value as String;
+      }
+      return 'none';
+    }
+
+    String? normalizeAppeal(Object? value) {
+      if (value == 'open' || value == 'resolved') {
+        return value as String;
+      }
+      return null;
+    }
+
     if (json == null) {
       return const PostTrustTimeline();
     }
 
     return PostTrustTimeline(
-      created: json['created'] as String? ?? 'complete',
-      mediaChecked: json['mediaChecked'] as String? ?? 'none',
-      moderation: json['moderation'] as String? ?? 'none',
-      appeal: json['appeal'] as String?,
+      created: normalizeCreated(json['created']),
+      mediaChecked: normalizeMediaChecked(json['mediaChecked']),
+      moderation: normalizeModeration(json['moderation']),
+      appeal: normalizeAppeal(json['appeal']),
     );
   }
 

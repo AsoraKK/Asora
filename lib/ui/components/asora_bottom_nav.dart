@@ -21,12 +21,8 @@ class AsoraBottomNav extends ConsumerWidget {
 
     final items = <BottomNavigationBarItem>[
       const BottomNavigationBarItem(
-        icon: Icon(Icons.home_outlined),
-        label: 'Home',
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.emoji_events_outlined),
-        label: 'Rewards',
+        icon: Icon(Icons.explore_outlined),
+        label: 'Discover',
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.add_circle_outline),

@@ -13,7 +13,10 @@ import { httpHandler } from '@shared/http/handler';
 import type { UpdateUserProfileRequest, UserProfile } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { usersService } from '@auth/service/usersService';
-import { profileService } from '@users/service/profileService';
+import {
+  isTrustPassportVisibility,
+  profileService,
+} from '@users/service/profileService';
 import { moderateProfileUpdates } from '@users/service/profileModerationService';
 
 export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile>(async (ctx) => {
@@ -57,6 +60,19 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
       );
     }
 
+    let cosmosProfile = await profileService.getProfile(auth.userId);
+
+    const trustPassportVisibility = updates.trustPassportVisibility;
+    if (
+      trustPassportVisibility !== undefined &&
+      !isTrustPassportVisibility(trustPassportVisibility)
+    ) {
+      return ctx.badRequest(
+        'Invalid trust passport visibility value',
+        'INVALID_TRUST_PASSPORT_VISIBILITY'
+      );
+    }
+
     // Update Cosmos profile
     const profileUpdates: Record<string, unknown> = {};
 
@@ -72,11 +88,25 @@ export const users_me_update = httpHandler<UpdateUserProfileRequest, UserProfile
     if (updates.avatarUrl !== undefined) {
       profileUpdates.avatarUrl = updates.avatarUrl;
     }
-    if (updates.preferences !== undefined) {
-      profileUpdates.settings = updates.preferences;
+
+    if (
+      updates.preferences !== undefined ||
+      trustPassportVisibility !== undefined
+    ) {
+      const incomingSettings: Record<string, unknown> = {};
+      if (updates.preferences && typeof updates.preferences === 'object') {
+        Object.assign(incomingSettings, updates.preferences);
+      }
+      if (trustPassportVisibility !== undefined) {
+        incomingSettings.trustPassportVisibility = trustPassportVisibility;
+      }
+
+      profileUpdates.settings = {
+        ...(cosmosProfile?.settings ?? {}),
+        ...incomingSettings,
+      };
     }
 
-    let cosmosProfile = await profileService.getProfile(auth.userId);
     if (!cosmosProfile) {
       // Create profile if it doesn't exist
       cosmosProfile = await profileService.createProfile(

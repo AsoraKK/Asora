@@ -332,6 +332,8 @@ export function deriveTrustSummary(
   const moderationAction =
     latestModeration?.metadata?.moderationAction ||
     (fallback.isActioned ? 'blocked' : 'none');
+  const hasActionedModeration =
+    moderationAction !== 'none' || fallback.isActioned;
 
   const moderationTimeline: PostTrustTimeline['moderation'] =
     moderationAction === 'blocked' || moderationAction === 'removed'
@@ -368,7 +370,7 @@ export function deriveTrustSummary(
 
   const trustStatus: TrustStatus = appealOpen
     ? 'under_appeal'
-    : moderationAction === 'blocked' || moderationAction === 'removed' || fallback.isActioned
+    : hasActionedModeration
       ? 'actioned'
       : proofSignalsProvided
         ? 'verified_signals_attached'
@@ -388,4 +390,3 @@ export function deriveTrustSummary(
     featuredEligible: fallback.featuredEligible,
   };
 }
-

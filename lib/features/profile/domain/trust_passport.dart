@@ -2,9 +2,16 @@
 
 import 'package:flutter/foundation.dart';
 
+const Set<String> _trustPassportVisibilityValues = {
+  'public_expanded',
+  'public_minimal',
+  'private',
+};
+
 @immutable
 class TrustPassport {
   final String userId;
+  final String visibility;
   final String transparencyStreakCategory;
   final String appealsResolvedFairlyLabel;
   final String jurorReliabilityTier;
@@ -12,6 +19,7 @@ class TrustPassport {
 
   const TrustPassport({
     required this.userId,
+    this.visibility = 'public_minimal',
     required this.transparencyStreakCategory,
     required this.appealsResolvedFairlyLabel,
     required this.jurorReliabilityTier,
@@ -19,8 +27,12 @@ class TrustPassport {
   });
 
   factory TrustPassport.fromJson(Map<String, dynamic> json) {
+    final visibility = json['visibility'] as String?;
     return TrustPassport(
       userId: json['userId'] as String,
+      visibility: _trustPassportVisibilityValues.contains(visibility)
+          ? visibility!
+          : 'public_minimal',
       transparencyStreakCategory:
           json['transparencyStreakCategory'] as String? ?? 'Rare',
       appealsResolvedFairlyLabel:

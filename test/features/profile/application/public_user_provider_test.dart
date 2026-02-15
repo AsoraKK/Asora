@@ -30,6 +30,7 @@ void main() {
             'displayName': 'Tester',
             'handle': '@tester',
             'tier': 'gold',
+            'trustPassportVisibility': 'public_expanded',
             'reputationScore': 42,
             'journalistVerified': true,
             'badges': ['Founder'],
@@ -52,18 +53,36 @@ void main() {
     expect(result, isA<PublicUser>());
     expect(result.displayName, 'Tester');
     expect(result.handleLabel, '@tester');
+    expect(result.trustPassportVisibility, 'public_expanded');
   });
 
-  test('publicUserProvider throws when unauthenticated', () async {
+  test('publicUserProvider allows guest profile reads', () async {
+    final dio = MockDio();
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/users/u1',
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => Response<Map<String, dynamic>>(
+        data: {
+          'user': {'id': 'u1', 'displayName': 'Guest Visible', 'tier': 'free'},
+        },
+        statusCode: 200,
+        requestOptions: RequestOptions(path: '/api/users/u1'),
+      ),
+    );
+
     final container = ProviderContainer(
-      overrides: [jwtProvider.overrideWith((ref) async => null)],
+      overrides: [
+        secureDioProvider.overrideWithValue(dio),
+        jwtProvider.overrideWith((ref) async => null),
+      ],
     );
     addTearDown(container.dispose);
 
-    await expectLater(
-      container.read(publicUserProvider('u1').future),
-      throwsA(isA<Exception>()),
-    );
+    final result = await container.read(publicUserProvider('u1').future);
+    expect(result.displayName, 'Guest Visible');
   });
 
   test('publicUserProvider throws on invalid response', () async {

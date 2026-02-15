@@ -187,8 +187,8 @@ void main() {
         },
       };
       final post = Post.fromJson(json);
-      expect(post.timeline.created, 'done');
-      expect(post.timeline.mediaChecked, 'passed');
+      expect(post.timeline.created, 'complete');
+      expect(post.timeline.mediaChecked, 'none');
     });
 
     test('parses source from non-typed Map', () {
@@ -203,6 +203,30 @@ void main() {
       final post = Post.fromJson(json);
       expect(post.source?.type, 'rss');
       expect(post.source?.name, 'BBC');
+    });
+
+    test('maps unknown trust status and timeline values to safe defaults', () {
+      final json = {
+        'id': 'p1',
+        'authorId': 'a1',
+        'authorUsername': 'bob',
+        'text': 'hi',
+        'createdAt': now.toIso8601String(),
+        'trustStatus': 'in_review',
+        'timeline': {
+          'created': 'unknown',
+          'mediaChecked': 'pending',
+          'moderation': 'flagged',
+          'appeal': 'waiting',
+        },
+      };
+
+      final post = Post.fromJson(json);
+      expect(post.trustStatus, 'no_extra_signals');
+      expect(post.timeline.created, 'complete');
+      expect(post.timeline.mediaChecked, 'none');
+      expect(post.timeline.moderation, 'none');
+      expect(post.timeline.appeal, isNull);
     });
 
     test('parses moderation from Map', () {

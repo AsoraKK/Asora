@@ -1,5 +1,19 @@
 import { getTargetDatabase } from '@shared/clients/cosmos';
 
+export type TrustPassportVisibility =
+  | 'public_expanded'
+  | 'public_minimal'
+  | 'private';
+
+export const DEFAULT_TRUST_PASSPORT_VISIBILITY: TrustPassportVisibility =
+  'public_minimal';
+
+const TRUST_PASSPORT_VISIBILITY_VALUES: TrustPassportVisibility[] = [
+  'public_expanded',
+  'public_minimal',
+  'private',
+];
+
 export interface CosmosUserProfile {
   id: string;
   displayName: string;
@@ -10,6 +24,24 @@ export interface CosmosUserProfile {
   settings?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export function isTrustPassportVisibility(
+  value: unknown
+): value is TrustPassportVisibility {
+  return (
+    typeof value === 'string' &&
+    TRUST_PASSPORT_VISIBILITY_VALUES.includes(value as TrustPassportVisibility)
+  );
+}
+
+export function resolveTrustPassportVisibility(
+  settings?: Record<string, unknown>
+): TrustPassportVisibility {
+  const value = settings?.trustPassportVisibility;
+  return isTrustPassportVisibility(value)
+    ? value
+    : DEFAULT_TRUST_PASSPORT_VISIBILITY;
 }
 
 class ProfileService {

@@ -12,8 +12,11 @@ class NewsFeed extends ConsumerWidget {
     super.key,
     required this.feed,
     required this.items,
+    this.controller,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.showNewPostsPill = false,
+    this.onNewPostsPillTap,
     this.onLoadMore,
     this.onRefresh,
     this.currentUserId,
@@ -22,8 +25,11 @@ class NewsFeed extends ConsumerWidget {
 
   final FeedModel feed;
   final List<FeedItem> items;
+  final ScrollController? controller;
   final bool hasMore;
   final bool isLoadingMore;
+  final bool showNewPostsPill;
+  final VoidCallback? onNewPostsPillTap;
   final VoidCallback? onLoadMore;
   final Future<void> Function()? onRefresh;
   final String? currentUserId;
@@ -45,6 +51,7 @@ class NewsFeed extends ConsumerWidget {
           return false;
         },
         child: CustomScrollView(
+          controller: controller,
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
@@ -58,6 +65,24 @@ class NewsFeed extends ConsumerWidget {
                 ),
               ),
             ),
+            if (showNewPostsPill)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: Spacing.md,
+                    right: Spacing.md,
+                    bottom: Spacing.xs,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ActionChip(
+                      avatar: const Icon(Icons.fiber_new_rounded, size: 16),
+                      label: const Text('New posts'),
+                      onPressed: onNewPostsPillTap,
+                    ),
+                  ),
+                ),
+              ),
             SliverList.separated(
               itemBuilder: (context, index) {
                 final item = items[index];

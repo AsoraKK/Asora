@@ -1,11 +1,25 @@
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/profile/application/profile_providers.dart';
+import 'package:asora/features/profile/domain/public_user.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _MockDio extends Mock implements Dio {}
 
 void main() {
-  testWidgets('SettingsScreen toggles update preferences', (tester) async {
+  setUpAll(() {
+    registerFallbackValue(RequestOptions(path: '/api/users/me'));
+    registerFallbackValue(Options());
+  });
+
+  testWidgets('SettingsScreen toggles local preferences', (tester) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -21,24 +35,91 @@ void main() {
       SwitchListTile,
       'Left-handed mode (mirror nav)',
     );
-    final swipeTile = find.widgetWithText(
-      SwitchListTile,
-      'Horizontal swipe between feeds',
-    );
     final hapticsTile = find.widgetWithText(SwitchListTile, 'Haptics');
 
     expect(tester.widget<SwitchListTile>(leftHandedTile).value, isFalse);
-    expect(tester.widget<SwitchListTile>(swipeTile).value, isTrue);
     expect(tester.widget<SwitchListTile>(hapticsTile).value, isTrue);
 
     await tester.tap(leftHandedTile);
-    await tester.tap(swipeTile);
     await tester.tap(hapticsTile);
     await tester.pumpAndSettle();
 
     final state = container.read(settingsProvider);
     expect(state.leftHandedMode, isTrue);
-    expect(state.horizontalSwipeEnabled, isFalse);
     expect(state.hapticsEnabled, isFalse);
+    expect(
+      find.text(
+        'Sign in to manage what others see on your Trust Passport.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('authenticated users can update trust visibility', (
+    tester,
+  ) async {
+    final dio = _MockDio();
+    when(
+      () => dio.patch<Map<String, dynamic>>(
+        '/api/users/me',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => Response<Map<String, dynamic>>(
+        data: const {},
+        statusCode: 200,
+        requestOptions: RequestOptions(path: '/api/users/me'),
+      ),
+    );
+
+    final user = User(
+      id: 'u1',
+      email: 'u1@lythaus.app',
+      role: UserRole.user,
+      tier: UserTier.bronze,
+      reputationScore: 0,
+      createdAt: DateTime(2025, 1, 1),
+      lastLoginAt: DateTime(2025, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          secureDioProvider.overrideWithValue(dio),
+          currentUserProvider.overrideWithValue(user),
+          jwtProvider.overrideWith((ref) async => 'token'),
+          publicUserProvider.overrideWith(
+            (ref, userId) async => const PublicUser(
+              id: 'u1',
+              displayName: 'Lythaus User',
+              tier: 'free',
+              trustPassportVisibility: 'public_minimal',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Private').first);
+    await tester.pumpAndSettle();
+
+    verify(
+      () => dio.patch<Map<String, dynamic>>(
+        '/api/users/me',
+        data: {'trustPassportVisibility': 'private'},
+        options: any(named: 'options'),
+      ),
+    ).called(1);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsScreen)),
+    );
+    expect(
+      container.read(settingsProvider).trustPassportVisibility,
+      'private',
+    );
   });
 }
