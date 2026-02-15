@@ -90,51 +90,60 @@ void main() {
       );
     }
 
-    test('uses subscription tier and paid achievement when token exists', () async {
-      final status = SubscriptionStatus(
-        userId: 'u1',
-        tier: 'premium',
-        status: 'active',
-        provider: 'test',
-        currentPeriodEnd: DateTime.now().add(const Duration(days: 14)),
-        cancelAtPeriodEnd: true,
-        entitlements: const SubscriptionEntitlements(
-          dailyPosts: 20,
-          maxMediaSizeMB: 30,
-          maxMediaPerPost: 4,
-        ),
-      );
-
-      final container = ProviderContainer(
-        overrides: [
-          currentUserProvider.overrideWithValue(userWithTier(UserTier.bronze)),
-          jwtProvider.overrideWith((_) async => 'token'),
-          subscriptionServiceProvider.overrideWithValue(
-            _FakeSubscriptionService(status),
+    test(
+      'uses subscription tier and paid achievement when token exists',
+      () async {
+        final status = SubscriptionStatus(
+          userId: 'u1',
+          tier: 'premium',
+          status: 'active',
+          provider: 'test',
+          currentPeriodEnd: DateTime.now().add(const Duration(days: 14)),
+          cancelAtPeriodEnd: true,
+          entitlements: const SubscriptionEntitlements(
+            dailyPosts: 20,
+            maxMediaSizeMB: 30,
+            maxMediaPerPost: 4,
           ),
-        ],
-      );
-      addTearDown(container.dispose);
+        );
 
-      final reputation = await container.read(reputationProvider.future);
+        final container = ProviderContainer(
+          overrides: [
+            currentUserProvider.overrideWithValue(
+              userWithTier(UserTier.bronze),
+            ),
+            jwtProvider.overrideWith((_) async => 'token'),
+            subscriptionServiceProvider.overrideWithValue(
+              _FakeSubscriptionService(status),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      expect(reputation.tier.id, 'premium');
-      expect(reputation.missions, hasLength(3));
-      expect(reputation.recentAchievements, contains('Tier active: Premium'));
-      expect(
-        reputation.recentAchievements,
-        contains('Paid tier entitlements active'),
-      );
-      expect(
-        reputation.recentAchievements.any((item) => item.startsWith('Renews through ')),
-        isTrue,
-      );
-    });
+        final reputation = await container.read(reputationProvider.future);
+
+        expect(reputation.tier.id, 'premium');
+        expect(reputation.missions, hasLength(3));
+        expect(reputation.recentAchievements, contains('Tier active: Premium'));
+        expect(
+          reputation.recentAchievements,
+          contains('Paid tier entitlements active'),
+        );
+        expect(
+          reputation.recentAchievements.any(
+            (item) => item.startsWith('Renews through '),
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('falls back to user tier mapping when token is missing', () async {
       final container = ProviderContainer(
         overrides: [
-          currentUserProvider.overrideWithValue(userWithTier(UserTier.platinum)),
+          currentUserProvider.overrideWithValue(
+            userWithTier(UserTier.platinum),
+          ),
           jwtProvider.overrideWith((_) async => null),
         ],
       );
@@ -146,21 +155,26 @@ void main() {
       expect(reputation.recentAchievements, contains('Tier active: Black'));
     });
 
-    test('falls back to user tier mapping when subscription check fails', () async {
-      final container = ProviderContainer(
-        overrides: [
-          currentUserProvider.overrideWithValue(userWithTier(UserTier.gold)),
-          jwtProvider.overrideWith((_) async => 'token'),
-          subscriptionServiceProvider.overrideWithValue(_ThrowingSubscriptionService()),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'falls back to user tier mapping when subscription check fails',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            currentUserProvider.overrideWithValue(userWithTier(UserTier.gold)),
+            jwtProvider.overrideWith((_) async => 'token'),
+            subscriptionServiceProvider.overrideWithValue(
+              _ThrowingSubscriptionService(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final reputation = await container.read(reputationProvider.future);
-      expect(reputation.tier.id, 'premium');
-      expect(reputation.missions, isEmpty);
-      expect(reputation.recentAchievements, contains('Tier active: Premium'));
-    });
+        final reputation = await container.read(reputationProvider.future);
+        expect(reputation.tier.id, 'premium');
+        expect(reputation.missions, isEmpty);
+        expect(reputation.recentAchievements, contains('Tier active: Premium'));
+      },
+    );
   });
 }
 
