@@ -8,7 +8,33 @@ import 'package:asora/core/security/cert_pinning.dart';
 
 class _FakeAdapter extends Mock implements HttpClientAdapter {}
 
+/// Manual spy for close/fetch delegation tests (avoids mocktail verify issues).
+class _SpyAdapter extends Fake implements HttpClientAdapter {
+  int closeCalls = 0;
+  bool? lastForce;
+  int fetchCalls = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    fetchCalls++;
+    return ResponseBody(const Stream<Uint8List>.empty(), 200);
+  }
+
+  @override
+  void close({bool force = false}) {
+    closeCalls++;
+    lastForce = force;
+  }
+}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(RequestOptions(path: ''));
+  });
   group('CertPinningInfo', () {
     test('toJson includes all fields', () {
       const info = CertPinningInfo(
@@ -130,32 +156,29 @@ void main() {
 
   group('PinnedCertHttpClientAdapter', () {
     test('wraps a non-IO adapter and delegates fetch', () async {
-      final fakeAdapter = _FakeAdapter();
-      const stream = Stream<Uint8List>.empty();
-      when(
-        () => fakeAdapter.fetch(any(), any(), any()),
-      ).thenAnswer((_) async => ResponseBody(stream, 200));
-
-      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      final spy = _SpyAdapter();
+      final pinned = PinnedCertHttpClientAdapter(spy);
       final opts = RequestOptions(path: '/test');
       final response = await pinned.fetch(opts, null, null);
 
       expect(response.statusCode, 200);
-      verify(() => fakeAdapter.fetch(opts, null, null)).called(1);
+      expect(spy.fetchCalls, 1);
     });
 
     test('close delegates to inner adapter', () {
-      final fakeAdapter = _FakeAdapter();
-      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      final spy = _SpyAdapter();
+      final pinned = PinnedCertHttpClientAdapter(spy);
       pinned.close();
-      verify(() => fakeAdapter.close(force: false)).called(1);
+      expect(spy.closeCalls, 1);
+      expect(spy.lastForce, false);
     });
 
     test('close with force delegates to inner adapter', () {
-      final fakeAdapter = _FakeAdapter();
-      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      final spy = _SpyAdapter();
+      final pinned = PinnedCertHttpClientAdapter(spy);
       pinned.close(force: true);
-      verify(() => fakeAdapter.close(force: true)).called(1);
+      expect(spy.closeCalls, 1);
+      expect(spy.lastForce, true);
     });
   });
 

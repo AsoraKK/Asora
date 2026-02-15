@@ -160,6 +160,8 @@ class ModerationService implements ModerationRepository {
         );
       }
       return data;
+    } on ModerationException {
+      rethrow;
     } on DioException catch (e) {
       throw _mapDioException(e);
     } catch (e) {
@@ -197,6 +199,8 @@ class ModerationService implements ModerationRepository {
         );
       }
       return VoteResult.fromJson(data);
+    } on ModerationException {
+      rethrow;
     } on DioException catch (e) {
       throw _mapDioException(e);
     } catch (e) {
@@ -239,6 +243,8 @@ class ModerationService implements ModerationRepository {
           code: 'LOAD_FEED_FAILED',
         );
       }
+    } on ModerationException {
+      rethrow;
     } on DioException catch (e) {
       throw ModerationException(
         'Network error: ${e.message}',
