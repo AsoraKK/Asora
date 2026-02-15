@@ -7,20 +7,20 @@ import 'package:asora/features/moderation/application/moderation_providers.dart'
 void main() {
   test('VotingFeedParams default constructor', () {
     // Use non-const invocation to ensure runtime execution for coverage
-    final params = VotingFeedParams();
+    const params = VotingFeedParams();
     expect(params.page, 1);
     expect(params.pageSize, 20);
     expect(params.filters, isNull);
   });
 
   test('VotingFeedParams with custom values', () {
-    final params = VotingFeedParams(page: 3, pageSize: 50);
+    const params = VotingFeedParams(page: 3, pageSize: 50);
     expect(params.page, 3);
     expect(params.pageSize, 50);
   });
 
   test('AppealSubmission constructor', () {
-    final submission = AppealSubmission(
+    const submission = AppealSubmission(
       contentId: 'c1',
       contentType: 'post',
       appealType: 'disagree',
@@ -35,7 +35,7 @@ void main() {
   });
 
   test('FlagSubmission constructor', () {
-    final flag = FlagSubmission(
+    const flag = FlagSubmission(
       contentId: 'c2',
       contentType: 'comment',
       reason: 'spam',
@@ -48,7 +48,7 @@ void main() {
   });
 
   test('VoteSubmission constructor', () {
-    final vote = VoteSubmission(
+    const vote = VoteSubmission(
       appealId: 'a1',
       vote: 'uphold',
       comment: 'Clearly violates guidelines',

@@ -7,7 +7,6 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -253,17 +252,16 @@ void main() {
       await tester.tap(find.text('New posts'));
       await tester.pumpAndSettle();
 
-      final snapshot = container.read(feedRestoreSnapshotsProvider)[
-          discoverFeed.id];
+      final snapshot = container.read(
+        feedRestoreSnapshotsProvider,
+      )[discoverFeed.id];
       expect(snapshot?.showNewPostsPill, isFalse);
       expect(snapshot?.lastVisibleItemId, isNull);
     });
   });
 
   group('Feed switching via Discover rail', () {
-    testWidgets('rail taps update currentFeedIndex', (
-      tester,
-    ) async {
+    testWidgets('rail taps update currentFeedIndex', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),

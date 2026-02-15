@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -38,14 +37,18 @@ ResponseBody _jsonResponse(Map<String, dynamic> data) {
   return ResponseBody.fromString(
     jsonEncode(data),
     200,
-    headers: {Headers.contentTypeHeader: ['application/json']},
+    headers: {
+      Headers.contentTypeHeader: ['application/json'],
+    },
   );
 }
 
 Widget _hostedSheet({required Dio dio, required String postId}) {
   return ProviderScope(
     overrides: [secureDioProvider.overrideWithValue(dio)],
-    child: MaterialApp(home: Scaffold(body: ReceiptDrawerSheet(postId: postId))),
+    child: MaterialApp(
+      home: Scaffold(body: ReceiptDrawerSheet(postId: postId)),
+    ),
   );
 }
 
@@ -135,7 +138,9 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('hides appeal button once any appeal event exists', (tester) async {
+  testWidgets('hides appeal button once any appeal event exists', (
+    tester,
+  ) async {
     final dio = _dioWithAdapter(
       _MockAdapter((_) async {
         return _jsonResponse({
@@ -174,7 +179,9 @@ void main() {
     expect(find.text('Appeal opened'), findsOneWidget);
   });
 
-  testWidgets('shows retry after error and reloads successfully', (tester) async {
+  testWidgets('shows retry after error and reloads successfully', (
+    tester,
+  ) async {
     var callCount = 0;
     final dio = _dioWithAdapter(
       _MockAdapter((options) async {

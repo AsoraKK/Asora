@@ -11,7 +11,6 @@ import 'package:asora/features/moderation/domain/moderation_filters.dart';
 import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/features/moderation/presentation/moderation_console/moderation_queue_tab.dart';
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
 
 class _MockRepo extends Mock implements ModerationRepository {}
 

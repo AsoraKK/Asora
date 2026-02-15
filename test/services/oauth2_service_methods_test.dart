@@ -34,12 +34,9 @@ void main() {
         'clientId': 'cid-456',
         'policy': 'B2C_1_signup',
         'authorityHost': 'mytenant.ciamlogin.com',
-        'scopes': const ['openid', 'offline_access'],
-        'redirectUris': const {
-          'android': 'com.app://callback',
-          'ios': 'msal://auth',
-        },
-        'knownAuthorities': const ['mytenant.ciamlogin.com'],
+        'scopes': ['openid', 'offline_access'],
+        'redirectUris': {'android': 'com.app://callback', 'ios': 'msal://auth'},
+        'knownAuthorities': ['mytenant.ciamlogin.com'],
         'googleIdpHint': 'Google',
       });
 
@@ -56,9 +53,9 @@ void main() {
         'clientId': 'C',
         'policy': 'P',
         'authorityHost': 'H',
-        'scopes': const <dynamic>[],
-        'redirectUris': const <String, dynamic>{},
-        'knownAuthorities': const <dynamic>[],
+        'scopes': <dynamic>[],
+        'redirectUris': <String, dynamic>{},
+        'knownAuthorities': <dynamic>[],
       });
       expect(config.tenantId, isNull);
     });
@@ -70,9 +67,9 @@ void main() {
         clientId: 'cid',
         policy: 'p',
         authorityHost: 'host.com',
-        scopes: const [],
-        redirectUris: const {},
-        knownAuthorities: const [],
+        scopes: [],
+        redirectUris: {},
+        knownAuthorities: [],
       );
       expect(config.discoveryUrl, contains('tenantIdValue'));
     });

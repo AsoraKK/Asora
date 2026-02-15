@@ -8,7 +8,7 @@ import 'package:asora/features/moderation/presentation/moderation_console/widget
 void main() {
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-  ModerationQueueItem _item({
+  ModerationQueueItem item({
     ModerationItemType type = ModerationItemType.flag,
     ModerationSeverityLevel severity = ModerationSeverityLevel.high,
     String? contentTitle,
@@ -39,7 +39,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(contentTitle: 'Bad Post Title'),
+            item: item(contentTitle: 'Bad Post Title'),
             onTap: () => tapped = true,
           ),
         ),
@@ -60,7 +60,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(type: ModerationItemType.appeal),
+            item: item(type: ModerationItemType.appeal),
             onTap: () {},
           ),
         ),
@@ -70,7 +70,7 @@ void main() {
 
     testWidgets('falls back to contentPreview when no title', (tester) async {
       await tester.pumpWidget(
-        wrap(ModerationQueueItemTile(item: _item(), onTap: () {})),
+        wrap(ModerationQueueItemTile(item: item(), onTap: () {})),
       );
       expect(find.text('Preview text here'), findsAtLeast(1));
     });
@@ -79,7 +79,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(aiRiskBand: 'Critical'),
+            item: item(aiRiskBand: 'Critical'),
             onTap: () {},
           ),
         ),
@@ -90,7 +90,7 @@ void main() {
     testWidgets('shows Escalated chip when escalated', (tester) async {
       await tester.pumpWidget(
         wrap(
-          ModerationQueueItemTile(item: _item(isEscalated: true), onTap: () {}),
+          ModerationQueueItemTile(item: item(isEscalated: true), onTap: () {}),
         ),
       );
       expect(find.text('Escalated'), findsOneWidget);
@@ -100,7 +100,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(authorHandle: '@kylee'),
+            item: item(authorHandle: '@kylee'),
             onTap: () {},
           ),
         ),
@@ -110,7 +110,7 @@ void main() {
 
     testWidgets('shows Unknown author when no handle', (tester) async {
       await tester.pumpWidget(
-        wrap(ModerationQueueItemTile(item: _item(), onTap: () {})),
+        wrap(ModerationQueueItemTile(item: item(), onTap: () {})),
       );
       expect(find.textContaining('Unknown author'), findsOneWidget);
     });
@@ -119,7 +119,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(severity: ModerationSeverityLevel.medium),
+            item: item(severity: ModerationSeverityLevel.medium),
             onTap: () {},
           ),
         ),
@@ -131,7 +131,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(severity: ModerationSeverityLevel.low),
+            item: item(severity: ModerationSeverityLevel.low),
             onTap: () {},
           ),
         ),
@@ -143,7 +143,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationQueueItemTile(
-            item: _item(severity: ModerationSeverityLevel.unknown),
+            item: item(severity: ModerationSeverityLevel.unknown),
             onTap: () {},
           ),
         ),

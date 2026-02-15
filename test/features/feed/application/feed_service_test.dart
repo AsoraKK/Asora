@@ -272,7 +272,7 @@ void main() {
     });
 
     test('getVotingFeed with filters passes filter count', () async {
-      final filters = AppealFilters(contentType: 'post');
+      const filters = AppealFilters(contentType: 'post');
       when(
         () => mockDio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',

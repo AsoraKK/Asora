@@ -56,7 +56,7 @@ void main() {
 
     testWidgets('renders appeal items on second tab', (tester) async {
       final items = [
-        AppealCase(
+        const AppealCase(
           id: 'a1',
           authorStatement: 'I disagree with the decision',
           evidence: 'Here is my evidence',

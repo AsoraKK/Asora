@@ -10,7 +10,7 @@ void main() {
     home: Scaffold(body: SingleChildScrollView(child: child)),
   );
 
-  ModerationAuditEntry _entry(ModerationAuditActionType action) =>
+  ModerationAuditEntry entry(ModerationAuditActionType action) =>
       ModerationAuditEntry(
         id: 'e1',
         caseId: 'c1',
@@ -31,7 +31,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationAuditTimeline(
-            entries: [_entry(ModerationAuditActionType.escalation)],
+            entries: [entry(ModerationAuditActionType.escalation)],
           ),
         ),
       );
@@ -44,7 +44,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationAuditTimeline(
-            entries: [_entry(ModerationAuditActionType.appeal)],
+            entries: [entry(ModerationAuditActionType.appeal)],
           ),
         ),
       );
@@ -56,7 +56,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           ModerationAuditTimeline(
-            entries: [_entry(ModerationAuditActionType.flagged)],
+            entries: [entry(ModerationAuditActionType.flagged)],
           ),
         ),
       );
@@ -69,10 +69,10 @@ void main() {
         wrap(
           ModerationAuditTimeline(
             entries: [
-              _entry(ModerationAuditActionType.flagged),
-              _entry(ModerationAuditActionType.aiEvaluated),
-              _entry(ModerationAuditActionType.communityVote),
-              _entry(ModerationAuditActionType.decision),
+              entry(ModerationAuditActionType.flagged),
+              entry(ModerationAuditActionType.aiEvaluated),
+              entry(ModerationAuditActionType.communityVote),
+              entry(ModerationAuditActionType.decision),
             ],
           ),
         ),

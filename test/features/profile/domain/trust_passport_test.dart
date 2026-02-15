@@ -57,10 +57,10 @@ void main() {
     });
 
     test('fromJson falls back to public_minimal for unknown visibility', () {
-      final passport = TrustPassport.fromJson({
+      final passport = TrustPassport.fromJson(const {
         'userId': 'u5',
         'visibility': 'friends_only',
-        'counts': <String, dynamic>{},
+        'counts': const <String, dynamic>{},
       });
 
       expect(passport.visibility, 'public_minimal');
