@@ -59,7 +59,7 @@ void main() {
     testWidgets('shows app bar title', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(xp: 0, tier: freeTier),
           ),
         ),
@@ -87,11 +87,11 @@ void main() {
     testWidgets('shows XP and tier data when loaded', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(
               xp: 500,
               tier: freeTier,
-              missions: const [
+              missions: [
                 Mission(
                   id: 'm1',
                   title: 'Daily post limit: 5',
@@ -99,7 +99,7 @@ void main() {
                   completed: true,
                 ),
               ],
-              recentAchievements: const ['Tier active: Free'],
+              recentAchievements: ['Tier active: Free'],
             ),
           ),
         ),
@@ -115,11 +115,11 @@ void main() {
     testWidgets('shows history section with achievements', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(
               xp: 100,
               tier: freeTier,
-              recentAchievements: const [
+              recentAchievements: [
                 'Tier active: Free',
                 'Paid tier entitlements active',
               ],
@@ -137,7 +137,7 @@ void main() {
     testWidgets('shows upcoming rewards section', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(xp: 100, tier: freeTier),
           ),
         ),
@@ -150,11 +150,11 @@ void main() {
     testWidgets('shows completed mission icon', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(
               xp: 400,
               tier: freeTier,
-              missions: const [
+              missions: [
                 Mission(
                   id: 'm1',
                   title: 'Complete me',
@@ -174,11 +174,11 @@ void main() {
     testWidgets('shows incomplete mission icon', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(
               xp: 400,
               tier: freeTier,
-              missions: const [
+              missions: [
                 Mission(
                   id: 'm2',
                   title: 'In progress',
@@ -198,11 +198,11 @@ void main() {
     testWidgets('shows XP reward for missions', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(
               xp: 100,
               tier: freeTier,
-              missions: const [
+              missions: [
                 Mission(id: 'm1', title: 'Test mission', xpReward: 50),
               ],
             ),
@@ -224,7 +224,7 @@ void main() {
 
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.data(
+          reputationValue: const AsyncValue.data(
             UserReputation(xp: 5000, tier: blackTier),
           ),
         ),

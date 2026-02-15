@@ -1,0 +1,176 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:asora/core/security/cert_pinning.dart';
+
+class _FakeAdapter extends Mock implements HttpClientAdapter {}
+
+void main() {
+  group('CertPinningInfo', () {
+    test('toJson includes all fields', () {
+      const info = CertPinningInfo(
+        enabled: true,
+        pins: {
+          'example.com': ['pin1', 'pin2'],
+        },
+        buildMode: 'debug',
+      );
+
+      final json = info.toJson();
+      expect(json['enabled'], isTrue);
+      expect(json['buildMode'], 'debug');
+      expect(json['pinnedDomains'], ['example.com']);
+      expect(json['pins'], isA<Map>());
+    });
+  });
+
+  group('getCertPinningInfo', () {
+    test('returns CertPinningInfo with expected structure', () {
+      final info = getCertPinningInfo();
+      expect(info, isA<CertPinningInfo>());
+      expect(info.enabled, isA<bool>());
+      expect(info.pins, isA<Map<String, List<String>>>());
+      expect(info.buildMode, isNotEmpty);
+    });
+  });
+
+  group('isPinValidationError', () {
+    test('true for connectionError on pinned domain', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+        ),
+        type: DioExceptionType.connectionError,
+      );
+      expect(isPinValidationError(err), isTrue);
+    });
+
+    test('true for badCertificate on pinned domain', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+        ),
+        type: DioExceptionType.badCertificate,
+      );
+      expect(isPinValidationError(err), isTrue);
+    });
+
+    test('true for unknown type on pinned domain', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+        ),
+        type: DioExceptionType.unknown,
+      );
+      expect(isPinValidationError(err), isTrue);
+    });
+
+    test('false for unpinned domain', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://unpinned.example.com/api/test',
+        ),
+        type: DioExceptionType.connectionError,
+      );
+      expect(isPinValidationError(err), isFalse);
+    });
+
+    test('false for non-connection error types', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+        ),
+        type: DioExceptionType.receiveTimeout,
+      );
+      expect(isPinValidationError(err), isFalse);
+    });
+
+    test('false for cancel type', () {
+      final err = DioException(
+        requestOptions: RequestOptions(
+          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+        ),
+        type: DioExceptionType.cancel,
+      );
+      expect(isPinValidationError(err), isFalse);
+    });
+  });
+
+  group('kPinnedDomains', () {
+    test('contains expected domains', () {
+      expect(kPinnedDomains.keys, isNotEmpty);
+      expect(
+        kPinnedDomains.containsKey('asora-function-dev.azurewebsites.net'),
+        isTrue,
+      );
+    });
+
+    test('pins are non-empty base64 strings', () {
+      for (final entry in kPinnedDomains.entries) {
+        for (final pin in entry.value) {
+          expect(pin, isNotEmpty, reason: 'Pin for ${entry.key} is empty');
+          expect(
+            pin.contains('PLACEHOLDER'),
+            isFalse,
+            reason: 'Pin for ${entry.key} contains placeholder',
+          );
+        }
+      }
+    });
+  });
+
+  group('kEnableCertPinning', () {
+    test('is a bool', () {
+      expect(kEnableCertPinning, isA<bool>());
+    });
+  });
+
+  group('PinnedCertHttpClientAdapter', () {
+    test('wraps a non-IO adapter and delegates fetch', () async {
+      final fakeAdapter = _FakeAdapter();
+      const stream = Stream<Uint8List>.empty();
+      when(
+        () => fakeAdapter.fetch(any(), any(), any()),
+      ).thenAnswer((_) async => ResponseBody(stream, 200));
+
+      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      final opts = RequestOptions(path: '/test');
+      final response = await pinned.fetch(opts, null, null);
+
+      expect(response.statusCode, 200);
+      verify(() => fakeAdapter.fetch(opts, null, null)).called(1);
+    });
+
+    test('close delegates to inner adapter', () {
+      final fakeAdapter = _FakeAdapter();
+      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      pinned.close();
+      verify(() => fakeAdapter.close(force: false)).called(1);
+    });
+
+    test('close with force delegates to inner adapter', () {
+      final fakeAdapter = _FakeAdapter();
+      final pinned = PinnedCertHttpClientAdapter(fakeAdapter);
+      pinned.close(force: true);
+      verify(() => fakeAdapter.close(force: true)).called(1);
+    });
+  });
+
+  group('createPinnedDio', () {
+    test('creates Dio instance with baseUrl', () {
+      final dio = createPinnedDio(baseUrl: 'https://example.com');
+      expect(dio, isA<Dio>());
+      expect(dio.options.baseUrl, 'https://example.com');
+      dio.close();
+    });
+
+    test('creates Dio without baseUrl', () {
+      final dio = createPinnedDio();
+      expect(dio, isA<Dio>());
+      dio.close();
+    });
+  });
+}

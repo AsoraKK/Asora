@@ -71,7 +71,7 @@ void main() {
     );
 
     test('constructs with required fields and defaults', () {
-      final rep = UserReputation(xp: 100, tier: baseTier);
+      const rep = UserReputation(xp: 100, tier: baseTier);
 
       expect(rep.xp, 100);
       expect(rep.tier.id, 'free');
@@ -87,11 +87,11 @@ void main() {
         completed: true,
       );
 
-      final rep = UserReputation(
+      const rep = UserReputation(
         xp: 500,
         tier: baseTier,
-        missions: const [mission],
-        recentAchievements: const ['First post'],
+        missions: [mission],
+        recentAchievements: ['First post'],
       );
 
       expect(rep.missions, hasLength(1));
@@ -99,7 +99,7 @@ void main() {
     });
 
     test('copyWith replaces xp', () {
-      final original = UserReputation(xp: 100, tier: baseTier);
+      const original = UserReputation(xp: 100, tier: baseTier);
       final updated = original.copyWith(xp: 200);
 
       expect(updated.xp, 200);
@@ -114,7 +114,7 @@ void main() {
         privileges: ['extra feeds'],
       );
 
-      final original = UserReputation(xp: 100, tier: baseTier);
+      const original = UserReputation(xp: 100, tier: baseTier);
       final updated = original.copyWith(tier: premiumTier);
 
       expect(updated.tier.id, 'premium');
@@ -124,7 +124,7 @@ void main() {
     test('copyWith replaces missions', () {
       const mission = Mission(id: 'm1', title: 'New', xpReward: 25);
 
-      final original = UserReputation(xp: 100, tier: baseTier);
+      const original = UserReputation(xp: 100, tier: baseTier);
       final updated = original.copyWith(missions: const [mission]);
 
       expect(updated.missions, hasLength(1));
@@ -132,7 +132,7 @@ void main() {
     });
 
     test('copyWith replaces recentAchievements', () {
-      final original = UserReputation(xp: 100, tier: baseTier);
+      const original = UserReputation(xp: 100, tier: baseTier);
       final updated = original.copyWith(
         recentAchievements: const ['Achievement 1', 'Achievement 2'],
       );
@@ -142,11 +142,11 @@ void main() {
 
     test('copyWith with no arguments returns equivalent object', () {
       const mission = Mission(id: 'm1', title: 'Test', xpReward: 5);
-      final original = UserReputation(
+      const original = UserReputation(
         xp: 300,
         tier: baseTier,
-        missions: const [mission],
-        recentAchievements: const ['Ach1'],
+        missions: [mission],
+        recentAchievements: ['Ach1'],
       );
       final copy = original.copyWith();
 

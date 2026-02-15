@@ -76,14 +76,18 @@ class _ReceiptDrawerSheetState extends ConsumerState<ReceiptDrawerSheet> {
         }
         if (snapshot.hasError) {
           return _ReceiptError(
-            onRetry: () => setState(() => _future = _loadReceipt()),
+            onRetry: () => setState(() {
+              _future = _loadReceipt();
+            }),
           );
         }
         final payload = snapshot.data;
         if (payload == null) {
           return _ReceiptError(
             message: 'Receipt unavailable',
-            onRetry: () => setState(() => _future = _loadReceipt()),
+            onRetry: () => setState(() {
+              _future = _loadReceipt();
+            }),
           );
         }
         return _ReceiptContent(payload: payload);

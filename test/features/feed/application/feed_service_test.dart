@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:dio/dio.dart';
 import 'package:asora/features/feed/application/feed_service.dart';
 import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
 
 class _MockDio extends Mock implements Dio {}
 
@@ -225,6 +226,81 @@ void main() {
         () => feedService.getFeedMetrics(token: 'test_token'),
         throwsA(isA<FeedException>()),
       );
+    });
+
+    test('getVotingHistory network error throws FeedException', () async {
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          '/api/getMyVotes',
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/getMyVotes'),
+          message: 'Connection reset',
+        ),
+      );
+
+      expect(
+        () => feedService.getVotingHistory(token: 'test_token'),
+        throwsA(
+          isA<FeedException>().having((e) => e.code, 'code', 'NETWORK_ERROR'),
+        ),
+      );
+    });
+
+    test('getFeedMetrics DioException throws FeedException', () async {
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          '/api/getFeedMetrics',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/getFeedMetrics'),
+          message: 'Timeout',
+        ),
+      );
+
+      expect(
+        () => feedService.getFeedMetrics(token: 'test_token'),
+        throwsA(
+          isA<FeedException>().having((e) => e.code, 'code', 'NETWORK_ERROR'),
+        ),
+      );
+    });
+
+    test('getVotingFeed with filters passes filter count', () async {
+      final filters = AppealFilters(contentType: 'post');
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          '/api/reviewAppealedContent',
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          data: {
+            'success': true,
+            'appeals': <Map<String, dynamic>>[],
+            'pagination': {
+              'currentPage': 1,
+              'pageSize': 20,
+              'totalItems': 0,
+              'totalPages': 0,
+            },
+          },
+          statusCode: 200,
+          requestOptions: RequestOptions(path: '/api/reviewAppealedContent'),
+        ),
+      );
+
+      final result = await feedService.getVotingFeed(
+        token: 'test_token',
+        filters: filters,
+      );
+      expect(result.appeals, isEmpty);
     });
   });
 }

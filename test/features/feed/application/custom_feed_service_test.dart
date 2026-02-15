@@ -141,4 +141,117 @@ void main() {
       ),
     ).called(1);
   });
+
+  test('getCustomFeedItems passes cursor when provided', () async {
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/custom-feeds/custom::2/items',
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response({
+        'items': <Map<String, dynamic>>[],
+        'nextCursor': null,
+      }, '/api/custom-feeds/custom::2/items'),
+    );
+
+    final result = await service.getCustomFeedItems(
+      token: 't1',
+      feedId: 'custom::2',
+      cursor: 'abc123',
+    );
+
+    expect(result.posts, isEmpty);
+  });
+
+  test('listCustomFeeds handles missing id in feed definition', () async {
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/custom-feeds',
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response({
+        'items': [
+          {'name': 'No-ID Feed', 'contentType': 'text', 'sorting': 'hot'},
+        ],
+      }, '/api/custom-feeds'),
+    );
+
+    final feeds = await service.listCustomFeeds(token: 't1');
+
+    expect(feeds, hasLength(1));
+    expect(feeds.first.id, startsWith('custom-'));
+    expect(feeds.first.sorting, SortingRule.hot);
+  });
+
+  test('createCustomFeed with SortingRule.hot', () async {
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/api/custom-feeds',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response(
+        {
+          'id': 'custom::hot',
+          'name': 'Hot Feed',
+          'contentType': 'mixed',
+          'sorting': 'hot',
+        },
+        '/api/custom-feeds',
+        statusCode: 201,
+      ),
+    );
+
+    final created = await service.createCustomFeed(
+      token: 't1',
+      draft: const CustomFeedDraft(
+        name: 'Hot Feed',
+        contentType: ContentType.mixed,
+        sorting: SortingRule.hot,
+        refinements: FeedRefinements(),
+      ),
+    );
+
+    expect(created.id, 'custom::hot');
+    expect(created.sorting, SortingRule.hot);
+  });
+
+  test('createCustomFeed with SortingRule.local', () async {
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/api/custom-feeds',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response(
+        {
+          'id': 'custom::local',
+          'name': 'Local Feed',
+          'contentType': 'mixed',
+          'sorting': 'local',
+        },
+        '/api/custom-feeds',
+        statusCode: 201,
+      ),
+    );
+
+    final created = await service.createCustomFeed(
+      token: 't1',
+      draft: const CustomFeedDraft(
+        name: 'Local Feed',
+        contentType: ContentType.mixed,
+        sorting: SortingRule.local,
+        refinements: FeedRefinements(),
+      ),
+    );
+
+    expect(created.id, 'custom::local');
+    expect(created.sorting, SortingRule.local);
+  });
 }
