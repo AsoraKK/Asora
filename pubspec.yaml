@@ -34,9 +34,9 @@ dependencies:
   crypto: ^3.0.3 # For certificate pinning SPKI hashing
   cupertino_icons: ^1.0.8
   dio: ^5.4.0
-  firebase_core: ^3.8.1
-  firebase_crashlytics: ^4.1.3
-  firebase_messaging: ^15.1.3
+  firebase_core: ^4.4.0
+  firebase_crashlytics: ^5.0.7
+  firebase_messaging: ^16.1.1
   flutter:
     sdk: flutter
   flutter_appauth: ^7.0.1 # OAuth2/OIDC client for B2C authentication
@@ -45,12 +45,12 @@ dependencies:
   flutter_riverpod: ^2.4.0
   flutter_secure_storage: ^9.0.0
   flutter_svg: ^2.0.9
-  google_fonts: ^6.0.0
+  google_fonts: ^6.3.2
   http: ^1.2.0
   image_picker: ^1.1.2
   intl: ^0.19.0 # Date/time formatting
   local_auth: ^2.2.0
-  meta: ^1.12.0
+  meta: ^1.16.0
   opentelemetry: ^0.18.10
   permission_handler: ^12.0.1
   timezone: ^0.9.4 # For scheduled local notifications
@@ -64,7 +64,7 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  mockito: ^5.4.4 # Mocking framework for unit tests
+  mockito: ^5.5.0 # Mocking framework for unit tests
   mocktail: ^1.0.3 # Lightweight mocking for Riverpod/appauth tests
   permission_handler_platform_interface: ^4.3.0
   test: ^1.25.15
