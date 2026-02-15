@@ -43,7 +43,7 @@ dependencies:
   flutter_jailbreak_detection: ^1.10.0 # Device integrity checks
   flutter_local_notifications: ^18.0.1
   flutter_riverpod: ^2.4.0
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.0.0
   flutter_svg: ^2.0.9
   google_fonts: ^6.0.0
   http: ^1.2.0
