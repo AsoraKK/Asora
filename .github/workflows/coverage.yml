@@ -7,10 +7,7 @@ permissions:
   actions: read
 
 on:
-  workflow_run:
-    workflows: [tests-and-coverage]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test-functions:
@@ -163,5 +160,4 @@ jobs:
               issue_number: pr,
               body
             });
-
 

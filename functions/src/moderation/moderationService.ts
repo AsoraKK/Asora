@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import type { ModerationCase, ModerationCaseResponse, ModerationDecision } from '@shared/types/openapi';
 
@@ -79,7 +79,7 @@ export async function createModerationDecision(
   rationale?: string
 ): Promise<ModerationDecision> {
   const now = new Date().toISOString();
-  const decisionId = `decision::${caseId}::${crypto.randomUUID().slice(0, 8)}`;
+  const decisionId = uuidv7();
   const document = {
     id: decisionId,
     caseId,

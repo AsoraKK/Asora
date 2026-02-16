@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/notifications/presentation/notifications_screen.dart';
 import 'package:asora/services/service_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/ui/components/asora_bottom_nav.dart';
 import 'package:asora/ui/screens/create/create_screen.dart';
 import 'package:asora/ui/screens/home/home_feed_navigator.dart';
@@ -59,6 +60,7 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
     final _ = ref.watch(
       leftHandedModeProvider,
     ); // trigger rebuild on mirror toggle
+    final isGuest = ref.watch(guestModeProvider);
     const tabs = <Widget>[
       HomeFeedNavigator(),
       CreateScreen(),
@@ -77,6 +79,12 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
       bottomNavigationBar: AsoraBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
+          if (isGuest && index == 1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Sign in to create a post.')),
+            );
+            return;
+          }
           setState(() => _currentIndex = index);
         },
       ),

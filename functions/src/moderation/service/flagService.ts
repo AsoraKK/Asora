@@ -10,6 +10,7 @@
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { PatchOperation } from '@azure/cosmos';
 import { z } from 'zod';
+import { v7 as uuidv7 } from 'uuid';
 import { createHiveClient, HiveAIClient } from '@shared/clients/hive';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import {
@@ -96,6 +97,7 @@ interface FlagContentParams {
 
 interface FlagDocument {
   id: string;
+  targetId: string;
   contentId: string;
   contentType: string;
   flaggedBy: string;
@@ -151,7 +153,7 @@ async function calculatePriorityScore(reason: string, urgency: string): Promise<
 }
 
 function generateFlagId(): string {
-  return `flag_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  return uuidv7();
 }
 
 function getContentContainerName(contentType: string): 'posts' | 'users' {
@@ -296,6 +298,7 @@ export async function flagContentHandler({
 
     const flagDocument: FlagDocument = {
       id: flagId,
+      targetId: contentId,
       contentId,
       contentType,
       flaggedBy: userId,

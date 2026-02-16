@@ -8,12 +8,12 @@ final appealProvider = Provider<AppealService>((ref) => AppealService(ref));
 class AppealService {
   final Ref ref;
   AppealService(this.ref);
-  Future<bool> submit(String postId, String reason) async {
+  Future<bool> submit(String caseId, String statement) async {
     try {
       final dio = ref.read(secureDioProvider);
       await dio.post<void>(
         '/appeals',
-        data: {'postId': postId, 'reason': reason},
+        data: {'caseId': caseId, 'statement': statement},
       );
       return true;
     } catch (_) {

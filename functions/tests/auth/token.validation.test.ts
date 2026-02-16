@@ -364,6 +364,8 @@ describe('auth/token validation and method handling', () => {
     expect(payload.success).toBe(true);
     expect(payload.data).toHaveProperty('access_token');
     expect(payload.data).toHaveProperty('refresh_token');
+    const decoded = jwt.verify(payload.data.access_token, process.env.JWT_SECRET!) as jwt.JwtPayload;
+    expect(decoded.sub).toBe('u1');
   });
 
   it('authorization_code: success via base64 PKCE branch', async () => {

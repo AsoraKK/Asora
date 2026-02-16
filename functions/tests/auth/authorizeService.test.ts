@@ -37,6 +37,8 @@ beforeEach(() => {
 
   process.env.COSMOS_CONNECTION_STRING = 'mock-connection';
   process.env.COSMOS_DATABASE_NAME = 'asora';
+  process.env.NODE_ENV = 'test';
+  delete process.env.AUTH_ALLOW_TEST_USER_ID;
 });
 
 describe('authorizeService - parameter validation', () => {
@@ -141,6 +143,70 @@ describe('authorizeService - parameter validation', () => {
 });
 
 describe('authorizeService - user verification', () => {
+  it('returns access_denied when no authenticated subject is available', async () => {
+    const req = httpReqMock({
+      query: {
+        client_id: 'test-client',
+        response_type: 'code',
+        redirect_uri: 'https://example.com/callback',
+        state: 'xyz',
+        code_challenge: 'abc123',
+        code_challenge_method: 'S256',
+      },
+    });
+
+    const response = await authorizeHandler(req, contextStub);
+    expect(response.status).toBe(302);
+    expect(response.headers?.Location).toContain('error=access_denied');
+    expect(response.headers?.Location).toContain('Authenticated+session+is+required');
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('ignores test user_id when running in production mode', async () => {
+    process.env.NODE_ENV = 'production';
+
+    const req = httpReqMock({
+      query: {
+        client_id: 'test-client',
+        response_type: 'code',
+        redirect_uri: 'https://example.com/callback',
+        state: 'xyz',
+        code_challenge: 'abc123',
+        code_challenge_method: 'S256',
+        user_id: 'user-123',
+      },
+    });
+
+    const response = await authorizeHandler(req, contextStub);
+    expect(response.status).toBe(302);
+    expect(response.headers?.Location).toContain('error=access_denied');
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('accepts authenticated subject from upstream principal header', async () => {
+    mockQuery.mockResolvedValueOnce({ resources: [{ id: 'user-123' }] });
+    mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
+
+    const req = httpReqMock({
+      query: {
+        client_id: 'test-client',
+        response_type: 'code',
+        redirect_uri: 'https://example.com/callback',
+        state: 'xyz',
+        code_challenge: 'abc123',
+        code_challenge_method: 'S256',
+      },
+      headers: {
+        'x-ms-client-principal-id': 'user-123',
+      },
+    });
+
+    const response = await authorizeHandler(req, contextStub);
+    expect(response.status).toBe(302);
+    expect(response.headers?.Location).toContain('code=');
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
   it('returns error when user not found', async () => {
     mockQuery.mockResolvedValueOnce({ resources: [] });
 

@@ -9,7 +9,7 @@ provider "azurerm" {
 module "cosmos_sql" {
   source = "../../modules/cosmos_sql"
 
-  resource_group            = "asora-psql-flex" # TODO: Use prod RG when ready
+  resource_group            = var.cosmos_resource_group
   account_name              = var.account_name
   database_name             = var.database_name
   index_dir                 = "${path.module}/../../../../database/cosmos/indexes"
@@ -68,6 +68,12 @@ module "cosmos_sql" {
       max_throughput = 2000
     },
     {
+      name           = "custom_feeds"
+      partition_key  = "/partitionKey"
+      index_file     = "custom_feeds.index.json"
+      max_throughput = 2000
+    },
+    {
       name           = "config"
       partition_key  = "/partitionKey"
       index_file     = "config.index.json"
@@ -96,6 +102,18 @@ module "cosmos_sql" {
       partition_key  = "/id"
       index_file     = "audit_logs.index.json"
       max_throughput = 1000
+    },
+    {
+      name           = "privacy_audit"
+      partition_key  = "/id"
+      index_file     = "privacy_audit.index.json"
+      max_throughput = 1000
+    },
+    {
+      name           = "reputation_audit"
+      partition_key  = "/_partitionKey"
+      index_file     = "reputation_audit.index.json"
+      max_throughput = 1000
     }
   ]
 }
@@ -109,4 +127,17 @@ module "export_storage_full" {
   function_principal_id = var.function_principal_id
   vnet_subnet_id        = var.storage_vnet_subnet_id
   tags                  = var.storage_tags
+}
+
+module "observability" {
+  count  = var.observability_enabled ? 1 : 0
+  source = "../../modules/observability"
+
+  resource_group_name      = var.observability_resource_group
+  location                 = var.observability_location
+  name_prefix              = var.observability_name_prefix
+  environment              = "production"
+  alert_email_addresses    = var.observability_alert_email_addresses
+  function_app_resource_id = var.function_app_resource_id
+  tags                     = var.observability_tags
 }

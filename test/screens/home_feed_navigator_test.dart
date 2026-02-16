@@ -1,3 +1,7 @@
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_event_tracker.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
 import 'package:asora/ui/components/feed_card.dart';
@@ -5,6 +9,43 @@ import 'package:asora/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _RecordingAnalyticsClient implements AnalyticsClient {
+  final List<String> events = [];
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? properties}) async {
+    events.add(name);
+  }
+
+  @override
+  Future<void> reset() async {}
+
+  @override
+  Future<void> setUserId(String? userId) async {}
+
+  @override
+  Future<void> setUserProperties(Map<String, Object?> properties) async {}
+}
+
+class _RecordingEventTracker implements AnalyticsEventTracker {
+  final List<String> onceEvents = [];
+
+  @override
+  Future<bool> logEventOnce(
+    AnalyticsClient client,
+    String eventName, {
+    String? userId,
+    Map<String, Object?>? properties,
+  }) async {
+    onceEvents.add(eventName);
+    await client.logEvent(eventName, properties: properties);
+    return true;
+  }
+
+  @override
+  Future<bool> wasLogged(String eventName, {String? userId}) async => false;
+}
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -66,6 +107,10 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        analyticsClientProvider.overrideWithValue(_RecordingAnalyticsClient()),
+        analyticsEventTrackerProvider.overrideWithValue(
+          _RecordingEventTracker(),
+        ),
         feedListProvider.overrideWith((ref) => feeds),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier([
@@ -97,6 +142,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    final tracker =
+        container.read(analyticsEventTrackerProvider) as _RecordingEventTracker;
+    expect(tracker.onceEvents, contains(AnalyticsEvents.feedFirstLoad));
 
     expect(
       find.text('Discover calm, trustworthy updates tailored to you.'),

@@ -61,10 +61,16 @@ export const feed_user_get = httpHandler<void, CursorPaginatedPostView>(async (c
       items.map((item: any) => postsService.enrichPost(item, viewerId))
     );
 
-    return ctx.ok({
+    const response = ctx.ok({
       items: enrichedPosts,
       nextCursor: feedResult.body.meta.nextCursor || undefined,
     });
+    response.headers = {
+      ...response.headers,
+      'Cache-Control': 'private, no-store',
+      Vary: 'Authorization',
+    };
+    return response;
   } catch (error) {
     ctx.context.error(`[feed_user_get] Error fetching user feed: ${error}`, { correlationId: ctx.correlationId });
     return ctx.internalError(error as Error);

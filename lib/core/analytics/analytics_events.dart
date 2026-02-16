@@ -37,6 +37,12 @@ class AnalyticsEvents {
   /// - method: string (google, email, guest)
   static const String authStarted = 'auth_started';
 
+  /// User selected an auth path from entry screen.
+  ///
+  /// Properties:
+  /// - method: string (guest, sign_in, create_account)
+  static const String authChoiceSelected = 'auth_choice_selected';
+
   /// User completed sign-in successfully
   ///
   /// Properties:
@@ -83,6 +89,9 @@ class AnalyticsEvents {
   /// - is_first_post: bool
   static const String postCreated = 'post_created';
 
+  /// User attempted to submit their first post.
+  static const String firstPostAttempt = 'first_post_attempt';
+
   /// User created a comment
   ///
   /// Properties:
@@ -97,6 +106,9 @@ class AnalyticsEvents {
   /// - approx_items_viewed: int (count of items scrolled past)
   /// - session_duration_seconds: int
   static const String feedScrolled = 'feed_scrolled';
+
+  /// First successful feed payload rendered for current user/session.
+  static const String feedFirstLoad = 'feed_first_load';
 
   /// User interacted with a post (like, share, etc.)
   ///

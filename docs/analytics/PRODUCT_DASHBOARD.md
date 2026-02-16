@@ -5,6 +5,22 @@
 ```
 onboarding_start
    ↓
+auth_choice_selected (guest|sign_in|create_account)
+   ↓
+auth_started (provider selected)
+   ↓
+auth_completed
+   ↓
+feed_first_load
+   ↓
+first_post_attempt
+```
+
+## Invite Funnel (if invite mode enabled)
+
+```
+onboarding_start
+   ↓
 invite_screen_view
    ↓
 invite_redeem_success
@@ -92,6 +108,20 @@ FROM steps;
 ```
 
 ### KQL (App Insights)
+
+```kql
+// Core auth → feed → first post attempt funnel
+customEvents
+| where name in (
+  "onboarding_start",
+  "auth_choice_selected",
+  "auth_started",
+  "auth_completed",
+  "feed_first_load",
+  "first_post_attempt"
+)
+| summarize users=dcount(tostring(customDimensions.userId)) by name
+```
 
 ```kql
 // Funnel step counts

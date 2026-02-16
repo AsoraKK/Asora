@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { HttpError } from '@shared/utils/errors';
 import type {
@@ -17,7 +17,7 @@ export async function createAppeal(
   payload: FileAppealRequest
 ): Promise<Appeal> {
   const now = new Date().toISOString();
-  const appealId = `appeal::${crypto.randomUUID().slice(0, 8)}`;
+  const appealId = uuidv7();
 
   const document: {
     id: string;
@@ -132,21 +132,20 @@ export async function voteOnAppeal(
     throw new HttpError(400, 'Appeal already resolved');
   }
 
-  const voteId = `vote::${appealId}::${userId}`;
-  try {
-    await votesContainer.item(voteId, appealId).read();
+  const existingVoteQuery = {
+    query: 'SELECT TOP 1 c.id FROM c WHERE c.appealId = @appealId AND c.userId = @userId',
+    parameters: [
+      { name: '@appealId', value: appealId },
+      { name: '@userId', value: userId },
+    ],
+  };
+  const { resources: existingVotes } = await votesContainer.items.query(existingVoteQuery).fetchAll();
+  if (existingVotes.length > 0) {
     throw new HttpError(400, 'User has already voted on this appeal');
-  } catch (error) {
-    const err = error as any;
-    if (!(err?.code === 404 || err?.statusCode === 404)) {
-      if (err instanceof HttpError) {
-        throw err;
-      }
-      throw error;
-    }
   }
 
   const voteWeight = 1;
+  const voteId = uuidv7();
   const document = {
     id: voteId,
     appealId,

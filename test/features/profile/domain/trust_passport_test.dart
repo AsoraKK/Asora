@@ -60,7 +60,7 @@ void main() {
       final passport = TrustPassport.fromJson(const {
         'userId': 'u5',
         'visibility': 'friends_only',
-        'counts': const <String, dynamic>{},
+        'counts': <String, dynamic>{},
       });
 
       expect(passport.visibility, 'public_minimal');

@@ -287,3 +287,13 @@ jobs:
           fi
 
           node scripts/e2e-itest.js
+
+      - name: Trust endpoints smoke (receipt + passport)
+        shell: bash
+        env:
+          BASE_URL: ${{ env.FUNCTION_BASE_URL }}
+          FUNCTION_KEY: ${{ env.FUNCTION_KEY }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/smoke-trust-endpoints.sh
+          bash scripts/smoke-trust-endpoints.sh

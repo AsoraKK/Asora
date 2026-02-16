@@ -19,7 +19,7 @@ class _MockGuard extends Mock implements DeviceIntegrityGuard {}
 class _FakeDio extends Fake implements Dio {}
 
 const _emptyFeedResponse = FeedResponse(
-  posts: const [],
+  posts: [],
   hasMore: false,
   totalCount: 0,
   page: 1,

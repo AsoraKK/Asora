@@ -7,6 +7,10 @@ export interface Env {
 }
 
 const FEED_PATH_PREFIX = "/api/feed";
+const ANON_CACHEABLE_FEED_PATHS = new Set([
+  "/api/feed/discover",
+  "/api/feed/news",
+]);
 const ALLOWED_PARAMS = new Set(["page", "pageSize", "timeWindow"]);
 const EDGE_LIMIT = { limit: 60, windowSeconds: 60 };
 
@@ -18,12 +22,16 @@ export default {
     const cachingEnabled = (env.FEED_CACHE_ENABLED || "true").toLowerCase() === "true";
 
     const isFeed = method === "GET" && url.pathname.startsWith(FEED_PATH_PREFIX);
+    const isAnonCacheableFeedPath = ANON_CACHEABLE_FEED_PATHS.has(url.pathname);
 
     // Bypass conditions: non-feed, auth present, or disabled via env
-    if (!isFeed || auth || !cachingEnabled) {
+    if (!isFeed || auth || !cachingEnabled || !isAnonCacheableFeedPath) {
       const resp = await fetch(request);
       const r = new Response(resp.body, resp);
       r.headers.set("Vary", "Authorization");
+      if (isFeed && !isAnonCacheableFeedPath) {
+        r.headers.set("Cache-Control", "private, no-store");
+      }
       r.headers.set("X-Cache", auth ? "BYPASS" : "BYPASS");
       return r;
     }

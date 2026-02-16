@@ -232,6 +232,10 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createAnonymousPolicy('feed');
     case 'createPost':
       return createWritePolicy('post');
+    case 'updatePost':
+      return createWritePolicy('post/update');
+    case 'deletePost':
+      return createWritePolicy('post/delete');
     case 'likePost':
     case 'unlikePost':
       return createWritePolicy('post/like');
@@ -250,6 +254,12 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createWritePolicy('moderation/appeals');
     case 'moderation-vote-appeal':
       return createWritePolicy('moderation/appeals/vote');
+    case 'appeals-create':
+      return createWritePolicy('appeals/create');
+    case 'appeals-vote':
+      return createWritePolicy('appeals/vote');
+    case 'media-upload-url':
+      return createWritePolicy('media/upload-url');
     case 'privacy-export-user':
       return createWritePolicy('user/export');
     case 'privacy-delete-user':

@@ -13,6 +13,8 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 import {
   generateUploadSasUrl,
   extractExtension,
@@ -137,5 +139,5 @@ app.http('media_upload_url', {
   methods: ['POST'],
   authLevel: 'anonymous', // Auth verified in handler via JWT
   route: 'media/upload-url',
-  handler: media_upload_url,
+  handler: withRateLimit(media_upload_url, () => getPolicyForFunction('media-upload-url')),
 });

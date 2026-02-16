@@ -64,8 +64,17 @@ export function validateStartupEnvironment(): void {
     // eslint-disable-next-line no-console
     console.error(msg);
     trackException(new Error(msg), { severity: 'critical', component: 'startup' });
-    // Don't throw in Flex Consumption — the host must start so health probes can respond.
-    // The /ready endpoint will report 503 for missing dependencies.
+    const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+    const appEnv = (process.env.APP_ENV ?? '').toLowerCase();
+    const strictStartup =
+      process.env.STRICT_STARTUP_VALIDATION === 'true' ||
+      nodeEnv === 'production' ||
+      appEnv === 'production' ||
+      appEnv === 'prod';
+
+    if (strictStartup) {
+      throw new Error(msg);
+    }
   }
 
   // eslint-disable-next-line no-console

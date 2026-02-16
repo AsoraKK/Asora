@@ -88,13 +88,15 @@ void main() {
     expect(find.text('Security Debug'), findsOneWidget);
   });
 
-  testWidgets('continue as guest logs analytics and signs out', (tester) async {
+  testWidgets('continue as guest logs analytics and enables guest mode', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(400, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final analytics = _FakeAnalyticsClient();
     final notifier = _MockAuthStateNotifier();
-    when(() => notifier.signOut()).thenAnswer((_) async {});
+    when(() => notifier.continueAsGuest()).thenAnswer((_) async {});
 
     await tester.pumpWidget(
       ProviderScope(
@@ -110,7 +112,11 @@ void main() {
     await tester.tap(find.text('Continue as guest'));
     await tester.pump();
 
-    verify(() => notifier.signOut()).called(1);
+    verify(() => notifier.continueAsGuest()).called(1);
+    expect(
+      analytics.loggedEvents,
+      contains(AnalyticsEvents.authChoiceSelected),
+    );
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
@@ -149,6 +155,10 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => notifier.signInWithProvider(OAuth2Provider.google)).called(1);
+    expect(
+      analytics.loggedEvents,
+      contains(AnalyticsEvents.authChoiceSelected),
+    );
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authStarted));
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });

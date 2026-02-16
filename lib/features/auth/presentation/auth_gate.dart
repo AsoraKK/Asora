@@ -53,13 +53,17 @@ class _AuthGateState extends ConsumerState<AuthGate> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
+    final isGuest = ref.watch(guestModeProvider);
 
     return authState.when(
       data: (user) {
-        return user != null ? const AsoraAppShell() : const AuthChoiceScreen();
+        return user != null || isGuest
+            ? const AsoraAppShell()
+            : const AuthChoiceScreen();
       },
-      loading: () => const AuthChoiceScreen(),
-      error: (error, stack) => const AuthChoiceScreen(),
+      loading: () => isGuest ? const AsoraAppShell() : const AuthChoiceScreen(),
+      error: (error, stack) =>
+          isGuest ? const AsoraAppShell() : const AuthChoiceScreen(),
     );
   }
 }

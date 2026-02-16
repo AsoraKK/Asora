@@ -47,19 +47,22 @@ export function getTargetDatabase(
   databaseName = process.env.COSMOS_DATABASE_NAME || 'asora'
 ) {
   const database = cosmosClient.database(databaseName);
+  const reactionsContainerName = process.env.COSMOS_REACTIONS_CONTAINER || 'likes';
+  const customFeedsContainerName = process.env.COSMOS_CUSTOM_FEEDS_CONTAINER || 'custom_feeds';
+  const flagsContainerName = process.env.COSMOS_FLAGS_CONTAINER || 'content_flags';
 
   return {
     postsV2: database.container('posts_v2'),
     userFeed: database.container('userFeed'),
-    reactions: database.container('reactions'),
+    reactions: database.container(reactionsContainerName),
     notifications: database.container('notifications'),
     counters: database.container('counters'),
     publicProfiles: database.container('publicProfiles'),
       users: database.container('users'),
       profiles: database.container('profiles'),
     posts: database.container('posts'),
-    customFeeds: database.container('custom_feeds'),
-    flags: database.container('flags'),
+    customFeeds: database.container(customFeedsContainerName),
+    flags: database.container(flagsContainerName),
     appeals: database.container('appeals'),
     appealVotes: database.container('appeal_votes'),
     moderationDecisions: database.container('moderation_decisions'),

@@ -1,4 +1,5 @@
 import { app, HttpRequest, InvocationContext } from '@azure/functions';
+import { v7 as uuidv7 } from 'uuid';
 
 import { requireActiveUser } from '@shared/middleware/activeUser';
 import { withDeviceIntegrity } from '@shared/middleware/deviceIntegrity';
@@ -13,6 +14,7 @@ import { awardPostCreated } from '@shared/services/reputationService';
 import { ModerationAction } from '@shared/clients/hive';
 import { withChaos } from '@shared/middleware/chaos';
 import { withDailyPostLimit } from '@shared/middleware/dailyPostLimit';
+import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 import {
   moderatePostContent,
   buildModerationMeta,
@@ -138,6 +140,13 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     return badRequest(validation.error);
   }
 
+  if (validation.mediaUrl) {
+    const mediaValidation = await validateOwnedMediaUrls(principal.sub, [validation.mediaUrl]);
+    if (!mediaValidation.valid) {
+      return badRequest('One or more media items are not owned by your account.');
+    }
+  }
+
   const effectiveAiLabel = normalizeAiLabel(payload.aiLabel) ?? 'human';
   if (payload.aiLabel !== undefined && normalizeAiLabel(payload.aiLabel) === undefined) {
     return badRequest('aiLabel must be "human" or "generated"');
@@ -157,7 +166,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
 
   try {
     const now = Date.now();
-    const postId = crypto.randomUUID();
+    const postId = uuidv7();
 
     // ─────────────────────────────────────────────────────────────
     // Content Moderation - Check before creating post (uses shared util)

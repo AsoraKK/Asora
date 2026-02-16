@@ -19,6 +19,7 @@ import 'package:asora/features/feed/domain/post_repository.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/services/appeal_provider.dart';
 import 'package:asora/services/service_providers.dart';
 import 'package:asora/services/media/media_upload_service.dart';
 
@@ -123,7 +124,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           children: [
             // Error banner
             if (state.isBlocked)
-              _ContentBlockedBanner(result: state.blockedResult!),
+              _ContentBlockedBanner(
+                result: state.blockedResult!,
+                onAppeal:
+                    state.blockedResult!.appealEligible &&
+                        (state.blockedResult!.appealCaseId?.isNotEmpty ?? false)
+                    ? () => _submitBlockedAppeal(
+                        state.blockedResult!.appealCaseId!,
+                      )
+                    : null,
+              ),
             if (state.isLimitExceeded)
               _LimitExceededBanner(result: state.limitExceededResult!),
             if (state.hasError &&
@@ -405,6 +415,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       _policyReminderShown = true;
       _policyTooltipKey.currentState?.ensureTooltipVisible();
     }
+
+    final user = ref.read(currentUserProvider);
+    ref
+        .read(analyticsEventTrackerProvider)
+        .logEventOnce(
+          ref.read(analyticsClientProvider),
+          AnalyticsEvents.firstPostAttempt,
+          userId: user?.id,
+        );
 
     await runWithDeviceGuard(
       context,
@@ -796,6 +815,63 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
     return host;
   }
+
+  Future<void> _submitBlockedAppeal(String caseId) async {
+    final controller = TextEditingController();
+    final statement = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Appeal this decision', style: GoogleFonts.sora()),
+        content: TextField(
+          controller: controller,
+          minLines: 3,
+          maxLines: 6,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Briefly explain why this should be reviewed.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: GoogleFonts.sora()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text('Submit', style: GoogleFonts.sora()),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (!mounted) return;
+    if (statement == null || statement.trim().length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please provide at least 10 characters for your appeal.',
+            style: GoogleFonts.sora(),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final success = await ref.read(appealProvider).submit(caseId, statement);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Appeal submitted. We will notify you when there is an update.'
+              : 'Failed to submit appeal. Please try again.',
+          style: GoogleFonts.sora(),
+        ),
+      ),
+    );
+  }
 }
 
 enum _ProofTileKind { captureHash, editHash, sourceAttestation }
@@ -885,8 +961,9 @@ class _ProofTile extends StatelessWidget {
 /// Banner shown when content is blocked by moderation
 class _ContentBlockedBanner extends StatelessWidget {
   final CreatePostBlocked result;
+  final VoidCallback? onAppeal;
 
-  const _ContentBlockedBanner({required this.result});
+  const _ContentBlockedBanner({required this.result, this.onAppeal});
 
   @override
   Widget build(BuildContext context) {
@@ -929,6 +1006,14 @@ class _ContentBlockedBanner extends StatelessWidget {
                   ),
                 );
               }).toList(),
+            ),
+          ],
+          if (onAppeal != null) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: onAppeal,
+              icon: const Icon(Icons.gavel_outlined),
+              label: const Text('Appeal'),
             ),
           ],
         ],

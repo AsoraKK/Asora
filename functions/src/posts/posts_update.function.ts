@@ -13,6 +13,8 @@ import { httpHandler } from '@shared/http/handler';
 import type { Post, UpdatePostRequest } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 import {
   moderatePostContent,
   buildModerationMeta,
@@ -20,6 +22,7 @@ import {
   hasAiSignal,
 } from '@posts/service/moderationUtil';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
+import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 
 function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
   if (label === undefined || label === null) {
@@ -34,6 +37,23 @@ function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
     return normalized;
   }
   return undefined;
+}
+
+function mediaValidationMessage(reason?: string): string {
+  switch (reason) {
+    case 'ownership_mismatch':
+      return 'One or more media items are not owned by your account.';
+    case 'blob_missing':
+      return 'One or more media items were not found. Please upload again.';
+    case 'blob_stale':
+      return 'One or more media items expired before posting. Please upload again.';
+    case 'invalid_url':
+      return 'One or more media URLs are invalid.';
+    case 'storage_not_configured':
+      return 'Media uploads are currently unavailable.';
+    default:
+      return 'Unable to validate media attachments.';
+  }
 }
 
 export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => {
@@ -99,6 +119,20 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       normalizeAiLabel(rawAiLabel) ?? existing.aiLabel ?? 'human'
     );
 
+    if (mediaUrls !== undefined) {
+      const mediaValidation = await validateOwnedMediaUrls(existing.authorId, mediaUrls);
+      if (!mediaValidation.valid) {
+        return ctx.badRequest(
+          mediaValidationMessage(mediaValidation.reason),
+          'INVALID_MEDIA_URLS',
+          {
+            reason: mediaValidation.reason ?? 'invalid_url',
+            invalidCount: mediaValidation.invalidUrls.length,
+          }
+        );
+      }
+    }
+
     const { result: moderationResult, error: moderationError } = await moderatePostContent(
       effectiveContent,
       auth.userId,
@@ -110,6 +144,8 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
 
     if (moderationMeta.status === 'blocked') {
       return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        appealEligible: true,
+        caseId: postId,
         categories: moderationMeta.categories,
       });
     }
@@ -123,6 +159,8 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
 
     if (mediaModeration.status === 'blocked') {
       return ctx.badRequest('Media violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        appealEligible: true,
+        caseId: postId,
         categories: mediaModeration.categories,
       });
     }
@@ -134,7 +172,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       return ctx.badRequest(
         'AI-generated content cannot be published. You can appeal this decision.',
         'AI_CONTENT_BLOCKED',
-        { appealEligible: true }
+        { appealEligible: true, caseId: postId }
       );
     }
 
@@ -144,6 +182,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         'AI_LABEL_REQUIRED',
         {
           appealEligible: true,
+          caseId: postId,
           categories: [
             ...(moderationMeta.categories ?? []),
             ...mediaModeration.categories,
@@ -263,5 +302,5 @@ app.http('posts_update', {
   methods: ['PATCH'],
   authLevel: 'anonymous',
   route: 'posts/{id}',
-  handler: posts_update,
+  handler: withRateLimit(posts_update, () => getPolicyForFunction('updatePost')),
 });

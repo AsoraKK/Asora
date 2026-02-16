@@ -44,6 +44,7 @@ final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
 /// Token version provider used to invalidate cached JWT reads when the
 /// underlying authentication state changes (sign-in, refresh, logout).
 final tokenVersionProvider = StateProvider<int>((ref) => 0);
+final guestModeProvider = StateProvider<bool>((ref) => false);
 
 /// Current user authentication state provider
 final authStateProvider =
@@ -80,6 +81,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   /// Sign in with OAuth2
   Future<void> signInWithOAuth2() async {
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.loading();
       final user = await _authService.signInWithOAuth2();
       state = AsyncValue.data(user);
@@ -96,6 +98,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> signInWithProvider(OAuth2Provider provider) async {
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.loading();
       final user = await _authService.signInWithOAuth2(provider: provider);
       state = AsyncValue.data(user);
@@ -113,6 +116,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   /// Sign in with email and password
   Future<void> signInWithEmail(String email, String password) async {
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.loading();
       final user = await _authService.loginWithEmail(email, password);
       state = AsyncValue.data(user);
@@ -146,13 +150,26 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   /// Sign out current user
   Future<void> signOut() async {
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
       await _authService.logout();
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     } catch (error) {
+      _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     }
+  }
+
+  Future<void> continueAsGuest() async {
+    try {
+      await _authService.logout();
+    } catch (_) {
+      // Best effort: guest mode should still be enabled.
+    }
+    _ref.read(guestModeProvider.notifier).state = true;
+    state = const AsyncValue.data(null);
+    _bumpTokenVersion();
   }
 
   /// Validate current token and refresh if needed

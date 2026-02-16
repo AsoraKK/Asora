@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import crypto from 'node:crypto';
+import { v7 as uuidv7 } from 'uuid';
 import { HttpError, notFoundError } from '@shared/utils/errors';
 import { normalizeTier } from '@shared/services/tierLimits';
 import { getTargetDatabase } from '@shared/clients/cosmos';
@@ -131,7 +131,7 @@ export async function createCustomFeed(
 
   const now = Date.now();
   const doc: CustomFeedDocument = {
-    id: `custom::${crypto.randomUUID()}`,
+    id: uuidv7(),
     ownerId,
     partitionKey: ownerId,
     name: payload.name,

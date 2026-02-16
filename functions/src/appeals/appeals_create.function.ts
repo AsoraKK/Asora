@@ -15,6 +15,8 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { createAppeal } from './appealsService';
 import { HttpError } from '@shared/utils/errors';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(async (ctx) => {
   ctx.context.log(`[appeals_create] Filing new appeal [${ctx.correlationId}]`);
@@ -67,5 +69,5 @@ app.http('appeals_create', {
   methods: ['POST'],
   authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
   route: 'appeals',
-  handler: appeals_create,
+  handler: withRateLimit(appeals_create, () => getPolicyForFunction('appeals-create')),
 });

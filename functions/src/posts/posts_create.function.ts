@@ -10,6 +10,7 @@
  */
 
 import { app } from '@azure/functions';
+import { v7 as uuidv7 } from 'uuid';
 import { httpHandler } from '@shared/http/handler';
 import type { CreatePostRequest, Post } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
@@ -27,6 +28,9 @@ import {
   checkAndIncrementPostCount,
   DailyPostLimitExceededError,
 } from '@shared/services/dailyPostLimitService';
+import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
   if (label === undefined || label === null) {
@@ -41,6 +45,23 @@ function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
     return normalized;
   }
   return undefined;
+}
+
+function mediaValidationMessage(reason?: string): string {
+  switch (reason) {
+    case 'ownership_mismatch':
+      return 'One or more media items are not owned by your account.';
+    case 'blob_missing':
+      return 'One or more media items were not found. Please upload again.';
+    case 'blob_stale':
+      return 'One or more media items expired before posting. Please upload again.';
+    case 'invalid_url':
+      return 'One or more media URLs are invalid.';
+    case 'storage_not_configured':
+      return 'Media uploads are currently unavailable.';
+    default:
+      return 'Unable to validate media attachments.';
+  }
 }
 
 export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => {
@@ -139,8 +160,20 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? 'human');
 
+    const mediaValidation = await validateOwnedMediaUrls(auth.userId, ctx.body.mediaUrls);
+    if (!mediaValidation.valid) {
+      return ctx.badRequest(
+        mediaValidationMessage(mediaValidation.reason),
+        'INVALID_MEDIA_URLS',
+        {
+          reason: mediaValidation.reason ?? 'invalid_url',
+          invalidCount: mediaValidation.invalidUrls.length,
+        }
+      );
+    }
+
     // Generate post ID for moderation tracking
-    const postId = crypto.randomUUID();
+    const postId = uuidv7();
 
     // ─────────────────────────────────────────────────────────────
     // Content Moderation - Check before creating post
@@ -163,6 +196,8 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         isTestMode: testContext.isTestMode,
       });
       return ctx.badRequest('Content violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        appealEligible: true,
+        caseId: postId,
         categories: moderationMeta.categories,
       });
     }
@@ -176,6 +211,8 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     if (mediaModeration.status === 'blocked') {
       return ctx.badRequest('Media violates policy and cannot be posted', 'CONTENT_BLOCKED', {
+        appealEligible: true,
+        caseId: postId,
         categories: mediaModeration.categories,
       });
     }
@@ -187,7 +224,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       return ctx.badRequest(
         'AI-generated content cannot be published. You can appeal this decision.',
         'AI_CONTENT_BLOCKED',
-        { appealEligible: true }
+        { appealEligible: true, caseId: postId }
       );
     }
 
@@ -197,6 +234,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         'AI_LABEL_REQUIRED',
         {
           appealEligible: true,
+          caseId: postId,
           categories: [
             ...(moderationMeta.categories ?? []),
             ...mediaModeration.categories,
@@ -339,5 +377,5 @@ app.http('posts_create', {
   methods: ['POST'],
   authLevel: 'anonymous', // Auth verified in handler via JWT
   route: 'posts',
-  handler: posts_create,
+  handler: withRateLimit(posts_create, () => getPolicyForFunction('createPost')),
 });

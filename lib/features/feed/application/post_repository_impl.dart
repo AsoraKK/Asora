@@ -242,6 +242,8 @@ class PostRepositoryImpl implements PostRepository {
         message: message,
         categories: categories,
         code: code ?? 'content_blocked',
+        appealEligible: details?['appealEligible'] == true,
+        appealCaseId: details?['caseId'] as String?,
       );
     }
 

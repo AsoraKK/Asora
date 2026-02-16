@@ -25,6 +25,7 @@ Recommended execution order:
 1. Run `deploy-asora-function-staging`.
 2. Run `E2E Integration Test` with `target_environment=staging`.
 3. Confirm `health`, admin function index, and feed probes pass.
+4. Confirm trust endpoints smoke passes (`scripts/smoke-trust-endpoints.sh` via `.github/workflows/e2e-integration.yml`).
 
 ## M1: Core social MVP
 
@@ -89,3 +90,8 @@ External handoff:
 - Play Console and (later) App Store Connect artifact/form completion.
 - Vendor/legal governance records outside repo-controlled files.
 - Launch-day operations staffing and incident command roster.
+
+## Safety references
+
+- Terraform safe apply and trust smoke: `docs/runbooks/terraform-safe-apply-and-smoke.md`
+- Observability alert drill: `docs/runbooks/observability-alerting-drill.md`

@@ -3,8 +3,6 @@
 /// mapAppAuthException, AuthConfig.fromJson, redirectUri platform logic
 library;
 
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

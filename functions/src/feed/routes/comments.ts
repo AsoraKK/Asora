@@ -1,4 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+import { v7 as uuidv7 } from 'uuid';
 
 import { requireActiveUser } from '@shared/middleware/activeUser';
 import { withDeviceIntegrity } from '@shared/middleware/deviceIntegrity';
@@ -158,7 +159,7 @@ export const createComment = requireActiveUser(
       }
 
       const now = Date.now();
-      const commentId = crypto.randomUUID();
+      const commentId = uuidv7();
 
       // Create comment document in posts container with type='comment'
       const commentDocument: CommentDocument = {

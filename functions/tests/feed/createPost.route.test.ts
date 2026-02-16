@@ -3,6 +3,7 @@ import type { HttpRequest, InvocationContext } from '@azure/functions';
 import { createPost as createPostRoute } from '@feed/routes/createPost';
 import { httpReqMock } from '../helpers/http';
 import { ModerationAction, ModerationCategory, HiveAPIError } from '@shared/clients/hive';
+import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 
 jest.mock('@auth/verifyJwt', () => {
   const actual = jest.requireActual('@auth/verifyJwt');
@@ -87,6 +88,10 @@ jest.mock('@shared/services/dailyPostLimitService', () => {
   };
 });
 
+jest.mock('@media/mediaStorageClient', () => ({
+  validateOwnedMediaUrls: jest.fn(),
+}));
+
 // Mock Hive client
 const mockModerateTextContent = jest.fn();
 jest.mock('@shared/clients/hive', () => {
@@ -109,6 +114,7 @@ const mockCheckAndIncrementDailyActionCount = jest.mocked(
 );
 const { DailyPostLimitExceededError } = dailyPostLimitModule;
 const contextStub = { log: jest.fn() } as unknown as InvocationContext;
+const mockedValidateOwnedMediaUrls = validateOwnedMediaUrls as jest.MockedFunction<typeof validateOwnedMediaUrls>;
 
 // Store original HIVE_API_KEY
 const originalHiveApiKey = process.env.HIVE_API_KEY;
@@ -152,6 +158,10 @@ describe('createPost route', () => {
       newCount: 1,
       limit: 100,
       remaining: 99,
+    });
+    mockedValidateOwnedMediaUrls.mockResolvedValue({
+      valid: true,
+      invalidUrls: [],
     });
   });
 
@@ -243,6 +253,22 @@ describe('createPost route', () => {
       contextStub
     );
     expect(response.status).toBe(201);
+  });
+
+  it('rejects media URL when ownership validation fails', async () => {
+    mockedValidateOwnedMediaUrls.mockResolvedValueOnce({
+      valid: false,
+      invalidUrls: ['https://asora.blob.core.windows.net/media/image.jpg'],
+      reason: 'ownership_mismatch',
+    });
+
+    const response = await createPostRoute(
+      userRequest({ text: 'hello', mediaUrl: 'https://asora.blob.core.windows.net/media/image.jpg' }),
+      contextStub
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toBe(JSON.stringify({ error: 'One or more media items are not owned by your account.' }));
   });
 
   it('handles Cosmos create error gracefully', async () => {

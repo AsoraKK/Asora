@@ -12,6 +12,8 @@ import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export const posts_delete = httpHandler<void, void>(async (ctx) => {
   const postId = ctx.params.id;
@@ -59,5 +61,5 @@ app.http('posts_delete', {
   methods: ['DELETE'],
   authLevel: 'anonymous', // Auth verified in handler via JWT
   route: 'posts/{id}',
-  handler: posts_delete,
+  handler: withRateLimit(posts_delete, () => getPolicyForFunction('deletePost')),
 });

@@ -22,7 +22,14 @@ class JWTService {
   private readonly refreshTokenExpiry: string;
 
   constructor() {
-    this.secret = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+    const configuredSecret = process.env.JWT_SECRET?.trim();
+    if (configuredSecret && configuredSecret.length > 0) {
+      this.secret = configuredSecret;
+    } else if ((process.env.NODE_ENV ?? '').toLowerCase() === 'test') {
+      this.secret = 'test-secret';
+    } else {
+      throw new Error('Missing JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
+    }
     this.issuer = process.env.JWT_ISSUER || 'asora-auth';
     this.accessTokenExpiry = process.env.ACCESS_TOKEN_EXPIRY || '15m';
     this.refreshTokenExpiry = process.env.REFRESH_TOKEN_EXPIRY || '7d';

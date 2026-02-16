@@ -13,6 +13,7 @@ import { validateText } from '@shared/utils/validate';
 import { getAzureLogger } from '@shared/utils/logger';
 import type { AuthorizeRequest } from '@auth/types';
 import * as crypto from 'crypto';
+import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
 
 const logger = getAzureLogger('auth/authorize');
@@ -81,16 +82,15 @@ export async function authorizeHandler(
       redirectUri: authRequest.redirect_uri,
     });
 
-    // In a real implementation, this is where you would:
-    // 1. Check if user is already authenticated (session/cookie)
-    // 2. If not authenticated, redirect to login page
-    // 3. If authenticated, check if user has consented to the requested scopes
-    // 4. If not consented, show consent page
-    // 5. Generate authorization code and redirect
-
-    // For this implementation, we'll simulate an authenticated user
-    // In production, you would get the user ID from the authenticated session
-    const userId = authRequest.user_id || 'demo-user-123'; // Temporary for testing
+    const userId = resolveAuthenticatedUserId(req, authRequest);
+    if (!userId) {
+      return createAuthError(
+        authRequest.redirect_uri,
+        authRequest.state,
+        'access_denied',
+        'Authenticated session is required'
+      );
+    }
 
     // Verify user exists
     const userExists = await verifyUserExists(userId);
@@ -109,7 +109,7 @@ export async function authorizeHandler(
 
     // Store the authorization session
     const session = {
-      id: crypto.randomUUID(),
+      id: uuidv7(),
       partitionKey: authRequest.client_id,
       state: authRequest.state,
       nonce: authRequest.nonce || '',
@@ -203,8 +203,29 @@ function parseAuthorizeRequest(params: any): AuthorizeRequest {
     nonce: params.nonce,
     code_challenge: params.code_challenge || '',
     code_challenge_method: params.code_challenge_method || '',
-    user_id: params.user_id, // For testing only
+    user_id: params.user_id, // Test-only path, disabled in production by default
   };
+}
+
+function resolveAuthenticatedUserId(req: HttpRequest, request: AuthorizeRequest): string | null {
+  const upstreamPrincipalId = req.headers.get('x-ms-client-principal-id')?.trim();
+  if (upstreamPrincipalId) {
+    return upstreamPrincipalId;
+  }
+
+  const forwardedUserId = req.headers.get('x-authenticated-user-id')?.trim();
+  if (forwardedUserId) {
+    return forwardedUserId;
+  }
+
+  const allowTestUserId =
+    process.env.AUTH_ALLOW_TEST_USER_ID === 'true' || process.env.NODE_ENV === 'test';
+  const requestedUserId = request.user_id?.trim();
+  if (allowTestUserId && requestedUserId) {
+    return requestedUserId;
+  }
+
+  return null;
 }
 
 function validateAuthorizeRequest(request: AuthorizeRequest): string | null {

@@ -4,12 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('analytics event names are stable', () {
     expect(AnalyticsEvents.onboardingStart, 'onboarding_start');
+    expect(AnalyticsEvents.authChoiceSelected, 'auth_choice_selected');
     expect(AnalyticsEvents.inviteScreenView, 'invite_screen_view');
     expect(AnalyticsEvents.inviteRedeemSuccess, 'invite_redeem_success');
     expect(AnalyticsEvents.inviteRedeemFail, 'invite_redeem_fail');
     expect(AnalyticsEvents.profileComplete, 'profile_complete');
     expect(AnalyticsEvents.firstFollow, 'first_follow');
+    expect(AnalyticsEvents.firstPostAttempt, 'first_post_attempt');
     expect(AnalyticsEvents.firstPost, 'first_post');
+    expect(AnalyticsEvents.feedFirstLoad, 'feed_first_load');
   });
 
   test('invite redeem failure reasons map to snake case', () {

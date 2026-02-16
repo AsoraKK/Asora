@@ -28,10 +28,12 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
 
   try {
     // Get viewer ID if authenticated (optional)
+    let isAuthenticated = false;
     let principal = null;
     let viewerId: string | undefined;
     try {
       const auth = await extractAuthContext(ctx);
+      isAuthenticated = true;
       principal = { sub: auth.userId, roles: auth.roles };
       viewerId = auth.userId;
     } catch {
@@ -72,10 +74,18 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
       items.map((item: any) => postsService.enrichPost(item, viewerId))
     );
 
-    return ctx.ok({
+    const response = ctx.ok({
       items: enrichedPosts,
       nextCursor: items.length > 0 ? feedResult.body.meta.nextCursor || undefined : undefined,
     });
+    response.headers = {
+      ...response.headers,
+      'Cache-Control': isAuthenticated
+        ? 'private, no-store'
+        : 'public, max-age=60, stale-while-revalidate=30',
+      Vary: 'Authorization',
+    };
+    return response;
   } catch (error) {
     ctx.context.error(`[feed_news_get] Error fetching news feed: ${error}`, { correlationId: ctx.correlationId });
     return ctx.internalError(error as Error);

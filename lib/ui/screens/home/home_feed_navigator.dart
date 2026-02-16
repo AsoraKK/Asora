@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
 import 'package:asora/ui/components/asora_top_bar.dart';
@@ -212,6 +214,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   static const double _estimatedCardExtent = 340;
   late final ScrollController _scrollController;
   bool _restoreApplied = false;
+  bool _firstFeedLoadLogged = false;
 
   @override
   void initState() {
@@ -238,6 +241,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     final liveState = ref.watch(liveFeedStateProvider(feed));
     final restoreResult = ref.watch(feedRestoreResultProvider(feed));
 
+    _logFirstFeedLoad(liveState);
     _applyRestoreIfReady(liveState: liveState, restoreResult: restoreResult);
 
     if (liveState.isInitialLoading) {
@@ -369,6 +373,22 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
         );
       }
     });
+  }
+
+  void _logFirstFeedLoad(LiveFeedState state) {
+    if (_firstFeedLoadLogged || state.isInitialLoading || state.items.isEmpty) {
+      return;
+    }
+    _firstFeedLoadLogged = true;
+    final user = ref.read(currentUserProvider);
+    ref
+        .read(analyticsEventTrackerProvider)
+        .logEventOnce(
+          ref.read(analyticsClientProvider),
+          AnalyticsEvents.feedFirstLoad,
+          userId: user?.id,
+          properties: {'feed_type': widget.feed.type.name},
+        );
   }
 
   void _persistRestoreSnapshot() {

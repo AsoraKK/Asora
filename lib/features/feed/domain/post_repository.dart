@@ -26,11 +26,15 @@ class CreatePostBlocked extends CreatePostResult {
   final String message;
   final List<String> categories;
   final String code;
+  final bool appealEligible;
+  final String? appealCaseId;
 
   const CreatePostBlocked({
     required this.message,
     required this.categories,
     this.code = 'content_blocked',
+    this.appealEligible = false,
+    this.appealCaseId,
   });
 }
 

@@ -155,6 +155,8 @@ describe('getPolicyForFunction', () => {
     const cases: Array<{ fn: string; expectedName: string; hasBackoff: boolean }> = [
       { fn: 'getFeed', expectedName: 'feed-anonymous', hasBackoff: false },
       { fn: 'createPost', expectedName: 'post-write', hasBackoff: false },
+      { fn: 'updatePost', expectedName: 'post/update-write', hasBackoff: false },
+      { fn: 'deletePost', expectedName: 'post/delete-write', hasBackoff: false },
       { fn: 'likePost', expectedName: 'post/like-write', hasBackoff: false },
       { fn: 'createComment', expectedName: 'post/comment-write', hasBackoff: false },
       { fn: 'analytics.ingest', expectedName: 'analytics/ingest-auth', hasBackoff: false },

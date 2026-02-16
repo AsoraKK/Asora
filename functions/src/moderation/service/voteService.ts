@@ -9,6 +9,7 @@
 
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { JWTPayload } from 'jose';
+import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { usersService } from '@auth/service/usersService';
@@ -619,7 +620,7 @@ async function persistModerationDecision({
       (content?.contentOwnerId as string | undefined) ??
       null;
 
-    const decisionId = `decision_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    const decisionId = uuidv7();
     const decidedAt = String(appealDoc.resolvedAt ?? new Date().toISOString());
 
     const record = {

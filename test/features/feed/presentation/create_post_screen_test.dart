@@ -6,6 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_event_tracker.dart';
+import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/security/device_integrity_guard.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/features/feed/presentation/create_post_screen.dart';
@@ -18,6 +22,43 @@ import 'package:asora/features/auth/domain/user.dart';
 
 // Mock classes
 class MockPostRepository extends Mock implements PostRepository {}
+
+class _RecordingAnalyticsClient implements AnalyticsClient {
+  final List<String> events = [];
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? properties}) async {
+    events.add(name);
+  }
+
+  @override
+  Future<void> reset() async {}
+
+  @override
+  Future<void> setUserId(String? userId) async {}
+
+  @override
+  Future<void> setUserProperties(Map<String, Object?> properties) async {}
+}
+
+class _RecordingEventTracker implements AnalyticsEventTracker {
+  final List<String> onceEvents = [];
+
+  @override
+  Future<bool> logEventOnce(
+    AnalyticsClient client,
+    String eventName, {
+    String? userId,
+    Map<String, Object?>? properties,
+  }) async {
+    onceEvents.add(eventName);
+    await client.logEvent(eventName, properties: properties);
+    return true;
+  }
+
+  @override
+  Future<bool> wasLogged(String eventName, {String? userId}) async => false;
+}
 
 class FakeDeviceSecurityService implements DeviceSecurityService {
   FakeDeviceSecurityService(this._state);
@@ -68,7 +109,10 @@ void main() {
     mockRepository = MockPostRepository();
   });
 
-  Widget createTestWidget({User? user}) {
+  Widget createTestWidget({
+    User? user,
+    List<Override> extraOverrides = const [],
+  }) {
     return ProviderScope(
       overrides: [
         postRepositoryProvider.overrideWithValue(mockRepository),
@@ -78,6 +122,7 @@ void main() {
         jwtProvider.overrideWith(
           (ref) async => user != null ? 'test-token' : null,
         ),
+        ...extraOverrides,
       ],
       child: const MaterialApp(home: CreatePostScreen()),
     );
@@ -191,6 +236,51 @@ void main() {
     });
 
     group('Form Submission', () {
+      testWidgets('logs first post attempt when submit is tapped', (
+        tester,
+      ) async {
+        when(
+          () => mockRepository.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        ).thenAnswer(
+          (_) async => CreatePostSuccess(
+            Post(
+              id: 'post-1',
+              authorId: 'test-user-id',
+              authorUsername: 'Tester',
+              text: 'Hello world',
+              createdAt: DateTime.parse('2026-02-01T00:00:00.000Z'),
+              updatedAt: DateTime.parse('2026-02-01T00:00:00.000Z'),
+              isNews: false,
+            ),
+          ),
+        );
+
+        final analytics = _RecordingAnalyticsClient();
+        final tracker = _RecordingEventTracker();
+
+        await tester.pumpWidget(
+          createTestWidget(
+            user: createTestUser(),
+            extraOverrides: [
+              analyticsClientProvider.overrideWithValue(analytics),
+              analyticsEventTrackerProvider.overrideWithValue(tracker),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).first, 'Hello world');
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+        await tester.pumpAndSettle();
+
+        expect(tracker.onceEvents, contains(AnalyticsEvents.firstPostAttempt));
+      });
+
       testWidgets('blocks submission on compromised device', (tester) async {
         final compromisedState = DeviceSecurityState(
           isRootedOrJailbroken: true,
@@ -602,6 +692,11 @@ class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
 
   @override
   Future<void> signOut() async {
+    state = const AsyncValue.data(null);
+  }
+
+  @override
+  Future<void> continueAsGuest() async {
     state = const AsyncValue.data(null);
   }
 

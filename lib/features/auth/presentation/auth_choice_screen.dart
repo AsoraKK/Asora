@@ -48,6 +48,10 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleSignIn(BuildContext context) async {
+    await _analyticsClient.logEvent(
+      AnalyticsEvents.authChoiceSelected,
+      properties: {AnalyticsEvents.propMethod: 'sign_in'},
+    );
     final provider = await _showProviderPicker(context, isCreateFlow: false);
     if (provider == null) {
       return;
@@ -86,6 +90,10 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleCreateAccount(BuildContext context) async {
+    await _analyticsClient.logEvent(
+      AnalyticsEvents.authChoiceSelected,
+      properties: {AnalyticsEvents.propMethod: 'create_account'},
+    );
     final provider = await _showProviderPicker(context, isCreateFlow: true);
     if (provider == null) {
       return;
@@ -168,7 +176,11 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     );
   }
 
-  void _handleGuestContinue() {
+  Future<void> _handleGuestContinue() async {
+    _analyticsClient.logEvent(
+      AnalyticsEvents.authChoiceSelected,
+      properties: {AnalyticsEvents.propMethod: 'guest'},
+    );
     _analyticsClient.logEvent(
       AnalyticsEvents.authCompleted,
       properties: {
@@ -176,7 +188,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
         AnalyticsEvents.propIsNewUser: false,
       },
     );
-    ref.read(authStateProvider.notifier).signOut();
+    await ref.read(authStateProvider.notifier).continueAsGuest();
   }
 
   @override

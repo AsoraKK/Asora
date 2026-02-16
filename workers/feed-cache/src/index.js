@@ -4,6 +4,8 @@ export default {
     if (!url.pathname.startsWith("/api/feed")) {
       return new Response("Not handled", { status: 404 });
     }
+    const cacheableAnonymousPath =
+      url.pathname === "/api/feed/discover" || url.pathname === "/api/feed/news";
 
     const method = request.method === "HEAD" ? "GET" : request.method;
     const upstream = new URL(url.pathname + url.search, env.ORIGIN_BASE);
@@ -17,10 +19,12 @@ export default {
         : { cacheEverything: true, cacheTtl: 60 }
     };
 
-    if (hasAuth || method !== "GET") {
+    if (hasAuth || method !== "GET" || !cacheableAnonymousPath) {
       const res = await fetch(upstream, init);
       const out = new Response(res.body, res);
-      if (hasAuth) out.headers.set("Cache-Control", "private, no-store");
+      if (hasAuth || !cacheableAnonymousPath) {
+        out.headers.set("Cache-Control", "private, no-store");
+      }
       out.headers.append("Vary", "Authorization");
       return out;
     }
@@ -37,4 +41,3 @@ export default {
     return out;
   }
 };
-

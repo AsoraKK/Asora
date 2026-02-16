@@ -12,7 +12,7 @@ class _MockAdapter implements HttpClientAdapter {
   final int statusCode;
   final DioException? error;
 
-  _MockAdapter({this.responseBody, this.statusCode = 200, this.error});
+  _MockAdapter({this.statusCode = 200, this.error});
 
   @override
   Future<ResponseBody> fetch(

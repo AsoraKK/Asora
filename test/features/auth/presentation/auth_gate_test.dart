@@ -103,7 +103,13 @@ void main() {
           analyticsClientProvider.overrideWithValue(analytics),
           analyticsEventTrackerProvider.overrideWithValue(tracker),
         ],
-        child: const MaterialApp(home: AuthGate()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: const AuthGate(),
+        ),
       ),
     );
 

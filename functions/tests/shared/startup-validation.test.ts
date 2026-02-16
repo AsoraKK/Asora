@@ -147,4 +147,18 @@ describe('startup-validation', () => {
 
     jest.restoreAllMocks();
   });
+
+  it('throws when required vars are missing in strict production mode', () => {
+    delete process.env.COSMOS_CONNECTION_STRING;
+    delete process.env.JWT_SECRET;
+    process.env.NODE_ENV = 'production';
+
+    jest.spyOn(console, 'error').mockImplementation();
+    jest.spyOn(console, 'warn').mockImplementation();
+    jest.spyOn(console, 'log').mockImplementation();
+
+    expect(() => validateStartupEnvironment()).toThrow('[STARTUP] CRITICAL');
+
+    jest.restoreAllMocks();
+  });
 });

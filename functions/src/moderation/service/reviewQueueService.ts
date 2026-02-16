@@ -98,7 +98,8 @@ export async function getReviewQueueHandler({
 
   try {
     const database = getCosmosDatabase();
-    const flagsContainer = database.container('flags');
+    const flagsContainerName = process.env.COSMOS_FLAGS_CONTAINER || 'content_flags';
+    const flagsContainer = database.container(flagsContainerName);
     const appealsContainer = database.container('appeals');
 
     // Clamp limit

@@ -6,11 +6,7 @@ import 'package:asora/core/security/security_overrides.dart';
 
 /// Fake device security service returning scripted state.
 class _FakeDeviceSecurityService implements DeviceSecurityService {
-  _FakeDeviceSecurityService({
-    this.isRooted = false,
-    this.isEmulator = false,
-    this.isDebug = false,
-  });
+  _FakeDeviceSecurityService({this.isRooted = false, this.isEmulator = false});
 
   final bool isRooted;
   final bool isEmulator;

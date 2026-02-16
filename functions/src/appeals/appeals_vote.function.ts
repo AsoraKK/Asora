@@ -14,6 +14,8 @@ import type { VoteOnAppealRequest, VoteOnAppealResponse } from '@shared/types/op
 import { extractAuthContext } from '@shared/http/authContext';
 import { voteOnAppeal } from './appealsService';
 import { HttpError } from '@shared/utils/errors';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 const VALID_VOTES: VoteOnAppealRequest['vote'][] = ['uphold', 'deny'];
 
@@ -59,5 +61,5 @@ app.http('appeals_vote', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'appeals/{id}/votes',
-  handler: appeals_vote,
+  handler: withRateLimit(appeals_vote, () => getPolicyForFunction('appeals-vote')),
 });

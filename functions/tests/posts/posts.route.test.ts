@@ -17,6 +17,7 @@ import {
   checkAndIncrementPostCount,
   DailyPostLimitExceededError,
 } from '@shared/services/dailyPostLimitService';
+import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 
 jest.mock('@posts/service/postsService', () => ({
   postsService: {
@@ -73,6 +74,10 @@ jest.mock('@shared/services/dailyPostLimitService', () => ({
   },
 }));
 
+jest.mock('@media/mediaStorageClient', () => ({
+  validateOwnedMediaUrls: jest.fn(),
+}));
+
 const mockedPostsService = postsService as jest.Mocked<typeof postsService>;
 const mockedJwtService = jwtService as jest.Mocked<typeof jwtService>;
 const mockedModeration = {
@@ -82,6 +87,7 @@ const mockedModeration = {
   hasAiSignal: hasAiSignal as jest.MockedFunction<typeof hasAiSignal>,
 };
 const mockedCheckAndIncrementPostCount = checkAndIncrementPostCount as jest.MockedFunction<typeof checkAndIncrementPostCount>;
+const mockedValidateOwnedMediaUrls = validateOwnedMediaUrls as jest.MockedFunction<typeof validateOwnedMediaUrls>;
 
 const createContextStub = (): InvocationContext =>
   ({
@@ -125,6 +131,10 @@ describe('posts route handlers', () => {
       aiDetected: false,
     });
     mockedModeration.hasAiSignal.mockReturnValue(false);
+    mockedValidateOwnedMediaUrls.mockResolvedValue({
+      valid: true,
+      invalidUrls: [],
+    });
     mockedPostsService.listPostsByUser.mockResolvedValue({ posts: [], nextCursor: undefined });
     mockedPostsService.enrichPost.mockResolvedValue({
       id: 'post-abc',
@@ -159,6 +169,27 @@ describe('posts route handlers', () => {
 
     expect(response.status).toBe(400);
     expect(response.jsonBody?.error.code).toBe('INVALID_CONTENT');
+    expect(mockedPostsService.createPost).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when media URLs are not owned by the caller', async () => {
+    mockedValidateOwnedMediaUrls.mockResolvedValueOnce({
+      valid: false,
+      invalidUrls: ['https://example.com/foreign.jpg'],
+      reason: 'ownership_mismatch',
+    });
+
+    const response = await posts_create(
+      authRequest({
+        content: 'hello',
+        contentType: 'text',
+        mediaUrls: ['https://example.com/foreign.jpg'],
+      }),
+      context
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.jsonBody?.error.code).toBe('INVALID_MEDIA_URLS');
     expect(mockedPostsService.createPost).not.toHaveBeenCalled();
   });
 
