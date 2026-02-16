@@ -25,6 +25,8 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> signOut() async => state = const AsyncValue.data(null);
   @override
   Future<void> validateToken() async {}
+  @override
+  Future<void> continueAsGuest() async {}
 }
 
 User _makeUser(UserRole role) => User(
