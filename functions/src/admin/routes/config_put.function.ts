@@ -14,6 +14,8 @@ import { updateAdminConfig } from '../adminService';
 import { validateAdminConfigRequest, validatePayloadSize } from '../validation';
 import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
 import type { AdminConfigPayload } from '../types';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 async function adminConfigPutHandler(
   request: HttpRequest,
@@ -230,7 +232,7 @@ app.http('admin_config_put', {
   methods: ['PUT', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'admin/config',
-  handler: adminConfigPutHandler,
+  handler: withRateLimit(adminConfigPutHandler, (req) => getPolicyForRoute(req)),
 });
 
 export { adminConfigPutHandler };

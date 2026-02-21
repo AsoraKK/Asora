@@ -6,6 +6,8 @@ import { getErrorMessage } from '@shared/errorUtils';
 import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { createAuditEntry } from '../common/models';
 import { z } from 'zod';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 const Schema = z.object({ pass: z.boolean(), notes: z.string().max(500).optional() });
@@ -43,10 +45,11 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
 }
 
 const protectedHandler = requirePrivacyAdmin(handler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-reviewA', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/{id}/reviewA',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

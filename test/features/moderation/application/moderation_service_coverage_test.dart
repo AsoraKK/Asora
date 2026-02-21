@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/features/moderation/application/moderation_service.dart';
@@ -8,11 +6,11 @@ import 'package:asora/core/error/error_codes.dart';
 
 /// Adapter that returns a fixed response (JSON map).
 class _MockAdapter implements HttpClientAdapter {
-  final Map<String, dynamic>? responseBody;
-  final int statusCode;
+  final Map<String, dynamic>? responseBody = null;
+  final int statusCode = 200;
   final DioException? error;
 
-  _MockAdapter({this.responseBody, this.statusCode = 200, this.error});
+  _MockAdapter({this.error});
 
   @override
   Future<ResponseBody> fetch(
@@ -21,9 +19,6 @@ class _MockAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     if (error != null) throw error!;
-    final bytes = responseBody != null
-        ? utf8.encode(responseBody.toString())
-        : <int>[];
     // Build a simple response
     return ResponseBody.fromString(
       responseBody != null ? _toJsonString(responseBody!) : '',

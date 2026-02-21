@@ -1,0 +1,30 @@
+{
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/userId",
+        "order": "ascending"
+      },
+      {
+        "path": "/counterType",
+        "order": "ascending"
+      },
+      {
+        "path": "/date",
+        "order": "descending"
+      }
+    ]
+  ],
+  "spatialIndexes": []
+}

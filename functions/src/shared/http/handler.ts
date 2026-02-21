@@ -261,6 +261,14 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
         headers['X-Correlation-ID'] = correlationId;
       }
 
+      const hasAuthHeader = Boolean(request.headers.get('authorization'));
+      if (hasAuthHeader && !headers['Cache-Control']) {
+        headers['Cache-Control'] = 'private, no-store';
+      }
+      if (hasAuthHeader && !headers.Vary) {
+        headers.Vary = 'Authorization';
+      }
+
       context.log(
         `[HTTP Handler] Response: ${response.status ?? 200} [${correlationId}]`
       );

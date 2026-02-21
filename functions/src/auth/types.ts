@@ -73,9 +73,9 @@ export interface TokenPayload {
   reputation?: number;
   iss?: string;
   aud?: string;
-  exp?: number;  // Added by jwt.sign()
-  iat?: number;  // Added by jwt.sign()
-  jti?: string;  // Added by jwt.sign()
+  exp?: number;  // Added by JWT signer
+  iat?: number;  // Added by JWT signer
+  jti?: string;  // Added by JWT signer
   nonce?: string;
   [key: string]: unknown;  // Allow additional claims
 }

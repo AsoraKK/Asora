@@ -1,6 +1,6 @@
 # Release Milestones M0-M5 (Android-first)
 
-Last updated: 2026-02-08
+Last updated: 2026-02-19
 Scope: In-repo execution paths and external handoffs.
 
 ## M0: Internal CI and staging readiness
@@ -26,6 +26,7 @@ Recommended execution order:
 2. Run `E2E Integration Test` with `target_environment=staging`.
 3. Confirm `health`, admin function index, and feed probes pass.
 4. Confirm trust endpoints smoke passes (`scripts/smoke-trust-endpoints.sh` via `.github/workflows/e2e-integration.yml`).
+5. Confirm auth refresh behavior is consistent between `/api/auth/token` and `/api/auth/refresh` before widening cohort.
 
 ## M1: Core social MVP
 
@@ -38,6 +39,7 @@ Verification:
 - `flutter test test/screens/home_feed_navigator_test.dart`
 - `flutter test test/ui_components/feed_control_panel_test.dart`
 - `flutter test test/ui/screens/p1_screen_smoke_test.dart`
+- Staging auth drill validates token exchange and refresh parity (`/api/auth/token` vs `/api/auth/refresh`) before expanding beta access.
 
 ## M2: Moderation and AI authenticity
 
@@ -49,6 +51,7 @@ In-repo status:
 Verification:
 - Run moderation service tests in `functions/tests`.
 - Validate vote + override flows in staging.
+- Validate OpenAPI `posts_create` path behavior in `functions/tests/posts/posts.route.test.ts` (not only legacy `createPost` route coverage).
 
 ## M3: Privacy and compliance
 
@@ -67,6 +70,9 @@ Verification:
 In-repo status:
 - Android release signing requires real `key.properties` values and hard-fails when missing.
 - Android release workflow handles signing material decode and cleanup.
+- Launch-readiness gate workflow validates alert routing config, store evidence checklist, and Android/iOS signing material:
+  - `.github/workflows/launch-readiness-gate.yml`
+- Flutter toolchain is pinned from `.fvmrc` and consumed by CI/release workflows.
 - Crash reporting bootstraps in app startup.
 
 External handoff:
@@ -82,12 +88,18 @@ In-repo prerequisites:
 External handoff:
 - Final production rollout approvals and launch operations.
 - On-call staffing, communications, and incident escalation contacts.
+- Rollback trigger thresholds agreed and linked to alert drill outputs:
+  - Elevated 5xx error burst over alert threshold.
+  - Latency breach over alert threshold.
+  - Auth-failure surge over alert threshold.
 
 ## External-only checklist (not closable by code alone)
 
 - Azure account/resource provisioning state for staging/prod.
 - Secret population and rotation in cloud secret stores.
 - Play Console and (later) App Store Connect artifact/form completion.
+- Store submission evidence checklist maintained and signed:
+  - `docs/runbooks/store-submission-evidence.md`
 - Vendor/legal governance records outside repo-controlled files.
 - Launch-day operations staffing and incident command roster.
 

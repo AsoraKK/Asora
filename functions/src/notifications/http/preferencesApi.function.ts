@@ -8,6 +8,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { parseAuth } from '../../shared/middleware/auth';
 import { userNotificationPreferencesRepo } from '../repositories/userNotificationPreferencesRepo';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   handleNotificationError,
   unauthorizedResponse,
@@ -72,12 +74,12 @@ app.http('notifications-getPreferences', {
   methods: ['GET'],
   route: 'notifications/preferences',
   authLevel: 'anonymous',
-  handler: getPreferences,
+  handler: withRateLimit(getPreferences, (req) => getPolicyForRoute(req)),
 });
 
 app.http('notifications-updatePreferences', {
   methods: ['PUT'],
   route: 'notifications/preferences',
   authLevel: 'anonymous',
-  handler: updatePreferences,
+  handler: withRateLimit(updatePreferences, (req) => getPolicyForRoute(req)),
 });

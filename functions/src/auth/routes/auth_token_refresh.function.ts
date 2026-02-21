@@ -11,7 +11,9 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import type { RefreshTokenRequest, RefreshTokenResponse } from '@shared/types/openapi';
-import { jwtService } from '@auth/service/jwtService';
+import { refreshTokensWithRotation } from '@auth/service/tokenService';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 
 export const auth_token_refresh = httpHandler<RefreshTokenRequest, RefreshTokenResponse>(async (ctx) => {
   ctx.context.log(`[auth_token_refresh] Processing token refresh request [${ctx.correlationId}]`);
@@ -27,14 +29,16 @@ export const auth_token_refresh = httpHandler<RefreshTokenRequest, RefreshTokenR
   }
 
   try {
-    // Verify the refresh token signature and expiration
-    const payload = await jwtService.verifyToken(refresh_token);
-
-    // Generate new token pair using the same user claims
-    const { access_token, refresh_token: new_refresh_token, expires_in } = await jwtService.generateTokenPair(
-      payload.sub,
-      payload.roles,
-      payload.tier
+    const clientId = process.env.AUTH_REFRESH_CLIENT_ID || 'lythaus-mobile';
+    const {
+      access_token,
+      refresh_token: new_refresh_token,
+      expires_in,
+      scope,
+    } = await refreshTokensWithRotation(
+      refresh_token,
+      clientId,
+      ctx.correlationId
     );
 
     return ctx.ok({
@@ -42,15 +46,19 @@ export const auth_token_refresh = httpHandler<RefreshTokenRequest, RefreshTokenR
       refresh_token: new_refresh_token,
       token_type: 'Bearer',
       expires_in,
+      scope,
     });
   } catch (error) {
     ctx.context.error(`[auth_token_refresh] Token verification failed: ${error}`, { correlationId: ctx.correlationId });
 
     if (error instanceof Error) {
-      if (error.message.includes('expired')) {
+      if (error.message.toLowerCase().includes('expired')) {
         return ctx.unauthorized('Refresh token expired', 'TOKEN_EXPIRED');
       }
-      if (error.message.includes('verification')) {
+      if (error.message.toLowerCase().includes('revoked')) {
+        return ctx.unauthorized('Refresh token revoked', 'TOKEN_REVOKED');
+      }
+      if (error.message.toLowerCase().includes('invalid')) {
         return ctx.unauthorized('Invalid refresh token', 'INVALID_TOKEN');
       }
     }
@@ -59,10 +67,15 @@ export const auth_token_refresh = httpHandler<RefreshTokenRequest, RefreshTokenR
   }
 });
 
+const rateLimitedAuthTokenRefresh = withRateLimit(
+  auth_token_refresh,
+  () => getPolicyForFunction('auth-token-refresh')
+);
+
 // Register HTTP trigger
 app.http('auth_token_refresh', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'auth/refresh',
-  handler: auth_token_refresh,
+  handler: rateLimitedAuthTokenRefresh,
 });

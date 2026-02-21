@@ -301,7 +301,7 @@ void main() {
         'success': true,
         'appeals': [_appealJson()],
         'pagination': {'total': 1, 'page': 1, 'pageSize': 20},
-        'filters': {},
+        'filters': <String, dynamic>{},
         'summary': {'totalActive': 1},
       });
       final response = await service.getVotingFeed(token: 'tok');
@@ -322,7 +322,7 @@ void main() {
   group('fetchModerationQueue', () {
     test('returns ModerationQueueResponse', () async {
       adapter.respondWith({
-        'data': {'items': [], 'pagination': {}},
+        'data': {'items': <dynamic>[], 'pagination': <String, dynamic>{}},
       });
       final response = await service.fetchModerationQueue(token: 'tok');
       expect(response.items, isEmpty);
@@ -358,10 +358,10 @@ void main() {
           'severity': 'medium',
           'createdAt': '2024-01-01T00:00:00Z',
           'updatedAt': '2024-01-01T00:00:00Z',
-          'reports': [],
-          'aiSignals': [],
-          'auditTrail': [],
-          'decisionHistory': [],
+          'reports': <dynamic>[],
+          'aiSignals': <dynamic>[],
+          'auditTrail': <dynamic>[],
+          'decisionHistory': <dynamic>[],
         },
       });
       final mod = await service.fetchModerationCase(
@@ -453,7 +453,7 @@ void main() {
   group('fetchCaseAudit', () {
     test('returns audit response', () async {
       adapter.respondWith({
-        'data': {'entries': [], 'pagination': {}},
+        'data': {'entries': <dynamic>[], 'pagination': <String, dynamic>{}},
       });
       final result = await service.fetchCaseAudit(
         caseId: 'case-1',
@@ -468,7 +468,7 @@ void main() {
   group('searchAudit', () {
     test('returns audit response with default filters', () async {
       adapter.respondWith({
-        'data': {'entries': [], 'pagination': {}},
+        'data': {'entries': <dynamic>[], 'pagination': <String, dynamic>{}},
       });
       final result = await service.searchAudit(
         filters: const ModerationAuditSearchFilters(),

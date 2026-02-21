@@ -57,12 +57,6 @@ jest.mock('@shared/clients/cosmos', () => ({
   })),
 }));
 
-// Minimal crypto/jwt behavior
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn(() => 'tok'),
-  verify: jest.fn(() => ({ sub: 'user-1', type: 'refresh' })),
-}));
-
 function req(body: any): HttpRequest {
   return {
     method: 'POST',

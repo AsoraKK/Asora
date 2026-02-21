@@ -1,7 +1,8 @@
 /// <reference types="jest" />
 // Mock cosmos to avoid parsing real connection string at import time
 import * as crypto from 'crypto';
-import * as jwt from 'jsonwebtoken';
+import { decodeProtectedHeader } from 'jose';
+import { signHs256Jwt, verifyHs256Jwt } from '../helpers/hs256Jwt';
 
 // Mutable stub the Cosmos mock can read at call-time
 const dbStub: { sessions: any[]; user: any } = { sessions: [], user: null };
@@ -364,8 +365,16 @@ describe('auth/token validation and method handling', () => {
     expect(payload.success).toBe(true);
     expect(payload.data).toHaveProperty('access_token');
     expect(payload.data).toHaveProperty('refresh_token');
-    const decoded = jwt.verify(payload.data.access_token, process.env.JWT_SECRET!) as jwt.JwtPayload;
+    const accessHeader = decodeProtectedHeader(payload.data.access_token);
+    const refreshHeader = decodeProtectedHeader(payload.data.refresh_token);
+    expect(accessHeader.alg).toBe('HS256');
+    expect(refreshHeader.alg).toBe('HS256');
+    const decoded = await verifyHs256Jwt(payload.data.access_token, process.env.JWT_SECRET!);
+    const refreshDecoded = await verifyHs256Jwt(payload.data.refresh_token, process.env.JWT_SECRET!);
     expect(decoded.sub).toBe('u1');
+    expect(refreshDecoded.sub).toBe('u1');
+    expect(refreshDecoded.type).toBe('refresh');
+    expect(refreshDecoded.jti).toBeDefined();
   });
 
   it('authorization_code: success via base64 PKCE branch', async () => {
@@ -484,10 +493,10 @@ describe('auth/token validation and method handling', () => {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
     });
-    const refresh = jwt.sign(
+    const refresh = await signHs256Jwt(
       { sub: 'u1', iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
-      { expiresIn: '7d', jwtid: jti }
+      { expiresIn: '7d', jti }
     );
     const req = httpReqMock({
       method: 'POST',
@@ -502,7 +511,7 @@ describe('auth/token validation and method handling', () => {
   });
 
   it('refresh_token: user not found', async () => {
-    const refresh = jwt.sign(
+    const refresh = await signHs256Jwt(
       { sub: 'missing', iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
@@ -525,7 +534,7 @@ describe('auth/token validation and method handling', () => {
       reputationScore: 1,
       isActive: false,
     };
-    const refresh = jwt.sign(
+    const refresh = await signHs256Jwt(
       { sub: 'u9', iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
@@ -540,7 +549,7 @@ describe('auth/token validation and method handling', () => {
 
   it('refresh_token: invalid token type (access)', async () => {
     // create a signed token with type access so verify succeeds but type check fails
-    const tok = jwt.sign(
+    const tok = await signHs256Jwt(
       { sub: 'u1', iss: 'asora-auth', type: 'access' },
       process.env.JWT_SECRET!,
       { expiresIn: '5m' }

@@ -20,8 +20,7 @@ Ensure Cloudflare caches only anonymous-safe feed endpoints and never caches per
   - Requests with `Authorization` bypass edge cache and set `Cache-Control: private, no-store`.
   - Non-allowlisted feed paths bypass cache and set `Cache-Control: private, no-store`.
 - `workers/feed-cache/src/index.js`:
-  - Same allowlist and bypass behavior as above.
-  - `Vary: Authorization` is always present.
+  - Compatibility wrapper only; delegates to `cloudflare/worker.ts`.
 
 ## Staging validation commands
 

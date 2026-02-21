@@ -4,6 +4,8 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { withClient } from '@shared/clients/postgres';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../notifications/types';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 interface FollowStatus {
   following: boolean;
@@ -102,19 +104,19 @@ app.http('follow_create', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'users/{id}/follow',
-  handler: follow_create,
+  handler: withRateLimit(follow_create, (req) => getPolicyForRoute(req)),
 });
 
 app.http('follow_delete', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'users/{id}/follow',
-  handler: follow_delete,
+  handler: withRateLimit(follow_delete, (req) => getPolicyForRoute(req)),
 });
 
 app.http('follow_get', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'users/{id}/follow',
-  handler: follow_get,
+  handler: withRateLimit(follow_get, (req) => getPolicyForRoute(req)),
 });

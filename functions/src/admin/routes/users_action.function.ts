@@ -3,6 +3,8 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type UserAction = 'disable' | 'enable';
 
@@ -110,12 +112,12 @@ app.http('admin_users_disable', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/users/{userId}/disable',
-  handler: requireActiveAdmin(disableUser),
+  handler: withRateLimit(requireActiveAdmin(disableUser), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin_users_enable', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/users/{userId}/enable',
-  handler: requireActiveAdmin(enableUser),
+  handler: withRateLimit(requireActiveAdmin(enableUser), (req) => getPolicyForRoute(req)),
 });

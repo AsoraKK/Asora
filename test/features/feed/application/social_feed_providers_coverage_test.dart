@@ -10,21 +10,12 @@ import 'package:asora/features/feed/domain/models.dart';
 import 'package:asora/features/feed/domain/social_feed_repository.dart';
 
 import 'package:dio/dio.dart';
-import 'package:mocktail/mocktail.dart' as mocktail;
 
 class _MockFeedRepo extends Mock implements SocialFeedRepository {}
 
 class _MockGuard extends Mock implements DeviceIntegrityGuard {}
 
 class _FakeDio extends Fake implements Dio {}
-
-const _emptyFeedResponse = FeedResponse(
-  posts: [],
-  hasMore: false,
-  totalCount: 0,
-  page: 1,
-  pageSize: 20,
-);
 
 FeedResponse _feedWith({
   List<Post> posts = const [],

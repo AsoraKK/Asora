@@ -13,6 +13,8 @@ import { httpHandler } from '@shared/http/handler';
 import type { ModerationDecisionRequest, ModerationDecision } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { createModerationDecision, hasModeratorRole } from '@moderation/moderationService';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 const VALID_ACTIONS: ModerationDecisionRequest['action'][] = ['approve', 'reject', 'escalate'];
 
@@ -54,5 +56,5 @@ app.http('moderation_cases_decide', {
   methods: ['POST'],
   authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware
   route: 'moderation/cases/{id}/decision',
-  handler: moderation_cases_decide,
+  handler: withRateLimit(moderation_cases_decide, (req) => getPolicyForRoute(req)),
 });

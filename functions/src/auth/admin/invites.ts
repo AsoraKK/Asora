@@ -12,6 +12,8 @@ import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { validateEmail } from '@shared/utils/validate';
 import { recordAdminAudit } from '@admin/auditLogger';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   createInvite,
   listInvitesPage,
@@ -419,24 +421,27 @@ app.http('admin-invites', {
   methods: ['GET', 'POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/invites',
-  handler: requireActiveAdmin(async (req: Authed, context: InvocationContext): Promise<HttpResponseInit> => {
-    const method = req.method?.toUpperCase();
-    if (method === 'POST') {
-      return createInviteHandler(req, context);
-    } else if (method === 'GET') {
-      return listInvitesHandler(req, context);
-    } else if (method === 'OPTIONS') {
-      return handleCorsAndMethod('OPTIONS', ['GET', 'POST']).response!;
-    }
-    return createErrorResponse(405, 'method_not_allowed', `Method ${method} not allowed`);
-  }),
+  handler: withRateLimit(
+    requireActiveAdmin(async (req: Authed, context: InvocationContext): Promise<HttpResponseInit> => {
+      const method = req.method?.toUpperCase();
+      if (method === 'POST') {
+        return createInviteHandler(req, context);
+      } else if (method === 'GET') {
+        return listInvitesHandler(req, context);
+      } else if (method === 'OPTIONS') {
+        return handleCorsAndMethod('OPTIONS', ['GET', 'POST']).response!;
+      }
+      return createErrorResponse(405, 'method_not_allowed', `Method ${method} not allowed`);
+    }),
+    (req) => getPolicyForRoute(req)
+  ),
 });
 
 app.http('admin-invites-batch', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/invites/batch',
-  handler: requireActiveAdmin(createInviteBatchHandler),
+  handler: withRateLimit(requireActiveAdmin(createInviteBatchHandler), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin-invites-get', {
@@ -450,12 +455,12 @@ app.http('admin-invites-delete', {
   methods: ['DELETE', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/invites/{code}',
-  handler: requireActiveAdmin(deleteInviteHandler),
+  handler: withRateLimit(requireActiveAdmin(deleteInviteHandler), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin-invites-revoke', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/invites/{code}/revoke',
-  handler: requireActiveAdmin(revokeInviteHandler),
+  handler: withRateLimit(requireActiveAdmin(revokeInviteHandler), (req) => getPolicyForRoute(req)),
 });

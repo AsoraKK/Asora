@@ -3,6 +3,8 @@ import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent } from '@shared/appInsights';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 interface PostDocument {
   id: string;
@@ -69,5 +71,5 @@ app.http('posts_view', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'posts/{id}/view',
-  handler: posts_view,
+  handler: withRateLimit(posts_view, (req) => getPolicyForRoute(req)),
 });

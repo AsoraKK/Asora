@@ -14,6 +14,8 @@ import type { CreateCustomFeedRequest, CustomFeedDefinition } from '@shared/type
 import { extractAuthContext } from '@shared/http/authContext';
 import { createCustomFeed } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 export const customFeeds_create = httpHandler<CreateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   ctx.context.log(`[customFeeds_create] Creating custom feed [${ctx.correlationId}]`);
@@ -50,5 +52,5 @@ app.http('customFeeds_create', {
   methods: ['POST'],
   authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
   route: 'custom-feeds',
-  handler: customFeeds_create,
+  handler: withRateLimit(customFeeds_create, (req) => getPolicyForRoute(req)),
 });

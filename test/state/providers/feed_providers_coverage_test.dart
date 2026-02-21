@@ -113,20 +113,20 @@ void main() {
     });
 
     test('initial state is default CustomFeedDraft', () {
-      expect(notifier.debugState.contentType, ContentType.mixed);
-      expect(notifier.debugState.sorting, SortingRule.relevant);
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.setAsHome, isFalse);
+      expect(notifier.state.contentType, ContentType.mixed);
+      expect(notifier.state.sorting, SortingRule.relevant);
+      expect(notifier.state.name, '');
+      expect(notifier.state.setAsHome, isFalse);
     });
 
     test('setContentType updates content type', () {
       notifier.setContentType(ContentType.image);
-      expect(notifier.debugState.contentType, ContentType.image);
+      expect(notifier.state.contentType, ContentType.image);
     });
 
     test('setSorting updates sorting', () {
       notifier.setSorting(SortingRule.newest);
-      expect(notifier.debugState.sorting, SortingRule.newest);
+      expect(notifier.state.sorting, SortingRule.newest);
     });
 
     test('updateRefinements updates refinements', () {
@@ -135,18 +135,18 @@ void main() {
         excludeKeywords: ['java'],
       );
       notifier.updateRefinements(refinements);
-      expect(notifier.debugState.refinements.includeKeywords, ['dart']);
-      expect(notifier.debugState.refinements.excludeKeywords, ['java']);
+      expect(notifier.state.refinements.includeKeywords, ['dart']);
+      expect(notifier.state.refinements.excludeKeywords, ['java']);
     });
 
     test('setName updates name', () {
       notifier.setName('My Feed');
-      expect(notifier.debugState.name, 'My Feed');
+      expect(notifier.state.name, 'My Feed');
     });
 
     test('setHome updates setAsHome', () {
       notifier.setHome(true);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.setAsHome, isTrue);
     });
 
     test('reset returns to default state', () {
@@ -157,10 +157,10 @@ void main() {
 
       notifier.reset();
 
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.sorting, SortingRule.relevant);
-      expect(notifier.debugState.contentType, ContentType.mixed);
-      expect(notifier.debugState.setAsHome, isFalse);
+      expect(notifier.state.name, '');
+      expect(notifier.state.sorting, SortingRule.relevant);
+      expect(notifier.state.contentType, ContentType.mixed);
+      expect(notifier.state.setAsHome, isFalse);
     });
 
     test('multiple sequential updates', () {
@@ -169,10 +169,10 @@ void main() {
       notifier.setSorting(SortingRule.local);
       notifier.setHome(true);
 
-      expect(notifier.debugState.name, 'Feed A');
-      expect(notifier.debugState.contentType, ContentType.text);
-      expect(notifier.debugState.sorting, SortingRule.local);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.name, 'Feed A');
+      expect(notifier.state.contentType, ContentType.text);
+      expect(notifier.state.sorting, SortingRule.local);
+      expect(notifier.state.setAsHome, isTrue);
     });
   });
 

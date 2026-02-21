@@ -1,0 +1,32 @@
+{
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/apiType",
+        "order": "ascending"
+      },
+      {
+        "path": "/active",
+        "order": "ascending"
+      }
+    ],
+    [
+      {
+        "path": "/lastModifiedAt",
+        "order": "descending"
+      }
+    ]
+  ],
+  "spatialIndexes": []
+}

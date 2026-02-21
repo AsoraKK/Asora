@@ -12,6 +12,8 @@ import { recordAdminAudit } from '../auditLogger';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type OverrideDecision = 'allow' | 'block';
 type OverrideReasonCode = 'policy_exception' | 'false_positive' | 'safety_risk' | 'other';
@@ -371,5 +373,5 @@ app.http('admin_appeals_override', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/appeals/{appealId}/override',
-  handler: requireActiveModerator(overrideAppeal),
+  handler: withRateLimit(requireActiveModerator(overrideAppeal), (req) => getPolicyForRoute(req)),
 });

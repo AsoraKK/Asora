@@ -207,8 +207,8 @@ void main() {
           'version': 2,
           'updatedAt': '2025-01-02T00:00:00Z',
           'updatedBy': 'admin',
-          'moderation': {},
-          'featureFlags': {},
+          'moderation': <String, dynamic>{},
+          'featureFlags': <String, dynamic>{},
         },
       );
       client = AdminApiClient(dio);

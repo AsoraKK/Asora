@@ -88,7 +88,6 @@ linter:
     - use_super_parameters
     
     # Documentation
-    - package_api_docs
     - public_member_api_docs
     
     # Pub

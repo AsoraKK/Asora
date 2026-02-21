@@ -5,6 +5,8 @@ import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from 
 import { getErrorMessage } from '@shared/errorUtils';
 import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { createAuditEntry } from '../common/models';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 
@@ -31,10 +33,11 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
 }
 
 const protectedHandler = requirePrivacyAdmin(handler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-cancel', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/{id}/cancel',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

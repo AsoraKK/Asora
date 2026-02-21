@@ -13,6 +13,8 @@ import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { deleteCustomFeed } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 export const customFeeds_delete = httpHandler<void, void>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -52,5 +54,5 @@ app.http('customFeeds_delete', {
   methods: ['DELETE'],
   authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
   route: 'custom-feeds/{id}',
-  handler: customFeeds_delete,
+  handler: withRateLimit(customFeeds_delete, (req) => getPolicyForRoute(req)),
 });

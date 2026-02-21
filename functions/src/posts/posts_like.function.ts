@@ -16,6 +16,8 @@ import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostLiked, revokePostLiked } from '@shared/services/reputationService';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../notifications/types';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   DEVICE_INTEGRITY_BLOCKED_CODE,
   DEVICE_INTEGRITY_BLOCKED_MESSAGE,
@@ -356,19 +358,19 @@ app.http('posts_like_create', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'posts/{id}/like',
-  handler: posts_like_create,
+  handler: withRateLimit(posts_like_create, (req) => getPolicyForRoute(req)),
 });
 
 app.http('posts_like_delete', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'posts/{id}/like',
-  handler: posts_like_delete,
+  handler: withRateLimit(posts_like_delete, (req) => getPolicyForRoute(req)),
 });
 
 app.http('posts_like_get', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'posts/{id}/like',
-  handler: posts_like_get,
+  handler: withRateLimit(posts_like_get, (req) => getPolicyForRoute(req)),
 });

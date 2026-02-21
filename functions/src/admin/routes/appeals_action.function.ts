@@ -4,6 +4,8 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
 import { fetchContentById } from '../moderationAdminUtils';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type AppealDecision = 'approve' | 'reject';
 
@@ -149,12 +151,12 @@ app.http('admin_appeals_approve', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/appeals/{appealId}/approve',
-  handler: requireActiveAdmin(approveAppeal),
+  handler: withRateLimit(requireActiveAdmin(approveAppeal), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin_appeals_reject', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/appeals/{appealId}/reject',
-  handler: requireActiveAdmin(rejectAppeal),
+  handler: withRateLimit(requireActiveAdmin(rejectAppeal), (req) => getPolicyForRoute(req)),
 });

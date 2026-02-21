@@ -1,8 +1,11 @@
 import { v7 as uuidv7 } from 'uuid';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import type { ModerationCase, ModerationCaseResponse, ModerationDecision } from '@shared/types/openapi';
+import { recordAdminAudit } from '@admin/auditLogger';
 
-const decisionsContainer = getTargetDatabase().moderationDecisions;
+function getDecisionsContainer() {
+  return getTargetDatabase().moderationDecisions;
+}
 
 function mapDecisionResource(resource: Record<string, any>): ModerationDecision {
   return {
@@ -29,6 +32,7 @@ function mapActionToStatus(action: string | undefined): ModerationCase['status']
 }
 
 export async function getModerationCaseById(caseId: string): Promise<ModerationCaseResponse | null> {
+  const decisionsContainer = getDecisionsContainer();
   const { resources } = await decisionsContainer.items
     .query(
       {
@@ -78,6 +82,7 @@ export async function createModerationDecision(
   action: ModerationDecision['action'],
   rationale?: string
 ): Promise<ModerationDecision> {
+  const decisionsContainer = getDecisionsContainer();
   const now = new Date().toISOString();
   const decisionId = uuidv7();
   const document = {
@@ -99,6 +104,22 @@ export async function createModerationDecision(
   };
 
   await decisionsContainer.items.create({ ...document, partitionKey: caseId });
+  await recordAdminAudit({
+    actorId: userId,
+    action: 'MODERATION_CASE_DECIDE',
+    subjectId: caseId,
+    targetType: 'moderation_case',
+    reasonCode: `MODERATION_${action.toUpperCase()}`,
+    note: rationale ?? null,
+    before: { status: 'pending' },
+    after: { status: mapActionToStatus(action).toUpperCase() },
+    metadata: {
+      decisionId,
+      action,
+      contentType: document.contentType,
+      contentId: document.contentId,
+    },
+  });
   return mapDecisionResource(document);
 }
 

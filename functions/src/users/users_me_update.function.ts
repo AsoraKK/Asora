@@ -13,6 +13,8 @@ import { httpHandler } from '@shared/http/handler';
 import type { UpdateUserProfileRequest, UserProfile } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { usersService } from '@auth/service/usersService';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   isTrustPassportVisibility,
   profileService,
@@ -156,5 +158,5 @@ app.http('users_me_update', {
   methods: ['PATCH'],
   authLevel: 'anonymous', // Auth is verified in handler via JWT extraction
   route: 'users/me',
-  handler: users_me_update,
+  handler: withRateLimit(users_me_update, (req) => getPolicyForRoute(req)),
 });

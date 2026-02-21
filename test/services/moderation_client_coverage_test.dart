@@ -122,13 +122,13 @@ void main() {
 
   group('ModerationClient.getMyAppeals', () {
     test('success with defaults', () async {
-      adapter.respondWith({'appeals': [], 'total': 0});
+      adapter.respondWith({'appeals': <dynamic>[], 'total': 0});
       final result = await client.getMyAppeals(token: 'tok');
       expect(result['total'], 0);
     });
 
     test('with filters', () async {
-      adapter.respondWith({'appeals': [], 'total': 0});
+      adapter.respondWith({'appeals': <dynamic>[], 'total': 0});
       final result = await client.getMyAppeals(
         token: 'tok',
         page: 2,
@@ -145,13 +145,13 @@ void main() {
 
   group('ModerationClient.getAppealedContent', () {
     test('success', () async {
-      adapter.respondWith({'appeals': [], 'total': 0});
+      adapter.respondWith({'appeals': <dynamic>[], 'total': 0});
       final result = await client.getAppealedContent(token: 'tok');
       expect(result['total'], 0);
     });
 
     test('with contentType filter', () async {
-      adapter.respondWith({'appeals': [], 'total': 0});
+      adapter.respondWith({'appeals': <dynamic>[], 'total': 0});
       final result = await client.getAppealedContent(
         token: 'tok',
         contentType: 'comment',
@@ -189,7 +189,7 @@ void main() {
 
   group('ModerationClient.getAppealsForVoting', () {
     test('delegates to getAppealedContent', () async {
-      adapter.respondWith({'appeals': [], 'total': 0});
+      adapter.respondWith({'appeals': <dynamic>[], 'total': 0});
       final result = await client.getAppealsForVoting(token: 'tok');
       expect(result['total'], 0);
     });

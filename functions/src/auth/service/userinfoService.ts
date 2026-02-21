@@ -10,7 +10,7 @@ import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functio
 import { createSuccessResponse, createErrorResponse, extractAuthToken } from '@shared/utils/http';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
-import * as jwt from 'jsonwebtoken';
+import { jwtVerify } from 'jose';
 import type { TokenPayload, UserDocument } from '@auth/types';
 
 const logger = getAzureLogger('auth/userinfo');
@@ -31,6 +31,10 @@ function getJwtSecret(): string {
     throw new Error('Missing JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
   }
   return secret;
+}
+
+function getJwtSecretBytes(): Uint8Array {
+  return new TextEncoder().encode(getJwtSecret());
 }
 
 export async function userInfoHandler(
@@ -68,7 +72,8 @@ export async function userInfoHandler(
     // Verify JWT token
     let tokenPayload: TokenPayload;
     try {
-      tokenPayload = jwt.verify(token, getJwtSecret()) as TokenPayload;
+      const { payload } = await jwtVerify(token, getJwtSecretBytes());
+      tokenPayload = payload as TokenPayload;
     } catch (jwtError) {
       const errorMsg = jwtError instanceof Error ? jwtError.message : 'Token verification failed';
 

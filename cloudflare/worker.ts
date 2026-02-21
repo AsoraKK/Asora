@@ -29,7 +29,7 @@ export default {
       const resp = await fetch(request);
       const r = new Response(resp.body, resp);
       r.headers.set("Vary", "Authorization");
-      if (isFeed && !isAnonCacheableFeedPath) {
+      if (auth || (isFeed && !isAnonCacheableFeedPath)) {
         r.headers.set("Cache-Control", "private, no-store");
       }
       r.headers.set("X-Cache", auth ? "BYPASS" : "BYPASS");

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "notification_events",
+    "envPartitionKey": "/userId",
+    "legacyPartitionKey": "/userId",
+    "mapping": "mapped"
+  },
+  {
+    "name": "posts",
+    "envPartitionKey": "/authorId",
+    "legacyPartitionKey": "/id",
+    "mapping": "mapped"
+  },
+  {
+    "name": "users",
+    "envPartitionKey": "/id",
+    "legacyPartitionKey": "/id",
+    "mapping": "mapped"
+  }
+]

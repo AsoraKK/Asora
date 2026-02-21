@@ -6,8 +6,6 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:asora/core/security/cert_pinning.dart';
 
-class _FakeAdapter extends Mock implements HttpClientAdapter {}
-
 /// Manual spy for close/fetch delegation tests (avoids mocktail verify issues).
 class _SpyAdapter extends Fake implements HttpClientAdapter {
   int closeCalls = 0;
@@ -49,7 +47,7 @@ void main() {
       expect(json['enabled'], isTrue);
       expect(json['buildMode'], 'debug');
       expect(json['pinnedDomains'], ['example.com']);
-      expect(json['pins'], isA<Map>());
+      expect(json['pins'], isA<Map<String, dynamic>>());
     });
   });
 

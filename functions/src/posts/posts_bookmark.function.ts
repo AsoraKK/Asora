@@ -3,6 +3,8 @@ import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent } from '@shared/appInsights';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 interface BookmarkDocument {
   id: string;
@@ -201,19 +203,19 @@ app.http('posts_bookmark_create', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'posts/{id}/bookmark',
-  handler: posts_bookmark_create,
+  handler: withRateLimit(posts_bookmark_create, (req) => getPolicyForRoute(req)),
 });
 
 app.http('posts_bookmark_delete', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
   route: 'posts/{id}/bookmark',
-  handler: posts_bookmark_delete,
+  handler: withRateLimit(posts_bookmark_delete, (req) => getPolicyForRoute(req)),
 });
 
 app.http('posts_bookmark_get', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'posts/{id}/bookmark',
-  handler: posts_bookmark_get,
+  handler: withRateLimit(posts_bookmark_get, (req) => getPolicyForRoute(req)),
 });

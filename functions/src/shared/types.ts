@@ -5,7 +5,7 @@
  */
 
 import type { CosmosClient } from '@azure/cosmos';
-import type { RedisClientType } from 'redis';
+import type { Redis } from 'ioredis';
 
 export type { Principal } from './middleware/auth';
 
@@ -22,7 +22,7 @@ export type Result<T> =
  */
 export interface ContextDeps {
   cosmos: CosmosClient;
-  redis?: RedisClientType;
+  redis?: Redis;
   now: () => Date;
 }
 

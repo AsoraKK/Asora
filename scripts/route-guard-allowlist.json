@@ -1,0 +1,12 @@
+{
+  "rateLimitExempt": [
+    "admin_test_data_purge",
+    "moderation-test-proxy",
+    "moderation_test",
+    "payments_webhook"
+  ],
+  "authGuardExempt": [
+    "moderation-test-proxy",
+    "payments_webhook"
+  ]
+}

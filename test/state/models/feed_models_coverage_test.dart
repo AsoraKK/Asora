@@ -238,13 +238,13 @@ void main() {
     test('setContentType updates state', () {
       final notifier = CustomFeedDraftNotifier();
       notifier.setContentType(ContentType.video);
-      expect(notifier.debugState.contentType, ContentType.video);
+      expect(notifier.state.contentType, ContentType.video);
     });
 
     test('setSorting updates state', () {
       final notifier = CustomFeedDraftNotifier();
       notifier.setSorting(SortingRule.newest);
-      expect(notifier.debugState.sorting, SortingRule.newest);
+      expect(notifier.state.sorting, SortingRule.newest);
     });
 
     test('updateRefinements updates state', () {
@@ -252,19 +252,19 @@ void main() {
       notifier.updateRefinements(
         const FeedRefinements(includeKeywords: ['dart']),
       );
-      expect(notifier.debugState.refinements.includeKeywords, ['dart']);
+      expect(notifier.state.refinements.includeKeywords, ['dart']);
     });
 
     test('setName updates state', () {
       final notifier = CustomFeedDraftNotifier();
       notifier.setName('My Feed');
-      expect(notifier.debugState.name, 'My Feed');
+      expect(notifier.state.name, 'My Feed');
     });
 
     test('setHome updates state', () {
       final notifier = CustomFeedDraftNotifier();
       notifier.setHome(true);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.setAsHome, isTrue);
     });
 
     test('reset returns to default', () {
@@ -272,8 +272,8 @@ void main() {
       notifier.setName('Temp');
       notifier.setSorting(SortingRule.hot);
       notifier.reset();
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.sorting, SortingRule.relevant);
+      expect(notifier.state.name, '');
+      expect(notifier.state.sorting, SortingRule.relevant);
     });
   });
 }

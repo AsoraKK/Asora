@@ -13,12 +13,13 @@ void main() {
     privileges: ['Discovery + News feeds'],
   );
 
-  const premiumTier = ReputationTier(
-    id: 'premium',
-    name: 'Premium',
-    minXP: 1200,
-    privileges: ['Discovery + News feeds', '2 custom feeds'],
-  );
+  // Premium tier available for future tests:
+  // const premiumTier = ReputationTier(
+  //   id: 'premium',
+  //   name: 'Premium',
+  //   minXP: 1200,
+  //   privileges: ['Discovery + News feeds', '2 custom feeds'],
+  // );
 
   Widget buildDashboard({required AsyncValue<UserReputation> reputationValue}) {
     return ProviderScope(

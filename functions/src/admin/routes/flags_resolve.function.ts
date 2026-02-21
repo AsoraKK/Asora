@@ -3,6 +3,8 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 interface ResolveBody {
   reasonCode?: string;
@@ -81,5 +83,5 @@ app.http('admin_flags_resolve', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/flags/{flagId}/resolve',
-  handler: requireActiveAdmin(resolveFlag),
+  handler: withRateLimit(requireActiveAdmin(resolveFlag), (req) => getPolicyForRoute(req)),
 });

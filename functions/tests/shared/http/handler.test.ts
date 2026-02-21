@@ -370,4 +370,38 @@ describe('httpHandler', () => {
       expect(response.status).toBe(206);
     });
   });
+
+  describe('cache control defaults', () => {
+    it('sets private no-store for authenticated responses when not explicitly set', async () => {
+      const handler = httpHandler(async (ctx) => ctx.ok({ message: 'authed' }));
+
+      const request = createMockRequest({
+        headers: { authorization: 'Bearer token-123' },
+      });
+      const context = createMockContext();
+
+      const response = await handler(request, context);
+      expect(response.headers?.['Cache-Control']).toBe('private, no-store');
+      expect(response.headers?.Vary).toBe('Authorization');
+    });
+
+    it('preserves explicit cache headers from endpoint handlers', async () => {
+      const handler = httpHandler(async (ctx) => ({
+        status: 200,
+        jsonBody: { message: 'explicit' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60',
+        },
+      }));
+
+      const request = createMockRequest({
+        headers: { authorization: 'Bearer token-123' },
+      });
+      const context = createMockContext();
+
+      const response = await handler(request, context);
+      expect(response.headers?.['Cache-Control']).toBe('public, max-age=60');
+    });
+  });
 });

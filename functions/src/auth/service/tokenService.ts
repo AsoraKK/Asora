@@ -4,7 +4,7 @@ import { createSuccessResponse, createErrorResponse } from '@shared/utils/http';
 import { validateText, validateRequestSize } from '@shared/utils/validate';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import * as crypto from 'crypto';
-import * as jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { getCosmosClient } from '@shared/clients/cosmos';
 
 import type { AuthSession, TokenPayload, TokenRequest, UserDocument } from '@auth/types';
@@ -12,6 +12,7 @@ import {
   storeRefreshToken,
   validateRefreshToken,
   rotateRefreshToken,
+  revokeAllUserTokens,
 } from './refreshTokenStore';
 
 const logger = getAzureLogger('auth/token');
@@ -51,6 +52,23 @@ function getJwtSecret(): string {
 const JWT_ISSUER = process.env.JWT_ISSUER || 'asora-auth';
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
+
+function getJwtSecretBytes(): Uint8Array {
+  return new TextEncoder().encode(getJwtSecret());
+}
+
+async function signJwtToken(
+  payload: Record<string, unknown>,
+  expiresIn: string,
+  jwtid = crypto.randomUUID()
+): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setJti(jwtid)
+    .setExpirationTime(expiresIn)
+    .sign(getJwtSecretBytes());
+}
 
 
 
@@ -264,21 +282,15 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     nonce: session.nonce,
   };
 
-  const accessToken = jwt.sign(tokenPayload, getJwtSecret(), {
-    expiresIn: ACCESS_TOKEN_EXPIRY,
-    jwtid: crypto.randomUUID(),
-  });
+  const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
 
   const refreshJti = crypto.randomUUID();
   const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  const refreshToken = jwt.sign(
+  const refreshToken = await signJwtToken(
     { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
-    getJwtSecret(),
-    {
-      expiresIn: REFRESH_TOKEN_EXPIRY,
-      jwtid: refreshJti,
-    }
+    REFRESH_TOKEN_EXPIRY,
+    refreshJti
   );
 
   // Store refresh token for rotation tracking
@@ -314,10 +326,16 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
 
   try {
     // Verify and decode refresh token
-    const decoded = jwt.verify(body.refresh_token, getJwtSecret());
+    const { payload: decoded } = await jwtVerify(body.refresh_token, getJwtSecretBytes());
 
     // Type guard for decoded token
-    if (typeof decoded !== 'object' || decoded === null || !('sub' in decoded) || !('type' in decoded) || !('jti' in decoded)) {
+    if (
+      typeof decoded !== 'object' ||
+      decoded === null ||
+      !('sub' in decoded) ||
+      !('type' in decoded) ||
+      !('jti' in decoded)
+    ) {
       throw new Error('Invalid token structure');
     }
 
@@ -372,22 +390,16 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       aud: body.client_id,
     };
 
-    const accessToken = jwt.sign(tokenPayload, getJwtSecret(), {
-      expiresIn: ACCESS_TOKEN_EXPIRY,
-      jwtid: crypto.randomUUID(),
-    });
+    const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
 
     // Rotate refresh token: revoke old, issue new
     const newRefreshJti = crypto.randomUUID();
     const newRefreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    const newRefreshToken = jwt.sign(
+    const newRefreshToken = await signJwtToken(
       { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
-      getJwtSecret(),
-      {
-        expiresIn: REFRESH_TOKEN_EXPIRY,
-        jwtid: newRefreshJti,
-      }
+      REFRESH_TOKEN_EXPIRY,
+      newRefreshJti
     );
 
     await rotateRefreshToken(oldJti, newRefreshJti, user.id, newRefreshExpiresAt);
@@ -402,9 +414,40 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       scope: 'read write',
     };
   } catch (jwtError) {
-    if (jwtError instanceof Error && jwtError.message.includes('revoked')) {
-      throw jwtError; // Preserve specific error message
+    if (jwtError instanceof joseErrors.JWTExpired) {
+      throw new Error('Refresh token expired');
     }
-    throw new Error('Invalid or expired refresh token');
+    if (jwtError instanceof Error && jwtError.message.includes('revoked')) {
+      throw jwtError; // Preserve specific revocation message
+    }
+    if (jwtError instanceof Error && jwtError.message.toLowerCase().includes('expired')) {
+      throw new Error('Refresh token expired');
+    }
+    throw new Error('Invalid refresh token');
   }
+}
+
+export async function refreshTokensWithRotation(
+  refreshToken: string,
+  clientId = 'lythaus-mobile',
+  requestId = 'auth-refresh-route'
+): Promise<{
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
+}> {
+  return handleRefreshTokenGrant(
+    {
+      client_id: clientId,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    },
+    requestId
+  );
+}
+
+export async function revokeAllRefreshTokensForUser(userId: string): Promise<number> {
+  return revokeAllUserTokens(userId);
 }

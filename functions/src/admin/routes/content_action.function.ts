@@ -3,6 +3,8 @@ import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from 
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
 import { fetchContentById, mapContentState, resolveFlagsForContent } from '../moderationAdminUtils';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type ContentAction = 'block' | 'publish';
 
@@ -129,12 +131,12 @@ app.http('admin_content_block', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/content/{contentId}/block',
-  handler: requireActiveAdmin(blockContent),
+  handler: withRateLimit(requireActiveAdmin(blockContent), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin_content_publish', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/content/{contentId}/publish',
-  handler: requireActiveAdmin(publishContent),
+  handler: withRateLimit(requireActiveAdmin(publishContent), (req) => getPolicyForRoute(req)),
 });

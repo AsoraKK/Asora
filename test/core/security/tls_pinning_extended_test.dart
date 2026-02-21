@@ -19,10 +19,7 @@ void main() {
         spkiPinsBase64: ['abc123'],
         strictMode: true,
       );
-      final validator = TlsPinningValidator(
-        config: config,
-        environment: Environment.development,
-      );
+      TlsPinningValidator(config: config, environment: Environment.development);
 
       // Can't pass real X509Certificate in test, but with disabled config
       // it should return true immediately without touching the cert.
@@ -37,10 +34,7 @@ void main() {
         spkiPinsBase64: [],
         strictMode: true,
       );
-      final validator = TlsPinningValidator(
-        config: config,
-        environment: Environment.development,
-      );
+      TlsPinningValidator(config: config, environment: Environment.development);
       // Empty pins = fail open, no cert needed for this branch
     });
   });
@@ -62,18 +56,15 @@ void main() {
 
   group('PinnedHttpClient', () {
     late PinnedHttpClient pinnedClient;
-    late TlsPinningValidator validator;
 
     setUp(() {
+      // Validator constructed to verify no errors during init
       const config = TlsPinConfig(
         enabled: false,
         spkiPinsBase64: [],
         strictMode: false,
       );
-      validator = TlsPinningValidator(
-        config: config,
-        environment: Environment.development,
-      );
+      TlsPinningValidator(config: config, environment: Environment.development);
     });
 
     tearDown(() {

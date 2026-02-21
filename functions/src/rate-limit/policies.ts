@@ -210,11 +210,14 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
     case 'user/delete':
       return createWritePolicy('user/delete');
     case 'auth/token':
+    case 'auth/refresh':
     case 'auth/authorize':
     case 'auth/redeem-invite':
       return createAuthEndpointPolicy(path);
     case 'auth/userinfo':
       return createAuthenticatedPolicy('auth/userinfo');
+    case 'auth/sessions/revoke':
+      return createWritePolicy('auth/sessions/revoke');
     case 'auth/b2c-config':
     case 'auth/ping':
     case 'auth/invite/validate':
@@ -265,12 +268,15 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
     case 'privacy-delete-user':
       return createWritePolicy('user/delete');
     case 'auth-token':
+    case 'auth-token-refresh':
     case 'auth-authorize':
       return createAuthEndpointPolicy(routeId);
     case 'auth-redeem-invite':
       return createAuthEndpointPolicy(routeId);
     case 'auth-userinfo':
       return createAuthenticatedPolicy('auth/userinfo');
+    case 'auth-sessions-revoke':
+      return createWritePolicy('auth/sessions/revoke');
     case 'auth-config':
     case 'auth-ping':
       return createAnonymousPolicy(routeId);

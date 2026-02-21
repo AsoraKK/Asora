@@ -10,7 +10,7 @@
  */
 
 import * as crypto from 'crypto';
-import * as jwt from 'jsonwebtoken';
+import { decodeHs256Jwt, signHs256Jwt } from '../helpers/hs256Jwt';
 
 // In-memory stores for mocking
 const dbStub: { sessions: any[]; user: any } = { sessions: [], user: null };
@@ -170,7 +170,7 @@ describe('Refresh Token Rotation', () => {
       expect(body.data).toHaveProperty('refresh_token');
 
       // Decode the refresh token to get the jti
-      const decoded = jwt.decode(body.data.refresh_token) as any;
+      const decoded = decodeHs256Jwt(body.data.refresh_token) as any;
       expect(decoded.jti).toBeDefined();
 
       // Verify it was stored
@@ -193,10 +193,10 @@ describe('Refresh Token Rotation', () => {
 
       // Create initial refresh token
       const oldJti = crypto.randomUUID();
-      const oldRefreshToken = jwt.sign(
+      const oldRefreshToken = await signHs256Jwt(
         { sub: 'u-rotate', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d', jwtid: oldJti }
+        { expiresIn: '7d', jti: oldJti }
       );
 
       // Store it in our mock
@@ -226,7 +226,7 @@ describe('Refresh Token Rotation', () => {
       expect(refreshTokenStore.has(oldJti)).toBe(false);
 
       // Verify new token was stored
-      const newDecoded = jwt.decode(body.data.refresh_token) as any;
+      const newDecoded = decodeHs256Jwt(body.data.refresh_token) as any;
       expect(newDecoded.jti).toBeDefined();
       expect(newDecoded.jti).not.toBe(oldJti);
       expect(refreshTokenStore.has(newDecoded.jti)).toBe(true);
@@ -244,10 +244,10 @@ describe('Refresh Token Rotation', () => {
 
       // Create a token that is NOT in the store (simulating rotation already happened)
       const oldJti = crypto.randomUUID();
-      const oldRefreshToken = jwt.sign(
+      const oldRefreshToken = await signHs256Jwt(
         { sub: 'u-reuse', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d', jwtid: oldJti }
+        { expiresIn: '7d', jti: oldJti }
       );
 
       // Note: NOT storing in refreshTokenStore - simulates it was already rotated
@@ -276,10 +276,10 @@ describe('Refresh Token Rotation', () => {
       };
 
       const jti = crypto.randomUUID();
-      const refreshToken = jwt.sign(
+      const refreshToken = await signHs256Jwt(
         { sub: 'u-newrt', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d', jwtid: jti }
+        { expiresIn: '7d', jti }
       );
 
       refreshTokenStore.set(jti, {
@@ -319,10 +319,10 @@ describe('Refresh Token Rotation', () => {
       };
 
       // Create token WITHOUT jti
-      const tokenWithoutJti = jwt.sign(
+      const tokenWithoutJti = await signHs256Jwt(
         { sub: 'u-nojti', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d' } // No jwtid option
+        { expiresIn: '7d' } // No jti option
       );
 
       const req = httpReqMock({
@@ -349,10 +349,10 @@ describe('Refresh Token Rotation', () => {
       };
 
       const jti = crypto.randomUUID();
-      const refreshToken = jwt.sign(
+      const refreshToken = await signHs256Jwt(
         { sub: 'u-different', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d', jwtid: jti }
+        { expiresIn: '7d', jti }
       );
 
       // Store with DIFFERENT user
@@ -386,10 +386,10 @@ describe('Refresh Token Rotation', () => {
       };
 
       const jti = crypto.randomUUID();
-      const refreshToken = jwt.sign(
+      const refreshToken = await signHs256Jwt(
         { sub: 'u-expired', iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
-        { expiresIn: '7d', jwtid: jti }
+        { expiresIn: '7d', jti }
       );
 
       // Store with expired date
@@ -414,10 +414,10 @@ describe('Refresh Token Rotation', () => {
 
     it('rejects invalid JWT signature', async () => {
       const jti = crypto.randomUUID();
-      const refreshToken = jwt.sign(
+      const refreshToken = await signHs256Jwt(
         { sub: 'u-badsig', iss: 'asora-auth', type: 'refresh' },
         'wrong-secret-key',
-        { expiresIn: '7d', jwtid: jti }
+        { expiresIn: '7d', jti }
       );
 
       const req = httpReqMock({

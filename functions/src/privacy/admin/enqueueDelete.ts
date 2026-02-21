@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { createDsrRequest } from '../service/dsrStore';
 import { enqueueDsrMessage } from '../common/storage';
 import { createAuditEntry, DsrRequest } from '../common/models';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 
@@ -56,10 +58,11 @@ async function handler(req: Authed, context: InvocationContext): Promise<HttpRes
 }
 
 const protectedHandler = requirePrivacyAdmin(handler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-enqueue-delete', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/delete',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

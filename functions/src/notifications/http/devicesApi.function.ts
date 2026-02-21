@@ -12,6 +12,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { parseAuth } from '../../shared/middleware/auth';
 import { userDeviceTokensRepo } from '../repositories/userDeviceTokensRepo';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   handleNotificationError,
   unauthorizedResponse,
@@ -141,19 +143,19 @@ app.http('notifications-registerDevice', {
   methods: ['POST'],
   route: 'notifications/devices',
   authLevel: 'anonymous',
-  handler: registerDevice,
+  handler: withRateLimit(registerDevice, (req) => getPolicyForRoute(req)),
 });
 
 app.http('notifications-listDevices', {
   methods: ['GET'],
   route: 'notifications/devices',
   authLevel: 'anonymous',
-  handler: listDevices,
+  handler: withRateLimit(listDevices, (req) => getPolicyForRoute(req)),
 });
 
 app.http('notifications-revokeDevice', {
   methods: ['POST'],
   route: 'notifications/devices/{id}/revoke',
   authLevel: 'anonymous',
-  handler: revokeDevice,
+  handler: withRateLimit(revokeDevice, (req) => getPolicyForRoute(req)),
 });

@@ -100,9 +100,9 @@ void main() {
       final json = post.toJson();
       expect(json.containsKey('updatedAt'), isTrue);
       expect(json['mediaUrls'], ['img.png']);
-      expect(json['moderation'], isA<Map>());
-      expect(json['metadata'], isA<Map>());
-      expect(json['source'], isA<Map>());
+      expect(json['moderation'], isA<Map<String, dynamic>>());
+      expect(json['metadata'], isA<Map<String, dynamic>>());
+      expect(json['source'], isA<Map<String, dynamic>>());
       expect(json['isNews'], true);
       expect(json['hasAppeal'], true);
       expect(json['proofSignalsProvided'], true);

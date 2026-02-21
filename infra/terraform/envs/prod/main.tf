@@ -6,6 +6,12 @@ provider "azurerm" {
   features {}
 }
 
+data "azurerm_client_config" "current" {}
+
+locals {
+  effective_function_app_resource_id = length(trimspace(var.function_app_resource_id)) > 0 ? var.function_app_resource_id : "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.observability_resource_group}/providers/Microsoft.Web/sites/${var.function_app_name}"
+}
+
 module "cosmos_sql" {
   source = "../../modules/cosmos_sql"
 
@@ -68,6 +74,78 @@ module "cosmos_sql" {
       max_throughput = 2000
     },
     {
+      name           = "auth_sessions"
+      partition_key  = "/partitionKey"
+      index_file     = "auth_sessions.index.json"
+      max_throughput = 1000
+    },
+    {
+      name           = "invites"
+      partition_key  = "/_partitionKey"
+      index_file     = "invites.index.json"
+      max_throughput = 1000
+    },
+    {
+      name           = "profiles"
+      partition_key  = "/id"
+      index_file     = "profiles.index.json"
+      max_throughput = 2000
+    },
+    {
+      name           = "publicProfiles"
+      partition_key  = "/userId"
+      index_file     = "publicProfiles.index.json"
+      max_throughput = 2000
+    },
+    {
+      name           = "counters"
+      partition_key  = "/userId"
+      index_file     = "counters.index.json"
+      max_throughput = 2000
+    },
+    {
+      name           = "messages"
+      partition_key  = "/conversationId"
+      index_file     = "messages.index.json"
+      max_throughput = 2000
+    },
+    {
+      name           = "userFeed"
+      partition_key  = "/recipientId"
+      index_file     = "userFeed.index.json"
+      max_throughput = 4000
+    },
+    {
+      name           = "posts_v2"
+      partition_key  = "/postId"
+      index_file     = "posts_v2.index.json"
+      max_throughput = 8000
+    },
+    {
+      name           = "notifications"
+      partition_key  = "/userId"
+      index_file     = "notifications.index.json"
+      max_throughput = 4000
+    },
+    {
+      name           = "notification_preferences"
+      partition_key  = "/userId"
+      index_file     = "notification_preferences.index.json"
+      max_throughput = 1000
+    },
+    {
+      name           = "device_tokens"
+      partition_key  = "/userId"
+      index_file     = "device_tokens.index.json"
+      max_throughput = 1000
+    },
+    {
+      name           = "notification_events"
+      partition_key  = "/userId"
+      index_file     = "notification_events.index.json"
+      max_throughput = 4000
+    },
+    {
       name           = "custom_feeds"
       partition_key  = "/partitionKey"
       index_file     = "custom_feeds.index.json"
@@ -114,6 +192,12 @@ module "cosmos_sql" {
       partition_key  = "/_partitionKey"
       index_file     = "reputation_audit.index.json"
       max_throughput = 1000
+    },
+    {
+      name           = "ModerationWeights"
+      partition_key  = "/className"
+      index_file     = "ModerationWeights.index.json"
+      max_throughput = 1000
     }
   ]
 }
@@ -138,6 +222,6 @@ module "observability" {
   name_prefix              = var.observability_name_prefix
   environment              = "production"
   alert_email_addresses    = var.observability_alert_email_addresses
-  function_app_resource_id = var.function_app_resource_id
+  function_app_resource_id = local.effective_function_app_resource_id
   tags                     = var.observability_tags
 }

@@ -4,6 +4,8 @@ import type { Principal } from '@shared/middleware/auth';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { getErrorMessage } from '@shared/errorUtils';
 import { clearLegalHold } from '../service/dsrStore';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 
@@ -21,10 +23,11 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
 }
 
 const protectedHandler = requirePrivacyAdmin(handler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-clear-hold', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/legal-holds/{id}/clear',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

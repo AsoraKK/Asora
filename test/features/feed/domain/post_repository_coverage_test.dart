@@ -64,7 +64,7 @@ void main() {
         proofSignals: ProofSignals(captureMetadataHash: 'abc'),
       );
       final json = req.toJson();
-      expect(json['proofSignals'], isA<Map>());
+      expect(json['proofSignals'], isA<Map<String, dynamic>>());
       expect(json['proofSignals']['captureMetadataHash'], 'abc');
     });
 
@@ -150,7 +150,7 @@ void main() {
       final json = req.toJson();
       expect(json['mediaUrls'], ['img.png']);
       expect(json['isNews'], true);
-      expect(json['proofSignals'], isA<Map>());
+      expect(json['proofSignals'], isA<Map<String, dynamic>>());
     });
   });
 

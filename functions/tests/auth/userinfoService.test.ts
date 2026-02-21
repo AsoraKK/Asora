@@ -2,7 +2,7 @@
  * Service-layer tests for OIDC UserInfo endpoint
  */
 import type { InvocationContext } from '@azure/functions';
-import jwt from 'jsonwebtoken';
+import { signHs256Jwt } from '../helpers/hs256Jwt';
 
 // Mock Cosmos DB BEFORE importing the service
 jest.mock('@azure/cosmos');
@@ -42,10 +42,12 @@ afterAll(() => {
   process.env.JWT_SECRET = originalSecret;
 });
 
-function validToken(overrides: Record<string, any> = {}) {
-  return jwt.sign({ sub: 'user-789', iss: 'asora', ...overrides }, process.env.JWT_SECRET!, {
-    algorithm: 'HS256',
-  });
+async function validToken(overrides: Record<string, any> = {}): Promise<string> {
+  return signHs256Jwt(
+    { sub: 'user-789', iss: 'asora', ...overrides },
+    process.env.JWT_SECRET!,
+    { expiresIn: '15m' }
+  );
 }
 
 describe('userinfoService - token validation', () => {
@@ -76,10 +78,10 @@ describe('userinfoService - token validation', () => {
   });
 
   it('returns 401 when JWT token is expired', async () => {
-    const expiredToken = jwt.sign(
-      { sub: 'user-789', exp: Math.floor(Date.now() / 1000) - 3600 },
+    const expiredToken = await signHs256Jwt(
+      { sub: 'user-789' },
       process.env.JWT_SECRET!,
-      { algorithm: 'HS256' }
+      { expiresIn: '-1s' }
     );
 
     const req = httpReqMock({
@@ -99,7 +101,7 @@ describe('userinfoService - user lookup', () => {
 
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: `Bearer ${validToken()}` },
+      headers: { authorization: `Bearer ${await validToken()}` },
     });
 
     const response = await userInfoHandler(req, contextStub);
@@ -120,7 +122,7 @@ describe('userinfoService - user lookup', () => {
 
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: `Bearer ${validToken()}` },
+      headers: { authorization: `Bearer ${await validToken()}` },
     });
 
     const response = await userInfoHandler(req, contextStub);
@@ -139,7 +141,7 @@ describe('userinfoService - user lookup', () => {
 
     const req = httpReqMock({
       method: 'GET',
-      headers: { authorization: `Bearer ${validToken()}` },
+      headers: { authorization: `Bearer ${await validToken()}` },
     });
 
     const response = await userInfoHandler(req, contextStub);

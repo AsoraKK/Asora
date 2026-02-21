@@ -34,7 +34,7 @@ void main() {
       final json = info.toJson();
       expect(json['enabled'], isTrue);
       expect(json['buildMode'], 'release');
-      expect(json['pins'], isA<Map>());
+      expect(json['pins'], isA<Map<String, dynamic>>());
       expect(json['pinnedDomains'], ['a.com', 'b.com']);
     });
 

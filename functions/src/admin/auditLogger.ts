@@ -4,6 +4,7 @@ import { getCosmosDatabase } from '@shared/clients/cosmos';
 export type AdminAuditAction =
   | 'CONTENT_BLOCK'
   | 'CONTENT_PUBLISH'
+  | 'MODERATION_CASE_DECIDE'
   | 'APPEAL_OVERRIDE'
   | 'APPEAL_APPROVE'
   | 'APPEAL_REJECT'
@@ -15,7 +16,13 @@ export type AdminAuditAction =
   | 'FLAG_RESOLVE'
   | 'NEWS_INGEST';
 
-export type AdminAuditTargetType = 'content' | 'appeal' | 'user' | 'invite' | 'flag';
+export type AdminAuditTargetType =
+  | 'content'
+  | 'appeal'
+  | 'user'
+  | 'invite'
+  | 'flag'
+  | 'moderation_case';
 
 export interface AdminAuditInput {
   actorId: string;

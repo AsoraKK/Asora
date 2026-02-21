@@ -10,7 +10,10 @@ observability_enabled               = true
 observability_resource_group        = "asora-staging-rg"
 observability_location              = "eastus"
 observability_name_prefix           = "asora-staging"
-observability_alert_email_addresses = []
+observability_alert_email_addresses = [
+  "platform-oncall@lythaus.app",
+  "backend-oncall@lythaus.app"
+]
 function_app_resource_id            = ""
 observability_tags                  = {}
 # function_principal_id must be supplied securely via CLI or pipeline secrets

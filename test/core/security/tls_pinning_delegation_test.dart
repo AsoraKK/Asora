@@ -260,7 +260,6 @@ void main() {
 
     test('badCertificateCallback invokes validator for pinned host', () {
       // Set the callback first
-      bool? customCallbackResult;
       pinned.badCertificateCallback = null;
 
       // Now verify the mock client had its callback set

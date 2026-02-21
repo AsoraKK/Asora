@@ -7,6 +7,8 @@ import { getDsrRequest, patchDsrRequest } from '../service/dsrStore';
 import { createAuditEntry } from '../common/models';
 import { isBeyondRetention } from '../common/retention';
 import { createUserDelegationUrl } from '../common/storage';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 const TTL = Number(process.env.DSR_EXPORT_SIGNED_URL_TTL_HOURS ?? '12');
@@ -46,10 +48,11 @@ export async function releaseHandler(req: Authed): Promise<HttpResponseInit> {
 }
 
 const protectedHandler = requirePrivacyAdmin(releaseHandler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-release', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/{id}/release',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

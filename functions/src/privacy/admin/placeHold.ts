@@ -7,6 +7,8 @@ import { placeLegalHold } from '../service/dsrStore';
 import type { LegalHold } from '../common/models';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 type Authed = HttpRequest & { principal: Principal };
 const Schema = z.object({
@@ -51,10 +53,11 @@ async function handler(req: Authed): Promise<HttpResponseInit> {
 }
 
 const protectedHandler = requirePrivacyAdmin(handler);
+const rateLimitedHandler = withRateLimit(protectedHandler, (req) => getPolicyForRoute(req));
 
 app.http('privacy-admin-dsr-place-hold', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/dsr/legal-holds',
-  handler: protectedHandler,
+  handler: rateLimitedHandler,
 });

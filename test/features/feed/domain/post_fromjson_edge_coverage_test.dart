@@ -26,7 +26,7 @@ void main() {
     // Build a Map that is `Map` but NOT `Map<String, dynamic>` at runtime
     // to trigger the second branch in the ternary.
     // Cast via Object to ensure runtime type is _LinkedHashMap<Object, Object>.
-    final Map untypedTimeline = Map<Object, Object>.from({
+    final Map<dynamic, dynamic> untypedTimeline = Map<Object, Object>.from({
       'created': 'complete',
       'moderation': 'flagged',
     });

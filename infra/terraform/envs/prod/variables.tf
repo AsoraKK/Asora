@@ -86,12 +86,28 @@ variable "observability_alert_email_addresses" {
   description = "Alert receiver emails for production"
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = var.observability_enabled == false || length(var.observability_alert_email_addresses) > 0
+    error_message = "When observability is enabled, at least one production alert recipient email is required."
+  }
 }
 
 variable "function_app_resource_id" {
   description = "Production Function App resource ID monitored by observability alerts"
   type        = string
   default     = ""
+}
+
+variable "function_app_name" {
+  description = "Production Function App name used to derive monitored resource ID when function_app_resource_id is empty"
+  type        = string
+  default     = "asora-function-prod"
+
+  validation {
+    condition     = var.observability_enabled == false || length(trimspace(var.function_app_name)) > 0 || length(trimspace(var.function_app_resource_id)) > 0
+    error_message = "When observability is enabled, function_app_name or function_app_resource_id must be provided."
+  }
 }
 
 variable "observability_tags" {

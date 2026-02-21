@@ -21,6 +21,9 @@ import { CosmosClient } from '@azure/cosmos';
 import { getClassByName } from '../../shared/hive-classes-config';
 import { saveWeightOverride } from '../../shared/moderation-weights-loader';
 import { getAzureLogger } from '../../shared/azure-logger';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
+import { requireActiveAdmin } from './adminAuthUtils';
 
 const logger = getAzureLogger('saveWeightOverride');
 
@@ -189,7 +192,7 @@ app.http('saveWeightOverride', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'admin/moderation-classes/weights',
-  handler: saveWeightOverrideHandler,
+  handler: withRateLimit(requireActiveAdmin(saveWeightOverrideHandler), (req) => getPolicyForRoute(req)),
 });
 
 export default saveWeightOverrideHandler;

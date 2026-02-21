@@ -111,41 +111,41 @@ void main() {
     });
 
     test('initial state is default CustomFeedDraft', () {
-      expect(notifier.debugState.name, '');
+      expect(notifier.state.name, '');
     });
 
     test('setContentType updates content type', () {
       notifier.setContentType(ContentType.image);
-      expect(notifier.debugState.contentType, ContentType.image);
+      expect(notifier.state.contentType, ContentType.image);
     });
 
     test('setSorting updates sorting', () {
       notifier.setSorting(SortingRule.newest);
-      expect(notifier.debugState.sorting, SortingRule.newest);
+      expect(notifier.state.sorting, SortingRule.newest);
     });
 
     test('updateRefinements updates refinements', () {
       const r = FeedRefinements(includeKeywords: ['test']);
       notifier.updateRefinements(r);
-      expect(notifier.debugState.refinements.includeKeywords, ['test']);
+      expect(notifier.state.refinements.includeKeywords, ['test']);
     });
 
     test('setName updates name', () {
       notifier.setName('My Feed');
-      expect(notifier.debugState.name, 'My Feed');
+      expect(notifier.state.name, 'My Feed');
     });
 
     test('setHome updates setAsHome', () {
       notifier.setHome(true);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.setAsHome, isTrue);
     });
 
     test('reset returns to default state', () {
       notifier.setName('Feed');
       notifier.setSorting(SortingRule.newest);
       notifier.reset();
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.sorting, SortingRule.relevant);
+      expect(notifier.state.name, '');
+      expect(notifier.state.sorting, SortingRule.relevant);
     });
   });
 

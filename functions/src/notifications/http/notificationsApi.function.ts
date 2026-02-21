@@ -13,6 +13,8 @@ import { parseAuth, requireAdmin } from '../../shared/middleware/auth';
 import { notificationsRepo } from '../repositories/notificationsRepo';
 import { notificationDispatcher } from '../services/notificationDispatcher';
 import { NotificationEventType } from '../types';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import {
   handleNotificationError,
   unauthorizedResponse,
@@ -248,33 +250,33 @@ app.http('getNotifications', {
   methods: ['GET'],
   route: 'notifications',
   authLevel: 'anonymous',
-  handler: getNotifications,
+  handler: withRateLimit(getNotifications, (req) => getPolicyForRoute(req)),
 });
 
 app.http('getUnreadCount', {
   methods: ['GET'],
   route: 'notifications/unread-count',
   authLevel: 'anonymous',
-  handler: getUnreadCount,
+  handler: withRateLimit(getUnreadCount, (req) => getPolicyForRoute(req)),
 });
 
 app.http('markNotificationAsRead', {
   methods: ['POST'],
   route: 'notifications/{id}/read',
   authLevel: 'anonymous',
-  handler: markNotificationAsRead,
+  handler: withRateLimit(markNotificationAsRead, (req) => getPolicyForRoute(req)),
 });
 
 app.http('dismissNotification', {
   methods: ['POST'],
   route: 'notifications/{id}/dismiss',
   authLevel: 'anonymous',
-  handler: dismissNotification,
+  handler: withRateLimit(dismissNotification, (req) => getPolicyForRoute(req)),
 });
 
 app.http('notifications-send', {
   methods: ['POST'],
   route: 'notifications/send',
   authLevel: 'anonymous',
-  handler: requireAdmin(queueNotificationSend),
+  handler: withRateLimit(requireAdmin(queueNotificationSend), (req) => getPolicyForRoute(req)),
 });

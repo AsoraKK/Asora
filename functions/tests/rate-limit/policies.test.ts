@@ -119,6 +119,14 @@ describe('getPolicyForRoute', () => {
       expect(policy.name).toBe('auth/redeem-invite-auth-endpoint');
       expect(policy.authBackoff).toBeDefined();
     });
+
+    it('returns auth endpoint policy for refresh route', () => {
+      const req = createRequest('POST', 'auth/refresh');
+      const policy = getPolicyForRoute(req);
+
+      expect(policy.name).toBe('auth/refresh-auth-endpoint');
+      expect(policy.authBackoff).toBeDefined();
+    });
   });
 
   describe('authenticated routes', () => {
@@ -166,6 +174,8 @@ describe('getPolicyForFunction', () => {
       { fn: 'auth-token', expectedName: 'auth-token-auth-endpoint', hasBackoff: true },
       { fn: 'auth-authorize', expectedName: 'auth-authorize-auth-endpoint', hasBackoff: true },
       { fn: 'auth-redeem-invite', expectedName: 'auth-redeem-invite-auth-endpoint', hasBackoff: true },
+      { fn: 'auth-token-refresh', expectedName: 'auth-token-refresh-auth-endpoint', hasBackoff: true },
+      { fn: 'auth-sessions-revoke', expectedName: 'auth/sessions/revoke-write', hasBackoff: false },
       { fn: 'auth-userinfo', expectedName: 'auth/userinfo-auth', hasBackoff: false },
     ];
 

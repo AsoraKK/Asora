@@ -83,14 +83,14 @@ void main() {
       final notifier = CustomFeedDraftNotifier();
       addTearDown(() => notifier.dispose());
       notifier.setContentType(ContentType.image);
-      expect(notifier.debugState.contentType, ContentType.image);
+      expect(notifier.state.contentType, ContentType.image);
     });
 
     test('setSorting updates state', () {
       final notifier = CustomFeedDraftNotifier();
       addTearDown(() => notifier.dispose());
       notifier.setSorting(SortingRule.newest);
-      expect(notifier.debugState.sorting, SortingRule.newest);
+      expect(notifier.state.sorting, SortingRule.newest);
     });
 
     test('updateRefinements updates state', () {
@@ -98,21 +98,21 @@ void main() {
       addTearDown(() => notifier.dispose());
       const newRef = FeedRefinements(includeKeywords: ['health']);
       notifier.updateRefinements(newRef);
-      expect(notifier.debugState.refinements.includeKeywords, ['health']);
+      expect(notifier.state.refinements.includeKeywords, ['health']);
     });
 
     test('setName updates state', () {
       final notifier = CustomFeedDraftNotifier();
       addTearDown(() => notifier.dispose());
       notifier.setName('My Feed');
-      expect(notifier.debugState.name, 'My Feed');
+      expect(notifier.state.name, 'My Feed');
     });
 
     test('setHome updates state', () {
       final notifier = CustomFeedDraftNotifier();
       addTearDown(() => notifier.dispose());
       notifier.setHome(true);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.setAsHome, isTrue);
     });
 
     test('reset clears to defaults', () {
@@ -121,7 +121,7 @@ void main() {
       notifier.setName('Custom');
       notifier.setSorting(SortingRule.hot);
       notifier.reset();
-      expect(notifier.debugState.name, isEmpty);
+      expect(notifier.state.name, isEmpty);
     });
   });
 

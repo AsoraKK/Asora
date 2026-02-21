@@ -7,6 +7,8 @@ import {
 } from '@feed/service/newsIngestionService';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 
 interface NewsIngestBody {
   content?: string;
@@ -134,5 +136,5 @@ app.http('admin_news_ingest', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/news/ingest',
-  handler: requireActiveAdmin(ingestNewsHandler),
+  handler: withRateLimit(requireActiveAdmin(ingestNewsHandler), (req) => getPolicyForRoute(req)),
 });

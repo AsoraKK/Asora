@@ -6,6 +6,12 @@ provider "azurerm" {
   features {}
 }
 
+data "azurerm_client_config" "current" {}
+
+locals {
+  effective_function_app_resource_id = length(trimspace(var.function_app_resource_id)) > 0 ? var.function_app_resource_id : "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.observability_resource_group}/providers/Microsoft.Web/sites/${var.function_app_name}"
+}
+
 module "cosmos_sql" {
   source = "../../modules/cosmos_sql"
 
@@ -58,6 +64,66 @@ module "cosmos_sql" {
       index_file    = "users.index.json"
     },
     {
+      name          = "auth_sessions"
+      partition_key = "/partitionKey"
+      index_file    = "auth_sessions.index.json"
+    },
+    {
+      name          = "invites"
+      partition_key = "/_partitionKey"
+      index_file    = "invites.index.json"
+    },
+    {
+      name          = "profiles"
+      partition_key = "/id"
+      index_file    = "profiles.index.json"
+    },
+    {
+      name          = "publicProfiles"
+      partition_key = "/userId"
+      index_file    = "publicProfiles.index.json"
+    },
+    {
+      name          = "counters"
+      partition_key = "/userId"
+      index_file    = "counters.index.json"
+    },
+    {
+      name          = "messages"
+      partition_key = "/conversationId"
+      index_file    = "messages.index.json"
+    },
+    {
+      name          = "userFeed"
+      partition_key = "/recipientId"
+      index_file    = "userFeed.index.json"
+    },
+    {
+      name          = "posts_v2"
+      partition_key = "/postId"
+      index_file    = "posts_v2.index.json"
+    },
+    {
+      name          = "notifications"
+      partition_key = "/userId"
+      index_file    = "notifications.index.json"
+    },
+    {
+      name          = "notification_preferences"
+      partition_key = "/userId"
+      index_file    = "notification_preferences.index.json"
+    },
+    {
+      name          = "device_tokens"
+      partition_key = "/userId"
+      index_file    = "device_tokens.index.json"
+    },
+    {
+      name          = "notification_events"
+      partition_key = "/userId"
+      index_file    = "notification_events.index.json"
+    },
+    {
       name          = "custom_feeds"
       partition_key = "/partitionKey"
       index_file    = "custom_feeds.index.json"
@@ -96,6 +162,11 @@ module "cosmos_sql" {
       name          = "reputation_audit"
       partition_key = "/_partitionKey"
       index_file    = "reputation_audit.index.json"
+    },
+    {
+      name          = "ModerationWeights"
+      partition_key = "/className"
+      index_file    = "ModerationWeights.index.json"
     }
   ]
 }
@@ -120,6 +191,6 @@ module "observability" {
   name_prefix              = var.observability_name_prefix
   environment              = "development"
   alert_email_addresses    = var.observability_alert_email_addresses
-  function_app_resource_id = var.function_app_resource_id
+  function_app_resource_id = local.effective_function_app_resource_id
   tags                     = var.observability_tags
 }

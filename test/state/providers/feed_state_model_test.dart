@@ -125,28 +125,28 @@ void main() {
     });
 
     test('initial state is default', () {
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.contentType, ContentType.mixed);
+      expect(notifier.state.name, '');
+      expect(notifier.state.contentType, ContentType.mixed);
     });
 
     test('setContentType updates content type', () {
       notifier.setContentType(ContentType.video);
-      expect(notifier.debugState.contentType, ContentType.video);
+      expect(notifier.state.contentType, ContentType.video);
     });
 
     test('setSorting updates sorting', () {
       notifier.setSorting(SortingRule.newest);
-      expect(notifier.debugState.sorting, SortingRule.newest);
+      expect(notifier.state.sorting, SortingRule.newest);
     });
 
     test('setName updates name', () {
       notifier.setName('Tech News');
-      expect(notifier.debugState.name, 'Tech News');
+      expect(notifier.state.name, 'Tech News');
     });
 
     test('setHome updates setAsHome', () {
       notifier.setHome(true);
-      expect(notifier.debugState.setAsHome, isTrue);
+      expect(notifier.state.setAsHome, isTrue);
     });
 
     test('updateRefinements updates refinements', () {
@@ -155,8 +155,8 @@ void main() {
         excludeAccounts: ['spam'],
       );
       notifier.updateRefinements(r);
-      expect(notifier.debugState.refinements.includeKeywords, ['dart']);
-      expect(notifier.debugState.refinements.excludeAccounts, ['spam']);
+      expect(notifier.state.refinements.includeKeywords, ['dart']);
+      expect(notifier.state.refinements.excludeAccounts, ['spam']);
     });
 
     test('reset returns to default state', () {
@@ -164,9 +164,9 @@ void main() {
       notifier.setSorting(SortingRule.hot);
       notifier.setHome(true);
       notifier.reset();
-      expect(notifier.debugState.name, '');
-      expect(notifier.debugState.sorting, SortingRule.relevant);
-      expect(notifier.debugState.setAsHome, isFalse);
+      expect(notifier.state.name, '');
+      expect(notifier.state.sorting, SortingRule.relevant);
+      expect(notifier.state.setAsHome, isFalse);
     });
   });
 

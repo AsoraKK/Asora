@@ -3,7 +3,7 @@
  * Redeem Invite Endpoint Tests
  */
 
-import * as jwt from 'jsonwebtoken';
+import { signHs256Jwt } from '../helpers/hs256Jwt';
 
 // In-memory stores
 const inviteStore = new Map<string, any>();
@@ -105,8 +105,8 @@ const ctx: Partial<InvocationContext> = {
   error: logFn,
 };
 
-function createValidToken(userId: string, email: string): string {
-  return jwt.sign(
+async function createValidToken(userId: string, email: string): Promise<string> {
+  return signHs256Jwt(
     { sub: userId, email, iss: 'asora-auth' },
     JWT_SECRET,
     { expiresIn: '15m' }
@@ -164,7 +164,7 @@ describe('Redeem Invite Endpoint', () => {
       userStore.set(userId, createInactiveUser(userId, email));
       inviteStore.set(inviteCode, createValidInvite(inviteCode));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -199,7 +199,7 @@ describe('Redeem Invite Endpoint', () => {
       userStore.set(userId, createInactiveUser(userId, email));
       inviteStore.set(inviteCode, createValidInvite(inviteCode, email));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -219,7 +219,7 @@ describe('Redeem Invite Endpoint', () => {
       userStore.set(userId, createInactiveUser(userId, email));
       inviteStore.set(inviteCode, createValidInvite(inviteCode));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode: 'cccc-3333' }, // lowercase
@@ -265,7 +265,7 @@ describe('Redeem Invite Endpoint', () => {
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: {},
@@ -284,7 +284,7 @@ describe('Redeem Invite Endpoint', () => {
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode: 'invalid-format' },
@@ -305,7 +305,7 @@ describe('Redeem Invite Endpoint', () => {
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode: 'XXXX-YYYY' },
@@ -331,7 +331,7 @@ describe('Redeem Invite Endpoint', () => {
       invite.expiresAt = new Date(Date.now() - 1000).toISOString();
       inviteStore.set(inviteCode, invite);
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -358,7 +358,7 @@ describe('Redeem Invite Endpoint', () => {
       invite.usedByUserId = 'other-user';
       inviteStore.set(inviteCode, invite);
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -382,7 +382,7 @@ describe('Redeem Invite Endpoint', () => {
       // Create email-restricted invite for different email
       inviteStore.set(inviteCode, createValidInvite(inviteCode, 'other@example.com'));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -410,7 +410,7 @@ describe('Redeem Invite Endpoint', () => {
 
       inviteStore.set(inviteCode, createValidInvite(inviteCode));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
@@ -432,7 +432,7 @@ describe('Redeem Invite Endpoint', () => {
       // Don't add user to store
       inviteStore.set(inviteCode, createValidInvite(inviteCode));
 
-      const token = createValidToken(userId, email);
+      const token = await createValidToken(userId, email);
       const req = httpReqMock({
         method: 'POST',
         body: { inviteCode },
