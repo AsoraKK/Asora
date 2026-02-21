@@ -473,14 +473,21 @@ jobs:
           ./gradlew :app:processReleaseMainManifest
 
       - name: Validate required permissions in merged manifest
-        working-directory: android
         run: |
           set -euo pipefail
-          # AGP 8+ redirects build output to repo-root build/ via
-          # rootProject.layout.buildDirectory.dir("../../build"), so
-          # the merged manifest is at ../build/app/intermediates/... from android/
-          MANIFEST="$(find ../build/app/intermediates/merged_manifests -name 'AndroidManifest.xml' -path '*release*' | head -n 1)"
-          test -n "$MANIFEST" || { echo "Merged release manifest not found"; exit 1; }
+          # Search broadly under GITHUB_WORKSPACE for any merged manifest from
+          # the release variant. AGP 8.9 may nest under a task-specific subdir.
+          MANIFEST="$(find "$GITHUB_WORKSPACE" \
+            -path '*/intermediates/merged_manifests/*' \
+            -name 'AndroidManifest.xml' \
+            -path '*release*' \
+            2>/dev/null | head -n 1)"
+          if [ -z "$MANIFEST" ]; then
+            echo "Merged release manifest not found. Build tree intermediates:"
+            find "$GITHUB_WORKSPACE" -path '*/intermediates/merged_manifests' -type d 2>/dev/null || true
+            find "$GITHUB_WORKSPACE/build" -name 'AndroidManifest.xml' 2>/dev/null | head -20 || true
+            exit 1
+          fi
           echo "Using merged manifest: $MANIFEST"
           sed -n '1,140p' "$MANIFEST"
 
