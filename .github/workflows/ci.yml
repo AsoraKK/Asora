@@ -452,6 +452,49 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Ensure google-services.json for release manifest task
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          mkdir -p android/app
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+          else
+            cat > android/app/google-services.json <<'JSON'
+            {
+              "project_info": {
+                "project_number": "1234567890",
+                "project_id": "lythaus-ci-placeholder",
+                "storage_bucket": "lythaus-ci-placeholder.appspot.com"
+              },
+              "client": [
+                {
+                  "client_info": {
+                    "mobilesdk_app_id": "1:1234567890:android:ci-placeholder",
+                    "android_client_info": {
+                      "package_name": "com.asora.app"
+                    }
+                  },
+                  "oauth_client": [],
+                  "api_key": [
+                    {
+                      "current_key": "ci-placeholder-key"
+                    }
+                  ],
+                  "services": {
+                    "appinvite_service": {
+                      "other_platform_oauth_client": []
+                    }
+                  }
+                }
+              ],
+              "configuration_version": "1"
+            }
+            JSON
+          fi
+          test -s android/app/google-services.json
+
       - name: Generate release merged manifest
         working-directory: android
         run: |
@@ -474,6 +517,10 @@ jobs:
             echo "Missing CAMERA permission required for in-app camera capture"
             exit 1
           fi
+
+      - name: Clean temporary google-services file
+        if: always()
+        run: rm -f android/app/google-services.json
 
   ios_archive_validation:
     name: iOS archive validation
