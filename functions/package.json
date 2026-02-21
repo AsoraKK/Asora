@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@types/archiver": "^7.0.0",
-    "@types/jest": "^29.0.0",
+    "@types/jest": "^30.0.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "^20.0.0",
     "@types/pg": "^8.15.5",
