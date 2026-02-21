@@ -475,17 +475,14 @@ jobs:
       - name: Validate required permissions in merged manifest
         run: |
           set -euo pipefail
-          # Search broadly under GITHUB_WORKSPACE for any merged manifest from
-          # the release variant. AGP 8.9 may nest under a task-specific subdir.
-          MANIFEST="$(find "$GITHUB_WORKSPACE" \
-            -path '*/intermediates/merged_manifests/*' \
-            -name 'AndroidManifest.xml' \
-            -path '*release*' \
+          # AGP 8.9 uses singular 'merged_manifest'; scoped to build/app/ to
+          # avoid picking up plugin manifests.
+          MANIFEST="$(find "$GITHUB_WORKSPACE/build/app/intermediates/merged_manifest" \
+            -name 'AndroidManifest.xml' -path '*release*' \
             2>/dev/null | head -n 1)"
           if [ -z "$MANIFEST" ]; then
-            echo "Merged release manifest not found. Build tree intermediates:"
-            find "$GITHUB_WORKSPACE" -path '*/intermediates/merged_manifests' -type d 2>/dev/null || true
-            find "$GITHUB_WORKSPACE/build" -name 'AndroidManifest.xml' 2>/dev/null | head -20 || true
+            echo "Merged release manifest not found. Available manifests:"
+            find "$GITHUB_WORKSPACE/build/app/intermediates" -name 'AndroidManifest.xml' 2>/dev/null | head -20 || true
             exit 1
           fi
           echo "Using merged manifest: $MANIFEST"
