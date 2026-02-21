@@ -20,7 +20,10 @@ val keystoreProperties = Properties().apply {
 }
 val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
     val normalized = taskName.lowercase()
-    normalized.contains("release") || normalized.contains("bundle")
+    // Only require key.properties for tasks that actually perform signing/packaging,
+    // not for manifest processing, compilation, or other non-signing release tasks.
+    (normalized.contains("assemble") || normalized.contains("bundle") || normalized.contains("package")) &&
+        normalized.contains("release")
 }
 
 fun requireSigningProperty(name: String): String {
