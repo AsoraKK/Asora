@@ -170,6 +170,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ripgrep
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+
       - name: Scan docs/markdown for embedded secrets
         run: bash scripts/scan-doc-secrets.sh
 
