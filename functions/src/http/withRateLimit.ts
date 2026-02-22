@@ -442,7 +442,13 @@ export function withRateLimit(
       return handler(req, context);
     }
 
-    const policy = await resolvePolicy(policyOrResolver, req, context);
+    let policy: RateLimitPolicy | null;
+    try {
+      policy = await resolvePolicy(policyOrResolver, req, context);
+    } catch (policyError) {
+      context.warn?.('[rate-limit] policy resolution failed, falling through to handler', policyError);
+      return handler(req, context);
+    }
     if (!policy || policy.limits.length === 0) {
       return handler(req, context);
     }
@@ -465,6 +471,10 @@ export function withRateLimit(
     }
 
     const traceId = extractTraceId(context);
+
+    // Fail-open: if rate-limit evaluation throws (e.g. Cosmos unavailable),
+    // log the error and fall through to the handler instead of returning 500.
+    try {
 
     if (policy.authBackoff) {
       const activeLock = await evaluateAuthBackoff(policy.authBackoff, requestContext, hashedIp);
@@ -551,6 +561,12 @@ export function withRateLimit(
     }
 
     return response;
+
+    } catch (rateLimitError) {
+      // Fail-open: rate-limit infrastructure failure must not block requests
+      context.warn?.('[rate-limit] evaluation failed, falling through to handler', rateLimitError);
+      return handler(req, context);
+    }
   };
 }
 

@@ -120,6 +120,34 @@
     "users": {
       "envPartitionKey": "/id",
       "legacyPartitionKey": "/id"
+    },
+    "ModerationWeights": {
+      "envPartitionKey": "/className",
+      "legacyPartitionKey": "/id"
+    },
+    "config": {
+      "envPartitionKey": "/partitionKey",
+      "legacyPartitionKey": "/partitionKey"
+    },
+    "custom_feeds": {
+      "envPartitionKey": "/partitionKey",
+      "legacyPartitionKey": "/partitionKey"
+    },
+    "moderation_decisions": {
+      "envPartitionKey": "/itemId",
+      "legacyPartitionKey": "/itemId"
+    },
+    "privacy_audit": {
+      "envPartitionKey": "/id",
+      "legacyPartitionKey": "/id"
+    },
+    "profiles": {
+      "envPartitionKey": "/id",
+      "legacyPartitionKey": "/userId"
+    },
+    "receipt_events": {
+      "envPartitionKey": "/postId",
+      "legacyPartitionKey": "/postId"
     }
   }
 }
