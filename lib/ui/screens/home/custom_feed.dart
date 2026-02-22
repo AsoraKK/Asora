@@ -21,6 +21,7 @@ class CustomFeedView extends ConsumerWidget {
     this.onRefresh,
     this.currentUserId,
     this.onEditItem,
+    this.onOpenItem,
   });
 
   final FeedModel feed;
@@ -34,6 +35,7 @@ class CustomFeedView extends ConsumerWidget {
   final Future<void> Function()? onRefresh;
   final String? currentUserId;
   final Future<void> Function(FeedItem item)? onEditItem;
+  final Future<void> Function(FeedItem item)? onOpenItem;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,6 +113,7 @@ class CustomFeedView extends ConsumerWidget {
                     currentUserId != null && currentUserId == item.authorId;
                 return FeedCard(
                   item: item,
+                  onTap: onOpenItem == null ? null : () => onOpenItem!(item),
                   canEdit: canEdit,
                   onEdit: canEdit && onEditItem != null
                       ? () => onEditItem!(item)

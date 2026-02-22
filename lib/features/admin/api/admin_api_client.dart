@@ -13,6 +13,61 @@ import 'package:uuid/uuid.dart';
 
 import 'package:asora/features/admin/domain/admin_config_models.dart';
 
+/// Budget configuration returned by the backend
+class BudgetInfo {
+  const BudgetInfo({
+    required this.amount,
+    required this.azureBudgetName,
+    required this.resourceGroup,
+    required this.notificationEmail,
+    required this.thresholds,
+    required this.updatedAt,
+    required this.updatedBy,
+  });
+
+  final double amount;
+  final String azureBudgetName;
+  final String resourceGroup;
+  final String notificationEmail;
+  final Map<String, List<int>> thresholds;
+  final DateTime updatedAt;
+  final String updatedBy;
+
+  factory BudgetInfo.fromJson(Map<String, dynamic> json) {
+    final thresholds = json['thresholds'] as Map<String, dynamic>? ?? {};
+    return BudgetInfo(
+      amount: (json['amount'] as num?)?.toDouble() ?? 200,
+      azureBudgetName: json['azureBudgetName'] as String? ?? '',
+      resourceGroup: json['resourceGroup'] as String? ?? '',
+      notificationEmail: json['notificationEmail'] as String? ?? '',
+      thresholds: {
+        'actual':
+            (thresholds['actual'] as List?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            [],
+        'forecasted':
+            (thresholds['forecasted'] as List?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            [],
+      },
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
+      updatedBy: json['updatedBy'] as String? ?? 'unknown',
+    );
+  }
+}
+
+/// Result of a budget update operation
+class BudgetUpdateResult {
+  const BudgetUpdateResult({required this.budget, required this.azureSynced});
+
+  final BudgetInfo budget;
+  final bool azureSynced;
+}
+
 /// Exception thrown by AdminApiClient operations
 class AdminApiException implements Exception {
   const AdminApiException({
@@ -289,6 +344,93 @@ class AdminApiClient {
       }
 
       return AdminAuditResponse.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Budget management
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Get current budget configuration
+  ///
+  /// Returns the budget info (amount, thresholds, metadata).
+  /// Throws [AdminApiException] on failure.
+  Future<BudgetInfo> getBudget() async {
+    final requestId = _generateRequestId();
+
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        _buildUrl('/api/_admin/budget'),
+        options: Options(
+          headers: {
+            'X-Correlation-ID': requestId,
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.data == null) {
+        throw const AdminApiException(
+          message: 'Empty response from server',
+          code: 'EMPTY_RESPONSE',
+        );
+      }
+
+      final budgetJson = response.data!['budget'] as Map<String, dynamic>?;
+      if (budgetJson == null) {
+        throw const AdminApiException(
+          message: 'Missing budget in response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+
+      return BudgetInfo.fromJson(budgetJson);
+    } on DioException catch (e) {
+      throw _parseError(e);
+    }
+  }
+
+  /// Update budget amount
+  ///
+  /// Returns the updated budget info and whether Azure was synced.
+  /// Throws [AdminApiException] on failure.
+  Future<BudgetUpdateResult> updateBudget(double amount) async {
+    final requestId = _generateRequestId();
+
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        _buildUrl('/api/_admin/budget'),
+        data: {'amount': amount},
+        options: Options(
+          headers: {
+            'X-Correlation-ID': requestId,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.data == null) {
+        throw const AdminApiException(
+          message: 'Empty response from server',
+          code: 'EMPTY_RESPONSE',
+        );
+      }
+
+      final budgetJson = response.data!['budget'] as Map<String, dynamic>?;
+      if (budgetJson == null) {
+        throw const AdminApiException(
+          message: 'Missing budget in response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+
+      return BudgetUpdateResult(
+        budget: BudgetInfo.fromJson(budgetJson),
+        azureSynced: response.data!['azureSynced'] as bool? ?? false,
+      );
     } on DioException catch (e) {
       throw _parseError(e);
     }

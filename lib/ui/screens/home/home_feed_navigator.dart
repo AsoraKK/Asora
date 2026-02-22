@@ -18,6 +18,7 @@ import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/design_system/tokens/motion.dart';
 import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
+import 'package:asora/features/feed/presentation/post_detail_screen.dart';
 import 'package:asora/ui/screens/home/custom_feed.dart';
 import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
 import 'package:asora/ui/screens/home/discover_feed.dart';
@@ -297,6 +298,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
           controller: controller,
           feed: feed,
           items: items,
+          onOpenItem: (item) => _openPostDetail(context, item.id),
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
@@ -313,6 +315,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
           controller: controller,
           feed: feed,
           items: items,
+          onOpenItem: (item) => _openPostDetail(context, item.id),
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
@@ -329,6 +332,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
           controller: controller,
           feed: feed,
           items: items,
+          onOpenItem: (item) => _openPostDetail(context, item.id),
           currentUserId: currentUserId,
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
@@ -443,6 +447,12 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
       0,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _openPostDetail(BuildContext context, String postId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => PostDetailScreen(postId: postId)),
     );
   }
 

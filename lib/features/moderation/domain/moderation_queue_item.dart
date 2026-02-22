@@ -26,6 +26,7 @@ class ModerationQueueItem {
     this.thumbnailUrl,
     this.aiRiskBand,
     this.aiSignal,
+    this.tier,
     this.isPolicyTest = false,
   });
 
@@ -46,6 +47,7 @@ class ModerationQueueItem {
   final String? thumbnailUrl;
   final String? aiRiskBand;
   final String? aiSignal;
+  final String? tier;
   final bool isPolicyTest;
 
   bool get hasHighSeverity => severity == ModerationSeverityLevel.high;
@@ -88,6 +90,10 @@ class ModerationQueueItem {
       thumbnailUrl: json['thumbnailUrl']?.toString(),
       aiRiskBand: json['aiRiskBand']?.toString() ?? json['aiLabel']?.toString(),
       aiSignal: json['aiSignal']?.toString(),
+      tier:
+          json['tier']?.toString() ??
+          json['authorTier']?.toString() ??
+          json['userTier']?.toString(),
       isPolicyTest: json['isPolicyTest'] == true,
     );
   }
@@ -111,6 +117,7 @@ class ModerationQueueItem {
       'thumbnailUrl': thumbnailUrl,
       'aiRiskBand': aiRiskBand,
       'aiSignal': aiSignal,
+      'tier': tier,
       'isPolicyTest': isPolicyTest,
     };
   }

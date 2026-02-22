@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/features/admin/ui/admin_config_screen.dart';
 import 'package:asora/features/admin/ui/app_preview_screen.dart';
+import 'package:asora/features/admin/ui/budget_screen.dart';
 import 'package:asora/screens/admin/moderation_weights_screen.dart';
 
 /// Navigation tabs available in the control panel
@@ -28,6 +29,7 @@ enum ControlPanelTab {
     Icons.balance,
     'Per-class threshold management',
   ),
+  budget('Budget', Icons.account_balance_wallet, 'Monthly budget management'),
   analytics('Analytics', Icons.analytics, 'Usage metrics and insights'),
   users('Users', Icons.people, 'User management'),
   audit('Audit Log', Icons.history, 'Activity history');
@@ -127,6 +129,7 @@ class ControlPanelShell extends ConsumerWidget {
       ControlPanelTab.appPreview => const AppPreviewScreen(),
       ControlPanelTab.config => const AdminConfigScreen(),
       ControlPanelTab.moderationWeights => const ModerationWeightsScreen(),
+      ControlPanelTab.budget => const BudgetScreen(),
       ControlPanelTab.analytics => const _PlaceholderScreen(
         title: 'Analytics',
         icon: Icons.analytics,
