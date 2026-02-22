@@ -31,14 +31,13 @@ afterEach(() => {
 describe('adminApi URL construction', () => {
   describe('resolveToAbsoluteUrl', () => {
     it('should return absolute URLs unchanged', async () => {
-      const { default: adminApi } = await import('../api/adminApi.js');
-      
       // Test that absolute URLs pass through
       const absUrl = 'https://admin-api.asora.co.za/api';
       // We can test via getAbsoluteAdminApiUrl when localStorage returns absolute URL
       window.localStorage.getItem = vi.fn(() => absUrl);
       
-      const result = adminApi.getAbsoluteAdminApiUrl();
+      const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
+      const result = getAbsoluteAdminApiUrl();
       expect(result).toBe(absUrl);
     });
 

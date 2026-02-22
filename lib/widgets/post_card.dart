@@ -13,6 +13,7 @@ import 'package:asora/widgets/post_actions.dart';
 import 'package:asora/widgets/moderation_badges.dart';
 import 'package:asora/widgets/appeal_dialog.dart';
 import 'package:asora/widgets/reputation_badge.dart';
+import 'package:asora/features/feed/presentation/comment_thread_screen.dart';
 
 /// ASORA POST CARD WITH MODERATION INTEGRATION
 ///
@@ -348,29 +349,9 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   void _handleComment() {
-    // Navigate to comment input — currently a bottom sheet placeholder.
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Comments', style: Theme.of(ctx).textTheme.titleMedium),
-            const SizedBox(height: 16),
-            Text(
-              'Comments coming soon.',
-              style: Theme.of(ctx).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CommentThreadScreen(postId: widget.post.id),
       ),
     );
   }

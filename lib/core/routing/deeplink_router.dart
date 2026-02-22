@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:asora/features/feed/presentation/post_detail_screen.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
 import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
 
@@ -11,26 +14,30 @@ class DeeplinkRouter {
   /// Supported formats:
   /// - asora://post/{postId} - Navigate to post detail
   /// - asora://user/{userId} - Navigate to user profile
-  /// - asora://comment/{commentId} - Navigate to comment thread
+  /// - asora://comment/{commentId}?postId={postId} - Navigate to comment thread
   /// - asora://settings/notifications - Navigate to notification settings
   /// - asora://invite/{code} - Navigate to invite redemption
   static Future<void> navigate(BuildContext context, String deeplink) async {
-    final uri = Uri.parse(deeplink);
-
-    // Extract path segments
-    final segments = uri.pathSegments;
-    if (segments.isEmpty) {
+    final uri = Uri.tryParse(deeplink);
+    if (uri == null) {
+      debugPrint('[DeepLink] Invalid deeplink: $deeplink');
+      return;
+    }
+    final parsed = _normalize(uri);
+    if (parsed == null) {
       debugPrint('[DeepLink] Invalid deeplink: $deeplink');
       return;
     }
 
-    final type = segments[0];
-    final id = segments.length > 1 ? segments[1] : null;
+    final type = parsed.type;
+    final id = parsed.id;
 
     switch (type) {
       case 'post':
         if (id != null) {
-          await _navigateToPost(context, id);
+          final commentId =
+              parsed.query['commentId'] ?? parsed.query['comment'];
+          await _navigateToPost(context, id, initialCommentId: commentId);
         }
         break;
       case 'user':
@@ -40,7 +47,7 @@ class DeeplinkRouter {
         break;
       case 'comment':
         if (id != null) {
-          await _navigateToComment(context, id);
+          await _navigateToComment(context, id, parsed);
         }
         break;
       case 'settings':
@@ -48,8 +55,11 @@ class DeeplinkRouter {
           await _navigateToNotificationSettings(context);
         }
         break;
+      case 'moderation':
+        await _navigateToModeration(context, parsed);
+        break;
       case 'invite':
-        await _navigateToInvite(context, id, uri.queryParameters['code']);
+        await _navigateToInvite(context, id, parsed.query['code']);
         break;
       default:
         debugPrint('[DeepLink] Unknown deeplink type: $type');
@@ -58,12 +68,17 @@ class DeeplinkRouter {
 
   static Future<void> _navigateToPost(
     BuildContext context,
-    String postId,
-  ) async {
-    // Navigate to the home feed — a dedicated PostDetailScreen can be
-    // introduced later; for now deep-linking to a post opens the feed.
-    debugPrint('[DeepLink] Navigate to post: $postId');
-    // TODO(deep-link): Push PostDetailScreen(postId) once the screen exists.
+    String postId, {
+    String? initialCommentId,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PostDetailScreen(
+          postId: postId,
+          initialCommentId: initialCommentId,
+        ),
+      ),
+    );
   }
 
   static Future<void> _navigateToProfile(
@@ -78,10 +93,38 @@ class DeeplinkRouter {
   static Future<void> _navigateToComment(
     BuildContext context,
     String commentId,
+    _NormalizedDeepLink parsed,
   ) async {
-    // Comments are embedded in the post view — navigate to the feed.
-    debugPrint('[DeepLink] Navigate to comment: $commentId');
-    // TODO(deep-link): Push to PostDetailScreen with comment anchor once available.
+    final postId =
+        parsed.query['postId'] ??
+        parsed.query['post'] ??
+        (parsed.remainingPathSegments.isNotEmpty
+            ? parsed.remainingPathSegments.first
+            : null);
+    if (postId == null || postId.isEmpty) {
+      debugPrint(
+        '[DeepLink] Missing postId for comment deep-link: comment=$commentId',
+      );
+      return;
+    }
+    await _navigateToPost(context, postId, initialCommentId: commentId);
+  }
+
+  static Future<void> _navigateToModeration(
+    BuildContext context,
+    _NormalizedDeepLink parsed,
+  ) async {
+    final subtype = parsed.id;
+    if (subtype == 'appeal') {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const AppealHistoryScreen()),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ModerationConsoleScreen()),
+    );
   }
 
   static Future<void> _navigateToNotificationSettings(
@@ -117,4 +160,47 @@ class DeeplinkRouter {
       await navigate(context, deeplink);
     }
   }
+}
+
+class _NormalizedDeepLink {
+  const _NormalizedDeepLink({
+    required this.type,
+    required this.id,
+    required this.remainingPathSegments,
+    required this.query,
+  });
+
+  final String type;
+  final String? id;
+  final List<String> remainingPathSegments;
+  final Map<String, String> query;
+}
+
+_NormalizedDeepLink? _normalize(Uri uri) {
+  if (uri.scheme == 'asora') {
+    final type = uri.host.trim();
+    if (type.isEmpty) {
+      return null;
+    }
+    final segments = uri.pathSegments.where((segment) => segment.isNotEmpty);
+    final list = List<String>.from(segments);
+    return _NormalizedDeepLink(
+      type: type,
+      id: list.isNotEmpty ? list.first : null,
+      remainingPathSegments: list.length > 1 ? list.sublist(1) : const [],
+      query: uri.queryParameters,
+    );
+  }
+
+  final pathSegments = uri.pathSegments.where((segment) => segment.isNotEmpty);
+  final list = List<String>.from(pathSegments);
+  if (list.isEmpty) {
+    return null;
+  }
+  return _NormalizedDeepLink(
+    type: list.first,
+    id: list.length > 1 ? list[1] : null,
+    remainingPathSegments: list.length > 2 ? list.sublist(2) : const [],
+    query: uri.queryParameters,
+  );
 }

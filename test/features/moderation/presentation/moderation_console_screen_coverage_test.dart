@@ -176,10 +176,8 @@ void main() {
     await tester.tap(find.text('Insights'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Insights coming soon'), findsOneWidget);
-    expect(
-      find.textContaining('Dashboards for escalation load'),
-      findsOneWidget,
-    );
+    // Insights tab now shows operational dashboard (no longer a placeholder)
+    expect(find.text('Operational insights'), findsOneWidget);
+    expect(find.textContaining('Track moderation load'), findsOneWidget);
   });
 }

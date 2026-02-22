@@ -13,11 +13,13 @@ class NewsCard extends StatelessWidget {
     required this.item,
     this.canEdit = false,
     this.onEdit,
+    this.onTap,
   });
 
   final FeedItem item;
   final bool canEdit;
   final VoidCallback? onEdit;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class NewsCard extends StatelessWidget {
       children: [
         FeedCard(
           item: item,
+          onTap: onTap,
           showSource: true,
           canEdit: canEdit,
           onEdit: onEdit,
