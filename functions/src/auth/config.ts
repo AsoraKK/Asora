@@ -1,17 +1,22 @@
+/// Custom OAuth2 Auth Configuration
+///
+/// Provides JWT verification config for the custom OAuth2 server
+/// (tokenService.ts issues HS256 tokens with JWT_SECRET).
+///
+/// Required env vars: JWT_SECRET
+/// Optional env vars: JWT_ISSUER, JWT_AUDIENCE, AUTH_MAX_SKEW_SECONDS
+
 import assert from 'node:assert';
 
-export type SupportedAlgorithm = 'RS256' | 'RS512';
-
 export type AuthConfig = {
-  tenant: string;
-  policy: string;
-  discoveryUrl: string;
+  /** HS256 symmetric secret (shared with tokenService) */
+  jwtSecret: Uint8Array;
+  /** Expected issuer claim (default: 'asora-auth') */
   expectedIssuer: string;
+  /** Expected audience values (optional, skipped if empty) */
   expectedAudiences: string[];
-  allowedAlgorithms: SupportedAlgorithm[];
-  cacheTtlSeconds: number;
+  /** Maximum clock skew tolerance in seconds */
   maxClockSkewSeconds: number;
-  strictIssuerMatch: boolean;
 };
 
 let cachedConfig: AuthConfig | null = null;
@@ -29,73 +34,24 @@ function parsePositiveInteger(value: string | undefined, fallback: number): numb
   return Math.floor(parsed);
 }
 
-function parseAlgorithms(raw: string | undefined): SupportedAlgorithm[] {
-  if (!raw) {
-    return ['RS256'];
-  }
-
-  const allowed = new Set<SupportedAlgorithm>(['RS256', 'RS512']);
-  const list = raw
-    .split(',')
-    .map(item => item.trim().toUpperCase())
-    .filter(Boolean) as SupportedAlgorithm[];
-
-  const invalid = list.filter(alg => !allowed.has(alg));
-  if (invalid.length > 0) {
-    throw new Error(`Unsupported JWT algorithms configured: ${invalid.join(', ')}`);
-  }
-
-  const unique = [...new Set(list)];
-  if (unique.length === 0) {
-    throw new Error('At least one JWT algorithm must be configured in B2C_ALLOWED_ALGS');
-  }
-
-  return unique;
-}
-
-function buildDiscoveryUrl(tenant: string, policy: string): string {
-  return `https://${tenant}.b2clogin.com/${tenant}.onmicrosoft.com/${policy}/v2.0/.well-known/openid-configuration`;
-}
-
 function initialiseConfig(): AuthConfig {
-  const tenant = process.env.B2C_TENANT?.trim();
-  const policy = process.env.B2C_POLICY?.trim();
-  const expectedIssuer = process.env.B2C_EXPECTED_ISSUER?.trim();
-  const expectedAudience = process.env.B2C_EXPECTED_AUDIENCE?.trim();
+  const secret = process.env.JWT_SECRET?.trim();
+  assert(secret, 'Missing required environment variable JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
 
-  assert(tenant, 'Missing required environment variable B2C_TENANT');
-  assert(policy, 'Missing required environment variable B2C_POLICY');
-  assert(
-    expectedIssuer,
-    'Missing required environment variable B2C_EXPECTED_ISSUER (copy exact issuer from discovery document)',
-  );
-  assert(expectedAudience, 'Missing required environment variable B2C_EXPECTED_AUDIENCE');
+  const expectedIssuer = (process.env.JWT_ISSUER ?? 'asora-auth').trim();
 
-  const expectedAudiences = expectedAudience
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
+  const audienceRaw = process.env.JWT_AUDIENCE?.trim();
+  const expectedAudiences = audienceRaw
+    ? audienceRaw.split(',').map(item => item.trim()).filter(Boolean)
+    : [];
 
-  assert(
-    expectedAudiences.length > 0,
-    'B2C_EXPECTED_AUDIENCE must include at least one audience value separated by commas if multiple',
-  );
-
-  const cacheTtlSeconds = parsePositiveInteger(process.env.AUTH_CACHE_TTL_SECONDS, 6 * 60 * 60);
   const maxClockSkewSeconds = parsePositiveInteger(process.env.AUTH_MAX_SKEW_SECONDS, 120);
-  const allowedAlgorithms = parseAlgorithms(process.env.B2C_ALLOWED_ALGS);
-  const strictIssuerMatch = (process.env.B2C_STRICT_ISSUER_MATCH ?? 'true').toLowerCase() !== 'false';
 
   return {
-    tenant,
-    policy,
-    discoveryUrl: buildDiscoveryUrl(tenant, policy),
-    expectedIssuer: expectedIssuer!,
+    jwtSecret: new TextEncoder().encode(secret),
+    expectedIssuer,
     expectedAudiences,
-    allowedAlgorithms,
-    cacheTtlSeconds,
     maxClockSkewSeconds,
-    strictIssuerMatch,
   };
 }
 

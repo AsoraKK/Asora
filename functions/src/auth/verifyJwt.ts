@@ -1,8 +1,12 @@
-import { decodeProtectedHeader, importJWK, JWK, JWTPayload, jwtVerify } from 'jose';
+/// Custom OAuth2 JWT Verification
+///
+/// Verifies HS256 tokens issued by tokenService.ts using JWT_SECRET.
+/// Replaces the previous B2C RS256 verifier — the custom OAuth2 server
+/// is the sole token issuer.
 
-import { getB2COpenIdConfig } from './b2cOpenIdConfig';
+import { JWTPayload, jwtVerify } from 'jose';
+
 import { getAuthConfig } from './config';
-import { getJwkByKid } from './jwks';
 import type { Principal as AzurePrincipal } from '../types/azure';
 
 export type AuthErrorCode =
@@ -154,57 +158,23 @@ function mapJoseError(error: unknown): AuthError {
   return new AuthError('invalid_token', 'Unable to validate token');
 }
 
-async function validatePolicyClaim(payload: JWTPayload): Promise<void> {
-  const { policy } = getAuthConfig();
-  const tfp = typeof payload.tfp === 'string' ? payload.tfp : undefined;
-  const acr = typeof payload.acr === 'string' ? payload.acr : undefined;
-
-  if (tfp === policy || acr === policy) {
-    return;
-  }
-
-  throw new AuthError('invalid_claim', 'Token issued for different policy');
-}
-
 export async function verifyAuthorizationHeader(header: string | null | undefined): Promise<Principal> {
   const token = normalizeAuthorizationHeader(header);
 
-  let protectedHeader;
   try {
-    protectedHeader = decodeProtectedHeader(token);
-  } catch (error) {
-    throw mapJoseError(error);
-  }
+    const { jwtSecret, expectedIssuer, expectedAudiences, maxClockSkewSeconds } = getAuthConfig();
 
-  const kid = typeof protectedHeader.kid === 'string' ? protectedHeader.kid : undefined;
-  const headerAlg = typeof protectedHeader.alg === 'string' ? protectedHeader.alg : undefined;
-
-  try {
-    const { expectedAudiences, expectedIssuer, maxClockSkewSeconds, allowedAlgorithms } = getAuthConfig();
-    const { issuer } = await getB2COpenIdConfig();
-    const jwk: JWK = await getJwkByKid(kid ?? '', headerAlg);
-
-    if (!jwk.kty) {
-      throw new AuthError('invalid_key', 'JWK missing kty');
-    }
-
-    const algorithm = headerAlg ?? (typeof jwk.alg === 'string' ? jwk.alg : allowedAlgorithms[0]);
-    if (!algorithm) {
-      throw new AuthError('invalid_token', 'JWT algorithm missing');
-    }
-
-    const key = await importJWK(jwk, algorithm);
-
-    const verification = await jwtVerify(token, key, {
-      issuer: expectedIssuer || issuer,
-      audience: expectedAudiences,
-      algorithms: allowedAlgorithms,
+    const verifyOptions: Parameters<typeof jwtVerify>[2] = {
+      issuer: expectedIssuer,
+      algorithms: ['HS256'],
       clockTolerance: maxClockSkewSeconds,
-    });
+    };
 
-    const payload = verification.payload;
+    if (expectedAudiences.length > 0) {
+      verifyOptions.audience = expectedAudiences;
+    }
 
-    await validatePolicyClaim(payload);
+    const { payload } = await jwtVerify(token, jwtSecret, verifyOptions);
 
     if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
       throw new AuthError('invalid_claim', 'Token subject missing');

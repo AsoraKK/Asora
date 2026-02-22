@@ -1,77 +1,55 @@
 import { jest } from '@jest/globals';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { SignJWT } from 'jose';
 
 import { resetAuthConfigForTesting } from '@auth/config';
 import { tryGetPrincipal, verifyAuthorizationHeader } from '@auth/verifyJwt';
 
-jest.mock('@auth/jwks', () => ({
-  getJwkByKid: jest.fn(),
-}));
-
-jest.mock('@auth/b2cOpenIdConfig', () => ({
-  getB2COpenIdConfig: jest.fn().mockResolvedValue({
-    issuer: 'https://issuer/',
-    jwks_uri: 'https://issuer/jwks',
-    token_endpoint: 'https://issuer/token',
-  }),
-}));
-
-const getJwkByKidMock = jest.mocked(require('@auth/jwks').getJwkByKid);
-const getConfigMock = jest.mocked(require('@auth/b2cOpenIdConfig').getB2COpenIdConfig);
-
-const expectedIssuer = 'https://issuer/';
-const expectedAudience = 'api://asora';
-const policy = 'B2C_1_POLICY';
-
-let privateKey: CryptoKey;
-let publicJwk: any;
+const JWT_SECRET = 'test-secret-key-for-unit-tests-only-min-32chars!';
+const JWT_ISSUER = 'asora-auth';
+const secretBytes = new TextEncoder().encode(JWT_SECRET);
 
 async function createToken(
   claims: Record<string, unknown>,
-  header: Record<string, unknown> = {},
+  options: {
+    issuer?: string;
+    audience?: string;
+    expirationTime?: string | number;
+    notBefore?: string | number;
+  } = {},
 ): Promise<string> {
-  const jwt = new SignJWT({ tfp: policy, ...claims })
-    .setProtectedHeader({ alg: 'RS256', kid: 'test-key', ...header })
-    .setIssuer(expectedIssuer)
-    .setAudience(expectedAudience)
+  const jwt = new SignJWT(claims)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuer(options.issuer ?? JWT_ISSUER)
     .setIssuedAt();
 
-  if (!('exp' in claims)) {
+  if (options.audience) {
+    jwt.setAudience(options.audience);
+  }
+
+  if (options.expirationTime !== undefined) {
+    jwt.setExpirationTime(options.expirationTime);
+  } else {
     jwt.setExpirationTime('5m');
   }
-  if (!('nbf' in claims)) {
+
+  if (options.notBefore !== undefined) {
+    jwt.setNotBefore(options.notBefore);
+  } else {
     jwt.setNotBefore('0s');
   }
 
-  return jwt.sign(privateKey);
+  return jwt.sign(secretBytes);
 }
 
 function setEnv(overrides: Record<string, string> = {}): void {
   Object.assign(process.env, {
-    B2C_TENANT: 'asora',
-    B2C_POLICY: policy,
-    B2C_EXPECTED_ISSUER: expectedIssuer,
-    B2C_EXPECTED_AUDIENCE: expectedAudience,
-    AUTH_CACHE_TTL_SECONDS: '3600',
+    JWT_SECRET,
+    JWT_ISSUER,
     AUTH_MAX_SKEW_SECONDS: '120',
     ...overrides,
   });
   resetAuthConfigForTesting();
-  getJwkByKidMock.mockReset().mockResolvedValue(publicJwk);
-  getConfigMock.mockResolvedValue({
-    issuer: expectedIssuer,
-    jwks_uri: 'https://issuer/jwks',
-    token_endpoint: 'https://issuer/token',
-  });
 }
-
-beforeAll(async () => {
-  const { privateKey: priv, publicKey } = await generateKeyPair('RS256');
-  privateKey = priv;
-  publicJwk = await exportJWK(publicKey);
-  publicJwk.kty = 'RSA';
-  publicJwk.kid = 'test-key';
-});
 
 beforeEach(() => {
   setEnv();
@@ -90,40 +68,39 @@ describe('verifyAuthorizationHeader', () => {
     expect(principal.scp).toBe('feed.read');
   });
 
-  it('throws invalid_signature when signature does not match', async () => {
-    const { publicKey: wrongPublic } = await generateKeyPair('RS256');
-    const wrongJwk = await exportJWK(wrongPublic);
-    wrongJwk.kty = 'RSA';
-    wrongJwk.kid = 'test-key';
-    getJwkByKidMock.mockResolvedValueOnce(wrongJwk);
+  it('extracts email, name, tier, and roles', async () => {
+    const token = await createToken({
+      sub: 'user-456',
+      email: 'test@example.com',
+      name: 'Test User',
+      tier: 'pro',
+      roles: ['admin', 'moderator'],
+    });
 
-    const token = await createToken({ sub: 'user-123' });
+    const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
+    expect(principal.sub).toBe('user-456');
+    expect(principal.email).toBe('test@example.com');
+    expect(principal.name).toBe('Test User');
+    expect(principal.tier).toBe('pro');
+    expect(principal.roles).toEqual(['admin', 'moderator']);
+  });
+
+  it('throws invalid_signature when secret does not match', async () => {
+    const wrongSecret = new TextEncoder().encode('wrong-secret-key-for-test-purposes-min-32!');
+    const token = await new SignJWT({ sub: 'user-123' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(JWT_ISSUER)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(wrongSecret);
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_signature',
     });
   });
 
-  it('throws invalid_key when JWK lacks kty', async () => {
-    const jwkWithoutKty = { ...publicJwk };
-    delete jwkWithoutKty.kty;
-    getJwkByKidMock.mockResolvedValueOnce(jwkWithoutKty as any);
-
-    const token = await createToken({ sub: 'user-123' });
-
-    await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
-      code: 'invalid_key',
-    });
-  });
-
   it('throws invalid_issuer when issuer mismatches', async () => {
-    const token = await new SignJWT({ sub: 'user-123', tfp: policy })
-      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
-      .setIssuer('https://other/')
-      .setAudience(expectedAudience)
-      .setIssuedAt()
-      .setExpirationTime('5m')
-      .sign(privateKey);
+    const token = await createToken({ sub: 'user-123' }, { issuer: 'https://other/' });
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_issuer',
@@ -131,29 +108,39 @@ describe('verifyAuthorizationHeader', () => {
   });
 
   it('throws invalid_audience when audience is not accepted', async () => {
-    const token = await new SignJWT({ sub: 'user-123', tfp: policy })
-      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
-      .setIssuer(expectedIssuer)
-      .setAudience('api://other')
-      .setIssuedAt()
-      .setExpirationTime('5m')
-      .sign(privateKey);
+    setEnv({ JWT_AUDIENCE: 'expected-audience' });
+    const token = await createToken({ sub: 'user-123' }, { audience: 'wrong-audience' });
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_audience',
     });
   });
 
+  it('accepts token when audience matches', async () => {
+    setEnv({ JWT_AUDIENCE: 'my-audience' });
+    const token = await createToken({ sub: 'user-123' }, { audience: 'my-audience' });
+
+    const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
+    expect(principal.sub).toBe('user-123');
+  });
+
+  it('skips audience check when JWT_AUDIENCE not set', async () => {
+    setEnv();
+    delete process.env.JWT_AUDIENCE;
+    resetAuthConfigForTesting();
+    const token = await createToken({ sub: 'user-123' }, { audience: 'any-audience' });
+
+    const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
+    expect(principal.sub).toBe('user-123');
+  });
+
   it('throws token_expired when exp is in the past', async () => {
     setEnv({ AUTH_MAX_SKEW_SECONDS: '1' });
     const now = Math.floor(Date.now() / 1000);
-    const token = await new SignJWT({ sub: 'user-123', tfp: policy })
-      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
-      .setIssuer(expectedIssuer)
-      .setAudience(expectedAudience)
-      .setIssuedAt(now - 3600)
-      .setExpirationTime(now - 1800)
-      .sign(privateKey);
+    const token = await createToken(
+      { sub: 'user-123' },
+      { expirationTime: now - 1800 },
+    );
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'token_expired',
@@ -161,26 +148,40 @@ describe('verifyAuthorizationHeader', () => {
   });
 
   it('throws token_not_yet_valid when nbf is in the future', async () => {
+    setEnv({ AUTH_MAX_SKEW_SECONDS: '1' });
     const now = Math.floor(Date.now() / 1000);
-    const token = await new SignJWT({ sub: 'user-123', tfp: policy })
-      .setProtectedHeader({ alg: 'RS256', kid: 'test-key' })
-      .setIssuer(expectedIssuer)
-      .setAudience(expectedAudience)
-      .setIssuedAt(now)
-      .setNotBefore(now + 600)
-      .setExpirationTime(now + 3600)
-      .sign(privateKey);
+    const token = await createToken(
+      { sub: 'user-123' },
+      { notBefore: now + 600, expirationTime: now + 3600 },
+    );
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'token_not_yet_valid',
     });
   });
 
-  it('throws invalid_claim when tfp/acr does not match policy', async () => {
-    const token = await createToken({ sub: 'user-123', tfp: 'other_policy' });
+  it('throws invalid_claim when sub is missing', async () => {
+    const token = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(JWT_ISSUER)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(secretBytes);
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_claim',
+    });
+  });
+
+  it('throws invalid_request when header is missing', async () => {
+    await expect(verifyAuthorizationHeader(null)).rejects.toMatchObject({
+      code: 'invalid_request',
+    });
+  });
+
+  it('throws invalid_request when header is not Bearer', async () => {
+    await expect(verifyAuthorizationHeader('Basic abc')).rejects.toMatchObject({
+      code: 'invalid_request',
     });
   });
 });
@@ -192,12 +193,21 @@ describe('tryGetPrincipal', () => {
   });
 
   it('returns null for invalid tokens without throwing', async () => {
-    getJwkByKidMock.mockImplementationOnce(() => {
-      throw new Error('no key');
-    });
+    const wrongSecret = new TextEncoder().encode('wrong-secret-for-try-principal-test-min-32!');
+    const token = await new SignJWT({ sub: 'user-123' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(JWT_ISSUER)
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(wrongSecret);
 
-    const token = await createToken({ sub: 'user-123' });
     const principal = await tryGetPrincipal(`Bearer ${token}`);
     expect(principal).toBeNull();
+  });
+
+  it('returns principal for valid token', async () => {
+    const token = await createToken({ sub: 'user-789' });
+    const principal = await tryGetPrincipal(`Bearer ${token}`);
+    expect(principal?.sub).toBe('user-789');
   });
 });
