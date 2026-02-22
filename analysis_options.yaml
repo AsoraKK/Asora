@@ -25,6 +25,7 @@ analyzer:
     - lib/generated/**
     - build/**
     - .dart_tool/**
+    - graveyard/**
     
   language:
     strict-casts: true
