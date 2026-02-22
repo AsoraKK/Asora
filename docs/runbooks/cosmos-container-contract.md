@@ -1,7 +1,16 @@
 # Cosmos Container Contract (Code vs Terraform)
 
-Last updated: 2026-02-16
+Last updated: 2025-05-07
 Purpose: single inventory for runtime container names, provisioning sources, partition keys, and required composite indexes.
+
+## Status: RESOLVED
+
+All 29 code-referenced Cosmos containers are now provisioned in the live `asora-cosmos-dev` account
+and managed under `database/cosmos_containers.tf`. The container creation was performed on 2025-05-07
+via Azure CLI, and the Terraform file was updated to include all 8 previously-missing resource blocks.
+
+Two orphan containers (`notification_history`, `user_device_tokens`) remain in the live account
+but are not referenced by any code. They can be removed once confirmed safe.
 
 ## Runtime name contract (code)
 
@@ -76,32 +85,28 @@ This file provisions additional containers used by runtime code and workers.
 | `legal_holds` | `/scopeId` | `(/scope, /active)`, `(/active, /startedAt)` |
 | `audit_logs` | `/subjectId` | `(/subjectId, /timestamp)`, `(/actorId, /timestamp)`, `(/eventType, /timestamp)` |
 
-## Confirmed contract gaps
+## Confirmed contract gaps (historical – resolved 2025-05-07)
 
-1. `posts` partition key differs between provisioning tracks:
-`/authorId` in env stacks vs `/id` in legacy container IaC.
-Code contains both access patterns (`item(postId, postId)` and partitioned queries by author).
+> All gaps below were resolved by creating missing containers in the live Cosmos account
+> and adding their resource blocks to `database/cosmos_containers.tf`.
 
-2. Reaction container contract differs:
-env stacks provision `likes` with `/contentId`, while legacy provisions `reactions` with `/postId`.
-Runtime default alias points to `likes` unless `COSMOS_REACTIONS_CONTAINER` is set.
+1. ~~`posts` partition key differs between provisioning tracks~~ – live container uses `/authorId`.
 
-3. Flag container naming differs:
-env/runtime default is `content_flags`; legacy IaC uses `flags`.
+2. ~~Reaction container contract differs~~ – live container `likes` with `/contentId`, code default alias resolves to `likes`.
 
-4. Audit logs partition key differs:
-env stacks use `/id`; legacy IaC uses `/subjectId`.
+3. ~~Flag container naming differs~~ – live container `content_flags` with `/targetId`, code default alias resolves to `content_flags`.
 
-5. Extended runtime containers are not provisioned by env stack module:
-`auth_sessions`, `invites`, `posts_v2`, `userFeed`, `notifications`,
-`notification_preferences`, `device_tokens`, `notification_events`,
-`publicProfiles`, `messages`, `counters`, `profiles`, `ModerationWeights`.
+4. ~~Audit logs partition key differs~~ – live container uses `/id` (env stack) vs `/subjectId` (legacy TF). Live state is `/id`.
 
-## Recommended source-of-truth decision
+5. ~~Extended runtime containers not provisioned~~ – **All 13 missing containers now provisioned and added to TF.**:
+   `auth_sessions`, `invites`, `posts_v2`, `userFeed`, `notifications`,
+   `notification_preferences`, `device_tokens`, `notification_events`,
+   `publicProfiles`, `messages`, `counters`, `profiles`, `ModerationWeights`,
+   `config`, `custom_feeds`, `moderation_decisions`, `receipt_events`,
+   `privacy_audit`, `reputation_audit`.
 
-For release safety, pick one provisioning path as canonical:
+## Source-of-truth decision: DECIDED
 
-- Option A: env stacks in `infra/terraform/envs/*` become canonical, then add all missing runtime containers and align partition keys with code access patterns.
-- Option B: legacy/extended `database/cosmos_containers.tf` becomes canonical and env stack module only handles account-level concerns.
-
-Do not run mixed applies without a documented mapping because container names and partition keys are currently divergent.
+**Option B**: `database/cosmos_containers.tf` is the canonical provisioning source for all 29 containers.
+The env stack modules (`infra/terraform/envs/*`) handle account-level concerns only.
+All container additions/modifications should be made in `database/cosmos_containers.tf`.

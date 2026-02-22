@@ -20,12 +20,6 @@
         "path": "/active",
         "order": "ascending"
       }
-    ],
-    [
-      {
-        "path": "/lastModifiedAt",
-        "order": "descending"
-      }
     ]
   ],
   "spatialIndexes": []

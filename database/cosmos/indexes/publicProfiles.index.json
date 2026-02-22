@@ -10,13 +10,6 @@
       "path": "/\"_etag\"/?"
     }
   ],
-  "compositeIndexes": [
-    [
-      {
-        "path": "/userId",
-        "order": "ascending"
-      }
-    ]
-  ],
+  "compositeIndexes": [],
   "spatialIndexes": []
 }

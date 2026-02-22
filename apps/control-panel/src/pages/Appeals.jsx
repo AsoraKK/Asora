@@ -4,6 +4,7 @@ import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import LythInput from '../components/LythInput.jsx';
+import PageLayout from '../components/PageLayout.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
@@ -19,6 +20,21 @@ const OVERRIDE_REASON_OPTIONS = [
   { value: 'safety_risk', label: 'Safety risk' },
   { value: 'other', label: 'Other' }
 ];
+
+const APPEALS_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Appeals handles blocked-content disputes, community vote state, and moderator override decisions.',
+  items: [
+    'Review pending appeals first and monitor time-to-expiry.',
+    'Confirm vote tally, quorum status, and original moderation context.',
+    'Use Moderator Override only when policy evidence is clear.',
+    'Select an explicit override reason code before confirming.',
+    'Treat override as irreversible and always audit-traceable.'
+  ],
+  footnote:
+    'Override actions are high-impact governance events and should be reserved for policy-exception cases.'
+};
 
 function formatTimeRemaining(seconds) {
   if (seconds === null || seconds === undefined) {
@@ -196,13 +212,11 @@ function Appeals() {
   }, [status]);
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Appeals</h1>
-        <p className="page-subtitle">
-          Appeals are the only review path for blocked content.
-        </p>
-      </div>
+    <PageLayout
+      title="Appeals"
+      subtitle="Community-voted dispute resolution for blocked content."
+      guide={APPEALS_GUIDE}
+    >
       <div className="page-grid">
         <LythCard variant="panel">
           <div className="panel-header">
@@ -558,7 +572,7 @@ function Appeals() {
           )}
         </LythCard>
       </div>
-    </section>
+    </PageLayout>
   );
 }
 
