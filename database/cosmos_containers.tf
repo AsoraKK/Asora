@@ -955,6 +955,268 @@ resource "azurerm_cosmosdb_sql_container" "audit_logs" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Previously unmanaged containers – added to align TF with live state
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "azurerm_cosmosdb_sql_container" "config" {
+  name                = "config"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/partitionKey"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "custom_feeds" {
+  name                = "custom_feeds"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/partitionKey"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/ownerId"
+        order = "ascending"
+      }
+      index {
+        path  = "/updatedAt"
+        order = "descending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "moderation_decisions" {
+  name                = "moderation_decisions"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/itemId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/itemId"
+        order = "ascending"
+      }
+      index {
+        path  = "/decidedAt"
+        order = "descending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "receipt_events" {
+  name                = "receipt_events"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/postId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/postId"
+        order = "ascending"
+      }
+      index {
+        path  = "/createdAt"
+        order = "ascending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "profiles" {
+  name                = "profiles"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/userId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "posts_v2" {
+  name                = "posts_v2"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/postId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/createdAt"
+        order = "descending"
+      }
+      index {
+        path  = "/id"
+        order = "descending"
+      }
+    }
+
+    composite_index {
+      index {
+        path  = "/authorId"
+        order = "ascending"
+      }
+      index {
+        path  = "/createdAt"
+        order = "descending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "privacy_audit" {
+  name                = "privacy_audit"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/id"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "moderation_weights" {
+  name                = "ModerationWeights"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/id"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/apiType"
+        order = "ascending"
+      }
+      index {
+        path  = "/active"
+        order = "ascending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Outputs
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -983,6 +1245,13 @@ output "container_names" {
     azurerm_cosmosdb_sql_container.privacy_requests.name,
     azurerm_cosmosdb_sql_container.legal_holds.name,
     azurerm_cosmosdb_sql_container.audit_logs.name,
+    azurerm_cosmosdb_sql_container.config.name,
+    azurerm_cosmosdb_sql_container.custom_feeds.name,
+    azurerm_cosmosdb_sql_container.moderation_decisions.name,
+    azurerm_cosmosdb_sql_container.receipt_events.name,
+    azurerm_cosmosdb_sql_container.profiles.name,
+    azurerm_cosmosdb_sql_container.privacy_audit.name,
+    azurerm_cosmosdb_sql_container.moderation_weights.name,
   ]
 }
 
@@ -1011,5 +1280,12 @@ output "partition_keys" {
     privacy_requests         = "/id"
     legal_holds              = "/scopeId"
     audit_logs               = "/subjectId"
+    config                   = "/partitionKey"
+    custom_feeds             = "/partitionKey"
+    moderation_decisions     = "/itemId"
+    receipt_events           = "/postId"
+    profiles                 = "/userId"
+    privacy_audit            = "/id"
+    ModerationWeights        = "/id"
   }
 }

@@ -4,6 +4,7 @@ import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import LythInput from '../components/LythInput.jsx';
+import PageLayout from '../components/PageLayout.jsx';
 
 function parseOptionalInt(value) {
   if (!value) {
@@ -15,6 +16,21 @@ function parseOptionalInt(value) {
   }
   return parsed;
 }
+
+const INVITES_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Invites controls beta access lifecycle: create, batch create, usage monitoring, and revocation.',
+  items: [
+    'Create single invites for targeted onboarding.',
+    'Use batch mode for campaigns with shared constraints.',
+    'Track usage, max uses, and invite status before revoking.',
+    'Provide a reason code for revoke actions.',
+    'Use labels to map invite cohorts to growth experiments.'
+  ],
+  footnote:
+    'Revoked or exhausted invites should not be reactivated; issue a new invite code instead.'
+};
 
 function Invites() {
   const [invites, setInvites] = useState([]);
@@ -149,13 +165,11 @@ function Invites() {
   };
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Invites</h1>
-        <p className="page-subtitle">
-          Generate and revoke beta invites with usage tracking.
-        </p>
-      </div>
+    <PageLayout
+      title="Invites"
+      subtitle="Beta access management with lifecycle and usage controls."
+      guide={INVITES_GUIDE}
+    >
       <div className="page-grid">
         <LythCard variant="panel">
           <div className="panel-header">
@@ -403,7 +417,7 @@ function Invites() {
           )}
         </LythCard>
       </div>
-    </section>
+    </PageLayout>
   );
 }
 

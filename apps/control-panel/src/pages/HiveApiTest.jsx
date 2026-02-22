@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import { adminRequest, getAdminApiUrl } from '../api/adminApi.js';
+import PageLayout from '../components/PageLayout.jsx';
 
 const HIVE_API_URL = import.meta.env.VITE_HIVE_API_URL || 'https://api.thehive.ai/api/v2/task/sync';
 
@@ -29,6 +30,21 @@ const SAMPLE_TEXTS = [
   { label: 'Food content', text: 'Just made an amazing pasta carbonara with fresh ingredients.' },
   { label: 'Question', text: 'Does anyone know a good restaurant near downtown?' }
 ];
+
+const HIVE_TEST_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Hive AI Testing validates moderation provider behavior before changes are rolled into enforcement paths.',
+  items: [
+    'Switch between text, image, and deepfake probes.',
+    'Use mock mode for fast UI verification and live mode for vendor response checks.',
+    'Capture debug payloads and request IDs during incident investigations.',
+    'Review confidence/classes for calibration, not public-facing scoring.',
+    'Export logs when handing off issues to moderation engineering.'
+  ],
+  footnote:
+    'Live mode should be rate-limited by operator discipline; repeated tests can trigger vendor throttling.'
+};
 
 function HiveApiTest() {
   const [testMode, setTestMode] = useState('text');
@@ -307,38 +323,34 @@ function HiveApiTest() {
   };
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <div className="page-header-row">
-          <div>
-            <h1>Hive AI Testing</h1>
-            <p className="page-subtitle">
-              Test content moderation APIs with text and image analysis.
-            </p>
-          </div>
-          <div className="live-mode-toggle">
-            <label className="live-mode-label">
-              <input
-                type="checkbox"
-                checked={liveMode}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setLiveMode(next);
-                  if (next) {
-                    clearUpload();
-                  }
-                }}
-              />
-              <span className={`live-badge ${liveMode ? 'active' : ''}`}>
-                {liveMode ? '🔴 LIVE' : '🔵 MOCK'}
-              </span>
-            </label>
-            <span className="live-hint">
-              {liveMode ? 'Using real Hive AI API (URL-only)' : 'Using mock responses'}
+    <PageLayout
+      title={liveMode ? 'Hive AI Testing (Live)' : 'Hive AI Testing'}
+      subtitle="Moderation provider validation for text, image, and deepfake classes."
+      guide={HIVE_TEST_GUIDE}
+      headerActions={
+        <div className="live-mode-toggle">
+          <label className="live-mode-label">
+            <input
+              type="checkbox"
+              checked={liveMode}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setLiveMode(next);
+                if (next) {
+                  clearUpload();
+                }
+              }}
+            />
+            <span className={`live-badge ${liveMode ? 'active' : ''}`}>
+              {liveMode ? '🔴 LIVE' : '🔵 MOCK'}
             </span>
-          </div>
+          </label>
+          <span className="live-hint">
+            {liveMode ? 'Using real Hive AI API (URL-only)' : 'Using mock responses'}
+          </span>
         </div>
-      </div>
+      }
+    >
 
       {/* Tab Toggle */}
       <div className="test-tabs">
@@ -864,7 +876,7 @@ function HiveApiTest() {
           </div>
         )}
       </LythCard>
-    </section>
+    </PageLayout>
   );
 }
 

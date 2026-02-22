@@ -3,12 +3,28 @@ import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
+import PageLayout from '../components/PageLayout.jsx';
 
 function formatActionLabel(entry) {
   const action = entry.action || 'UNKNOWN';
   const reason = entry.reasonCode ? ` (${entry.reasonCode})` : '';
   return `${action}${reason}`;
 }
+
+const AUDIT_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Audit is the immutable event stream for administrative actions across moderation, users, and access.',
+  items: [
+    'Use refresh before incident reviews to avoid stale evidence.',
+    'Check actor id, action, and target type together.',
+    'Correlate high-impact actions with reason codes and notes.',
+    'Escalate any action without expected rationale metadata.',
+    'Use this view as the source of truth during post-incident analysis.'
+  ],
+  footnote:
+    'Audit entries should never be edited manually; investigate source services if formatting looks wrong.'
+};
 
 function Audit() {
   const [items, setItems] = useState([]);
@@ -35,13 +51,11 @@ function Audit() {
   }, []);
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Audit</h1>
-        <p className="page-subtitle">
-          Recent admin actions with audit trail details.
-        </p>
-      </div>
+    <PageLayout
+      title="Audit"
+      subtitle="Immutable administrative activity log with target and actor traceability."
+      guide={AUDIT_GUIDE}
+    >
       <LythCard variant="panel">
         <div className="panel-header">
           <h2>Recent activity</h2>
@@ -85,7 +99,7 @@ function Audit() {
           <div className="empty-state">No audit entries found.</div>
         ) : null}
       </LythCard>
-    </section>
+    </PageLayout>
   );
 }
 

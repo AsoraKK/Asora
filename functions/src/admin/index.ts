@@ -5,6 +5,7 @@
  */
 
 import './routes/config.function';
+import './routes/budget.function';
 import './routes/audit_get.function';
 import './routes/flags_list.function';
 import './routes/flags_get.function';

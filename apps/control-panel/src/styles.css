@@ -8,8 +8,8 @@ body {
   font-family: var(--font-sans);
   color: var(--on-surface);
   background:
-    radial-gradient(1200px 520px at 8% -12%, rgba(237, 227, 200, 0.22), transparent 60%),
-    radial-gradient(900px 520px at 92% -10%, rgba(26, 26, 26, 0.08), transparent 55%),
+    radial-gradient(1200px 540px at 8% -12%, rgba(119, 200, 232, 0.18), transparent 58%),
+    radial-gradient(900px 520px at 92% -10%, rgba(230, 223, 201, 0.1), transparent 55%),
     linear-gradient(180deg, var(--surface), var(--surface-container));
 }
 
@@ -32,7 +32,7 @@ a {
   padding: 18px 32px;
   background: var(--surface-elevated);
   border-bottom: 1px solid var(--outline);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -101,15 +101,72 @@ a {
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: 32px;
+  padding: 28px 32px 36px;
 }
 
 .page {
-  width: min(1100px, 100%);
+  width: min(1420px, 100%);
   display: flex;
   flex-direction: column;
   gap: 24px;
   animation: pageEnter 0.5s ease both;
+}
+
+.page--with-guide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.page-main {
+  display: grid;
+  gap: 20px;
+}
+
+.page-guide {
+  position: sticky;
+  top: 94px;
+}
+
+.guide-card {
+  display: grid;
+  gap: 12px;
+}
+
+.guide-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.guide-summary,
+.guide-footnote {
+  margin: 0;
+  color: var(--on-surface-muted);
+  line-height: 1.5;
+}
+
+.guide-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--on-surface);
+}
+
+.page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .page-header h1 {
@@ -122,6 +179,92 @@ a {
   margin: 0;
   color: var(--on-surface-muted);
   max-width: 640px;
+}
+
+.ops-kpi-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.kpi-card {
+  min-height: 138px;
+}
+
+.kpi-card .kpi-value {
+  font-size: 1.75rem;
+  line-height: 1;
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+
+.kpi-value.healthy {
+  color: var(--success);
+}
+
+.kpi-value.degraded {
+  color: var(--warning);
+}
+
+.kpi-value.down {
+  color: var(--danger);
+}
+
+.health-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.health-pill.healthy {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.health-pill.degraded {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.health-pill.down {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.quick-action-card {
+  gap: 12px;
+}
+
+.inline-link {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--outline);
+  color: var(--on-surface);
+  background: var(--surface-container-high);
+  transition: background var(--motion-fast) ease, transform var(--motion-fast) ease;
+}
+
+.inline-link:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+  transform: translateY(-1px);
+}
+
+.dashboard-section-heading {
+  margin-bottom: -8px;
+}
+
+.dashboard-last-updated {
+  margin-top: -10px;
 }
 
 .card-grid {
@@ -682,6 +825,14 @@ textarea.lyth-input {
     padding: 24px;
   }
 
+  .page--with-guide {
+    grid-template-columns: 1fr;
+  }
+
+  .page-guide {
+    position: static;
+  }
+
   .page-grid {
     grid-template-columns: 1fr;
   }
@@ -698,6 +849,10 @@ textarea.lyth-input {
 
   .page-header h1 {
     font-size: 1.9rem;
+  }
+
+  .page-header-actions {
+    width: 100%;
   }
 
   .timeline-item {

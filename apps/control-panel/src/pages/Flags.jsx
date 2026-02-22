@@ -4,12 +4,28 @@ import { formatDateTime, formatList } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import LythInput from '../components/LythInput.jsx';
+import PageLayout from '../components/PageLayout.jsx';
 
 const STATUS_OPTIONS = [
   { value: 'open', label: 'Open' },
   { value: 'resolved', label: 'Resolved' },
   { value: 'all', label: 'All' }
 ];
+
+const FLAGS_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Flags is your first-line moderation queue for reported content. Decisions here directly affect public visibility.',
+  items: [
+    'Filter queue by status to focus on unresolved risk first.',
+    'Open an item, review content, reasons, and timeline history.',
+    'Apply a reason code before block/publish/resolve actions.',
+    'Use Block when policy risk is confirmed; Publish when false-positive.',
+    'Resolve only after a clear action trail is recorded.'
+  ],
+  footnote:
+    'Every action should include a reason code to preserve immutable moderation audit quality.'
+};
 
 function Flags() {
   const [items, setItems] = useState([]);
@@ -168,13 +184,11 @@ function Flags() {
   }, [status]);
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Flagged content</h1>
-        <p className="page-subtitle">
-          Review flags and apply a binary publish or block decision.
-        </p>
-      </div>
+    <PageLayout
+      title="Flagged content"
+      subtitle="Review flagged posts/comments and apply publish or block decisions."
+      guide={FLAGS_GUIDE}
+    >
       <div className="page-grid">
         <LythCard variant="panel">
           <div className="panel-header">
@@ -434,7 +448,7 @@ function Flags() {
           )}
         </LythCard>
       </div>
-    </section>
+    </PageLayout>
   );
 }
 

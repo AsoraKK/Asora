@@ -1,84 +1,58 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --font-sans: "Space Grotesk", sans-serif;
   --font-display: "Fraunces", serif;
   --radius-lg: 18px;
   --radius-md: 12px;
   --radius-sm: 10px;
   --radius-pill: 999px;
-  --surface: #f3f1ec;
-  --surface-container: #ece8e1;
-  --surface-container-high: #e4dfd6;
-  --surface-elevated: rgba(243, 241, 236, 0.86);
-  --on-surface: #1a1a1a;
-  --on-surface-muted: #5a564e;
-  --outline: #b8b2a9;
-  --primary: #ede3c8;
-  --on-primary: #1a1a1a;
-  --primary-glow: rgba(237, 227, 200, 0.55);
-  --success: #2c6c5f;
-  --success-soft: rgba(44, 108, 95, 0.16);
-  --danger: #b4472f;
-  --danger-soft: rgba(180, 71, 47, 0.18);
-  --warning: #a47618;
-  --warning-soft: rgba(164, 118, 24, 0.18);
-  --info: #1e6d88;
-  --info-soft: rgba(30, 109, 136, 0.16);
-  --shadow-soft: 0 12px 28px rgba(32, 30, 24, 0.12);
-  --shadow-strong: 0 24px 50px rgba(32, 30, 24, 0.18);
+  --surface: #0b1115;
+  --surface-container: #121b22;
+  --surface-container-high: #1a2731;
+  --surface-elevated: rgba(11, 17, 21, 0.88);
+  --on-surface: #ecf2f5;
+  --on-surface-muted: #9cb1bf;
+  --outline: #2c3f4c;
+  --primary: #e6dfc9;
+  --on-primary: #0b1115;
+  --primary-glow: rgba(230, 223, 201, 0.35);
+  --success: #78d0a7;
+  --success-soft: rgba(120, 208, 167, 0.18);
+  --danger: #f29680;
+  --danger-soft: rgba(242, 150, 128, 0.18);
+  --warning: #f2cf7a;
+  --warning-soft: rgba(242, 207, 122, 0.2);
+  --info: #77c8e8;
+  --info-soft: rgba(119, 200, 232, 0.2);
+  --shadow-soft: 0 16px 34px rgba(0, 0, 0, 0.28);
+  --shadow-strong: 0 30px 56px rgba(0, 0, 0, 0.4);
   --motion-fast: 150ms;
   --motion-med: 220ms;
   --motion-slow: 500ms;
 }
 
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --surface: #121413;
-  --surface-container: #1a1d1b;
-  --surface-container-high: #242725;
-  --surface-elevated: rgba(18, 20, 19, 0.88);
-  --on-surface: #e6e2d9;
-  --on-surface-muted: #a6a099;
-  --outline: #3a3d3b;
+:root[data-theme='light'] {
+  color-scheme: light;
+  --surface: #f2f5f7;
+  --surface-container: #e8eef2;
+  --surface-container-high: #dde5ea;
+  --surface-elevated: rgba(242, 245, 247, 0.9);
+  --on-surface: #12202a;
+  --on-surface-muted: #516471;
+  --outline: #b5c3cb;
   --primary: #ede3c8;
-  --on-primary: #121413;
-  --primary-glow: rgba(237, 227, 200, 0.35);
-  --success: #6fb7a6;
-  --success-soft: rgba(111, 183, 166, 0.16);
-  --danger: #e39a84;
-  --danger-soft: rgba(227, 154, 132, 0.18);
-  --warning: #e0b45a;
-  --warning-soft: rgba(224, 180, 90, 0.18);
-  --info: #78b8cc;
-  --info-soft: rgba(120, 184, 204, 0.18);
-  --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.3);
-  --shadow-strong: 0 24px 48px rgba(0, 0, 0, 0.4);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --surface: #121413;
-    --surface-container: #1a1d1b;
-    --surface-container-high: #242725;
-    --surface-elevated: rgba(18, 20, 19, 0.88);
-    --on-surface: #e6e2d9;
-    --on-surface-muted: #a6a099;
-    --outline: #3a3d3b;
-    --primary: #ede3c8;
-    --on-primary: #121413;
-    --primary-glow: rgba(237, 227, 200, 0.35);
-    --success: #6fb7a6;
-    --success-soft: rgba(111, 183, 166, 0.16);
-    --danger: #e39a84;
-    --danger-soft: rgba(227, 154, 132, 0.18);
-    --warning: #e0b45a;
-    --warning-soft: rgba(224, 180, 90, 0.18);
-    --info: #78b8cc;
-    --info-soft: rgba(120, 184, 204, 0.18);
-    --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.3);
-    --shadow-strong: 0 24px 48px rgba(0, 0, 0, 0.4);
-  }
+  --on-primary: #12202a;
+  --primary-glow: rgba(237, 227, 200, 0.55);
+  --success: #2b7a5f;
+  --success-soft: rgba(43, 122, 95, 0.16);
+  --danger: #c75238;
+  --danger-soft: rgba(199, 82, 56, 0.18);
+  --warning: #a87a1d;
+  --warning-soft: rgba(168, 122, 29, 0.2);
+  --info: #287a98;
+  --info-soft: rgba(40, 122, 152, 0.18);
+  --shadow-soft: 0 12px 28px rgba(32, 46, 56, 0.12);
+  --shadow-strong: 0 24px 48px rgba(32, 46, 56, 0.18);
 }

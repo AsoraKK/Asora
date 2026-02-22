@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import DeviceEmulator from '../components/DeviceEmulator.jsx';
 import LythCard from '../components/LythCard.jsx';
-import LythButton from '../components/LythButton.jsx';
+import PageLayout from '../components/PageLayout.jsx';
 
 /**
  * Preview flows matching Flutter's PreviewFlow enum
@@ -17,6 +17,21 @@ const PREVIEW_FLOWS = [
   { id: 'settings', label: 'Settings', desc: 'App settings screen', icon: '⚙️' },
   { id: 'rewards', label: 'Rewards', desc: 'Rewards dashboard', icon: '🏆' }
 ];
+
+const PREVIEW_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'App Preview simulates key Lythaus mobile journeys in a controlled environment for QA and product reviews.',
+  items: [
+    'Use flow selector to navigate through onboarding, feed, post, and profile states.',
+    'Toggle mock/live mode deliberately; live mode consumes real API capacity.',
+    'Reset state before demos to ensure reproducible behavior.',
+    'Review action log to confirm event sequencing and interaction coverage.',
+    'Use this view to align release QA scripts with expected UX behavior.'
+  ],
+  footnote:
+    'Live mode is for controlled validation only. Avoid running repetitive automation against production from this view.'
+};
 
 /**
  * Interactive mock screen content for each flow
@@ -395,37 +410,31 @@ function AppPreview() {
   }, []);
 
   return (
-    <section className="page app-preview-page">
-      <div className="page-header">
-        <div className="page-header-row">
-          <div>
-            <h1>
-              App Preview
-              {liveMode && <span className="header-live-badge">🔴 LIVE</span>}
-            </h1>
-            <p className="page-subtitle">
-              Test Lythaus app flows with device emulation. Click buttons in the phone to navigate!
-            </p>
-          </div>
-          <div className="preview-actions">
-            <button
-              type="button"
-              className={`live-toggle ${liveMode ? 'active' : ''}`}
-              onClick={() => setLiveMode(!liveMode)}
-            >
-              {liveMode ? '🔴 Live Mode' : '🔵 Mock Mode'}
+    <PageLayout
+      className="app-preview-page"
+      title={liveMode ? 'App Preview (Live)' : 'App Preview'}
+      subtitle="Interactive simulation of mobile flows and UX states."
+      guide={PREVIEW_GUIDE}
+      headerActions={
+        <div className="preview-actions">
+          <button
+            type="button"
+            className={`live-toggle ${liveMode ? 'active' : ''}`}
+            onClick={() => setLiveMode(!liveMode)}
+          >
+            {liveMode ? '🔴 Live Mode' : '🔵 Mock Mode'}
+          </button>
+          <button type="button" className="reset-btn" onClick={handleReset}>
+            🔄 Reset State
+          </button>
+          {liveMode ? (
+            <button type="button" className="session-btn" onClick={handleNewSession}>
+              ✨ New Session
             </button>
-            <button type="button" className="reset-btn" onClick={handleReset}>
-              🔄 Reset State
-            </button>
-            {liveMode && (
-              <button type="button" className="session-btn" onClick={handleNewSession}>
-                ✨ New Session
-              </button>
-            )}
-          </div>
+          ) : null}
         </div>
-      </div>
+      }
+    >
 
       <div className="preview-layout">
         {/* Flow Selector */}
@@ -491,7 +500,7 @@ function AppPreview() {
           </DeviceEmulator>
         </div>
       </div>
-    </section>
+    </PageLayout>
   );
 }
 

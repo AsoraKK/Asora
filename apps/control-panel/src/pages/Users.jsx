@@ -4,6 +4,22 @@ import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import LythInput from '../components/LythInput.jsx';
+import PageLayout from '../components/PageLayout.jsx';
+
+const USERS_GUIDE = {
+  title: 'What this page does',
+  summary:
+    'Users gives moderators direct account safety controls for search, disable, and enable workflows.',
+  items: [
+    'Search by user id, handle, or email to find the exact account.',
+    'Review current status before taking action.',
+    'Disable requires a reason code and internal note.',
+    'Enable should only be used after remediation verification.',
+    'Keep notes concise, factual, and policy-linked.'
+  ],
+  footnote:
+    'User status actions are sensitive. Avoid ambiguous reason codes and ensure internal notes are decision-grade.'
+};
 
 function Users() {
   const [query, setQuery] = useState('');
@@ -76,13 +92,11 @@ function Users() {
   };
 
   return (
-    <section className="page">
-      <div className="page-header">
-        <h1>Users</h1>
-        <p className="page-subtitle">
-          Find users and disable abusive accounts immediately.
-        </p>
-      </div>
+    <PageLayout
+      title="Users"
+      subtitle="Account safety operations for search, disable, and re-enable."
+      guide={USERS_GUIDE}
+    >
       <LythCard variant="panel">
         <form className="form-row" onSubmit={runSearch}>
           <LythInput
@@ -195,7 +209,7 @@ function Users() {
           </>
         )}
       </LythCard>
-    </section>
+    </PageLayout>
   );
 }
 
