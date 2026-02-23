@@ -76,12 +76,12 @@ jobs:
           STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
         run: npx jest -c jest.contract.config.cjs --runInBand
       - name: Upload bundled spec
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openapi.json
           path: api/openapi/dist/openapi.json
       - name: Upload OpenAPI docs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openapi-docs
           path: api/openapi/dist/index.html

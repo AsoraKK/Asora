@@ -133,7 +133,7 @@ jobs:
           node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json --json > cosmos-container-diff.json
 
       - name: Upload Cosmos contract diff artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cosmos-container-diff
           path: cosmos-container-diff.json
@@ -158,7 +158,7 @@ jobs:
           node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json
 
       - name: Upload route inventory artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: functions-route-inventory
           path: route-inventory.json
@@ -191,7 +191,7 @@ jobs:
         run: node scripts/generate-todo-triage.js
 
       - name: Upload TODO triage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: todo-triage-report
           path: docs/runbooks/todo-triage.md
@@ -235,7 +235,7 @@ jobs:
         run: npm run openapi:bundle
 
       - name: Upload bundled spec
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openapi-spec
           path: api/openapi/dist/openapi.json
@@ -532,7 +532,7 @@ jobs:
             archive
 
       - name: Upload iOS archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-release-archive
           path: build/ios/archive/Runner.xcarchive
@@ -642,12 +642,12 @@ jobs:
           echo "Created $ROOT/dist-v4-final.zip"
 
       - name: Upload feed workbook artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: feed-workbook
           path: observability/workbooks/feed-latency.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: functions-v4-artifact
           path: dist-v4-final.zip
