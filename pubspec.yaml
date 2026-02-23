@@ -55,7 +55,7 @@ dependencies:
   permission_handler: ^12.0.1
   timezone: ^0.9.4 # For scheduled local notifications
   url_launcher: ^6.2.2 # Launch URLs and handle OAuth callbacks
-  uuid: ^4.4.0 # UUID generation for request IDs
+  uuid: ^4.5.3 # UUID generation for request IDs
 
 dev_dependencies:
   build_runner: ^2.4.7 # Code generation for mockito
