@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -58,7 +58,7 @@ jobs:
     name: Validate legal operation registers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate legal register files
         run: bash scripts/check_legal_registers.sh
@@ -67,7 +67,7 @@ jobs:
     name: Lint workflows (actionlint + shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install dependencies (jq, shellcheck)
         run: |
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate pinned Flutter version source-of-truth
         run: bash scripts/validate-flutter-toolchain-pinning.sh
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate staging/prod alert recipients
         run: bash scripts/validate-alert-routing-config.sh
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -168,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install ripgrep
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
@@ -181,7 +181,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -201,7 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate extension bundle version
         run: |
@@ -218,7 +218,7 @@ jobs:
     name: Lint OpenAPI spec
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -248,7 +248,7 @@ jobs:
       run:
         working-directory: apps/control-panel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -273,7 +273,7 @@ jobs:
       run:
         working-directory: apps/marketing-site
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -309,7 +309,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run gitleaks
         run: scripts/secret-scan.sh
 
@@ -333,7 +333,7 @@ jobs:
     name: Verify TLS certificate pins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -353,7 +353,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/cache@v4
         with:
@@ -438,7 +438,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-java@v4
         with:
@@ -505,7 +505,7 @@ jobs:
     runs-on: macos-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: subosito/flutter-action@v2
         with:
@@ -545,7 +545,7 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install jq for guards
         run: |

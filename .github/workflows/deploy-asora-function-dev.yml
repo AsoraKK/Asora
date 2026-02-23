@@ -58,7 +58,7 @@ jobs:
     environment: ${{ github.event.inputs.target_environment || 'dev' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -412,7 +412,7 @@ jobs:
     needs: deploy
     environment: ${{ github.event.inputs.target_environment || 'dev' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Azure login (OIDC)
         uses: azure/login@v2

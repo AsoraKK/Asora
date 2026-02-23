@@ -17,7 +17,7 @@ jobs:
       AZURE_KEY_VAULT_NAME: kv-asora-dev
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Azure login (OIDC)
         uses: azure/login@v2

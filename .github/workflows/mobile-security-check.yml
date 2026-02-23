@@ -43,7 +43,7 @@ jobs:
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v6
 
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
