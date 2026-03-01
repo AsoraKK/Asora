@@ -242,6 +242,37 @@ jobs:
           echo "Waiting 90s for Flex host warmup..."
           sleep 90
 
+      - name: Provision AUDIT_HMAC_KEY via Key Vault
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
+
+          if [ -z "$KEY_VAULT" ]; then
+            echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY cannot be provisioned"
+            exit 1
+          fi
+
+          # Check if the secret already exists
+          EXISTING=$(az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "value" -o tsv 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
+          else
+            echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
+            HMAC_KEY=$(openssl rand -hex 32)
+            az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
+              --value "$HMAC_KEY" --output none
+            echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
+          fi
+
+          # Wire as Key Vault reference in Function App
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
+            --output none
+          echo "✅ AUDIT_HMAC_KEY wired as Key Vault reference"
+
       - name: Validate Flex app settings
         run: |
           set -euo pipefail
@@ -634,33 +665,3 @@ jobs:
 
           echo "✅ Media storage environment variables configured"
 
-      - name: Provision AUDIT_HMAC_KEY via Key Vault
-        continue-on-error: false
-        run: |
-          set -euo pipefail
-          RG_CLEAN=$(echo "$RG" | tr -d '\r')
-          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
-
-          if [ -z "$KEY_VAULT" ]; then
-            echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY cannot be provisioned"
-            exit 1
-          fi
-
-          # Check if the secret already exists
-          EXISTING=$(az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "value" -o tsv 2>/dev/null || echo "")
-          if [ -n "$EXISTING" ]; then
-            echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
-          else
-            echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
-            HMAC_KEY=$(openssl rand -hex 32)
-            az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
-              --value "$HMAC_KEY" --output none
-            echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
-          fi
-
-          # Wire as Key Vault reference in Function App
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
-            --output none
-          echo "✅ AUDIT_HMAC_KEY wired as Key Vault reference"
