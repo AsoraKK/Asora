@@ -248,23 +248,48 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
           KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
 
           if [ -z "$KEY_VAULT" ]; then
-            echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY cannot be provisioned"
-            exit 1
+            if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
+              echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY must use Key Vault in production"
+              exit 1
+            fi
+
+            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
+            echo "ℹ️  Using plain AUDIT_HMAC_KEY app setting fallback for non-production environment: $ENVIRONMENT"
+            HMAC_KEY=$(openssl rand -hex 32)
+            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+              --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
+            echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
+            exit 0
           fi
 
-          # Check if the secret already exists
-          EXISTING=$(az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "value" -o tsv 2>/dev/null || echo "")
-          if [ -n "$EXISTING" ]; then
+          # Check if the secret already exists (may fail if SP lacks get permission)
+          if az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "id" -o tsv >/dev/null 2>&1; then
             echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
           else
             echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
             HMAC_KEY=$(openssl rand -hex 32)
-            az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
-              --value "$HMAC_KEY" --output none
-            echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
+
+            if az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
+              --value "$HMAC_KEY" --output none; then
+              echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
+            else
+              if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
+                echo "::error::Failed to create Key Vault secret audit-hmac-key in production"
+                echo "::error::Grant the deployment principal Key Vault Secrets Officer (or setSecret permission) on $KEY_VAULT"
+                exit 1
+              fi
+
+              echo "⚠️  Unable to create Key Vault secret (likely RBAC limitation)"
+              echo "ℹ️  Falling back to plain AUDIT_HMAC_KEY app setting for non-production environment: $ENVIRONMENT"
+              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
+              echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
+              exit 0
+            fi
           fi
 
           # Wire as Key Vault reference in Function App
@@ -276,6 +301,7 @@ jobs:
       - name: Validate Flex app settings
         run: |
           set -euo pipefail
+          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
           SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
           EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
           if [ "$EXT_VERSION" != "~4" ]; then
@@ -289,8 +315,13 @@ jobs:
           # Guard: AUDIT_HMAC_KEY must be set (as Key Vault ref) in all deployed environments
           HMAC_SETTING=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="AUDIT_HMAC_KEY") | .value' || echo "")
           if [ -z "$HMAC_SETTING" ]; then
-            echo "::error::AUDIT_HMAC_KEY is not set — audit log pseudonymisation requires this Key Vault reference"; exit 1
+            echo "::error::AUDIT_HMAC_KEY is not set — audit log pseudonymisation requires this setting"; exit 1
           fi
+
+          if { [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; } && [[ "$HMAC_SETTING" != @Microsoft.KeyVault* ]]; then
+            echo "::error::AUDIT_HMAC_KEY must be a Key Vault reference in production"; exit 1
+          fi
+
           echo "✅ AUDIT_HMAC_KEY is configured"
 
       - name: Post-deploy probe /api/health
