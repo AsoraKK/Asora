@@ -50,6 +50,7 @@ resource "azurerm_linux_function_app_slot" "main" {
       # Key Vault references for secrets
       EMAIL_HASH_SALT          = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/email-hash-salt/)"
       COSMOS_CONNECTION_STRING = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/COSMOS-CONN/)"
+      AUDIT_HMAC_KEY           = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/audit-hmac-key/)"
 
       # Runtime settings (do NOT set FUNCTIONS_WORKER_RUNTIME for Flex)
       WEBSITE_NODE_DEFAULT_VERSION = "~20"
@@ -92,6 +93,7 @@ resource "null_resource" "enforce_app_settings" {
           "RATE_LIMITS_ENABLED=true" \
           "EMAIL_HASH_SALT=@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/email-hash-salt/)" \
           "COSMOS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/COSMOS-CONN/)" \
+          "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/audit-hmac-key/)" \
         >/dev/null
     EOT
   }
@@ -123,6 +125,7 @@ output "enforced_settings" {
     rate_limits_enabled             = "true"
     email_hash_salt_source          = "Key Vault: email-hash-salt"
     cosmos_connection_string_source = "Key Vault: COSMOS-CONN"
+    audit_hmac_key_source           = "Key Vault: audit-hmac-key"
   }
   sensitive = false
 }

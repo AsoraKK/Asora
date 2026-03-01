@@ -12,6 +12,8 @@ import { createErrorResponse } from '@shared/utils/http';
 import { validateText } from '@shared/utils/validate';
 import { getAzureLogger } from '@shared/utils/logger';
 import type { AuthorizeRequest } from '@auth/types';
+import { auditForgedHeader, auditTestUserBlocked } from './authAuditService';
+import { validateAndCrossCheckPrincipal } from './easyAuthValidator';
 import * as crypto from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
@@ -208,14 +210,61 @@ function parseAuthorizeRequest(params: any): AuthorizeRequest {
 }
 
 function resolveAuthenticatedUserId(req: HttpRequest, request: AuthorizeRequest): string | null {
+  // ── Upstream platform identity (EasyAuth / gateway) ────────────────
+  const env = process.env.NODE_ENV || 'production';
+  const isProduction = env === 'production' || env === 'staging';
+
   const upstreamPrincipalId = req.headers.get('x-ms-client-principal-id')?.trim();
   if (upstreamPrincipalId) {
-    return upstreamPrincipalId;
+    // In production, only trust this header when EasyAuth injects it.
+    // EasyAuth always sets x-ms-client-principal alongside the ID header.
+    const companionHeader = req.headers.get('x-ms-client-principal');
+    if (isProduction && !companionHeader) {
+      logger.warn('auth.resolve.forged_header_suspected', {
+        header: 'x-ms-client-principal-id',
+        reason: 'x-ms-client-principal missing in production environment',
+      });
+      auditForgedHeader('x-ms-client-principal-id').catch(() => {});
+      // Fall through — do not trust the header without the companion claim
+    } else if (isProduction && companionHeader) {
+      // Validate the companion header content and cross-check subject
+      const validation = validateAndCrossCheckPrincipal(companionHeader, upstreamPrincipalId);
+      if (!validation.valid) {
+        logger.warn('auth.resolve.invalid_principal_payload', {
+          error: validation.error,
+          principalIdPrefix: upstreamPrincipalId.slice(0, 8),
+        });
+        // Fall through — malformed or inconsistent principal
+      } else {
+        return upstreamPrincipalId;
+      }
+    } else {
+      return upstreamPrincipalId;
+    }
   }
 
   const forwardedUserId = req.headers.get('x-authenticated-user-id')?.trim();
   if (forwardedUserId) {
-    return forwardedUserId;
+    if (isProduction && !req.headers.get('x-ms-client-principal')) {
+      logger.warn('auth.resolve.forged_header_suspected', {
+        header: 'x-authenticated-user-id',
+        reason: 'x-ms-client-principal missing in production environment',
+      });
+      auditForgedHeader('x-authenticated-user-id').catch(() => {});
+      // Fall through — do not trust the header without EasyAuth context
+    } else {
+      return forwardedUserId;
+    }
+  }
+
+  // ── Test user ID path — HARD-BLOCKED in production ─────────────────
+  // SECURITY: Never allow test user ID impersonation in production,
+  // regardless of environment variable configuration.
+  if (isProduction) {
+    if (request.user_id?.trim()) {
+      auditTestUserBlocked().catch(() => {});
+    }
+    return null;
   }
 
   const allowTestUserId =

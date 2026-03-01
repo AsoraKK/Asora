@@ -8,6 +8,7 @@ import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { revokeAllRefreshTokensForUser } from '@auth/service/tokenService';
+import { auditSessionRevoke } from '@auth/service/authAuditService';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 
@@ -20,6 +21,7 @@ export const auth_sessions_revoke = httpHandler(async (ctx) => {
   }
 
   const revoked = await revokeAllRefreshTokensForUser(auth.userId);
+  auditSessionRevoke(auth.userId, revoked, ctx.correlationId).catch(() => {});
   return ctx.ok({ revoked });
 });
 

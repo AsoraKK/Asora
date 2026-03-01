@@ -16,6 +16,7 @@ import { updateCustomFeed } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import { requireAuth } from '@auth/requireAuth';
 
 export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -57,7 +58,7 @@ export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFee
 // Register HTTP trigger
 app.http('customFeeds_update', {
   methods: ['PATCH'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
+  authLevel: 'anonymous',
   route: 'custom-feeds/{id}',
-  handler: withRateLimit(customFeeds_update, (req) => getPolicyForRoute(req)),
+  handler: requireAuth(withRateLimit(customFeeds_update, (req) => getPolicyForRoute(req)) as any),
 });

@@ -15,6 +15,7 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { createModerationDecision, hasModeratorRole } from '@moderation/moderationService';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import { requireModerator } from '@auth/requireRoles';
 
 const VALID_ACTIONS: ModerationDecisionRequest['action'][] = ['approve', 'reject', 'escalate'];
 
@@ -54,7 +55,7 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
 // Register HTTP trigger
 app.http('moderation_cases_decide', {
   methods: ['POST'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware
+  authLevel: 'anonymous',
   route: 'moderation/cases/{id}/decision',
-  handler: withRateLimit(moderation_cases_decide, (req) => getPolicyForRoute(req)),
+  handler: requireModerator(withRateLimit(moderation_cases_decide, (req) => getPolicyForRoute(req)) as any),
 });

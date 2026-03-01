@@ -164,6 +164,11 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
               title: const Text('World ID'),
               onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.world),
             ),
+            ListTile(
+              leading: const Icon(Icons.email_outlined),
+              title: const Text('Email'),
+              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.email),
+            ),
           ],
         ),
       ),

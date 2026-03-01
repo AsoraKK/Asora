@@ -18,6 +18,8 @@ import './routes/appeals_override.function';
 import './routes/users_search.function';
 import './routes/users_action.function';
 import './routes/news_ingest.function';
+import './routes/ops_metrics.function';
+import './routes/ops_state.function';
 
 // Moderation class weight management endpoints
 import './get-moderation-classes.function';

@@ -52,6 +52,18 @@ async function healthCheck(
     const cosmosHealthy = cosmosInfo.configured;
     const notificationsHealthy = fcmStatus.configured;
 
+    // ── EasyAuth configuration check ──────────────────────────────
+    const easyAuthEnabled = process.env.WEBSITE_AUTH_ENABLED?.toLowerCase() === 'true';
+    const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+    const appEnv = (process.env.APP_ENV ?? '').toLowerCase();
+    const isProductionLike =
+      nodeEnv === 'production' ||
+      nodeEnv === 'staging' ||
+      appEnv === 'production' ||
+      appEnv === 'prod' ||
+      appEnv === 'staging';
+    const easyAuthMisconfigured = isProductionLike && !easyAuthEnabled;
+
     let status: 'healthy' | 'degraded' = 'healthy';
     let httpStatus = 200;
     const degradations: string[] = [];
@@ -67,10 +79,20 @@ async function healthCheck(
       degradations.push('fcm_not_configured');
     }
 
+    if (easyAuthMisconfigured) {
+      status = 'degraded';
+      httpStatus = 503; // Auth infra is critical
+      degradations.push('easyauth_not_enabled');
+    }
+
     const response = {
       status,
       timestamp: new Date().toISOString(),
       degradations,
+      auth: {
+        easyAuthEnabled,
+        easyAuthMisconfigured,
+      },
       config: configSummary,
       notifications: {
         enabled: notificationsInfo.enabled,

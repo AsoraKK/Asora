@@ -14,7 +14,8 @@ export type AdminAuditAction =
   | 'INVITE_BATCH_CREATE'
   | 'INVITE_REVOKE'
   | 'FLAG_RESOLVE'
-  | 'NEWS_INGEST';
+  | 'NEWS_INGEST'
+  | 'OPS_CHECKLIST_MODE_UPDATE';
 
 export type AdminAuditTargetType =
   | 'content'
@@ -22,7 +23,8 @@ export type AdminAuditTargetType =
   | 'user'
   | 'invite'
   | 'flag'
-  | 'moderation_case';
+  | 'moderation_case'
+  | 'config';
 
 export interface AdminAuditInput {
   actorId: string;

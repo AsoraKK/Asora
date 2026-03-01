@@ -158,8 +158,153 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "health_failure" {
 }
 
 # ──────────────────────────────────────────────────────────────
-# Dashboard – combined health view for all targets
+# Alert: Auth 401 spike (per target)
+# Fires when 401 responses exceed threshold in 5 minutes.
+# Detects: brute-force attempts, token expiry storms, config issues
 # ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_401_spike" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-auth-401-spike"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT5M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = max(each.value.severity - 1, 1)
+
+  criteria {
+    query = <<-QUERY
+      requests
+      | where timestamp > ago(5m)
+      | where cloud_RoleName == "${each.key}"
+      | where toint(resultCode) == 401
+      | summarize count_401 = count()
+      | where count_401 > ${var.auth_alert_401_threshold}
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when 401 responses exceed ${var.auth_alert_401_threshold} in 5 min on ${each.key} — possible brute-force or token expiry storm"
+  display_name                     = "${each.key} - Auth 401 Spike"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: Refresh token reuse detection (per target)
+# Fires when ANY token reuse event is detected.
+# Severity: Critical — indicates possible credential theft.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_token_reuse" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-token-reuse"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT5M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = 1
+
+  criteria {
+    query = <<-QUERY
+      traces
+      | where timestamp > ago(5m)
+      | where cloud_RoleName == "${each.key}"
+      | where message has "Refresh token reuse"
+         or customDimensions.eventType == "auth.security.token_reuse"
+      | summarize reuse_count = count()
+      | where reuse_count >= ${var.auth_alert_reuse_threshold}
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "CRITICAL: Refresh token reuse detected on ${each.key} — possible credential theft. Investigate immediately."
+  display_name                     = "${each.key} - Token Reuse (Critical)"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: Auth failure rate > 10% (per target)
+# Fires when >10% of auth-related requests fail over 5 minutes.
+# Detects: misconfigured clients, JWT secret rotation issues.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_failure_rate" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-auth-fail-rate"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT5M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = each.value.severity
+
+  criteria {
+    query = <<-QUERY
+      requests
+      | where timestamp > ago(5m)
+      | where cloud_RoleName == "${each.key}"
+      | where name has "auth" or url has "/api/auth/"
+      | summarize
+          total = count(),
+          failures = countif(toint(resultCode) == 401 or toint(resultCode) == 403)
+      | where total >= 10
+      | extend fail_rate = todouble(failures) / todouble(total) * 100.0
+      | where fail_rate > 10.0
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when >10%% of auth requests fail (401/403) over 5 min on ${each.key}"
+  display_name                     = "${each.key} - High Auth Failure Rate"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
 resource "azurerm_portal_dashboard" "health_dashboard" {
   name                = "dash-lythaus-health"
   resource_group_name = var.resource_group_name
@@ -230,8 +375,11 @@ output "alert_ids" {
   description = "IDs of created alert rules, keyed by target"
   value = {
     for k in keys(local.targets) : k => {
-      error_rate  = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate[k].id
-      health_fail = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure[k].id
+      error_rate     = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate[k].id
+      health_fail    = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure[k].id
+      auth_401_spike = azurerm_monitor_scheduled_query_rules_alert_v2.auth_401_spike[k].id
+      token_reuse    = azurerm_monitor_scheduled_query_rules_alert_v2.auth_token_reuse[k].id
+      auth_fail_rate = azurerm_monitor_scheduled_query_rules_alert_v2.auth_failure_rate[k].id
     }
   }
 }

@@ -15,6 +15,7 @@ import { CosmosClient } from '@azure/cosmos';
 import { ALL_HIVE_CLASSES } from '../../shared/hive-classes-config';
 import { loadModerationWeights } from '../../shared/moderation-weights-loader';
 import { getAzureLogger } from '../../shared/azure-logger';
+import { requireActiveAdmin } from './adminAuthUtils';
 
 const logger = getAzureLogger('getModerationClasses');
 
@@ -49,21 +50,6 @@ async function getModerationClasses(
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
-    // Verify admin access (would be implemented with proper auth middleware)
-    // For now, we'll just check if the header exists as a placeholder
-    const authorization = req.headers.get('Authorization');
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      logger.warn('Unauthorized access to moderation classes endpoint');
-      return {
-        status: 401,
-        jsonBody: {
-          success: false,
-          error: 'Unauthorized',
-          message: 'Valid Bearer token required',
-        },
-      };
-    }
-
     // Load current weights from Cosmos DB (if available)
     let currentWeights: Record<string, number> = {};
     try {
@@ -149,7 +135,7 @@ app.http('getModerationClasses', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'admin/moderation-classes',
-  handler: getModerationClasses,
+  handler: requireActiveAdmin(getModerationClasses as any),
 });
 
 export default getModerationClasses;

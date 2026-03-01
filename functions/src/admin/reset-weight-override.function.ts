@@ -39,19 +39,7 @@ async function resetWeightHandler(
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
-    // Verify admin authorization
-    const authorization = req.headers.get('Authorization');
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      logger.info('Unauthorized POST attempt', { endpoint: 'reset-weight' });
-      return {
-        status: 401,
-        jsonBody: {
-          success: false,
-          error: 'Unauthorized',
-          message: 'Valid Bearer token required',
-        },
-      };
-    }
+    // Admin authorization is enforced by requireActiveAdmin wrapper.
 
     // Extract className from route parameter
     const className = (context.triggerMetadata as any)?.className;

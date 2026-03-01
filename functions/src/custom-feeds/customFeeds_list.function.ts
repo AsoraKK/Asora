@@ -14,6 +14,7 @@ import type { CustomFeedListResponse } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { listCustomFeeds } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+import { requireAuth } from '@auth/requireAuth';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -66,7 +67,7 @@ export const customFeeds_list = httpHandler<void, CustomFeedListResponse>(async 
 // Register HTTP trigger
 app.http('customFeeds_list', {
   methods: ['GET'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
+  authLevel: 'anonymous',
   route: 'custom-feeds',
-  handler: customFeeds_list,
+  handler: requireAuth(customFeeds_list as any),
 });

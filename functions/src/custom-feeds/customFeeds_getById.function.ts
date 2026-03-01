@@ -14,6 +14,7 @@ import type { CustomFeedDefinition } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getCustomFeed } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+import { requireAuth } from '@auth/requireAuth';
 
 export const customFeeds_getById = httpHandler<void, CustomFeedDefinition>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -51,7 +52,7 @@ export const customFeeds_getById = httpHandler<void, CustomFeedDefinition>(async
 // Register HTTP trigger
 app.http('customFeeds_getById', {
   methods: ['GET'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth middleware
+  authLevel: 'anonymous',
   route: 'custom-feeds/{id}',
-  handler: customFeeds_getById,
+  handler: requireAuth(customFeeds_getById as any),
 });

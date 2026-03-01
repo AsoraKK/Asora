@@ -384,12 +384,13 @@ function walkTsFiles(rootDir) {
 
 function loadAllowlist(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
-    return { rateLimitExempt: [], authGuardExempt: [] };
+    return { rateLimitExempt: [], authGuardExempt: [], anonymousReadAllowed: [] };
   }
   const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   return {
     rateLimitExempt: Array.isArray(parsed.rateLimitExempt) ? parsed.rateLimitExempt : [],
     authGuardExempt: Array.isArray(parsed.authGuardExempt) ? parsed.authGuardExempt : [],
+    anonymousReadAllowed: Array.isArray(parsed.anonymousReadAllowed) ? parsed.anonymousReadAllowed : [],
   };
 }
 
@@ -431,6 +432,31 @@ function buildInventory(functionsRoot, allowlist) {
 
       const isRateLimitExempt = allowlist.rateLimitExempt.includes(route.functionName);
       const isAuthGuardExempt = allowlist.authGuardExempt.includes(route.functionName);
+      const anonymousReadList = allowlist.anonymousReadAllowed || [];
+      const isAnonymousReadAllowed = anonymousReadList.includes(route.functionName);
+
+      // Check for "anonymous + TODO auth" anti-pattern in source file
+      const hasAnonymousTodo =
+        route.authLevel === 'anonymous' &&
+        /TODO.*(?:auth|function|requireAuth|requireRoles)/i.test(content);
+
+      // Check for anonymous read endpoints (GET) without auth guard
+      const isRead = !isWrite;
+      const isAnonymousReadUnguarded =
+        isRead &&
+        route.authLevel === 'anonymous' &&
+        !hasAuthGuard &&
+        !isAnonymousReadAllowed &&
+        !isAuthGuardExempt;
+
+      // Check for test/purge endpoints missing production env guard
+      const isTestPurgeEndpoint =
+        /test.data|purge|cleanup/i.test(route.functionName) ||
+        /test.data|purge|cleanup/i.test(route.route);
+      const hasEnvGuard =
+        content.includes("NODE_ENV") &&
+        (content.includes("=== 'production'") || content.includes("!== 'production'"));
+      const missingTestEnvGuard = isTestPurgeEndpoint && !hasEnvGuard;
 
       inventory.push({
         file: path.relative(process.cwd(), file),
@@ -443,6 +469,9 @@ function buildInventory(functionsRoot, allowlist) {
         hasAuthGuard,
         rateLimitExempt: isRateLimitExempt,
         authGuardExempt: isAuthGuardExempt,
+        hasAnonymousTodo,
+        isAnonymousReadUnguarded,
+        missingTestEnvGuard,
       });
     }
   }
@@ -460,8 +489,18 @@ function buildInventory(functionsRoot, allowlist) {
   const missingAuthGuard = inventory.filter(
     (item) => item.isWrite && !item.hasAuthGuard && !item.authGuardExempt
   );
+  const anonymousTodoViolations = inventory.filter((item) => item.hasAnonymousTodo);
+  const anonymousReadViolations = inventory.filter((item) => item.isAnonymousReadUnguarded);
+  const testEnvGuardViolations = inventory.filter((item) => item.missingTestEnvGuard);
 
-  return { inventory, missingRateLimit, missingAuthGuard };
+  return {
+    inventory,
+    missingRateLimit,
+    missingAuthGuard,
+    anonymousTodoViolations,
+    anonymousReadViolations,
+    testEnvGuardViolations,
+  };
 }
 
 function parseArgs(argv) {
@@ -491,7 +530,14 @@ function parseArgs(argv) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const allowlist = loadAllowlist(path.resolve(process.cwd(), args.allowlist));
-  const { inventory, missingRateLimit, missingAuthGuard } = buildInventory(
+  const {
+    inventory,
+    missingRateLimit,
+    missingAuthGuard,
+    anonymousTodoViolations,
+    anonymousReadViolations,
+    testEnvGuardViolations,
+  } = buildInventory(
     path.resolve(process.cwd(), args.functionsRoot),
     allowlist
   );
@@ -513,6 +559,22 @@ function main() {
       methods: item.methods,
       file: item.file,
     })),
+    anonymousTodoViolations: anonymousTodoViolations.map((item) => ({
+      functionName: item.functionName,
+      route: item.route,
+      file: item.file,
+    })),
+    anonymousReadViolations: anonymousReadViolations.map((item) => ({
+      functionName: item.functionName,
+      route: item.route,
+      methods: item.methods,
+      file: item.file,
+    })),
+    testEnvGuardViolations: testEnvGuardViolations.map((item) => ({
+      functionName: item.functionName,
+      route: item.route,
+      file: item.file,
+    })),
     inventory,
   };
 
@@ -528,8 +590,28 @@ function main() {
   for (const item of output.missingAuthGuard) {
     console.log(`  - ${item.functionName} (${item.methods.join('/')}) ${item.route} :: ${item.file}`);
   }
+  console.log(`[route-guards] anonymous+TODO violations: ${output.anonymousTodoViolations.length}`);
+  for (const item of output.anonymousTodoViolations) {
+    console.log(`  - ${item.functionName} ${item.route} :: ${item.file}`);
+  }
+  console.log(`[route-guards] anonymous read without auth: ${output.anonymousReadViolations.length}`);
+  for (const item of output.anonymousReadViolations) {
+    console.log(`  - ${item.functionName} (${item.methods.join('/')}) ${item.route} :: ${item.file}`);
+  }
+  console.log(`[route-guards] test/purge missing env guard: ${output.testEnvGuardViolations.length}`);
+  for (const item of output.testEnvGuardViolations) {
+    console.log(`  - ${item.functionName} ${item.route} :: ${item.file}`);
+  }
 
-  if (output.missingRateLimit.length > 0 || output.missingAuthGuard.length > 0) {
+  const hasFailures =
+    output.missingRateLimit.length > 0 ||
+    output.missingAuthGuard.length > 0 ||
+    output.anonymousTodoViolations.length > 0 ||
+    output.testEnvGuardViolations.length > 0;
+  // Note: anonymousReadViolations are reported as warnings, not failures (yet).
+  // Promote to failure once all read endpoints are classified.
+
+  if (hasFailures) {
     process.exit(1);
   }
 }

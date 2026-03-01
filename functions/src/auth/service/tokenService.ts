@@ -14,6 +14,14 @@ import {
   rotateRefreshToken,
   revokeAllUserTokens,
 } from './refreshTokenStore';
+import {
+  auditTokenExchange,
+  auditTokenExchangeFailure,
+  auditTokenRefresh,
+  auditTokenRefreshFailure,
+  auditTokenReuse,
+} from './authAuditService';
+import { getClientIp } from '@rate-limit/keys';
 
 const logger = getAzureLogger('auth/token');
 
@@ -179,6 +187,7 @@ export async function tokenHandler(
     });
 
     logAuthAttempt(logger, false, 'unknown', errorMessage, context.invocationId);
+    auditTokenExchangeFailure(errorMessage, context.invocationId, getClientIp(req) || undefined).catch(() => {});
 
     return createErrorResponse(
       500,
@@ -297,6 +306,7 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
   await storeRefreshToken(refreshJti, user.id, refreshExpiresAt);
 
   logAuthAttempt(logger, true, user.id, 'Token exchange successful', requestId);
+  auditTokenExchange(user.id, requestId).catch(() => {});
 
   return {
     access_token: accessToken,
@@ -357,6 +367,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
         jti: oldJti.slice(0, 8),
         userId: String(decoded.sub).slice(0, 8),
       });
+      auditTokenReuse(String(decoded.sub), oldJti.slice(0, 8), requestId).catch(() => {});
       throw new Error('Refresh token has been revoked or is invalid');
     }
 
@@ -405,6 +416,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
     await rotateRefreshToken(oldJti, newRefreshJti, user.id, newRefreshExpiresAt);
 
     logAuthAttempt(logger, true, user.id, 'Token refresh with rotation successful', requestId);
+    auditTokenRefresh(user.id, requestId).catch(() => {});
 
     return {
       access_token: accessToken,

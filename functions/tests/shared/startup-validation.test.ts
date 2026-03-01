@@ -1,4 +1,4 @@
-import { validateStartupEnvironment } from '../../src/shared/startup-validation';
+import { validateStartupEnvironment, validateEasyAuthPresence } from '../../src/shared/startup-validation';
 import { trackException } from '../../src/shared/appInsights';
 
 jest.mock('../../src/shared/appInsights', () => ({
@@ -114,6 +114,7 @@ describe('startup-validation', () => {
     process.env.CORS_ALLOWED_ORIGINS = 'test';
     process.env.RATE_LIMITS_ENABLED = 'true';
     process.env.RATE_LIMIT_CONTAINER = 'test';
+    process.env.AUDIT_HMAC_KEY = 'test-hmac-key';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
@@ -160,5 +161,114 @@ describe('startup-validation', () => {
     expect(() => validateStartupEnvironment()).toThrow('[STARTUP] CRITICAL');
 
     jest.restoreAllMocks();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// EasyAuth drift detection
+// ═══════════════════════════════════════════════════════════════════════
+describe('validateEasyAuthPresence', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it('does nothing in non-production environments', () => {
+    process.env.NODE_ENV = 'test';
+    delete process.env.WEBSITE_AUTH_ENABLED;
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(mockTrackException).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('does nothing in development', () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.WEBSITE_AUTH_ENABLED;
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('warns in production when WEBSITE_AUTH_ENABLED is missing', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.WEBSITE_AUTH_ENABLED;
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('WEBSITE_AUTH_ENABLED')
+    );
+    expect(mockTrackException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        severity: 'critical',
+        check: 'easyauth_drift',
+      })
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('warns in staging when WEBSITE_AUTH_ENABLED is missing', () => {
+    process.env.NODE_ENV = 'staging';
+    delete process.env.WEBSITE_AUTH_ENABLED;
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('WEBSITE_AUTH_ENABLED')
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('warns when APP_ENV=production and WEBSITE_AUTH_ENABLED is missing', () => {
+    delete process.env.NODE_ENV;
+    process.env.APP_ENV = 'production';
+    delete process.env.WEBSITE_AUTH_ENABLED;
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('WEBSITE_AUTH_ENABLED')
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('does NOT warn when WEBSITE_AUTH_ENABLED=True in production', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.WEBSITE_AUTH_ENABLED = 'True';
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(mockTrackException).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('accepts lowercase "true" for WEBSITE_AUTH_ENABLED', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.WEBSITE_AUTH_ENABLED = 'true';
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+    validateEasyAuthPresence();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

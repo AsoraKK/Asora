@@ -32,6 +32,15 @@ interface PurgeResponse {
 export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(async (ctx) => {
   ctx.context.log(`[admin_test_data_purge] Purge request [${ctx.correlationId}]`);
 
+  // SECURITY: Block test data purge in production environments
+  const env = process.env.NODE_ENV || 'production';
+  if (env === 'production') {
+    return ctx.forbidden(
+      'Test data purge is not available in production',
+      'PRODUCTION_BLOCKED'
+    );
+  }
+
   try {
     // Extract and verify admin JWT
     const auth = await extractAuthContext(ctx);

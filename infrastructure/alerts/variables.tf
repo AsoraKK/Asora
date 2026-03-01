@@ -40,3 +40,15 @@ variable "webhook_url" {
   type        = string
   default     = ""
 }
+
+variable "auth_alert_401_threshold" {
+  description = "Number of 401 responses in 5 minutes to trigger auth failure spike alert"
+  type        = number
+  default     = 50
+}
+
+variable "auth_alert_reuse_threshold" {
+  description = "Number of token reuse events in 5 minutes to trigger alert"
+  type        = number
+  default     = 1
+}

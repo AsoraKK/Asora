@@ -52,22 +52,9 @@ async function saveWeightOverrideHandler(
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   try {
-    // Verify admin authorization
-    const authorization = req.headers.get('Authorization');
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      logger.info('Unauthorized POST attempt', { endpoint: 'weight-override' });
-      return {
-        status: 401,
-        jsonBody: {
-          success: false,
-          error: 'Unauthorized',
-          message: 'Valid Bearer token required',
-        },
-      };
-    }
-
-    // Extract admin user ID from token (placeholder - would use actual JWT parsing)
-    const adminUserId = 'admin@lythaus.com'; // TODO: Extract from JWT
+    // Admin authorization is enforced by requireActiveAdmin wrapper —
+    // extract the authenticated principal's identity for audit logging.
+    const adminUserId = (req as HttpRequest & { principal: { sub: string } }).principal.sub;
 
     // Parse request body
     let payload: SaveWeightRequest;

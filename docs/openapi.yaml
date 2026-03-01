@@ -2332,6 +2332,118 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /_admin/ops/metrics:
+    get:
+      tags:
+      - admin
+      summary: Get control panel operations metrics.
+      description: Returns incident severity, queue counts, and trend buckets for dashboard sparklines.
+      operationId: admin_ops_metrics_get
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: window
+        in: query
+        description: Trend window for bucket aggregation.
+        required: false
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          default: 24h
+      responses:
+        '200':
+          description: Operations metrics response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOpsMetricsResponse'
+        '400':
+          description: Bad request - invalid window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /_admin/ops/state:
+    get:
+      tags:
+      - admin
+      summary: Get shared operator checklist mode state.
+      description: Returns shared mode toggle used by operator checklist workflows.
+      operationId: admin_ops_state_get
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Ops state response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOpsStateResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - admin
+      summary: Update shared operator checklist mode.
+      description: Updates shared checklist mode toggle. Only admins can write.
+      operationId: admin_ops_state_put
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminOpsStateUpdateRequest'
+      responses:
+        '200':
+          description: Updated ops state response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOpsStateResponse'
+        '400':
+          description: Bad request - invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /_admin/users/search:
     get:
       tags:
@@ -4251,6 +4363,154 @@ components:
           type: integer
         nextCursor:
           type: string
+    AdminOpsQueryError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    AdminOpsTrendPoint:
+      type: object
+      required:
+      - t
+      - count
+      properties:
+        t:
+          type: string
+          format: date-time
+        count:
+          type: integer
+    AdminOpsMetricsResponse:
+      type: object
+      required:
+      - schemaVersion
+      - partial
+      - incident
+      - queues
+      - trends
+      - signals
+      - errors
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+          - 1
+        partial:
+          type: boolean
+        incident:
+          type: object
+          required:
+          - severity
+          - healthStatus
+          - readinessStatus
+          - severityReasons
+          - generatedAt
+          properties:
+            severity:
+              type: string
+              enum:
+              - normal
+              - degraded
+              - incident
+            healthStatus:
+              type: string
+              enum:
+              - healthy
+              - degraded
+              - error
+            readinessStatus:
+              type: string
+              enum:
+              - ready
+              - degraded
+              - not_ready
+            severityReasons:
+              type: array
+              items:
+                type: string
+            generatedAt:
+              type: string
+              format: date-time
+        queues:
+          type: object
+          required:
+          - openFlags
+          - pendingAppeals
+          - audit24h
+          properties:
+            openFlags:
+              type: integer
+            pendingAppeals:
+              type: integer
+            audit24h:
+              type: integer
+        trends:
+          type: object
+          required:
+          - window
+          - bucketSeconds
+          - flags
+          - appeals
+          properties:
+            window:
+              type: string
+              enum:
+              - 24h
+              - 7d
+            bucketSeconds:
+              type: integer
+            flags:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminOpsTrendPoint'
+            appeals:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminOpsTrendPoint'
+        signals:
+          type: object
+          required:
+          - flagsDeltaBuckets
+          - appealsDeltaBuckets
+          properties:
+            flagsDeltaBuckets:
+              type: integer
+            appealsDeltaBuckets:
+              type: integer
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOpsQueryError'
+    AdminOpsStateResponse:
+      type: object
+      required:
+      - schemaVersion
+      - operatorChecklistMode
+      - updatedAt
+      - updatedBy
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+          - 1
+        operatorChecklistMode:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+    AdminOpsStateUpdateRequest:
+      type: object
+      required:
+      - operatorChecklistMode
+      properties:
+        operatorChecklistMode:
+          type: boolean
     AdminUserSummary:
       type: object
       properties:

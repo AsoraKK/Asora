@@ -14,6 +14,7 @@ import { extractAuthContext } from '@shared/http/authContext';
 import { hasModeratorRole } from '@moderation/moderationService';
 import { getReviewQueueHandler } from '@moderation/service/reviewQueueService';
 import type { ModerationCaseListResponse } from '@shared/types/openapi';
+import { requireModerator } from '@auth/requireRoles';
 
 const MAX_LIMIT = 50;
 
@@ -55,7 +56,7 @@ export const moderation_queue_list = httpHandler<void, ModerationCaseListRespons
 // Register HTTP trigger
 app.http('moderation_queue_list', {
   methods: ['GET'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware
+  authLevel: 'anonymous',
   route: 'moderation/queue',
-  handler: moderation_queue_list,
+  handler: requireModerator(moderation_queue_list as any),
 });

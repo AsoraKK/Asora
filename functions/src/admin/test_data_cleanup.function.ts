@@ -167,8 +167,15 @@ export async function purgeTestSession(
 /**
  * Timer-triggered cleanup function
  * Runs every hour to purge expired test data
+ * SECURITY: Disabled in production — only runs in development/staging
  */
 async function timerHandler(timer: Timer, context: InvocationContext): Promise<void> {
+  const env = process.env.NODE_ENV || 'production';
+  if (env === 'production') {
+    context.log('[testDataCleanup] Skipping — test data cleanup is disabled in production');
+    return;
+  }
+
   context.log('[testDataCleanup] Timer triggered', {
     isPastDue: timer.isPastDue,
     scheduledAt: timer.scheduleStatus?.next,

@@ -13,6 +13,7 @@ import { httpHandler } from '@shared/http/handler';
 import type { ModerationCaseResponse } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getModerationCaseById, hasModeratorRole } from '@moderation/moderationService';
+import { requireModerator } from '@auth/requireRoles';
 
 export const moderation_cases_getById = httpHandler<void, ModerationCaseResponse>(async (ctx) => {
   const caseId = ctx.params.id;
@@ -48,7 +49,7 @@ export const moderation_cases_getById = httpHandler<void, ModerationCaseResponse
 // Register HTTP trigger
 app.http('moderation_cases_getById', {
   methods: ['GET'],
-  authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware
+  authLevel: 'anonymous',
   route: 'moderation/cases/{id}',
-  handler: moderation_cases_getById,
+  handler: requireModerator(moderation_cases_getById as any),
 });

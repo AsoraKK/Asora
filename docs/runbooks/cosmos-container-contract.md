@@ -1,16 +1,15 @@
 # Cosmos Container Contract (Code vs Terraform)
 
-Last updated: 2025-05-07
+Last updated: 2026-03-01
 Purpose: single inventory for runtime container names, provisioning sources, partition keys, and required composite indexes.
 
-## Status: RESOLVED
+## Status: ACTIVE GOVERNANCE
 
-All 29 code-referenced Cosmos containers are now provisioned in the live `asora-cosmos-dev` account
-and managed under `database/cosmos_containers.tf`. The container creation was performed on 2025-05-07
-via Azure CLI, and the Terraform file was updated to include all 8 previously-missing resource blocks.
+Container contract enforcement is governed by the repository policy file and CI validator:
 
-Two orphan containers (`notification_history`, `user_device_tokens`) remain in the live account
-but are not referenced by any code. They can be removed once confirmed safe.
+- Policy file: `infra/cosmos-container-policy.json`
+- Validator: `scripts/validate-cosmos-contract.js`
+- CI job: `.github/workflows/ci.yml` (`cosmos_contract_guard`)
 
 ## Runtime name contract (code)
 
@@ -105,8 +104,22 @@ This file provisions additional containers used by runtime code and workers.
    `config`, `custom_feeds`, `moderation_decisions`, `receipt_events`,
    `privacy_audit`, `reputation_audit`.
 
-## Source-of-truth decision: DECIDED
+## Canonical source-of-truth decision
 
-**Option B**: `database/cosmos_containers.tf` is the canonical provisioning source for all 29 containers.
-The env stack modules (`infra/terraform/envs/*`) handle account-level concerns only.
-All container additions/modifications should be made in `database/cosmos_containers.tf`.
+Canonical declaration is **policy-first**:
+
+- `infra/cosmos-container-policy.json` is the canonical governance artifact.
+- CI validates contract compliance against this file.
+- Any change to container topology must update policy + IaC + validator mappings in the same change set.
+
+This keeps runtime governance unambiguous even when multiple IaC tracks exist.
+
+## Governance invariant
+
+For any Cosmos container change (name, partition key, overlap mapping, required runtime list):
+
+1. Update `infra/cosmos-container-policy.json`
+2. Update relevant IaC definitions
+3. Re-run validator:
+   - `node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json`
+4. Keep this runbook aligned with the active policy model

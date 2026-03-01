@@ -224,6 +224,12 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
       return createAnonymousPolicy(path, 30);
     case 'health':
   return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
+    case '_admin/ops/metrics':
+      return createAuthenticatedPolicy('admin/ops/metrics', 120, 60);
+    case '_admin/ops/state':
+      return method === 'PUT'
+        ? createWritePolicy('admin/ops/state')
+        : createAuthenticatedPolicy('admin/ops/state', 120, 60);
     default:
       return createGenericPolicy(path || 'unknown');
   }
