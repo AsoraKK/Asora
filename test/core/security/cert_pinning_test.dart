@@ -1,69 +1,124 @@
-// Tests for certificate pinning functionality
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:asora/core/security/cert_pinning.dart';
 
-void main() {
-  group('Certificate Pinning', () {
-    test('should have correct pinned domains configured', () {
-      expect(kPinnedDomains, isNotEmpty);
+class _FakeAdapter implements HttpClientAdapter {
+  ResponseBody? response;
+  Object? errorToThrow;
+  bool throwWithIncomingOptions = false;
 
-      // Check that our Azure Function domain is pinned
-      expect(
-        kPinnedDomains.keys,
-        contains(
-          'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net',
-        ),
-      );
-
-      // Check that pins are in correct format
-      for (final pins in kPinnedDomains.values) {
-        for (final pin in pins) {
-          expect(pin, startsWith('sha256/'));
-          expect(
-            pin.length,
-            greaterThan(10),
-          ); // Base64 should be longer than 10 chars
-        }
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (errorToThrow != null) {
+      if (errorToThrow is DioException) throw errorToThrow!;
+      if (throwWithIncomingOptions) {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          error: errorToThrow,
+        );
+      } else {
+        // Fallback if options not provided
+        throw DioException(
+          requestOptions: RequestOptions(path: options.path),
+          type: DioExceptionType.connectionError,
+          error: errorToThrow,
+        );
       }
-    });
+    }
+    return response ?? ResponseBody.fromString('ok', 200);
+  }
 
-    test('should create Dio instance with pinning when enabled', () {
-      // Test when pinning is enabled (default)
-      final dio = createPinnedDio();
-      expect(dio, isNotNull);
-      // BaseURL could be null or empty string depending on Dio version
-      expect(dio.options.baseUrl, anyOf(isNull, equals('')));
+  @override
+  void close({bool force = false}) {}
+}
 
-      // Test with base URL
-      final dioWithUrl = createPinnedDio(baseUrl: 'https://example.com');
-      expect(dioWithUrl.options.baseUrl, 'https://example.com');
-    });
-
-    test('should provide certificate pinning info', () {
-      final info = getCertPinningInfo();
-
-      expect(info.enabled, equals(kEnableCertPinning));
-      expect(info.pins, equals(kPinnedDomains));
-      expect(info.buildMode, isIn(['debug', 'release']));
-    });
-
-    test('should serialize pinning info to JSON', () {
-      final info = getCertPinningInfo();
-      final json = info.toJson();
-
-      expect(json, isMap);
-      expect(json['enabled'], isA<bool>());
-      expect(json['pins'], isA<Map>());
-      expect(json['buildMode'], isA<String>());
-      expect(json['pinnedDomains'], isA<List>());
-    });
+void main() {
+  test('createPinnedDio sets adapter and interceptor', () {
+    final dio = createPinnedDio(baseUrl: 'https://example.com');
+    expect(dio.options.baseUrl, 'https://example.com');
+    expect(dio.httpClientAdapter, isA<PinnedCertHttpClientAdapter>());
+    // Interceptor type name should be present
+    expect(
+      dio.interceptors.any(
+        (i) => i.runtimeType.toString().contains('CertPinning'),
+      ),
+      isTrue,
+    );
   });
 
-  group('PinnedCertHttpClientAdapter', () {
-    test('should implement HttpClientAdapter interface', () {
-      // This is more of a compile-time check
-      // The adapter should extend/implement HttpClientAdapter correctly
-      expect(() => createPinnedDio(), returnsNormally);
-    });
+  test('PinnedCertHttpClientAdapter delegates on success', () async {
+    final fake = _FakeAdapter();
+    fake.response = ResponseBody.fromString('ok', 200);
+
+    final pinned = PinnedCertHttpClientAdapter(fake);
+    final opts = RequestOptions(path: '/test', method: 'GET');
+    // Base URL influences host parsing
+    opts.baseUrl = 'https://asora-function-flex.azurewebsites.net';
+
+    final res = await pinned.fetch(opts, null, null);
+    expect(res.statusCode, 200);
+  });
+
+  test('PinnedCertHttpClientAdapter logs and rethrows on error', () async {
+    final fake = _FakeAdapter();
+    final opts = RequestOptions(path: '/x', method: 'GET');
+    opts.baseUrl = 'https://asora-function-flex.azurewebsites.net';
+    fake.errorToThrow = Exception('tls fail');
+
+    final pinned = PinnedCertHttpClientAdapter(fake);
+
+    expect(() => pinned.fetch(opts, null, null), throwsA(isA<DioException>()));
+  });
+
+  test('isPinValidationError detects for pinned host connection errors', () {
+    final ro = RequestOptions(path: '/x', method: 'GET');
+    ro.baseUrl = 'https://asora-function-dev.azurewebsites.net';
+    final err = DioException(
+      requestOptions: ro,
+      type: DioExceptionType.connectionError,
+      error: Exception('conn'),
+    );
+    expect(isPinValidationError(err), isTrue);
+
+    final ro2 = RequestOptions(path: '/x', method: 'GET');
+    ro2.baseUrl = 'https://not-pinned.example';
+    final err2 = DioException(
+      requestOptions: ro2,
+      type: DioExceptionType.connectionError,
+      error: Exception('conn'),
+    );
+    expect(isPinValidationError(err2), isFalse);
+  });
+
+  test('getCertPinningInfo contains pinned domains', () {
+    final info = getCertPinningInfo();
+    expect(info.enabled, kEnableCertPinning);
+    expect(info.pins.keys, contains('asora-function-dev.azurewebsites.net'));
+  });
+
+  test('interceptor maps connectionError for pinned host', () async {
+    final dio = createPinnedDio(
+      baseUrl: 'https://asora-function-dev.azurewebsites.net',
+    );
+    final fake = _FakeAdapter();
+    dio.httpClientAdapter = PinnedCertHttpClientAdapter(fake);
+    // adapter will throw a DioException connectionError using incoming request options
+    fake.throwWithIncomingOptions = true;
+    fake.errorToThrow = Exception('tls');
+    try {
+      await dio.get<Map<String, dynamic>>('/x');
+      fail('should throw');
+    } on DioException catch (e) {
+      expect(isPinValidationError(e), isTrue);
+      expect(e.message, contains('Secure connection could not be established'));
+    }
   });
 }

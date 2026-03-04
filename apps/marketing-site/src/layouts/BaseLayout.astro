@@ -1,0 +1,45 @@
+---
+const { title = 'Lythaus', description = 'Invite-only beta for human-first publishing.' } = Astro.props;
+const pageTitle = title ? `${title} | Lythaus` : 'Lythaus';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{pageTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/global.css" />
+  </head>
+  <body>
+    <div class="orb orb--one" aria-hidden="true"></div>
+    <div class="orb orb--two" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="logo" href="/">Lythaus</a>
+      <nav class="site-nav">
+        <a href="/#waitlist">Waitlist</a>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+      </nav>
+    </header>
+    <main class="page">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="footer-links">
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/invite">Redeem invite</a>
+      </div>
+      <p class="footer-note">
+        Lythaus is an invite-only beta focused on authentic human content.
+      </p>
+    </footer>
+  </body>
+</html>

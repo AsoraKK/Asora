@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA FEED SERVICE
 ///
 /// 🎯 Purpose: Implementation of feed repository interface
@@ -7,9 +9,9 @@
 library;
 
 import 'package:dio/dio.dart';
-import '../domain/feed_repository.dart';
-import '../../moderation/domain/appeal.dart';
-import '../../../core/observability/asora_tracer.dart';
+import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
 
 /// Concrete implementation of [FeedRepository]
 ///
@@ -39,20 +41,21 @@ class FeedService implements FeedRepository {
           if (filters != null) ...filters.toJson(),
         };
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',
           queryParameters: queryParams,
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.data['success'] == true) {
-          return AppealResponse.fromJson(response.data);
-        } else {
-          throw FeedException(
-            response.data['message'] ?? 'Failed to load voting feed',
-            code: 'LOAD_FEED_FAILED',
-          );
+        final data = response.data;
+        if (data != null && data['success'] == true) {
+          return AppealResponse.fromJson(data);
         }
+        final message = data?['message'] as String?;
+        throw FeedException(
+          message ?? 'Failed to load voting feed',
+          code: 'LOAD_FEED_FAILED',
+        );
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -91,23 +94,25 @@ class FeedService implements FeedRepository {
     return AsoraTracer.traceOperation(
       'FeedService.getVotingHistory',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '/api/getMyVotes',
           queryParameters: {'page': page, 'pageSize': pageSize},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        if (response.data['success'] == true &&
-            response.data['votes'] != null) {
-          return (response.data['votes'] as List)
-              .map((data) => UserVote.fromJson(data))
+        final data = response.data;
+        final votes = data?['votes'];
+        if (data != null && data['success'] == true && votes is List) {
+          return votes
+              .whereType<Map<String, dynamic>>()
+              .map((vote) => UserVote.fromJson(Map<String, dynamic>.from(vote)))
               .toList();
-        } else {
-          throw FeedException(
-            response.data['message'] ?? 'Failed to load voting history',
-            code: 'LOAD_HISTORY_FAILED',
-          );
         }
+        final message = data?['message'] as String?;
+        throw FeedException(
+          message ?? 'Failed to load voting history',
+          code: 'LOAD_HISTORY_FAILED',
+        );
       },
       attributes: AsoraTracer.httpRequestAttributes(
         method: 'GET',
@@ -133,20 +138,21 @@ class FeedService implements FeedRepository {
   @override
   Future<FeedMetrics> getFeedMetrics({required String token}) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/getFeedMetrics',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true &&
-          response.data['metrics'] != null) {
-        return FeedMetrics.fromJson(response.data['metrics']);
-      } else {
-        throw FeedException(
-          response.data['message'] ?? 'Failed to load feed metrics',
-          code: 'LOAD_METRICS_FAILED',
-        );
+      final data = response.data;
+      final metrics = data?['metrics'];
+      if (data != null && data['success'] == true && metrics is Map) {
+        return FeedMetrics.fromJson(Map<String, dynamic>.from(metrics));
       }
+      final message = data?['message'] as String?;
+      throw FeedException(
+        message ?? 'Failed to load feed metrics',
+        code: 'LOAD_METRICS_FAILED',
+      );
     } on DioException catch (e) {
       throw FeedException(
         'Network error: ${e.message}',

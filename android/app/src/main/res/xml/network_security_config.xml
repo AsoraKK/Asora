@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">asora-function-dev.azurewebsites.net</domain>
+        <pin-set expiration="2026-12-31">
+            <pin digest="SHA-256">x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=</pin>
+            <pin digest="SHA-256">sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=</pin>
+        </pin-set>
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net</domain>
+        <pin-set expiration="2026-12-31">
+            <pin digest="SHA-256">x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=</pin>
+            <pin digest="SHA-256">sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

@@ -1,0 +1,14 @@
+// ignore_for_file: public_member_api_docs
+
+import 'package:flutter/material.dart';
+
+import 'package:asora/features/feed/presentation/create_post_screen.dart';
+
+class CreateScreen extends StatelessWidget {
+  const CreateScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const CreatePostScreen();
+  }
+}

@@ -1,92 +1,57 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
+// Entrypoint for the Azure Functions v4 runtime (PROGRAMMATIC MODEL).
+//
+// All functions are registered via app.http(), app.timer(), etc.
+// No file-based function.json discovery is used.
+//
+// All functions must be imported synchronously for the programmatic model to work.
+// Async imports can cause functions to not be registered if the host scans before they load.
 
-/**
- * ASORA AZURE FUNCTIONS v4 ENTRY POINT
- * 
- * This file registers all HTTP-triggered functions using the Azure Functions v4 programming model.
- * Each function is registered with app.http() and includes proper typing and error handling.
- */
+// Bootstrap: environment validation and observability
+import './shared/appInsights'; // initialize App Insights early
+import { validateStartupEnvironment } from './shared/startup-validation';
+validateStartupEnvironment();
 
-// =============================================================================
-// HEALTH CHECK ENDPOINT
-// =============================================================================
+// Health endpoint - must load synchronously for reliability
+import './health/health.function';
+import './shared/routes/ready';
 
-app.http('health', {
-    methods: ['GET'],
-    authLevel: 'anonymous',
-    route: 'health',
-    handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-        context.log('Health check endpoint called');
+// Load all feature modules synchronously
+// (wrapped in try/catch to avoid crashing the host if one module fails)
+const trySyncImport = (label: string, loader: () => void) => {
+	try {
+		loader();
+		// eslint-disable-next-line no-console
+		console.log(`[routes] loaded: ${label}`);
+	} catch (err) {
+		// eslint-disable-next-line no-console
+		console.error(`[routes] failed to load ${label}:`, err instanceof Error ? err.message : err);
+	}
+};
 
-        const healthResponse = {
-            ok: true,
-            timestamp: new Date().toISOString(),
-            status: 'healthy',
-            service: 'asora-functions',
-            version: '1.0.0'
-        };
+trySyncImport('analytics', () => require('./analytics'));
+trySyncImport('auth', () => require('./auth'));
+trySyncImport('feed', () => require('./feed'));
+trySyncImport('moderation', () => require('./moderation'));
+trySyncImport('privacy', () => require('./privacy'));
+trySyncImport('social', () => require('./social'));
 
-        return {
-            status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            jsonBody: healthResponse
-        };
-    }
-});
+// OpenAPI v1 handlers (generated from docs/openapi.yaml)
+trySyncImport('users', () => require('./users'));
+trySyncImport('posts', () => require('./posts'));
+trySyncImport('custom-feeds', () => require('./custom-feeds'));
+trySyncImport('appeals', () => require('./appeals'));
 
-// =============================================================================
-// PRIVACY FUNCTIONS (GDPR/POPIA Compliance)
-// =============================================================================
+// Notifications - FCM-enabled push notification handlers
+trySyncImport('notifications/devices', () => require('./notifications/http/devicesApi.function'));
+trySyncImport('notifications/preferences', () => require('./notifications/http/preferencesApi.function'));
+trySyncImport('notifications/api', () => require('./notifications/http/notificationsApi.function'));
+trySyncImport('notifications/processPendingNotifications', () => require('./notifications/timers/processPendingNotifications.function'));
 
-app.http('exportUser', {
-    methods: ['GET'],
-    authLevel: 'function',
-    route: 'privacy/exportUser',
-    handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-        // Import the actual implementation
-        const { exportUser } = await import('../privacy/exportUser.js');
-        return exportUser(request, context);
-    }
-});
+// Media API - upload URL generation for Azure Blob Storage
+trySyncImport('media', () => require('./media'));
 
-app.http('deleteUser', {
-    methods: ['POST'],
-    authLevel: 'function',
-    route: 'privacy/deleteUser',
-    handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-        // Import the actual implementation
-        const { deleteUser } = await import('../privacy/deleteUser.js');
-        return deleteUser(request, context);
-    }
-});
+// Payments API - subscription status and webhook (architecture placeholder)
+trySyncImport('payments', () => require('./payments'));
 
-// =============================================================================
-// FUTURE FUNCTIONS
-// =============================================================================
-
-/*
-TODO: Register additional functions here as they are migrated to v4:
-
-app.http('feedGet', {
-    methods: ['GET'],
-    authLevel: 'function',
-    route: 'feed',
-    handler: feedGetHandler
-});
-
-app.http('userAuth', {
-    methods: ['POST'],
-    authLevel: 'anonymous',
-    route: 'auth',
-    handler: userAuthHandler
-});
-*/
-
-// =============================================================================
-// EXPORT FOR AZURE FUNCTIONS RUNTIME
-// =============================================================================
-
-// The app object is automatically exported by @azure/functions v4
-// No explicit export needed - the runtime discovers registered functions
+// Admin API - configuration and audit endpoints (Cloudflare Access protected)
+trySyncImport('admin', () => require('./admin'));

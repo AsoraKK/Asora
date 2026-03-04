@@ -29,17 +29,29 @@ variable "environment" {
   description = "Environment name (development, staging, production)"
   type        = string
   default     = "development"
-  
+
   validation {
     condition     = contains(["development", "staging", "production"], var.environment)
     error_message = "Environment must be development, staging, or production."
   }
 }
 
+variable "name_prefix" {
+  description = "Name prefix for resources"
+  type        = string
+  default     = ""
+}
+
+# Local values for consistent naming
+locals {
+  env         = lower(var.environment)
+  name_prefix = var.name_prefix != "" ? var.name_prefix : "asora-${local.env}"
+}
+
 variable "location" {
   description = "Azure region"
   type        = string
-  default     = "northeurope"  # North Europe
+  default     = "northeurope" # North Europe
 }
 
 variable "resource_group_name" {
@@ -53,8 +65,8 @@ variable "postgresql_admin" {
 }
 
 variable "postgresql_password" {
-  type      = string
-  sensitive = true
+  type        = string
+  sensitive   = true
   description = "Admin password – define in terraform.tfvars or via TF_VAR_postgresql_password env var."
 }
 
@@ -65,70 +77,23 @@ variable "client_ip" {
   # Set via: export TF_VAR_client_ip="your-client-ip"
 }
 
-# Secrets for Key Vault
-variable "jwt_secret" {
-  type        = string
-  sensitive   = true
-  description = "JWT secret for token signing"
-}
-
-variable "email_hash_salt" {
-  type        = string
-  sensitive   = true
-  description = "Salt for email hashing"
-}
-
-variable "hive_text_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI Text Classification API key"
-}
-
-variable "hive_image_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI Image Classification API key"
-}
-
-variable "hive_deepfake_key" {
-  type        = string
-  sensitive   = true
-  description = "Hive AI AI-Generated & Deepfake Detection API key"
-}
+# Note: Key Vault secrets (jwt_secret, email_hash_salt, hive_*_key) are managed
+# via Azure Portal / CLI until Key Vault Terraform module is implemented.
+# See: AZURE_FUNCTIONS_KEYVAULT_NOTES.md for current secret management approach.
 
 variable "enable_redis_cache" {
   description = "Enable Redis cache for feed caching (use only if FEED_CACHE_BACKEND=redis)"
   type        = bool
   default     = false
-  
+
   validation {
     condition     = can(var.enable_redis_cache)
     error_message = "enable_redis_cache must be a boolean value."
   }
 }
 
-variable "feed_cache_backend" {
-  description = "Feed caching backend to use (edge, redis, or none)"
-  type        = string
-  default     = "edge"
-  
-  validation {
-    condition = contains(["edge", "redis", "none"], var.feed_cache_backend)
-    error_message = "feed_cache_backend must be one of: edge, redis, none."
-  }
-}
-
-variable "edge_telemetry_secret" {
-  description = "Shared secret for edge telemetry authentication"
-  type        = string
-  sensitive   = true
-}
-
-variable "alert_email_address" {
-  description = "Email address for receiving alerts from Application Insights"
-  type        = string
-  default     = null
-}
+# Note: feed_cache_backend, edge_telemetry_secret, and alert_email_address
+# are reserved for future edge caching and alerting implementation.
 
 ############################################
 # RESOURCE GROUP
@@ -144,19 +109,19 @@ resource "azurerm_resource_group" "rg" {
 ############################################
 
 resource "azurerm_postgresql_flexible_server" "pg" {
-  zone                    = "3"
-  name                   = "asora-pg-dev-ne"
-  resource_group_name    = azurerm_resource_group.rg.name
-  location               = azurerm_resource_group.rg.location
+  zone                = "3"
+  name                = "${local.name_prefix}-pg-${replace(var.location, " ", "")}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
 
-  administrator_login     = var.postgresql_admin
-  administrator_password  = var.postgresql_password
+  administrator_login    = var.postgresql_admin
+  administrator_password = var.postgresql_password
 
-  sku_name                = "B_Standard_B1ms"   # 1 vCPU / 2 GiB RAM
-  storage_mb              = 32768               # 32 GiB
-  version                 = 16
+  sku_name   = "B_Standard_B1ms" # 1 vCPU / 2 GiB RAM
+  storage_mb = 32768             # 32 GiB
+  version    = 16
 
-  backup_retention_days   = 7
+  backup_retention_days        = 7
   geo_redundant_backup_enabled = false
 
   authentication {
@@ -165,7 +130,7 @@ resource "azurerm_postgresql_flexible_server" "pg" {
 
   tags = {
     application     = "Asora-Mobile"
-    env             = "Development"
+    env             = title(local.env)
     region          = "NorthEU"
     confidentiality = "PII"
     sla             = "99.9%"
@@ -202,7 +167,7 @@ resource "azurerm_postgresql_flexible_server_database" "appdb" {
 ############################################
 
 resource "azurerm_cosmosdb_account" "cosmos" {
-  name                = "asora-cosmos-dev"
+  name                = "${local.name_prefix}-cosmos"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   offer_type          = "Standard"
@@ -223,7 +188,7 @@ resource "azurerm_cosmosdb_account" "cosmos" {
 
   tags = {
     application     = "Asora-Mobile"
-    env             = "Development"
+    env             = title(local.env)
     region          = "NorthEU"
     confidentiality = "PII"
     sla             = "99.9%"
@@ -250,6 +215,30 @@ resource "azurerm_cosmosdb_sql_container" "posts" {
   partition_key_paths = ["/authorId"]
 }
 
+resource "azurerm_cosmosdb_sql_container" "flags" {
+  name                = "flags"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
+resource "azurerm_cosmosdb_sql_container" "appeals" {
+  name                = "appeals"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
+resource "azurerm_cosmosdb_sql_container" "moderation_decisions" {
+  name                = "moderation_decisions"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.cosmos.name
+  database_name       = azurerm_cosmosdb_sql_database.sqldb.name
+  partition_key_paths = ["/contentId"]
+}
+
 ############################################
 # REDIS CACHE (Optional - only when enable_redis_cache=true)
 ############################################
@@ -257,30 +246,113 @@ resource "azurerm_cosmosdb_sql_container" "posts" {
 # Redis Cache for feed caching fallback (when FEED_CACHE_BACKEND=redis)
 resource "azurerm_redis_cache" "asora_redis" {
   count = var.enable_redis_cache ? 1 : 0
-  
+
   name                = "asora-redis-${var.environment}"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
-  capacity            = 0  # Basic C0 SKU
+  capacity            = 0 # Basic C0 SKU
   family              = "C"
-  sku_name           = "Basic"
-  
+  sku_name            = "Basic"
+
   # Enable TLS for secure connections
   minimum_tls_version = "1.2"
-  
+
   # Disable public network access in production
   public_network_access_enabled = var.environment == "development" ? true : false
-  
+
   # Redis configuration
   redis_configuration {
     # maxmemory_policy = "volatile-lru"  # Would enable this for Standard+ SKUs
   }
-  
+
   tags = {
-    Environment = var.environment
-    Project     = "asora"
-    Purpose     = "feed-caching-fallback"
+    Environment  = var.environment
+    Project      = "asora"
+    Purpose      = "feed-caching-fallback"
     azd-env-name = var.environment
+  }
+}
+
+############################################
+# STORAGE ACCOUNT (for Function App)
+############################################
+
+resource "azurerm_storage_account" "function_storage" {
+  name                     = "${replace(local.name_prefix, "-", "")}funcstorage"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  min_tls_version          = "TLS1_2"
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
+  }
+}
+
+############################################
+# APP SERVICE PLAN (for Function App)
+############################################
+
+resource "azurerm_service_plan" "function_plan" {
+  name                = "${local.name_prefix}-function-plan"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  os_type             = "Linux"
+  sku_name            = "Y1" # Consumption plan
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
+  }
+}
+
+############################################
+# FUNCTION APP
+############################################
+
+resource "azurerm_linux_function_app" "function_app" {
+  name                       = "${local.name_prefix}-function"
+  location                   = azurerm_resource_group.rg.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  service_plan_id            = azurerm_service_plan.function_plan.id
+  storage_account_name       = azurerm_storage_account.function_storage.name
+  storage_account_access_key = azurerm_storage_account.function_storage.primary_access_key
+
+  site_config {
+    application_stack {
+      node_version = "20"
+    }
+  }
+
+  app_settings = {
+    FUNCTIONS_EXTENSION_VERSION  = "~4"
+    FUNCTIONS_WORKER_RUNTIME     = "node"
+    WEBSITE_NODE_DEFAULT_VERSION = "~20"
+  }
+
+  tags = {
+    application     = "Asora-Mobile"
+    env             = title(local.env)
+    region          = "NorthEU"
+    confidentiality = "PII"
+    sla             = "99.9%"
+    department      = "Platform"
+    costcenter      = "CC-12345"
+    project         = "Asora-Launch"
   }
 }
 
@@ -304,6 +376,11 @@ output "redis_cache_name" {
 output "redis_cache_hostname" {
   description = "Hostname of the Redis cache"
   value       = var.enable_redis_cache ? azurerm_redis_cache.asora_redis[0].hostname : ""
+}
+
+output "function_app_name" {
+  description = "Name of the Function App"
+  value       = azurerm_linux_function_app.function_app.name
 }
 
 output "redis_primary_connection_string" {

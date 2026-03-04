@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA DATE FORMATTER UTILITY
 ///
 /// 🎯 Purpose: Format dates for display in UI components
@@ -8,9 +10,9 @@ library;
 
 class DateFormatter {
   /// Format a DateTime as relative time (e.g., "2 hours ago", "Just now")
-  static String formatRelative(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  static String formatRelative(DateTime dateTime, {DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final difference = current.difference(dateTime);
 
     if (difference.inDays > 365) {
       final years = (difference.inDays / 365).floor();

@@ -1,0 +1,26 @@
+{
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/ownerId",
+        "order": "ascending"
+      },
+      {
+        "path": "/updatedAt",
+        "order": "descending"
+      }
+    ]
+  ],
+  "spatialIndexes": []
+}

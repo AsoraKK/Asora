@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA OAUTH2 PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for OAuth2 authentication state management
@@ -11,10 +13,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/user.dart';
-import '../domain/auth_failure.dart';
-import 'oauth2_service.dart';
-import 'auth_service.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/features/auth/application/auth_service.dart';
+import 'package:asora/features/auth/application/invite_redeem_service.dart';
+import 'package:asora/core/network/dio_client.dart';
 
 /// OAuth2Service provider - manages OAuth2 PKCE flow
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
@@ -32,20 +36,37 @@ final enhancedAuthServiceProvider = Provider<AuthService>((ref) {
   );
 });
 
+/// Invite redemption service provider
+final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
+  return InviteRedeemService(ref.watch(secureDioProvider));
+});
+
+/// Token version provider used to invalidate cached JWT reads when the
+/// underlying authentication state changes (sign-in, refresh, logout).
+final tokenVersionProvider = StateProvider<int>((ref) => 0);
+final guestModeProvider = StateProvider<bool>((ref) => false);
+
 /// Current user authentication state provider
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<User?>>((ref) {
       final authService = ref.read(enhancedAuthServiceProvider);
-      return AuthStateNotifier(authService);
+      return AuthStateNotifier(ref, authService);
     });
 
 /// Authentication state notifier
 class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
-  AuthStateNotifier(this._authService) : super(const AsyncValue.loading()) {
+  AuthStateNotifier(this._ref, this._authService)
+    : super(const AsyncValue.loading()) {
     _loadCurrentUser();
   }
 
+  final Ref _ref;
   final AuthService _authService;
+
+  void _bumpTokenVersion() {
+    final notifier = _ref.read(tokenVersionProvider.notifier);
+    notifier.state = notifier.state + 1;
+  }
 
   /// Load current authenticated user on app startup
   Future<void> _loadCurrentUser() async {
@@ -57,13 +78,31 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  /// Sign in with OAuth2 PKCE flow
+  /// Sign in with OAuth2
   Future<void> signInWithOAuth2() async {
-    state = const AsyncValue.loading();
-
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
+      state = const AsyncValue.loading();
       final user = await _authService.signInWithOAuth2();
       state = AsyncValue.data(user);
+      _bumpTokenVersion();
+    } on AuthFailure catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(
+        AuthFailure.serverError('OAuth2 sign-in failed: ${error.toString()}'),
+        stackTrace,
+      );
+    }
+  }
+
+  Future<void> signInWithProvider(OAuth2Provider provider) async {
+    try {
+      _ref.read(guestModeProvider.notifier).state = false;
+      state = const AsyncValue.loading();
+      final user = await _authService.signInWithOAuth2(provider: provider);
+      state = AsyncValue.data(user);
+      _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
@@ -76,11 +115,12 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
 
   /// Sign in with email and password
   Future<void> signInWithEmail(String email, String password) async {
-    state = const AsyncValue.loading();
-
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
+      state = const AsyncValue.loading();
       final user = await _authService.loginWithEmail(email, password);
       state = AsyncValue.data(user);
+      _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
@@ -95,10 +135,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> refreshToken() async {
     try {
       await _authService.refreshOAuth2Token();
-
-      // Reload current user after token refresh
-      final user = await _authService.getCurrentUser();
-      state = AsyncValue.data(user);
+      _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
       // Token refresh failed, user needs to sign in again
       state = AsyncValue.error(error, stackTrace);
@@ -113,12 +150,26 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   /// Sign out current user
   Future<void> signOut() async {
     try {
+      _ref.read(guestModeProvider.notifier).state = false;
       await _authService.logout();
       state = const AsyncValue.data(null);
+      _bumpTokenVersion();
     } catch (error) {
-      // Even if logout fails, clear the state
+      _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.data(null);
+      _bumpTokenVersion();
     }
+  }
+
+  Future<void> continueAsGuest() async {
+    try {
+      await _authService.logout();
+    } catch (_) {
+      // Best effort: guest mode should still be enabled.
+    }
+    _ref.read(guestModeProvider.notifier).state = true;
+    state = const AsyncValue.data(null);
+    _bumpTokenVersion();
   }
 
   /// Validate current token and refresh if needed
@@ -129,10 +180,12 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       if (!isValid) {
         // Token invalid and refresh failed, sign out user
         state = const AsyncValue.data(null);
+        _bumpTokenVersion();
       } else {
         // Token is valid, reload user data
         final user = await _authService.getCurrentUser();
         state = AsyncValue.data(user);
+        _bumpTokenVersion();
       }
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
@@ -165,4 +218,29 @@ final authErrorProvider = Provider<AuthFailure?>((ref) {
     error: (error, _) => error is AuthFailure ? error : null,
     orElse: () => null,
   );
+});
+
+/// Reactive JWT provider that refreshes whenever [tokenVersionProvider] is
+/// incremented. Returns `null` when the user is unauthenticated.
+final jwtProvider = FutureProvider<String?>((ref) async {
+  // Recompute whenever auth state bumps the token version counter.
+  ref.watch(tokenVersionProvider);
+
+  final oauth2 = ref.watch(oauth2ServiceProvider);
+  try {
+    final oauthToken = await oauth2.getAccessToken();
+    if (oauthToken != null && oauthToken.isNotEmpty) {
+      return oauthToken;
+    }
+  } catch (_) {
+    // Ignore and fall back to stored token.
+  }
+
+  final authService = ref.watch(enhancedAuthServiceProvider);
+  final stored = await authService.getJwtToken();
+  if (stored != null && stored.isNotEmpty) {
+    return stored;
+  }
+
+  return null;
 });

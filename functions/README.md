@@ -1,213 +1,212 @@
-# 🚀 Asora Backend Functions
+# Asora Backend Functions
 
-## Overview
-Complete TypeScript-based Azure Functions backend for the Asora platform, featuring AI-powered content moderation, JWT authentication, and tier-based user management.
+TypeScript Azure Functions that power Asora's feed, moderation, privacy, and authentication workflows. The runtime now follows a module-first layout with explicit middleware, making it easy to share logic between HTTP routes, timers, and future background jobs.
 
-## 🏗️ Architecture
+## Project Layout
 
 ```
-Asora Backend Functions
-├── shared/           # Reusable utilities
-│   ├── auth.ts      # JWT validation & user extraction
-│   ├── cosmosClient.ts # Cosmos DB connection helpers
-│   └── validation.ts   # Input validation utilities
-├── auth/            # Authentication endpoints
-│   └── userinfo.ts  # Enhanced user profile data
-├── post/            # Content management
-│   ├── create.ts    # AI-moderated post creation
-│   └── delete.ts    # Authorized post deletion
-├── feed/            # Content discovery
-│   └── get.ts       # Personalized feeds with tier features
-└── moderation/      # Community safety
-    └── flag.ts      # AI-assisted content reporting
+functions/
+├── src/
+│   ├── auth/
+│   │   ├── routes/         # HTTP triggers (token, authorize, userinfo)
+│   │   └── service/        # OAuth2 + session logic
+│   ├── feed/
+│   │   ├── routes/         # GET /feed, POST /post
+│   │   └── service/        # Redis cache + rate limiting
+│   ├── moderation/
+│   │   ├── routes/         # Flag content, submit appeals, vote on appeals
+│   │   └── service/        # Cosmos + Hive orchestration
+│   ├── privacy/
+│   │   ├── routes/         # GDPR export/deletion workflows
+│   │   └── service/        # Multi-container data scrubbing
+│   └── shared/
+│       ├── middleware/     # JWT verification helpers + requireAuth guard
+│       ├── utils/          # HTTP helpers, validation, error types
+│       └── clients/        # Cosmos, Redis, Hive, Postgres connectors
+└── tests/                  # Module-aligned Jest suites
 ```
 
-## 🔧 Quick Start
+All application code lives under `src/`. Path aliases (`@shared/*`, `@feed/*`, `@moderation/*`, …) are configured in `tsconfig.json`, Jest, and ESLint for clean imports.
 
-> NOTE: Azure Functions Core Tools are not installed via local devDependencies to avoid CI failures (exit code 127). Install them globally if you need the `func` CLI locally:
-> ```bash
-> npm i -g azure-functions-core-tools@4 --unsafe-perm true
-> ```
+## Quick Start
 
-### 1. Install Dependencies
+> Install Azure Functions Core Tools v4 globally if you plan to run the local runtime: `npm i -g azure-functions-core-tools@4 --unsafe-perm`.
+
 ```bash
 cd functions
 npm install
-```
 
-### 2. Configure Environment
-Create `local.settings.json`:
-```json
-{
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "",
-    "FUNCTIONS_WORKER_RUNTIME": "node",
-    "JWT_SECRET": "your_jwt_secret",
-    "COSMOS_ENDPOINT": "https://your-cosmos.documents.azure.com:443/",
-    "COSMOS_KEY": "your_cosmos_key",
-    "HIVE_API_KEY": "your_hive_ai_key"
-  }
-}
-```
-
-### 3. Build & Start
-```bash
+# Type-check + emit to dist/
 npm run build
+
+# Run Jest tests (serialised for Cosmos/Redis mocks)
+npm test
+
+# Launch local Functions host at http://localhost:7071/api
 npm start
+
+# Lint TypeScript sources
+npm run lint
 ```
 
-## 🤖 GitHub Copilot Integration
+Create `local.settings.json` with at least `JWT_SECRET`, `COSMOS_CONNECTION_STRING`, and any Hive/Redis keys you depend on. Everything in `src/shared/clients` reads from `process.env`.
 
-Each function is documented with comprehensive prompts for GitHub Copilot:
+## Middleware & Responses
 
-### Example: Post Creation
-Open `/post/create.ts` and start typing after the docstring. Copilot will auto-generate:
-- JWT token validation
-- Input sanitization  
-- Hive AI moderation call
-- Cosmos DB insertion
-- Error handling
-- Response formatting
+- `parseAuth(req)` asynchronously inspects the `Authorization` header and returns a `Principal` when the bearer token is valid. Missing or invalid headers yield `null` so public endpoints can stay cache friendly.
+- `requireAuth(handler)` wraps Azure Functions HTTP handlers. It verifies the B2C access token, attaches `principal` to `context.bindingData` and the request object, and returns a 401 with a `WWW-Authenticate` header when validation fails.
+- `authRequired(principal)` remains available for legacy code paths that already pulled a principal via `parseAuth`.
+- `@shared/utils/http` exposes typed helpers (`ok`, `created`, `badRequest`, `serverError`, …) so routes always return a serialised JSON body with consistent headers.
 
-### Copilot-Ready Features
-- ✅ **Detailed function specifications**
-- ✅ **Request/response schemas**
-- ✅ **Integration requirements**
-- ✅ **Error handling patterns**
-- ✅ **Security considerations**
+## Token Lifecycle & Refresh Rotation
 
-## 🔐 Security Features
+The auth module issues two types of tokens:
 
-### JWT Authentication
-- Token validation with configurable expiration
-- User role extraction (user/moderator/admin)
-- Tier-based access control (free/premium/enterprise)
+| Token Type     | Lifetime | Storage                     | Notes                                       |
+| -------------- | -------- | --------------------------- | ------------------------------------------- |
+| Access token   | 15 min   | Client only                 | Short-lived, stateless JWT                  |
+| Refresh token  | 7 days   | Postgres `refresh_tokens`   | Long-lived, tracked by `jti` for rotation   |
 
-### Input Validation
-- Schema-based request validation
-- SQL injection prevention
-- XSS protection
-- Rate limiting by user tier
+**Refresh Token Rotation** (implemented in `src/auth/service/tokenService.ts`):
 
-### Content Moderation
-- Hive AI integration for real-time analysis
-- Automated action triggers
-- Human moderator workflow
-- Appeal process support
+1. **Initial Issue**: When a user completes OAuth2 authorization code exchange, both tokens are issued. The refresh token's `jti` is stored in Postgres.
 
-## 🎯 Tier-Based Features
+2. **On Refresh**: When the client exchanges a refresh token for a new access token:
+   - The `jti` is validated against the Postgres store
+   - The old refresh token is revoked (deleted from store)
+   - A new refresh token with a new `jti` is issued and stored
+   - Both new access and refresh tokens are returned
 
-| Feature | Free | Premium | Enterprise |
-|---------|------|---------|------------|
-| API Rate Limit | 100/hour | 1000/hour | Unlimited |
-| Post Character Limit | 280 | 2000 | 5000 |
-| Media Attachments | 1 | 5 | Unlimited |
-| AI Priority | Standard | High | Instant |
-| Custom Feeds | Basic | Advanced | Full Control |
+3. **Reuse Detection**: If a client attempts to reuse an already-rotated refresh token:
+   - The `jti` won't exist in the store (already deleted)
+   - The request fails with a 500 error
+   - This indicates potential token theft—consider revoking all user tokens
 
-## 🗄️ Database Schema
+**Related Services**:
+- `src/auth/service/refreshTokenStore.ts` - Postgres-backed `jti` tracking
+- `revokeAllUserTokens(userId)` - Logout-all functionality
+- `cleanupExpiredTokens()` - Periodic cleanup (call from timer trigger)
 
-### Collections
-- **users**: User profiles, authentication data
-- **posts**: Content with AI moderation scores
-- **comments**: Threaded discussions
-- **likes**: User interactions (+1/-1 voting)
-- **feeds**: Personalized content algorithms
-- **flags**: Content moderation reports
-- **reputation**: User scoring and achievements
+## HTTP Surface
 
-## 📡 API Endpoints
+| Route                               | Method | Module       | Notes                                  |
+| ----------------------------------- | ------ | ------------ | --------------------------------------- |
+| `/auth/token`                       | POST   | auth         | OAuth2 token exchange with PKCE         |
+| `/auth/authorize`                   | GET    | auth         | Authorization code issuance             |
+| `/auth/userinfo`                    | GET    | auth         | OIDC-compliant profile payload          |
+| `/auth/redeem-invite`               | POST   | auth         | Redeem invite code to activate account  |
+| `/admin/invites`                    | POST   | auth/admin   | Create invite code (admin only)         |
+| `/admin/invites`                    | GET    | auth/admin   | List invite codes (admin only)          |
+| `/admin/invites/{code}`             | GET    | auth/admin   | Get single invite (admin only)          |
+| `/admin/invites/{code}`             | DELETE | auth/admin   | Delete invite code (admin only)         |
+| `/feed`                             | GET    | feed         | Guest-friendly feed with Redis support  |
+| `/post`                             | POST   | feed         | Authenticated post creation w/ limits   |
+| `/moderation/flag`                  | POST   | moderation   | Authenticated content flagging          |
+| `/moderation/appeals`               | POST   | moderation   | Submit an appeal for review             |
+| `/moderation/appeals/{id}/vote`     | POST   | moderation   | Vote on appeals (role aware)            |
+| `/user/export`                      | GET    | privacy      | GDPR data export (24h rate limit)       |
+| `/user/delete`                      | DELETE | privacy      | Irreversible account deletion workflow  |
 
-### Authentication
-- `GET /auth/userinfo` - Get comprehensive user profile
+Each entry maps to a `src/<module>/routes/*.ts` file that delegates to `service/` for Cosmos/Hive/Redis orchestration.
 
-### Content Management  
-- `POST /post/create` - Create AI-moderated posts
-- `DELETE /post/delete` - Delete posts with authorization
+## Invite System (Alpha Gating)
 
-### Content Discovery
-- `GET /feed/get` - Personalized content feeds
+The invite system gates new user access during alpha. Users register but remain inactive until they redeem a valid invite code.
 
-### Community Safety
-- `POST /moderation/flag` - Report inappropriate content
+### How It Works
 
-## 🧪 Testing
+1. **Admin creates invite**: `POST /admin/invites` with optional `email` (restricts to specific email) and `expiresInDays` (default 30, max 365).
 
-### Local Testing
+2. **User redeems invite**: After OAuth registration, user calls `POST /auth/redeem-invite` with their invite code.
+
+3. **Account activation**: On successful redemption:
+   - Invite is marked as used with `usedAt` and `usedByUserId`
+   - User's `isActive` flag is set to `true`
+   - Fresh access and refresh tokens are issued
+
+### Invite Code Format
+
+Codes follow the pattern `XXXX-XXXX` (e.g., `A3K9-B7M2`) using alphanumeric characters excluding confusables (0/O, 1/I).
+
+### Admin Endpoints
+
 ```bash
-# Test with curl
-curl -H "Authorization: Bearer <JWT>" \
-  http://localhost:7072/api/auth/userinfo
+# Create unrestricted invite (anyone can use)
+curl -X POST /admin/invites \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"expiresInDays": 14}'
 
-# Create test post
-curl -X POST -H "Authorization: Bearer <JWT>" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Test post content"}' \
-  http://localhost:7072/api/post/create
+# Create email-restricted invite
+curl -X POST /admin/invites \
+  -H "Authorization: Bearer <admin-token>" \
+  -d '{"email": "newuser@example.com", "expiresInDays": 7}'
+
+# List all invites
+curl /admin/invites \
+  -H "Authorization: Bearer <admin-token>"
+
+# List unused invites only
+curl "/admin/invites?unused=true" \
+  -H "Authorization: Bearer <admin-token>"
+
+# Delete an invite
+curl -X DELETE /admin/invites/A3K9-B7M2 \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
-### Flutter Integration
-```dart
-// AuthService already configured for 10.0.2.2:7072
-final userInfo = await authService.getCurrentUser();
-```
+### User Redemption
 
-## 🔄 Development Workflow
-
-1. **Modify Function**: Edit TypeScript files with Copilot assistance
-2. **Build**: `npm run build` (or use watch mode)
-3. **Test Locally**: Functions run on `localhost:7072`
-4. **Deploy**: Use Azure Functions deployment tools
-
-## 📦 Dependencies
-
-### Core
-- `@azure/functions` - Azure Functions runtime
-- `@azure/cosmos` - Cosmos DB SDK v4
-- `jsonwebtoken` - JWT token handling
-- `axios` - HTTP requests to external APIs
-
-### Development
-- `typescript` - TypeScript compiler
-- `@types/*` - Type definitions
-- `jest` - Testing framework
-
-## 🚀 Deployment
-
-### Azure Functions Deployment
 ```bash
-# Deploy to Azure
-func azure functionapp publish <function-app-name>
-
-# Set environment variables in Azure
-az functionapp config appsettings set \
-  --name <function-app-name> \
-  --resource-group <resource-group> \
-  --settings JWT_SECRET=<value> COSMOS_ENDPOINT=<value>
+# Redeem invite (user must be authenticated but inactive)
+curl -X POST /auth/redeem-invite \
+  -H "Authorization: Bearer <user-token>" \
+  -d '{"inviteCode": "A3K9-B7M2"}'
 ```
 
-### CI/CD Considerations
-- The `azure-functions-core-tools` package was removed from `devDependencies` to prevent `npm ci` failures in Linux runners.
-- Deployment workflows install the core tools globally just-in-time.
-- Local developers should install core tools globally (see Quick Start note) rather than adding it back to `package.json`.
+### Error Codes
 
-## 📈 Monitoring & Analytics
+| Code | Meaning |
+|------|---------|
+| `not_found` | Invite code doesn't exist |
+| `expired` | Invite has passed expiration date |
+| `already_used` | Invite was redeemed by another user |
+| `email_mismatch` | Email-restricted invite used by wrong email |
+| `already_active` | User account is already activated |
 
-- **Application Insights**: Function performance monitoring
-- **Cosmos DB Metrics**: Database performance tracking  
-- **Custom Telemetry**: User engagement analytics
-- **Error Tracking**: Comprehensive error logging
+### Storage
 
-## 🔜 Future Enhancements
+Invites are stored in Cosmos DB `invites` container, partitioned by `inviteCode`.
 
-- [ ] GraphQL endpoint for complex queries
-- [ ] Real-time notifications via SignalR
-- [ ] Advanced AI features (sentiment analysis, topic detection)
-- [ ] Multi-language content support
-- [ ] Blockchain integration for content verification
-- [ ] Advanced analytics and reporting dashboard
+## Testing
 
----
+- Jest roots: `src/` and `tests/` (configured via `jest.config.ts`).
+- Module-specific suites live in `functions/tests/<module>/`.
+- Example commands:
 
-**Ready for GitHub Copilot to accelerate your Asora backend development!** 🚀
+```bash
+# Run all suites
+npm test
+
+# Target a single file
+npx jest tests/feed/createPost.route.test.ts
+```
+
+Minimum coverage expectations include:
+
+- Middleware behaviour (`parseAuth`, `requireAuth`).
+- Feed service Redis integration and rate limiting.
+- Route-level guards returning 401/403 when principals are missing.
+
+## Maintenance Notes
+
+- When introducing new modules, update `tsconfig.json`, Jest `moduleNameMapper`, and ESLint `settings.import/resolver` so alias imports continue to work.
+- Keep heavy business logic in `service/` files; routes should stay focused on HTTP parsing and response shaping. This keeps services reusable from timers or future queue triggers.
+- Shared infrastructure (Cosmos clients, Redis connectors, schema validation helpers) belongs under `src/shared/` to avoid duplication.
+
+## Azure AD B2C configuration
+
+1. Open the discovery document for your user flow or custom policy at:
+   `https://{tenant}.b2clogin.com/{tenant}.onmicrosoft.com/{policy}/v2.0/.well-known/openid-configuration`.
+2. Copy the exact `issuer` field into `B2C_EXPECTED_ISSUER`.
+3. Use the Application (client) ID or App ID URI of this API registration for `B2C_EXPECTED_AUDIENCE`.
+4. Set `B2C_TENANT`, `B2C_POLICY`, `B2C_ALLOWED_ALGS`, `AUTH_CACHE_TTL_SECONDS`, `AUTH_MAX_SKEW_SECONDS`, and `B2C_STRICT_ISSUER_MATCH` in your environment configuration. The cache TTL controls discovery/JWKS refreshes; max skew tolerates small clock drift during expiry validation.

@@ -2,31 +2,50 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"],
-    "outDir": "./dist",
-    "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@auth/*": ["src/auth/*"],
+      "@users/*": ["src/users/*"],
+      "@posts/*": ["src/posts/*"],
+      "@feed/*": ["src/feed/*"],
+      "@moderation/*": ["src/moderation/*"],
+      "@privacy/*": ["src/privacy/*"],
+      "@rate-limit/*": ["src/rate-limit/*"],
+      "@http/*": ["src/http/*"],
+      "@admin/*": ["src/admin/*"],
+      "@media/*": ["src/media/*"],
+      "@payments/*": ["src/payments/*"]
+    },
+    "lib": ["ES2020"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "plugins": [
-      {
-        "name": "@azure/functions"
-      }
-    ]
+    "skipLibCheck": true,
+    "types": ["@azure/functions", "node", "jest"]
   },
-  "include": [
-    "**/*.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "exclude": [
-    "node_modules",
     "dist",
-    "**/*.test.ts"
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "tests",
+    "src/test-setup.ts",
+    "node_modules",
+    "probe",
+    "deploy",
+    "coverage",
+    "**/probe/**",
+    "**/deploy/**",
+    "**/coverage/**"
   ]
 }

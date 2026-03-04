@@ -1,0 +1,26 @@
+{
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/appealId",
+        "order": "ascending"
+      },
+      {
+        "path": "/createdAt",
+        "order": "ascending"
+      }
+    ]
+  ],
+  "spatialIndexes": []
+}

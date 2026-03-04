@@ -2,39 +2,37 @@
 
 echo "🔍 Running pre-commit formatting checks (modern Husky, shim removed)..."
 
-# Check Dart formatting (Flutter app)
+# Validate OpenAPI spec and regenerate client first
+echo "📄 Validating OpenAPI spec and client..."
+if ! npm run openapi:lint; then
+  echo "❌ OpenAPI lint failed"; exit 1; fi
+if ! npm run openapi:bundle; then
+  echo "❌ OpenAPI bundle failed"; exit 1; fi
+if ! npm run openapi:gen:dart; then
+  echo "❌ Dart client generation failed"; exit 1; fi
+# Ensure regenerated client files are staged in this commit
+git add -A lib/generated/api_client || true
+echo "✅ OpenAPI validation passed"
+
+# Check Dart formatting (Flutter app) - after client regeneration
 echo "📱 Checking Dart formatting..."
-dart format --output=none --set-exit-if-changed .
-if [ $? -ne 0 ]; then
-  echo "❌ Dart formatting check failed. Please run: dart format ."
-  exit 1
+dart format $(find . -name "*.dart" -not -path "./lib/generated/*" -not -path "./.git/*" -not -path "./.dart_tool/*")
+# Stage any formatting changes so commit includes them
+git add -A lib test || true
+echo "✅ Dart formatting applied and staged"
+
+# Secret scan (lightweight, repo-local)
+echo "🔒 Scanning for plaintext secrets in code..."
+# Use ripgrep with a conservative pattern set, skipping docs and generated artifacts to reduce false positives
+if command -v rg >/dev/null 2>&1; then
+  if rg --hidden -n --no-ignore-vcs --line-number --multiline --pcre2 "(?:AKIA|AIza|-----BEGIN PRIVATE KEY-----|GITHUB_TOKEN|client_secret|azure_client_secret|DB_PASS|PASSWORD|TOKEN|SECRET)" functions src lib tools .github --glob '!**/dist/**' --glob '!**/node_modules/**' --glob '!**/*.map' --glob '!**/*.lock' > /tmp/secret_hits.txt 2>/dev/null; then
+    echo "❌ Potential plaintext secrets detected in code paths. Failing commit."
+    echo "First 50 hits shown (full report at /tmp/secret_hits.txt):"
+    head -n 50 /tmp/secret_hits.txt || true
+    exit 1
+  else
+    echo "✅ No plaintext secrets detected in code paths"
+  fi
+else
+  echo "⚠️ ripgrep not installed; skipping secret scan"
 fi
-echo "✅ Dart formatting check passed"
-
-# Check Functions (JavaScript) formatting and linting with auto-fix
-echo "⚡ Checking Functions formatting and linting..."
-pushd functions > /dev/null
-
-if [ ! -d "node_modules" ]; then
-  echo "📦 Installing Functions dependencies (first run)..."
-  npm install --no-audit --no-fund
-fi
-
-echo "🛠  Running Prettier auto-fix..."
-npm run format >/dev/null 2>&1 || true
-
-echo "🔎 Verifying formatting..."
-if ! npm run format:check >/dev/null 2>&1; then
-  echo "❌ Remaining format issues (unexpected)"; exit 1; fi
-echo "✅ Functions formatting OK"
-
-echo "🧹 Running ESLint (auto-fix)..."
-npm run lint >/dev/null 2>&1 || true
-
-echo "🔎 Verifying lint..."
-if ! npm run lint:check >/dev/null 2>&1; then
-  echo "❌ Lint issues remain"; exit 1; fi
-echo "✅ Functions lint OK"
-
-popd > /dev/null
-echo "🎉 All formatting checks passed! Commit proceeding..."

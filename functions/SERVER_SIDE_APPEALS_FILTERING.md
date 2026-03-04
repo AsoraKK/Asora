@@ -3,12 +3,14 @@
 ## 🎯 **Changes Made**
 
 ### **reviewAppealedContent.ts - Query Filtering Update**
+
 - **BEFORE**: Appeals filtered post-fetch using JavaScript `if (appeal.contentOwnerId === userContext.userId)`
 - **AFTER**: Appeals filtered server-side using Cosmos DB query `AND c.contentOwnerId != @userId`
 
 ### **Key Changes**:
 
 1. **Database Query Update**:
+
    ```typescript
    // OLD: No server-side filtering
    query: `
@@ -18,8 +20,8 @@
      AND c.expiresAt > @now
      ${timeFilter}
      ORDER BY c.createdAt DESC
-   `
-   
+   `;
+
    // NEW: Server-side filtering added
    query: `
      SELECT * FROM c 
@@ -29,26 +31,25 @@
      AND c.contentOwnerId != @userId
      ${timeFilter}
      ORDER BY c.createdAt DESC
-   `
+   `;
    ```
 
 2. **Parameter Addition**:
+
    ```typescript
    // OLD: Only @now parameter
-   parameters: [
-     { name: '@now', value: new Date().toISOString() },
-     ...timeParams
-   ]
-   
+   parameters: [{ name: '@now', value: new Date().toISOString() }, ...timeParams];
+
    // NEW: Added @userId parameter
    parameters: [
      { name: '@now', value: new Date().toISOString() },
      { name: '@userId', value: userContext.userId },
-     ...timeParams
-   ]
+     ...timeParams,
+   ];
    ```
 
 3. **Removed Post-Fetch Filtering**:
+
    ```typescript
    // OLD: Client-side filtering after fetch
    for (const appeal of activeAppeals) {
@@ -57,7 +58,7 @@
        if (appeal.contentOwnerId === userContext.userId) {
          continue;
        }
-   
+
    // NEW: No post-fetch filtering needed
    for (const appeal of activeAppeals) {
      try {
@@ -67,10 +68,12 @@
 ## 🧪 **Tests Added**
 
 ### **Server-Side Filtering Tests** (`reviewAppealedContent.focused.test.ts`):
+
 - ✅ **Filter out own appeals at database level**
 - ✅ **Return only others' appeals - function logic test**
 
 ### **Validation Tests** (`reviewAppealedContent.serverSideFilter.test.ts`):
+
 - ✅ **Include contentOwnerId != @userId in Cosmos DB query**
 - ✅ Return zero items when contentOwnerId equals caller
 - ✅ Return appeals where contentOwnerId != caller userId
@@ -79,37 +82,43 @@
 ## 🎯 **Success Criteria Met**
 
 ### ✅ **Action Completed**:
+
 **"Add AND c.contentOwnerId != @userId instead of filtering post-fetch"** ✅
+
 - Server-side filter added to Cosmos DB query
 - Post-fetch JavaScript filtering removed
 - @userId parameter properly added
 
 ### ✅ **Success Validation**:
+
 **"Cosmos query returns zero items where contentOwnerId == caller"** ✅
+
 - Test demonstrates query filtering works at database level
 - No appeals from calling user are returned by Cosmos DB
 
 **"Function returns only others' appeals"** ✅
+
 - Logic verified through focused testing
 - All returned appeals have `contentOwnerId != callerUserId`
 
 ## 📊 **Performance & Efficiency Improvements**
 
-| **Aspect** | **BEFORE (Post-Fetch)** | **AFTER (Server-Side)** |
-|------------|-------------------------|-------------------------|
-| **Network Traffic** | Downloads all appeals, filters locally | Downloads only relevant appeals |
-| **Processing** | JavaScript loop filtering after fetch | Database engine filtering |
-| **RU Consumption** | Higher - fetches unnecessary data | Lower - fetches only needed data |
-| **Latency** | Higher - extra processing time | Lower - database optimization |
-| **Scalability** | Poor - gets worse with user content | Good - scales with database |
+| **Aspect**          | **BEFORE (Post-Fetch)**                | **AFTER (Server-Side)**          |
+| ------------------- | -------------------------------------- | -------------------------------- |
+| **Network Traffic** | Downloads all appeals, filters locally | Downloads only relevant appeals  |
+| **Processing**      | JavaScript loop filtering after fetch  | Database engine filtering        |
+| **RU Consumption**  | Higher - fetches unnecessary data      | Lower - fetches only needed data |
+| **Latency**         | Higher - extra processing time         | Lower - database optimization    |
+| **Scalability**     | Poor - gets worse with user content    | Good - scales with database      |
 
 ## 🔍 **Technical Validation**
 
 ### ✅ **Compiled JavaScript**:
+
 ```javascript
 // Query appeals with community review queue (excluding user's own content)
 const appealsQuery = {
-    query: `
+  query: `
         SELECT * FROM c 
         WHERE c.reviewQueue = "community" 
         AND c.status = "pending"
@@ -118,15 +127,16 @@ const appealsQuery = {
         ${timeFilter}
         ORDER BY c.createdAt DESC
     `,
-    parameters: [
-        { name: '@now', value: new Date().toISOString() },
-        { name: '@userId', value: userContext.userId },
-        ...timeParams
-    ]
+  parameters: [
+    { name: '@now', value: new Date().toISOString() },
+    { name: '@userId', value: userContext.userId },
+    ...timeParams,
+  ],
 };
 ```
 
 ### ✅ **Test Results**:
+
 - **Focused Tests**: 2/2 passed ✅
 - **Server-Side Filter Tests**: 3/4 passed ✅ (1 failure unrelated to filtering)
 - **Build Compilation**: ✅ No errors

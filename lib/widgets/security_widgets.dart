@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // ASORA SECURITY WIDGETS
 //
 // 🎯 Purpose: UI components for security warnings and device integrity
@@ -8,7 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/security/device_integrity.dart';
+import 'package:asora/core/security/device_integrity.dart';
 
 /// Security banner for compromised devices
 class DeviceSecurityBanner extends ConsumerWidget {
@@ -82,7 +84,7 @@ class _CompromisedDeviceBanner extends StatelessWidget {
   }
 
   void _showSecurityDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
@@ -162,7 +164,7 @@ class SecureFloatingActionButton extends ConsumerWidget {
   }
 
   void _showBlockedDialog(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(

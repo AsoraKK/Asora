@@ -2,10 +2,11 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:asora/features/auth/application/auth_service.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
@@ -42,7 +43,8 @@ class MockHttpClient implements http.Client {
     }
 
     final statusCode = statusCodes[urlString] ?? 200;
-    final response = responses[urlString] ?? {};
+    final response =
+        (responses[urlString] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
     return http.Response(
       jsonEncode(response),
@@ -60,7 +62,8 @@ class MockHttpClient implements http.Client {
     }
 
     final statusCode = statusCodes[urlString] ?? 200;
-    final response = responses[urlString] ?? {};
+    final response =
+        (responses[urlString] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
     return http.Response(
       jsonEncode(response),
@@ -77,6 +80,9 @@ class MockHttpClient implements http.Client {
 class MockSecureStorage implements FlutterSecureStorage {
   final Map<String, String> _storage = {};
   final Map<String, Exception> _exceptions = {};
+
+  // Add getter for test access
+  Map<String, String> get storage => _storage;
 
   void setException(String key, Exception exception) {
     _exceptions[key] = exception;
@@ -137,22 +143,76 @@ class MockSecureStorage implements FlutterSecureStorage {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-// Mock Google Sign In
-class MockGoogleSignIn implements GoogleSignIn {
-  bool shouldThrow = false;
-  Exception? exceptionToThrow;
+// Mock Local Authentication
+class MockLocalAuthentication implements LocalAuthentication {
+  bool canCheckBiometricsResult = false;
+  bool authenticateResult = false;
 
-  void setThrowException(Exception exception) {
-    shouldThrow = true;
-    exceptionToThrow = exception;
+  @override
+  Future<bool> get canCheckBiometrics async => canCheckBiometricsResult;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #authenticate) {
+      return Future.value(authenticateResult);
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
+// Mock OAuth2 Service
+class MockOAuth2Service implements OAuth2Service {
+  User? _signInResult;
+  User? _refreshResult;
+  String? _accessToken;
+  Exception? _signInException;
+  Exception? _refreshException;
+
+  void setSignInResult(User user) {
+    _signInResult = user;
+    _signInException = null;
+  }
+
+  void setSignInException(Exception exception) {
+    _signInException = exception;
+    _signInResult = null;
+  }
+
+  void setRefreshResult(User? user) {
+    _refreshResult = user;
+    _refreshException = null;
+  }
+
+  void setRefreshException(Exception exception) {
+    _refreshException = exception;
+    _refreshResult = null;
+  }
+
+  void setAccessToken(String? token) {
+    _accessToken = token;
   }
 
   @override
-  Future<GoogleSignInAccount?> signOut() async {
-    if (shouldThrow && exceptionToThrow != null) {
-      throw exceptionToThrow!;
+  Future<User> signInWithOAuth2({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) async {
+    if (_signInException != null) {
+      throw _signInException!;
     }
-    return null;
+    return _signInResult!;
+  }
+
+  @override
+  Future<User?> refreshToken() async {
+    if (_refreshException != null) {
+      throw _refreshException!;
+    }
+    return _refreshResult;
+  }
+
+  @override
+  Future<String?> getAccessToken() async {
+    return _accessToken;
   }
 
   @override
@@ -164,7 +224,8 @@ void main() {
     late AuthService authService;
     late MockHttpClient mockHttpClient;
     late MockSecureStorage mockSecureStorage;
-    late MockGoogleSignIn mockGoogleSignIn;
+    late MockLocalAuthentication mockLocalAuth;
+    late MockOAuth2Service mockOAuth2Service;
 
     const testAuthUrl = 'https://test-api.asora.app';
     const testEmail = 'test@asora.app';
@@ -185,12 +246,14 @@ void main() {
     setUp(() {
       mockHttpClient = MockHttpClient();
       mockSecureStorage = MockSecureStorage();
-      mockGoogleSignIn = MockGoogleSignIn();
+      mockLocalAuth = MockLocalAuthentication();
+      mockOAuth2Service = MockOAuth2Service();
 
       authService = AuthService(
         httpClient: mockHttpClient,
         secureStorage: mockSecureStorage,
-        googleSignIn: mockGoogleSignIn,
+        localAuth: mockLocalAuth,
+        oauth2Service: mockOAuth2Service,
         authUrl: testAuthUrl,
       );
     });
@@ -283,6 +346,41 @@ void main() {
           };
 
           mockHttpClient.setResponse('$testAuthUrl/authEmail', responseBody);
+
+          // Act & Assert
+          expect(
+            () => authService.loginWithEmail(testEmail, testPassword),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
+      test(
+        'should throw AuthFailure.serverError for missing user in response',
+        () async {
+          // Arrange
+          final responseBody = {
+            'token': testToken,
+            // Missing user key
+          };
+
+          mockHttpClient.setResponse('$testAuthUrl/authEmail', responseBody);
+
+          // Act & Assert
+          expect(
+            () => authService.loginWithEmail(testEmail, testPassword),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
+      test(
+        'should throw AuthFailure.serverError for non-200 status code',
+        () async {
+          // Arrange
+          mockHttpClient.setResponse('$testAuthUrl/authEmail', {
+            'error': 'Not found',
+          }, statusCode: 404);
 
           // Act & Assert
           expect(
@@ -415,7 +513,6 @@ void main() {
           key: 'userData',
           value: jsonEncode(testUser.toJson()),
         );
-        await mockSecureStorage.write(key: 'sessionToken', value: 'session123');
 
         // Act
         await authService.logout();
@@ -423,17 +520,14 @@ void main() {
         // Assert
         final jwtToken = await mockSecureStorage.read(key: 'jwt');
         final userData = await mockSecureStorage.read(key: 'userData');
-        final sessionToken = await mockSecureStorage.read(key: 'sessionToken');
 
         expect(jwtToken, isNull);
         expect(userData, isNull);
-        expect(sessionToken, isNull);
       });
 
       test('should not throw error when storage operations fail', () async {
         // Arrange
         mockSecureStorage.setException('jwt', Exception('Storage error'));
-        mockGoogleSignIn.setThrowException(Exception('Google sign out error'));
 
         // Act & Assert
         expect(() => authService.logout(), returnsNormally);
@@ -501,6 +595,266 @@ void main() {
 
         // Assert
         expect(result, isNull);
+      });
+    });
+
+    // signInWithGoogle now delegates to signInWithOAuth2 (tested separately)
+    // verifyTokenWithBackend, getSessionToken, clearSessionToken removed
+    // (B2C OAuth2 is the single flow; legacy session token helpers no longer needed)
+
+    group('authenticateWithBiometrics', () {
+      test(
+        'should return true when biometric authentication succeeds',
+        () async {
+          // Arrange
+          mockLocalAuth.canCheckBiometricsResult = true;
+          mockLocalAuth.authenticateResult = true;
+
+          // Act
+          final result = await authService.authenticateWithBiometrics();
+
+          // Assert
+          expect(result, isTrue);
+        },
+      );
+
+      test('should return false when biometrics are not available', () async {
+        // Arrange
+        mockLocalAuth.canCheckBiometricsResult = false;
+
+        // Act
+        final result = await authService.authenticateWithBiometrics();
+
+        // Assert
+        expect(result, isFalse);
+      });
+
+      test('should return false when biometric authentication fails', () async {
+        // Arrange
+        mockLocalAuth.canCheckBiometricsResult = true;
+        mockLocalAuth.authenticateResult = false;
+
+        // Act
+        final result = await authService.authenticateWithBiometrics();
+
+        // Assert
+        expect(result, isFalse);
+      });
+    });
+
+    group('signOut', () {
+      test('should call logout method', () async {
+        // Arrange
+        await mockSecureStorage.write(key: 'jwt', value: testToken);
+        await mockSecureStorage.write(
+          key: 'userData',
+          value: jsonEncode(testUser.toJson()),
+        );
+
+        // Act
+        await authService.signOut();
+
+        // Assert
+        final jwtToken = await mockSecureStorage.read(key: 'jwt');
+        final userData = await mockSecureStorage.read(key: 'userData');
+        expect(jwtToken, isNull);
+        expect(userData, isNull);
+      });
+    });
+
+    group('signInWithOAuth2', () {
+      test('should return user when OAuth2 sign-in succeeds', () async {
+        // Arrange
+        mockOAuth2Service.setSignInResult(testUser);
+        mockOAuth2Service.setAccessToken(testToken);
+
+        // Act
+        final result = await authService.signInWithOAuth2();
+
+        // Assert
+        expect(result.id, testUser.id);
+        expect(result.email, testUser.email);
+        expect(mockSecureStorage.storage['jwt'], testToken);
+        expect(
+          mockSecureStorage.storage['userData'],
+          jsonEncode(testUser.toJson()),
+        );
+      });
+
+      test('should throw AuthFailure when OAuth2 service fails', () async {
+        // Arrange
+        mockOAuth2Service.setSignInException(
+          AuthFailure.serverError('OAuth2 failed'),
+        );
+
+        // Act & Assert
+        expect(
+          () => authService.signInWithOAuth2(),
+          throwsA(isA<AuthFailure>()),
+        );
+      });
+
+      test('should handle generic exceptions as server errors', () async {
+        // Arrange
+        mockOAuth2Service.setSignInException(Exception('Generic error'));
+
+        // Act & Assert
+        expect(
+          () => authService.signInWithOAuth2(),
+          throwsA(isA<AuthFailure>()),
+        );
+      });
+    });
+
+    group('refreshOAuth2Token', () {
+      test(
+        'should refresh token and update storage when refresh succeeds',
+        () async {
+          // Arrange
+          mockOAuth2Service.setRefreshResult(testUser);
+          mockOAuth2Service.setAccessToken(testToken);
+
+          // Act
+          await authService.refreshOAuth2Token();
+
+          // Assert
+          expect(mockSecureStorage.storage['jwt'], testToken);
+          expect(
+            mockSecureStorage.storage['userData'],
+            jsonEncode(testUser.toJson()),
+          );
+        },
+      );
+
+      test(
+        'should logout and throw AuthFailure when refresh returns null',
+        () async {
+          // Arrange
+          mockOAuth2Service.setRefreshResult(null);
+
+          // Act & Assert
+          expect(
+            () => authService.refreshOAuth2Token(),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
+      test(
+        'should logout and rethrow AuthFailure when OAuth2 service fails',
+        () async {
+          // Arrange
+          mockOAuth2Service.setRefreshException(
+            AuthFailure.invalidCredentials('Refresh failed'),
+          );
+
+          // Act & Assert
+          expect(
+            () => authService.refreshOAuth2Token(),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+
+      test(
+        'should logout and handle generic exceptions as server errors',
+        () async {
+          // Arrange
+          mockOAuth2Service.setRefreshException(Exception('Generic error'));
+
+          // Act & Assert
+          expect(
+            () => authService.refreshOAuth2Token(),
+            throwsA(isA<AuthFailure>()),
+          );
+        },
+      );
+    });
+
+    group('validateAndRefreshToken', () {
+      test('should return true when token is valid', () async {
+        // Arrange
+        await mockSecureStorage.write(key: 'jwt', value: testToken);
+        mockHttpClient.setResponse('$testAuthUrl/userinfo', {
+          'valid': true,
+        }, statusCode: 200);
+
+        // Act
+        final result = await authService.validateAndRefreshToken();
+
+        // Assert
+        expect(result, isTrue);
+      });
+
+      test('should return false when no token exists', () async {
+        // Act
+        final result = await authService.validateAndRefreshToken();
+
+        // Assert
+        expect(result, isFalse);
+      });
+
+      test(
+        'should refresh token and return true when token is expired',
+        () async {
+          // Arrange
+          await mockSecureStorage.write(key: 'jwt', value: testToken);
+          mockHttpClient.setResponse('$testAuthUrl/userinfo', {
+            'error': 'Token expired',
+          }, statusCode: 401);
+          mockOAuth2Service.setRefreshResult(testUser);
+          mockOAuth2Service.setAccessToken('new-token');
+
+          // Act
+          final result = await authService.validateAndRefreshToken();
+
+          // Assert
+          expect(result, isTrue);
+        },
+      );
+
+      test('should return false when token refresh fails', () async {
+        // Arrange
+        await mockSecureStorage.write(key: 'jwt', value: testToken);
+        mockHttpClient.setResponse('$testAuthUrl/userinfo', {
+          'error': 'Token expired',
+        }, statusCode: 401);
+        mockOAuth2Service.setRefreshException(Exception('Refresh failed'));
+
+        // Act
+        final result = await authService.validateAndRefreshToken();
+
+        // Assert
+        expect(result, isFalse);
+      });
+
+      test('should return false for non-401 error responses', () async {
+        // Arrange
+        await mockSecureStorage.write(key: 'jwt', value: testToken);
+        mockHttpClient.setResponse('$testAuthUrl/userinfo', {
+          'error': 'Server error',
+        }, statusCode: 500);
+
+        // Act
+        final result = await authService.validateAndRefreshToken();
+
+        // Assert
+        expect(result, isFalse);
+      });
+
+      test('should return false when network error occurs', () async {
+        // Arrange
+        await mockSecureStorage.write(key: 'jwt', value: testToken);
+        mockHttpClient.setException(
+          '$testAuthUrl/userinfo',
+          Exception('Network error'),
+        );
+
+        // Act
+        final result = await authService.validateAndRefreshToken();
+
+        // Assert
+        expect(result, isFalse);
       });
     });
   });

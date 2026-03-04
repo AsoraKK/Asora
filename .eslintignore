@@ -7,3 +7,5 @@ linux/
 macos/
 windows/
 functions/**/*.js
+functions/dist/
+functions/**/*.d.ts

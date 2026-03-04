@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// 🎯 Purpose: Riverpod providers for social media feed state management
 /// 🏗️ Architecture: Application layer - manages state and dependency injection
 /// 🔐 Dependency Rule: Depends on domain and application services
@@ -5,11 +7,13 @@
 library social_feed_providers;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/social_feed_repository.dart';
-import '../domain/models.dart';
-import '../application/social_feed_service.dart';
-import '../../../core/network/dio_client.dart';
-import '../../../features/auth/application/auth_providers.dart';
+import 'package:asora/features/feed/domain/social_feed_repository.dart';
+import 'package:asora/features/feed/domain/models.dart';
+import 'package:asora/features/feed/application/social_feed_service.dart';
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 /// Provider for the social feed service implementation
 final socialFeedServiceProvider = Provider<SocialFeedRepository>((ref) {
@@ -28,6 +32,24 @@ final trendingFeedProvider =
     AsyncNotifierProvider<TrendingFeedNotifier, FeedResponse>(
       () => TrendingFeedNotifier(),
     );
+
+/// Provider for searching feeds by keyword/tag
+final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
+  ref,
+  query,
+) async {
+  final feedService = ref.read(socialFeedServiceProvider);
+  final token = await ref.read(jwtProvider.future);
+  return feedService.getFeed(
+    params: FeedParams(
+      type: FeedType.trending,
+      page: 1,
+      pageSize: 20,
+      tags: [query],
+    ),
+    token: token,
+  );
+});
 
 /// Provider for local feed
 final localFeedProvider =
@@ -61,6 +83,17 @@ final authTokenProvider = FutureProvider<String?>((ref) async {
   final oauth2Service = ref.read(oauth2ServiceProvider);
   return await oauth2Service.getAccessToken();
 });
+
+Future<void> _enforceWriteIntegrity(Ref ref, IntegrityUseCase useCase) async {
+  final guard = ref.read(deviceIntegrityGuardProvider);
+  final decision = await guard.evaluate(useCase);
+  if (!decision.allow && decision.errorCode != null) {
+    throw SocialFeedException(
+      ErrorMessages.forCode(decision.errorCode),
+      code: decision.errorCode,
+    );
+  }
+}
 
 /// Parameters for local feed
 class LocalFeedParams {
@@ -121,13 +154,9 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
   @override
   Future<FeedResponse> build(FeedParams arg) async {
     final feedService = ref.read(socialFeedServiceProvider);
+    final token = await ref.read(jwtProvider.future);
 
-    return feedService.getFeed(
-      params: arg,
-      token: await ref.read(
-        authTokenProvider.future,
-      ), // Use token from auth provider
-    );
+    return feedService.getFeed(params: arg, token: token);
   }
 
   /// Load more pages (pagination)
@@ -149,10 +178,11 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
 
     state = await AsyncValue.guard(() async {
       final feedService = ref.read(socialFeedServiceProvider);
+      final token = await ref.read(jwtProvider.future);
 
       final nextPage = await feedService.getFeed(
         params: nextParams,
-        token: null, // TODO: Implement token from auth when ready
+        token: token,
       );
 
       return FeedResponse(
@@ -181,11 +211,12 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
   Future<FeedResponse> build() async {
     _currentPage = 1;
     final feedService = ref.read(socialFeedServiceProvider);
+    final token = await ref.read(jwtProvider.future);
 
     return feedService.getTrendingFeed(
       page: _currentPage,
       pageSize: _pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token: token,
     );
   }
 
@@ -200,11 +231,12 @@ class TrendingFeedNotifier extends AsyncNotifier<FeedResponse> {
 
     state = await AsyncValue.guard(() async {
       final feedService = ref.read(socialFeedServiceProvider);
+      final token = await ref.read(jwtProvider.future);
 
       final nextPage = await feedService.getTrendingFeed(
         page: _currentPage + 1,
         pageSize: _pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token: token,
       );
 
       _currentPage++;
@@ -245,7 +277,8 @@ class LocalFeedNotifier
       radius: arg.radius,
       page: arg.page,
       pageSize: arg.pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -265,7 +298,8 @@ class LocalFeedNotifier
         radius: arg.radius,
         page: _currentPage + 1,
         pageSize: arg.pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -300,7 +334,8 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
     return feedService.getNewCreatorsFeed(
       page: _currentPage,
       pageSize: _pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -318,7 +353,8 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
       final nextPage = await feedService.getNewCreatorsFeed(
         page: _currentPage + 1,
         pageSize: _pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -348,7 +384,8 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
     return feedService.getPost(
       postId: arg,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -357,8 +394,9 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // TODO: Implement authentication check
-    const token = null; // Placeholder
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.like);
+
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(
@@ -385,8 +423,9 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     final currentPost = state.value;
     if (currentPost == null) return;
 
-    // TODO: Implement authentication check
-    const token = null; // Placeholder
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.like);
+
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(
@@ -410,8 +449,9 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
 
   /// Flag post for moderation (requires authentication when implemented)
   Future<void> flagPost({required String reason, String? details}) async {
-    // TODO: Implement authentication check
-    const token = null; // Placeholder
+    await _enforceWriteIntegrity(ref, IntegrityUseCase.flag);
+
+    final token = await ref.read(jwtProvider.future);
 
     if (token == null) {
       throw const SocialFeedException(
@@ -445,7 +485,8 @@ class CommentsNotifier
       postId: arg.postId,
       page: arg.page,
       pageSize: arg.pageSize,
-      token: null, // TODO: Implement token from auth when ready
+      token:
+          null, // NOTE(asora-auth): inject access token once auth wiring lands
     );
   }
 
@@ -464,7 +505,8 @@ class CommentsNotifier
         postId: arg.postId,
         page: _currentPage + 1,
         pageSize: arg.pageSize,
-        token: null, // TODO: Implement token from auth when ready
+        token:
+            null, // NOTE(asora-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;

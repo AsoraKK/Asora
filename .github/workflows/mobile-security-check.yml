@@ -1,0 +1,177 @@
+---
+name: Mobile Security Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-secrets:
+    name: Verify Required Variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure required variables
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          for k in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            v="${!k:-}"
+            [ -n "$v" ] || { echo "Missing variable: $k"; exit 1; }
+          done
+
+  check-pins-and-integrity:
+    # Only run on push to main/release branches - skip for pull_request events
+    # because Azure federated identity doesn't have pull_request subject claim
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
+    runs-on: ubuntu-latest
+    needs: verify-secrets
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - name: Install jq, zip, unzip
+        run: sudo apt-get update && sudo apt-get install -y jq zip unzip
+
+      - name: Isolate AZ cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/azcfg-${GITHUB_RUN_ID}"
+          mkdir -p "$DIR"
+          echo "AZURE_CONFIG_DIR=$DIR" >> "$GITHUB_ENV"
+      - name: Verify OIDC token env
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "::error::ACTIONS_ID_TOKEN_REQUEST_URL missing"; exit 1; }
+
+      - name: Fail if legacy Azure secrets are present
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          [ -z "${AZURE_CREDENTIALS:-}" ] || { echo "ERROR: legacy secret AZURE_CREDENTIALS present"; exit 1; }
+          [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set Azure subscription context
+        run: |
+          set -euo pipefail
+          az cloud set -n AzureCloud
+          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
+      - name: Resolve function host
+        env:
+          SUBS: ${{ env.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          SUBS="${SUBS:?}"
+          RG="asora-psql-flex"
+          APP="asora-function-dev"
+          az account set --subscription "$SUBS"
+          echo "Try ARM first (more reliable across plan types)"
+          APP_JSON=$(az rest --method get --url "https://management.azure.com/subscriptions/${SUBS}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${APP}?api-version=2022-03-01")
+          HOST=$(jq -r '.properties.defaultHostName // empty' <<<"$APP_JSON")
+          if [ -z "$HOST" ]; then
+            echo "::error::defaultHostName not returned"; exit 1
+          fi
+          echo "Detected function host: $HOST"
+          echo "FUNCTION_BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+          echo "BASE_URL=https://${HOST}" >> "$GITHUB_ENV"
+
+
+      - name: Check for SPKI pin placeholders in entire codebase
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Scanning entire codebase for SPKI pin placeholders..."
+
+          # Search for actual placeholder values in pin lists, excluding validation code
+          # Look for placeholder patterns that appear as actual pin values (not in validation)
+          placeholder_matches="$(find . -name "*.dart" -type f -exec grep -Hn "sha256/.*REPLACE_WITH_SPKI\|sha256/.*YOUR_SPKI_PIN\|sha256/.*TODO\|sha256/.*FIXME" {} \; 2>/dev/null || true)"
+
+          if [ -n "$placeholder_matches" ]; then
+            echo "::error::Found SPKI pin placeholders in pin values:"
+            printf '%s\n' "$placeholder_matches"
+            echo ""
+            echo "All SPKI pin placeholders must be replaced with real pins before merging."
+            echo "Update the authoritative pins in lib/core/security/cert_pinning.dart."
+            exit 1
+          else
+            echo "✓ No SPKI pin placeholders found in pin values."
+            echo "Reference pins live in lib/core/security/cert_pinning.dart."
+          fi
+
+      - name: Verify live certificate pins
+        env:
+          EXTRA_PIN_HOSTS: asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_pins.py
+          cat mobile-pin-report.json
+
+      - name: Upload pin verification report
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: mobile-pin-report
+          path: mobile-pin-report.json
+          if-no-files-found: error
+
+      - name: Check for security placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          security_matches="$(find . -name "*.dart" -type f -exec grep -Hn "TODO.*[Ss]ecurity\|FIXME.*[Ss]ecurity\|PLACEHOLDER.*[Ss]ecurity" {} \; 2>/dev/null || true)"
+          if [ -n "$security_matches" ]; then
+            echo "::warning::Found security-related placeholders that may need attention:"
+            printf '%s\n' "$security_matches"
+          else
+            echo "✓ No security TODO/FIXME placeholders detected."
+          fi
+
+      - name: Dart format check (optional)
+        shell: bash
+        run: |
+          # Check if Flutter/Dart is available, skip if not
+          if command -v dart &> /dev/null; then
+            echo "Running Dart format check..."
+            dart format --set-exit-if-changed . || echo "::warning::Code formatting issues found. Run 'dart format .' to fix."
+          else
+            echo "Dart not available, skipping format check."
+          fi
+
+      - name: Dart analyze (optional)
+        shell: bash
+        run: |
+          # Check if Flutter/Dart is available, skip if not
+          if command -v dart &> /dev/null; then
+            echo "Running Dart analyzer..."
+            dart analyze . || echo "::warning::Dart analyzer found issues. Review and fix before merging."
+          else
+            echo "Dart not available, skipping analysis."
+          fi

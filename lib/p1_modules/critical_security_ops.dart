@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // ASORA P1 CRITICAL SECURITY OPERATIONS
 //
 // 🛡️ Priority 1 Module: Essential security functions
@@ -69,12 +71,12 @@ class CriticalSecurityOps {
 
     // Check for SQL injection patterns
     const sqlPatterns = [
-      r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|UNION)\b",
+      r'\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|UNION)\b',
       r"\'.*OR.*\'.*=.*\'", // ' OR '1'='1' and similar patterns
-      r"(\d\s*(OR|AND)\s*\d\s*=\s*\d)",
+      r'(\d\s*(OR|AND)\s*\d\s*=\s*\d)',
       r"(\'\s*(OR|AND)\s*\d+\s*=\s*\d+)",
-      r"(--|\#|/\*)",
-      r"(\bTABLE\b|\bUSERS\b|\bPASSWORD\b)",
+      r'(--|\#|/\*)',
+      r'(\bTABLE\b|\bUSERS\b|\bPASSWORD\b)',
     ];
 
     for (final pattern in sqlPatterns) {
@@ -87,12 +89,12 @@ class CriticalSecurityOps {
 
     // Check for XSS patterns
     const xssPatterns = [
-      r"<script[^>]*>.*?</script>",
-      r"javascript:",
-      r"on\w+\s*=",
-      r"<iframe[^>]*>",
-      r"<object[^>]*>",
-      r"<embed[^>]*>",
+      r'<script[^>]*>.*?</script>',
+      r'javascript:',
+      r'on\w+\s*=',
+      r'<iframe[^>]*>',
+      r'<object[^>]*>',
+      r'<embed[^>]*>',
     ];
 
     for (final pattern in xssPatterns) {
@@ -105,10 +107,10 @@ class CriticalSecurityOps {
 
     // Check for suspicious URLs
     const suspiciousPatterns = [
-      r"bit\.ly",
-      r"tinyurl\.com",
-      r"t\.co",
-      r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", // IP addresses
+      r'bit\.ly',
+      r'tinyurl\.com',
+      r't\.co',
+      r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', // IP addresses
     ];
 
     for (final pattern in suspiciousPatterns) {

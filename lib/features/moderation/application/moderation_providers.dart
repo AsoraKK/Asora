@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for moderation feature
@@ -7,9 +9,13 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/moderation_repository.dart';
-import '../domain/appeal.dart';
-import '../../../core/providers/repository_providers.dart';
+
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/core/providers/repository_providers.dart';
+import 'package:asora/core/security/device_integrity_guard.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure
@@ -22,14 +28,32 @@ final moderationClientProvider = Provider<ModerationRepository>((ref) {
   return ref.watch(moderationRepositoryProvider);
 });
 
+Future<String> _requireJwtToken(Ref ref) async {
+  final token = await ref.watch(jwtProvider.future);
+  if (token == null || token.isEmpty) {
+    throw const ModerationException('User not authenticated');
+  }
+  return token;
+}
+
+Future<void> _enforceModerationWriteIntegrity(
+  Ref ref,
+  IntegrityUseCase useCase,
+) async {
+  final guard = ref.read(deviceIntegrityGuardProvider);
+  final decision = await guard.evaluate(useCase);
+  if (!decision.allow && decision.errorCode != null) {
+    throw ModerationException(
+      ErrorMessages.forCode(decision.errorCode),
+      code: decision.errorCode,
+    );
+  }
+}
+
 /// Provider for user's appeals list
 final myAppealsProvider = FutureProvider<List<Appeal>>((ref) async {
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await _requireJwtToken(ref);
 
   return repository.getMyAppeals(token: token);
 });
@@ -41,11 +65,7 @@ final votingFeedProvider =
       params,
     ) async {
       final repository = ref.watch(moderationRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const ModerationException('User not authenticated');
-      }
+      final token = await _requireJwtToken(ref);
 
       return repository.getVotingFeed(
         page: params.page,
@@ -60,12 +80,9 @@ final submitVoteProvider = FutureProvider.family<VoteResult, VoteSubmission>((
   ref,
   submission,
 ) async {
+  await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.appeal);
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await _requireJwtToken(ref);
 
   return repository.submitVote(
     appealId: submission.appealId,
@@ -80,12 +97,9 @@ final submitAppealProvider = FutureProvider.family<Appeal, AppealSubmission>((
   ref,
   submission,
 ) async {
+  await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.appeal);
   final repository = ref.watch(moderationRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const ModerationException('User not authenticated');
-  }
+  final token = await _requireJwtToken(ref);
 
   return repository.submitAppeal(
     contentId: submission.contentId,
@@ -103,12 +117,9 @@ final flagContentProvider =
       ref,
       submission,
     ) async {
+      await _enforceModerationWriteIntegrity(ref, IntegrityUseCase.flag);
       final repository = ref.watch(moderationRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const ModerationException('User not authenticated');
-      }
+      final token = await _requireJwtToken(ref);
 
       return repository.flagContent(
         contentId: submission.contentId,
@@ -118,9 +129,6 @@ final flagContentProvider =
         token: token,
       );
     });
-
-/// Mock JWT provider - replace with your actual authentication provider
-final jwtProvider = StateProvider<String?>((ref) => null);
 
 /// Data classes for provider parameters
 

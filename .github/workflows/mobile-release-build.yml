@@ -1,0 +1,113 @@
+---
+name: Android Release Build (Obfuscated)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_PATH: android/app/upload-keystore.jks
+      KEY_PROPERTIES_PATH: android/key.properties
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Install Android native SDK components
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT"
+            exit 1
+          fi
+
+          # `yes` can end with SIGPIPE when sdkmanager closes stdin early.
+          # Ignore preflight license exit and fail only if package install fails.
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          yes | "$SDKMANAGER" "cmake;3.22.1" "ndk;28.2.13676358"
+          INSTALL_EXIT=$?
+          set -o pipefail
+          if [ "$INSTALL_EXIT" -ne 0 ]; then
+            echo "sdkmanager package install failed with exit code $INSTALL_EXIT"
+            exit "$INSTALL_EXIT"
+          fi
+
+      # --- Firebase config (gitignored) ---
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
+            echo "Missing required secret: GOOGLE_SERVICES_JSON"; exit 1
+          fi
+          echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+          test -s android/app/google-services.json || { echo "Decoded google-services.json is empty"; exit 1; }
+
+      # --- Android release signing ---
+      - name: Validate Android signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEY_ALIAS ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD; do
+            value="${!key:-}"
+            [ -n "$value" ] || { echo "Missing required secret: $key"; exit 1; }
+          done
+
+      - name: Materialize Android signing files
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH" || { echo "Decoded keystore is empty"; exit 1; }
+
+          cat > "$KEY_PROPERTIES_PATH" <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
+          chmod 600 "$KEY_PROPERTIES_PATH"
+
+          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+
+      - name: Build Android AAB (obfuscated)
+        run: |
+          set -euo pipefail
+          TS="$(date +%Y%m%d%H%M%S)"
+          flutter build appbundle --release --obfuscate --split-debug-info="build/symbols/android/${TS}"
+          test -s build/app/outputs/bundle/release/app-release.aab
+
+      - name: Clean signing material
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f "$KEYSTORE_PATH" "$KEY_PROPERTIES_PATH" android/app/google-services.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: android-release
+          path: |
+            build/app/outputs/bundle/release/*.aab
+            build/symbols/android/**

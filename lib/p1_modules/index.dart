@@ -14,5 +14,5 @@
 
 export '../core/security/cert_pinning.dart';
 export '../core/security/device_integrity.dart';
-export '../services/privacy_service.dart';
+export '../features/privacy/state/privacy_controller.dart';
 export '../features/auth/application/auth_providers.dart';

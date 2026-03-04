@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library;
 
 /// ASORA AUTH SESSION MANAGER
@@ -225,9 +227,6 @@ class AuthSessionManager {
   /// Get the current session status
   Future<AuthSessionStatus> getSessionState() async {
     try {
-      final hasSession = await hasActiveSession();
-      if (!hasSession) return AuthSessionStatus.unauthenticated;
-
       final token = await _storage.read(key: _sessionTokenKey);
       final expiryStr = await _storage.read(key: _sessionExpiryKey);
 
@@ -296,6 +295,12 @@ class AuthSessionManager {
       if (currentSession == null) return false;
 
       final expiry = newExpiry ?? DateTime.now().add(const Duration(hours: 24));
+
+      // If the new expiry is in the past, clear the session instead
+      if (expiry.isBefore(DateTime.now())) {
+        await clearSession();
+        return false;
+      }
 
       await _storage.write(key: _sessionTokenKey, value: newAccessToken);
       await _storage.write(

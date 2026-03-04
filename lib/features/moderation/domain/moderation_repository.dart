@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for moderation operations
@@ -6,7 +8,12 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'appeal.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
 
 /// Abstract repository defining moderation domain operations
 ///
@@ -88,6 +95,46 @@ abstract class ModerationRepository {
     int page = 1,
     int pageSize = 20,
     AppealFilters? filters,
+    required String token,
+  });
+
+  /// Fetch the moderation review queue (flags + appeals).
+  Future<ModerationQueueResponse> fetchModerationQueue({
+    int page = 1,
+    int pageSize = 20,
+    ModerationFilters? filters,
+    required String token,
+  });
+
+  /// Load a single moderation case for review.
+  Future<ModerationCase> fetchModerationCase({
+    required String caseId,
+    required String token,
+  });
+
+  /// Submit a moderator decision.
+  Future<ModerationDecisionResult> submitModerationDecision({
+    required String caseId,
+    required String token,
+    required ModerationDecisionInput input,
+  });
+
+  /// Escalate a case to a different queue.
+  Future<void> escalateModerationCase({
+    required String caseId,
+    required String token,
+    required ModerationEscalationInput input,
+  });
+
+  /// Fetch the audit trail tied to a case.
+  Future<ModerationAuditResponse> fetchCaseAudit({
+    required String caseId,
+    required String token,
+  });
+
+  /// Global audit search with filters.
+  Future<ModerationAuditResponse> searchAudit({
+    required ModerationAuditSearchFilters filters,
     required String token,
   });
 }

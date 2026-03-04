@@ -1,0 +1,698 @@
+name: deploy-asora-function-dev
+
+on:
+  workflow_call:
+    inputs:
+      target_environment:
+        description: "Deployment environment"
+        required: false
+        type: string
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Deployment environment"
+        type: choice
+        required: true
+        default: dev
+        options:
+          - dev
+          - staging
+      function_app_name:
+        description: "Optional Function App override"
+        required: false
+        type: string
+      resource_group:
+        description: "Optional Azure resource group override"
+        required: false
+        type: string
+  push:
+    branches: [ "main" ]
+    paths:
+      - "functions/**"
+      - ".github/workflows/deploy-asora-function-dev.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  TARGET_ENV: ${{ github.event.inputs.target_environment || 'dev' }}
+  RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
+  FUNC_APP: ${{ github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
+  NODE_VERSION: 20
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target_environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Functions (Flex)
+        working-directory: functions
+        env:
+          HUSKY: 0
+          GIT_SHA: ${{ github.sha }}
+        run: npm ci --no-audit --no-fund && npm run build
+
+      - name: Run Notifications E2E Tests
+        working-directory: functions
+        env:
+          NODE_ENV: test
+          AZURE_FUNCTIONS_UNIT_TEST: '1'
+          AI_TELEMETRY: 'off'
+          LOG_LEVEL: debug
+        run: npm test -- tests/notifications --runInBand --verbose
+
+      - name: Gate artifact structure
+        working-directory: functions/dist
+        run: |
+          set -euo pipefail
+          echo "Validating V4 PROGRAMMATIC MODEL package structure..."
+          
+          # Required files for programmatic model
+          test -f host.json || { echo "::error::Missing host.json"; exit 1; }
+          test -f package.json || { echo "::error::Missing package.json"; exit 1; }
+          test -f index.js || { echo "::error::Missing root index.js entrypoint"; exit 1; }
+          test -f src/index.js || { echo "::error::Missing src/index.js (compiled handlers)"; exit 1; }
+          test -d shared || { echo "::error::Missing shared/ directory"; exit 1; }
+          
+          # Ensure package.json has main=index.js and NO "type":"module"
+          MAIN=$(jq -r .main package.json)
+          echo "package.json main field: $MAIN"
+          if [ "$MAIN" != "index.js" ]; then
+            echo "::error::Expected main=index.js, got: $MAIN"; exit 1
+          fi
+          TYPE=$(jq -r '.type // "commonjs"' package.json)
+          if [ "$TYPE" = "module" ]; then
+            echo "::error::package.json must NOT have type=module (breaks CJS handlers)"; exit 1
+          fi
+          
+          echo "Verifying index.js is PROGRAMMATIC (must require src/index.js)..."
+          # V4 programmatic model: index.js MUST load the compiled handlers
+          if ! grep -q "require.*src/index" index.js; then
+            echo "::error::index.js must require('./src/index.js') for v4 programmatic model"; exit 1
+          fi
+          
+          echo "Smoke-testing programmatic entrypoint..."
+          # This will fail fast if there are missing dependencies
+          node -e "
+            try {
+              require('./index.js');
+              console.log('✅ Programmatic entrypoint loads successfully');
+            } catch (e) {
+              // Expected: may fail due to missing env vars, but should not have syntax errors
+              if (e.code === 'MODULE_NOT_FOUND') {
+                console.error('❌ Missing module:', e.message);
+                process.exit(1);
+              }
+              // Config/env errors are OK at build time
+              console.log('⚠️  Config/env warning (expected at build time):', e.message);
+            }
+          "
+          
+          # Verify NO file-based function.json files exist (programmatic model only)
+          FUNC_JSON_COUNT=$(find . -name "function.json" -type f | wc -l)
+          if [ "$FUNC_JSON_COUNT" -gt 0 ]; then
+            echo "::warning::Found $FUNC_JSON_COUNT function.json files (should be 0 for pure programmatic model)"
+            find . -name "function.json" -type f
+          fi
+          
+          echo "✅ All V4 programmatic model structure gates passed"
+
+      - name: Zip dist root (zip the CONTENTS of dist)
+        working-directory: functions/dist
+        run: zip -r ../../functions-dist.zip .
+
+      - name: Verify packaged artifact structure
+        working-directory: functions
+        run: npm run verify:dist
+
+      - name: Publish to Flex via Kudu (recommended)
+        run: |
+          set -euo pipefail
+
+          # Strip CRLF from all variables to prevent %0D in REST URLs
+          SUBS=$(az account show --query id -o tsv | tr -d '\r')
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # Extract storage pointer (as stored in functionApp config) and parse components
+          DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r')
+          if [ -z "$DEPLOY_VALUE" ]; then
+            echo "::error::Function App is not Flex or deployment storage not configured"; exit 1
+          fi
+
+          STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
+          CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
+          
+          # Use versioned blob name for audit trail and rollback capability
+          VERSIONED_BLOB="functionapp-${SHORT_SHA}.zip"
+          
+          echo "Uploading versioned package to $STG/$CONT/$VERSIONED_BLOB"
+          az storage blob upload --auth-mode login \
+            --account-name "$STG" \
+            --container-name "$CONT" \
+            --name "$VERSIONED_BLOB" \
+            --file "functions-dist.zip" \
+            --overwrite
+          
+          # Artifact integrity check: download what we just uploaded and verify hash
+          echo "Verifying artifact integrity..."
+          az storage blob download --auth-mode login \
+            --account-name "$STG" \
+            --container-name "$CONT" \
+            --name "$VERSIONED_BLOB" \
+            --file "/tmp/deployed-${SHORT_SHA}.zip"
+          
+          LOCAL_HASH=$(sha256sum functions-dist.zip | awk '{print $1}')
+          REMOTE_HASH=$(sha256sum "/tmp/deployed-${SHORT_SHA}.zip" | awk '{print $1}')
+          echo "Local artifact hash:  $LOCAL_HASH"
+          echo "Remote artifact hash: $REMOTE_HASH"
+          
+          if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
+            echo "::error::Artifact integrity check FAILED: hashes do not match"
+            exit 1
+          fi
+          echo "✅ Artifact integrity verified"
+
+          # Generate short-lived SAS for the versioned blob
+          EXPIRY=$(date -u -d '30 minutes' +%Y-%m-%dT%H:%MZ)
+          SAS=$(az storage blob generate-sas --account-name "$STG" --container-name "$CONT" --name "$VERSIONED_BLOB" --permissions r --expiry "$EXPIRY" --as-user --auth-mode login -o tsv)
+          PKG_URI="https://$STG.blob.core.windows.net/$CONT/$VERSIONED_BLOB?$SAS"
+
+          echo "Publishing via Kudu SCM /api/publish using versioned SAS URL"
+          CREDS=$(az webapp deployment list-publishing-credentials -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" -o json)
+          USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          SCM_URL="https://${FUNC_APP_CLEAN}.scm.azurewebsites.net/api/publish"
+
+          curl -fsSL -u "$USER:$PASS" -H "Content-Type: application/json" -X POST -d "{\"type\":\"zip\",\"packageUri\":\"$PKG_URI\"}" "$SCM_URL"
+
+          # Copy versioned blob to functionapp.zip for cold-start persistence
+          echo "Copying $VERSIONED_BLOB to functionapp.zip for cold-start persistence..."
+          az storage blob copy start --auth-mode login \
+            --account-name "$STG" \
+            --destination-container "$CONT" \
+            --destination-blob functionapp.zip \
+            --source-container "$CONT" \
+            --source-blob "$VERSIONED_BLOB"
+          
+          # Wait for copy to complete
+          for i in $(seq 1 10); do
+            STATUS=$(az storage blob show --auth-mode login --account-name "$STG" --container-name "$CONT" --name functionapp.zip --query "properties.copy.status" -o tsv)
+            if [ "$STATUS" = "success" ]; then
+              echo "✅ Blob copy completed"
+              break
+            fi
+            echo "Blob copy status: $STATUS (attempt $i/10)"
+            sleep 2
+          done
+
+          # Trigger reindex and give the host longer warmup for Flex
+          echo "Triggering function sync and restarting host"
+          az rest --method post --uri "https://management.azure.com/subscriptions/$SUBS/resourceGroups/$RG_CLEAN/providers/Microsoft.Web/sites/$FUNC_APP_CLEAN/syncfunctiontriggers?api-version=2023-12-01" --verbose
+          az functionapp restart -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN"
+
+          echo "Waiting 90s for Flex host warmup..."
+          sleep 90
+
+      - name: Provision AUDIT_HMAC_KEY via Key Vault
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
+          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
+
+          if [ -z "$KEY_VAULT" ]; then
+            if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
+              echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY must use Key Vault in production"
+              exit 1
+            fi
+
+            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
+            echo "ℹ️  Using plain AUDIT_HMAC_KEY app setting fallback for non-production environment: $ENVIRONMENT"
+            HMAC_KEY=$(openssl rand -hex 32)
+            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+              --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
+            echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
+            exit 0
+          fi
+
+          # Check if the secret already exists (may fail if SP lacks get permission)
+          if az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "id" -o tsv >/dev/null 2>&1; then
+            echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
+          else
+            echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
+            HMAC_KEY=$(openssl rand -hex 32)
+
+            if az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
+              --value "$HMAC_KEY" --output none; then
+              echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
+            else
+              if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
+                echo "::error::Failed to create Key Vault secret audit-hmac-key in production"
+                echo "::error::Grant the deployment principal Key Vault Secrets Officer (or setSecret permission) on $KEY_VAULT"
+                exit 1
+              fi
+
+              echo "⚠️  Unable to create Key Vault secret (likely RBAC limitation)"
+              echo "ℹ️  Falling back to plain AUDIT_HMAC_KEY app setting for non-production environment: $ENVIRONMENT"
+              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
+              echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
+              exit 0
+            fi
+          fi
+
+          # Wire as Key Vault reference in Function App
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
+            --output none
+          echo "✅ AUDIT_HMAC_KEY wired as Key Vault reference"
+
+      - name: Validate Flex app settings
+        run: |
+          set -euo pipefail
+          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
+          SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
+          EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
+          if [ "$EXT_VERSION" != "~4" ]; then
+            echo "::error::FUNCTIONS_EXTENSION_VERSION must be ~4, found: ${EXT_VERSION:-NOT_SET}"; exit 1
+          fi
+          # Flex: FUNCTIONS_WORKER_RUNTIME should NOT be set
+          WORKER=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_WORKER_RUNTIME") | .value' || echo "")
+          if [ -n "$WORKER" ]; then
+            echo "::error::FUNCTIONS_WORKER_RUNTIME must be unset on Flex, found: $WORKER"; exit 1
+          fi
+          # Guard: AUDIT_HMAC_KEY must be set (as Key Vault ref) in all deployed environments
+          HMAC_SETTING=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="AUDIT_HMAC_KEY") | .value' || echo "")
+          if [ -z "$HMAC_SETTING" ]; then
+            echo "::error::AUDIT_HMAC_KEY is not set — audit log pseudonymisation requires this setting"; exit 1
+          fi
+
+          if { [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; } && [[ "$HMAC_SETTING" != @Microsoft.KeyVault* ]]; then
+            echo "::error::AUDIT_HMAC_KEY must be a Key Vault reference in production"; exit 1
+          fi
+
+          echo "✅ AUDIT_HMAC_KEY is configured"
+
+      - name: Post-deploy probe /api/health
+        run: |
+          set -euo pipefail
+          
+          # Strip CRLF from variables
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
+          BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
+          
+          echo "Running V4 PROGRAMMATIC MODEL runtime gates..."
+          
+          # Gate 1: Health returns 200 (20 probes, 5s intervals)
+          GATE1_PASSED=false
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            echo "Gate 1 - probe $i/20: /api/health returned HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✅ Gate 1 PASSED: health endpoint returns 200"
+              GATE1_PASSED=true
+              break
+            fi
+            if [ "$i" -lt 20 ]; then
+              sleep 5
+            fi
+          done
+          
+          if [ "$GATE1_PASSED" = "false" ]; then
+            echo "::error::Gate 1 FAILED: /api/health never returned 200 after 20 probes"
+            exit 1
+          fi
+          
+          # Gate 2: Bogus route returns 404 (not 500, validates host routing)
+          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
+          echo "Gate 2 - bogus route returned HTTP $bogus_code"
+          if [ "$bogus_code" = "404" ]; then
+            echo "✅ Gate 2 PASSED: bogus route returns 404 (host routing intact)"
+          else
+            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing correctly)"
+            exit 1
+          fi
+          
+          # Gate 3: Admin /functions lists at least 'health' (v4 programmatic model)
+          # Note: Programmatic model registers multiple functions
+          ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
+          FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
+          FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+          FUNC_NAMES=$(echo "$FUNCTIONS" | jq -r '.[].name' | tr '\n' ' ')
+          echo "Gate 3 - indexed functions count: $FUNC_COUNT"
+          echo "Gate 3 - indexed function names: $FUNC_NAMES"
+          
+          # V4 programmatic: expect at least health + ready + other handlers
+          if [ "$FUNC_COUNT" -lt 1 ]; then
+            echo "::error::Gate 3 FAILED: Expected at least 1 function, found $FUNC_COUNT"
+            echo "Full admin response: $FUNCTIONS"
+            exit 1
+          fi
+          
+          if ! echo "$FUNC_NAMES" | grep -qw "health"; then
+            echo "::error::Gate 3 FAILED: 'health' not found in indexed functions: $FUNC_NAMES"
+            exit 1
+          fi
+          
+          echo "✅ Gate 3 PASSED: health function is indexed (total: $FUNC_COUNT functions)"
+          echo ""
+          echo "🎉 All 3 runtime gates PASSED!"
+          echo "   - Health endpoint: 200 OK"
+          echo "   - Host routing: functional (404 for bogus)"
+          echo "   - Functions registered: $FUNC_COUNT (including health)"
+
+      - name: Diagnostic logs on failure
+        if: failure()
+        run: |
+          set +e  # Continue on error for diagnostics
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          
+          echo "=========================================="
+          echo "Auto-diagnostics on deployment failure"
+          echo "=========================================="
+          echo ""
+          
+          echo "--- 1) Indexed functions from /admin/functions ---"
+          ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r' || echo "")
+          if [ -n "$ADMIN_KEY" ]; then
+            FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
+            echo "$FUNCTIONS" | jq '.'
+            FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+            echo "Total functions indexed: $FUNC_COUNT"
+            echo "Function names:"
+            echo "$FUNCTIONS" | jq -r '.[].name'
+          else
+            echo "Could not retrieve admin key"
+          fi
+          echo ""
+          
+          echo "--- 2) Deployed artifact verification ---"
+          DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r' || echo "")
+          if [ -n "$DEPLOY_VALUE" ]; then
+            STG=$(echo "$DEPLOY_VALUE" | sed -n 's#https://\([^.]*\)\.blob\.core\.windows\.net/.*#\1#p')
+            CONT=$(echo "$DEPLOY_VALUE" | sed -n 's#https://[^/]*/\([^/]*\)/.*#\1#p')
+            VERSIONED_BLOB="functionapp-${SHORT_SHA}.zip"
+            
+            echo "Downloading deployed artifact: $STG/$CONT/$VERSIONED_BLOB"
+            az storage blob download --auth-mode login \
+              --account-name "$STG" \
+              --container-name "$CONT" \
+              --name "$VERSIONED_BLOB" \
+              --file "/tmp/diag-${SHORT_SHA}.zip" 2>&1 || echo "Could not download blob"
+            
+            if [ -f "/tmp/diag-${SHORT_SHA}.zip" ]; then
+              echo "Deployed artifact contents:"
+              unzip -l "/tmp/diag-${SHORT_SHA}.zip" | head -n 50
+              echo ""
+              echo "Deployed artifact hash:"
+              sha256sum "/tmp/diag-${SHORT_SHA}.zip"
+            fi
+          fi
+          echo ""
+          
+          echo "--- 3) Recent Application Insights traces (last 15m) ---"
+          az monitor app-insights query \
+            --app "$FUNC_APP_CLEAN" \
+            --analytics-query "traces | where timestamp > ago(15m) and (severityLevel >= 2 or message contains 'error' or message contains 'exception') | project timestamp, severityLevel, message | order by timestamp desc | take 30" \
+            --offset 15m 2>&1 || echo "App Insights query not available or no errors found"
+          echo ""
+          
+          echo "--- 4) Function app configuration ---"
+          echo "FUNCTIONS_EXTENSION_VERSION:"
+          az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "[?name=='FUNCTIONS_EXTENSION_VERSION'].value" -o tsv || echo "Not set"
+          echo "FUNCTIONS_WORKER_RUNTIME (should be empty on Flex):"
+          az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "[?name=='FUNCTIONS_WORKER_RUNTIME'].value" -o tsv || echo "Not set (expected)"
+          echo ""
+          
+          echo "--- 5) Kudu diagnostic endpoints ---"
+          echo "Attempting to fetch Kudu logs..."
+          CREDS=$(az webapp deployment list-publishing-credentials -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" -o json 2>/dev/null || echo "{}")
+          KUDU_USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          KUDU_PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          if [ -n "$KUDU_USER" ] && [ "$KUDU_USER" != "null" ]; then
+            echo "Recent Docker logs from Kudu:"
+            curl -s -u "$KUDU_USER:$KUDU_PASS" "https://${FUNC_APP_CLEAN}.scm.azurewebsites.net/api/logs/docker" 2>&1 | tail -n 50 || echo "Could not fetch Kudu logs"
+          fi
+          echo ""
+          
+          echo "=========================================="
+          echo "End of auto-diagnostics"
+          echo "=========================================="
+
+  acceptance:
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment: ${{ github.event.inputs.target_environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Acceptance checks (Flex)
+        run: |
+          set -euo pipefail
+          BASE="https://${FUNC_APP}.azurewebsites.net"
+
+          # 1) Liveness must be 200
+          echo "🔍 Testing health endpoint: $BASE/api/health"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
+          echo "   Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed: expected 200, got $STATUS"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+          # 2) Bogus route must be 404
+          echo "🔍 Testing 404 route: $BASE/api/__bogus__"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/__bogus__")
+          echo "   Status: $STATUS"
+          if [ "$STATUS" != "404" ]; then
+            echo "❌ 404 check failed: expected 404, got $STATUS"
+            exit 1
+          fi
+          echo "✅ 404 check passed"
+
+          # 3) Unauthenticated notification endpoints must return 401/403 (not 500)
+          echo "🔍 Testing unauthenticated notification endpoints"
+          
+          # Test /api/notifications/devices (GET without auth)
+          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/devices")
+          echo "   /api/notifications/devices (no auth): $DEVICES_STATUS"
+          if [ "$DEVICES_STATUS" = "500" ]; then
+            echo "❌ Notifications devices returned 500 (should be 401/403)"
+            exit 1
+          fi
+          if [ "$DEVICES_STATUS" != "401" ] && [ "$DEVICES_STATUS" != "403" ]; then
+            echo "⚠️  Expected 401/403 for unauthenticated request, got $DEVICES_STATUS"
+          else
+            echo "✅ Notifications devices auth check passed ($DEVICES_STATUS)"
+          fi
+
+          # Test /api/notifications/preferences (GET without auth)
+          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/preferences")
+          echo "   /api/notifications/preferences (no auth): $PREFS_STATUS"
+          if [ "$PREFS_STATUS" = "500" ]; then
+            echo "❌ Notifications preferences returned 500 (should be 401/403)"
+            exit 1
+          fi
+          if [ "$PREFS_STATUS" != "401" ] && [ "$PREFS_STATUS" != "403" ]; then
+            echo "⚠️  Expected 401/403 for unauthenticated request, got $PREFS_STATUS"
+          else
+            echo "✅ Notifications preferences auth check passed ($PREFS_STATUS)"
+          fi
+
+          echo "✅ Notification endpoints properly reject unauthenticated requests"
+
+          # 4) At least health is registered (v4 programmatic model)
+          echo "🔍 Checking function registration"
+          ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
+          FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")
+          echo "   Functions registered:"
+          echo "$FUNCTIONS" | jq -r '.[].name' | sed 's/^/     - /'
+          FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
+          echo "   Total function count: $FUNC_COUNT"
+          HEALTH_COUNT=$(echo "$FUNCTIONS" | jq -r '.[].name' | grep -cx 'health' || echo 0)
+          if [ "$HEALTH_COUNT" != "1" ]; then
+            echo "❌ Function registration check failed: health function not found"
+            exit 1
+          fi
+          echo "✅ Function registration passed ($FUNC_COUNT functions including health)"
+
+      - name: Verify DSR export storage configuration (optional)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          PRINCIPAL_ID=$(az functionapp identity show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query principalId -o tsv)
+          SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
+          if [ -z "$SA" ]; then
+            echo "⚠️  DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"
+            echo "ℹ️  DSR features will not be available until storage infrastructure is provisioned"
+            exit 0
+          fi
+          bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID"
+
+      - name: Verify Cosmos DB private networking (optional)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          COSMOS_ACCOUNT=$(az cosmosdb list -g "$RG_CLEAN" --query "[0].name" -o tsv)
+          if [ -n "$COSMOS_ACCOUNT" ]; then
+            bash infra/scripts/verify-cosmos-private-endpoint.sh "$COSMOS_ACCOUNT" "$RG_CLEAN"
+          else
+            echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
+          fi
+
+      - name: Configure Cloudflare Access credentials (control-panel proxy)
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          # Extract CF Access credentials from GitHub Actions secrets
+          # Note: Secret names use underscores due to GitHub Actions naming constraints
+          CF_CLIENT_ID="${{ secrets.CF_Access_Client_Id }}"
+          CF_CLIENT_SECRET="${{ secrets.CF_Access_Client_Secret }}"
+          
+          if [ -z "$CF_CLIENT_ID" ] || [ -z "$CF_CLIENT_SECRET" ]; then
+            echo "⚠️  Cloudflare Access credentials not configured in GitHub Actions secrets"
+            echo "ℹ️  Add CF_Access_Client_Id and CF_Access_Client_Secret to enable CORS proxy"
+            echo "ℹ️  Control-panel tests will fail without these credentials"
+            exit 0
+          fi
+          
+          echo "Configuring Cloudflare Access credentials in Function App..."
+          
+          # Store client ID directly (non-sensitive)
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --setting CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+          
+          # Store secret via Key Vault reference (secure approach)
+          # Requires: Key Vault must exist with write access via managed identity
+          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$KEY_VAULT" ]; then
+            echo "Setting CF_ACCESS_CLIENT_SECRET via Key Vault reference..."
+            if az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
+              --value "$CF_CLIENT_SECRET" --output none; then
+              # Reference the Key Vault secret in Function App Settings
+              if az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+                --output none; then
+                echo "✅ Key Vault reference configured"
+              else
+                echo "⚠️  Key Vault reference failed; falling back to plain app setting"
+                az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                  --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+              fi
+            else
+              echo "⚠️  Key Vault secret write failed; falling back to plain app setting"
+              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+                --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+            fi
+          else
+            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
+            echo "ℹ️  Setting CF_ACCESS_CLIENT_SECRET as plain app setting (less secure)"
+            echo "ℹ️  Recommended: Create Azure Key Vault and use Key Vault reference instead"
+            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+              --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
+          fi
+          
+          echo "✅ Cloudflare Access credentials configured"
+
+      - name: Configure DSR environment variables (optional)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          
+          # Get DSR storage account name
+          DSR_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
+          if [ -z "$DSR_SA" ]; then
+            echo "⚠️  DSR storage account not found, skipping DSR environment variable configuration"
+            echo "ℹ️  Run infra provisioning to create DSR storage account before enabling DSR features"
+            exit 0
+          fi
+          
+          echo "Setting DSR environment variables..."
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_STORAGE_ACCOUNT="$DSR_SA" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_CONTAINER="dsr-exports" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_NAME="dsr-requests" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="AzureWebJobsStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_MAX_CONCURRENCY="5" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_SIGNED_URL_TTL_HOURS="12" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_PURGE_WINDOW_DAYS="30" --output none
+          
+          echo "✅ DSR environment variables configured"
+
+      - name: Configure media storage environment variables
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+
+          # Look for a storage account tagged purpose=media-storage, or fall back to explicit name
+          MEDIA_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='media-storage'].name | [0]" -o tsv)
+          if [ -z "$MEDIA_SA" ]; then
+            # Try well-known name
+            MEDIA_SA="asoramediadev"
+            if ! az storage account show -n "$MEDIA_SA" -g "$RG_CLEAN" --query "name" -o tsv 2>/dev/null; then
+              echo "⚠️  Media storage account not found, skipping media environment variable configuration"
+              echo "ℹ️  Run scripts/setup-media-storage.sh to create media storage account"
+              exit 0
+            fi
+          fi
+
+          echo "Setting media storage environment variables (account: $MEDIA_SA)..."
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_STORAGE_ACCOUNT="$MEDIA_SA" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_CONTAINER="user-media" --output none
+
+          echo "✅ Media storage environment variables configured"
+

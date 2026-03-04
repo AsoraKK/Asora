@@ -9,11 +9,11 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/moderation/domain/moderation_repository.dart';
-import '../../features/moderation/application/moderation_service.dart';
-import '../../features/feed/domain/feed_repository.dart';
-import '../../features/feed/application/feed_service.dart';
-import '../security/cert_pinning.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/features/moderation/application/moderation_service.dart';
+import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:asora/features/feed/application/feed_service.dart';
+import 'package:asora/core/security/cert_pinning.dart';
 
 /// **Core HTTP Client Provider**
 ///

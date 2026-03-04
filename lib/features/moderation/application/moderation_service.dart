@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA MODERATION SERVICE
 ///
 /// 🎯 Purpose: Implementation of moderation repository interface
@@ -7,8 +9,15 @@
 library;
 
 import 'package:dio/dio.dart';
-import '../domain/moderation_repository.dart';
-import '../domain/appeal.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:asora/features/moderation/domain/moderation_case.dart';
+import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:asora/core/error/error_codes.dart';
 
 /// Concrete implementation of [ModerationRepository]
 ///
@@ -22,31 +31,54 @@ class ModerationService implements ModerationRepository {
 
   ModerationService(this._dio);
 
+  ModerationException _mapDioException(DioException error) {
+    final data = error.response?.data;
+    String? code;
+    if (data is Map<String, dynamic>) {
+      if (data['code'] is String) {
+        code = data['code'] as String;
+      } else if (data['error'] is Map<String, dynamic>) {
+        final nested = data['error'] as Map<String, dynamic>;
+        if (nested['code'] is String) {
+          code = nested['code'] as String;
+        }
+      }
+      if (code == ErrorCodes.deviceIntegrityBlocked) {
+        return ModerationException(
+          ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+          code: ErrorCodes.deviceIntegrityBlocked,
+          originalError: error,
+        );
+      }
+    }
+    return ModerationException(
+      'Network error: ${error.message}',
+      code: 'NETWORK_ERROR',
+      originalError: error,
+    );
+  }
+
   @override
   Future<List<Appeal>> getMyAppeals({required String token}) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/getMyAppeals',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true &&
-          response.data['appeals'] != null) {
-        return (response.data['appeals'] as List)
-            .map((data) => Appeal.fromJson(data))
+      if (response.data?['success'] == true &&
+          response.data?['appeals'] != null) {
+        return (response.data!['appeals'] as List)
+            .map((data) => Appeal.fromJson(data as Map<String, dynamic>))
             .toList();
       } else {
         throw ModerationException(
-          response.data['message'] ?? 'Failed to load appeals',
+          (response.data?['message'] as String?) ?? 'Failed to load appeals',
           code: 'LOAD_APPEALS_FAILED',
         );
       }
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -66,7 +98,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/appealContent',
         data: {
           'contentId': contentId,
@@ -78,20 +110,19 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true && response.data['appeal'] != null) {
-        return Appeal.fromJson(response.data['appeal']);
+      if (response.data?['success'] == true &&
+          response.data?['appeal'] != null) {
+        return Appeal.fromJson(
+          response.data!['appeal'] as Map<String, dynamic>,
+        );
       } else {
         throw ModerationException(
-          response.data['message'] ?? 'Failed to submit appeal',
+          (response.data?['message'] as String?) ?? 'Failed to submit appeal',
           code: 'SUBMIT_APPEAL_FAILED',
         );
       }
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -110,7 +141,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/flag',
         data: {
           'contentId': contentId,
@@ -121,13 +152,18 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      return response.data;
+      final data = response.data;
+      if (data == null) {
+        throw const ModerationException(
+          'Invalid flag response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return data;
+    } on ModerationException {
+      rethrow;
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -145,7 +181,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         '/api/voteOnAppeal',
         data: {
           'appealId': appealId,
@@ -155,13 +191,18 @@ class ModerationService implements ModerationRepository {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      return VoteResult.fromJson(response.data);
+      final data = response.data;
+      if (data == null) {
+        throw const ModerationException(
+          'Invalid vote response',
+          code: 'INVALID_RESPONSE',
+        );
+      }
+      return VoteResult.fromJson(data);
+    } on ModerationException {
+      rethrow;
     } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
+      throw _mapDioException(e);
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',
@@ -185,20 +226,270 @@ class ModerationService implements ModerationRepository {
         if (filters != null) ...filters.toJson(),
       };
 
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/api/reviewAppealedContent',
         queryParameters: queryParams,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      if (response.data['success'] == true) {
-        return AppealResponse.fromJson(response.data);
+      final Map<String, dynamic> responseData =
+          response.data ?? <String, dynamic>{};
+      if (responseData['success'] == true) {
+        return AppealResponse.fromJson(responseData);
       } else {
+        final message = responseData['message'] as String?;
         throw ModerationException(
-          response.data['message'] ?? 'Failed to load voting feed',
+          message ?? 'Failed to load voting feed',
           code: 'LOAD_FEED_FAILED',
         );
       }
+    } on ModerationException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<ModerationQueueResponse> fetchModerationQueue({
+    int page = 1,
+    int pageSize = 20,
+    ModerationFilters? filters,
+    required String token,
+  }) async {
+    try {
+      final filterParams = filters?.toQueryParams() ?? <String, dynamic>{};
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'pageSize': pageSize,
+        ...filterParams,
+      };
+      final attributes = <String, Object>{
+        'request.page': page,
+        'request.page_size': pageSize,
+      };
+      for (final entry in filterParams.entries) {
+        attributes['request.filter.${entry.key}'] = entry.value.toString();
+      }
+
+      return await AsoraTracer.traceOperation(
+        'ModerationService.fetchModerationQueue',
+        () async {
+          final response = await _dio.get<Map<String, dynamic>>(
+            '/moderation/review-queue',
+            queryParameters: queryParams,
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final payload = response.data ?? {};
+          final queueData =
+              (payload['data'] as Map<String, dynamic>?) ?? payload;
+          return ModerationQueueResponse.fromJson(queueData);
+        },
+        attributes: attributes,
+      );
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<ModerationCase> fetchModerationCase({
+    required String caseId,
+    required String token,
+  }) async {
+    try {
+      return await AsoraTracer.traceOperation(
+        'ModerationService.fetchModerationCase',
+        () async {
+          final response = await _dio.get<Map<String, dynamic>>(
+            '/moderation/cases/$caseId',
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final payload = response.data ?? {};
+          final caseData =
+              (payload['data'] as Map<String, dynamic>?) ?? payload;
+          return ModerationCase.fromJson(caseData);
+        },
+        attributes: {'request.case_id': caseId},
+      );
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<ModerationDecisionResult> submitModerationDecision({
+    required String caseId,
+    required String token,
+    required ModerationDecisionInput input,
+  }) async {
+    try {
+      return await AsoraTracer.traceOperation(
+        'ModerationService.submitModerationDecision',
+        () async {
+          final response = await _dio.post<Map<String, dynamic>>(
+            '/moderation/cases/$caseId/decision',
+            data: input.toJson(),
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final payload = response.data ?? {};
+          final resultData =
+              (payload['data'] as Map<String, dynamic>?) ?? payload;
+          return ModerationDecisionResult.fromJson(resultData);
+        },
+        attributes: <String, Object>{
+          'request.case_id': caseId,
+          'request.decision': input.action.name,
+          if (input.policyTest) 'request.policy_test': true,
+        },
+      );
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<void> escalateModerationCase({
+    required String caseId,
+    required String token,
+    required ModerationEscalationInput input,
+  }) async {
+    try {
+      await AsoraTracer.traceOperation<void>(
+        'ModerationService.escalateModerationCase',
+        () async {
+          await _dio.post<Map<String, dynamic>>(
+            '/moderation/cases/$caseId/escalate',
+            data: input.toJson(),
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+        },
+        attributes: {
+          'request.case_id': caseId,
+          'request.target_queue': input.targetQueue,
+        },
+      );
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<ModerationAuditResponse> fetchCaseAudit({
+    required String caseId,
+    required String token,
+  }) async {
+    try {
+      return await AsoraTracer.traceOperation(
+        'ModerationService.fetchCaseAudit',
+        () async {
+          final response = await _dio.get<Map<String, dynamic>>(
+            '/moderation/cases/$caseId/audit',
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final payload = response.data ?? {};
+          final auditData =
+              (payload['data'] as Map<String, dynamic>?) ?? payload;
+          return ModerationAuditResponse.fromJson(auditData);
+        },
+        attributes: {'request.case_id': caseId},
+      );
+    } on DioException catch (e) {
+      throw ModerationException(
+        'Network error: ${e.message}',
+        code: 'NETWORK_ERROR',
+        originalError: e,
+      );
+    } catch (e) {
+      throw ModerationException(
+        'Unexpected error: $e',
+        code: 'UNKNOWN_ERROR',
+        originalError: e,
+      );
+    }
+  }
+
+  @override
+  Future<ModerationAuditResponse> searchAudit({
+    required ModerationAuditSearchFilters filters,
+    required String token,
+  }) async {
+    try {
+      final queryParams = filters.toQueryParams();
+      final attributes = <String, Object>{
+        'request.page': filters.page,
+        'request.page_size': filters.pageSize,
+      };
+      for (final entry in queryParams.entries) {
+        attributes['request.audit_filter.${entry.key}'] = entry.value
+            .toString();
+      }
+
+      return await AsoraTracer.traceOperation(
+        'ModerationService.searchAudit',
+        () async {
+          final response = await _dio.get<Map<String, dynamic>>(
+            '/moderation/audit',
+            queryParameters: queryParams,
+            options: Options(headers: {'Authorization': 'Bearer $token'}),
+          );
+          final payload = response.data ?? {};
+          final auditData =
+              (payload['data'] as Map<String, dynamic>?) ?? payload;
+          return ModerationAuditResponse.fromJson(auditData);
+        },
+        attributes: attributes,
+      );
     } on DioException catch (e) {
       throw ModerationException(
         'Network error: ${e.message}',

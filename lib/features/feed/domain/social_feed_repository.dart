@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library social_feed_repository;
 
 /// ASORA SOCIAL FEED REPOSITORY
@@ -7,7 +9,7 @@ library social_feed_repository;
 /// 🔐 Dependency Rule: Application layer implements this interface
 /// 📱 Platform: Flutter with Clean Architecture compliance
 
-import 'models.dart';
+import 'package:asora/features/feed/domain/models.dart';
 
 /// Abstract repository defining social feed operations
 ///
@@ -24,6 +26,29 @@ abstract class SocialFeedRepository {
   /// Returns paginated feed response with posts and AI moderation data
   /// Throws [SocialFeedException] on request failure
   Future<FeedResponse> getFeed({required FeedParams params, String? token});
+
+  /// Fetch discover feed (public) with cursor pagination.
+  Future<FeedResponse> getDiscoverFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  });
+
+  /// Fetch news feed (public) with cursor pagination.
+  Future<FeedResponse> getNewsFeed({
+    String? cursor,
+    int limit = 25,
+    String? token,
+  });
+
+  /// Fetch a user's timeline feed.
+  Future<FeedResponse> getUserFeed({
+    required String userId,
+    String? cursor,
+    int limit = 25,
+    String? token,
+    bool includeReplies = false,
+  });
 
   /// Get trending posts feed
   ///
@@ -181,13 +206,22 @@ class SocialFeedMetrics {
   });
 
   factory SocialFeedMetrics.fromJson(Map<String, dynamic> json) {
+    final topCategories = json['topCategories'];
+    final trendingTags = json['trendingTags'];
+    final averageEngagement = json['averageEngagement'];
     return SocialFeedMetrics(
-      totalPosts: json['totalPosts'] ?? 0,
-      totalActiveUsers: json['totalActiveUsers'] ?? 0,
-      postsToday: json['postsToday'] ?? 0,
-      averageEngagement: (json['averageEngagement'] ?? 0.0).toDouble(),
-      topCategories: Map<String, int>.from(json['topCategories'] ?? {}),
-      trendingTags: List<String>.from(json['trendingTags'] ?? []),
+      totalPosts: json['totalPosts'] as int? ?? 0,
+      totalActiveUsers: json['totalActiveUsers'] as int? ?? 0,
+      postsToday: json['postsToday'] as int? ?? 0,
+      averageEngagement: averageEngagement is num
+          ? averageEngagement.toDouble()
+          : 0.0,
+      topCategories: topCategories is Map
+          ? Map<String, int>.from(topCategories)
+          : const <String, int>{},
+      trendingTags: trendingTags is List
+          ? trendingTags.whereType<String>().toList()
+          : const <String>[],
     );
   }
 }

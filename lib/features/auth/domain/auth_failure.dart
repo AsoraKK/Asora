@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // lib/features/auth/domain/auth_failure.dart
 
 class AuthFailure implements Exception {

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 library feed_models;
 
 /// ASORA FEED DOMAIN MODELS
@@ -6,8 +8,6 @@ library feed_models;
 /// 🏗️ Architecture: Domain layer - defines business entities
 /// 🔐 Dependency Rule: No dependencies on external layers
 /// 📱 Platform: Dart domain models
-
-import 'package:flutter/material.dart';
 
 class Post {
   final String id;
@@ -22,8 +22,16 @@ class Post {
   final List<String>? mediaUrls;
   final PostModerationData? moderation;
   final PostMetadata? metadata;
+  final NewsSource? source;
+  final bool isNews;
   final bool userLiked;
   final bool userDisliked;
+  final String trustStatus;
+  final PostTrustTimeline timeline;
+  final bool hasAppeal;
+  final bool proofSignalsProvided;
+  final bool verifiedContextBadgeEligible;
+  final bool featuredEligible;
 
   const Post({
     required this.id,
@@ -38,16 +46,49 @@ class Post {
     this.mediaUrls,
     this.moderation,
     this.metadata,
+    this.source,
+    this.isNews = false,
     this.userLiked = false,
     this.userDisliked = false,
+    this.trustStatus = 'no_extra_signals',
+    this.timeline = const PostTrustTimeline(),
+    this.hasAppeal = false,
+    this.proofSignalsProvided = false,
+    this.verifiedContextBadgeEligible = false,
+    this.featuredEligible = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
+    final author = json['author'] as Map<String, dynamic>?;
+    final textValue = _extractText(json);
+    final metadata = _extractMetadata(json);
+    final media = json['mediaUrls'];
+    final moderation = json['moderation'];
+    final sourceJson = json['source'];
+    final username =
+        json['authorUsername'] as String? ??
+        author?['username'] as String? ??
+        author?['displayName'] as String? ??
+        json['authorId'] as String;
+
+    String normalizeTrustStatus(Object? value) {
+      const allowed = {
+        'verified_signals_attached',
+        'no_extra_signals',
+        'under_appeal',
+        'actioned',
+      };
+      if (value is String && allowed.contains(value)) {
+        return value;
+      }
+      return 'no_extra_signals';
+    }
+
     return Post(
       id: json['id'] as String,
       authorId: json['authorId'] as String,
-      authorUsername: json['authorUsername'] as String,
-      text: json['text'] as String,
+      authorUsername: username,
+      text: textValue,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
@@ -55,17 +96,38 @@ class Post {
       likeCount: json['likeCount'] as int? ?? 0,
       dislikeCount: json['dislikeCount'] as int? ?? 0,
       commentCount: json['commentCount'] as int? ?? 0,
-      mediaUrls: json['mediaUrls'] != null
-          ? List<String>.from(json['mediaUrls'])
+      mediaUrls: media is List ? media.whereType<String>().toList() : null,
+      moderation: moderation is Map
+          ? PostModerationData.fromJson(Map<String, dynamic>.from(moderation))
           : null,
-      moderation: json['moderation'] != null
-          ? PostModerationData.fromJson(json['moderation'])
+      metadata: metadata,
+      source: sourceJson is Map<String, dynamic>
+          ? NewsSource.fromJson(sourceJson)
+          : sourceJson is Map
+          ? NewsSource.fromJson(Map<String, dynamic>.from(sourceJson))
           : null,
-      metadata: json['metadata'] != null
-          ? PostMetadata.fromJson(json['metadata'])
-          : null,
-      userLiked: json['userLiked'] as bool? ?? false,
-      userDisliked: json['userDisliked'] as bool? ?? false,
+      isNews: json['isNews'] as bool? ?? metadata?.category == 'news',
+      userLiked:
+          json['userLiked'] as bool? ??
+          json['viewerHasLiked'] as bool? ??
+          false,
+      userDisliked:
+          json['userDisliked'] as bool? ??
+          json['viewerHasDisliked'] as bool? ??
+          false,
+      trustStatus: normalizeTrustStatus(json['trustStatus']),
+      timeline: PostTrustTimeline.fromJson(
+        json['timeline'] is Map<String, dynamic>
+            ? json['timeline'] as Map<String, dynamic>
+            : json['timeline'] is Map
+            ? Map<String, dynamic>.from(json['timeline'] as Map)
+            : null,
+      ),
+      hasAppeal: json['hasAppeal'] as bool? ?? false,
+      proofSignalsProvided: json['proofSignalsProvided'] as bool? ?? false,
+      verifiedContextBadgeEligible:
+          json['verifiedContextBadgeEligible'] as bool? ?? false,
+      featuredEligible: json['featuredEligible'] as bool? ?? false,
     );
   }
 
@@ -83,8 +145,162 @@ class Post {
       if (mediaUrls != null) 'mediaUrls': mediaUrls,
       if (moderation != null) 'moderation': moderation!.toJson(),
       if (metadata != null) 'metadata': metadata!.toJson(),
+      if (source != null) 'source': source!.toJson(),
+      'isNews': isNews,
       'userLiked': userLiked,
       'userDisliked': userDisliked,
+      'trustStatus': trustStatus,
+      'timeline': timeline.toJson(),
+      'hasAppeal': hasAppeal,
+      'proofSignalsProvided': proofSignalsProvided,
+      'verifiedContextBadgeEligible': verifiedContextBadgeEligible,
+      'featuredEligible': featuredEligible,
+    };
+  }
+
+  static String _extractText(Map<String, dynamic> json) {
+    return (json['text'] ?? json['content'] ?? '') as String;
+  }
+
+  static PostMetadata? _extractMetadata(Map<String, dynamic> json) {
+    final metadataJson = json['metadata'] as Map<String, dynamic>?;
+    if (metadataJson != null) {
+      return PostMetadata.fromJson(metadataJson);
+    }
+    final topics = json['topics'];
+    final tags = topics is List ? List<String>.from(topics) : null;
+    final location = json['location'] as String?;
+    final category = json['category'] as String?;
+    if (location != null ||
+        (tags != null && tags.isNotEmpty) ||
+        category != null) {
+      return PostMetadata(location: location, tags: tags, category: category);
+    }
+    return null;
+  }
+}
+
+class PostTrustTimeline {
+  final String created;
+  final String mediaChecked;
+  final String moderation;
+  final String? appeal;
+
+  const PostTrustTimeline({
+    this.created = 'complete',
+    this.mediaChecked = 'none',
+    this.moderation = 'none',
+    this.appeal,
+  });
+
+  factory PostTrustTimeline.fromJson(Map<String, dynamic>? json) {
+    String normalizeCreated(Object? _) => 'complete';
+
+    String normalizeMediaChecked(Object? value) {
+      if (value == 'complete' || value == 'none') {
+        return value as String;
+      }
+      return 'none';
+    }
+
+    String normalizeModeration(Object? value) {
+      if (value == 'complete' ||
+          value == 'warn' ||
+          value == 'actioned' ||
+          value == 'none') {
+        return value as String;
+      }
+      return 'none';
+    }
+
+    String? normalizeAppeal(Object? value) {
+      if (value == 'open' || value == 'resolved') {
+        return value as String;
+      }
+      return null;
+    }
+
+    if (json == null) {
+      return const PostTrustTimeline();
+    }
+
+    return PostTrustTimeline(
+      created: normalizeCreated(json['created']),
+      mediaChecked: normalizeMediaChecked(json['mediaChecked']),
+      moderation: normalizeModeration(json['moderation']),
+      appeal: normalizeAppeal(json['appeal']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'created': created,
+      'mediaChecked': mediaChecked,
+      'moderation': moderation,
+      if (appeal != null) 'appeal': appeal,
+    };
+  }
+}
+
+class NewsSource {
+  final String type;
+  final String name;
+  final String? url;
+  final String? feedUrl;
+  final String? externalId;
+  final DateTime? publishedAt;
+  final DateTime? ingestedAt;
+  final String? ingestedBy;
+  final String? ingestMethod;
+
+  const NewsSource({
+    required this.type,
+    required this.name,
+    this.url,
+    this.feedUrl,
+    this.externalId,
+    this.publishedAt,
+    this.ingestedAt,
+    this.ingestedBy,
+    this.ingestMethod,
+  });
+
+  factory NewsSource.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(Object? value) {
+      if (value is! String || value.isEmpty) {
+        return null;
+      }
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return NewsSource(
+      type: json['type'] as String? ?? 'curated',
+      name: json['name'] as String? ?? 'Unknown source',
+      url: json['url'] as String?,
+      feedUrl: json['feedUrl'] as String?,
+      externalId: json['externalId'] as String?,
+      publishedAt: parseDate(json['publishedAt']),
+      ingestedAt: parseDate(json['ingestedAt']),
+      ingestedBy: json['ingestedBy'] as String?,
+      ingestMethod: json['ingestMethod'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'name': name,
+      if (url != null) 'url': url,
+      if (feedUrl != null) 'feedUrl': feedUrl,
+      if (externalId != null) 'externalId': externalId,
+      if (publishedAt != null) 'publishedAt': publishedAt!.toIso8601String(),
+      if (ingestedAt != null) 'ingestedAt': ingestedAt!.toIso8601String(),
+      if (ingestedBy != null) 'ingestedBy': ingestedBy,
+      if (ingestMethod != null) 'ingestMethod': ingestMethod,
     };
   }
 }
@@ -106,10 +322,11 @@ class PostModerationData {
   });
 
   factory PostModerationData.fromJson(Map<String, dynamic> json) {
+    final flags = json['flags'];
     return PostModerationData(
       confidence: json['confidence'] as String,
       score: (json['score'] as num).toDouble(),
-      flags: List<String>.from(json['flags'] ?? []),
+      flags: flags is List ? List<String>.from(flags) : const <String>[],
       analyzedAt: DateTime.parse(json['analyzedAt'] as String),
       provider: json['provider'] as String,
     );
@@ -143,9 +360,10 @@ class PostMetadata {
   });
 
   factory PostMetadata.fromJson(Map<String, dynamic> json) {
+    final tags = json['tags'];
     return PostMetadata(
       location: json['location'] as String?,
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
+      tags: tags is List ? List<String>.from(tags) : null,
       isPinned: json['isPinned'] as bool? ?? false,
       isEdited: json['isEdited'] as bool? ?? false,
       category: json['category'] as String?,
@@ -233,13 +451,32 @@ class FeedResponse {
     required this.pageSize,
   });
 
-  factory FeedResponse.fromJson(Map<String, dynamic> json) {
+  factory FeedResponse.fromCursor({
+    required List<Post> posts,
+    String? nextCursor,
+    int limit = 20,
+  }) {
     return FeedResponse(
-      posts: (json['posts'] as List)
-          .map((post) => Post.fromJson(post as Map<String, dynamic>))
-          .toList(),
-      totalCount: json['totalCount'] as int,
-      hasMore: json['hasMore'] as bool,
+      posts: posts,
+      totalCount: posts.length,
+      hasMore: nextCursor != null,
+      nextCursor: nextCursor,
+      page: 1,
+      pageSize: limit,
+    );
+  }
+
+  factory FeedResponse.fromJson(Map<String, dynamic> json) {
+    final posts = json['posts'];
+    return FeedResponse(
+      posts: posts is List
+          ? posts
+                .whereType<Map<String, dynamic>>()
+                .map((post) => Post.fromJson(Map<String, dynamic>.from(post)))
+                .toList()
+          : const <Post>[],
+      totalCount: json['totalCount'] as int? ?? 0,
+      hasMore: json['hasMore'] as bool? ?? false,
       nextCursor: json['nextCursor'] as String?,
       page: json['page'] as int? ?? 1,
       pageSize: json['pageSize'] as int? ?? 20,
@@ -310,11 +547,10 @@ enum HumanConfidence {
 }
 
 extension HumanConfidenceExtension on HumanConfidence {
-  /// Get display color for the confidence chip
-  Color get color => switch (this) {
-    HumanConfidence.high => const Color(0xFF4CAF50), // Green
-    HumanConfidence.medium => const Color(0xFFFF9800), // Orange
-    HumanConfidence.low => const Color(0xFFFF5722), // Deep Orange
-    HumanConfidence.aiGen => const Color(0xFFF44336), // Red
+  String get displayLabel => switch (this) {
+    HumanConfidence.high => 'High',
+    HumanConfidence.medium => 'Medium',
+    HumanConfidence.low => 'Low',
+    HumanConfidence.aiGen => 'AI Generated',
   };
 }

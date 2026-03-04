@@ -1,0 +1,87 @@
+name: OpenAPI
+
+on:
+  pull_request:
+    paths:
+      - 'api/openapi/**'
+      - 'functions/**'
+      - 'lib/**'
+      - '.github/workflows/**'
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run openapi:lint
+      - name: Spectral lint
+        run: npx spectral lint api/openapi/openapi.yaml
+      - run: npm run openapi:bundle
+      - name: Fail if bundled spec drift
+        run: |
+          git add -N api/openapi/dist/openapi.json
+          if ! git diff --quiet -- api/openapi/dist/openapi.json; then
+            echo "Bundled openapi.json out of date. Run: npm run openapi:bundle and commit."
+            exit 1
+          fi
+      - name: Check for breaking changes
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          npx oasdiff --fail-on-diff \
+            api/openapi/dist/openapi.json \
+            <(git show origin/${{ github.base_ref }}:api/openapi/dist/openapi.json)
+      - name: Enforce semver when breaking
+        run: |
+          set -e
+          BASE=origin/${{ github.base_ref }}
+          if npx oasdiff --fail-on-breaking api/openapi/dist/openapi.json <(git show $BASE:api/openapi/dist/openapi.json); then
+            exit 0
+          fi
+          CURR=$(node -pe 'JSON.parse(require("node:fs").readFileSync("api/openapi/dist/openapi.json","utf8")).info?.version ?? ""')
+          PREV=$(git show $BASE:api/openapi/dist/openapi.json | node -pe 'JSON.parse(require("node:fs").readFileSync(0,"utf8")).info?.version ?? ""')
+          echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
+          node -e "const s=process.argv[1].split('.').map(Number);const t=process.argv[2].split('.').map(Number);process.exit(!((t[1]>s[1])||(t[0]>s[0])));" "$PREV" "$CURR"
+      - name: Assert Functions routes are covered by OpenAPI
+        run: npx ts-node tools/openapi/assert-routes-covered.ts
+      - name: Validate OpenAPI examples
+        run: npx ts-node tools/openapi/validate-examples.ts
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npx openapi-generator-cli version-manager set 7.7.0
+      - run: npm run openapi:gen:dart
+      - name: Fail if client drift
+        run: |
+          if [[ -n "$(git status --porcelain lib/generated/api_client)" ]]; then
+            echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
+            git --no-pager diff -- lib/generated/api_client | head -n 200
+            exit 1
+          fi
+      - name: Generate OpenAPI docs pre-release bundle
+        run: npm run openapi:docs
+      - name: Write contract env
+        run: |
+          cat <<EOF > .env.test
+          STAGING_DOMAIN=${{ secrets.STAGING_DOMAIN }}
+          STAGING_SMOKE_TOKEN=${{ secrets.STAGING_SMOKE_TOKEN }}
+          EOF
+      - name: Contract tests
+        env:
+          STAGING_DOMAIN: ${{ secrets.STAGING_DOMAIN }}
+          STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+        run: npx jest -c jest.contract.config.cjs --runInBand
+      - name: Upload bundled spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi.json
+          path: api/openapi/dist/openapi.json
+      - name: Upload OpenAPI docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-docs
+          path: api/openapi/dist/index.html

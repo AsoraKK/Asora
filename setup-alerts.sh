@@ -8,6 +8,7 @@ set -e
 RG="${AZURE_RESOURCE_GROUP:-asora-psql-flex}"
 APP="${AZURE_FUNCTIONAPP_NAME:-asora-function-dev}"
 SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
+ACTION_GROUP_ID="${ALERT_ACTION_GROUP_ID:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -18,6 +19,11 @@ NC='\033[0m'
 
 echo -e "${BLUE}🚨 Setting up Application Insights Alerts${NC}"
 echo "=============================================="
+
+if [ -z "$ACTION_GROUP_ID" ]; then
+    echo -e "${RED}❌ ALERT_ACTION_GROUP_ID is required (alerts must route to humans)${NC}"
+    exit 1
+fi
 
 # Get Application Insights resource
 AI_RESOURCE=$(az functionapp show -g "$RG" -n "$APP" --query "siteConfig.appSettings[?name=='APPLICATIONINSIGHTS_CONNECTION_STRING'].value" -o tsv)
@@ -44,7 +50,7 @@ az monitor metrics alert create \
     --evaluation-frequency 5m \
     --severity 2 \
     --description "Function App error rate exceeds 1% over 10 minutes" \
-    --action-group-ids ""
+    --action-group-ids "$ACTION_GROUP_ID"
 
 echo -e "${GREEN}✅ Error rate alert created${NC}"
 
@@ -60,7 +66,7 @@ az monitor metrics alert create \
     --evaluation-frequency 5m \
     --severity 2 \
     --description "Function App p95 latency exceeds 200ms over 10 minutes" \
-    --action-group-ids ""
+    --action-group-ids "$ACTION_GROUP_ID"
 
 echo -e "${GREEN}✅ Latency alert created${NC}"
 
@@ -69,8 +75,7 @@ echo "=============================================="
 echo -e "${YELLOW}Error Rate Alert:${NC} Triggers when >1% of requests fail over 10 minutes"
 echo -e "${YELLOW}Latency Alert:${NC} Triggers when p95 response time >200ms over 10 minutes"
 echo ""
-echo -e "${BLUE}📧 To add email notifications:${NC}"
-echo "1. Create an Action Group in Azure Portal"
-echo "2. Update alerts to reference the Action Group ID"
+echo -e "${BLUE}📧 Action group configured:${NC}"
+echo "  $ACTION_GROUP_ID"
 echo ""
 echo -e "${GREEN}🎉 Application Insights alerts configured!${NC}"

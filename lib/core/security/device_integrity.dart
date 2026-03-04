@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA DEVICE INTEGRITY DETECTION
 ///
 /// 🎯 Purpose: Detect compromised devices (root/jailbreak)
@@ -8,8 +10,12 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart'; // Temporarily disabled for Android build compatibility
+// Prefer flutter_jailbreak_detection when available; keep a safe fallback.
+// ignore: unused_import
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart'
+    as jailbreak;
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 /// Device integrity state
 enum DeviceIntegrityStatus { unknown, secure, compromised, error }
@@ -64,16 +70,12 @@ class DeviceIntegrityService {
       bool isJailbroken = false;
 
       try {
-        // Temporarily disabled jailbreak detection for Android build compatibility
-        // TODO: Re-enable when flutter_jailbreak_detection supports Android namespace
-        // final isDeveloperMode = await FlutterJailbreakDetection.developerMode;
-
-        // For now, assume device is secure in production, allow testing override
-        const isDeveloperMode = false;
-
-        // For demonstration, treat developer mode as potentially compromised
-        // In production, you'd use more sophisticated checks
-        isJailbroken = isDeveloperMode;
+        // Use plugin if linked; otherwise fallback to secure
+        bool rooted = false;
+        try {
+          rooted = await jailbreak.FlutterJailbreakDetection.jailbroken;
+        } catch (_) {}
+        isJailbroken = rooted;
       } catch (e) {
         debugPrint('🚨 Jailbreak detection failed, assuming secure: $e');
         isJailbroken = false; // Fail secure
@@ -117,7 +119,15 @@ class DeviceIntegrityService {
 
       return result;
     } catch (e) {
-      debugPrint('🚨 Device integrity check failed: $e');
+      try {
+        debugPrint('🚨 Device integrity check failed: $e');
+      } catch (logError) {
+        developer.log(
+          '🚨 [FALLBACK] Logging failed: $logError',
+          name: 'device_integrity',
+          error: logError,
+        );
+      }
 
       final errorResult = DeviceIntegrityInfo(
         status: DeviceIntegrityStatus.error,
@@ -149,8 +159,8 @@ class DeviceIntegrityService {
 
     debugPrint('🚨 SECURITY: Device integrity violation: ${jsonEncode(event)}');
 
-    // TODO: Send to telemetry service
-    // TelemetryService.reportSecurityEvent(event);
+    // Telemetry hook: integrate with telemetry service if available
+    // Example: TelemetryService.reportSecurityEvent(event);
   }
 }
 

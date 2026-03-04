@@ -1,10 +1,12 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final Dio _dio = Dio();
-  final _storage = const FlutterSecureStorage();
+  final Dio _dio;
+  final FlutterSecureStorage _storage;
 
   // Your Azure Functions local development URL (Android emulator compatible)
   // SECURITY: Environment-based URL configuration
@@ -21,7 +23,9 @@ class AuthService {
     return isDevelopment ? _devUrl : _prodUrl;
   }
 
-  AuthService() {
+  AuthService({Dio? dio, FlutterSecureStorage? storage})
+    : _dio = dio ?? Dio(),
+      _storage = storage ?? const FlutterSecureStorage() {
     // Configure Dio with default options
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);
@@ -32,10 +36,13 @@ class AuthService {
   /// Login with email - calls your authEmail Azure Function
   Future<bool> loginWithEmail(String email) async {
     try {
-      final response = await _dio.post('/authEmail', data: {'email': email});
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/authEmail',
+        data: {'email': email},
+      );
 
       if (response.statusCode == 200) {
-        final token = response.data['token'];
+        final token = response.data?['token'] as String?;
         if (token != null) {
           // Store JWT token securely
           await _storage.write(key: 'jwt_token', value: token);
@@ -92,7 +99,7 @@ class AuthService {
     if (token == null) return null;
 
     try {
-      final response = await _dio.get(
+      final response = await _dio.get<Map<String, dynamic>>(
         '/getMe',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

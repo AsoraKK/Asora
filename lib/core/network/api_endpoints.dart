@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /**
  * ASORA API ENDPOINTS
  * 
@@ -20,6 +22,7 @@ class ApiEndpoints {
 
   // Privacy & GDPR endpoints
   static const String exportUser = '$_baseApi/user/export';
+  static const String exportStatus = '$_baseApi/user/export/status';
   static const String deleteUser = '$_baseApi/user/delete';
 
   // Feed & Posts

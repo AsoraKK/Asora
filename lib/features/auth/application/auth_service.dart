@@ -1,83 +1,36 @@
+// ignore_for_file: public_member_api_docs
+
 // lib/features/auth/application/auth_service.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:http/http.dart' as http;
 
-import '../domain/auth_failure.dart';
-import '../domain/user.dart';
-import 'oauth2_service.dart';
-
-GoogleSignIn _buildGoogleSignIn() {
-  // Provide fallback values for client IDs to avoid null issues
-  const webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: 'web-client-id-not-set',
-  );
-  const androidClientId = String.fromEnvironment(
-    'GOOGLE_ANDROID_CLIENT_ID',
-    defaultValue: 'android-client-id-not-set',
-  );
-  const desktopClientId = String.fromEnvironment(
-    'GOOGLE_DESKTOP_CLIENT_ID',
-    defaultValue: 'desktop-client-id-not-set',
-  );
-
-  if (kIsWeb) {
-    return GoogleSignIn(
-      clientId: webClientId,
-      scopes: ['email', 'profile', 'openid'],
-    );
-  }
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-      return GoogleSignIn(
-        clientId: androidClientId,
-        serverClientId: webClientId,
-        scopes: ['email', 'profile', 'openid'],
-      );
-    case TargetPlatform.macOS:
-    case TargetPlatform.linux:
-    case TargetPlatform.windows:
-      return GoogleSignIn(
-        clientId: desktopClientId,
-        serverClientId: webClientId,
-        scopes: ['email', 'profile', 'openid'],
-      );
-    default:
-      dev.log('Unsupported platform: $defaultTargetPlatform', name: 'auth');
-      throw UnsupportedError('Unsupported platform');
-  }
-}
+import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 
 class AuthService {
   AuthService({
-    GoogleSignIn? googleSignIn,
     FlutterSecureStorage? secureStorage,
     LocalAuthentication? localAuth,
     http.Client? httpClient,
     OAuth2Service? oauth2Service,
     String authUrl = _defaultAuthUrl,
-  }) : _googleSignIn = googleSignIn ?? _buildGoogleSignIn(),
-       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _localAuth = localAuth ?? LocalAuthentication(),
        _httpClient = httpClient ?? http.Client(),
        _oauth2Service = oauth2Service ?? OAuth2Service(),
        _authUrl = authUrl;
-
-  final GoogleSignIn _googleSignIn;
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuth;
   final http.Client _httpClient;
   final OAuth2Service _oauth2Service;
   final String _authUrl;
 
-  static const _sessionKey = 'sessionToken';
   static const _jwtKey = 'jwt';
   static const _userKey = 'userData';
   static const _defaultAuthUrl = String.fromEnvironment('AUTH_URL');
@@ -234,28 +187,34 @@ class AuthService {
 
   /// Logout user and clear all stored data
   Future<void> logout() async {
-    try {
-      dev.log('Logging out user', name: 'auth');
-
-      // Clear all stored authentication data
-      await Future.wait([
-        _secureStorage.delete(key: _jwtKey),
-        _secureStorage.delete(key: _userKey),
-        _secureStorage.delete(key: _sessionKey),
-        _googleSignIn.signOut(),
-      ]);
-
-      dev.log('User logged out successfully', name: 'auth');
-    } catch (e, st) {
-      dev.log(
-        'Error during logout: $e',
-        name: 'auth',
-        error: e,
-        stackTrace: st,
-        level: 1000,
-      );
-      // Don't throw error on logout, just log it
+    // Ensure none of the individual logout steps can throw synchronously
+    // or bubble up errors. We want logout() to be safe to call regardless of
+    // storage or platform failures (tests rely on this behaviour).
+    Future<void> safeRun(FutureOr<dynamic> Function() fn) async {
+      try {
+        final res = fn();
+        if (res is Future) await res;
+      } catch (e, st) {
+        dev.log(
+          'Ignored logout error: $e',
+          name: 'auth',
+          error: e,
+          stackTrace: st,
+        );
+      }
     }
+
+    dev.log('Logging out user', name: 'auth');
+
+    await Future.wait([
+      safeRun(() => _secureStorage.delete(key: _jwtKey)),
+      safeRun(() => _secureStorage.delete(key: _userKey)),
+      // Social provider sign-out is handled via the identity provider
+      // (B2C hosted sign-out). No direct google_sign_in SDK call is used.
+      safeRun(() => _oauth2Service.signOut()),
+    ]);
+
+    dev.log('User logged out (best-effort) completed', name: 'auth');
   }
 
   /// Check if user is currently authenticated
@@ -279,58 +238,74 @@ class AuthService {
     }
   }
 
-  // Existing methods...
-  Future<String> signInWithGoogle() async {
+  /// Sign in with Google via B2C/Entra External ID
+  ///
+  /// This method initiates OAuth2/OIDC flow through B2C, which federates to Google
+  /// as an identity provider. The user sees "Continue with Google" but the app
+  /// receives a B2C-issued token (not a Google-native token).
+  ///
+  /// Note: Google is configured as an identity provider in B2C/Entra, not called
+  /// directly via google_sign_in SDK. This maintains a single trust boundary.
+  Future<User> signInWithGoogle() async {
     try {
-      final account = await _googleSignIn.signIn();
-      if (account == null) throw AuthFailure.cancelledByUser();
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-      assert(idToken != null, 'Google returned a null idToken');
-      final sessionToken = await verifyTokenWithBackend(idToken!);
-      dev.log('Google sign-in succeeded', name: 'auth');
-      return sessionToken;
+      dev.log('Starting B2C sign-in (Google IdP)', name: 'auth');
+
+      // Use OAuth2/OIDC flow that goes through B2C
+      // B2C will handle Google authentication and return a B2C token
+      final user = await signInWithOAuth2(provider: OAuth2Provider.google);
+
+      dev.log('B2C sign-in succeeded (Google IdP): ${user.id}', name: 'auth');
+      return user;
     } catch (e, st) {
       dev.log(
-        'Google sign-in failed: $e',
+        'B2C sign-in failed (Google IdP): $e',
         name: 'auth',
         error: e,
         stackTrace: st,
         level: 1000,
       );
-      throw AuthFailure.serverError(e.toString());
-    }
-  }
-
-  Future<String> verifyTokenWithBackend(String idToken) async {
-    try {
-      final response = await _httpClient.post(
-        Uri.parse(_authUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'token': idToken}),
-      );
-
-      if (response.statusCode != 200) {
-        final error = response.body.isNotEmpty
-            ? jsonDecode(response.body)['error'] ?? 'Server error'
-            : 'Server error';
-        throw AuthFailure.serverError(error.toString());
-      }
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = data['sessionToken'] as String?;
-      if (token == null) throw AuthFailure.serverError('Invalid response');
-      await _secureStorage.write(key: _sessionKey, value: token);
-      return token;
-    } catch (e) {
       if (e is AuthFailure) rethrow;
-      throw AuthFailure.serverError(e.toString());
+      throw AuthFailure.serverError('B2C sign-in failed: ${e.toString()}');
     }
   }
 
-  Future<String?> getSessionToken() => _secureStorage.read(key: _sessionKey);
+  Future<User> signInWithApple() async {
+    try {
+      dev.log('Starting B2C sign-in (Apple IdP)', name: 'auth');
+      return await signInWithOAuth2(provider: OAuth2Provider.apple);
+    } catch (e, st) {
+      dev.log(
+        'B2C sign-in failed (Apple IdP): $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError(
+        'B2C Apple sign-in failed: ${e.toString()}',
+      );
+    }
+  }
 
-  Future<void> clearSessionToken() => _secureStorage.delete(key: _sessionKey);
+  Future<User> signInWithWorld() async {
+    try {
+      dev.log('Starting B2C sign-in (World IdP)', name: 'auth');
+      return await signInWithOAuth2(provider: OAuth2Provider.world);
+    } catch (e, st) {
+      dev.log(
+        'B2C sign-in failed (World IdP): $e',
+        name: 'auth',
+        error: e,
+        stackTrace: st,
+        level: 1000,
+      );
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure.serverError(
+        'B2C World sign-in failed: ${e.toString()}',
+      );
+    }
+  }
 
   Future<bool> authenticateWithBiometrics() async {
     final canCheck = await _localAuth.canCheckBiometrics;
@@ -348,11 +323,13 @@ class AuthService {
   // OAuth2 Authentication Methods
 
   /// Sign in using OAuth2 PKCE flow
-  Future<User> signInWithOAuth2() async {
+  Future<User> signInWithOAuth2({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) async {
     try {
       dev.log('Starting OAuth2 sign-in', name: 'auth');
 
-      final user = await _oauth2Service.signInWithOAuth2();
+      final user = await _oauth2Service.signInWithOAuth2(provider: provider);
 
       // Get fresh token from OAuth2Service secure storage
       final token = await _oauth2Service.getAccessToken();

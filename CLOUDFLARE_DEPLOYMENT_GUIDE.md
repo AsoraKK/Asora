@@ -56,12 +56,12 @@ wrangler deploy --env production
    - **Proxy status**: Proxied (orange cloud)
 
 3. In Workers → Triggers → Routes:
-   - Add route: `api-cache.yourdomain.com/api/feed/get`
+   - Add route: `api-cache.yourdomain.com/api/feed`
    - Select your deployed worker
 
 #### Option B: Path-based routing (Production)
 1. In Workers → Triggers → Routes:
-   - Add route: `yourdomain.com/api/feed/get`
+   - Add route: `yourdomain.com/api/feed`
    - Select your deployed worker
 
 ### 6. Test Edge Caching
@@ -69,7 +69,7 @@ wrangler deploy --env production
 #### Anonymous Request (Should cache)
 ```bash
 curl -H "Accept: application/json" \
-     "https://api-cache.yourdomain.com/api/feed/get?telemetry=1"
+     "https://api-cache.yourdomain.com/api/feed?telemetry=1"
 ```
 
 Expected response headers:
@@ -83,7 +83,7 @@ x-cache-backend: edge
 ```bash
 curl -H "Accept: application/json" \
      -H "Authorization: Bearer your-jwt-token" \
-     "https://api-cache.yourdomain.com/api/feed/get"
+     "https://api-cache.yourdomain.com/api/feed"
 ```
 
 Expected response headers:
@@ -119,14 +119,14 @@ wrangler tail --env production
 ```toml
 [env.development]
 name = "asora-edge-cache-dev"
-routes = ["dev.yourdomain.com/api/feed/get"]
+routes = ["dev.yourdomain.com/api/feed"]
 ```
 
 ### Production Environment
 ```toml
 [env.production]
 name = "asora-edge-cache-prod"
-routes = ["yourdomain.com/api/feed/get", "www.yourdomain.com/api/feed/get"]
+routes = ["yourdomain.com/api/feed", "www.yourdomain.com/api/feed"]
 ```
 
 ## Security Notes
@@ -149,7 +149,7 @@ To purge cache for specific feed endpoints:
 curl -X POST "https://api.cloudflare.com/client/v4/zones/ZONE_ID/purge_cache" \
      -H "Authorization: Bearer YOUR_API_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"files":["https://yourdomain.com/api/feed/get"]}'
+     -d '{"files":["https://yourdomain.com/api/feed"]}'
 ```
 
 ## Troubleshooting

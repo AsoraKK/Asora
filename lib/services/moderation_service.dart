@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/observability/asora_tracer.dart';
+import 'package:asora/core/observability/asora_tracer.dart';
 
 /// ASORA MODERATION CLIENT
 ///
@@ -25,7 +27,7 @@ class ModerationClient {
     return AsoraTracer.traceOperation(
       'ModerationService.flagContent',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '/api/flag',
           data: {
             'contentId': contentId,
@@ -36,7 +38,11 @@ class ModerationClient {
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        return response.data;
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Invalid flag response');
+        }
+        return data;
       },
       attributes:
           AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/flag')
@@ -61,7 +67,7 @@ class ModerationClient {
     return AsoraTracer.traceOperation(
       'ModerationService.appealContent',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '/api/appealContent',
           data: {
             'contentId': contentId,
@@ -73,7 +79,11 @@ class ModerationClient {
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        return response.data;
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Invalid appeal response');
+        }
+        return data;
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -109,13 +119,17 @@ class ModerationClient {
           if (reviewQueue != null) 'reviewQueue': reviewQueue,
         };
 
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '/api/getMyAppeals',
           queryParameters: queryParams,
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        return response.data;
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Invalid appeals response');
+        }
+        return data;
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -142,7 +156,7 @@ class ModerationClient {
     return AsoraTracer.traceOperation(
       'ModerationService.getAppealedContent',
       () async {
-        final response = await _dio.get(
+        final response = await _dio.get<Map<String, dynamic>>(
           '/api/reviewAppealedContent',
           queryParameters: {
             'page': page,
@@ -153,7 +167,11 @@ class ModerationClient {
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        return response.data;
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Invalid review response');
+        }
+        return data;
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -178,7 +196,7 @@ class ModerationClient {
     return AsoraTracer.traceOperation(
       'ModerationService.voteOnAppeal',
       () async {
-        final response = await _dio.post(
+        final response = await _dio.post<Map<String, dynamic>>(
           '/api/voteOnAppeal',
           data: {
             'appealId': appealId,
@@ -188,7 +206,11 @@ class ModerationClient {
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
 
-        return response.data;
+        final data = response.data;
+        if (data == null) {
+          throw Exception('Invalid vote response');
+        }
+        return data;
       },
       attributes:
           AsoraTracer.httpRequestAttributes(
@@ -273,9 +295,6 @@ final moderationClientProvider = Provider<ModerationClient>((ref) {
   return ModerationClient(dio);
 });
 
-// Mock JWT provider - replace with your actual authentication provider
-final jwtProvider = StateProvider<String?>((ref) => null);
-
 // Moderation state models
 class FlagResult {
   final bool success;
@@ -302,7 +321,33 @@ class VoteResult {
 }
 
 // Appeal status enum
-enum AppealStatus { pending, underReview, resolved, expired }
+enum AppealStatus { pending, approved, rejected, expired }
+
+AppealStatus _parseAppealStatus(String? status, String? outcome) {
+  final normalized = status?.toLowerCase();
+  switch (normalized) {
+    case 'approved':
+      return AppealStatus.approved;
+    case 'rejected':
+      return AppealStatus.rejected;
+    case 'expired':
+      return AppealStatus.expired;
+    case 'resolved':
+      final outcomeValue = outcome?.toLowerCase();
+      if (outcomeValue == 'approved') {
+        return AppealStatus.approved;
+      }
+      if (outcomeValue == 'rejected') {
+        return AppealStatus.rejected;
+      }
+      return AppealStatus.pending;
+    case 'under_review':
+    case 'underreview':
+    case 'pending':
+    default:
+      return AppealStatus.pending;
+  }
+}
 
 // Content moderation status
 enum ModerationStatus {
@@ -311,7 +356,6 @@ enum ModerationStatus {
   hidden,
   communityApproved,
   communityRejected,
-  underReview,
 }
 
 // Voting progress model
@@ -335,14 +379,17 @@ class VotingProgress {
   });
 
   factory VotingProgress.fromJson(Map<String, dynamic> json) {
+    final approvalRateValue = json['approvalRate'];
     return VotingProgress(
-      totalVotes: json['totalVotes'] ?? 0,
-      approveVotes: json['approveVotes'] ?? 0,
-      rejectVotes: json['rejectVotes'] ?? 0,
-      approvalRate: (json['approvalRate'] ?? 0.0).toDouble(),
-      quorumMet: json['quorumMet'] ?? false,
-      timeRemaining: json['timeRemaining'],
-      estimatedResolution: json['estimatedResolution'],
+      totalVotes: json['totalVotes'] as int? ?? 0,
+      approveVotes: json['approveVotes'] as int? ?? 0,
+      rejectVotes: json['rejectVotes'] as int? ?? 0,
+      approvalRate: approvalRateValue is num
+          ? approvalRateValue.toDouble()
+          : 0.0,
+      quorumMet: json['quorumMet'] as bool? ?? false,
+      timeRemaining: json['timeRemaining'] as String?,
+      estimatedResolution: json['estimatedResolution'] as String?,
     );
   }
 }
@@ -396,33 +443,42 @@ class AppealHistoryItem {
   });
 
   factory AppealHistoryItem.fromJson(Map<String, dynamic> json) {
+    final votingProgressValue = json['votingProgress'];
+    final resolutionDetailsValue = json['resolutionDetails'];
+    final nextStepsValue = json['nextSteps'];
     return AppealHistoryItem(
-      appealId: json['appealId'],
-      contentId: json['contentId'],
-      contentType: json['contentType'],
-      contentTitle: json['contentTitle'],
-      appealType: json['appealType'],
-      status: AppealStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => AppealStatus.pending,
+      appealId: json['appealId'] as String,
+      contentId: json['contentId'] as String,
+      contentType: json['contentType'] as String,
+      contentTitle: json['contentTitle'] as String?,
+      appealType: json['appealType'] as String,
+      status: _parseAppealStatus(
+        json['status'] as String?,
+        json['outcome'] as String?,
       ),
-      reviewQueue: json['reviewQueue'],
-      outcome: json['outcome'],
-      submittedAt: DateTime.parse(json['submittedAt']),
-      resolvedAt: json['resolvedAt'] != null
-          ? DateTime.parse(json['resolvedAt'])
+      reviewQueue: json['reviewQueue'] as String,
+      outcome: json['outcome'] as String?,
+      submittedAt: DateTime.parse(json['submittedAt'] as String),
+      resolvedAt: json['resolvedAt'] is String
+          ? DateTime.parse(json['resolvedAt'] as String)
           : null,
-      expiresAt: DateTime.parse(json['expiresAt']),
-      appealReason: json['appealReason'],
-      userStatement: json['userStatement'],
-      votingProgress: json['votingProgress'] != null
-          ? VotingProgress.fromJson(json['votingProgress'])
+      expiresAt: DateTime.parse(json['expiresAt'] as String),
+      appealReason: json['appealReason'] as String,
+      userStatement: json['userStatement'] as String,
+      votingProgress: votingProgressValue is Map
+          ? VotingProgress.fromJson(
+              Map<String, dynamic>.from(votingProgressValue),
+            )
           : null,
-      resolutionDetails: json['resolutionDetails'],
-      canAppeal: json['canAppeal'] ?? false,
-      isExpired: json['isExpired'] ?? false,
-      isUrgent: json['isUrgent'] ?? false,
-      nextSteps: List<String>.from(json['nextSteps'] ?? []),
+      resolutionDetails: resolutionDetailsValue is Map
+          ? Map<String, dynamic>.from(resolutionDetailsValue)
+          : null,
+      canAppeal: json['canAppeal'] as bool? ?? false,
+      isExpired: json['isExpired'] as bool? ?? false,
+      isUrgent: json['isUrgent'] as bool? ?? false,
+      nextSteps: nextStepsValue is List
+          ? nextStepsValue.whereType<String>().toList()
+          : const <String>[],
     );
   }
 }

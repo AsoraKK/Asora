@@ -42,21 +42,41 @@ class StructuredAzureLogger implements AzureLogger {
   }
 
   private log(level: string, message: string, context?: LogContext): void {
+    const emitConsoleLogs = this.shouldEmitConsoleLogs();
     const logEntry = {
       timestamp: new Date().toISOString(),
       level,
       component: this.component,
       message,
-      ...context
+      ...context,
     };
 
     // In Azure Functions, console.log integrates with Application Insights
-    console.log(JSON.stringify(logEntry));
+    if (emitConsoleLogs) {
+      console.log(JSON.stringify(logEntry));
+    }
 
     // For Application Insights custom telemetry
-    if (typeof process !== 'undefined' && process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+    if (
+      emitConsoleLogs &&
+      typeof process !== 'undefined' &&
+      process.env.APPLICATIONINSIGHTS_CONNECTION_STRING
+    ) {
       this.sendToApplicationInsights(level, message, logEntry);
     }
+  }
+
+  private shouldEmitConsoleLogs(): boolean {
+    if (typeof process === 'undefined') {
+      return true;
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      return true;
+    }
+
+    const override = (process.env.ASORA_TEST_LOGS ?? '').toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(override);
   }
 
   private sendToApplicationInsights(level: string, message: string, logEntry: any): void {
@@ -99,7 +119,7 @@ export function logHttpRequest(
     url,
     statusCode,
     duration,
-    type: 'http_request'
+    type: 'http_request',
   });
 }
 
@@ -117,7 +137,7 @@ export function logDatabaseOperation(
     collection,
     duration,
     requestCharge,
-    type: 'database_operation'
+    type: 'database_operation',
   });
 }
 
@@ -130,13 +150,13 @@ export function logAuthAttempt(
 ): void {
   const level = success ? 'info' : 'warn';
   const message = success ? 'Authentication successful' : 'Authentication failed';
-  
+
   logger[level](message, {
     requestId,
     userId,
     success,
     reason,
-    type: 'auth_attempt'
+    type: 'auth_attempt',
   });
 }
 
@@ -150,7 +170,7 @@ export function logBusinessEvent(
     requestId,
     event,
     ...data,
-    type: 'business_event'
+    type: 'business_event',
   });
 }
 
@@ -168,22 +188,18 @@ export function logPerformanceMetric(
     value,
     unit,
     tags,
-    type: 'performance_metric'
+    type: 'performance_metric',
   });
 }
 
 // Error logging with stack traces
-export function logError(
-  logger: AzureLogger,
-  error: Error,
-  context?: LogContext
-): void {
+export function logError(logger: AzureLogger, error: Error, context?: LogContext): void {
   logger.error('Unhandled error occurred', {
     ...context,
     errorName: error.name,
     errorMessage: error.message,
     stackTrace: error.stack,
-    type: 'unhandled_error'
+    type: 'unhandled_error',
   });
 }
 

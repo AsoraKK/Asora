@@ -1,0 +1,108 @@
+name: Staging Profiles Migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'staging/migration'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=1024
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_KEY_VAULT_NAME: kv-asora-dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch secrets from Key Vault
+        run: |
+          set -euo pipefail
+          : "${AZURE_KEY_VAULT_NAME:?AZURE_KEY_VAULT_NAME not set}"
+          az keyvault show --name "$AZURE_KEY_VAULT_NAME" >/dev/null
+          POSTGRES_CONN=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name PostgresConnectionString --query value -o tsv)
+          COSMOS_CONN=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name CosmosConnectionString --query value -o tsv)
+          COSMOS_DB=$(az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name CosmosDatabaseName --query value -o tsv)
+          {
+            echo "POSTGRES_CONN=$POSTGRES_CONN"
+            echo "COSMOS_CONNECTION_STRING=$COSMOS_CONN"
+            echo "COSMOS_DATABASE_NAME=$COSMOS_DB"
+          } >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Apply schema
+        env:
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
+        run: |
+          npm run apply:schema
+
+      - name: Run migration (dry-run)
+        env:
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
+          COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: ${{ env.COSMOS_DATABASE_NAME }}
+        run: |
+          npm run migrate:profiles
+
+      - name: Reconcile profiles
+        env:
+          POSTGRES_CONN: ${{ env.POSTGRES_CONN }}
+          COSMOS_CONNECTION_STRING: ${{ env.COSMOS_CONNECTION_STRING }}
+          COSMOS_DATABASE_NAME: ${{ env.COSMOS_DATABASE_NAME }}
+        run: |
+          npm run reconcile:profiles
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-artifacts
+          path: |
+            migration_reports/*.csv
+            migration_reports/*.json
+            audit_logs/*.txt
+
+      - name: Threshold checks
+        env:
+          SUMMARY_JSON: migration_reports/reconcile_profiles_summary_*.json
+        run: |
+          node -e "
+          const fs=require('fs');
+          const glob=require('glob');
+          const paths=glob.sync(process.env.SUMMARY_JSON);
+          if(paths.length===0){console.error('No summary JSON found'); process.exit(2);}
+          const s=JSON.parse(fs.readFileSync(paths[0],'utf8'));
+          const total=s.summary.total||s.total||0;
+          const mism=s.summary.mismatches||s.mismatches||{display_name:0,bio:0,avatar_url:0};
+          const copied = total - (mism.display_name + mism.bio + mism.avatar_url); // coarse estimate
+          const copyRate = total? (copied/total):0;
+          const dnRate = total? (mism.display_name/total):0;
+          const bRate = total? (mism.bio/total):0;
+          const aRate = total? (mism.avatar_url/total):0;
+          console.log('copyRate',copyRate,'displayNameRate',dnRate,'bioRate',bRate,'avatarRate',aRate);
+          if(copyRate < 0.999){ console.error('Copy rate below threshold', copyRate); process.exit(3);} 
+          if(dnRate > 0.001 || bRate > 0.001 || aRate > 0.001){ console.error('Field mismatch rate above threshold', {dnRate,bRate,aRate}); process.exit(4);} 
+          console.log('Thresholds passed');
+          "
+
+      - name: Post short report comment
+        if: always()
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            Migration run completed. Artifacts uploaded.
+            Summary available in migration_reports and audit_logs artifacts.

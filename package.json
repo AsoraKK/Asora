@@ -4,7 +4,7 @@
   "private": true,
   "description": "Asora platform - Flutter mobile app with Azure Functions backend",
   "scripts": {
-    "prepare": "node -e \"try{require.resolve('husky')}catch(e){process.exit(0)}\" && husky install || true",
+    "prepare": "if [ \"$CI\" = \"true\" ]; then exit 0; fi; command -v npx >/dev/null 2>&1 && npx husky install || true",
     "format-dart": "dart format --output=none --set-exit-if-changed .",
     "format-functions": "cd functions && npm run format",
     "lint-functions": "cd functions && npm run lint",
@@ -12,10 +12,50 @@
     "lint-check": "npm run lint-functions",
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
-    "test-functions": "cd functions && npm run test"
+    "test-functions": "cd functions && npm run test",
+    "verify:routes": "node functions/dev/verify-routes.js",
+    "openapi:lint": "redocly lint api/openapi/openapi.yaml",
+    "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
+  "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora,hideGenerationTimestamp=true",
+    "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
+    "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
+    "cosmos:contract": "node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json",
+    "test:cosmos-contract": "node --test scripts/tests/validate-cosmos-contract.test.js",
+    "routes:guard": "node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json",
+    "test:route-guards": "node --test scripts/tests/validate-functions-route-guards.test.js",
+    "todo:triage": "node scripts/generate-todo-triage.js",
+    "k6:smoke": "K6_BASE_URL=${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net} K6_SMOKE_TOKEN=$K6_SMOKE_TOKEN k6 run load/k6/smoke.js",
+    "k6:feed": "K6_BASE_URL=${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net} K6_SMOKE_TOKEN=$K6_SMOKE_TOKEN k6 run load/k6/feed-read.js",
+    "k6:smoke:docker": "docker run --rm -i -e K6_BASE_URL=${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net} -e K6_SMOKE_TOKEN -v \"$PWD\":/work -w /work grafana/k6 run load/k6/smoke.js",
+    "k6:feed:docker": "docker run --rm -i -e K6_BASE_URL=${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net} -e K6_SMOKE_TOKEN -v \"$PWD\":/work -w /work grafana/k6 run load/k6/feed-read.js",
+    "apply:schema": "node tools/apply_sql_to_pg.js database/migrate_to_target_schema.sql",
+    "migrate:profiles": "node tools/migrate_profiles_to_postgres.js",
+    "reconcile:profiles": "node tools/reconcile_profiles.js",
+    "vuln:scan": "bash tools/run_vuln_scan.sh",
+    "lint:api": "npm run openapi:lint"
   },
   "devDependencies": {
-    "husky": "^8.0.3"
+    "@openapitools/openapi-generator-cli": "^2.25.0",
+    "@redocly/cli": "^2.5.0",
+    "@stoplight/spectral-cli": "^6.11.0",
+    "@types/jest": "^30.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "cross-fetch": "^4.1.0",
+    "glob": "^11.0.3",
+    "husky": "^8.0.3",
+    "jest": "^30.2.0",
+    "jsonpointer": "^5.0.1",
+    "oasdiff": "file:tools/openapi/oasdiff",
+    "openapi-client-axios": "^7.7.0",
+    "redoc-cli": "^0.13.21",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "5.5.4",
+    "yaml": "^2.8.1"
+  },
+  "overrides": {
+    "typescript": "5.5.4"
   },
   "workspaces": [
     "functions"

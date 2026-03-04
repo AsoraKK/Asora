@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA FEED PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for feed feature
@@ -7,26 +9,32 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/feed_repository.dart';
-import '../../moderation/domain/appeal.dart';
-import '../../moderation/application/moderation_providers.dart'; // For jwtProvider
-import '../../../core/providers/repository_providers.dart';
+import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart'
+    show VotingFeedParams;
+import 'package:asora/core/providers/repository_providers.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure
 
 /// Provider for voting feed appeals
+Future<String> _requireJwtToken(Ref ref) async {
+  final token = await ref.watch(jwtProvider.future);
+  if (token == null || token.isEmpty) {
+    throw const FeedException('User not authenticated');
+  }
+  return token;
+}
+
 final votingFeedProvider =
     FutureProvider.family<AppealResponse, VotingFeedParams>((
       ref,
       params,
     ) async {
       final repository = ref.watch(feedRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const FeedException('User not authenticated');
-      }
+      final token = await _requireJwtToken(ref);
 
       return repository.getVotingFeed(
         page: params.page,
@@ -43,11 +51,7 @@ final votingHistoryProvider =
       params,
     ) async {
       final repository = ref.watch(feedRepositoryProvider);
-      final token = ref.watch(jwtProvider);
-
-      if (token == null) {
-        throw const FeedException('User not authenticated');
-      }
+      final token = await _requireJwtToken(ref);
 
       return repository.getVotingHistory(
         token: token,
@@ -59,11 +63,7 @@ final votingHistoryProvider =
 /// Provider for feed metrics
 final feedMetricsProvider = FutureProvider<FeedMetrics>((ref) async {
   final repository = ref.watch(feedRepositoryProvider);
-  final token = ref.watch(jwtProvider);
-
-  if (token == null) {
-    throw const FeedException('User not authenticated');
-  }
+  final token = await _requireJwtToken(ref);
 
   return repository.getFeedMetrics(token: token);
 });

@@ -1,0 +1,26 @@
+{
+  "rateLimitExempt": [
+    "admin_test_data_purge",
+    "moderation-test-proxy",
+    "moderation_test",
+    "payments_webhook"
+  ],
+  "authGuardExempt": [
+    "moderation-test-proxy",
+    "payments_webhook"
+  ],
+  "anonymousReadAllowed": [
+    "health",
+    "ready",
+    "auth_authorize",
+    "auth_getConfig",
+    "auth_invite_validate",
+    "auth_ping",
+    "posts_get_by_id",
+    "posts_list_by_user",
+    "posts_view",
+    "posts_receipt_get",
+    "listComments",
+    "users_get_by_id"
+  ]
+}

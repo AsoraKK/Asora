@@ -367,7 +367,7 @@ void main() {
         input,
       );
       // Small delay to ensure different timestamps
-      await Future.delayed(const Duration(milliseconds: 1));
+      await Future<void>.delayed(const Duration(milliseconds: 1));
       final hash2 = PasswordValidationResult.generateUntestedSecurityHash(
         input,
       );

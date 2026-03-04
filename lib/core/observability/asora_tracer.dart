@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA OPENTELEMETRY INSTRUMENTATION
 ///
 /// 🎯 Purpose: Service method instrumentation for observability
@@ -172,12 +174,18 @@ class AsoraTracer {
   ) {
     // Status code from response
     if (response.containsKey('statusCode')) {
-      span.setAttribute('http.status_code', response['statusCode']);
+      final statusCode = response['statusCode'];
+      if (statusCode != null) {
+        span.setAttribute('http.status_code', statusCode as Object);
+      }
     }
 
     // Success flag
     if (response.containsKey('success')) {
-      span.setAttribute('response.success', response['success']);
+      final success = response['success'];
+      if (success != null) {
+        span.setAttribute('response.success', success as Object);
+      }
     }
 
     // Item count for paginated responses
@@ -195,12 +203,12 @@ class AsoraTracer {
 
     // Pagination info
     if (response.containsKey('pagination')) {
-      final pagination = response['pagination'] as Map<String, dynamic>?;
-      if (pagination != null) {
+      final pagination = response['pagination'];
+      if (pagination is Map) {
         span.setAttributes({
-          'pagination.page': pagination['page'] ?? 1,
-          'pagination.total_pages': pagination['totalPages'] ?? 1,
-          'pagination.total_items': pagination['totalItems'] ?? 0,
+          'pagination.page': pagination['page'] as int? ?? 1,
+          'pagination.total_pages': pagination['totalPages'] as int? ?? 1,
+          'pagination.total_items': pagination['totalItems'] as int? ?? 0,
         });
       }
     }
