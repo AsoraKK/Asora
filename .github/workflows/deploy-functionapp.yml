@@ -1,0 +1,184 @@
+name: Deploy Azure Function App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, staging, production]
+      force_deploy:
+        description: 'Ignore change detection'
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      force_deploy:
+        required: false
+        type: boolean
+
+# Required for OIDC authentication with Azure
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: functionapp-${{ inputs.environment }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  FUNCTIONS_WORKER_RUNTIME: 'node'
+  WORKING_DIR: 'functions'
+
+jobs:
+  infra:
+    uses: ./.github/workflows/infra.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    needs: infra
+    environment: ${{ inputs.environment }}
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve environment config
+        run: |
+          case "${{ inputs.environment }}" in
+            dev)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-function-dev" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-psql-flex" >> $GITHUB_ENV
+              ;;
+            staging)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-function-staging" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-staging" >> $GITHUB_ENV
+              ;;
+            production)
+              echo "AZURE_FUNCTIONAPP_NAME=asora-function-production" >> $GITHUB_ENV
+              echo "AZURE_RESOURCE_GROUP=asora-production" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Enforce branch for production
+        if: ${{ inputs.environment == 'production' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Production deploys must run from main. Current ref: ${{ github.ref }}."
+          exit 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install Azure Functions Core Tools v4
+        run: npm i -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Show Azure context
+        run: az account show -o table
+
+      - name: Configure Function App for Node 20
+        run: |
+          echo "Configuring Function App runtime and app settings for Node 20..."
+          az functionapp config appsettings set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+          az functionapp config set \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "Node|20"
+
+      - name: Build functions
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          HUSKY: "0"
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
+        run: |
+          npm ci
+          npm run build || echo "No build script"
+
+      - name: Verify Function App exists (pre-publish)
+        run: |
+          echo "Checking Azure subscription and target Function App"
+          az account show --query "{name:name, user:user.name, id:id}" -o table || true
+          echo "Looking for Function App: $AZURE_FUNCTIONAPP_NAME in RG: $AZURE_RESOURCE_GROUP"
+          if az functionapp show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" -o none 2>/dev/null; then
+            echo "Found Function App: $AZURE_FUNCTIONAPP_NAME"
+          else
+            echo "ERROR: Function App '$AZURE_FUNCTIONAPP_NAME' not found in resource group '$AZURE_RESOURCE_GROUP'"
+            echo "Listing Function Apps in $AZURE_RESOURCE_GROUP for debugging:"
+            az functionapp list --resource-group "$AZURE_RESOURCE_GROUP" --query "[].{name:name, state:state, defaultHostName:defaultHostName}" -o table || true
+            echo "Listing all Function Apps in subscription for extra context:"
+            az functionapp list --query "[].{rg:resourceGroup, name:name, defaultHostName:defaultHostName}" -o table || true
+            echo "Please verify the AZURE_FUNCTIONAPP_NAME, AZURE_RESOURCE_GROUP, and AZURE_SUBSCRIPTION_ID are correct and that the app exists."
+            exit 1
+          fi
+
+      - name: Publish to Function App
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          func azure functionapp publish "$AZURE_FUNCTIONAPP_NAME" --javascript --force --build remote
+
+      - name: Resolve app URL
+        id: url
+        run: |
+          HOST=$(az functionapp show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "defaultHostName" -o tsv)
+          echo "app_url=https://$HOST" >> $GITHUB_OUTPUT
+          echo "Deployed URL: https://$HOST"
+
+      - name: Smoke check
+        run: |
+          URL="${{ steps.url.outputs.app_url }}"
+          echo "Probing $URL ..."
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          echo "HTTP $code"
+          if [ "$code" = "000" ]; then
+            echo "App not responding yet" && exit 1
+          fi
+
+      - name: Post-deployment validation
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Function App: $AZURE_FUNCTIONAPP_NAME"
+          echo "Resource Group: $AZURE_RESOURCE_GROUP"
+          echo "Checking linuxFxVersion and WEBSITE_NODE_DEFAULT_VERSION..."
+          az functionapp config show --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "linuxFxVersion" -o tsv || true
+          az functionapp config appsettings list --name "$AZURE_FUNCTIONAPP_NAME" --resource-group "$AZURE_RESOURCE_GROUP" --query "[?name=='WEBSITE_NODE_DEFAULT_VERSION'].value" -o tsv || true
+
+      - name: Key Vault references present
+        run: |
+          APP="$AZURE_FUNCTIONAPP_NAME"
+          RG="$AZURE_RESOURCE_GROUP"
+          req=("JWT_SECRET" "HIVE_TEXT_KEY" "HIVE_IMAGE_KEY" "HIVE_DEEPFAKE_KEY" "COSMOS_KEY" "POSTGRES_CONNECTION_STRING")
+          for k in "${req[@]}"; do
+            v=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='$k'].value" -o tsv || true)
+            if [[ "$v" != *"@Microsoft.KeyVault"* ]]; then
+              echo "Missing Key Vault ref for $k"; exit 1
+            fi
+          done
+          echo "Key Vault references OK"

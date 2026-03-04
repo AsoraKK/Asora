@@ -1,18 +1,7 @@
-// ignore_for_file: public_member_api_docs
-
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import '../features/moderation/application/moderation_providers.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///
@@ -53,7 +42,7 @@ class PostActions extends ConsumerWidget {
         _ActionButton(
           icon: isLiked ? Icons.favorite : Icons.favorite_border,
           label: _formatCount(likeCount),
-          color: isLiked ? Theme.of(context).colorScheme.error : null,
+          color: isLiked ? Colors.red : null,
           onPressed: onLike,
         ),
 
@@ -104,15 +93,11 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(context.radius.md),
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: spacing.lg,
-          vertical: spacing.sm,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -121,10 +106,11 @@ class _ActionButton extends StatelessWidget {
               size: 20,
               color: color ?? Theme.of(context).iconTheme.color,
             ),
-            SizedBox(height: spacing.xs),
+            const SizedBox(height: 4),
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: TextStyle(
+                fontSize: 12,
                 color: color ?? Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
@@ -159,11 +145,11 @@ class _FlagButton extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Row(
+          title: const Row(
             children: [
-              Icon(Icons.flag, color: Theme.of(context).colorScheme.primary),
-              SizedBox(width: context.spacing.sm),
-              const Text('Report Content'),
+              Icon(Icons.flag, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Report Content'),
             ],
           ),
           content: SingleChildScrollView(
@@ -175,56 +161,58 @@ class _FlagButton extends ConsumerWidget {
                   'Why are you reporting this $contentType?',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                SizedBox(height: context.spacing.lg),
+                const SizedBox(height: 16),
 
                 // Reason selection
-                ...FlagReason.values.map((reason) {
-                  final isSelected = selectedReason == reason.value;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      isSelected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    title: Text(reason.displayName),
-                    subtitle: Text(
-                      reason.description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    onTap: () {
-                      setState(() {
-                        selectedReason = reason.value;
-                      });
-                    },
-                  );
-                }),
+                RadioGroup<String>(
+                  groupValue: selectedReason,
+                  onChanged: (String? value) {
+                    if (value == null) return;
+                    setState(() {
+                      selectedReason = value;
+                    });
+                  },
+                  child: Column(
+                    children: FlagReason.values
+                        .map(
+                          (reason) => RadioListTile<String>(
+                            title: Text(reason.displayName),
+                            subtitle: Text(
+                              reason.description,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            value: reason.value,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
 
-                SizedBox(height: context.spacing.lg),
+                const SizedBox(height: 16),
 
                 // Additional details (optional)
-                LythTextField(
-                  label: 'Additional details (optional)',
-                  placeholder: 'Provide more context about the issue...',
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Additional details (optional)',
+                    hintText: 'Provide more context about the issue...',
+                    border: OutlineInputBorder(),
+                  ),
                   maxLines: 3,
                   onChanged: (value) {
                     additionalDetails = value.isEmpty ? null : value;
                   },
                 ),
 
-                SizedBox(height: context.spacing.lg),
+                const SizedBox(height: 16),
 
                 // Disclaimer
                 Container(
-                  padding: EdgeInsets.all(context.spacing.md),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(context.radius.md),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,7 +222,7 @@ class _FlagButton extends ConsumerWidget {
                         size: 16,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      SizedBox(width: context.spacing.sm),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Reports are reviewed by our moderation team and community. '
@@ -252,13 +240,17 @@ class _FlagButton extends ConsumerWidget {
             ),
           ),
           actions: [
-            LythButton.tertiary(
-              label: 'Cancel',
+            TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
             ),
-            LythButton.primary(
-              label: 'Submit Report',
+            ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Submit Report'),
             ),
           ],
         ),
@@ -266,13 +258,7 @@ class _FlagButton extends ConsumerWidget {
     );
 
     if (result == true && context.mounted) {
-      // Guard: Block flag reports on compromised devices
-      await runWithDeviceGuard(
-        context,
-        ref,
-        IntegrityUseCase.flag,
-        () => _submitFlag(context, ref, selectedReason, additionalDetails),
-      );
+      await _submitFlag(context, ref, selectedReason, additionalDetails);
     }
   }
 
@@ -284,18 +270,30 @@ class _FlagButton extends ConsumerWidget {
   ) async {
     // Show loading indicator
     if (context.mounted) {
-      LythSnackbar.info(
-        context: context,
-        message: 'Submitting report...',
-        duration: const Duration(seconds: 2),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 16),
+              Text('Submitting report...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = await ref.read(jwtProvider.future);
-      if (token == null || token.isEmpty) {
-        throw const ModerationException('User not authenticated');
+      final token = ref.read(jwtProvider);
+
+      if (token == null) {
+        throw Exception('Please log in to report content');
       }
 
       final result = await client.flagContent(
@@ -307,11 +305,23 @@ class _FlagButton extends ConsumerWidget {
       );
 
       if (context.mounted) {
-        final message = result['message'] as String?;
         ScaffoldMessenger.of(context).clearSnackBars();
-        LythSnackbar.success(
-          context: context,
-          message: message ?? 'Report submitted successfully',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    result['message'] ?? 'Report submitted successfully',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } catch (error) {
@@ -325,30 +335,30 @@ class _FlagButton extends ConsumerWidget {
           } else if (error.response?.statusCode == 429) {
             errorMessage =
                 'Too many reports. Please wait before reporting again.';
-          } else if (error.response?.data is Map &&
-              (error.response!.data as Map)['error'] is String) {
-            errorMessage = (error.response!.data as Map)['error'] as String;
+          } else if (error.response?.data?['error'] != null) {
+            errorMessage = error.response!.data['error'];
           }
-        } else if (error is ModerationException) {
-          final handled = await showDeviceIntegrityBlockedForCode(
-            context,
-            code: error.code,
-          );
-          if (handled) {
-            return;
-          }
-          errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }
 
-        LythSnackbar.error(
-          context: context,
-          message: errorMessage,
-          action: SnackBarAction(
-            label: 'Retry',
-            onPressed: () =>
-                _submitFlag(context, ref, reason, additionalDetails),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 16),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () =>
+                  _submitFlag(context, ref, reason, additionalDetails),
+            ),
           ),
         );
       }

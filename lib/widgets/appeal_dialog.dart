@@ -1,20 +1,8 @@
-// ignore_for_file: public_member_api_docs
-
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/utils/daily_limit_message.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import '../features/moderation/application/moderation_providers.dart';
+import '../features/moderation/domain/appeal.dart';
 
 /// ASORA APPEAL DIALOG
 ///
@@ -57,11 +45,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(context.radius.dialog),
-      ),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
@@ -70,12 +54,12 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           children: [
             // Header
             Container(
-              padding: EdgeInsets.all(spacing.lg),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(context.radius.dialog),
-                  topRight: Radius.circular(context.radius.dialog),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
                 ),
               ),
               child: Row(
@@ -84,13 +68,13 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
                     Icons.gavel,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
-                  SizedBox(width: spacing.md),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Appeal Content Decision',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -108,7 +92,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(spacing.lg),
+                padding: const EdgeInsets.all(20),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -116,22 +100,22 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
                     children: [
                       // Current status info
                       _buildStatusInfo(),
-                      SizedBox(height: spacing.lg),
+                      const SizedBox(height: 20),
 
                       // Content preview (if available)
                       if (widget.contentPreview != null) _buildContentPreview(),
 
                       // Appeal type selection
                       _buildAppealTypeSelection(),
-                      SizedBox(height: spacing.lg),
+                      const SizedBox(height: 20),
 
                       // Appeal reason
                       _buildAppealReasonField(),
-                      SizedBox(height: spacing.lg),
+                      const SizedBox(height: 20),
 
                       // User statement
                       _buildUserStatementField(),
-                      SizedBox(height: spacing.lg),
+                      const SizedBox(height: 20),
 
                       // Appeal process info
                       _buildAppealProcessInfo(),
@@ -143,7 +127,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
             // Actions
             Container(
-              padding: EdgeInsets.all(spacing.lg),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(color: Theme.of(context).dividerColor),
@@ -152,17 +136,22 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  LythButton.tertiary(
-                    label: 'Cancel',
+                  TextButton(
                     onPressed: _isSubmitting
                         ? null
                         : () => Navigator.pop(context),
+                    child: const Text('Cancel'),
                   ),
-                  SizedBox(width: spacing.md),
-                  LythButton.primary(
-                    label: 'Submit Appeal',
+                  const SizedBox(width: 12),
+                  ElevatedButton(
                     onPressed: _isSubmitting ? null : _submitAppeal,
-                    isLoading: _isSubmitting,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Submit Appeal'),
                   ),
                 ],
               ),
@@ -174,8 +163,6 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
   }
 
   Widget _buildStatusInfo() {
-    final scheme = Theme.of(context).colorScheme;
-    final spacing = context.spacing;
     String statusText;
     Color statusColor;
     IconData statusIcon;
@@ -183,43 +170,40 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
     switch (widget.currentStatus) {
       case ModerationStatus.flagged:
         statusText = 'This content has been flagged by the community';
-        statusColor = scheme.primary;
+        statusColor = Colors.orange;
         statusIcon = Icons.flag;
         break;
       case ModerationStatus.hidden:
-        statusText = 'This content has been blocked by moderators';
-        statusColor = scheme.error;
+        statusText = 'This content has been hidden by moderators';
+        statusColor = Colors.red;
         statusIcon = Icons.visibility_off;
         break;
       case ModerationStatus.communityRejected:
         statusText = 'This content was rejected by community vote';
-        statusColor = scheme.error;
+        statusColor = Colors.red;
         statusIcon = Icons.cancel;
         break;
       default:
-        statusText = 'This content is blocked';
-        statusColor = scheme.error;
-        statusIcon = Icons.visibility_off;
+        statusText = 'Content is under review';
+        statusColor = Colors.blue;
+        statusIcon = Icons.hourglass_empty;
     }
 
     return Container(
-      padding: EdgeInsets.all(spacing.lg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: statusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(context.radius.md),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: statusColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(statusIcon, color: statusColor),
-          SizedBox(width: spacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               statusText,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -232,13 +216,13 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Content Preview:', style: Theme.of(context).textTheme.titleSmall),
-        SizedBox(height: context.spacing.sm),
+        const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(context.spacing.md),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(context.radius.md),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             widget.contentPreview!,
@@ -247,7 +231,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        SizedBox(height: context.spacing.lg),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -260,31 +244,30 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           'Why are you appealing this decision?',
           style: Theme.of(context).textTheme.titleSmall,
         ),
-        SizedBox(height: context.spacing.md),
-        ...AppealType.values.map((type) {
-          final isSelected = _appealType == type.value;
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              isSelected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            title: Text(type.displayName),
-            subtitle: Text(
-              type.description,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            onTap: () {
-              setState(() {
-                _appealType = type.value;
-              });
-            },
-          );
-        }),
+        const SizedBox(height: 12),
+        RadioGroup<String>(
+          groupValue: _appealType,
+          onChanged: (String? value) {
+            if (value == null) return;
+            setState(() {
+              _appealType = value;
+            });
+          },
+          child: Column(
+            children: AppealType.values
+                .map(
+                  (type) => RadioListTile<String>(
+                    title: Text(type.displayName),
+                    subtitle: Text(
+                      type.description,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    value: type.value,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
       ],
     );
   }
@@ -294,9 +277,12 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Appeal Reason', style: Theme.of(context).textTheme.titleSmall),
-        SizedBox(height: context.spacing.sm),
-        LythTextField(
-          placeholder: 'Briefly explain the reason for your appeal...',
+        const SizedBox(height: 8),
+        TextFormField(
+          decoration: const InputDecoration(
+            hintText: 'Briefly explain the reason for your appeal...',
+            border: OutlineInputBorder(),
+          ),
           maxLines: 2,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
@@ -323,11 +309,15 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           'Detailed Statement',
           style: Theme.of(context).textTheme.titleSmall,
         ),
-        SizedBox(height: context.spacing.sm),
-        LythTextField(
+        const SizedBox(height: 8),
+        TextFormField(
           controller: _statementController,
-          placeholder:
-              'Provide a detailed explanation of why you believe this decision should be reversed...',
+          decoration: const InputDecoration(
+            hintText:
+                'Provide a detailed explanation of why you believe this decision should be reversed...',
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
+          ),
           maxLines: 5,
           maxLength: 1000,
           validator: (value) {
@@ -346,10 +336,10 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
   Widget _buildAppealProcessInfo() {
     return Container(
-      padding: EdgeInsets.all(context.spacing.lg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(context.radius.md),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +351,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
                 size: 20,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
-              SizedBox(width: context.spacing.sm),
+              const SizedBox(width: 8),
               Text(
                 'Appeal Process',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -370,12 +360,12 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
               ),
             ],
           ),
-          SizedBox(height: context.spacing.sm),
+          const SizedBox(height: 8),
           Text(
             '1. Your appeal will be reviewed by moderators first\n'
             '2. If rejected, eligible community members can vote\n'
-            '3. Community voting runs for 5 minutes\n'
-            '4. The community outcome is applied unless overridden by admins\n'
+            '3. Community voting requires 5+ votes or 5-minute timeout\n'
+            '4. Majority approval (>50%) will restore your content\n'
             '5. You\'ll receive notifications about the decision',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
@@ -395,24 +385,12 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       _isSubmitting = true;
     });
 
-    // Guard: Block appeals on compromised devices
-    await runWithDeviceGuard(context, ref, IntegrityUseCase.appeal, () async {
-      await _doSubmitAppeal();
-    });
-
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-      });
-    }
-  }
-
-  Future<void> _doSubmitAppeal() async {
     try {
       final client = ref.read(moderationClientProvider);
-      final token = await ref.read(jwtProvider.future);
-      if (token == null || token.isEmpty) {
-        throw const ModerationException('User not authenticated');
+      final token = ref.read(jwtProvider);
+
+      if (token == null) {
+        throw Exception('Please log in to submit an appeal');
       }
 
       final result = await client.submitAppeal(
@@ -426,15 +404,29 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
       if (mounted) {
         Navigator.pop(context, true);
-        LythSnackbar.success(
-          context: context,
-          message: 'Appeal submitted successfully - ID: ${result.appealId}',
-          action: SnackBarAction(
-            label: 'View Status',
-            onPressed: () {
-              // Navigate to appeal history
-              // This will be implemented when we create the appeal history page
-            },
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Appeal submitted successfully - ID: ${result.appealId}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'View Status',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to appeal history
+                // This will be implemented when we create the appeal history page
+              },
+            ),
           ),
         );
       }
@@ -442,35 +434,37 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       if (mounted) {
         String errorMessage = 'Failed to submit appeal';
         if (error is DioException) {
-          final data = error.response?.data;
-          if (data is Map<String, dynamic> &&
-              data['code'] == 'DAILY_APPEAL_LIMIT_EXCEEDED') {
-            errorMessage = dailyLimitMessage(
-              payload: data,
-              actionLabel: 'appeals',
-            );
-          } else if (error.response?.statusCode == 401) {
+          if (error.response?.statusCode == 401) {
             errorMessage = 'Please log in to submit an appeal';
           } else if (error.response?.statusCode == 409) {
             errorMessage =
                 'You have already submitted an appeal for this content';
-          } else if (data is Map<String, dynamic> && data['error'] != null) {
-            errorMessage = data['error'] as String;
+          } else if (error.response?.data?['error'] != null) {
+            errorMessage = error.response!.data['error'];
           }
-        } else if (error is ModerationException) {
-          final handled = await showDeviceIntegrityBlockedForCode(
-            context,
-            code: error.code,
-          );
-          if (handled) {
-            return;
-          }
-          errorMessage = error.message;
         } else {
           errorMessage = error.toString();
         }
 
-        LythSnackbar.error(context: context, message: errorMessage);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 16),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
