@@ -449,16 +449,27 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   void _showStatusFilter() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildFilterOption('all', 'All Status'),
-            _buildFilterOption('active', 'Active Voting'),
-            _buildFilterOption('quorum', 'Quorum Reached'),
-            _buildFilterOption('expired', 'Time Expired'),
-          ],
+        content: RadioGroup<String>(
+          groupValue: _statusFilter,
+          onChanged: (String? value) {
+            if (value == null) return;
+            setState(() {
+              _statusFilter = value;
+            });
+            Navigator.of(dialogContext).pop();
+            _applyFiltersAndSort();
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFilterOption('all', 'All Status'),
+              _buildFilterOption('active', 'Active Voting'),
+              _buildFilterOption('quorum', 'Quorum Reached'),
+              _buildFilterOption('expired', 'Time Expired'),
+            ],
+          ),
         ),
       ),
     );
@@ -467,16 +478,27 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   void _showContentTypeFilter() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Content Type'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildFilterOption('all', 'All Types', isContentType: true),
-            _buildFilterOption('post', 'Posts', isContentType: true),
-            _buildFilterOption('comment', 'Comments', isContentType: true),
-            _buildFilterOption('user', 'Users', isContentType: true),
-          ],
+        content: RadioGroup<String>(
+          groupValue: _contentTypeFilter,
+          onChanged: (String? value) {
+            if (value == null) return;
+            setState(() {
+              _contentTypeFilter = value;
+            });
+            Navigator.of(dialogContext).pop();
+            _applyFiltersAndSort();
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFilterOption('all', 'All Types'),
+              _buildFilterOption('post', 'Posts'),
+              _buildFilterOption('comment', 'Comments'),
+              _buildFilterOption('user', 'Users'),
+            ],
+          ),
         ),
       ),
     );
@@ -485,50 +507,36 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   void _showUrgencyFilter() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Urgency'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildFilterOption('all', 'All Urgency', isUrgency: true),
-            _buildFilterOption('high', 'High (70-100)', isUrgency: true),
-            _buildFilterOption('medium', 'Medium (40-69)', isUrgency: true),
-            _buildFilterOption('low', 'Low (0-39)', isUrgency: true),
-          ],
+        content: RadioGroup<String>(
+          groupValue: _urgencyFilter,
+          onChanged: (String? value) {
+            if (value == null) return;
+            setState(() {
+              _urgencyFilter = value;
+            });
+            Navigator.of(dialogContext).pop();
+            _applyFiltersAndSort();
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildFilterOption('all', 'All Urgency'),
+              _buildFilterOption('high', 'High (70-100)'),
+              _buildFilterOption('medium', 'Medium (40-69)'),
+              _buildFilterOption('low', 'Low (0-39)'),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterOption(
-    String value,
-    String label, {
-    bool isContentType = false,
-    bool isUrgency = false,
-  }) {
+  Widget _buildFilterOption(String value, String label) {
     return ListTile(
       title: Text(label),
-      leading: Radio<String>(
-        value: value,
-        groupValue: isContentType
-            ? _contentTypeFilter
-            : isUrgency
-            ? _urgencyFilter
-            : _statusFilter,
-        onChanged: (newValue) {
-          setState(() {
-            if (isContentType) {
-              _contentTypeFilter = newValue!;
-            } else if (isUrgency) {
-              _urgencyFilter = newValue!;
-            } else {
-              _statusFilter = newValue!;
-            }
-          });
-          Navigator.of(context).pop();
-          _applyFiltersAndSort();
-        },
-      ),
+      leading: Radio<String>(value: value),
     );
   }
 

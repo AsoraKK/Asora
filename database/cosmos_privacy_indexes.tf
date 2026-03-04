@@ -8,7 +8,7 @@
  */
 
 // Privacy-optimized composite indexes for user data queries
-resource "cosmos_privacy_indexes" {
+locals {
   // Users container - already has partition key on 'id' (userId)
   users_container_indexes = {
     composite_indexes = [

@@ -164,20 +164,27 @@ class _FlagButton extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // Reason selection
-                ...FlagReason.values.map(
-                  (reason) => RadioListTile<String>(
-                    title: Text(reason.displayName),
-                    subtitle: Text(
-                      reason.description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    value: reason.value,
-                    groupValue: selectedReason,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedReason = value!;
-                      });
-                    },
+                RadioGroup<String>(
+                  groupValue: selectedReason,
+                  onChanged: (String? value) {
+                    if (value == null) return;
+                    setState(() {
+                      selectedReason = value;
+                    });
+                  },
+                  child: Column(
+                    children: FlagReason.values
+                        .map(
+                          (reason) => RadioListTile<String>(
+                            title: Text(reason.displayName),
+                            subtitle: Text(
+                              reason.description,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            value: reason.value,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
 
