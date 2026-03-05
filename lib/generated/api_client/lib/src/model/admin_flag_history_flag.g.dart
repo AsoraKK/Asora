@@ -14,15 +14,15 @@ class _$AdminFlagHistoryFlag extends AdminFlagHistoryFlag {
   @override
   final String? reason;
 
-  factory _$AdminFlagHistoryFlag(
-          [void Function(AdminFlagHistoryFlagBuilder)? updates]) =>
-      (AdminFlagHistoryFlagBuilder()..update(updates))._build();
+  factory _$AdminFlagHistoryFlag([
+    void Function(AdminFlagHistoryFlagBuilder)? updates,
+  ]) => (AdminFlagHistoryFlagBuilder()..update(updates))._build();
 
   _$AdminFlagHistoryFlag._({this.type, this.at, this.reason}) : super._();
   @override
   AdminFlagHistoryFlag rebuild(
-          void Function(AdminFlagHistoryFlagBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagHistoryFlagBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagHistoryFlagBuilder toBuilder() =>
@@ -102,12 +102,8 @@ class AdminFlagHistoryFlagBuilder
   AdminFlagHistoryFlag build() => _build();
 
   _$AdminFlagHistoryFlag _build() {
-    final _$result = _$v ??
-        _$AdminFlagHistoryFlag._(
-          type: type,
-          at: at,
-          reason: reason,
-        );
+    final _$result =
+        _$v ?? _$AdminFlagHistoryFlag._(type: type, at: at, reason: reason);
     replace(_$result);
     return _$result;
   }

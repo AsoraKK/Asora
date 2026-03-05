@@ -12,11 +12,12 @@ part 'admin_moderation_summary.g.dart';
 /// AdminModerationSummary
 ///
 /// Properties:
-/// * [lastDecisionAt] 
-/// * [configVersionUsed] 
-/// * [reasonCodes] 
+/// * [lastDecisionAt]
+/// * [configVersionUsed]
+/// * [reasonCodes]
 @BuiltValue()
-abstract class AdminModerationSummary implements Built<AdminModerationSummary, AdminModerationSummaryBuilder> {
+abstract class AdminModerationSummary
+    implements Built<AdminModerationSummary, AdminModerationSummaryBuilder> {
   @BuiltValueField(wireName: r'lastDecisionAt')
   DateTime? get lastDecisionAt;
 
@@ -28,18 +29,25 @@ abstract class AdminModerationSummary implements Built<AdminModerationSummary, A
 
   AdminModerationSummary._();
 
-  factory AdminModerationSummary([void updates(AdminModerationSummaryBuilder b)]) = _$AdminModerationSummary;
+  factory AdminModerationSummary([
+    void updates(AdminModerationSummaryBuilder b),
+  ]) = _$AdminModerationSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminModerationSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminModerationSummary> get serializer => _$AdminModerationSummarySerializer();
+  static Serializer<AdminModerationSummary> get serializer =>
+      _$AdminModerationSummarySerializer();
 }
 
-class _$AdminModerationSummarySerializer implements PrimitiveSerializer<AdminModerationSummary> {
+class _$AdminModerationSummarySerializer
+    implements PrimitiveSerializer<AdminModerationSummary> {
   @override
-  final Iterable<Type> types = const [AdminModerationSummary, _$AdminModerationSummary];
+  final Iterable<Type> types = const [
+    AdminModerationSummary,
+    _$AdminModerationSummary,
+  ];
 
   @override
   final String wireName = r'AdminModerationSummary';
@@ -78,7 +86,11 @@ class _$AdminModerationSummarySerializer implements PrimitiveSerializer<AdminMod
     AdminModerationSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -94,24 +106,29 @@ class _$AdminModerationSummarySerializer implements PrimitiveSerializer<AdminMod
       final value = serializedList[i + 1];
       switch (key) {
         case r'lastDecisionAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.lastDecisionAt = valueDes;
           break;
         case r'configVersionUsed':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.configVersionUsed = valueDes;
           break;
         case r'reasonCodes':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltList, [
+                      FullType(String),
+                    ]),
+                  )
+                  as BuiltList<String>;
           result.reasonCodes.replace(valueDes);
           break;
         default:
@@ -142,4 +159,3 @@ class _$AdminModerationSummarySerializer implements PrimitiveSerializer<AdminMod
     return result.build();
   }
 }
-

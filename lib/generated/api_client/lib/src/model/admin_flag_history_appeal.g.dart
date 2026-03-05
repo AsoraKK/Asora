@@ -14,15 +14,15 @@ class _$AdminFlagHistoryAppeal extends AdminFlagHistoryAppeal {
   @override
   final AdminAppealStatus? status;
 
-  factory _$AdminFlagHistoryAppeal(
-          [void Function(AdminFlagHistoryAppealBuilder)? updates]) =>
-      (AdminFlagHistoryAppealBuilder()..update(updates))._build();
+  factory _$AdminFlagHistoryAppeal([
+    void Function(AdminFlagHistoryAppealBuilder)? updates,
+  ]) => (AdminFlagHistoryAppealBuilder()..update(updates))._build();
 
   _$AdminFlagHistoryAppeal._({this.type, this.at, this.status}) : super._();
   @override
   AdminFlagHistoryAppeal rebuild(
-          void Function(AdminFlagHistoryAppealBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagHistoryAppealBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagHistoryAppealBuilder toBuilder() =>
@@ -102,12 +102,8 @@ class AdminFlagHistoryAppealBuilder
   AdminFlagHistoryAppeal build() => _build();
 
   _$AdminFlagHistoryAppeal _build() {
-    final _$result = _$v ??
-        _$AdminFlagHistoryAppeal._(
-          type: type,
-          at: at,
-          status: status,
-        );
+    final _$result =
+        _$v ?? _$AdminFlagHistoryAppeal._(type: type, at: at, status: status);
     replace(_$result);
     return _$result;
   }

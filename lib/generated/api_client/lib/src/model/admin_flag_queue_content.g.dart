@@ -16,17 +16,20 @@ class _$AdminFlagQueueContent extends AdminFlagQueueContent {
   @override
   final String? preview;
 
-  factory _$AdminFlagQueueContent(
-          [void Function(AdminFlagQueueContentBuilder)? updates]) =>
-      (AdminFlagQueueContentBuilder()..update(updates))._build();
+  factory _$AdminFlagQueueContent([
+    void Function(AdminFlagQueueContentBuilder)? updates,
+  ]) => (AdminFlagQueueContentBuilder()..update(updates))._build();
 
-  _$AdminFlagQueueContent._(
-      {this.contentId, this.type, this.createdAt, this.preview})
-      : super._();
+  _$AdminFlagQueueContent._({
+    this.contentId,
+    this.type,
+    this.createdAt,
+    this.preview,
+  }) : super._();
   @override
   AdminFlagQueueContent rebuild(
-          void Function(AdminFlagQueueContentBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagQueueContentBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueContentBuilder toBuilder() =>
@@ -114,7 +117,8 @@ class AdminFlagQueueContentBuilder
   AdminFlagQueueContent build() => _build();
 
   _$AdminFlagQueueContent _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagQueueContent._(
           contentId: contentId,
           type: type,

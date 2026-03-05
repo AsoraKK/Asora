@@ -18,17 +18,21 @@ class _$GetHealth200Response extends GetHealth200Response {
   @override
   final String? version;
 
-  factory _$GetHealth200Response(
-          [void Function(GetHealth200ResponseBuilder)? updates]) =>
-      (GetHealth200ResponseBuilder()..update(updates))._build();
+  factory _$GetHealth200Response([
+    void Function(GetHealth200ResponseBuilder)? updates,
+  ]) => (GetHealth200ResponseBuilder()..update(updates))._build();
 
-  _$GetHealth200Response._(
-      {this.ok, this.status, this.timestamp, this.service, this.version})
-      : super._();
+  _$GetHealth200Response._({
+    this.ok,
+    this.status,
+    this.timestamp,
+    this.service,
+    this.version,
+  }) : super._();
   @override
   GetHealth200Response rebuild(
-          void Function(GetHealth200ResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(GetHealth200ResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   GetHealth200ResponseBuilder toBuilder() =>
@@ -124,7 +128,8 @@ class GetHealth200ResponseBuilder
   GetHealth200Response build() => _build();
 
   _$GetHealth200Response _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$GetHealth200Response._(
           ok: ok,
           status: status,

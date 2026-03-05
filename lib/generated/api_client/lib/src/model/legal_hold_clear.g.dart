@@ -37,8 +37,9 @@ class _$LegalHoldClear extends LegalHoldClear {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'LegalHoldClear')..add('id', id))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'LegalHoldClear',
+    )..add('id', id)).toString();
   }
 }
 
@@ -77,10 +78,14 @@ class LegalHoldClearBuilder
   LegalHoldClear build() => _build();
 
   _$LegalHoldClear _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$LegalHoldClear._(
           id: BuiltValueNullFieldError.checkNotNull(
-              id, r'LegalHoldClear', 'id'),
+            id,
+            r'LegalHoldClear',
+            'id',
+          ),
         );
     replace(_$result);
     return _$result;

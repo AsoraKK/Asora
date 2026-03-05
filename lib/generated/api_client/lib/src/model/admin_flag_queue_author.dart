@@ -11,11 +11,12 @@ part 'admin_flag_queue_author.g.dart';
 /// AdminFlagQueueAuthor
 ///
 /// Properties:
-/// * [authorId] 
-/// * [displayName] 
-/// * [handle] 
+/// * [authorId]
+/// * [displayName]
+/// * [handle]
 @BuiltValue()
-abstract class AdminFlagQueueAuthor implements Built<AdminFlagQueueAuthor, AdminFlagQueueAuthorBuilder> {
+abstract class AdminFlagQueueAuthor
+    implements Built<AdminFlagQueueAuthor, AdminFlagQueueAuthorBuilder> {
   @BuiltValueField(wireName: r'authorId')
   String? get authorId;
 
@@ -27,18 +28,24 @@ abstract class AdminFlagQueueAuthor implements Built<AdminFlagQueueAuthor, Admin
 
   AdminFlagQueueAuthor._();
 
-  factory AdminFlagQueueAuthor([void updates(AdminFlagQueueAuthorBuilder b)]) = _$AdminFlagQueueAuthor;
+  factory AdminFlagQueueAuthor([void updates(AdminFlagQueueAuthorBuilder b)]) =
+      _$AdminFlagQueueAuthor;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueAuthorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueAuthor> get serializer => _$AdminFlagQueueAuthorSerializer();
+  static Serializer<AdminFlagQueueAuthor> get serializer =>
+      _$AdminFlagQueueAuthorSerializer();
 }
 
-class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQueueAuthor> {
+class _$AdminFlagQueueAuthorSerializer
+    implements PrimitiveSerializer<AdminFlagQueueAuthor> {
   @override
-  final Iterable<Type> types = const [AdminFlagQueueAuthor, _$AdminFlagQueueAuthor];
+  final Iterable<Type> types = const [
+    AdminFlagQueueAuthor,
+    _$AdminFlagQueueAuthor,
+  ];
 
   @override
   final String wireName = r'AdminFlagQueueAuthor';
@@ -77,7 +84,11 @@ class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQ
     AdminFlagQueueAuthor object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -93,24 +104,30 @@ class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQ
       final value = serializedList[i + 1];
       switch (key) {
         case r'authorId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.authorId = valueDes;
           break;
         case r'displayName':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.displayName = valueDes;
           break;
         case r'handle':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.handle = valueDes;
           break;
         default:
@@ -141,4 +158,3 @@ class _$AdminFlagQueueAuthorSerializer implements PrimitiveSerializer<AdminFlagQ
     return result.build();
   }
 }
-

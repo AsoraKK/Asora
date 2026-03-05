@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-
 /// tests for PrivacyAdminApi
 void main() {
   final instance = AsoraApiClient().getPrivacyAdminApi();
@@ -34,6 +33,5 @@ void main() {
     test('test placeLegalHold', () async {
       // TODO
     });
-
   });
 }

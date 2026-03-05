@@ -12,11 +12,13 @@ part 'admin_content_action_request.g.dart';
 /// AdminContentActionRequest
 ///
 /// Properties:
-/// * [contentType] 
-/// * [reasonCode] 
-/// * [note] 
+/// * [contentType]
+/// * [reasonCode]
+/// * [note]
 @BuiltValue()
-abstract class AdminContentActionRequest implements Built<AdminContentActionRequest, AdminContentActionRequestBuilder> {
+abstract class AdminContentActionRequest
+    implements
+        Built<AdminContentActionRequest, AdminContentActionRequestBuilder> {
   @BuiltValueField(wireName: r'contentType')
   AdminContentType get contentType;
   // enum contentTypeEnum {  post,  comment,  user,  };
@@ -29,18 +31,25 @@ abstract class AdminContentActionRequest implements Built<AdminContentActionRequ
 
   AdminContentActionRequest._();
 
-  factory AdminContentActionRequest([void updates(AdminContentActionRequestBuilder b)]) = _$AdminContentActionRequest;
+  factory AdminContentActionRequest([
+    void updates(AdminContentActionRequestBuilder b),
+  ]) = _$AdminContentActionRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminContentActionRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminContentActionRequest> get serializer => _$AdminContentActionRequestSerializer();
+  static Serializer<AdminContentActionRequest> get serializer =>
+      _$AdminContentActionRequestSerializer();
 }
 
-class _$AdminContentActionRequestSerializer implements PrimitiveSerializer<AdminContentActionRequest> {
+class _$AdminContentActionRequestSerializer
+    implements PrimitiveSerializer<AdminContentActionRequest> {
   @override
-  final Iterable<Type> types = const [AdminContentActionRequest, _$AdminContentActionRequest];
+  final Iterable<Type> types = const [
+    AdminContentActionRequest,
+    _$AdminContentActionRequest,
+  ];
 
   @override
   final String wireName = r'AdminContentActionRequest';
@@ -75,7 +84,11 @@ class _$AdminContentActionRequestSerializer implements PrimitiveSerializer<Admin
     AdminContentActionRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -91,24 +104,30 @@ class _$AdminContentActionRequestSerializer implements PrimitiveSerializer<Admin
       final value = serializedList[i + 1];
       switch (key) {
         case r'contentType':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminContentType),
-          ) as AdminContentType;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminContentType),
+                  )
+                  as AdminContentType;
           result.contentType = valueDes;
           break;
         case r'reasonCode':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.note = valueDes;
           break;
         default:
@@ -139,4 +158,3 @@ class _$AdminContentActionRequestSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
-

@@ -7,14 +7,15 @@ part of 'flag_content202_response.dart';
 // **************************************************************************
 
 const FlagContent202ResponseStatusEnum
-    _$flagContent202ResponseStatusEnum_queued =
+_$flagContent202ResponseStatusEnum_queued =
     const FlagContent202ResponseStatusEnum._('queued');
 const FlagContent202ResponseStatusEnum
-    _$flagContent202ResponseStatusEnum_received =
+_$flagContent202ResponseStatusEnum_received =
     const FlagContent202ResponseStatusEnum._('received');
 
 FlagContent202ResponseStatusEnum _$flagContent202ResponseStatusEnumValueOf(
-    String name) {
+  String name,
+) {
   switch (name) {
     case 'queued':
       return _$flagContent202ResponseStatusEnum_queued;
@@ -26,14 +27,16 @@ FlagContent202ResponseStatusEnum _$flagContent202ResponseStatusEnumValueOf(
 }
 
 final BuiltSet<FlagContent202ResponseStatusEnum>
-    _$flagContent202ResponseStatusEnumValues = BuiltSet<
-        FlagContent202ResponseStatusEnum>(const <FlagContent202ResponseStatusEnum>[
-  _$flagContent202ResponseStatusEnum_queued,
-  _$flagContent202ResponseStatusEnum_received,
-]);
+_$flagContent202ResponseStatusEnumValues =
+    BuiltSet<FlagContent202ResponseStatusEnum>(
+      const <FlagContent202ResponseStatusEnum>[
+        _$flagContent202ResponseStatusEnum_queued,
+        _$flagContent202ResponseStatusEnum_received,
+      ],
+    );
 
 Serializer<FlagContent202ResponseStatusEnum>
-    _$flagContent202ResponseStatusEnumSerializer =
+_$flagContent202ResponseStatusEnumSerializer =
     _$FlagContent202ResponseStatusEnumSerializer();
 
 class _$FlagContent202ResponseStatusEnumSerializer
@@ -54,16 +57,19 @@ class _$FlagContent202ResponseStatusEnumSerializer
 
   @override
   Object serialize(
-          Serializers serializers, FlagContent202ResponseStatusEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+    Serializers serializers,
+    FlagContent202ResponseStatusEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   FlagContent202ResponseStatusEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      FlagContent202ResponseStatusEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => FlagContent202ResponseStatusEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$FlagContent202Response extends FlagContent202Response {
@@ -72,15 +78,15 @@ class _$FlagContent202Response extends FlagContent202Response {
   @override
   final FlagContent202ResponseStatusEnum? status;
 
-  factory _$FlagContent202Response(
-          [void Function(FlagContent202ResponseBuilder)? updates]) =>
-      (FlagContent202ResponseBuilder()..update(updates))._build();
+  factory _$FlagContent202Response([
+    void Function(FlagContent202ResponseBuilder)? updates,
+  ]) => (FlagContent202ResponseBuilder()..update(updates))._build();
 
   _$FlagContent202Response._({this.flagId, this.status}) : super._();
   @override
   FlagContent202Response rebuild(
-          void Function(FlagContent202ResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(FlagContent202ResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   FlagContent202ResponseBuilder toBuilder() =>
@@ -153,11 +159,8 @@ class FlagContent202ResponseBuilder
   FlagContent202Response build() => _build();
 
   _$FlagContent202Response _build() {
-    final _$result = _$v ??
-        _$FlagContent202Response._(
-          flagId: flagId,
-          status: status,
-        );
+    final _$result =
+        _$v ?? _$FlagContent202Response._(flagId: flagId, status: status);
     replace(_$result);
     return _$result;
   }

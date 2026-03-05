@@ -20,18 +20,18 @@ class _$AdminUserSummary extends AdminUserSummary {
   @override
   final AdminUserStatus? status;
 
-  factory _$AdminUserSummary(
-          [void Function(AdminUserSummaryBuilder)? updates]) =>
-      (AdminUserSummaryBuilder()..update(updates))._build();
+  factory _$AdminUserSummary([
+    void Function(AdminUserSummaryBuilder)? updates,
+  ]) => (AdminUserSummaryBuilder()..update(updates))._build();
 
-  _$AdminUserSummary._(
-      {this.userId,
-      this.displayName,
-      this.handle,
-      this.email,
-      this.createdAt,
-      this.status})
-      : super._();
+  _$AdminUserSummary._({
+    this.userId,
+    this.displayName,
+    this.handle,
+    this.email,
+    this.createdAt,
+    this.status,
+  }) : super._();
   @override
   AdminUserSummary rebuild(void Function(AdminUserSummaryBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -138,7 +138,8 @@ class AdminUserSummaryBuilder
   AdminUserSummary build() => _build();
 
   _$AdminUserSummary _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminUserSummary._(
           userId: userId,
           displayName: displayName,

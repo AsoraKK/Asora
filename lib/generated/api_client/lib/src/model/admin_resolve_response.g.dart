@@ -10,15 +10,15 @@ class _$AdminResolveResponse extends AdminResolveResponse {
   @override
   final bool? resolved;
 
-  factory _$AdminResolveResponse(
-          [void Function(AdminResolveResponseBuilder)? updates]) =>
-      (AdminResolveResponseBuilder()..update(updates))._build();
+  factory _$AdminResolveResponse([
+    void Function(AdminResolveResponseBuilder)? updates,
+  ]) => (AdminResolveResponseBuilder()..update(updates))._build();
 
   _$AdminResolveResponse._({this.resolved}) : super._();
   @override
   AdminResolveResponse rebuild(
-          void Function(AdminResolveResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminResolveResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminResolveResponseBuilder toBuilder() =>
@@ -40,9 +40,9 @@ class _$AdminResolveResponse extends AdminResolveResponse {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'AdminResolveResponse')
-          ..add('resolved', resolved))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'AdminResolveResponse',
+    )..add('resolved', resolved)).toString();
   }
 }
 
@@ -81,10 +81,7 @@ class AdminResolveResponseBuilder
   AdminResolveResponse build() => _build();
 
   _$AdminResolveResponse _build() {
-    final _$result = _$v ??
-        _$AdminResolveResponse._(
-          resolved: resolved,
-        );
+    final _$result = _$v ?? _$AdminResolveResponse._(resolved: resolved);
     replace(_$result);
     return _$result;
   }

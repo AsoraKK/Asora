@@ -13,11 +13,13 @@ part 'admin_content_action_response.g.dart';
 /// AdminContentActionResponse
 ///
 /// Properties:
-/// * [contentId] 
-/// * [contentType] 
-/// * [status] 
+/// * [contentId]
+/// * [contentType]
+/// * [status]
 @BuiltValue()
-abstract class AdminContentActionResponse implements Built<AdminContentActionResponse, AdminContentActionResponseBuilder> {
+abstract class AdminContentActionResponse
+    implements
+        Built<AdminContentActionResponse, AdminContentActionResponseBuilder> {
   @BuiltValueField(wireName: r'contentId')
   String? get contentId;
 
@@ -31,18 +33,25 @@ abstract class AdminContentActionResponse implements Built<AdminContentActionRes
 
   AdminContentActionResponse._();
 
-  factory AdminContentActionResponse([void updates(AdminContentActionResponseBuilder b)]) = _$AdminContentActionResponse;
+  factory AdminContentActionResponse([
+    void updates(AdminContentActionResponseBuilder b),
+  ]) = _$AdminContentActionResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminContentActionResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminContentActionResponse> get serializer => _$AdminContentActionResponseSerializer();
+  static Serializer<AdminContentActionResponse> get serializer =>
+      _$AdminContentActionResponseSerializer();
 }
 
-class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<AdminContentActionResponse> {
+class _$AdminContentActionResponseSerializer
+    implements PrimitiveSerializer<AdminContentActionResponse> {
   @override
-  final Iterable<Type> types = const [AdminContentActionResponse, _$AdminContentActionResponse];
+  final Iterable<Type> types = const [
+    AdminContentActionResponse,
+    _$AdminContentActionResponse,
+  ];
 
   @override
   final String wireName = r'AdminContentActionResponse';
@@ -81,7 +90,11 @@ class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<Admi
     AdminContentActionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -97,24 +110,30 @@ class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<Admi
       final value = serializedList[i + 1];
       switch (key) {
         case r'contentId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.contentId = valueDes;
           break;
         case r'contentType':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminContentType),
-          ) as AdminContentType;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminContentType),
+                  )
+                  as AdminContentType;
           result.contentType = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminContentState),
-          ) as AdminContentState;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminContentState),
+                  )
+                  as AdminContentState;
           result.status = valueDes;
           break;
         default:
@@ -145,4 +164,3 @@ class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<Admi
     return result.build();
   }
 }
-

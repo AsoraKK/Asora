@@ -13,24 +13,25 @@ part 'admin_appeal_detail.g.dart';
 /// AdminAppealDetail
 ///
 /// Properties:
-/// * [appealId] 
-/// * [contentId] 
-/// * [authorId] 
-/// * [submittedAt] 
-/// * [status] 
-/// * [appealType] 
-/// * [appealReason] 
-/// * [userStatement] 
-/// * [evidenceUrls] 
-/// * [internalNote] 
-/// * [votesFor] 
-/// * [votesAgainst] 
-/// * [totalVotes] 
-/// * [votingStatus] 
-/// * [expiresAt] 
-/// * [timeRemainingSeconds] 
+/// * [appealId]
+/// * [contentId]
+/// * [authorId]
+/// * [submittedAt]
+/// * [status]
+/// * [appealType]
+/// * [appealReason]
+/// * [userStatement]
+/// * [evidenceUrls]
+/// * [internalNote]
+/// * [votesFor]
+/// * [votesAgainst]
+/// * [totalVotes]
+/// * [votingStatus]
+/// * [expiresAt]
+/// * [timeRemainingSeconds]
 @BuiltValue()
-abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
+abstract class AdminAppealDetail
+    implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -82,16 +83,19 @@ abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppeal
 
   AdminAppealDetail._();
 
-  factory AdminAppealDetail([void updates(AdminAppealDetailBuilder b)]) = _$AdminAppealDetail;
+  factory AdminAppealDetail([void updates(AdminAppealDetailBuilder b)]) =
+      _$AdminAppealDetail;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealDetailBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealDetail> get serializer => _$AdminAppealDetailSerializer();
+  static Serializer<AdminAppealDetail> get serializer =>
+      _$AdminAppealDetailSerializer();
 }
 
-class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDetail> {
+class _$AdminAppealDetailSerializer
+    implements PrimitiveSerializer<AdminAppealDetail> {
   @override
   final Iterable<Type> types = const [AdminAppealDetail, _$AdminAppealDetail];
 
@@ -223,7 +227,11 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
     AdminAppealDetail object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -239,117 +247,142 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
       final value = serializedList[i + 1];
       switch (key) {
         case r'appealId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.appealId = valueDes;
           break;
         case r'contentId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.contentId = valueDes;
           break;
         case r'authorId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.authorId = valueDes;
           break;
         case r'submittedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.submittedAt = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminAppealStatusDetail),
-          ) as AdminAppealStatusDetail;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminAppealStatusDetail),
+                  )
+                  as AdminAppealStatusDetail;
           result.status = valueDes;
           break;
         case r'appealType':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.appealType = valueDes;
           break;
         case r'appealReason':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.appealReason = valueDes;
           break;
         case r'userStatement':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.userStatement = valueDes;
           break;
         case r'evidenceUrls':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltList, [
+                      FullType(String),
+                    ]),
+                  )
+                  as BuiltList<String>;
           result.evidenceUrls.replace(valueDes);
           break;
         case r'internalNote':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.internalNote = valueDes;
           break;
         case r'votesFor':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.votesFor = valueDes;
           break;
         case r'votesAgainst':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.votesAgainst = valueDes;
           break;
         case r'totalVotes':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.totalVotes = valueDes;
           break;
         case r'votingStatus':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(String),
+                  )
+                  as String?;
           if (valueDes == null) continue;
           result.votingStatus = valueDes;
           break;
         case r'expiresAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(DateTime),
-          ) as DateTime?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(DateTime),
+                  )
+                  as DateTime?;
           if (valueDes == null) continue;
           result.expiresAt = valueDes;
           break;
         case r'timeRemainingSeconds':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(int),
+                  )
+                  as int?;
           if (valueDes == null) continue;
           result.timeRemainingSeconds = valueDes;
           break;
@@ -381,4 +414,3 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
     return result.build();
   }
 }
-

@@ -12,19 +12,19 @@ part 'admin_invite.g.dart';
 /// AdminInvite
 ///
 /// Properties:
-/// * [inviteCode] 
-/// * [email] 
-/// * [createdBy] 
-/// * [createdAt] 
-/// * [expiresAt] 
-/// * [maxUses] 
-/// * [usageCount] 
-/// * [lastUsedAt] 
-/// * [status] 
-/// * [label] 
-/// * [usedByUserId] 
+/// * [inviteCode]
+/// * [email]
+/// * [createdBy]
+/// * [createdAt]
+/// * [expiresAt]
+/// * [maxUses]
+/// * [usageCount]
+/// * [lastUsedAt]
+/// * [status]
+/// * [label]
+/// * [usedByUserId]
 @BuiltValue(instantiable: false)
-abstract class AdminInvite  {
+abstract class AdminInvite {
   @BuiltValueField(wireName: r'inviteCode')
   String? get inviteCode;
 
@@ -160,7 +160,11 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
     AdminInvite object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   @override
@@ -169,16 +173,22 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return serializers.deserialize(serialized, specifiedType: FullType($AdminInvite)) as $AdminInvite;
+    return serializers.deserialize(
+          serialized,
+          specifiedType: FullType($AdminInvite),
+        )
+        as $AdminInvite;
   }
 }
 
 /// a concrete implementation of [AdminInvite], since [AdminInvite] is not instantiable
 @BuiltValue(instantiable: true)
-abstract class $AdminInvite implements AdminInvite, Built<$AdminInvite, $AdminInviteBuilder> {
+abstract class $AdminInvite
+    implements AdminInvite, Built<$AdminInvite, $AdminInviteBuilder> {
   $AdminInvite._();
 
-  factory $AdminInvite([void Function($AdminInviteBuilder)? updates]) = _$$AdminInvite;
+  factory $AdminInvite([void Function($AdminInviteBuilder)? updates]) =
+      _$$AdminInvite;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults($AdminInviteBuilder b) => b;
@@ -216,80 +226,96 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
       final value = serializedList[i + 1];
       switch (key) {
         case r'inviteCode':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.inviteCode = valueDes;
           break;
         case r'email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.email = valueDes;
           break;
         case r'createdBy':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.createdBy = valueDes;
           break;
         case r'createdAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.createdAt = valueDes;
           break;
         case r'expiresAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.expiresAt = valueDes;
           break;
         case r'maxUses':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.maxUses = valueDes;
           break;
         case r'usageCount':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.usageCount = valueDes;
           break;
         case r'lastUsedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.lastUsedAt = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminInviteStatus),
-          ) as AdminInviteStatus;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminInviteStatus),
+                  )
+                  as AdminInviteStatus;
           result.status = valueDes;
           break;
         case r'label':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.label = valueDes;
           break;
         case r'usedByUserId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.usedByUserId = valueDes;
           break;
         default:
@@ -320,4 +346,3 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
     return result.build();
   }
 }
-

@@ -12,14 +12,15 @@ part 'admin_user_summary.g.dart';
 /// AdminUserSummary
 ///
 /// Properties:
-/// * [userId] 
-/// * [displayName] 
-/// * [handle] 
-/// * [email] 
-/// * [createdAt] 
-/// * [status] 
+/// * [userId]
+/// * [displayName]
+/// * [handle]
+/// * [email]
+/// * [createdAt]
+/// * [status]
 @BuiltValue()
-abstract class AdminUserSummary implements Built<AdminUserSummary, AdminUserSummaryBuilder> {
+abstract class AdminUserSummary
+    implements Built<AdminUserSummary, AdminUserSummaryBuilder> {
   @BuiltValueField(wireName: r'userId')
   String? get userId;
 
@@ -41,16 +42,19 @@ abstract class AdminUserSummary implements Built<AdminUserSummary, AdminUserSumm
 
   AdminUserSummary._();
 
-  factory AdminUserSummary([void updates(AdminUserSummaryBuilder b)]) = _$AdminUserSummary;
+  factory AdminUserSummary([void updates(AdminUserSummaryBuilder b)]) =
+      _$AdminUserSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserSummary> get serializer => _$AdminUserSummarySerializer();
+  static Serializer<AdminUserSummary> get serializer =>
+      _$AdminUserSummarySerializer();
 }
 
-class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSummary> {
+class _$AdminUserSummarySerializer
+    implements PrimitiveSerializer<AdminUserSummary> {
   @override
   final Iterable<Type> types = const [AdminUserSummary, _$AdminUserSummary];
 
@@ -112,7 +116,11 @@ class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSumma
     AdminUserSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -128,45 +136,57 @@ class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSumma
       final value = serializedList[i + 1];
       switch (key) {
         case r'userId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.userId = valueDes;
           break;
         case r'displayName':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.displayName = valueDes;
           break;
         case r'handle':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.handle = valueDes;
           break;
         case r'email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.email = valueDes;
           break;
         case r'createdAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.createdAt = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminUserStatus),
-          ) as AdminUserStatus;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminUserStatus),
+                  )
+                  as AdminUserStatus;
           result.status = valueDes;
           break;
         default:
@@ -197,4 +217,3 @@ class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSumma
     return result.build();
   }
 }
-

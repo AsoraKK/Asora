@@ -70,19 +70,19 @@ class _$$AdminInvite extends $AdminInvite {
   factory _$$AdminInvite([void Function($AdminInviteBuilder)? updates]) =>
       ($AdminInviteBuilder()..update(updates))._build();
 
-  _$$AdminInvite._(
-      {this.inviteCode,
-      this.email,
-      this.createdBy,
-      this.createdAt,
-      this.expiresAt,
-      this.maxUses,
-      this.usageCount,
-      this.lastUsedAt,
-      this.status,
-      this.label,
-      this.usedByUserId})
-      : super._();
+  _$$AdminInvite._({
+    this.inviteCode,
+    this.email,
+    this.createdBy,
+    this.createdAt,
+    this.expiresAt,
+    this.maxUses,
+    this.usageCount,
+    this.lastUsedAt,
+    this.status,
+    this.label,
+    this.usedByUserId,
+  }) : super._();
   @override
   $AdminInvite rebuild(void Function($AdminInviteBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -231,7 +231,8 @@ class $AdminInviteBuilder
   $AdminInvite build() => _build();
 
   _$$AdminInvite _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$$AdminInvite._(
           inviteCode: inviteCode,
           email: email,

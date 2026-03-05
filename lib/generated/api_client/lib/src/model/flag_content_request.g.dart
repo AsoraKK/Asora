@@ -17,7 +17,7 @@ const FlagContentRequestReasonEnum _$flagContentRequestReasonEnum_violence =
 const FlagContentRequestReasonEnum _$flagContentRequestReasonEnum_adultContent =
     const FlagContentRequestReasonEnum._('adultContent');
 const FlagContentRequestReasonEnum
-    _$flagContentRequestReasonEnum_misinformation =
+_$flagContentRequestReasonEnum_misinformation =
     const FlagContentRequestReasonEnum._('misinformation');
 const FlagContentRequestReasonEnum _$flagContentRequestReasonEnum_copyright =
     const FlagContentRequestReasonEnum._('copyright');
@@ -27,7 +27,8 @@ const FlagContentRequestReasonEnum _$flagContentRequestReasonEnum_other =
     const FlagContentRequestReasonEnum._('other');
 
 FlagContentRequestReasonEnum _$flagContentRequestReasonEnumValueOf(
-    String name) {
+  String name,
+) {
   switch (name) {
     case 'spam':
       return _$flagContentRequestReasonEnum_spam;
@@ -53,21 +54,21 @@ FlagContentRequestReasonEnum _$flagContentRequestReasonEnumValueOf(
 }
 
 final BuiltSet<FlagContentRequestReasonEnum>
-    _$flagContentRequestReasonEnumValues =
+_$flagContentRequestReasonEnumValues =
     BuiltSet<FlagContentRequestReasonEnum>(const <FlagContentRequestReasonEnum>[
-  _$flagContentRequestReasonEnum_spam,
-  _$flagContentRequestReasonEnum_harassment,
-  _$flagContentRequestReasonEnum_hateSpeech,
-  _$flagContentRequestReasonEnum_violence,
-  _$flagContentRequestReasonEnum_adultContent,
-  _$flagContentRequestReasonEnum_misinformation,
-  _$flagContentRequestReasonEnum_copyright,
-  _$flagContentRequestReasonEnum_privacy,
-  _$flagContentRequestReasonEnum_other,
-]);
+      _$flagContentRequestReasonEnum_spam,
+      _$flagContentRequestReasonEnum_harassment,
+      _$flagContentRequestReasonEnum_hateSpeech,
+      _$flagContentRequestReasonEnum_violence,
+      _$flagContentRequestReasonEnum_adultContent,
+      _$flagContentRequestReasonEnum_misinformation,
+      _$flagContentRequestReasonEnum_copyright,
+      _$flagContentRequestReasonEnum_privacy,
+      _$flagContentRequestReasonEnum_other,
+    ]);
 
 Serializer<FlagContentRequestReasonEnum>
-    _$flagContentRequestReasonEnumSerializer =
+_$flagContentRequestReasonEnumSerializer =
     _$FlagContentRequestReasonEnumSerializer();
 
 class _$FlagContentRequestReasonEnumSerializer
@@ -101,16 +102,20 @@ class _$FlagContentRequestReasonEnumSerializer
   final String wireName = 'FlagContentRequestReasonEnum';
 
   @override
-  Object serialize(Serializers serializers, FlagContentRequestReasonEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    FlagContentRequestReasonEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   FlagContentRequestReasonEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      FlagContentRequestReasonEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => FlagContentRequestReasonEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$FlagContentRequest extends FlagContentRequest {
@@ -121,17 +126,19 @@ class _$FlagContentRequest extends FlagContentRequest {
   @override
   final String? notes;
 
-  factory _$FlagContentRequest(
-          [void Function(FlagContentRequestBuilder)? updates]) =>
-      (FlagContentRequestBuilder()..update(updates))._build();
+  factory _$FlagContentRequest([
+    void Function(FlagContentRequestBuilder)? updates,
+  ]) => (FlagContentRequestBuilder()..update(updates))._build();
 
-  _$FlagContentRequest._(
-      {required this.targetId, required this.reason, this.notes})
-      : super._();
+  _$FlagContentRequest._({
+    required this.targetId,
+    required this.reason,
+    this.notes,
+  }) : super._();
   @override
   FlagContentRequest rebuild(
-          void Function(FlagContentRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(FlagContentRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   FlagContentRequestBuilder toBuilder() =>
@@ -211,12 +218,19 @@ class FlagContentRequestBuilder
   FlagContentRequest build() => _build();
 
   _$FlagContentRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$FlagContentRequest._(
           targetId: BuiltValueNullFieldError.checkNotNull(
-              targetId, r'FlagContentRequest', 'targetId'),
+            targetId,
+            r'FlagContentRequest',
+            'targetId',
+          ),
           reason: BuiltValueNullFieldError.checkNotNull(
-              reason, r'FlagContentRequest', 'reason'),
+            reason,
+            r'FlagContentRequest',
+            'reason',
+          ),
           notes: notes,
         );
     replace(_$result);

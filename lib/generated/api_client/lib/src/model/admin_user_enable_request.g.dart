@@ -12,15 +12,15 @@ class _$AdminUserEnableRequest extends AdminUserEnableRequest {
   @override
   final String? note;
 
-  factory _$AdminUserEnableRequest(
-          [void Function(AdminUserEnableRequestBuilder)? updates]) =>
-      (AdminUserEnableRequestBuilder()..update(updates))._build();
+  factory _$AdminUserEnableRequest([
+    void Function(AdminUserEnableRequestBuilder)? updates,
+  ]) => (AdminUserEnableRequestBuilder()..update(updates))._build();
 
   _$AdminUserEnableRequest._({this.reasonCode, this.note}) : super._();
   @override
   AdminUserEnableRequest rebuild(
-          void Function(AdminUserEnableRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminUserEnableRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminUserEnableRequestBuilder toBuilder() =>
@@ -92,11 +92,8 @@ class AdminUserEnableRequestBuilder
   AdminUserEnableRequest build() => _build();
 
   _$AdminUserEnableRequest _build() {
-    final _$result = _$v ??
-        _$AdminUserEnableRequest._(
-          reasonCode: reasonCode,
-          note: note,
-        );
+    final _$result =
+        _$v ?? _$AdminUserEnableRequest._(reasonCode: reasonCode, note: note);
     replace(_$result);
     return _$result;
   }

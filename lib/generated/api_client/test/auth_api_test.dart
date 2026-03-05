@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-
 /// tests for AuthApi
 void main() {
   final instance = AsoraApiClient().getAuthApi();
@@ -15,6 +14,5 @@ void main() {
     test('test authInviteValidate', () async {
       // TODO
     });
-
   });
 }

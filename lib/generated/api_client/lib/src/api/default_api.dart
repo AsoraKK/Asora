@@ -47,16 +47,10 @@ class DefaultApi {
     final _path = r'/post';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
         ],
         ...?extra,
       },
@@ -68,14 +62,13 @@ class DefaultApi {
 
     try {
       const _type = FullType(CreatePostRequest);
-      _bodyData =
-          _serializers.serialize(createPostRequest, specifiedType: _type);
+      _bodyData = _serializers.serialize(
+        createPostRequest,
+        specifiedType: _type,
+      );
     } catch (error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -98,9 +91,10 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(CreatePost201Response),
-            ) as CreatePost201Response;
+                  rawResponse,
+                  specifiedType: const FullType(CreatePost201Response),
+                )
+                as CreatePost201Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -149,16 +143,10 @@ class DefaultApi {
     final _path = r'/moderation/flag';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
         ],
         ...?extra,
       },
@@ -170,14 +158,13 @@ class DefaultApi {
 
     try {
       const _type = FullType(FlagContentRequest);
-      _bodyData =
-          _serializers.serialize(flagContentRequest, specifiedType: _type);
+      _bodyData = _serializers.serialize(
+        flagContentRequest,
+        specifiedType: _type,
+      );
     } catch (error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -200,9 +187,10 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(FlagContent202Response),
-            ) as FlagContent202Response;
+                  rawResponse,
+                  specifiedType: const FullType(FlagContent202Response),
+                )
+                as FlagContent202Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -253,16 +241,10 @@ class DefaultApi {
     final _path = r'/feed';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
         ],
         ...?extra,
       },
@@ -271,11 +253,17 @@ class DefaultApi {
 
     final _queryParameters = <String, dynamic>{
       if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
+        r'cursor': encodeQueryParameter(
+          _serializers,
+          cursor,
+          const FullType(String),
+        ),
       if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+        r'limit': encodeQueryParameter(
+          _serializers,
+          limit,
+          const FullType(int),
+        ),
     };
 
     final _response = await _dio.request<Object>(
@@ -294,9 +282,10 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(GetFeed200Response),
-            ) as GetFeed200Response;
+                  rawResponse,
+                  specifiedType: const FullType(GetFeed200Response),
+                )
+                as GetFeed200Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,

@@ -16,17 +16,20 @@ class _$AdminAppealContent extends AdminAppealContent {
   @override
   final String? preview;
 
-  factory _$AdminAppealContent(
-          [void Function(AdminAppealContentBuilder)? updates]) =>
-      (AdminAppealContentBuilder()..update(updates))._build();
+  factory _$AdminAppealContent([
+    void Function(AdminAppealContentBuilder)? updates,
+  ]) => (AdminAppealContentBuilder()..update(updates))._build();
 
-  _$AdminAppealContent._(
-      {this.contentId, this.type, this.createdAt, this.preview})
-      : super._();
+  _$AdminAppealContent._({
+    this.contentId,
+    this.type,
+    this.createdAt,
+    this.preview,
+  }) : super._();
   @override
   AdminAppealContent rebuild(
-          void Function(AdminAppealContentBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminAppealContentBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealContentBuilder toBuilder() =>
@@ -114,7 +117,8 @@ class AdminAppealContentBuilder
   AdminAppealContent build() => _build();
 
   _$AdminAppealContent _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminAppealContent._(
           contentId: contentId,
           type: type,

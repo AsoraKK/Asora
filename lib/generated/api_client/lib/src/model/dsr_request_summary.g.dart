@@ -47,17 +47,17 @@ DsrRequestSummaryStatusEnum _$dsrRequestSummaryStatusEnumValueOf(String name) {
 }
 
 final BuiltSet<DsrRequestSummaryStatusEnum>
-    _$dsrRequestSummaryStatusEnumValues =
+_$dsrRequestSummaryStatusEnumValues =
     BuiltSet<DsrRequestSummaryStatusEnum>(const <DsrRequestSummaryStatusEnum>[
-  _$dsrRequestSummaryStatusEnum_queued,
-  _$dsrRequestSummaryStatusEnum_running,
-  _$dsrRequestSummaryStatusEnum_awaitingReview,
-  _$dsrRequestSummaryStatusEnum_readyToRelease,
-  _$dsrRequestSummaryStatusEnum_released,
-  _$dsrRequestSummaryStatusEnum_succeeded,
-  _$dsrRequestSummaryStatusEnum_failed,
-  _$dsrRequestSummaryStatusEnum_canceled,
-]);
+      _$dsrRequestSummaryStatusEnum_queued,
+      _$dsrRequestSummaryStatusEnum_running,
+      _$dsrRequestSummaryStatusEnum_awaitingReview,
+      _$dsrRequestSummaryStatusEnum_readyToRelease,
+      _$dsrRequestSummaryStatusEnum_released,
+      _$dsrRequestSummaryStatusEnum_succeeded,
+      _$dsrRequestSummaryStatusEnum_failed,
+      _$dsrRequestSummaryStatusEnum_canceled,
+    ]);
 
 const DsrRequestSummaryTypeEnum _$dsrRequestSummaryTypeEnum_export_ =
     const DsrRequestSummaryTypeEnum._('export_');
@@ -77,12 +77,12 @@ DsrRequestSummaryTypeEnum _$dsrRequestSummaryTypeEnumValueOf(String name) {
 
 final BuiltSet<DsrRequestSummaryTypeEnum> _$dsrRequestSummaryTypeEnumValues =
     BuiltSet<DsrRequestSummaryTypeEnum>(const <DsrRequestSummaryTypeEnum>[
-  _$dsrRequestSummaryTypeEnum_export_,
-  _$dsrRequestSummaryTypeEnum_delete,
-]);
+      _$dsrRequestSummaryTypeEnum_export_,
+      _$dsrRequestSummaryTypeEnum_delete,
+    ]);
 
 Serializer<DsrRequestSummaryStatusEnum>
-    _$dsrRequestSummaryStatusEnumSerializer =
+_$dsrRequestSummaryStatusEnumSerializer =
     _$DsrRequestSummaryStatusEnumSerializer();
 Serializer<DsrRequestSummaryTypeEnum> _$dsrRequestSummaryTypeEnumSerializer =
     _$DsrRequestSummaryTypeEnumSerializer();
@@ -116,16 +116,20 @@ class _$DsrRequestSummaryStatusEnumSerializer
   final String wireName = 'DsrRequestSummaryStatusEnum';
 
   @override
-  Object serialize(Serializers serializers, DsrRequestSummaryStatusEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    DsrRequestSummaryStatusEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   DsrRequestSummaryStatusEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      DsrRequestSummaryStatusEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => DsrRequestSummaryStatusEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$DsrRequestSummaryTypeEnumSerializer
@@ -145,16 +149,20 @@ class _$DsrRequestSummaryTypeEnumSerializer
   final String wireName = 'DsrRequestSummaryTypeEnum';
 
   @override
-  Object serialize(Serializers serializers, DsrRequestSummaryTypeEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    DsrRequestSummaryTypeEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   DsrRequestSummaryTypeEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      DsrRequestSummaryTypeEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => DsrRequestSummaryTypeEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$DsrRequestSummary extends DsrRequestSummary {
@@ -169,13 +177,17 @@ class _$DsrRequestSummary extends DsrRequestSummary {
   @override
   final DateTime? attemptedAt;
 
-  factory _$DsrRequestSummary(
-          [void Function(DsrRequestSummaryBuilder)? updates]) =>
-      (DsrRequestSummaryBuilder()..update(updates))._build();
+  factory _$DsrRequestSummary([
+    void Function(DsrRequestSummaryBuilder)? updates,
+  ]) => (DsrRequestSummaryBuilder()..update(updates))._build();
 
-  _$DsrRequestSummary._(
-      {this.id, this.status, this.type, this.exportBlobPath, this.attemptedAt})
-      : super._();
+  _$DsrRequestSummary._({
+    this.id,
+    this.status,
+    this.type,
+    this.exportBlobPath,
+    this.attemptedAt,
+  }) : super._();
   @override
   DsrRequestSummary rebuild(void Function(DsrRequestSummaryBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -275,7 +287,8 @@ class DsrRequestSummaryBuilder
   DsrRequestSummary build() => _build();
 
   _$DsrRequestSummary _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$DsrRequestSummary._(
           id: id,
           status: status,

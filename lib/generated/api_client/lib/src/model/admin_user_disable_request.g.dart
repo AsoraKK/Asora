@@ -12,16 +12,16 @@ class _$AdminUserDisableRequest extends AdminUserDisableRequest {
   @override
   final String note;
 
-  factory _$AdminUserDisableRequest(
-          [void Function(AdminUserDisableRequestBuilder)? updates]) =>
-      (AdminUserDisableRequestBuilder()..update(updates))._build();
+  factory _$AdminUserDisableRequest([
+    void Function(AdminUserDisableRequestBuilder)? updates,
+  ]) => (AdminUserDisableRequestBuilder()..update(updates))._build();
 
   _$AdminUserDisableRequest._({required this.reasonCode, required this.note})
-      : super._();
+    : super._();
   @override
   AdminUserDisableRequest rebuild(
-          void Function(AdminUserDisableRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminUserDisableRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminUserDisableRequestBuilder toBuilder() =>
@@ -94,12 +94,19 @@ class AdminUserDisableRequestBuilder
   AdminUserDisableRequest build() => _build();
 
   _$AdminUserDisableRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminUserDisableRequest._(
           reasonCode: BuiltValueNullFieldError.checkNotNull(
-              reasonCode, r'AdminUserDisableRequest', 'reasonCode'),
+            reasonCode,
+            r'AdminUserDisableRequest',
+            'reasonCode',
+          ),
           note: BuiltValueNullFieldError.checkNotNull(
-              note, r'AdminUserDisableRequest', 'note'),
+            note,
+            r'AdminUserDisableRequest',
+            'note',
+          ),
         );
     replace(_$result);
     return _$result;

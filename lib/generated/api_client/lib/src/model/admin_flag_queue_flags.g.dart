@@ -16,17 +16,20 @@ class _$AdminFlagQueueFlags extends AdminFlagQueueFlags {
   @override
   final DateTime? lastFlaggedAt;
 
-  factory _$AdminFlagQueueFlags(
-          [void Function(AdminFlagQueueFlagsBuilder)? updates]) =>
-      (AdminFlagQueueFlagsBuilder()..update(updates))._build();
+  factory _$AdminFlagQueueFlags([
+    void Function(AdminFlagQueueFlagsBuilder)? updates,
+  ]) => (AdminFlagQueueFlagsBuilder()..update(updates))._build();
 
-  _$AdminFlagQueueFlags._(
-      {this.flagId, this.flagCount, this.reasonCategories, this.lastFlaggedAt})
-      : super._();
+  _$AdminFlagQueueFlags._({
+    this.flagId,
+    this.flagCount,
+    this.reasonCategories,
+    this.lastFlaggedAt,
+  }) : super._();
   @override
   AdminFlagQueueFlags rebuild(
-          void Function(AdminFlagQueueFlagsBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagQueueFlagsBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueFlagsBuilder toBuilder() =>
@@ -119,7 +122,8 @@ class AdminFlagQueueFlagsBuilder
   _$AdminFlagQueueFlags _build() {
     _$AdminFlagQueueFlags _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagQueueFlags._(
             flagId: flagId,
             flagCount: flagCount,
@@ -133,7 +137,10 @@ class AdminFlagQueueFlagsBuilder
         _reasonCategories?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminFlagQueueFlags', _$failedField, e.toString());
+          r'AdminFlagQueueFlags',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

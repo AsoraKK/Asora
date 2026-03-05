@@ -11,13 +11,14 @@ part 'get_health200_response.g.dart';
 /// GetHealth200Response
 ///
 /// Properties:
-/// * [ok] 
-/// * [status] 
-/// * [timestamp] 
-/// * [service] 
-/// * [version] 
+/// * [ok]
+/// * [status]
+/// * [timestamp]
+/// * [service]
+/// * [version]
 @BuiltValue()
-abstract class GetHealth200Response implements Built<GetHealth200Response, GetHealth200ResponseBuilder> {
+abstract class GetHealth200Response
+    implements Built<GetHealth200Response, GetHealth200ResponseBuilder> {
   @BuiltValueField(wireName: r'ok')
   bool? get ok;
 
@@ -35,18 +36,24 @@ abstract class GetHealth200Response implements Built<GetHealth200Response, GetHe
 
   GetHealth200Response._();
 
-  factory GetHealth200Response([void updates(GetHealth200ResponseBuilder b)]) = _$GetHealth200Response;
+  factory GetHealth200Response([void updates(GetHealth200ResponseBuilder b)]) =
+      _$GetHealth200Response;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(GetHealth200ResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<GetHealth200Response> get serializer => _$GetHealth200ResponseSerializer();
+  static Serializer<GetHealth200Response> get serializer =>
+      _$GetHealth200ResponseSerializer();
 }
 
-class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth200Response> {
+class _$GetHealth200ResponseSerializer
+    implements PrimitiveSerializer<GetHealth200Response> {
   @override
-  final Iterable<Type> types = const [GetHealth200Response, _$GetHealth200Response];
+  final Iterable<Type> types = const [
+    GetHealth200Response,
+    _$GetHealth200Response,
+  ];
 
   @override
   final String wireName = r'GetHealth200Response';
@@ -99,7 +106,11 @@ class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth2
     GetHealth200Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -115,38 +126,48 @@ class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth2
       final value = serializedList[i + 1];
       switch (key) {
         case r'ok':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(bool),
-          ) as bool;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(bool),
+                  )
+                  as bool;
           result.ok = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.status = valueDes;
           break;
         case r'timestamp':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.timestamp = valueDes;
           break;
         case r'service':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.service = valueDes;
           break;
         case r'version':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.version = valueDes;
           break;
         default:
@@ -177,4 +198,3 @@ class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth2
     return result.build();
   }
 }
-

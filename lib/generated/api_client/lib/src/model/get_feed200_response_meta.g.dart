@@ -16,17 +16,20 @@ class _$GetFeed200ResponseMeta extends GetFeed200ResponseMeta {
   @override
   final BuiltMap<String, JsonObject?>? applied;
 
-  factory _$GetFeed200ResponseMeta(
-          [void Function(GetFeed200ResponseMetaBuilder)? updates]) =>
-      (GetFeed200ResponseMetaBuilder()..update(updates))._build();
+  factory _$GetFeed200ResponseMeta([
+    void Function(GetFeed200ResponseMetaBuilder)? updates,
+  ]) => (GetFeed200ResponseMetaBuilder()..update(updates))._build();
 
-  _$GetFeed200ResponseMeta._(
-      {required this.count, this.nextCursor, this.timingsMs, this.applied})
-      : super._();
+  _$GetFeed200ResponseMeta._({
+    required this.count,
+    this.nextCursor,
+    this.timingsMs,
+    this.applied,
+  }) : super._();
   @override
   GetFeed200ResponseMeta rebuild(
-          void Function(GetFeed200ResponseMetaBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(GetFeed200ResponseMetaBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   GetFeed200ResponseMetaBuilder toBuilder() =>
@@ -120,10 +123,14 @@ class GetFeed200ResponseMetaBuilder
   _$GetFeed200ResponseMeta _build() {
     _$GetFeed200ResponseMeta _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$GetFeed200ResponseMeta._(
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'GetFeed200ResponseMeta', 'count'),
+              count,
+              r'GetFeed200ResponseMeta',
+              'count',
+            ),
             nextCursor: nextCursor,
             timingsMs: _timingsMs?.build(),
             applied: _applied?.build(),
@@ -137,7 +144,10 @@ class GetFeed200ResponseMetaBuilder
         _applied?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'GetFeed200ResponseMeta', _$failedField, e.toString());
+          r'GetFeed200ResponseMeta',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

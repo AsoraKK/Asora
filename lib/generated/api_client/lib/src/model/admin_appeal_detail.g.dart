@@ -28,22 +28,22 @@ class _$AdminAppealDetail extends AdminAppealDetail {
   @override
   final String? internalNote;
 
-  factory _$AdminAppealDetail(
-          [void Function(AdminAppealDetailBuilder)? updates]) =>
-      (AdminAppealDetailBuilder()..update(updates))._build();
+  factory _$AdminAppealDetail([
+    void Function(AdminAppealDetailBuilder)? updates,
+  ]) => (AdminAppealDetailBuilder()..update(updates))._build();
 
-  _$AdminAppealDetail._(
-      {this.appealId,
-      this.contentId,
-      this.authorId,
-      this.submittedAt,
-      this.status,
-      this.appealType,
-      this.appealReason,
-      this.userStatement,
-      this.evidenceUrls,
-      this.internalNote})
-      : super._();
+  _$AdminAppealDetail._({
+    this.appealId,
+    this.contentId,
+    this.authorId,
+    this.submittedAt,
+    this.status,
+    this.appealType,
+    this.appealReason,
+    this.userStatement,
+    this.evidenceUrls,
+    this.internalNote,
+  }) : super._();
   @override
   AdminAppealDetail rebuild(void Function(AdminAppealDetailBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -187,7 +187,8 @@ class AdminAppealDetailBuilder
   _$AdminAppealDetail _build() {
     _$AdminAppealDetail _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminAppealDetail._(
             appealId: appealId,
             contentId: contentId,
@@ -207,7 +208,10 @@ class AdminAppealDetailBuilder
         _evidenceUrls?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminAppealDetail', _$failedField, e.toString());
+          r'AdminAppealDetail',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

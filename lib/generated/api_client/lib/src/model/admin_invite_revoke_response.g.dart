@@ -10,15 +10,15 @@ class _$AdminInviteRevokeResponse extends AdminInviteRevokeResponse {
   @override
   final bool? revoked;
 
-  factory _$AdminInviteRevokeResponse(
-          [void Function(AdminInviteRevokeResponseBuilder)? updates]) =>
-      (AdminInviteRevokeResponseBuilder()..update(updates))._build();
+  factory _$AdminInviteRevokeResponse([
+    void Function(AdminInviteRevokeResponseBuilder)? updates,
+  ]) => (AdminInviteRevokeResponseBuilder()..update(updates))._build();
 
   _$AdminInviteRevokeResponse._({this.revoked}) : super._();
   @override
   AdminInviteRevokeResponse rebuild(
-          void Function(AdminInviteRevokeResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteRevokeResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteRevokeResponseBuilder toBuilder() =>
@@ -40,9 +40,9 @@ class _$AdminInviteRevokeResponse extends AdminInviteRevokeResponse {
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'AdminInviteRevokeResponse')
-          ..add('revoked', revoked))
-        .toString();
+    return (newBuiltValueToStringHelper(
+      r'AdminInviteRevokeResponse',
+    )..add('revoked', revoked)).toString();
   }
 }
 
@@ -82,10 +82,7 @@ class AdminInviteRevokeResponseBuilder
   AdminInviteRevokeResponse build() => _build();
 
   _$AdminInviteRevokeResponse _build() {
-    final _$result = _$v ??
-        _$AdminInviteRevokeResponse._(
-          revoked: revoked,
-        );
+    final _$result = _$v ?? _$AdminInviteRevokeResponse._(revoked: revoked);
     replace(_$result);
     return _$result;
   }

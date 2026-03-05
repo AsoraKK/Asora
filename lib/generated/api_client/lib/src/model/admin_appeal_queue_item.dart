@@ -12,20 +12,21 @@ part 'admin_appeal_queue_item.g.dart';
 /// AdminAppealQueueItem
 ///
 /// Properties:
-/// * [appealId] 
-/// * [contentId] 
-/// * [authorId] 
-/// * [submittedAt] 
-/// * [status] 
-/// * [originalReasonCategory] 
-/// * [votesFor] 
-/// * [votesAgainst] 
-/// * [totalVotes] 
-/// * [votingStatus] 
-/// * [expiresAt] 
-/// * [timeRemainingSeconds] 
+/// * [appealId]
+/// * [contentId]
+/// * [authorId]
+/// * [submittedAt]
+/// * [status]
+/// * [originalReasonCategory]
+/// * [votesFor]
+/// * [votesAgainst]
+/// * [totalVotes]
+/// * [votingStatus]
+/// * [expiresAt]
+/// * [timeRemainingSeconds]
 @BuiltValue()
-abstract class AdminAppealQueueItem implements Built<AdminAppealQueueItem, AdminAppealQueueItemBuilder> {
+abstract class AdminAppealQueueItem
+    implements Built<AdminAppealQueueItem, AdminAppealQueueItemBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -65,18 +66,24 @@ abstract class AdminAppealQueueItem implements Built<AdminAppealQueueItem, Admin
 
   AdminAppealQueueItem._();
 
-  factory AdminAppealQueueItem([void updates(AdminAppealQueueItemBuilder b)]) = _$AdminAppealQueueItem;
+  factory AdminAppealQueueItem([void updates(AdminAppealQueueItemBuilder b)]) =
+      _$AdminAppealQueueItem;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealQueueItemBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealQueueItem> get serializer => _$AdminAppealQueueItemSerializer();
+  static Serializer<AdminAppealQueueItem> get serializer =>
+      _$AdminAppealQueueItemSerializer();
 }
 
-class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppealQueueItem> {
+class _$AdminAppealQueueItemSerializer
+    implements PrimitiveSerializer<AdminAppealQueueItem> {
   @override
-  final Iterable<Type> types = const [AdminAppealQueueItem, _$AdminAppealQueueItem];
+  final Iterable<Type> types = const [
+    AdminAppealQueueItem,
+    _$AdminAppealQueueItem,
+  ];
 
   @override
   final String wireName = r'AdminAppealQueueItem';
@@ -178,7 +185,11 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
     AdminAppealQueueItem object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -194,89 +205,104 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
       final value = serializedList[i + 1];
       switch (key) {
         case r'appealId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.appealId = valueDes;
           break;
         case r'contentId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.contentId = valueDes;
           break;
         case r'authorId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.authorId = valueDes;
           break;
         case r'submittedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.submittedAt = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminAppealStatusDetail),
-          ) as AdminAppealStatusDetail;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminAppealStatusDetail),
+                  )
+                  as AdminAppealStatusDetail;
           result.status = valueDes;
           break;
         case r'originalReasonCategory':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.originalReasonCategory = valueDes;
           break;
         case r'votesFor':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.votesFor = valueDes;
           break;
         case r'votesAgainst':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.votesAgainst = valueDes;
           break;
         case r'totalVotes':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.totalVotes = valueDes;
           break;
         case r'votingStatus':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(String),
+                  )
+                  as String?;
           if (valueDes == null) continue;
           result.votingStatus = valueDes;
           break;
         case r'expiresAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(DateTime),
-          ) as DateTime?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(DateTime),
+                  )
+                  as DateTime?;
           if (valueDes == null) continue;
           result.expiresAt = valueDes;
           break;
         case r'timeRemainingSeconds':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(int),
+                  )
+                  as int?;
           if (valueDes == null) continue;
           result.timeRemainingSeconds = valueDes;
           break;
@@ -308,4 +334,3 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
     return result.build();
   }
 }
-

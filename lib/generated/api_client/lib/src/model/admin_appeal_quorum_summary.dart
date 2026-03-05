@@ -11,10 +11,12 @@ part 'admin_appeal_quorum_summary.g.dart';
 /// AdminAppealQuorumSummary
 ///
 /// Properties:
-/// * [required_] 
-/// * [reached] 
+/// * [required_]
+/// * [reached]
 @BuiltValue()
-abstract class AdminAppealQuorumSummary implements Built<AdminAppealQuorumSummary, AdminAppealQuorumSummaryBuilder> {
+abstract class AdminAppealQuorumSummary
+    implements
+        Built<AdminAppealQuorumSummary, AdminAppealQuorumSummaryBuilder> {
   @BuiltValueField(wireName: r'required')
   int get required_;
 
@@ -23,18 +25,25 @@ abstract class AdminAppealQuorumSummary implements Built<AdminAppealQuorumSummar
 
   AdminAppealQuorumSummary._();
 
-  factory AdminAppealQuorumSummary([void updates(AdminAppealQuorumSummaryBuilder b)]) = _$AdminAppealQuorumSummary;
+  factory AdminAppealQuorumSummary([
+    void updates(AdminAppealQuorumSummaryBuilder b),
+  ]) = _$AdminAppealQuorumSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealQuorumSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealQuorumSummary> get serializer => _$AdminAppealQuorumSummarySerializer();
+  static Serializer<AdminAppealQuorumSummary> get serializer =>
+      _$AdminAppealQuorumSummarySerializer();
 }
 
-class _$AdminAppealQuorumSummarySerializer implements PrimitiveSerializer<AdminAppealQuorumSummary> {
+class _$AdminAppealQuorumSummarySerializer
+    implements PrimitiveSerializer<AdminAppealQuorumSummary> {
   @override
-  final Iterable<Type> types = const [AdminAppealQuorumSummary, _$AdminAppealQuorumSummary];
+  final Iterable<Type> types = const [
+    AdminAppealQuorumSummary,
+    _$AdminAppealQuorumSummary,
+  ];
 
   @override
   final String wireName = r'AdminAppealQuorumSummary';
@@ -62,7 +71,11 @@ class _$AdminAppealQuorumSummarySerializer implements PrimitiveSerializer<AdminA
     AdminAppealQuorumSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -78,17 +91,18 @@ class _$AdminAppealQuorumSummarySerializer implements PrimitiveSerializer<AdminA
       final value = serializedList[i + 1];
       switch (key) {
         case r'required':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.required_ = valueDes;
           break;
         case r'reached':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(bool),
-          ) as bool;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(bool),
+                  )
+                  as bool;
           result.reached = valueDes;
           break;
         default:
@@ -119,4 +133,3 @@ class _$AdminAppealQuorumSummarySerializer implements PrimitiveSerializer<AdminA
     return result.build();
   }
 }
-

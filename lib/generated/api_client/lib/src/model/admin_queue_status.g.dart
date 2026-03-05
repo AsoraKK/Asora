@@ -20,11 +20,9 @@ AdminQueueStatus _$valueOf(String name) {
   }
 }
 
-final BuiltSet<AdminQueueStatus> _$values =
-    BuiltSet<AdminQueueStatus>(const <AdminQueueStatus>[
-  _$OPEN,
-  _$RESOLVED,
-]);
+final BuiltSet<AdminQueueStatus> _$values = BuiltSet<AdminQueueStatus>(
+  const <AdminQueueStatus>[_$OPEN, _$RESOLVED],
+);
 
 class _$AdminQueueStatusMeta {
   const _$AdminQueueStatusMeta();
@@ -59,15 +57,20 @@ class _$AdminQueueStatusSerializer
   final String wireName = 'AdminQueueStatus';
 
   @override
-  Object serialize(Serializers serializers, AdminQueueStatus object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    AdminQueueStatus object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
-  AdminQueueStatus deserialize(Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      AdminQueueStatus.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+  AdminQueueStatus deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => AdminQueueStatus.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 // ignore_for_file: deprecated_member_use_from_same_package,type=lint

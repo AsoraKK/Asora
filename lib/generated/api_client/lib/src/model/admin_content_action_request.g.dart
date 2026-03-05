@@ -14,17 +14,19 @@ class _$AdminContentActionRequest extends AdminContentActionRequest {
   @override
   final String? note;
 
-  factory _$AdminContentActionRequest(
-          [void Function(AdminContentActionRequestBuilder)? updates]) =>
-      (AdminContentActionRequestBuilder()..update(updates))._build();
+  factory _$AdminContentActionRequest([
+    void Function(AdminContentActionRequestBuilder)? updates,
+  ]) => (AdminContentActionRequestBuilder()..update(updates))._build();
 
-  _$AdminContentActionRequest._(
-      {required this.contentType, required this.reasonCode, this.note})
-      : super._();
+  _$AdminContentActionRequest._({
+    required this.contentType,
+    required this.reasonCode,
+    this.note,
+  }) : super._();
   @override
   AdminContentActionRequest rebuild(
-          void Function(AdminContentActionRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminContentActionRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminContentActionRequestBuilder toBuilder() =>
@@ -106,12 +108,19 @@ class AdminContentActionRequestBuilder
   AdminContentActionRequest build() => _build();
 
   _$AdminContentActionRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminContentActionRequest._(
           contentType: BuiltValueNullFieldError.checkNotNull(
-              contentType, r'AdminContentActionRequest', 'contentType'),
+            contentType,
+            r'AdminContentActionRequest',
+            'contentType',
+          ),
           reasonCode: BuiltValueNullFieldError.checkNotNull(
-              reasonCode, r'AdminContentActionRequest', 'reasonCode'),
+            reasonCode,
+            r'AdminContentActionRequest',
+            'reasonCode',
+          ),
           note: note,
         );
     replace(_$result);

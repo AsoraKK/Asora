@@ -14,13 +14,15 @@ class _$CreatePostRequest extends CreatePostRequest {
   @override
   final BuiltList<String>? attachments;
 
-  factory _$CreatePostRequest(
-          [void Function(CreatePostRequestBuilder)? updates]) =>
-      (CreatePostRequestBuilder()..update(updates))._build();
+  factory _$CreatePostRequest([
+    void Function(CreatePostRequestBuilder)? updates,
+  ]) => (CreatePostRequestBuilder()..update(updates))._build();
 
-  _$CreatePostRequest._(
-      {required this.id, required this.text, this.attachments})
-      : super._();
+  _$CreatePostRequest._({
+    required this.id,
+    required this.text,
+    this.attachments,
+  }) : super._();
   @override
   CreatePostRequest rebuild(void Function(CreatePostRequestBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -107,12 +109,19 @@ class CreatePostRequestBuilder
   _$CreatePostRequest _build() {
     _$CreatePostRequest _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$CreatePostRequest._(
             id: BuiltValueNullFieldError.checkNotNull(
-                id, r'CreatePostRequest', 'id'),
+              id,
+              r'CreatePostRequest',
+              'id',
+            ),
             text: BuiltValueNullFieldError.checkNotNull(
-                text, r'CreatePostRequest', 'text'),
+              text,
+              r'CreatePostRequest',
+              'text',
+            ),
             attachments: _attachments?.build(),
           );
     } catch (_) {
@@ -122,7 +131,10 @@ class CreatePostRequestBuilder
         _attachments?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'CreatePostRequest', _$failedField, e.toString());
+          r'CreatePostRequest',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

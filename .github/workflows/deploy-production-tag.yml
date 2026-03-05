@@ -12,3 +12,8 @@ permissions:
 jobs:
   deploy:
     name: Production Deploy
+    uses: ./.github/workflows/deploy-asora-function-dev.yml
+    with:
+      target_environment: production
+      function_app_name: asora-function-production
+    secrets: inherit

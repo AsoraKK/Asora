@@ -18,21 +18,21 @@ class _$AdminFlagDetailFlags extends AdminFlagDetailFlags {
   @override
   final BuiltList<AdminFlagDetailReason>? reasons;
 
-  factory _$AdminFlagDetailFlags(
-          [void Function(AdminFlagDetailFlagsBuilder)? updates]) =>
-      (AdminFlagDetailFlagsBuilder()..update(updates))._build();
+  factory _$AdminFlagDetailFlags([
+    void Function(AdminFlagDetailFlagsBuilder)? updates,
+  ]) => (AdminFlagDetailFlagsBuilder()..update(updates))._build();
 
-  _$AdminFlagDetailFlags._(
-      {this.flagId,
-      this.status,
-      this.flagCount,
-      this.reporterCount,
-      this.reasons})
-      : super._();
+  _$AdminFlagDetailFlags._({
+    this.flagId,
+    this.status,
+    this.flagCount,
+    this.reporterCount,
+    this.reasons,
+  }) : super._();
   @override
   AdminFlagDetailFlags rebuild(
-          void Function(AdminFlagDetailFlagsBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagDetailFlagsBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailFlagsBuilder toBuilder() =>
@@ -133,7 +133,8 @@ class AdminFlagDetailFlagsBuilder
   _$AdminFlagDetailFlags _build() {
     _$AdminFlagDetailFlags _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagDetailFlags._(
             flagId: flagId,
             status: status,
@@ -148,7 +149,10 @@ class AdminFlagDetailFlagsBuilder
         _reasons?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminFlagDetailFlags', _$failedField, e.toString());
+          r'AdminFlagDetailFlags',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

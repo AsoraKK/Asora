@@ -11,11 +11,12 @@ part 'admin_flag_history_flag.g.dart';
 /// AdminFlagHistoryFlag
 ///
 /// Properties:
-/// * [type] 
-/// * [at] 
-/// * [reason] 
+/// * [type]
+/// * [at]
+/// * [reason]
 @BuiltValue()
-abstract class AdminFlagHistoryFlag implements Built<AdminFlagHistoryFlag, AdminFlagHistoryFlagBuilder> {
+abstract class AdminFlagHistoryFlag
+    implements Built<AdminFlagHistoryFlag, AdminFlagHistoryFlagBuilder> {
   @BuiltValueField(wireName: r'type')
   String? get type;
 
@@ -27,18 +28,24 @@ abstract class AdminFlagHistoryFlag implements Built<AdminFlagHistoryFlag, Admin
 
   AdminFlagHistoryFlag._();
 
-  factory AdminFlagHistoryFlag([void updates(AdminFlagHistoryFlagBuilder b)]) = _$AdminFlagHistoryFlag;
+  factory AdminFlagHistoryFlag([void updates(AdminFlagHistoryFlagBuilder b)]) =
+      _$AdminFlagHistoryFlag;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagHistoryFlagBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagHistoryFlag> get serializer => _$AdminFlagHistoryFlagSerializer();
+  static Serializer<AdminFlagHistoryFlag> get serializer =>
+      _$AdminFlagHistoryFlagSerializer();
 }
 
-class _$AdminFlagHistoryFlagSerializer implements PrimitiveSerializer<AdminFlagHistoryFlag> {
+class _$AdminFlagHistoryFlagSerializer
+    implements PrimitiveSerializer<AdminFlagHistoryFlag> {
   @override
-  final Iterable<Type> types = const [AdminFlagHistoryFlag, _$AdminFlagHistoryFlag];
+  final Iterable<Type> types = const [
+    AdminFlagHistoryFlag,
+    _$AdminFlagHistoryFlag,
+  ];
 
   @override
   final String wireName = r'AdminFlagHistoryFlag';
@@ -77,7 +84,11 @@ class _$AdminFlagHistoryFlagSerializer implements PrimitiveSerializer<AdminFlagH
     AdminFlagHistoryFlag object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -93,24 +104,30 @@ class _$AdminFlagHistoryFlagSerializer implements PrimitiveSerializer<AdminFlagH
       final value = serializedList[i + 1];
       switch (key) {
         case r'type':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.type = valueDes;
           break;
         case r'at':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.at = valueDes;
           break;
         case r'reason':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.reason = valueDes;
           break;
         default:
@@ -141,4 +158,3 @@ class _$AdminFlagHistoryFlagSerializer implements PrimitiveSerializer<AdminFlagH
     return result.build();
   }
 }
-

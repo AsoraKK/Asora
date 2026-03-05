@@ -12,16 +12,16 @@ class _$AdminInviteBatchResponse extends AdminInviteBatchResponse {
   @override
   final BuiltList<AdminInvite> invites;
 
-  factory _$AdminInviteBatchResponse(
-          [void Function(AdminInviteBatchResponseBuilder)? updates]) =>
-      (AdminInviteBatchResponseBuilder()..update(updates))._build();
+  factory _$AdminInviteBatchResponse([
+    void Function(AdminInviteBatchResponseBuilder)? updates,
+  ]) => (AdminInviteBatchResponseBuilder()..update(updates))._build();
 
   _$AdminInviteBatchResponse._({required this.count, required this.invites})
-      : super._();
+    : super._();
   @override
   AdminInviteBatchResponse rebuild(
-          void Function(AdminInviteBatchResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteBatchResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteBatchResponseBuilder toBuilder() =>
@@ -97,10 +97,14 @@ class AdminInviteBatchResponseBuilder
   _$AdminInviteBatchResponse _build() {
     _$AdminInviteBatchResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminInviteBatchResponse._(
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'AdminInviteBatchResponse', 'count'),
+              count,
+              r'AdminInviteBatchResponse',
+              'count',
+            ),
             invites: invites.build(),
           );
     } catch (_) {
@@ -110,7 +114,10 @@ class AdminInviteBatchResponseBuilder
         invites.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminInviteBatchResponse', _$failedField, e.toString());
+          r'AdminInviteBatchResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

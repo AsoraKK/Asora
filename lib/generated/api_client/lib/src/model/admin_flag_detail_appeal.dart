@@ -12,12 +12,13 @@ part 'admin_flag_detail_appeal.g.dart';
 /// AdminFlagDetailAppeal
 ///
 /// Properties:
-/// * [appealId] 
-/// * [status] 
-/// * [submittedAt] 
-/// * [updatedAt] 
+/// * [appealId]
+/// * [status]
+/// * [submittedAt]
+/// * [updatedAt]
 @BuiltValue()
-abstract class AdminFlagDetailAppeal implements Built<AdminFlagDetailAppeal, AdminFlagDetailAppealBuilder> {
+abstract class AdminFlagDetailAppeal
+    implements Built<AdminFlagDetailAppeal, AdminFlagDetailAppealBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -33,18 +34,25 @@ abstract class AdminFlagDetailAppeal implements Built<AdminFlagDetailAppeal, Adm
 
   AdminFlagDetailAppeal._();
 
-  factory AdminFlagDetailAppeal([void updates(AdminFlagDetailAppealBuilder b)]) = _$AdminFlagDetailAppeal;
+  factory AdminFlagDetailAppeal([
+    void updates(AdminFlagDetailAppealBuilder b),
+  ]) = _$AdminFlagDetailAppeal;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagDetailAppealBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagDetailAppeal> get serializer => _$AdminFlagDetailAppealSerializer();
+  static Serializer<AdminFlagDetailAppeal> get serializer =>
+      _$AdminFlagDetailAppealSerializer();
 }
 
-class _$AdminFlagDetailAppealSerializer implements PrimitiveSerializer<AdminFlagDetailAppeal> {
+class _$AdminFlagDetailAppealSerializer
+    implements PrimitiveSerializer<AdminFlagDetailAppeal> {
   @override
-  final Iterable<Type> types = const [AdminFlagDetailAppeal, _$AdminFlagDetailAppeal];
+  final Iterable<Type> types = const [
+    AdminFlagDetailAppeal,
+    _$AdminFlagDetailAppeal,
+  ];
 
   @override
   final String wireName = r'AdminFlagDetailAppeal';
@@ -90,7 +98,11 @@ class _$AdminFlagDetailAppealSerializer implements PrimitiveSerializer<AdminFlag
     AdminFlagDetailAppeal object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -106,31 +118,39 @@ class _$AdminFlagDetailAppealSerializer implements PrimitiveSerializer<AdminFlag
       final value = serializedList[i + 1];
       switch (key) {
         case r'appealId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.appealId = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminAppealStatus),
-          ) as AdminAppealStatus;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminAppealStatus),
+                  )
+                  as AdminAppealStatus;
           result.status = valueDes;
           break;
         case r'submittedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.submittedAt = valueDes;
           break;
         case r'updatedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.updatedAt = valueDes;
           break;
         default:
@@ -161,4 +181,3 @@ class _$AdminFlagDetailAppealSerializer implements PrimitiveSerializer<AdminFlag
     return result.build();
   }
 }
-

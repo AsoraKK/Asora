@@ -31,6 +31,5 @@ void main() {
     test('to test the property `attemptedAt`', () async {
       // TODO
     });
-
   });
 }

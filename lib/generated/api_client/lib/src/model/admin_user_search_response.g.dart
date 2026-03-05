@@ -12,16 +12,16 @@ class _$AdminUserSearchResponse extends AdminUserSearchResponse {
   @override
   final int count;
 
-  factory _$AdminUserSearchResponse(
-          [void Function(AdminUserSearchResponseBuilder)? updates]) =>
-      (AdminUserSearchResponseBuilder()..update(updates))._build();
+  factory _$AdminUserSearchResponse([
+    void Function(AdminUserSearchResponseBuilder)? updates,
+  ]) => (AdminUserSearchResponseBuilder()..update(updates))._build();
 
   _$AdminUserSearchResponse._({required this.items, required this.count})
-      : super._();
+    : super._();
   @override
   AdminUserSearchResponse rebuild(
-          void Function(AdminUserSearchResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminUserSearchResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminUserSearchResponseBuilder toBuilder() =>
@@ -97,11 +97,15 @@ class AdminUserSearchResponseBuilder
   _$AdminUserSearchResponse _build() {
     _$AdminUserSearchResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminUserSearchResponse._(
             items: items.build(),
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'AdminUserSearchResponse', 'count'),
+              count,
+              r'AdminUserSearchResponse',
+              'count',
+            ),
           );
     } catch (_) {
       late String _$failedField;
@@ -110,7 +114,10 @@ class AdminUserSearchResponseBuilder
         items.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminUserSearchResponse', _$failedField, e.toString());
+          r'AdminUserSearchResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

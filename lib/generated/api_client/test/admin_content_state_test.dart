@@ -3,7 +3,5 @@ import 'package:asora_api_client/asora_api_client.dart';
 
 // tests for AdminContentState
 void main() {
-
-  group(AdminContentState, () {
-  });
+  group(AdminContentState, () {});
 }
