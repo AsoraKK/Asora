@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
@@ -448,7 +450,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showStatusFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Status'),
@@ -477,7 +479,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showContentTypeFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Content Type'),
@@ -506,7 +508,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   void _showUrgencyFilter() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Urgency'),

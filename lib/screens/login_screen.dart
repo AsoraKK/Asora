@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
@@ -71,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showUserDialog(User user) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('User Profile'),

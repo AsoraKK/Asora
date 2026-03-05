@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // ASORA PRIVACY SETTINGS SCREEN
 //
 // 🎯 Purpose: User privacy controls and GDPR/POPIA compliance UI
@@ -393,10 +395,12 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       await file.writeAsString(jsonString);
 
       // Share the file
-      final result = await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Your Asora data export from $timestamp',
-        subject: 'Asora Data Export - $timestamp',
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Your Asora data export from $timestamp',
+          subject: 'Asora Data Export - $timestamp',
+        ),
       );
 
       // Also copy to clipboard as backup
@@ -479,7 +483,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   }
 
   void _showSuccessDialog(String title, String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(
@@ -500,7 +504,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   }
 
   void _showErrorDialog(String title, String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         icon: Icon(
@@ -521,7 +525,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   }
 
   void _showInfoDialog(String title, String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),

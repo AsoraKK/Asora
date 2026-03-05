@@ -1,6 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 
 /// ASORA POST ACTIONS WIDGET
@@ -290,7 +293,7 @@ class _FlagButton extends ConsumerWidget {
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
+      final token = await ref.read(jwtProvider.future);
 
       if (token == null) {
         throw Exception('Please log in to report content');
@@ -303,6 +306,7 @@ class _FlagButton extends ConsumerWidget {
         additionalDetails: additionalDetails,
         token: token,
       );
+      final message = result['message'] as String?;
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
@@ -313,9 +317,7 @@ class _FlagButton extends ConsumerWidget {
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    result['message'] ?? 'Report submitted successfully',
-                  ),
+                  child: Text(message ?? 'Report submitted successfully'),
                 ),
               ],
             ),
@@ -336,7 +338,10 @@ class _FlagButton extends ConsumerWidget {
             errorMessage =
                 'Too many reports. Please wait before reporting again.';
           } else if (error.response?.data?['error'] != null) {
-            errorMessage = error.response!.data['error'];
+            final data = error.response!.data;
+            if (data is Map<String, dynamic> && data['error'] is String) {
+              errorMessage = data['error'] as String;
+            }
           }
         } else {
           errorMessage = error.toString();

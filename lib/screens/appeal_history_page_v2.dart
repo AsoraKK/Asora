@@ -1,6 +1,8 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/core/providers/repository_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart';
@@ -182,7 +184,7 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
 
     try {
       final repository = ref.read(moderationRepositoryProvider);
-      final token = ref.read(jwtProvider);
+      final token = await ref.read(jwtProvider.future);
 
       if (token == null) {
         throw Exception('Please log in to view your appeals');
@@ -203,7 +205,7 @@ class _AppealHistoryPageState extends ConsumerState<AppealHistoryPage>
   }
 
   void _showAppealDetails(Appeal appeal) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Appeal Details'),
