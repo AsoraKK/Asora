@@ -16,8 +16,7 @@ part 'create_post_request.g.dart';
 /// * [text] - Post body text
 /// * [attachments] - Optional media attachments
 @BuiltValue()
-abstract class CreatePostRequest
-    implements Built<CreatePostRequest, CreatePostRequestBuilder> {
+abstract class CreatePostRequest implements Built<CreatePostRequest, CreatePostRequestBuilder> {
   /// Client generated UUID v7 for the new post
   @BuiltValueField(wireName: r'id')
   String get id;
@@ -32,19 +31,16 @@ abstract class CreatePostRequest
 
   CreatePostRequest._();
 
-  factory CreatePostRequest([void updates(CreatePostRequestBuilder b)]) =
-      _$CreatePostRequest;
+  factory CreatePostRequest([void updates(CreatePostRequestBuilder b)]) = _$CreatePostRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(CreatePostRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<CreatePostRequest> get serializer =>
-      _$CreatePostRequestSerializer();
+  static Serializer<CreatePostRequest> get serializer => _$CreatePostRequestSerializer();
 }
 
-class _$CreatePostRequestSerializer
-    implements PrimitiveSerializer<CreatePostRequest> {
+class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostRequest> {
   @override
   final Iterable<Type> types = const [CreatePostRequest, _$CreatePostRequest];
 
@@ -81,11 +77,7 @@ class _$CreatePostRequestSerializer
     CreatePostRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -101,32 +93,24 @@ class _$CreatePostRequestSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'id':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.id = valueDes;
           break;
         case r'text':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.text = valueDes;
           break;
         case r'attachments':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(String),
-                    ]),
-                  )
-                  as BuiltList<String>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>;
           result.attachments.replace(valueDes);
           break;
         default:
@@ -157,3 +141,4 @@ class _$CreatePostRequestSerializer
     return result.build();
   }
 }
+

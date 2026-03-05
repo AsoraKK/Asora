@@ -502,8 +502,7 @@ function buildQuery(
   }
 
   const query = `
-    SELECT c.*
-    FROM c
+    SELECT * FROM c
     WHERE ${clauses.join(' AND ')}
     ORDER BY c.createdAt DESC, c.id DESC
   `;

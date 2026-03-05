@@ -11,11 +11,10 @@ part 'dsr_request_input.g.dart';
 /// DsrRequestInput
 ///
 /// Properties:
-/// * [userId]
-/// * [note]
+/// * [userId] 
+/// * [note] 
 @BuiltValue()
-abstract class DsrRequestInput
-    implements Built<DsrRequestInput, DsrRequestInputBuilder> {
+abstract class DsrRequestInput implements Built<DsrRequestInput, DsrRequestInputBuilder> {
   @BuiltValueField(wireName: r'userId')
   String get userId;
 
@@ -24,19 +23,16 @@ abstract class DsrRequestInput
 
   DsrRequestInput._();
 
-  factory DsrRequestInput([void updates(DsrRequestInputBuilder b)]) =
-      _$DsrRequestInput;
+  factory DsrRequestInput([void updates(DsrRequestInputBuilder b)]) = _$DsrRequestInput;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(DsrRequestInputBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<DsrRequestInput> get serializer =>
-      _$DsrRequestInputSerializer();
+  static Serializer<DsrRequestInput> get serializer => _$DsrRequestInputSerializer();
 }
 
-class _$DsrRequestInputSerializer
-    implements PrimitiveSerializer<DsrRequestInput> {
+class _$DsrRequestInputSerializer implements PrimitiveSerializer<DsrRequestInput> {
   @override
   final Iterable<Type> types = const [DsrRequestInput, _$DsrRequestInput];
 
@@ -68,11 +64,7 @@ class _$DsrRequestInputSerializer
     DsrRequestInput object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -88,21 +80,17 @@ class _$DsrRequestInputSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'userId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.userId = valueDes;
           break;
         case r'note':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.note = valueDes;
           break;
         default:
@@ -133,3 +121,4 @@ class _$DsrRequestInputSerializer
     return result.build();
   }
 }
+

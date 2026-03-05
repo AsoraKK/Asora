@@ -11,12 +11,10 @@ part 'admin_appeal_decision_request.g.dart';
 /// AdminAppealDecisionRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
-abstract class AdminAppealDecisionRequest
-    implements
-        Built<AdminAppealDecisionRequest, AdminAppealDecisionRequestBuilder> {
+abstract class AdminAppealDecisionRequest implements Built<AdminAppealDecisionRequest, AdminAppealDecisionRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
 
@@ -25,25 +23,18 @@ abstract class AdminAppealDecisionRequest
 
   AdminAppealDecisionRequest._();
 
-  factory AdminAppealDecisionRequest([
-    void updates(AdminAppealDecisionRequestBuilder b),
-  ]) = _$AdminAppealDecisionRequest;
+  factory AdminAppealDecisionRequest([void updates(AdminAppealDecisionRequestBuilder b)]) = _$AdminAppealDecisionRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealDecisionRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealDecisionRequest> get serializer =>
-      _$AdminAppealDecisionRequestSerializer();
+  static Serializer<AdminAppealDecisionRequest> get serializer => _$AdminAppealDecisionRequestSerializer();
 }
 
-class _$AdminAppealDecisionRequestSerializer
-    implements PrimitiveSerializer<AdminAppealDecisionRequest> {
+class _$AdminAppealDecisionRequestSerializer implements PrimitiveSerializer<AdminAppealDecisionRequest> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealDecisionRequest,
-    _$AdminAppealDecisionRequest,
-  ];
+  final Iterable<Type> types = const [AdminAppealDecisionRequest, _$AdminAppealDecisionRequest];
 
   @override
   final String wireName = r'AdminAppealDecisionRequest';
@@ -73,11 +64,7 @@ class _$AdminAppealDecisionRequestSerializer
     AdminAppealDecisionRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -93,21 +80,17 @@ class _$AdminAppealDecisionRequestSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'reasonCode':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.note = valueDes;
           break;
         default:
@@ -138,3 +121,4 @@ class _$AdminAppealDecisionRequestSerializer
     return result.build();
   }
 }
+

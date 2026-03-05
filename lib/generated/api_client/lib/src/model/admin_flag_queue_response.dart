@@ -13,12 +13,11 @@ part 'admin_flag_queue_response.g.dart';
 /// AdminFlagQueueResponse
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
-/// * [count]
+/// * [items] 
+/// * [nextCursor] 
+/// * [count] 
 @BuiltValue()
-abstract class AdminFlagQueueResponse
-    implements Built<AdminFlagQueueResponse, AdminFlagQueueResponseBuilder> {
+abstract class AdminFlagQueueResponse implements Built<AdminFlagQueueResponse, AdminFlagQueueResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<AdminFlagQueueItem> get items;
 
@@ -30,25 +29,18 @@ abstract class AdminFlagQueueResponse
 
   AdminFlagQueueResponse._();
 
-  factory AdminFlagQueueResponse([
-    void updates(AdminFlagQueueResponseBuilder b),
-  ]) = _$AdminFlagQueueResponse;
+  factory AdminFlagQueueResponse([void updates(AdminFlagQueueResponseBuilder b)]) = _$AdminFlagQueueResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueResponse> get serializer =>
-      _$AdminFlagQueueResponseSerializer();
+  static Serializer<AdminFlagQueueResponse> get serializer => _$AdminFlagQueueResponseSerializer();
 }
 
-class _$AdminFlagQueueResponseSerializer
-    implements PrimitiveSerializer<AdminFlagQueueResponse> {
+class _$AdminFlagQueueResponseSerializer implements PrimitiveSerializer<AdminFlagQueueResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagQueueResponse,
-    _$AdminFlagQueueResponse,
-  ];
+  final Iterable<Type> types = const [AdminFlagQueueResponse, _$AdminFlagQueueResponse];
 
   @override
   final String wireName = r'AdminFlagQueueResponse';
@@ -83,11 +75,7 @@ class _$AdminFlagQueueResponseSerializer
     AdminFlagQueueResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -103,29 +91,24 @@ class _$AdminFlagQueueResponseSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'items':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminFlagQueueItem),
-                    ]),
-                  )
-                  as BuiltList<AdminFlagQueueItem>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminFlagQueueItem)]),
+          ) as BuiltList<AdminFlagQueueItem>;
           result.items.replace(valueDes);
           break;
         case r'nextCursor':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.nextCursor = valueDes;
           break;
         case r'count':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.count = valueDes;
           break;
         default:
@@ -156,3 +139,4 @@ class _$AdminFlagQueueResponseSerializer
     return result.build();
   }
 }
+

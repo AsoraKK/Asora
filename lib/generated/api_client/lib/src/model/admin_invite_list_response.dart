@@ -13,12 +13,11 @@ part 'admin_invite_list_response.g.dart';
 /// AdminInviteListResponse
 ///
 /// Properties:
-/// * [invites]
-/// * [count]
-/// * [nextCursor]
+/// * [invites] 
+/// * [count] 
+/// * [nextCursor] 
 @BuiltValue()
-abstract class AdminInviteListResponse
-    implements Built<AdminInviteListResponse, AdminInviteListResponseBuilder> {
+abstract class AdminInviteListResponse implements Built<AdminInviteListResponse, AdminInviteListResponseBuilder> {
   @BuiltValueField(wireName: r'invites')
   BuiltList<AdminInvite> get invites;
 
@@ -30,25 +29,18 @@ abstract class AdminInviteListResponse
 
   AdminInviteListResponse._();
 
-  factory AdminInviteListResponse([
-    void updates(AdminInviteListResponseBuilder b),
-  ]) = _$AdminInviteListResponse;
+  factory AdminInviteListResponse([void updates(AdminInviteListResponseBuilder b)]) = _$AdminInviteListResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteListResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteListResponse> get serializer =>
-      _$AdminInviteListResponseSerializer();
+  static Serializer<AdminInviteListResponse> get serializer => _$AdminInviteListResponseSerializer();
 }
 
-class _$AdminInviteListResponseSerializer
-    implements PrimitiveSerializer<AdminInviteListResponse> {
+class _$AdminInviteListResponseSerializer implements PrimitiveSerializer<AdminInviteListResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminInviteListResponse,
-    _$AdminInviteListResponse,
-  ];
+  final Iterable<Type> types = const [AdminInviteListResponse, _$AdminInviteListResponse];
 
   @override
   final String wireName = r'AdminInviteListResponse';
@@ -83,11 +75,7 @@ class _$AdminInviteListResponseSerializer
     AdminInviteListResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -103,29 +91,24 @@ class _$AdminInviteListResponseSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'invites':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminInvite),
-                    ]),
-                  )
-                  as BuiltList<AdminInvite>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminInvite)]),
+          ) as BuiltList<AdminInvite>;
           result.invites.replace(valueDes);
           break;
         case r'count':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.count = valueDes;
           break;
         case r'nextCursor':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.nextCursor = valueDes;
           break;
         default:
@@ -156,3 +139,4 @@ class _$AdminInviteListResponseSerializer
     return result.build();
   }
 }
+

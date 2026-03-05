@@ -11,13 +11,12 @@ part 'admin_invite_batch_request.g.dart';
 /// AdminInviteBatchRequest
 ///
 /// Properties:
-/// * [count]
-/// * [expiresInDays]
-/// * [maxUses]
-/// * [label]
+/// * [count] 
+/// * [expiresInDays] 
+/// * [maxUses] 
+/// * [label] 
 @BuiltValue()
-abstract class AdminInviteBatchRequest
-    implements Built<AdminInviteBatchRequest, AdminInviteBatchRequestBuilder> {
+abstract class AdminInviteBatchRequest implements Built<AdminInviteBatchRequest, AdminInviteBatchRequestBuilder> {
   @BuiltValueField(wireName: r'count')
   int get count;
 
@@ -32,25 +31,18 @@ abstract class AdminInviteBatchRequest
 
   AdminInviteBatchRequest._();
 
-  factory AdminInviteBatchRequest([
-    void updates(AdminInviteBatchRequestBuilder b),
-  ]) = _$AdminInviteBatchRequest;
+  factory AdminInviteBatchRequest([void updates(AdminInviteBatchRequestBuilder b)]) = _$AdminInviteBatchRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteBatchRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteBatchRequest> get serializer =>
-      _$AdminInviteBatchRequestSerializer();
+  static Serializer<AdminInviteBatchRequest> get serializer => _$AdminInviteBatchRequestSerializer();
 }
 
-class _$AdminInviteBatchRequestSerializer
-    implements PrimitiveSerializer<AdminInviteBatchRequest> {
+class _$AdminInviteBatchRequestSerializer implements PrimitiveSerializer<AdminInviteBatchRequest> {
   @override
-  final Iterable<Type> types = const [
-    AdminInviteBatchRequest,
-    _$AdminInviteBatchRequest,
-  ];
+  final Iterable<Type> types = const [AdminInviteBatchRequest, _$AdminInviteBatchRequest];
 
   @override
   final String wireName = r'AdminInviteBatchRequest';
@@ -94,11 +86,7 @@ class _$AdminInviteBatchRequestSerializer
     AdminInviteBatchRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -114,30 +102,31 @@ class _$AdminInviteBatchRequestSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'count':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.count = valueDes;
           break;
         case r'expiresInDays':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.expiresInDays = valueDes;
           break;
         case r'maxUses':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.maxUses = valueDes;
           break;
         case r'label':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.label = valueDes;
           break;
         default:
@@ -168,3 +157,4 @@ class _$AdminInviteBatchRequestSerializer
     return result.build();
   }
 }
+

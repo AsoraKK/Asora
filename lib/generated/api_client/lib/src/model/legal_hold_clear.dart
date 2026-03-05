@@ -11,28 +11,24 @@ part 'legal_hold_clear.g.dart';
 /// LegalHoldClear
 ///
 /// Properties:
-/// * [id]
+/// * [id] 
 @BuiltValue()
-abstract class LegalHoldClear
-    implements Built<LegalHoldClear, LegalHoldClearBuilder> {
+abstract class LegalHoldClear implements Built<LegalHoldClear, LegalHoldClearBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
 
   LegalHoldClear._();
 
-  factory LegalHoldClear([void updates(LegalHoldClearBuilder b)]) =
-      _$LegalHoldClear;
+  factory LegalHoldClear([void updates(LegalHoldClearBuilder b)]) = _$LegalHoldClear;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(LegalHoldClearBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<LegalHoldClear> get serializer =>
-      _$LegalHoldClearSerializer();
+  static Serializer<LegalHoldClear> get serializer => _$LegalHoldClearSerializer();
 }
 
-class _$LegalHoldClearSerializer
-    implements PrimitiveSerializer<LegalHoldClear> {
+class _$LegalHoldClearSerializer implements PrimitiveSerializer<LegalHoldClear> {
   @override
   final Iterable<Type> types = const [LegalHoldClear, _$LegalHoldClear];
 
@@ -57,11 +53,7 @@ class _$LegalHoldClearSerializer
     LegalHoldClear object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -77,12 +69,10 @@ class _$LegalHoldClearSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'id':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.id = valueDes;
           break;
         default:
@@ -113,3 +103,4 @@ class _$LegalHoldClearSerializer
     return result.build();
   }
 }
+

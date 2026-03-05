@@ -12,12 +12,10 @@ part 'admin_appeal_original_decision.g.dart';
 /// AdminAppealOriginalDecision
 ///
 /// Properties:
-/// * [decision]
-/// * [decidedAt]
+/// * [decision] 
+/// * [decidedAt] 
 @BuiltValue()
-abstract class AdminAppealOriginalDecision
-    implements
-        Built<AdminAppealOriginalDecision, AdminAppealOriginalDecisionBuilder> {
+abstract class AdminAppealOriginalDecision implements Built<AdminAppealOriginalDecision, AdminAppealOriginalDecisionBuilder> {
   @BuiltValueField(wireName: r'decision')
   AdminAppealOriginalDecisionDecisionEnum? get decision;
   // enum decisionEnum {  BLOCKED,  };
@@ -27,25 +25,18 @@ abstract class AdminAppealOriginalDecision
 
   AdminAppealOriginalDecision._();
 
-  factory AdminAppealOriginalDecision([
-    void updates(AdminAppealOriginalDecisionBuilder b),
-  ]) = _$AdminAppealOriginalDecision;
+  factory AdminAppealOriginalDecision([void updates(AdminAppealOriginalDecisionBuilder b)]) = _$AdminAppealOriginalDecision;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealOriginalDecisionBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealOriginalDecision> get serializer =>
-      _$AdminAppealOriginalDecisionSerializer();
+  static Serializer<AdminAppealOriginalDecision> get serializer => _$AdminAppealOriginalDecisionSerializer();
 }
 
-class _$AdminAppealOriginalDecisionSerializer
-    implements PrimitiveSerializer<AdminAppealOriginalDecision> {
+class _$AdminAppealOriginalDecisionSerializer implements PrimitiveSerializer<AdminAppealOriginalDecision> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealOriginalDecision,
-    _$AdminAppealOriginalDecision,
-  ];
+  final Iterable<Type> types = const [AdminAppealOriginalDecision, _$AdminAppealOriginalDecision];
 
   @override
   final String wireName = r'AdminAppealOriginalDecision';
@@ -77,11 +68,7 @@ class _$AdminAppealOriginalDecisionSerializer
     AdminAppealOriginalDecision object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -97,23 +84,17 @@ class _$AdminAppealOriginalDecisionSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'decision':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(
-                      AdminAppealOriginalDecisionDecisionEnum,
-                    ),
-                  )
-                  as AdminAppealOriginalDecisionDecisionEnum;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminAppealOriginalDecisionDecisionEnum),
+          ) as AdminAppealOriginalDecisionDecisionEnum;
           result.decision = valueDes;
           break;
         case r'decidedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
           result.decidedAt = valueDes;
           break;
         default:
@@ -146,17 +127,15 @@ class _$AdminAppealOriginalDecisionSerializer
 }
 
 class AdminAppealOriginalDecisionDecisionEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'BLOCKED')
-  static const AdminAppealOriginalDecisionDecisionEnum BLOCKED =
-      _$adminAppealOriginalDecisionDecisionEnum_BLOCKED;
+  static const AdminAppealOriginalDecisionDecisionEnum BLOCKED = _$adminAppealOriginalDecisionDecisionEnum_BLOCKED;
 
-  static Serializer<AdminAppealOriginalDecisionDecisionEnum> get serializer =>
-      _$adminAppealOriginalDecisionDecisionEnumSerializer;
+  static Serializer<AdminAppealOriginalDecisionDecisionEnum> get serializer => _$adminAppealOriginalDecisionDecisionEnumSerializer;
 
-  const AdminAppealOriginalDecisionDecisionEnum._(String name) : super(name);
+  const AdminAppealOriginalDecisionDecisionEnum._(String name): super(name);
 
-  static BuiltSet<AdminAppealOriginalDecisionDecisionEnum> get values =>
-      _$adminAppealOriginalDecisionDecisionEnumValues;
-  static AdminAppealOriginalDecisionDecisionEnum valueOf(String name) =>
-      _$adminAppealOriginalDecisionDecisionEnumValueOf(name);
+  static BuiltSet<AdminAppealOriginalDecisionDecisionEnum> get values => _$adminAppealOriginalDecisionDecisionEnumValues;
+  static AdminAppealOriginalDecisionDecisionEnum valueOf(String name) => _$adminAppealOriginalDecisionDecisionEnumValueOf(name);
 }
+
