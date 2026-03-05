@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -248,28 +248,26 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 12),
-        RadioGroup<String>(
-          groupValue: _appealType,
-          onChanged: (String? value) {
-            if (value == null) return;
-            setState(() {
-              _appealType = value;
-            });
-          },
-          child: Column(
-            children: AppealType.values
-                .map(
-                  (type) => RadioListTile<String>(
-                    title: Text(type.displayName),
-                    subtitle: Text(
-                      type.description,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    value: type.value,
+        Column(
+          children: AppealType.values
+              .map(
+                (type) => RadioListTile<String>(
+                  title: Text(type.displayName),
+                  subtitle: Text(
+                    type.description,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                )
-                .toList(),
-          ),
+                  value: type.value,
+                  groupValue: _appealType,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _appealType = value;
+                    });
+                  },
+                ),
+              )
+              .toList(),
         ),
       ],
     );

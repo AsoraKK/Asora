@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -454,25 +454,38 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Status'),
-        content: RadioGroup<String>(
-          groupValue: _statusFilter,
-          onChanged: (String? value) {
-            if (value == null) return;
-            setState(() {
-              _statusFilter = value;
-            });
-            Navigator.of(dialogContext).pop();
-            _applyFiltersAndSort();
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildFilterOption('all', 'All Status'),
-              _buildFilterOption('active', 'Active Voting'),
-              _buildFilterOption('quorum', 'Quorum Reached'),
-              _buildFilterOption('expired', 'Time Expired'),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterOption(
+              'all',
+              'All Status',
+              groupValue: _statusFilter,
+              onSelected: (value) => _statusFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'active',
+              'Active Voting',
+              groupValue: _statusFilter,
+              onSelected: (value) => _statusFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'quorum',
+              'Quorum Reached',
+              groupValue: _statusFilter,
+              onSelected: (value) => _statusFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'expired',
+              'Time Expired',
+              groupValue: _statusFilter,
+              onSelected: (value) => _statusFilter = value,
+              dialogContext: dialogContext,
+            ),
+          ],
         ),
       ),
     );
@@ -483,25 +496,38 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Content Type'),
-        content: RadioGroup<String>(
-          groupValue: _contentTypeFilter,
-          onChanged: (String? value) {
-            if (value == null) return;
-            setState(() {
-              _contentTypeFilter = value;
-            });
-            Navigator.of(dialogContext).pop();
-            _applyFiltersAndSort();
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildFilterOption('all', 'All Types'),
-              _buildFilterOption('post', 'Posts'),
-              _buildFilterOption('comment', 'Comments'),
-              _buildFilterOption('user', 'Users'),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterOption(
+              'all',
+              'All Types',
+              groupValue: _contentTypeFilter,
+              onSelected: (value) => _contentTypeFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'post',
+              'Posts',
+              groupValue: _contentTypeFilter,
+              onSelected: (value) => _contentTypeFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'comment',
+              'Comments',
+              groupValue: _contentTypeFilter,
+              onSelected: (value) => _contentTypeFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'user',
+              'Users',
+              groupValue: _contentTypeFilter,
+              onSelected: (value) => _contentTypeFilter = value,
+              dialogContext: dialogContext,
+            ),
+          ],
         ),
       ),
     );
@@ -512,34 +538,64 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Filter by Urgency'),
-        content: RadioGroup<String>(
-          groupValue: _urgencyFilter,
-          onChanged: (String? value) {
-            if (value == null) return;
-            setState(() {
-              _urgencyFilter = value;
-            });
-            Navigator.of(dialogContext).pop();
-            _applyFiltersAndSort();
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildFilterOption('all', 'All Urgency'),
-              _buildFilterOption('high', 'High (70-100)'),
-              _buildFilterOption('medium', 'Medium (40-69)'),
-              _buildFilterOption('low', 'Low (0-39)'),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildFilterOption(
+              'all',
+              'All Urgency',
+              groupValue: _urgencyFilter,
+              onSelected: (value) => _urgencyFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'high',
+              'High (70-100)',
+              groupValue: _urgencyFilter,
+              onSelected: (value) => _urgencyFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'medium',
+              'Medium (40-69)',
+              groupValue: _urgencyFilter,
+              onSelected: (value) => _urgencyFilter = value,
+              dialogContext: dialogContext,
+            ),
+            _buildFilterOption(
+              'low',
+              'Low (0-39)',
+              groupValue: _urgencyFilter,
+              onSelected: (value) => _urgencyFilter = value,
+              dialogContext: dialogContext,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFilterOption(String value, String label) {
+  Widget _buildFilterOption(
+    String value,
+    String label, {
+    required String groupValue,
+    required void Function(String value) onSelected,
+    required BuildContext dialogContext,
+  }) {
     return ListTile(
       title: Text(label),
-      leading: Radio<String>(value: value),
+      leading: Radio<String>(
+        value: value,
+        groupValue: groupValue,
+        onChanged: (newValue) {
+          if (newValue == null) return;
+          setState(() {
+            onSelected(newValue);
+          });
+          Navigator.of(dialogContext).pop();
+          _applyFiltersAndSort();
+        },
+      ),
     );
   }
 

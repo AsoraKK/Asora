@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 /// LYTHAUS DEVICE EMULATOR WIDGET
 ///
@@ -133,7 +133,7 @@ class _DeviceEmulatorState extends State<DeviceEmulator> {
             Text('Device', style: theme.textTheme.labelMedium),
             const SizedBox(height: 4),
             DropdownButtonFormField<DevicePreset>(
-              initialValue: _selectedDevice,
+              value: _selectedDevice,
               isExpanded: true,
               decoration: const InputDecoration(
                 isDense: true,

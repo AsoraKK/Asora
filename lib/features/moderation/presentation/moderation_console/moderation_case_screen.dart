@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -252,7 +252,7 @@ class ModerationCaseScreen extends ConsumerWidget {
               ),
               SizedBox(height: context.spacing.md),
               DropdownButtonFormField<String>(
-                initialValue: targetQueue,
+                value: targetQueue,
                 items: _escalationQueues
                     .map(
                       (queue) =>
