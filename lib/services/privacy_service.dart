@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 // ASORA PRIVACY SERVICE
 //
 // 🎯 Purpose: GDPR/POPIA compliance client-side operations
@@ -44,13 +46,15 @@ class PrivacyService {
     try {
       _logger.info('Requesting user data export');
 
-      final response = await _dio.get(ApiEndpoints.exportUser);
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.exportUser,
+      );
 
       if (response.statusCode == 200) {
         _logger.info('User data export successful');
         return (
           result: PrivacyOperationResult.success,
-          data: response.data as Map<String, dynamic>?,
+          data: response.data,
           errorMessage: null,
         );
       } else {
@@ -82,7 +86,7 @@ class PrivacyService {
     try {
       _logger.info('Requesting account deletion');
 
-      final response = await _dio.post(
+      final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.deleteUser,
         options: Options(headers: {'X-Confirm-Delete': 'true'}),
       );

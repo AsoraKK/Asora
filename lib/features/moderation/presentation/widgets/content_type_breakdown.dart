@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/core/utils/content_type_helper.dart';

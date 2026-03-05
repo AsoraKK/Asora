@@ -1,6 +1,9 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 
@@ -387,7 +390,7 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
 
     try {
       final client = ref.read(moderationClientProvider);
-      final token = ref.read(jwtProvider);
+      final token = await ref.read(jwtProvider.future);
 
       if (token == null) {
         throw Exception('Please log in to submit an appeal');
@@ -440,7 +443,10 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
             errorMessage =
                 'You have already submitted an appeal for this content';
           } else if (error.response?.data?['error'] != null) {
-            errorMessage = error.response!.data['error'];
+            final data = error.response!.data;
+            if (data is Map<String, dynamic> && data['error'] is String) {
+              errorMessage = data['error'] as String;
+            }
           }
         } else {
           errorMessage = error.toString();

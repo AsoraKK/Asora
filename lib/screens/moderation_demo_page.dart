@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
@@ -235,7 +237,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 displayName: 'Eve Davis',
                 avatarUrl: null,
               ),
-              moderationStatus: ModerationStatus.underReview,
+              moderationStatus: ModerationStatus.flagged,
               aiScore: 0.58,
             ),
             showAiScores: _showAiScores,
@@ -335,7 +337,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
   }
 
   void _showSettingsDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Moderation Settings'),
