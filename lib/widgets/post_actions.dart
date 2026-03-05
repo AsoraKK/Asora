@@ -294,7 +294,23 @@ class _FlagButton extends ConsumerWidget {
       final token = await ref.read(jwtProvider.future);
 
       if (token == null) {
-        throw Exception('Please log in to report content');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  SizedBox(width: 16),
+                  Expanded(child: Text('User not authenticated')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
       }
 
       final result = await client.flagContent(
