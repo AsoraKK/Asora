@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -276,7 +276,7 @@ class _InsightsTabState extends ConsumerState<_InsightsTab> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: _rangeDays,
+                    value: _rangeDays,
                     decoration: const InputDecoration(
                       labelText: 'Date range',
                       border: OutlineInputBorder(),
@@ -304,7 +304,7 @@ class _InsightsTabState extends ConsumerState<_InsightsTab> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: selectedCategory,
+                    value: selectedCategory,
                     decoration: const InputDecoration(
                       labelText: 'Category',
                       border: OutlineInputBorder(),
@@ -328,7 +328,7 @@ class _InsightsTabState extends ConsumerState<_InsightsTab> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: selectedTier,
+                    value: selectedTier,
                     decoration: const InputDecoration(
                       labelText: 'Tier',
                       border: OutlineInputBorder(),

@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -167,28 +167,26 @@ class _FlagButton extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // Reason selection
-                RadioGroup<String>(
-                  groupValue: selectedReason,
-                  onChanged: (String? value) {
-                    if (value == null) return;
-                    setState(() {
-                      selectedReason = value;
-                    });
-                  },
-                  child: Column(
-                    children: FlagReason.values
-                        .map(
-                          (reason) => RadioListTile<String>(
-                            title: Text(reason.displayName),
-                            subtitle: Text(
-                              reason.description,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            value: reason.value,
+                Column(
+                  children: FlagReason.values
+                      .map(
+                        (reason) => RadioListTile<String>(
+                          title: Text(reason.displayName),
+                          subtitle: Text(
+                            reason.description,
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        )
-                        .toList(),
-                  ),
+                          value: reason.value,
+                          groupValue: selectedReason,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              selectedReason = value;
+                            });
+                          },
+                        ),
+                      )
+                      .toList(),
                 ),
 
                 const SizedBox(height: 16),

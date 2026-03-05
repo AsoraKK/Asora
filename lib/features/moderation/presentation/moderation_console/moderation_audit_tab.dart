@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -106,7 +106,7 @@ class _ModerationAuditTabState extends ConsumerState<ModerationAuditTab> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<ModerationAuditActionFilter>(
-                      initialValue: _action,
+                      value: _action,
                       decoration: const InputDecoration(labelText: 'Action'),
                       items: ModerationAuditActionFilter.values
                           .map(
