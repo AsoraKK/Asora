@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/moderation/domain/appeal.dart';
-import '../widgets/post_card.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/widgets/post_card.dart';
 
 /// ASORA MODERATION DEMO PAGE
 ///

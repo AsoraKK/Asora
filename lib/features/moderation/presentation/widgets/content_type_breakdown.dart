@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../domain/appeal.dart';
-import '../../../../core/utils/content_type_helper.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/core/utils/content_type_helper.dart';
 
 /// ASORA CONTENT TYPE BREAKDOWN WIDGET
 ///

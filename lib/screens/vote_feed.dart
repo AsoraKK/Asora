@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/appeal.dart' show Appeal, VotingStatus;
-import '../widgets/appeal_voting_card.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart'
+    show Appeal, VotingStatus;
+import 'package:asora/widgets/appeal_voting_card.dart';
 
 /// ASORA VOTE FEED PAGE
 ///
@@ -351,7 +352,7 @@ class _VoteFeedPageState extends ConsumerState<VoteFeedPage> {
   }
 
   List<Appeal> _getFilteredAppeals() {
-    var filtered = _appeals.where((appeal) {
+    final filtered = _appeals.where((appeal) {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
