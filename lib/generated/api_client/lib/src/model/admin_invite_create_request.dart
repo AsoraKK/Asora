@@ -11,12 +11,14 @@ part 'admin_invite_create_request.g.dart';
 /// AdminInviteCreateRequest
 ///
 /// Properties:
-/// * [email] 
-/// * [expiresInDays] 
-/// * [maxUses] 
-/// * [label] 
+/// * [email]
+/// * [expiresInDays]
+/// * [maxUses]
+/// * [label]
 @BuiltValue()
-abstract class AdminInviteCreateRequest implements Built<AdminInviteCreateRequest, AdminInviteCreateRequestBuilder> {
+abstract class AdminInviteCreateRequest
+    implements
+        Built<AdminInviteCreateRequest, AdminInviteCreateRequestBuilder> {
   @BuiltValueField(wireName: r'email')
   String? get email;
 
@@ -31,18 +33,25 @@ abstract class AdminInviteCreateRequest implements Built<AdminInviteCreateReques
 
   AdminInviteCreateRequest._();
 
-  factory AdminInviteCreateRequest([void updates(AdminInviteCreateRequestBuilder b)]) = _$AdminInviteCreateRequest;
+  factory AdminInviteCreateRequest([
+    void updates(AdminInviteCreateRequestBuilder b),
+  ]) = _$AdminInviteCreateRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteCreateRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteCreateRequest> get serializer => _$AdminInviteCreateRequestSerializer();
+  static Serializer<AdminInviteCreateRequest> get serializer =>
+      _$AdminInviteCreateRequestSerializer();
 }
 
-class _$AdminInviteCreateRequestSerializer implements PrimitiveSerializer<AdminInviteCreateRequest> {
+class _$AdminInviteCreateRequestSerializer
+    implements PrimitiveSerializer<AdminInviteCreateRequest> {
   @override
-  final Iterable<Type> types = const [AdminInviteCreateRequest, _$AdminInviteCreateRequest];
+  final Iterable<Type> types = const [
+    AdminInviteCreateRequest,
+    _$AdminInviteCreateRequest,
+  ];
 
   @override
   final String wireName = r'AdminInviteCreateRequest';
@@ -88,7 +97,11 @@ class _$AdminInviteCreateRequestSerializer implements PrimitiveSerializer<AdminI
     AdminInviteCreateRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -104,31 +117,33 @@ class _$AdminInviteCreateRequestSerializer implements PrimitiveSerializer<AdminI
       final value = serializedList[i + 1];
       switch (key) {
         case r'email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.email = valueDes;
           break;
         case r'expiresInDays':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.expiresInDays = valueDes;
           break;
         case r'maxUses':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.maxUses = valueDes;
           break;
         case r'label':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.label = valueDes;
           break;
         default:
@@ -159,4 +174,3 @@ class _$AdminInviteCreateRequestSerializer implements PrimitiveSerializer<AdminI
     return result.build();
   }
 }
-

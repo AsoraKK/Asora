@@ -10,15 +10,15 @@ import 'package:built_value/serializer.dart';
 part 'admin_queue_status.g.dart';
 
 class AdminQueueStatus extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'OPEN')
   static const AdminQueueStatus OPEN = _$OPEN;
   @BuiltValueEnumConst(wireName: r'RESOLVED')
   static const AdminQueueStatus RESOLVED = _$RESOLVED;
 
-  static Serializer<AdminQueueStatus> get serializer => _$adminQueueStatusSerializer;
+  static Serializer<AdminQueueStatus> get serializer =>
+      _$adminQueueStatusSerializer;
 
-  const AdminQueueStatus._(String name): super(name);
+  const AdminQueueStatus._(String name) : super(name);
 
   static BuiltSet<AdminQueueStatus> get values => _$values;
   static AdminQueueStatus valueOf(String name) => _$valueOf(name);
@@ -31,4 +31,3 @@ class AdminQueueStatus extends EnumClass {
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
 abstract class AdminQueueStatusMixin = Object with _$AdminQueueStatusMixin;
-

@@ -23,12 +23,9 @@ AdminContentType _$valueOf(String name) {
   }
 }
 
-final BuiltSet<AdminContentType> _$values =
-    BuiltSet<AdminContentType>(const <AdminContentType>[
-  _$post,
-  _$comment,
-  _$user,
-]);
+final BuiltSet<AdminContentType> _$values = BuiltSet<AdminContentType>(
+  const <AdminContentType>[_$post, _$comment, _$user],
+);
 
 class _$AdminContentTypeMeta {
   const _$AdminContentTypeMeta();
@@ -66,15 +63,20 @@ class _$AdminContentTypeSerializer
   final String wireName = 'AdminContentType';
 
   @override
-  Object serialize(Serializers serializers, AdminContentType object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    AdminContentType object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
-  AdminContentType deserialize(Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      AdminContentType.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+  AdminContentType deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => AdminContentType.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 // ignore_for_file: deprecated_member_use_from_same_package,type=lint

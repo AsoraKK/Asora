@@ -14,17 +14,19 @@ class _$AdminModerationSummary extends AdminModerationSummary {
   @override
   final BuiltList<String>? reasonCodes;
 
-  factory _$AdminModerationSummary(
-          [void Function(AdminModerationSummaryBuilder)? updates]) =>
-      (AdminModerationSummaryBuilder()..update(updates))._build();
+  factory _$AdminModerationSummary([
+    void Function(AdminModerationSummaryBuilder)? updates,
+  ]) => (AdminModerationSummaryBuilder()..update(updates))._build();
 
-  _$AdminModerationSummary._(
-      {this.lastDecisionAt, this.configVersionUsed, this.reasonCodes})
-      : super._();
+  _$AdminModerationSummary._({
+    this.lastDecisionAt,
+    this.configVersionUsed,
+    this.reasonCodes,
+  }) : super._();
   @override
   AdminModerationSummary rebuild(
-          void Function(AdminModerationSummaryBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminModerationSummaryBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminModerationSummaryBuilder toBuilder() =>
@@ -110,7 +112,8 @@ class AdminModerationSummaryBuilder
   _$AdminModerationSummary _build() {
     _$AdminModerationSummary _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminModerationSummary._(
             lastDecisionAt: lastDecisionAt,
             configVersionUsed: configVersionUsed,
@@ -123,7 +126,10 @@ class AdminModerationSummaryBuilder
         _reasonCodes?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminModerationSummary', _$failedField, e.toString());
+          r'AdminModerationSummary',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

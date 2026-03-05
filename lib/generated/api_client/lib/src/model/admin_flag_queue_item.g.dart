@@ -20,22 +20,22 @@ class _$AdminFlagQueueItem extends AdminFlagQueueItem {
   @override
   final AdminQueueStatus status;
 
-  factory _$AdminFlagQueueItem(
-          [void Function(AdminFlagQueueItemBuilder)? updates]) =>
-      (AdminFlagQueueItemBuilder()..update(updates))._build();
+  factory _$AdminFlagQueueItem([
+    void Function(AdminFlagQueueItemBuilder)? updates,
+  ]) => (AdminFlagQueueItemBuilder()..update(updates))._build();
 
-  _$AdminFlagQueueItem._(
-      {required this.content,
-      required this.author,
-      required this.flags,
-      required this.state,
-      this.moderation,
-      required this.status})
-      : super._();
+  _$AdminFlagQueueItem._({
+    required this.content,
+    required this.author,
+    required this.flags,
+    required this.state,
+    this.moderation,
+    required this.status,
+  }) : super._();
   @override
   AdminFlagQueueItem rebuild(
-          void Function(AdminFlagQueueItemBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagQueueItemBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueItemBuilder toBuilder() =>
@@ -147,16 +147,23 @@ class AdminFlagQueueItemBuilder
   _$AdminFlagQueueItem _build() {
     _$AdminFlagQueueItem _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagQueueItem._(
             content: content.build(),
             author: author.build(),
             flags: flags.build(),
             state: BuiltValueNullFieldError.checkNotNull(
-                state, r'AdminFlagQueueItem', 'state'),
+              state,
+              r'AdminFlagQueueItem',
+              'state',
+            ),
             moderation: _moderation?.build(),
             status: BuiltValueNullFieldError.checkNotNull(
-                status, r'AdminFlagQueueItem', 'status'),
+              status,
+              r'AdminFlagQueueItem',
+              'status',
+            ),
           );
     } catch (_) {
       late String _$failedField;
@@ -172,7 +179,10 @@ class AdminFlagQueueItemBuilder
         _moderation?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminFlagQueueItem', _$failedField, e.toString());
+          r'AdminFlagQueueItem',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

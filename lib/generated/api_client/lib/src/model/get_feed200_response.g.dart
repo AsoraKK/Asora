@@ -12,15 +12,15 @@ class _$GetFeed200Response extends GetFeed200Response {
   @override
   final GetFeed200ResponseMeta meta;
 
-  factory _$GetFeed200Response(
-          [void Function(GetFeed200ResponseBuilder)? updates]) =>
-      (GetFeed200ResponseBuilder()..update(updates))._build();
+  factory _$GetFeed200Response([
+    void Function(GetFeed200ResponseBuilder)? updates,
+  ]) => (GetFeed200ResponseBuilder()..update(updates))._build();
 
   _$GetFeed200Response._({required this.items, required this.meta}) : super._();
   @override
   GetFeed200Response rebuild(
-          void Function(GetFeed200ResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(GetFeed200ResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   GetFeed200ResponseBuilder toBuilder() =>
@@ -97,11 +97,9 @@ class GetFeed200ResponseBuilder
   _$GetFeed200Response _build() {
     _$GetFeed200Response _$result;
     try {
-      _$result = _$v ??
-          _$GetFeed200Response._(
-            items: items.build(),
-            meta: meta.build(),
-          );
+      _$result =
+          _$v ??
+          _$GetFeed200Response._(items: items.build(), meta: meta.build());
     } catch (_) {
       late String _$failedField;
       try {
@@ -111,7 +109,10 @@ class GetFeed200ResponseBuilder
         meta.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'GetFeed200Response', _$failedField, e.toString());
+          r'GetFeed200Response',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

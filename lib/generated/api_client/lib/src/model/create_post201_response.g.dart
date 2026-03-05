@@ -7,14 +7,15 @@ part of 'create_post201_response.dart';
 // **************************************************************************
 
 const CreatePost201ResponseStatusEnum
-    _$createPost201ResponseStatusEnum_published =
+_$createPost201ResponseStatusEnum_published =
     const CreatePost201ResponseStatusEnum._('published');
 const CreatePost201ResponseStatusEnum
-    _$createPost201ResponseStatusEnum_blocked =
+_$createPost201ResponseStatusEnum_blocked =
     const CreatePost201ResponseStatusEnum._('blocked');
 
 CreatePost201ResponseStatusEnum _$createPost201ResponseStatusEnumValueOf(
-    String name) {
+  String name,
+) {
   switch (name) {
     case 'published':
       return _$createPost201ResponseStatusEnum_published;
@@ -26,14 +27,16 @@ CreatePost201ResponseStatusEnum _$createPost201ResponseStatusEnumValueOf(
 }
 
 final BuiltSet<CreatePost201ResponseStatusEnum>
-    _$createPost201ResponseStatusEnumValues = BuiltSet<
-        CreatePost201ResponseStatusEnum>(const <CreatePost201ResponseStatusEnum>[
-  _$createPost201ResponseStatusEnum_published,
-  _$createPost201ResponseStatusEnum_blocked,
-]);
+_$createPost201ResponseStatusEnumValues =
+    BuiltSet<CreatePost201ResponseStatusEnum>(
+      const <CreatePost201ResponseStatusEnum>[
+        _$createPost201ResponseStatusEnum_published,
+        _$createPost201ResponseStatusEnum_blocked,
+      ],
+    );
 
 Serializer<CreatePost201ResponseStatusEnum>
-    _$createPost201ResponseStatusEnumSerializer =
+_$createPost201ResponseStatusEnumSerializer =
     _$CreatePost201ResponseStatusEnumSerializer();
 
 class _$CreatePost201ResponseStatusEnumSerializer
@@ -54,16 +57,19 @@ class _$CreatePost201ResponseStatusEnumSerializer
 
   @override
   Object serialize(
-          Serializers serializers, CreatePost201ResponseStatusEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+    Serializers serializers,
+    CreatePost201ResponseStatusEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   CreatePost201ResponseStatusEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      CreatePost201ResponseStatusEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => CreatePost201ResponseStatusEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$CreatePost201Response extends CreatePost201Response {
@@ -72,15 +78,15 @@ class _$CreatePost201Response extends CreatePost201Response {
   @override
   final CreatePost201ResponseStatusEnum? status;
 
-  factory _$CreatePost201Response(
-          [void Function(CreatePost201ResponseBuilder)? updates]) =>
-      (CreatePost201ResponseBuilder()..update(updates))._build();
+  factory _$CreatePost201Response([
+    void Function(CreatePost201ResponseBuilder)? updates,
+  ]) => (CreatePost201ResponseBuilder()..update(updates))._build();
 
   _$CreatePost201Response._({this.id, this.status}) : super._();
   @override
   CreatePost201Response rebuild(
-          void Function(CreatePost201ResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(CreatePost201ResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   CreatePost201ResponseBuilder toBuilder() =>
@@ -153,11 +159,7 @@ class CreatePost201ResponseBuilder
   CreatePost201Response build() => _build();
 
   _$CreatePost201Response _build() {
-    final _$result = _$v ??
-        _$CreatePost201Response._(
-          id: id,
-          status: status,
-        );
+    final _$result = _$v ?? _$CreatePost201Response._(id: id, status: status);
     replace(_$result);
     return _$result;
   }

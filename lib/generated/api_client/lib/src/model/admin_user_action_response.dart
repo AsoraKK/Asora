@@ -12,10 +12,11 @@ part 'admin_user_action_response.g.dart';
 /// AdminUserActionResponse
 ///
 /// Properties:
-/// * [userId] 
-/// * [status] 
+/// * [userId]
+/// * [status]
 @BuiltValue()
-abstract class AdminUserActionResponse implements Built<AdminUserActionResponse, AdminUserActionResponseBuilder> {
+abstract class AdminUserActionResponse
+    implements Built<AdminUserActionResponse, AdminUserActionResponseBuilder> {
   @BuiltValueField(wireName: r'userId')
   String? get userId;
 
@@ -25,18 +26,25 @@ abstract class AdminUserActionResponse implements Built<AdminUserActionResponse,
 
   AdminUserActionResponse._();
 
-  factory AdminUserActionResponse([void updates(AdminUserActionResponseBuilder b)]) = _$AdminUserActionResponse;
+  factory AdminUserActionResponse([
+    void updates(AdminUserActionResponseBuilder b),
+  ]) = _$AdminUserActionResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserActionResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserActionResponse> get serializer => _$AdminUserActionResponseSerializer();
+  static Serializer<AdminUserActionResponse> get serializer =>
+      _$AdminUserActionResponseSerializer();
 }
 
-class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUserActionResponse> {
+class _$AdminUserActionResponseSerializer
+    implements PrimitiveSerializer<AdminUserActionResponse> {
   @override
-  final Iterable<Type> types = const [AdminUserActionResponse, _$AdminUserActionResponse];
+  final Iterable<Type> types = const [
+    AdminUserActionResponse,
+    _$AdminUserActionResponse,
+  ];
 
   @override
   final String wireName = r'AdminUserActionResponse';
@@ -68,7 +76,11 @@ class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUs
     AdminUserActionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -84,17 +96,21 @@ class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUs
       final value = serializedList[i + 1];
       switch (key) {
         case r'userId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.userId = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminUserStatus),
-          ) as AdminUserStatus;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminUserStatus),
+                  )
+                  as AdminUserStatus;
           result.status = valueDes;
           break;
         default:
@@ -125,4 +141,3 @@ class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
-

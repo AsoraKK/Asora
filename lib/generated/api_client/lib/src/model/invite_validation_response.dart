@@ -12,12 +12,14 @@ part 'invite_validation_response.g.dart';
 /// InviteValidationResponse
 ///
 /// Properties:
-/// * [success] 
-/// * [data] 
-/// * [timestamp] 
-/// * [requestId] 
+/// * [success]
+/// * [data]
+/// * [timestamp]
+/// * [requestId]
 @BuiltValue()
-abstract class InviteValidationResponse implements Built<InviteValidationResponse, InviteValidationResponseBuilder> {
+abstract class InviteValidationResponse
+    implements
+        Built<InviteValidationResponse, InviteValidationResponseBuilder> {
   @BuiltValueField(wireName: r'success')
   bool get success;
 
@@ -32,18 +34,25 @@ abstract class InviteValidationResponse implements Built<InviteValidationRespons
 
   InviteValidationResponse._();
 
-  factory InviteValidationResponse([void updates(InviteValidationResponseBuilder b)]) = _$InviteValidationResponse;
+  factory InviteValidationResponse([
+    void updates(InviteValidationResponseBuilder b),
+  ]) = _$InviteValidationResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(InviteValidationResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<InviteValidationResponse> get serializer => _$InviteValidationResponseSerializer();
+  static Serializer<InviteValidationResponse> get serializer =>
+      _$InviteValidationResponseSerializer();
 }
 
-class _$InviteValidationResponseSerializer implements PrimitiveSerializer<InviteValidationResponse> {
+class _$InviteValidationResponseSerializer
+    implements PrimitiveSerializer<InviteValidationResponse> {
   @override
-  final Iterable<Type> types = const [InviteValidationResponse, _$InviteValidationResponse];
+  final Iterable<Type> types = const [
+    InviteValidationResponse,
+    _$InviteValidationResponse,
+  ];
 
   @override
   final String wireName = r'InviteValidationResponse';
@@ -83,7 +92,11 @@ class _$InviteValidationResponseSerializer implements PrimitiveSerializer<Invite
     InviteValidationResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -99,31 +112,39 @@ class _$InviteValidationResponseSerializer implements PrimitiveSerializer<Invite
       final value = serializedList[i + 1];
       switch (key) {
         case r'success':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(bool),
-          ) as bool;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(bool),
+                  )
+                  as bool;
           result.success = valueDes;
           break;
         case r'data':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(InviteValidationPayload),
-          ) as InviteValidationPayload;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(InviteValidationPayload),
+                  )
+                  as InviteValidationPayload;
           result.data.replace(valueDes);
           break;
         case r'timestamp':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.timestamp = valueDes;
           break;
         case r'requestId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.requestId = valueDes;
           break;
         default:
@@ -154,4 +175,3 @@ class _$InviteValidationResponseSerializer implements PrimitiveSerializer<Invite
     return result.build();
   }
 }
-

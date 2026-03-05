@@ -7,10 +7,10 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/network/dio_client.dart';
-import '../core/network/api_endpoints.dart';
-import '../core/logging/app_logger.dart';
-import '../features/auth/application/auth_providers.dart';
+import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/core/network/api_endpoints.dart';
+import 'package:asora/core/logging/app_logger.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
 
 /// Privacy operation results
 enum PrivacyOperationResult {

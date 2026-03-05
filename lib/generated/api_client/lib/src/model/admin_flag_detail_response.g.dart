@@ -18,17 +18,21 @@ class _$AdminFlagDetailResponse extends AdminFlagDetailResponse {
   @override
   final AdminFlagHistory? history;
 
-  factory _$AdminFlagDetailResponse(
-          [void Function(AdminFlagDetailResponseBuilder)? updates]) =>
-      (AdminFlagDetailResponseBuilder()..update(updates))._build();
+  factory _$AdminFlagDetailResponse([
+    void Function(AdminFlagDetailResponseBuilder)? updates,
+  ]) => (AdminFlagDetailResponseBuilder()..update(updates))._build();
 
-  _$AdminFlagDetailResponse._(
-      {this.content, this.flags, this.moderation, this.appeal, this.history})
-      : super._();
+  _$AdminFlagDetailResponse._({
+    this.content,
+    this.flags,
+    this.moderation,
+    this.appeal,
+    this.history,
+  }) : super._();
   @override
   AdminFlagDetailResponse rebuild(
-          void Function(AdminFlagDetailResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagDetailResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailResponseBuilder toBuilder() =>
@@ -134,7 +138,8 @@ class AdminFlagDetailResponseBuilder
   _$AdminFlagDetailResponse _build() {
     _$AdminFlagDetailResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagDetailResponse._(
             content: _content?.build(),
             flags: _flags?.build(),
@@ -157,7 +162,10 @@ class AdminFlagDetailResponseBuilder
         _history?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminFlagDetailResponse', _$failedField, e.toString());
+          r'AdminFlagDetailResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

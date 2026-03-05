@@ -20,7 +20,7 @@ class _$LegalHoldRecord extends LegalHoldRecord {
       (LegalHoldRecordBuilder()..update(updates))._build();
 
   _$LegalHoldRecord._({this.id, this.scope, this.scopeId, this.reason})
-      : super._();
+    : super._();
   @override
   LegalHoldRecord rebuild(void Function(LegalHoldRecordBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -110,7 +110,8 @@ class LegalHoldRecordBuilder
   LegalHoldRecord build() => _build();
 
   _$LegalHoldRecord _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$LegalHoldRecord._(
           id: id,
           scope: scope,

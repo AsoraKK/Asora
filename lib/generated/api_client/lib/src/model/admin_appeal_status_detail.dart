@@ -10,7 +10,6 @@ import 'package:built_value/serializer.dart';
 part 'admin_appeal_status_detail.g.dart';
 
 class AdminAppealStatusDetail extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'pending')
   static const AdminAppealStatusDetail pending = _$pending;
   @BuiltValueEnumConst(wireName: r'approved')
@@ -20,9 +19,10 @@ class AdminAppealStatusDetail extends EnumClass {
   @BuiltValueEnumConst(wireName: r'overridden')
   static const AdminAppealStatusDetail overridden = _$overridden;
 
-  static Serializer<AdminAppealStatusDetail> get serializer => _$adminAppealStatusDetailSerializer;
+  static Serializer<AdminAppealStatusDetail> get serializer =>
+      _$adminAppealStatusDetailSerializer;
 
-  const AdminAppealStatusDetail._(String name): super(name);
+  const AdminAppealStatusDetail._(String name) : super(name);
 
   static BuiltSet<AdminAppealStatusDetail> get values => _$values;
   static AdminAppealStatusDetail valueOf(String name) => _$valueOf(name);
@@ -34,5 +34,5 @@ class AdminAppealStatusDetail extends EnumClass {
 /// corresponding Angular template.
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
-abstract class AdminAppealStatusDetailMixin = Object with _$AdminAppealStatusDetailMixin;
-
+abstract class AdminAppealStatusDetailMixin = Object
+    with _$AdminAppealStatusDetailMixin;

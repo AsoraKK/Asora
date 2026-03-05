@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-
 /// tests for AdminApi
 void main() {
   final instance = AsoraApiClient().getAdminApi();
@@ -159,6 +158,5 @@ void main() {
     test('test adminUsersSearch', () async {
       // TODO
     });
-
   });
 }

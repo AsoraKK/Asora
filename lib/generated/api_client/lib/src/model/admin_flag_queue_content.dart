@@ -12,12 +12,13 @@ part 'admin_flag_queue_content.g.dart';
 /// AdminFlagQueueContent
 ///
 /// Properties:
-/// * [contentId] 
-/// * [type] 
-/// * [createdAt] 
-/// * [preview] 
+/// * [contentId]
+/// * [type]
+/// * [createdAt]
+/// * [preview]
 @BuiltValue()
-abstract class AdminFlagQueueContent implements Built<AdminFlagQueueContent, AdminFlagQueueContentBuilder> {
+abstract class AdminFlagQueueContent
+    implements Built<AdminFlagQueueContent, AdminFlagQueueContentBuilder> {
   @BuiltValueField(wireName: r'contentId')
   String? get contentId;
 
@@ -33,18 +34,25 @@ abstract class AdminFlagQueueContent implements Built<AdminFlagQueueContent, Adm
 
   AdminFlagQueueContent._();
 
-  factory AdminFlagQueueContent([void updates(AdminFlagQueueContentBuilder b)]) = _$AdminFlagQueueContent;
+  factory AdminFlagQueueContent([
+    void updates(AdminFlagQueueContentBuilder b),
+  ]) = _$AdminFlagQueueContent;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueContentBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueContent> get serializer => _$AdminFlagQueueContentSerializer();
+  static Serializer<AdminFlagQueueContent> get serializer =>
+      _$AdminFlagQueueContentSerializer();
 }
 
-class _$AdminFlagQueueContentSerializer implements PrimitiveSerializer<AdminFlagQueueContent> {
+class _$AdminFlagQueueContentSerializer
+    implements PrimitiveSerializer<AdminFlagQueueContent> {
   @override
-  final Iterable<Type> types = const [AdminFlagQueueContent, _$AdminFlagQueueContent];
+  final Iterable<Type> types = const [
+    AdminFlagQueueContent,
+    _$AdminFlagQueueContent,
+  ];
 
   @override
   final String wireName = r'AdminFlagQueueContent';
@@ -90,7 +98,11 @@ class _$AdminFlagQueueContentSerializer implements PrimitiveSerializer<AdminFlag
     AdminFlagQueueContent object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -106,31 +118,39 @@ class _$AdminFlagQueueContentSerializer implements PrimitiveSerializer<AdminFlag
       final value = serializedList[i + 1];
       switch (key) {
         case r'contentId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.contentId = valueDes;
           break;
         case r'type':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminContentType),
-          ) as AdminContentType;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminContentType),
+                  )
+                  as AdminContentType;
           result.type = valueDes;
           break;
         case r'createdAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.createdAt = valueDes;
           break;
         case r'preview':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.preview = valueDes;
           break;
         default:
@@ -161,4 +181,3 @@ class _$AdminFlagQueueContentSerializer implements PrimitiveSerializer<AdminFlag
     return result.build();
   }
 }
-

@@ -14,16 +14,16 @@ class _$AdminFlagQueueAuthor extends AdminFlagQueueAuthor {
   @override
   final String? handle;
 
-  factory _$AdminFlagQueueAuthor(
-          [void Function(AdminFlagQueueAuthorBuilder)? updates]) =>
-      (AdminFlagQueueAuthorBuilder()..update(updates))._build();
+  factory _$AdminFlagQueueAuthor([
+    void Function(AdminFlagQueueAuthorBuilder)? updates,
+  ]) => (AdminFlagQueueAuthorBuilder()..update(updates))._build();
 
   _$AdminFlagQueueAuthor._({this.authorId, this.displayName, this.handle})
-      : super._();
+    : super._();
   @override
   AdminFlagQueueAuthor rebuild(
-          void Function(AdminFlagQueueAuthorBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagQueueAuthorBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueAuthorBuilder toBuilder() =>
@@ -103,7 +103,8 @@ class AdminFlagQueueAuthorBuilder
   AdminFlagQueueAuthor build() => _build();
 
   _$AdminFlagQueueAuthor _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagQueueAuthor._(
           authorId: authorId,
           displayName: displayName,

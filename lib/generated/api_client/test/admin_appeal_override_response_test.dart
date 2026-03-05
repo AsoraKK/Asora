@@ -21,6 +21,5 @@ void main() {
     test('to test the property `finalDecision`', () async {
       // TODO
     });
-
   });
 }

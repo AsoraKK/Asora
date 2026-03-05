@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import '../features/moderation/application/moderation_providers.dart';
-import '../features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// ASORA APPEAL DIALOG
 ///

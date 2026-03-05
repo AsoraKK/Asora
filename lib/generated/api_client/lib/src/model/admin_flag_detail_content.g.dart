@@ -18,17 +18,21 @@ class _$AdminFlagDetailContent extends AdminFlagDetailContent {
   @override
   final String? preview;
 
-  factory _$AdminFlagDetailContent(
-          [void Function(AdminFlagDetailContentBuilder)? updates]) =>
-      (AdminFlagDetailContentBuilder()..update(updates))._build();
+  factory _$AdminFlagDetailContent([
+    void Function(AdminFlagDetailContentBuilder)? updates,
+  ]) => (AdminFlagDetailContentBuilder()..update(updates))._build();
 
-  _$AdminFlagDetailContent._(
-      {this.contentId, this.type, this.createdAt, this.state, this.preview})
-      : super._();
+  _$AdminFlagDetailContent._({
+    this.contentId,
+    this.type,
+    this.createdAt,
+    this.state,
+    this.preview,
+  }) : super._();
   @override
   AdminFlagDetailContent rebuild(
-          void Function(AdminFlagDetailContentBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagDetailContentBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailContentBuilder toBuilder() =>
@@ -124,7 +128,8 @@ class AdminFlagDetailContentBuilder
   AdminFlagDetailContent build() => _build();
 
   _$AdminFlagDetailContent _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagDetailContent._(
           contentId: contentId,
           type: type,

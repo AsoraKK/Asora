@@ -11,11 +11,12 @@ part 'admin_flag_detail_reason.g.dart';
 /// AdminFlagDetailReason
 ///
 /// Properties:
-/// * [reason] 
-/// * [createdAt] 
-/// * [status] 
+/// * [reason]
+/// * [createdAt]
+/// * [status]
 @BuiltValue()
-abstract class AdminFlagDetailReason implements Built<AdminFlagDetailReason, AdminFlagDetailReasonBuilder> {
+abstract class AdminFlagDetailReason
+    implements Built<AdminFlagDetailReason, AdminFlagDetailReasonBuilder> {
   @BuiltValueField(wireName: r'reason')
   String? get reason;
 
@@ -27,18 +28,25 @@ abstract class AdminFlagDetailReason implements Built<AdminFlagDetailReason, Adm
 
   AdminFlagDetailReason._();
 
-  factory AdminFlagDetailReason([void updates(AdminFlagDetailReasonBuilder b)]) = _$AdminFlagDetailReason;
+  factory AdminFlagDetailReason([
+    void updates(AdminFlagDetailReasonBuilder b),
+  ]) = _$AdminFlagDetailReason;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagDetailReasonBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagDetailReason> get serializer => _$AdminFlagDetailReasonSerializer();
+  static Serializer<AdminFlagDetailReason> get serializer =>
+      _$AdminFlagDetailReasonSerializer();
 }
 
-class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlagDetailReason> {
+class _$AdminFlagDetailReasonSerializer
+    implements PrimitiveSerializer<AdminFlagDetailReason> {
   @override
-  final Iterable<Type> types = const [AdminFlagDetailReason, _$AdminFlagDetailReason];
+  final Iterable<Type> types = const [
+    AdminFlagDetailReason,
+    _$AdminFlagDetailReason,
+  ];
 
   @override
   final String wireName = r'AdminFlagDetailReason';
@@ -77,7 +85,11 @@ class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlag
     AdminFlagDetailReason object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -93,24 +105,30 @@ class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlag
       final value = serializedList[i + 1];
       switch (key) {
         case r'reason':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.reason = valueDes;
           break;
         case r'createdAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.createdAt = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.status = valueDes;
           break;
         default:
@@ -141,4 +159,3 @@ class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlag
     return result.build();
   }
 }
-

@@ -13,20 +13,21 @@ part 'admin_audit_entry.g.dart';
 /// AdminAuditEntry
 ///
 /// Properties:
-/// * [id] 
-/// * [timestamp] 
-/// * [actorId] 
-/// * [action] 
-/// * [targetType] 
-/// * [subjectId] 
-/// * [reasonCode] 
-/// * [note] 
-/// * [before] 
-/// * [after] 
-/// * [correlationId] 
-/// * [metadata] 
+/// * [id]
+/// * [timestamp]
+/// * [actorId]
+/// * [action]
+/// * [targetType]
+/// * [subjectId]
+/// * [reasonCode]
+/// * [note]
+/// * [before]
+/// * [after]
+/// * [correlationId]
+/// * [metadata]
 @BuiltValue()
-abstract class AdminAuditEntry implements Built<AdminAuditEntry, AdminAuditEntryBuilder> {
+abstract class AdminAuditEntry
+    implements Built<AdminAuditEntry, AdminAuditEntryBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -65,16 +66,19 @@ abstract class AdminAuditEntry implements Built<AdminAuditEntry, AdminAuditEntry
 
   AdminAuditEntry._();
 
-  factory AdminAuditEntry([void updates(AdminAuditEntryBuilder b)]) = _$AdminAuditEntry;
+  factory AdminAuditEntry([void updates(AdminAuditEntryBuilder b)]) =
+      _$AdminAuditEntry;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAuditEntryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAuditEntry> get serializer => _$AdminAuditEntrySerializer();
+  static Serializer<AdminAuditEntry> get serializer =>
+      _$AdminAuditEntrySerializer();
 }
 
-class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry> {
+class _$AdminAuditEntrySerializer
+    implements PrimitiveSerializer<AdminAuditEntry> {
   @override
   final Iterable<Type> types = const [AdminAuditEntry, _$AdminAuditEntry];
 
@@ -146,14 +150,20 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
       yield r'before';
       yield serializers.serialize(
         object.before,
-        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [
+          FullType(String),
+          FullType.nullable(JsonObject),
+        ]),
       );
     }
     if (object.after != null) {
       yield r'after';
       yield serializers.serialize(
         object.after,
-        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [
+          FullType(String),
+          FullType.nullable(JsonObject),
+        ]),
       );
     }
     if (object.correlationId != null) {
@@ -167,7 +177,10 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
       yield r'metadata';
       yield serializers.serialize(
         object.metadata,
-        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [
+          FullType(String),
+          FullType.nullable(JsonObject),
+        ]),
       );
     }
   }
@@ -178,7 +191,11 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
     AdminAuditEntry object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -194,87 +211,120 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
       final value = serializedList[i + 1];
       switch (key) {
         case r'id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.id = valueDes;
           break;
         case r'timestamp':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
           result.timestamp = valueDes;
           break;
         case r'actorId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.actorId = valueDes;
           break;
         case r'action':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.action = valueDes;
           break;
         case r'targetType':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.targetType = valueDes;
           break;
         case r'subjectId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.subjectId = valueDes;
           break;
         case r'reasonCode':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.note = valueDes;
           break;
         case r'before':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltMap, [
+                      FullType(String),
+                      FullType.nullable(JsonObject),
+                    ]),
+                  )
+                  as BuiltMap<String, JsonObject?>;
           result.before.replace(valueDes);
           break;
         case r'after':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltMap, [
+                      FullType(String),
+                      FullType.nullable(JsonObject),
+                    ]),
+                  )
+                  as BuiltMap<String, JsonObject?>;
           result.after.replace(valueDes);
           break;
         case r'correlationId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.correlationId = valueDes;
           break;
         case r'metadata':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltMap, [
+                      FullType(String),
+                      FullType.nullable(JsonObject),
+                    ]),
+                  )
+                  as BuiltMap<String, JsonObject?>;
           result.metadata.replace(valueDes);
           break;
         default:
@@ -305,4 +355,3 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
     return result.build();
   }
 }
-

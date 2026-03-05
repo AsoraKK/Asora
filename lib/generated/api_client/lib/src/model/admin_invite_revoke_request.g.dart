@@ -12,15 +12,15 @@ class _$AdminInviteRevokeRequest extends AdminInviteRevokeRequest {
   @override
   final String? note;
 
-  factory _$AdminInviteRevokeRequest(
-          [void Function(AdminInviteRevokeRequestBuilder)? updates]) =>
-      (AdminInviteRevokeRequestBuilder()..update(updates))._build();
+  factory _$AdminInviteRevokeRequest([
+    void Function(AdminInviteRevokeRequestBuilder)? updates,
+  ]) => (AdminInviteRevokeRequestBuilder()..update(updates))._build();
 
   _$AdminInviteRevokeRequest._({this.reasonCode, this.note}) : super._();
   @override
   AdminInviteRevokeRequest rebuild(
-          void Function(AdminInviteRevokeRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteRevokeRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteRevokeRequestBuilder toBuilder() =>
@@ -93,11 +93,8 @@ class AdminInviteRevokeRequestBuilder
   AdminInviteRevokeRequest build() => _build();
 
   _$AdminInviteRevokeRequest _build() {
-    final _$result = _$v ??
-        _$AdminInviteRevokeRequest._(
-          reasonCode: reasonCode,
-          note: note,
-        );
+    final _$result =
+        _$v ?? _$AdminInviteRevokeRequest._(reasonCode: reasonCode, note: note);
     replace(_$result);
     return _$result;
   }

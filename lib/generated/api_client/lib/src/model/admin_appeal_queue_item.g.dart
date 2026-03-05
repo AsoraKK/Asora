@@ -22,23 +22,23 @@ class _$AdminAppealQueueItem extends AdminAppealQueueItem {
   @override
   final int? configVersionUsed;
 
-  factory _$AdminAppealQueueItem(
-          [void Function(AdminAppealQueueItemBuilder)? updates]) =>
-      (AdminAppealQueueItemBuilder()..update(updates))._build();
+  factory _$AdminAppealQueueItem([
+    void Function(AdminAppealQueueItemBuilder)? updates,
+  ]) => (AdminAppealQueueItemBuilder()..update(updates))._build();
 
-  _$AdminAppealQueueItem._(
-      {this.appealId,
-      this.contentId,
-      this.authorId,
-      this.submittedAt,
-      this.status,
-      this.originalReasonCategory,
-      this.configVersionUsed})
-      : super._();
+  _$AdminAppealQueueItem._({
+    this.appealId,
+    this.contentId,
+    this.authorId,
+    this.submittedAt,
+    this.status,
+    this.originalReasonCategory,
+    this.configVersionUsed,
+  }) : super._();
   @override
   AdminAppealQueueItem rebuild(
-          void Function(AdminAppealQueueItemBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminAppealQueueItemBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealQueueItemBuilder toBuilder() =>
@@ -152,7 +152,8 @@ class AdminAppealQueueItemBuilder
   AdminAppealQueueItem build() => _build();
 
   _$AdminAppealQueueItem _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminAppealQueueItem._(
           appealId: appealId,
           contentId: contentId,

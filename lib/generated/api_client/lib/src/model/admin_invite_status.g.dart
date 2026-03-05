@@ -23,12 +23,9 @@ AdminInviteStatus _$valueOf(String name) {
   }
 }
 
-final BuiltSet<AdminInviteStatus> _$values =
-    BuiltSet<AdminInviteStatus>(const <AdminInviteStatus>[
-  _$ACTIVE,
-  _$REVOKED,
-  _$EXHAUSTED,
-]);
+final BuiltSet<AdminInviteStatus> _$values = BuiltSet<AdminInviteStatus>(
+  const <AdminInviteStatus>[_$ACTIVE, _$REVOKED, _$EXHAUSTED],
+);
 
 class _$AdminInviteStatusMeta {
   const _$AdminInviteStatusMeta();
@@ -67,15 +64,20 @@ class _$AdminInviteStatusSerializer
   final String wireName = 'AdminInviteStatus';
 
   @override
-  Object serialize(Serializers serializers, AdminInviteStatus object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    AdminInviteStatus object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
-  AdminInviteStatus deserialize(Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      AdminInviteStatus.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+  AdminInviteStatus deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => AdminInviteStatus.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 // ignore_for_file: deprecated_member_use_from_same_package,type=lint

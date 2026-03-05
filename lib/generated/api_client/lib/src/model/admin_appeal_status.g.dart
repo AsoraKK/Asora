@@ -23,12 +23,9 @@ AdminAppealStatus _$valueOf(String name) {
   }
 }
 
-final BuiltSet<AdminAppealStatus> _$values =
-    BuiltSet<AdminAppealStatus>(const <AdminAppealStatus>[
-  _$PENDING,
-  _$APPROVED,
-  _$REJECTED,
-]);
+final BuiltSet<AdminAppealStatus> _$values = BuiltSet<AdminAppealStatus>(
+  const <AdminAppealStatus>[_$PENDING, _$APPROVED, _$REJECTED],
+);
 
 class _$AdminAppealStatusMeta {
   const _$AdminAppealStatusMeta();
@@ -67,15 +64,20 @@ class _$AdminAppealStatusSerializer
   final String wireName = 'AdminAppealStatus';
 
   @override
-  Object serialize(Serializers serializers, AdminAppealStatus object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    AdminAppealStatus object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
-  AdminAppealStatus deserialize(Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      AdminAppealStatus.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+  AdminAppealStatus deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => AdminAppealStatus.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 // ignore_for_file: deprecated_member_use_from_same_package,type=lint

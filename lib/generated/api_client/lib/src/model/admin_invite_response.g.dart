@@ -30,27 +30,27 @@ class _$AdminInviteResponse extends AdminInviteResponse {
   @override
   final String? usedByUserId;
 
-  factory _$AdminInviteResponse(
-          [void Function(AdminInviteResponseBuilder)? updates]) =>
-      (AdminInviteResponseBuilder()..update(updates))._build();
+  factory _$AdminInviteResponse([
+    void Function(AdminInviteResponseBuilder)? updates,
+  ]) => (AdminInviteResponseBuilder()..update(updates))._build();
 
-  _$AdminInviteResponse._(
-      {this.inviteCode,
-      this.email,
-      this.createdBy,
-      this.createdAt,
-      this.expiresAt,
-      this.maxUses,
-      this.usageCount,
-      this.lastUsedAt,
-      this.status,
-      this.label,
-      this.usedByUserId})
-      : super._();
+  _$AdminInviteResponse._({
+    this.inviteCode,
+    this.email,
+    this.createdBy,
+    this.createdAt,
+    this.expiresAt,
+    this.maxUses,
+    this.usageCount,
+    this.lastUsedAt,
+    this.status,
+    this.label,
+    this.usedByUserId,
+  }) : super._();
   @override
   AdminInviteResponse rebuild(
-          void Function(AdminInviteResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteResponseBuilder toBuilder() =>
@@ -199,7 +199,8 @@ class AdminInviteResponseBuilder
   AdminInviteResponse build() => _build();
 
   _$AdminInviteResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminInviteResponse._(
           inviteCode: inviteCode,
           email: email,

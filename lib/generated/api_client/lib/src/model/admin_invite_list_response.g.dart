@@ -14,17 +14,19 @@ class _$AdminInviteListResponse extends AdminInviteListResponse {
   @override
   final String? nextCursor;
 
-  factory _$AdminInviteListResponse(
-          [void Function(AdminInviteListResponseBuilder)? updates]) =>
-      (AdminInviteListResponseBuilder()..update(updates))._build();
+  factory _$AdminInviteListResponse([
+    void Function(AdminInviteListResponseBuilder)? updates,
+  ]) => (AdminInviteListResponseBuilder()..update(updates))._build();
 
-  _$AdminInviteListResponse._(
-      {required this.invites, required this.count, this.nextCursor})
-      : super._();
+  _$AdminInviteListResponse._({
+    required this.invites,
+    required this.count,
+    this.nextCursor,
+  }) : super._();
   @override
   AdminInviteListResponse rebuild(
-          void Function(AdminInviteListResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteListResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteListResponseBuilder toBuilder() =>
@@ -108,11 +110,15 @@ class AdminInviteListResponseBuilder
   _$AdminInviteListResponse _build() {
     _$AdminInviteListResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminInviteListResponse._(
             invites: invites.build(),
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'AdminInviteListResponse', 'count'),
+              count,
+              r'AdminInviteListResponse',
+              'count',
+            ),
             nextCursor: nextCursor,
           );
     } catch (_) {
@@ -122,7 +128,10 @@ class AdminInviteListResponseBuilder
         invites.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminInviteListResponse', _$failedField, e.toString());
+          r'AdminInviteListResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

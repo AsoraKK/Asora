@@ -12,16 +12,16 @@ class _$AdminFlagResolveRequest extends AdminFlagResolveRequest {
   @override
   final String? note;
 
-  factory _$AdminFlagResolveRequest(
-          [void Function(AdminFlagResolveRequestBuilder)? updates]) =>
-      (AdminFlagResolveRequestBuilder()..update(updates))._build();
+  factory _$AdminFlagResolveRequest([
+    void Function(AdminFlagResolveRequestBuilder)? updates,
+  ]) => (AdminFlagResolveRequestBuilder()..update(updates))._build();
 
   _$AdminFlagResolveRequest._({required this.reasonCode, this.note})
-      : super._();
+    : super._();
   @override
   AdminFlagResolveRequest rebuild(
-          void Function(AdminFlagResolveRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagResolveRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagResolveRequestBuilder toBuilder() =>
@@ -94,10 +94,14 @@ class AdminFlagResolveRequestBuilder
   AdminFlagResolveRequest build() => _build();
 
   _$AdminFlagResolveRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagResolveRequest._(
           reasonCode: BuiltValueNullFieldError.checkNotNull(
-              reasonCode, r'AdminFlagResolveRequest', 'reasonCode'),
+            reasonCode,
+            r'AdminFlagResolveRequest',
+            'reasonCode',
+          ),
           note: note,
         );
     replace(_$result);

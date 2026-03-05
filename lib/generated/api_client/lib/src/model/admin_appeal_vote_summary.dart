@@ -11,11 +11,12 @@ part 'admin_appeal_vote_summary.g.dart';
 /// AdminAppealVoteSummary
 ///
 /// Properties:
-/// * [for_] 
-/// * [against] 
-/// * [total] 
+/// * [for_]
+/// * [against]
+/// * [total]
 @BuiltValue()
-abstract class AdminAppealVoteSummary implements Built<AdminAppealVoteSummary, AdminAppealVoteSummaryBuilder> {
+abstract class AdminAppealVoteSummary
+    implements Built<AdminAppealVoteSummary, AdminAppealVoteSummaryBuilder> {
   @BuiltValueField(wireName: r'for')
   int get for_;
 
@@ -27,18 +28,25 @@ abstract class AdminAppealVoteSummary implements Built<AdminAppealVoteSummary, A
 
   AdminAppealVoteSummary._();
 
-  factory AdminAppealVoteSummary([void updates(AdminAppealVoteSummaryBuilder b)]) = _$AdminAppealVoteSummary;
+  factory AdminAppealVoteSummary([
+    void updates(AdminAppealVoteSummaryBuilder b),
+  ]) = _$AdminAppealVoteSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealVoteSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealVoteSummary> get serializer => _$AdminAppealVoteSummarySerializer();
+  static Serializer<AdminAppealVoteSummary> get serializer =>
+      _$AdminAppealVoteSummarySerializer();
 }
 
-class _$AdminAppealVoteSummarySerializer implements PrimitiveSerializer<AdminAppealVoteSummary> {
+class _$AdminAppealVoteSummarySerializer
+    implements PrimitiveSerializer<AdminAppealVoteSummary> {
   @override
-  final Iterable<Type> types = const [AdminAppealVoteSummary, _$AdminAppealVoteSummary];
+  final Iterable<Type> types = const [
+    AdminAppealVoteSummary,
+    _$AdminAppealVoteSummary,
+  ];
 
   @override
   final String wireName = r'AdminAppealVoteSummary';
@@ -71,7 +79,11 @@ class _$AdminAppealVoteSummarySerializer implements PrimitiveSerializer<AdminApp
     AdminAppealVoteSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -87,24 +99,21 @@ class _$AdminAppealVoteSummarySerializer implements PrimitiveSerializer<AdminApp
       final value = serializedList[i + 1];
       switch (key) {
         case r'for':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.for_ = valueDes;
           break;
         case r'against':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.against = valueDes;
           break;
         case r'total':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.total = valueDes;
           break;
         default:
@@ -135,4 +144,3 @@ class _$AdminAppealVoteSummarySerializer implements PrimitiveSerializer<AdminApp
     return result.build();
   }
 }
-

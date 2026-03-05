@@ -14,17 +14,19 @@ class _$AdminAppealQueueResponse extends AdminAppealQueueResponse {
   @override
   final int count;
 
-  factory _$AdminAppealQueueResponse(
-          [void Function(AdminAppealQueueResponseBuilder)? updates]) =>
-      (AdminAppealQueueResponseBuilder()..update(updates))._build();
+  factory _$AdminAppealQueueResponse([
+    void Function(AdminAppealQueueResponseBuilder)? updates,
+  ]) => (AdminAppealQueueResponseBuilder()..update(updates))._build();
 
-  _$AdminAppealQueueResponse._(
-      {required this.items, this.nextCursor, required this.count})
-      : super._();
+  _$AdminAppealQueueResponse._({
+    required this.items,
+    this.nextCursor,
+    required this.count,
+  }) : super._();
   @override
   AdminAppealQueueResponse rebuild(
-          void Function(AdminAppealQueueResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminAppealQueueResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealQueueResponseBuilder toBuilder() =>
@@ -108,12 +110,16 @@ class AdminAppealQueueResponseBuilder
   _$AdminAppealQueueResponse _build() {
     _$AdminAppealQueueResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminAppealQueueResponse._(
             items: items.build(),
             nextCursor: nextCursor,
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'AdminAppealQueueResponse', 'count'),
+              count,
+              r'AdminAppealQueueResponse',
+              'count',
+            ),
           );
     } catch (_) {
       late String _$failedField;
@@ -122,7 +128,10 @@ class AdminAppealQueueResponseBuilder
         items.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminAppealQueueResponse', _$failedField, e.toString());
+          r'AdminAppealQueueResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

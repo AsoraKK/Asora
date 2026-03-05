@@ -16,13 +16,14 @@ part 'admin_flag_detail_response.g.dart';
 /// AdminFlagDetailResponse
 ///
 /// Properties:
-/// * [content] 
-/// * [flags] 
-/// * [moderation] 
-/// * [appeal] 
-/// * [history] 
+/// * [content]
+/// * [flags]
+/// * [moderation]
+/// * [appeal]
+/// * [history]
 @BuiltValue()
-abstract class AdminFlagDetailResponse implements Built<AdminFlagDetailResponse, AdminFlagDetailResponseBuilder> {
+abstract class AdminFlagDetailResponse
+    implements Built<AdminFlagDetailResponse, AdminFlagDetailResponseBuilder> {
   @BuiltValueField(wireName: r'content')
   AdminFlagDetailContent? get content;
 
@@ -40,18 +41,25 @@ abstract class AdminFlagDetailResponse implements Built<AdminFlagDetailResponse,
 
   AdminFlagDetailResponse._();
 
-  factory AdminFlagDetailResponse([void updates(AdminFlagDetailResponseBuilder b)]) = _$AdminFlagDetailResponse;
+  factory AdminFlagDetailResponse([
+    void updates(AdminFlagDetailResponseBuilder b),
+  ]) = _$AdminFlagDetailResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagDetailResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagDetailResponse> get serializer => _$AdminFlagDetailResponseSerializer();
+  static Serializer<AdminFlagDetailResponse> get serializer =>
+      _$AdminFlagDetailResponseSerializer();
 }
 
-class _$AdminFlagDetailResponseSerializer implements PrimitiveSerializer<AdminFlagDetailResponse> {
+class _$AdminFlagDetailResponseSerializer
+    implements PrimitiveSerializer<AdminFlagDetailResponse> {
   @override
-  final Iterable<Type> types = const [AdminFlagDetailResponse, _$AdminFlagDetailResponse];
+  final Iterable<Type> types = const [
+    AdminFlagDetailResponse,
+    _$AdminFlagDetailResponse,
+  ];
 
   @override
   final String wireName = r'AdminFlagDetailResponse';
@@ -104,7 +112,11 @@ class _$AdminFlagDetailResponseSerializer implements PrimitiveSerializer<AdminFl
     AdminFlagDetailResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -120,38 +132,48 @@ class _$AdminFlagDetailResponseSerializer implements PrimitiveSerializer<AdminFl
       final value = serializedList[i + 1];
       switch (key) {
         case r'content':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminFlagDetailContent),
-          ) as AdminFlagDetailContent;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminFlagDetailContent),
+                  )
+                  as AdminFlagDetailContent;
           result.content.replace(valueDes);
           break;
         case r'flags':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminFlagDetailFlags),
-          ) as AdminFlagDetailFlags;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminFlagDetailFlags),
+                  )
+                  as AdminFlagDetailFlags;
           result.flags.replace(valueDes);
           break;
         case r'moderation':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminModerationSummary),
-          ) as AdminModerationSummary;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminModerationSummary),
+                  )
+                  as AdminModerationSummary;
           result.moderation.replace(valueDes);
           break;
         case r'appeal':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminFlagDetailAppeal),
-          ) as AdminFlagDetailAppeal;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminFlagDetailAppeal),
+                  )
+                  as AdminFlagDetailAppeal;
           result.appeal.replace(valueDes);
           break;
         case r'history':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AdminFlagHistory),
-          ) as AdminFlagHistory;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(AdminFlagHistory),
+                  )
+                  as AdminFlagHistory;
           result.history.replace(valueDes);
           break;
         default:
@@ -182,4 +204,3 @@ class _$AdminFlagDetailResponseSerializer implements PrimitiveSerializer<AdminFl
     return result.build();
   }
 }
-

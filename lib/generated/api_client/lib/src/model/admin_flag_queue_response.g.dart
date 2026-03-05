@@ -14,17 +14,19 @@ class _$AdminFlagQueueResponse extends AdminFlagQueueResponse {
   @override
   final int count;
 
-  factory _$AdminFlagQueueResponse(
-          [void Function(AdminFlagQueueResponseBuilder)? updates]) =>
-      (AdminFlagQueueResponseBuilder()..update(updates))._build();
+  factory _$AdminFlagQueueResponse([
+    void Function(AdminFlagQueueResponseBuilder)? updates,
+  ]) => (AdminFlagQueueResponseBuilder()..update(updates))._build();
 
-  _$AdminFlagQueueResponse._(
-      {required this.items, this.nextCursor, required this.count})
-      : super._();
+  _$AdminFlagQueueResponse._({
+    required this.items,
+    this.nextCursor,
+    required this.count,
+  }) : super._();
   @override
   AdminFlagQueueResponse rebuild(
-          void Function(AdminFlagQueueResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagQueueResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueResponseBuilder toBuilder() =>
@@ -107,12 +109,16 @@ class AdminFlagQueueResponseBuilder
   _$AdminFlagQueueResponse _build() {
     _$AdminFlagQueueResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagQueueResponse._(
             items: items.build(),
             nextCursor: nextCursor,
             count: BuiltValueNullFieldError.checkNotNull(
-                count, r'AdminFlagQueueResponse', 'count'),
+              count,
+              r'AdminFlagQueueResponse',
+              'count',
+            ),
           );
     } catch (_) {
       late String _$failedField;
@@ -121,7 +127,10 @@ class AdminFlagQueueResponseBuilder
         items.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
-            r'AdminFlagQueueResponse', _$failedField, e.toString());
+          r'AdminFlagQueueResponse',
+          _$failedField,
+          e.toString(),
+        );
       }
       rethrow;
     }

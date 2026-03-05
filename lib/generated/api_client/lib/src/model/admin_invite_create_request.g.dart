@@ -16,17 +16,20 @@ class _$AdminInviteCreateRequest extends AdminInviteCreateRequest {
   @override
   final String? label;
 
-  factory _$AdminInviteCreateRequest(
-          [void Function(AdminInviteCreateRequestBuilder)? updates]) =>
-      (AdminInviteCreateRequestBuilder()..update(updates))._build();
+  factory _$AdminInviteCreateRequest([
+    void Function(AdminInviteCreateRequestBuilder)? updates,
+  ]) => (AdminInviteCreateRequestBuilder()..update(updates))._build();
 
-  _$AdminInviteCreateRequest._(
-      {this.email, this.expiresInDays, this.maxUses, this.label})
-      : super._();
+  _$AdminInviteCreateRequest._({
+    this.email,
+    this.expiresInDays,
+    this.maxUses,
+    this.label,
+  }) : super._();
   @override
   AdminInviteCreateRequest rebuild(
-          void Function(AdminInviteCreateRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteCreateRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteCreateRequestBuilder toBuilder() =>
@@ -116,7 +119,8 @@ class AdminInviteCreateRequestBuilder
   AdminInviteCreateRequest build() => _build();
 
   _$AdminInviteCreateRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminInviteCreateRequest._(
           email: email,
           expiresInDays: expiresInDays,

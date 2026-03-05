@@ -12,8 +12,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/privacy_service.dart';
-import '../core/logging/app_logger.dart';
+import 'package:asora/services/privacy_service.dart';
+import 'package:asora/core/logging/app_logger.dart';
 
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
   const PrivacySettingsScreen({super.key});

@@ -16,17 +16,20 @@ class _$AdminInviteBatchRequest extends AdminInviteBatchRequest {
   @override
   final String? label;
 
-  factory _$AdminInviteBatchRequest(
-          [void Function(AdminInviteBatchRequestBuilder)? updates]) =>
-      (AdminInviteBatchRequestBuilder()..update(updates))._build();
+  factory _$AdminInviteBatchRequest([
+    void Function(AdminInviteBatchRequestBuilder)? updates,
+  ]) => (AdminInviteBatchRequestBuilder()..update(updates))._build();
 
-  _$AdminInviteBatchRequest._(
-      {required this.count, this.expiresInDays, this.maxUses, this.label})
-      : super._();
+  _$AdminInviteBatchRequest._({
+    required this.count,
+    this.expiresInDays,
+    this.maxUses,
+    this.label,
+  }) : super._();
   @override
   AdminInviteBatchRequest rebuild(
-          void Function(AdminInviteBatchRequestBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminInviteBatchRequestBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteBatchRequestBuilder toBuilder() =>
@@ -116,10 +119,14 @@ class AdminInviteBatchRequestBuilder
   AdminInviteBatchRequest build() => _build();
 
   _$AdminInviteBatchRequest _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminInviteBatchRequest._(
           count: BuiltValueNullFieldError.checkNotNull(
-              count, r'AdminInviteBatchRequest', 'count'),
+            count,
+            r'AdminInviteBatchRequest',
+            'count',
+          ),
           expiresInDays: expiresInDays,
           maxUses: maxUses,
           label: label,

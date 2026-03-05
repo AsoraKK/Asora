@@ -28,10 +28,10 @@ LegalHoldInputScopeEnum _$legalHoldInputScopeEnumValueOf(String name) {
 
 final BuiltSet<LegalHoldInputScopeEnum> _$legalHoldInputScopeEnumValues =
     BuiltSet<LegalHoldInputScopeEnum>(const <LegalHoldInputScopeEnum>[
-  _$legalHoldInputScopeEnum_user,
-  _$legalHoldInputScopeEnum_post,
-  _$legalHoldInputScopeEnum_case_,
-]);
+      _$legalHoldInputScopeEnum_user,
+      _$legalHoldInputScopeEnum_post,
+      _$legalHoldInputScopeEnum_case_,
+    ]);
 
 Serializer<LegalHoldInputScopeEnum> _$legalHoldInputScopeEnumSerializer =
     _$LegalHoldInputScopeEnumSerializer();
@@ -55,16 +55,20 @@ class _$LegalHoldInputScopeEnumSerializer
   final String wireName = 'LegalHoldInputScopeEnum';
 
   @override
-  Object serialize(Serializers serializers, LegalHoldInputScopeEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
+  Object serialize(
+    Serializers serializers,
+    LegalHoldInputScopeEnum object, {
+    FullType specifiedType = FullType.unspecified,
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   LegalHoldInputScopeEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      LegalHoldInputScopeEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) => LegalHoldInputScopeEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$LegalHoldInput extends LegalHoldInput {
@@ -78,9 +82,11 @@ class _$LegalHoldInput extends LegalHoldInput {
   factory _$LegalHoldInput([void Function(LegalHoldInputBuilder)? updates]) =>
       (LegalHoldInputBuilder()..update(updates))._build();
 
-  _$LegalHoldInput._(
-      {required this.scope, required this.scopeId, required this.reason})
-      : super._();
+  _$LegalHoldInput._({
+    required this.scope,
+    required this.scopeId,
+    required this.reason,
+  }) : super._();
   @override
   LegalHoldInput rebuild(void Function(LegalHoldInputBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -162,14 +168,24 @@ class LegalHoldInputBuilder
   LegalHoldInput build() => _build();
 
   _$LegalHoldInput _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$LegalHoldInput._(
           scope: BuiltValueNullFieldError.checkNotNull(
-              scope, r'LegalHoldInput', 'scope'),
+            scope,
+            r'LegalHoldInput',
+            'scope',
+          ),
           scopeId: BuiltValueNullFieldError.checkNotNull(
-              scopeId, r'LegalHoldInput', 'scopeId'),
+            scopeId,
+            r'LegalHoldInput',
+            'scopeId',
+          ),
           reason: BuiltValueNullFieldError.checkNotNull(
-              reason, r'LegalHoldInput', 'reason'),
+            reason,
+            r'LegalHoldInput',
+            'reason',
+          ),
         );
     replace(_$result);
     return _$result;

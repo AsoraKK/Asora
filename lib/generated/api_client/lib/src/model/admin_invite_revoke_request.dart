@@ -11,10 +11,12 @@ part 'admin_invite_revoke_request.g.dart';
 /// AdminInviteRevokeRequest
 ///
 /// Properties:
-/// * [reasonCode] 
-/// * [note] 
+/// * [reasonCode]
+/// * [note]
 @BuiltValue()
-abstract class AdminInviteRevokeRequest implements Built<AdminInviteRevokeRequest, AdminInviteRevokeRequestBuilder> {
+abstract class AdminInviteRevokeRequest
+    implements
+        Built<AdminInviteRevokeRequest, AdminInviteRevokeRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
   String? get reasonCode;
 
@@ -23,18 +25,25 @@ abstract class AdminInviteRevokeRequest implements Built<AdminInviteRevokeReques
 
   AdminInviteRevokeRequest._();
 
-  factory AdminInviteRevokeRequest([void updates(AdminInviteRevokeRequestBuilder b)]) = _$AdminInviteRevokeRequest;
+  factory AdminInviteRevokeRequest([
+    void updates(AdminInviteRevokeRequestBuilder b),
+  ]) = _$AdminInviteRevokeRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteRevokeRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteRevokeRequest> get serializer => _$AdminInviteRevokeRequestSerializer();
+  static Serializer<AdminInviteRevokeRequest> get serializer =>
+      _$AdminInviteRevokeRequestSerializer();
 }
 
-class _$AdminInviteRevokeRequestSerializer implements PrimitiveSerializer<AdminInviteRevokeRequest> {
+class _$AdminInviteRevokeRequestSerializer
+    implements PrimitiveSerializer<AdminInviteRevokeRequest> {
   @override
-  final Iterable<Type> types = const [AdminInviteRevokeRequest, _$AdminInviteRevokeRequest];
+  final Iterable<Type> types = const [
+    AdminInviteRevokeRequest,
+    _$AdminInviteRevokeRequest,
+  ];
 
   @override
   final String wireName = r'AdminInviteRevokeRequest';
@@ -66,7 +75,11 @@ class _$AdminInviteRevokeRequestSerializer implements PrimitiveSerializer<AdminI
     AdminInviteRevokeRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -82,17 +95,21 @@ class _$AdminInviteRevokeRequestSerializer implements PrimitiveSerializer<AdminI
       final value = serializedList[i + 1];
       switch (key) {
         case r'reasonCode':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.note = valueDes;
           break;
         default:
@@ -123,4 +140,3 @@ class _$AdminInviteRevokeRequestSerializer implements PrimitiveSerializer<AdminI
     return result.build();
   }
 }
-

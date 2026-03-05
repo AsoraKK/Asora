@@ -16,17 +16,20 @@ class _$AdminFlagDetailAppeal extends AdminFlagDetailAppeal {
   @override
   final DateTime? updatedAt;
 
-  factory _$AdminFlagDetailAppeal(
-          [void Function(AdminFlagDetailAppealBuilder)? updates]) =>
-      (AdminFlagDetailAppealBuilder()..update(updates))._build();
+  factory _$AdminFlagDetailAppeal([
+    void Function(AdminFlagDetailAppealBuilder)? updates,
+  ]) => (AdminFlagDetailAppealBuilder()..update(updates))._build();
 
-  _$AdminFlagDetailAppeal._(
-      {this.appealId, this.status, this.submittedAt, this.updatedAt})
-      : super._();
+  _$AdminFlagDetailAppeal._({
+    this.appealId,
+    this.status,
+    this.submittedAt,
+    this.updatedAt,
+  }) : super._();
   @override
   AdminFlagDetailAppeal rebuild(
-          void Function(AdminFlagDetailAppealBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagDetailAppealBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailAppealBuilder toBuilder() =>
@@ -114,7 +117,8 @@ class AdminFlagDetailAppealBuilder
   AdminFlagDetailAppeal build() => _build();
 
   _$AdminFlagDetailAppeal _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagDetailAppeal._(
           appealId: appealId,
           status: status,

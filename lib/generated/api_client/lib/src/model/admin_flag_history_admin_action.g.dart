@@ -18,17 +18,21 @@ class _$AdminFlagHistoryAdminAction extends AdminFlagHistoryAdminAction {
   @override
   final String? note;
 
-  factory _$AdminFlagHistoryAdminAction(
-          [void Function(AdminFlagHistoryAdminActionBuilder)? updates]) =>
-      (AdminFlagHistoryAdminActionBuilder()..update(updates))._build();
+  factory _$AdminFlagHistoryAdminAction([
+    void Function(AdminFlagHistoryAdminActionBuilder)? updates,
+  ]) => (AdminFlagHistoryAdminActionBuilder()..update(updates))._build();
 
-  _$AdminFlagHistoryAdminAction._(
-      {this.type, this.at, this.action, this.reasonCode, this.note})
-      : super._();
+  _$AdminFlagHistoryAdminAction._({
+    this.type,
+    this.at,
+    this.action,
+    this.reasonCode,
+    this.note,
+  }) : super._();
   @override
   AdminFlagHistoryAdminAction rebuild(
-          void Function(AdminFlagHistoryAdminActionBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminFlagHistoryAdminActionBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagHistoryAdminActionBuilder toBuilder() =>
@@ -71,8 +75,10 @@ class _$AdminFlagHistoryAdminAction extends AdminFlagHistoryAdminAction {
 
 class AdminFlagHistoryAdminActionBuilder
     implements
-        Builder<AdminFlagHistoryAdminAction,
-            AdminFlagHistoryAdminActionBuilder> {
+        Builder<
+          AdminFlagHistoryAdminAction,
+          AdminFlagHistoryAdminActionBuilder
+        > {
   _$AdminFlagHistoryAdminAction? _$v;
 
   String? _type;
@@ -126,7 +132,8 @@ class AdminFlagHistoryAdminActionBuilder
   AdminFlagHistoryAdminAction build() => _build();
 
   _$AdminFlagHistoryAdminAction _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagHistoryAdminAction._(
           type: type,
           at: at,

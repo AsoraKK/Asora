@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../domain/appeal.dart';
-import 'voting_status_badge.dart';
+import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
 
 /// ASORA VOTING STATUS BREAKDOWN WIDGET
 ///

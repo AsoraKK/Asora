@@ -12,10 +12,11 @@ part 'create_post201_response.g.dart';
 /// CreatePost201Response
 ///
 /// Properties:
-/// * [id] 
-/// * [status] 
+/// * [id]
+/// * [status]
 @BuiltValue()
-abstract class CreatePost201Response implements Built<CreatePost201Response, CreatePost201ResponseBuilder> {
+abstract class CreatePost201Response
+    implements Built<CreatePost201Response, CreatePost201ResponseBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -25,18 +26,25 @@ abstract class CreatePost201Response implements Built<CreatePost201Response, Cre
 
   CreatePost201Response._();
 
-  factory CreatePost201Response([void updates(CreatePost201ResponseBuilder b)]) = _$CreatePost201Response;
+  factory CreatePost201Response([
+    void updates(CreatePost201ResponseBuilder b),
+  ]) = _$CreatePost201Response;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(CreatePost201ResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<CreatePost201Response> get serializer => _$CreatePost201ResponseSerializer();
+  static Serializer<CreatePost201Response> get serializer =>
+      _$CreatePost201ResponseSerializer();
 }
 
-class _$CreatePost201ResponseSerializer implements PrimitiveSerializer<CreatePost201Response> {
+class _$CreatePost201ResponseSerializer
+    implements PrimitiveSerializer<CreatePost201Response> {
   @override
-  final Iterable<Type> types = const [CreatePost201Response, _$CreatePost201Response];
+  final Iterable<Type> types = const [
+    CreatePost201Response,
+    _$CreatePost201Response,
+  ];
 
   @override
   final String wireName = r'CreatePost201Response';
@@ -68,7 +76,11 @@ class _$CreatePost201ResponseSerializer implements PrimitiveSerializer<CreatePos
     CreatePost201Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -84,17 +96,23 @@ class _$CreatePost201ResponseSerializer implements PrimitiveSerializer<CreatePos
       final value = serializedList[i + 1];
       switch (key) {
         case r'id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
           result.id = valueDes;
           break;
         case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(CreatePost201ResponseStatusEnum),
-          ) as CreatePost201ResponseStatusEnum;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(
+                      CreatePost201ResponseStatusEnum,
+                    ),
+                  )
+                  as CreatePost201ResponseStatusEnum;
           result.status = valueDes;
           break;
         default:
@@ -127,17 +145,20 @@ class _$CreatePost201ResponseSerializer implements PrimitiveSerializer<CreatePos
 }
 
 class CreatePost201ResponseStatusEnum extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'published')
-  static const CreatePost201ResponseStatusEnum published = _$createPost201ResponseStatusEnum_published;
+  static const CreatePost201ResponseStatusEnum published =
+      _$createPost201ResponseStatusEnum_published;
   @BuiltValueEnumConst(wireName: r'blocked')
-  static const CreatePost201ResponseStatusEnum blocked = _$createPost201ResponseStatusEnum_blocked;
+  static const CreatePost201ResponseStatusEnum blocked =
+      _$createPost201ResponseStatusEnum_blocked;
 
-  static Serializer<CreatePost201ResponseStatusEnum> get serializer => _$createPost201ResponseStatusEnumSerializer;
+  static Serializer<CreatePost201ResponseStatusEnum> get serializer =>
+      _$createPost201ResponseStatusEnumSerializer;
 
-  const CreatePost201ResponseStatusEnum._(String name): super(name);
+  const CreatePost201ResponseStatusEnum._(String name) : super(name);
 
-  static BuiltSet<CreatePost201ResponseStatusEnum> get values => _$createPost201ResponseStatusEnumValues;
-  static CreatePost201ResponseStatusEnum valueOf(String name) => _$createPost201ResponseStatusEnumValueOf(name);
+  static BuiltSet<CreatePost201ResponseStatusEnum> get values =>
+      _$createPost201ResponseStatusEnumValues;
+  static CreatePost201ResponseStatusEnum valueOf(String name) =>
+      _$createPost201ResponseStatusEnumValueOf(name);
 }
-

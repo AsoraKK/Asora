@@ -14,17 +14,19 @@ class _$AdminContentActionResponse extends AdminContentActionResponse {
   @override
   final AdminContentState? status;
 
-  factory _$AdminContentActionResponse(
-          [void Function(AdminContentActionResponseBuilder)? updates]) =>
-      (AdminContentActionResponseBuilder()..update(updates))._build();
+  factory _$AdminContentActionResponse([
+    void Function(AdminContentActionResponseBuilder)? updates,
+  ]) => (AdminContentActionResponseBuilder()..update(updates))._build();
 
-  _$AdminContentActionResponse._(
-      {this.contentId, this.contentType, this.status})
-      : super._();
+  _$AdminContentActionResponse._({
+    this.contentId,
+    this.contentType,
+    this.status,
+  }) : super._();
   @override
   AdminContentActionResponse rebuild(
-          void Function(AdminContentActionResponseBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
+    void Function(AdminContentActionResponseBuilder) updates,
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminContentActionResponseBuilder toBuilder() =>
@@ -106,7 +108,8 @@ class AdminContentActionResponseBuilder
   AdminContentActionResponse build() => _build();
 
   _$AdminContentActionResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminContentActionResponse._(
           contentId: contentId,
           contentType: contentType,

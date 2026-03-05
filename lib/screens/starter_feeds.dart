@@ -20,22 +20,22 @@ class _StarterFeedsState extends State<StarterFeeds>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Asora"),
+        title: const Text('Asora'),
         bottom: TabBar(
           controller: _tc,
           tabs: const [
-            Tab(text: "Trending"),
-            Tab(text: "New Creators"),
-            Tab(text: "Local"),
+            Tab(text: 'Trending'),
+            Tab(text: 'New Creators'),
+            Tab(text: 'Local'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tc,
         children: const [
-          FeedList(endpoint: "/api/feed/trending"),
-          FeedList(endpoint: "/api/feed/new-creators"),
-          FeedList(endpoint: "/api/feed/local"),
+          FeedList(endpoint: '/api/feed/trending'),
+          FeedList(endpoint: '/api/feed/new-creators'),
+          FeedList(endpoint: '/api/feed/local'),
         ],
       ),
     );

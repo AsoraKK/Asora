@@ -10,7 +10,6 @@ import 'package:built_value/serializer.dart';
 part 'admin_appeal_target_type.g.dart';
 
 class AdminAppealTargetType extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'post')
   static const AdminAppealTargetType post = _$post;
   @BuiltValueEnumConst(wireName: r'comment')
@@ -18,9 +17,10 @@ class AdminAppealTargetType extends EnumClass {
   @BuiltValueEnumConst(wireName: r'profile')
   static const AdminAppealTargetType profile = _$profile;
 
-  static Serializer<AdminAppealTargetType> get serializer => _$adminAppealTargetTypeSerializer;
+  static Serializer<AdminAppealTargetType> get serializer =>
+      _$adminAppealTargetTypeSerializer;
 
-  const AdminAppealTargetType._(String name): super(name);
+  const AdminAppealTargetType._(String name) : super(name);
 
   static BuiltSet<AdminAppealTargetType> get values => _$values;
   static AdminAppealTargetType valueOf(String name) => _$valueOf(name);
@@ -32,5 +32,5 @@ class AdminAppealTargetType extends EnumClass {
 /// corresponding Angular template.
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
-abstract class AdminAppealTargetTypeMixin = Object with _$AdminAppealTargetTypeMixin;
-
+abstract class AdminAppealTargetTypeMixin = Object
+    with _$AdminAppealTargetTypeMixin;

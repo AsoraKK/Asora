@@ -243,7 +243,7 @@ jobs:
       - name: Deploy Cloudflare Worker to Staging
         run: |
           cd infra/cloudflare
-          echo " Deploying Worker to staging environment..."
+          echo " Deploying Worker to staging environment..."
           # Example: use wrangler with env using CLOUDFLARE_API_TOKEN
           # wrangler publish --env staging --api-token "$CLOUDFLARE_API_TOKEN"
           echo "Worker deployment completed"
