@@ -391,7 +391,22 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
       final token = await ref.read(jwtProvider.future);
 
       if (token == null) {
-        throw Exception('Please log in to submit an appeal');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  SizedBox(width: 16),
+                  Expanded(child: Text('User not authenticated')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
       }
 
       final result = await client.submitAppeal(
@@ -440,6 +455,18 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
           } else if (error.response?.statusCode == 409) {
             errorMessage =
                 'You have already submitted an appeal for this content';
+          } else if (error.response?.statusCode == 429) {
+            final data = error.response?.data;
+            if (data is Map<String, dynamic> &&
+                data['code'] == 'DAILY_APPEAL_LIMIT_EXCEEDED') {
+              final limit = data['limit'] ?? 1;
+              final tier = data['tier'] ?? 'free';
+              errorMessage =
+                  'You have reached your daily appeals limit ($limit for $tier tier). Please try again later.';
+            } else {
+              errorMessage =
+                  'Too many appeal requests. Please wait before trying again.';
+            }
           } else if (error.response?.data?['error'] != null) {
             final data = error.response!.data;
             if (data is Map<String, dynamic> && data['error'] is String) {

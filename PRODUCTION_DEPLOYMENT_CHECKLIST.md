@@ -14,10 +14,10 @@
   
   # Database Configuration
   export TF_VAR_postgresql_admin="asoraadmin"
-  export TF_VAR_postgresql_password="generate-strong-password-32-chars"
+  export TF_VAR_postgresql_password="<GENERATE_STRONG_PASSWORD_32_CHARS>"
   
   # Security Secrets (Generate strong random values)
-  export TF_VAR_jwt_secret="generate-256-bit-secret"
+  export TF_VAR_jwt_secret="<GENERATE_256_BIT_SECRET>"
   export TF_VAR_email_hash_salt="generate-salt-for-email-hashing"
   
   # AI Moderation API Keys
