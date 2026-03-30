@@ -54,7 +54,7 @@ dependencies:
   opentelemetry: ^0.18.10
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
-  share_plus: ^12.0.1
+  share_plus: ^12.0.2
   timezone: ^0.9.4 # For scheduled local notifications
   url_launcher: ^6.2.2 # Launch URLs and handle OAuth callbacks
   uuid: ^4.4.0 # UUID generation for request IDs
