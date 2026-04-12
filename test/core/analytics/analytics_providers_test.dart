@@ -155,4 +155,25 @@ void main() {
     final enabledClient = container.read(analyticsClientProvider);
     expect(enabledClient, isA<ConsentAwareAnalyticsClient>());
   });
+
+  test('analyticsClientProvider can build with shared HTTP provider', () async {
+    final storage = _FakeConsentStorage(
+      AnalyticsConsent(
+        enabled: true,
+        updatedAt: DateTime.utc(2024, 1, 1),
+        source: ConsentSource.onboarding,
+        policyVersion: 1,
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [analyticsConsentStorageProvider.overrideWithValue(storage)],
+    );
+    addTearDown(container.dispose);
+
+    container.read(analyticsConsentProvider);
+    await storage.waitForLoad();
+
+    final enabledClient = container.read(analyticsClientProvider);
+    expect(enabledClient, isA<ConsentAwareAnalyticsClient>());
+  });
 }

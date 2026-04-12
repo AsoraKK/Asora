@@ -127,7 +127,8 @@ These features are gracefully disabled on web:
 
 - **FCM push notifications** — `kIsWeb` guard in `AdaptiveShell` and `AppShell`
 - **Biometric auth** — guard in `AuthService`
-- **TLS certificate pinning** — guard in `DioClient`
+- **Crash reporting** — Firebase Crashlytics initializes only on Android
+- **TLS certificate pinning** — shared Dio factories fall back to the browser adapter on web
 - **Device security checks** — guard in `DeviceSecurityService`
 
 ## Pre-deploy Checklist

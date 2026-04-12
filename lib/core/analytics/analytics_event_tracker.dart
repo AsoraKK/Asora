@@ -23,18 +23,33 @@ class AnalyticsEventTracker {
     Map<String, Object?>? properties,
   }) async {
     final key = _buildKey(eventName, userId: userId);
-    final existing = await _storage.read(key: key);
-    if (existing == '1') {
+    final alreadyLogged = await wasLogged(eventName, userId: userId);
+    if (alreadyLogged) {
       return false;
     }
-    await client.logEvent(eventName, properties: properties);
-    await _storage.write(key: key, value: '1');
+
+    try {
+      await client.logEvent(eventName, properties: properties);
+    } catch (_) {
+      return false;
+    }
+
+    try {
+      await _storage.write(key: key, value: '1');
+    } catch (_) {
+      // Best effort on web and other constrained platforms.
+    }
+
     return true;
   }
 
   Future<bool> wasLogged(String eventName, {String? userId}) async {
     final key = _buildKey(eventName, userId: userId);
-    return (await _storage.read(key: key)) == '1';
+    try {
+      return (await _storage.read(key: key)) == '1';
+    } catch (_) {
+      return false;
+    }
   }
 
   String _buildKey(String eventName, {String? userId}) {

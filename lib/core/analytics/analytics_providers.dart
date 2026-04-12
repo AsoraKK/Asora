@@ -7,8 +7,8 @@
 /// 📊 Architecture: Provider-based dependency injection
 library;
 
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -114,10 +114,18 @@ final analyticsClientProvider = Provider<AnalyticsClient>((ref) {
 /// Get platform name for analytics
 String _getPlatformName() {
   if (kIsWeb) return 'web';
-  if (Platform.isAndroid) return 'android';
-  if (Platform.isIOS) return 'ios';
-  if (Platform.isWindows) return 'windows';
-  if (Platform.isMacOS) return 'macos';
-  if (Platform.isLinux) return 'linux';
-  return 'unknown';
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return 'android';
+    case TargetPlatform.iOS:
+      return 'ios';
+    case TargetPlatform.windows:
+      return 'windows';
+    case TargetPlatform.macOS:
+      return 'macos';
+    case TargetPlatform.linux:
+      return 'linux';
+    case TargetPlatform.fuchsia:
+      return 'fuchsia';
+  }
 }

@@ -54,6 +54,35 @@ class _FakeAnalyticsClient implements AnalyticsClient {
   Future<void> setUserProperties(Map<String, Object?> properties) async {}
 }
 
+class _ThrowingSecureStorage extends FlutterSecureStorage {
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw StateError('write failed');
+  }
+
+  @override
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw StateError('read failed');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -95,5 +124,25 @@ void main() {
     expect(userB, isTrue);
     expect(repeatA, isFalse);
     expect(client.events, ['first_post', 'first_post']);
+  });
+
+  test('logEventOnce tolerates storage failures', () async {
+    final tracker = AnalyticsEventTracker(storage: _ThrowingSecureStorage());
+    final client = _FakeAnalyticsClient();
+
+    final first = await tracker.logEventOnce(client, 'app_started');
+    final second = await tracker.logEventOnce(client, 'app_started');
+
+    expect(first, isTrue);
+    expect(second, isTrue);
+    expect(client.events, ['app_started', 'app_started']);
+  });
+
+  test('wasLogged returns false when storage read fails', () async {
+    final tracker = AnalyticsEventTracker(storage: _ThrowingSecureStorage());
+
+    final result = await tracker.wasLogged('app_started');
+
+    expect(result, isFalse);
   });
 }

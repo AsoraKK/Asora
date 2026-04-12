@@ -25,9 +25,9 @@ class FirebaseCrashSink implements CrashSink {
   FirebaseCrashSink({
     FirebaseCrashlytics? crashlytics,
     this.enableInDebug = false,
-  }) : _crashlytics = crashlytics ?? FirebaseCrashlytics.instance;
+  }) : _crashlytics = crashlytics;
 
-  final FirebaseCrashlytics _crashlytics;
+  FirebaseCrashlytics? _crashlytics;
   final bool enableInDebug;
   bool _enabled = false;
 
@@ -41,8 +41,9 @@ class FirebaseCrashSink implements CrashSink {
     }
 
     await Firebase.initializeApp();
+    _crashlytics ??= FirebaseCrashlytics.instance;
     _enabled = !kDebugMode || enableInDebug;
-    await _crashlytics.setCrashlyticsCollectionEnabled(_enabled);
+    await _crashlytics!.setCrashlyticsCollectionEnabled(_enabled);
   }
 
   @override
@@ -51,10 +52,12 @@ class FirebaseCrashSink implements CrashSink {
     required bool fatal,
   }) async {
     if (!_enabled) return;
+    final crashlytics = _crashlytics;
+    if (crashlytics == null) return;
     if (fatal) {
-      await _crashlytics.recordFlutterFatalError(details);
+      await crashlytics.recordFlutterFatalError(details);
     } else {
-      await _crashlytics.recordFlutterError(details);
+      await crashlytics.recordFlutterError(details);
     }
   }
 
@@ -65,7 +68,9 @@ class FirebaseCrashSink implements CrashSink {
     required bool fatal,
   }) async {
     if (!_enabled) return;
-    await _crashlytics.recordError(error, stackTrace, fatal: fatal);
+    final crashlytics = _crashlytics;
+    if (crashlytics == null) return;
+    await crashlytics.recordError(error, stackTrace, fatal: fatal);
   }
 }
 

@@ -1,8 +1,6 @@
-import 'dart:ui';
-
 import 'package:asora/core/logging/app_logger.dart';
 import 'package:asora/core/observability/crash_reporting.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeCrashSink implements CrashSink {
@@ -55,6 +53,17 @@ class _ThrowingCrashSink implements CrashSink {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('FirebaseCrashSink is safe to construct off Android', () async {
+    final previousPlatform = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final sink = FirebaseCrashSink();
+      await expectLater(sink.initialize(), completes);
+    } finally {
+      debugDefaultTargetPlatformOverride = previousPlatform;
+    }
+  });
 
   test('initialization installs Flutter and runtime handlers', () async {
     final sink = _FakeCrashSink();

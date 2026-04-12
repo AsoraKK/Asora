@@ -17,7 +17,9 @@ import 'package:asora/core/security/cert_pinning.dart';
 
 /// **Core HTTP Client Provider**
 ///
-/// Centralized Dio instance with Azure Functions configuration and certificate pinning
+/// Centralized Dio instance with Azure Functions configuration.
+///
+/// Native platforms use certificate pinning; web keeps Dio's browser adapter.
 /// Used by all repository implementations for consistency
 final httpClientProvider = Provider<Dio>((ref) {
   const baseUrl = String.fromEnvironment(
