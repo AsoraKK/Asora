@@ -12,12 +12,13 @@ part 'admin_appeal_content.g.dart';
 /// AdminAppealContent
 ///
 /// Properties:
-/// * [contentId] 
-/// * [type] 
-/// * [createdAt] 
-/// * [preview] 
+/// * [contentId]
+/// * [type]
+/// * [createdAt]
+/// * [preview]
 @BuiltValue()
-abstract class AdminAppealContent implements Built<AdminAppealContent, AdminAppealContentBuilder> {
+abstract class AdminAppealContent
+    implements Built<AdminAppealContent, AdminAppealContentBuilder> {
   @BuiltValueField(wireName: r'contentId')
   String? get contentId;
 
@@ -33,16 +34,19 @@ abstract class AdminAppealContent implements Built<AdminAppealContent, AdminAppe
 
   AdminAppealContent._();
 
-  factory AdminAppealContent([void updates(AdminAppealContentBuilder b)]) = _$AdminAppealContent;
+  factory AdminAppealContent([void updates(AdminAppealContentBuilder b)]) =
+      _$AdminAppealContent;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealContentBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealContent> get serializer => _$AdminAppealContentSerializer();
+  static Serializer<AdminAppealContent> get serializer =>
+      _$AdminAppealContentSerializer();
 }
 
-class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealContent> {
+class _$AdminAppealContentSerializer
+    implements PrimitiveSerializer<AdminAppealContent> {
   @override
   final Iterable<Type> types = const [AdminAppealContent, _$AdminAppealContent];
 
@@ -90,7 +94,9 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
     AdminAppealContent object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -161,4 +167,3 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
     return result.build();
   }
 }
-

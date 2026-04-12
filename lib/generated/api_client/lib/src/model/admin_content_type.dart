@@ -10,7 +10,6 @@ import 'package:built_value/serializer.dart';
 part 'admin_content_type.g.dart';
 
 class AdminContentType extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'post')
   static const AdminContentType post = _$post;
   @BuiltValueEnumConst(wireName: r'comment')
@@ -18,9 +17,10 @@ class AdminContentType extends EnumClass {
   @BuiltValueEnumConst(wireName: r'user')
   static const AdminContentType user = _$user;
 
-  static Serializer<AdminContentType> get serializer => _$adminContentTypeSerializer;
+  static Serializer<AdminContentType> get serializer =>
+      _$adminContentTypeSerializer;
 
-  const AdminContentType._(String name): super(name);
+  const AdminContentType._(String name) : super(name);
 
   static BuiltSet<AdminContentType> get values => _$values;
   static AdminContentType valueOf(String name) => _$valueOf(name);
@@ -33,4 +33,3 @@ class AdminContentType extends EnumClass {
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
 abstract class AdminContentTypeMixin = Object with _$AdminContentTypeMixin;
-

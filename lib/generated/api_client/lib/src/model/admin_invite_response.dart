@@ -13,33 +13,42 @@ part 'admin_invite_response.g.dart';
 /// AdminInviteResponse
 ///
 /// Properties:
-/// * [inviteCode] 
-/// * [email] 
-/// * [createdBy] 
-/// * [createdAt] 
-/// * [expiresAt] 
-/// * [maxUses] 
-/// * [usageCount] 
-/// * [lastUsedAt] 
-/// * [status] 
-/// * [label] 
-/// * [usedByUserId] 
+/// * [inviteCode]
+/// * [email]
+/// * [createdBy]
+/// * [createdAt]
+/// * [expiresAt]
+/// * [maxUses]
+/// * [usageCount]
+/// * [lastUsedAt]
+/// * [status]
+/// * [label]
+/// * [usedByUserId]
 @BuiltValue()
-abstract class AdminInviteResponse implements AdminInvite, Built<AdminInviteResponse, AdminInviteResponseBuilder> {
+abstract class AdminInviteResponse
+    implements
+        AdminInvite,
+        Built<AdminInviteResponse, AdminInviteResponseBuilder> {
   AdminInviteResponse._();
 
-  factory AdminInviteResponse([void updates(AdminInviteResponseBuilder b)]) = _$AdminInviteResponse;
+  factory AdminInviteResponse([void updates(AdminInviteResponseBuilder b)]) =
+      _$AdminInviteResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteResponse> get serializer => _$AdminInviteResponseSerializer();
+  static Serializer<AdminInviteResponse> get serializer =>
+      _$AdminInviteResponseSerializer();
 }
 
-class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInviteResponse> {
+class _$AdminInviteResponseSerializer
+    implements PrimitiveSerializer<AdminInviteResponse> {
   @override
-  final Iterable<Type> types = const [AdminInviteResponse, _$AdminInviteResponse];
+  final Iterable<Type> types = const [
+    AdminInviteResponse,
+    _$AdminInviteResponse
+  ];
 
   @override
   final String wireName = r'AdminInviteResponse';
@@ -134,7 +143,9 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     AdminInviteResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -254,4 +265,3 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     return result.build();
   }
 }
-

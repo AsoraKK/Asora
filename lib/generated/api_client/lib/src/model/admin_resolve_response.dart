@@ -11,26 +11,33 @@ part 'admin_resolve_response.g.dart';
 /// AdminResolveResponse
 ///
 /// Properties:
-/// * [resolved] 
+/// * [resolved]
 @BuiltValue()
-abstract class AdminResolveResponse implements Built<AdminResolveResponse, AdminResolveResponseBuilder> {
+abstract class AdminResolveResponse
+    implements Built<AdminResolveResponse, AdminResolveResponseBuilder> {
   @BuiltValueField(wireName: r'resolved')
   bool? get resolved;
 
   AdminResolveResponse._();
 
-  factory AdminResolveResponse([void updates(AdminResolveResponseBuilder b)]) = _$AdminResolveResponse;
+  factory AdminResolveResponse([void updates(AdminResolveResponseBuilder b)]) =
+      _$AdminResolveResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminResolveResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminResolveResponse> get serializer => _$AdminResolveResponseSerializer();
+  static Serializer<AdminResolveResponse> get serializer =>
+      _$AdminResolveResponseSerializer();
 }
 
-class _$AdminResolveResponseSerializer implements PrimitiveSerializer<AdminResolveResponse> {
+class _$AdminResolveResponseSerializer
+    implements PrimitiveSerializer<AdminResolveResponse> {
   @override
-  final Iterable<Type> types = const [AdminResolveResponse, _$AdminResolveResponse];
+  final Iterable<Type> types = const [
+    AdminResolveResponse,
+    _$AdminResolveResponse
+  ];
 
   @override
   final String wireName = r'AdminResolveResponse';
@@ -55,7 +62,9 @@ class _$AdminResolveResponseSerializer implements PrimitiveSerializer<AdminResol
     AdminResolveResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -105,4 +114,3 @@ class _$AdminResolveResponseSerializer implements PrimitiveSerializer<AdminResol
     return result.build();
   }
 }
-

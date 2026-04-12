@@ -13,11 +13,12 @@ part 'admin_audit_list_response.g.dart';
 /// AdminAuditListResponse
 ///
 /// Properties:
-/// * [items] 
-/// * [count] 
-/// * [nextCursor] 
+/// * [items]
+/// * [count]
+/// * [nextCursor]
 @BuiltValue()
-abstract class AdminAuditListResponse implements Built<AdminAuditListResponse, AdminAuditListResponseBuilder> {
+abstract class AdminAuditListResponse
+    implements Built<AdminAuditListResponse, AdminAuditListResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<AdminAuditEntry> get items;
 
@@ -29,18 +30,25 @@ abstract class AdminAuditListResponse implements Built<AdminAuditListResponse, A
 
   AdminAuditListResponse._();
 
-  factory AdminAuditListResponse([void updates(AdminAuditListResponseBuilder b)]) = _$AdminAuditListResponse;
+  factory AdminAuditListResponse(
+          [void updates(AdminAuditListResponseBuilder b)]) =
+      _$AdminAuditListResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAuditListResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAuditListResponse> get serializer => _$AdminAuditListResponseSerializer();
+  static Serializer<AdminAuditListResponse> get serializer =>
+      _$AdminAuditListResponseSerializer();
 }
 
-class _$AdminAuditListResponseSerializer implements PrimitiveSerializer<AdminAuditListResponse> {
+class _$AdminAuditListResponseSerializer
+    implements PrimitiveSerializer<AdminAuditListResponse> {
   @override
-  final Iterable<Type> types = const [AdminAuditListResponse, _$AdminAuditListResponse];
+  final Iterable<Type> types = const [
+    AdminAuditListResponse,
+    _$AdminAuditListResponse
+  ];
 
   @override
   final String wireName = r'AdminAuditListResponse';
@@ -75,7 +83,9 @@ class _$AdminAuditListResponseSerializer implements PrimitiveSerializer<AdminAud
     AdminAuditListResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -93,7 +103,8 @@ class _$AdminAuditListResponseSerializer implements PrimitiveSerializer<AdminAud
         case r'items':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(AdminAuditEntry)]),
+            specifiedType:
+                const FullType(BuiltList, [FullType(AdminAuditEntry)]),
           ) as BuiltList<AdminAuditEntry>;
           result.items.replace(valueDes);
           break;
@@ -139,4 +150,3 @@ class _$AdminAuditListResponseSerializer implements PrimitiveSerializer<AdminAud
     return result.build();
   }
 }
-

@@ -12,11 +12,12 @@ part 'legal_hold_input.g.dart';
 /// LegalHoldInput
 ///
 /// Properties:
-/// * [scope] 
-/// * [scopeId] 
-/// * [reason] 
+/// * [scope]
+/// * [scopeId]
+/// * [reason]
 @BuiltValue()
-abstract class LegalHoldInput implements Built<LegalHoldInput, LegalHoldInputBuilder> {
+abstract class LegalHoldInput
+    implements Built<LegalHoldInput, LegalHoldInputBuilder> {
   @BuiltValueField(wireName: r'scope')
   LegalHoldInputScopeEnum get scope;
   // enum scopeEnum {  user,  post,  case,  };
@@ -29,16 +30,19 @@ abstract class LegalHoldInput implements Built<LegalHoldInput, LegalHoldInputBui
 
   LegalHoldInput._();
 
-  factory LegalHoldInput([void updates(LegalHoldInputBuilder b)]) = _$LegalHoldInput;
+  factory LegalHoldInput([void updates(LegalHoldInputBuilder b)]) =
+      _$LegalHoldInput;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(LegalHoldInputBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<LegalHoldInput> get serializer => _$LegalHoldInputSerializer();
+  static Serializer<LegalHoldInput> get serializer =>
+      _$LegalHoldInputSerializer();
 }
 
-class _$LegalHoldInputSerializer implements PrimitiveSerializer<LegalHoldInput> {
+class _$LegalHoldInputSerializer
+    implements PrimitiveSerializer<LegalHoldInput> {
   @override
   final Iterable<Type> types = const [LegalHoldInput, _$LegalHoldInput];
 
@@ -73,7 +77,9 @@ class _$LegalHoldInputSerializer implements PrimitiveSerializer<LegalHoldInput> 
     LegalHoldInput object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -139,7 +145,6 @@ class _$LegalHoldInputSerializer implements PrimitiveSerializer<LegalHoldInput> 
 }
 
 class LegalHoldInputScopeEnum extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'user')
   static const LegalHoldInputScopeEnum user = _$legalHoldInputScopeEnum_user;
   @BuiltValueEnumConst(wireName: r'post')
@@ -147,11 +152,13 @@ class LegalHoldInputScopeEnum extends EnumClass {
   @BuiltValueEnumConst(wireName: r'case')
   static const LegalHoldInputScopeEnum case_ = _$legalHoldInputScopeEnum_case_;
 
-  static Serializer<LegalHoldInputScopeEnum> get serializer => _$legalHoldInputScopeEnumSerializer;
+  static Serializer<LegalHoldInputScopeEnum> get serializer =>
+      _$legalHoldInputScopeEnumSerializer;
 
-  const LegalHoldInputScopeEnum._(String name): super(name);
+  const LegalHoldInputScopeEnum._(String name) : super(name);
 
-  static BuiltSet<LegalHoldInputScopeEnum> get values => _$legalHoldInputScopeEnumValues;
-  static LegalHoldInputScopeEnum valueOf(String name) => _$legalHoldInputScopeEnumValueOf(name);
+  static BuiltSet<LegalHoldInputScopeEnum> get values =>
+      _$legalHoldInputScopeEnumValues;
+  static LegalHoldInputScopeEnum valueOf(String name) =>
+      _$legalHoldInputScopeEnumValueOf(name);
 }
-

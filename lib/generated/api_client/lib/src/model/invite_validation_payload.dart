@@ -13,25 +13,33 @@ part 'invite_validation_payload.g.dart';
 /// Properties:
 /// * [valid] - True when the invite code is active and redeemable.
 @BuiltValue()
-abstract class InviteValidationPayload implements Built<InviteValidationPayload, InviteValidationPayloadBuilder> {
+abstract class InviteValidationPayload
+    implements Built<InviteValidationPayload, InviteValidationPayloadBuilder> {
   /// True when the invite code is active and redeemable.
   @BuiltValueField(wireName: r'valid')
   bool get valid;
 
   InviteValidationPayload._();
 
-  factory InviteValidationPayload([void updates(InviteValidationPayloadBuilder b)]) = _$InviteValidationPayload;
+  factory InviteValidationPayload(
+          [void updates(InviteValidationPayloadBuilder b)]) =
+      _$InviteValidationPayload;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(InviteValidationPayloadBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<InviteValidationPayload> get serializer => _$InviteValidationPayloadSerializer();
+  static Serializer<InviteValidationPayload> get serializer =>
+      _$InviteValidationPayloadSerializer();
 }
 
-class _$InviteValidationPayloadSerializer implements PrimitiveSerializer<InviteValidationPayload> {
+class _$InviteValidationPayloadSerializer
+    implements PrimitiveSerializer<InviteValidationPayload> {
   @override
-  final Iterable<Type> types = const [InviteValidationPayload, _$InviteValidationPayload];
+  final Iterable<Type> types = const [
+    InviteValidationPayload,
+    _$InviteValidationPayload
+  ];
 
   @override
   final String wireName = r'InviteValidationPayload';
@@ -54,7 +62,9 @@ class _$InviteValidationPayloadSerializer implements PrimitiveSerializer<InviteV
     InviteValidationPayload object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -104,4 +114,3 @@ class _$InviteValidationPayloadSerializer implements PrimitiveSerializer<InviteV
     return result.build();
   }
 }
-

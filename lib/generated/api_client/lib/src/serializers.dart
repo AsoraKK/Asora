@@ -128,7 +128,8 @@ part 'serializers.g.dart';
   AdminFlagQueueItem,
   AdminFlagQueueResponse,
   AdminFlagResolveRequest,
-  AdminInvite,$AdminInvite,
+  AdminInvite,
+  $AdminInvite,
   AdminInviteBatchRequest,
   AdminInviteBatchResponse,
   AdminInviteCreateRequest,
@@ -165,7 +166,8 @@ part 'serializers.g.dart';
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        const FullType(
+            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
         () => MapBuilder<String, JsonObject>(),
       )
       ..add(AdminInvite.serializer)

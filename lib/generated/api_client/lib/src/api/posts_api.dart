@@ -12,7 +12,6 @@ import 'package:asora_api_client/src/model/create_post_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
 
 class PostsApi {
-
   final Dio _dio;
 
   final Serializers _serializers;
@@ -23,7 +22,7 @@ class PostsApi {
   /// Create a new post.
   ///
   /// Parameters:
-  /// * [createPostRequest] 
+  /// * [createPostRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CreatePost201Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CreatePost201Response>> createPost({ 
+  Future<Response<CreatePost201Response>> createPost({
     required CreatePostRequest createPostRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -66,11 +65,11 @@ class PostsApi {
 
     try {
       const _type = FullType(CreatePostRequest);
-      _bodyData = _serializers.serialize(createPostRequest, specifiedType: _type);
-
-    } catch(error, stackTrace) {
+      _bodyData =
+          _serializers.serialize(createPostRequest, specifiedType: _type);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
+        requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -93,11 +92,12 @@ class PostsApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(CreatePost201Response),
-      ) as CreatePost201Response;
-
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(CreatePost201Response),
+            ) as CreatePost201Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -119,5 +119,4 @@ class PostsApi {
       extra: _response.extra,
     );
   }
-
 }

@@ -16,7 +16,7 @@ echo "✅ OpenAPI validation passed"
 
 # Check Dart formatting (Flutter app) - after client regeneration
 echo "📱 Checking Dart formatting..."
-dart format $(find . -name "*.dart" -not -path "./lib/generated/*" -not -path "./.git/*" -not -path "./.dart_tool/*")
+dart format $(find . -name "*.dart" -not -path "./.git/*" -not -path "./.dart_tool/*")
 # Stage any formatting changes so commit includes them
 git add -A lib test || true
 echo "✅ Dart formatting applied and staged"

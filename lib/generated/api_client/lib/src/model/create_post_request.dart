@@ -16,7 +16,8 @@ part 'create_post_request.g.dart';
 /// * [text] - Post body text
 /// * [attachments] - Optional media attachments
 @BuiltValue()
-abstract class CreatePostRequest implements Built<CreatePostRequest, CreatePostRequestBuilder> {
+abstract class CreatePostRequest
+    implements Built<CreatePostRequest, CreatePostRequestBuilder> {
   /// Client generated UUID v7 for the new post
   @BuiltValueField(wireName: r'id')
   String get id;
@@ -31,16 +32,19 @@ abstract class CreatePostRequest implements Built<CreatePostRequest, CreatePostR
 
   CreatePostRequest._();
 
-  factory CreatePostRequest([void updates(CreatePostRequestBuilder b)]) = _$CreatePostRequest;
+  factory CreatePostRequest([void updates(CreatePostRequestBuilder b)]) =
+      _$CreatePostRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(CreatePostRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<CreatePostRequest> get serializer => _$CreatePostRequestSerializer();
+  static Serializer<CreatePostRequest> get serializer =>
+      _$CreatePostRequestSerializer();
 }
 
-class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostRequest> {
+class _$CreatePostRequestSerializer
+    implements PrimitiveSerializer<CreatePostRequest> {
   @override
   final Iterable<Type> types = const [CreatePostRequest, _$CreatePostRequest];
 
@@ -77,7 +81,9 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
     CreatePostRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -141,4 +147,3 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
     return result.build();
   }
 }
-

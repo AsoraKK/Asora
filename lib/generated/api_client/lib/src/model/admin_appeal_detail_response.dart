@@ -20,22 +20,24 @@ part 'admin_appeal_detail_response.g.dart';
 /// AdminAppealDetailResponse
 ///
 /// Properties:
-/// * [appealId] 
-/// * [targetType] 
-/// * [targetId] 
-/// * [status] 
-/// * [createdAt] 
-/// * [lastUpdatedAt] 
-/// * [votes] 
-/// * [quorum] 
-/// * [moderatorOverrideAllowed] 
-/// * [finalDecision] 
-/// * [auditSummary] 
-/// * [appeal] 
-/// * [content] 
-/// * [originalDecision] 
+/// * [appealId]
+/// * [targetType]
+/// * [targetId]
+/// * [status]
+/// * [createdAt]
+/// * [lastUpdatedAt]
+/// * [votes]
+/// * [quorum]
+/// * [moderatorOverrideAllowed]
+/// * [finalDecision]
+/// * [auditSummary]
+/// * [appeal]
+/// * [content]
+/// * [originalDecision]
 @BuiltValue()
-abstract class AdminAppealDetailResponse implements Built<AdminAppealDetailResponse, AdminAppealDetailResponseBuilder> {
+abstract class AdminAppealDetailResponse
+    implements
+        Built<AdminAppealDetailResponse, AdminAppealDetailResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -83,18 +85,25 @@ abstract class AdminAppealDetailResponse implements Built<AdminAppealDetailRespo
 
   AdminAppealDetailResponse._();
 
-  factory AdminAppealDetailResponse([void updates(AdminAppealDetailResponseBuilder b)]) = _$AdminAppealDetailResponse;
+  factory AdminAppealDetailResponse(
+          [void updates(AdminAppealDetailResponseBuilder b)]) =
+      _$AdminAppealDetailResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealDetailResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealDetailResponse> get serializer => _$AdminAppealDetailResponseSerializer();
+  static Serializer<AdminAppealDetailResponse> get serializer =>
+      _$AdminAppealDetailResponseSerializer();
 }
 
-class _$AdminAppealDetailResponseSerializer implements PrimitiveSerializer<AdminAppealDetailResponse> {
+class _$AdminAppealDetailResponseSerializer
+    implements PrimitiveSerializer<AdminAppealDetailResponse> {
   @override
-  final Iterable<Type> types = const [AdminAppealDetailResponse, _$AdminAppealDetailResponse];
+  final Iterable<Type> types = const [
+    AdminAppealDetailResponse,
+    _$AdminAppealDetailResponse
+  ];
 
   @override
   final String wireName = r'AdminAppealDetailResponse';
@@ -210,7 +219,9 @@ class _$AdminAppealDetailResponseSerializer implements PrimitiveSerializer<Admin
     AdminAppealDetailResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -351,4 +362,3 @@ class _$AdminAppealDetailResponseSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
-

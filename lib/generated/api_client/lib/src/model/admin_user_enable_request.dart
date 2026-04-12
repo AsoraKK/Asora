@@ -11,10 +11,11 @@ part 'admin_user_enable_request.g.dart';
 /// AdminUserEnableRequest
 ///
 /// Properties:
-/// * [reasonCode] 
-/// * [note] 
+/// * [reasonCode]
+/// * [note]
 @BuiltValue()
-abstract class AdminUserEnableRequest implements Built<AdminUserEnableRequest, AdminUserEnableRequestBuilder> {
+abstract class AdminUserEnableRequest
+    implements Built<AdminUserEnableRequest, AdminUserEnableRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
   String? get reasonCode;
 
@@ -23,18 +24,25 @@ abstract class AdminUserEnableRequest implements Built<AdminUserEnableRequest, A
 
   AdminUserEnableRequest._();
 
-  factory AdminUserEnableRequest([void updates(AdminUserEnableRequestBuilder b)]) = _$AdminUserEnableRequest;
+  factory AdminUserEnableRequest(
+          [void updates(AdminUserEnableRequestBuilder b)]) =
+      _$AdminUserEnableRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserEnableRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserEnableRequest> get serializer => _$AdminUserEnableRequestSerializer();
+  static Serializer<AdminUserEnableRequest> get serializer =>
+      _$AdminUserEnableRequestSerializer();
 }
 
-class _$AdminUserEnableRequestSerializer implements PrimitiveSerializer<AdminUserEnableRequest> {
+class _$AdminUserEnableRequestSerializer
+    implements PrimitiveSerializer<AdminUserEnableRequest> {
   @override
-  final Iterable<Type> types = const [AdminUserEnableRequest, _$AdminUserEnableRequest];
+  final Iterable<Type> types = const [
+    AdminUserEnableRequest,
+    _$AdminUserEnableRequest
+  ];
 
   @override
   final String wireName = r'AdminUserEnableRequest';
@@ -66,7 +74,9 @@ class _$AdminUserEnableRequestSerializer implements PrimitiveSerializer<AdminUse
     AdminUserEnableRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -123,4 +133,3 @@ class _$AdminUserEnableRequestSerializer implements PrimitiveSerializer<AdminUse
     return result.build();
   }
 }
-

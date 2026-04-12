@@ -13,10 +13,11 @@ part 'admin_user_search_response.g.dart';
 /// AdminUserSearchResponse
 ///
 /// Properties:
-/// * [items] 
-/// * [count] 
+/// * [items]
+/// * [count]
 @BuiltValue()
-abstract class AdminUserSearchResponse implements Built<AdminUserSearchResponse, AdminUserSearchResponseBuilder> {
+abstract class AdminUserSearchResponse
+    implements Built<AdminUserSearchResponse, AdminUserSearchResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<AdminUserSummary> get items;
 
@@ -25,18 +26,25 @@ abstract class AdminUserSearchResponse implements Built<AdminUserSearchResponse,
 
   AdminUserSearchResponse._();
 
-  factory AdminUserSearchResponse([void updates(AdminUserSearchResponseBuilder b)]) = _$AdminUserSearchResponse;
+  factory AdminUserSearchResponse(
+          [void updates(AdminUserSearchResponseBuilder b)]) =
+      _$AdminUserSearchResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserSearchResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserSearchResponse> get serializer => _$AdminUserSearchResponseSerializer();
+  static Serializer<AdminUserSearchResponse> get serializer =>
+      _$AdminUserSearchResponseSerializer();
 }
 
-class _$AdminUserSearchResponseSerializer implements PrimitiveSerializer<AdminUserSearchResponse> {
+class _$AdminUserSearchResponseSerializer
+    implements PrimitiveSerializer<AdminUserSearchResponse> {
   @override
-  final Iterable<Type> types = const [AdminUserSearchResponse, _$AdminUserSearchResponse];
+  final Iterable<Type> types = const [
+    AdminUserSearchResponse,
+    _$AdminUserSearchResponse
+  ];
 
   @override
   final String wireName = r'AdminUserSearchResponse';
@@ -64,7 +72,9 @@ class _$AdminUserSearchResponseSerializer implements PrimitiveSerializer<AdminUs
     AdminUserSearchResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -82,7 +92,8 @@ class _$AdminUserSearchResponseSerializer implements PrimitiveSerializer<AdminUs
         case r'items':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(AdminUserSummary)]),
+            specifiedType:
+                const FullType(BuiltList, [FullType(AdminUserSummary)]),
           ) as BuiltList<AdminUserSummary>;
           result.items.replace(valueDes);
           break;
@@ -121,4 +132,3 @@ class _$AdminUserSearchResponseSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
-

@@ -12,13 +12,14 @@ part 'dsr_request_summary.g.dart';
 /// DsrRequestSummary
 ///
 /// Properties:
-/// * [id] 
-/// * [status] 
-/// * [type] 
-/// * [exportBlobPath] 
-/// * [attemptedAt] 
+/// * [id]
+/// * [status]
+/// * [type]
+/// * [exportBlobPath]
+/// * [attemptedAt]
 @BuiltValue()
-abstract class DsrRequestSummary implements Built<DsrRequestSummary, DsrRequestSummaryBuilder> {
+abstract class DsrRequestSummary
+    implements Built<DsrRequestSummary, DsrRequestSummaryBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -38,16 +39,19 @@ abstract class DsrRequestSummary implements Built<DsrRequestSummary, DsrRequestS
 
   DsrRequestSummary._();
 
-  factory DsrRequestSummary([void updates(DsrRequestSummaryBuilder b)]) = _$DsrRequestSummary;
+  factory DsrRequestSummary([void updates(DsrRequestSummaryBuilder b)]) =
+      _$DsrRequestSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(DsrRequestSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<DsrRequestSummary> get serializer => _$DsrRequestSummarySerializer();
+  static Serializer<DsrRequestSummary> get serializer =>
+      _$DsrRequestSummarySerializer();
 }
 
-class _$DsrRequestSummarySerializer implements PrimitiveSerializer<DsrRequestSummary> {
+class _$DsrRequestSummarySerializer
+    implements PrimitiveSerializer<DsrRequestSummary> {
   @override
   final Iterable<Type> types = const [DsrRequestSummary, _$DsrRequestSummary];
 
@@ -102,7 +106,9 @@ class _$DsrRequestSummarySerializer implements PrimitiveSerializer<DsrRequestSum
     DsrRequestSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+    return _serializeProperties(serializers, object,
+            specifiedType: specifiedType)
+        .toList();
   }
 
   void _deserializeProperties(
@@ -182,44 +188,57 @@ class _$DsrRequestSummarySerializer implements PrimitiveSerializer<DsrRequestSum
 }
 
 class DsrRequestSummaryStatusEnum extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'queued')
-  static const DsrRequestSummaryStatusEnum queued = _$dsrRequestSummaryStatusEnum_queued;
+  static const DsrRequestSummaryStatusEnum queued =
+      _$dsrRequestSummaryStatusEnum_queued;
   @BuiltValueEnumConst(wireName: r'running')
-  static const DsrRequestSummaryStatusEnum running = _$dsrRequestSummaryStatusEnum_running;
+  static const DsrRequestSummaryStatusEnum running =
+      _$dsrRequestSummaryStatusEnum_running;
   @BuiltValueEnumConst(wireName: r'awaiting_review')
-  static const DsrRequestSummaryStatusEnum awaitingReview = _$dsrRequestSummaryStatusEnum_awaitingReview;
+  static const DsrRequestSummaryStatusEnum awaitingReview =
+      _$dsrRequestSummaryStatusEnum_awaitingReview;
   @BuiltValueEnumConst(wireName: r'ready_to_release')
-  static const DsrRequestSummaryStatusEnum readyToRelease = _$dsrRequestSummaryStatusEnum_readyToRelease;
+  static const DsrRequestSummaryStatusEnum readyToRelease =
+      _$dsrRequestSummaryStatusEnum_readyToRelease;
   @BuiltValueEnumConst(wireName: r'released')
-  static const DsrRequestSummaryStatusEnum released = _$dsrRequestSummaryStatusEnum_released;
+  static const DsrRequestSummaryStatusEnum released =
+      _$dsrRequestSummaryStatusEnum_released;
   @BuiltValueEnumConst(wireName: r'succeeded')
-  static const DsrRequestSummaryStatusEnum succeeded = _$dsrRequestSummaryStatusEnum_succeeded;
+  static const DsrRequestSummaryStatusEnum succeeded =
+      _$dsrRequestSummaryStatusEnum_succeeded;
   @BuiltValueEnumConst(wireName: r'failed')
-  static const DsrRequestSummaryStatusEnum failed = _$dsrRequestSummaryStatusEnum_failed;
+  static const DsrRequestSummaryStatusEnum failed =
+      _$dsrRequestSummaryStatusEnum_failed;
   @BuiltValueEnumConst(wireName: r'canceled')
-  static const DsrRequestSummaryStatusEnum canceled = _$dsrRequestSummaryStatusEnum_canceled;
+  static const DsrRequestSummaryStatusEnum canceled =
+      _$dsrRequestSummaryStatusEnum_canceled;
 
-  static Serializer<DsrRequestSummaryStatusEnum> get serializer => _$dsrRequestSummaryStatusEnumSerializer;
+  static Serializer<DsrRequestSummaryStatusEnum> get serializer =>
+      _$dsrRequestSummaryStatusEnumSerializer;
 
-  const DsrRequestSummaryStatusEnum._(String name): super(name);
+  const DsrRequestSummaryStatusEnum._(String name) : super(name);
 
-  static BuiltSet<DsrRequestSummaryStatusEnum> get values => _$dsrRequestSummaryStatusEnumValues;
-  static DsrRequestSummaryStatusEnum valueOf(String name) => _$dsrRequestSummaryStatusEnumValueOf(name);
+  static BuiltSet<DsrRequestSummaryStatusEnum> get values =>
+      _$dsrRequestSummaryStatusEnumValues;
+  static DsrRequestSummaryStatusEnum valueOf(String name) =>
+      _$dsrRequestSummaryStatusEnumValueOf(name);
 }
 
 class DsrRequestSummaryTypeEnum extends EnumClass {
-
   @BuiltValueEnumConst(wireName: r'export')
-  static const DsrRequestSummaryTypeEnum export_ = _$dsrRequestSummaryTypeEnum_export_;
+  static const DsrRequestSummaryTypeEnum export_ =
+      _$dsrRequestSummaryTypeEnum_export_;
   @BuiltValueEnumConst(wireName: r'delete')
-  static const DsrRequestSummaryTypeEnum delete = _$dsrRequestSummaryTypeEnum_delete;
+  static const DsrRequestSummaryTypeEnum delete =
+      _$dsrRequestSummaryTypeEnum_delete;
 
-  static Serializer<DsrRequestSummaryTypeEnum> get serializer => _$dsrRequestSummaryTypeEnumSerializer;
+  static Serializer<DsrRequestSummaryTypeEnum> get serializer =>
+      _$dsrRequestSummaryTypeEnumSerializer;
 
-  const DsrRequestSummaryTypeEnum._(String name): super(name);
+  const DsrRequestSummaryTypeEnum._(String name) : super(name);
 
-  static BuiltSet<DsrRequestSummaryTypeEnum> get values => _$dsrRequestSummaryTypeEnumValues;
-  static DsrRequestSummaryTypeEnum valueOf(String name) => _$dsrRequestSummaryTypeEnumValueOf(name);
+  static BuiltSet<DsrRequestSummaryTypeEnum> get values =>
+      _$dsrRequestSummaryTypeEnumValues;
+  static DsrRequestSummaryTypeEnum valueOf(String name) =>
+      _$dsrRequestSummaryTypeEnumValueOf(name);
 }
-
