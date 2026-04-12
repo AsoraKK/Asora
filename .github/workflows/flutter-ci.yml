@@ -25,7 +25,14 @@ jobs:
       run: flutter pub get
       
     - name: Check formatting
-      run: dart format --output=none --set-exit-if-changed .
+      run: |
+        # Exclude generated API client files — they're produced by openapi-generator
+        # which doesn't emit dart-format-compliant output. The pre-commit hook
+        # formats them locally, but output isn't stable across environments.
+        dart format --output=none --set-exit-if-changed \
+          $(find . -name "*.dart" \
+            -not -path "./lib/generated/*" \
+            -not -path "./.dart_tool/*")
       
     - name: Analyze code
       run: flutter analyze
