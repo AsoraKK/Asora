@@ -59,6 +59,19 @@ class DeviceSecurityServiceImpl implements DeviceSecurityService {
 
   @override
   Future<DeviceSecurityState> evaluateSecurity() async {
+    // Web has no meaningful device integrity checks — always report secure.
+    if (kIsWeb) {
+      final webState = DeviceSecurityState(
+        isRootedOrJailbroken: false,
+        isEmulator: false,
+        isDebugBuild: kDebugMode,
+        lastCheckedAt: DateTime.now(),
+      );
+      _cachedState = webState;
+      _lastCheck = DateTime.now();
+      return webState;
+    }
+
     // Return cached result if still valid
     if (_cachedState != null &&
         _lastCheck != null &&

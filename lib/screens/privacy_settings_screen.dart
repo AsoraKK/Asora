@@ -9,6 +9,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -383,18 +384,28 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       // Convert data to pretty-printed JSON
       final jsonString = const JsonEncoder.withIndent('  ').convert(data);
 
-      // Generate filename with timestamp
+      if (kIsWeb) {
+        // On web, copy to clipboard (no file-system / share-sheet access).
+        await Clipboard.setData(ClipboardData(text: jsonString));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data export copied to clipboard.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Mobile/desktop: write to file and share.
       final timestamp = DateTime.now().toIso8601String().split('T')[0];
       final filename = 'asora-data-export-$timestamp.json';
 
-      // Get app documents directory
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$filename');
-
-      // Write the file
       await file.writeAsString(jsonString);
 
-      // Share the file
       final result = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
@@ -403,10 +414,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
         ),
       );
 
-      // Also copy to clipboard as backup
       await Clipboard.setData(ClipboardData(text: jsonString));
 
-      // Show success message
       if (mounted && result.status == ShareResultStatus.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -8,6 +8,7 @@
 library;
 
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -112,6 +113,7 @@ final analyticsClientProvider = Provider<AnalyticsClient>((ref) {
 
 /// Get platform name for analytics
 String _getPlatformName() {
+  if (kIsWeb) return 'web';
   if (Platform.isAndroid) return 'android';
   if (Platform.isIOS) return 'ios';
   if (Platform.isWindows) return 'windows';

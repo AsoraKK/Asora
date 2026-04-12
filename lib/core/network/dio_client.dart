@@ -30,8 +30,10 @@ final secureDioProvider = Provider<Dio>((ref) {
   // Create Dio instance
   final dio = Dio(BaseOptions(baseUrl: baseUrl));
 
-  // Configure TLS pinning for HTTPS
-  if (baseUrl.startsWith('https') && envConfig.security.tlsPins.enabled) {
+  // Configure TLS pinning for HTTPS (native only — browser handles TLS)
+  if (!kIsWeb &&
+      baseUrl.startsWith('https') &&
+      envConfig.security.tlsPins.enabled) {
     final uri = Uri.parse(baseUrl);
     final pinnedHost = uri.host;
     final validator = TlsPinningValidator(

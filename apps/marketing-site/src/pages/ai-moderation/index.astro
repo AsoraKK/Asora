@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="AI Moderation"
+  description="How Lythaus uses AI to keep the platform safe and human-first."
+  canonicalPath="/ai-moderation"
+>
+  <section class="section">
+    <h1>AI-Powered Moderation</h1>
+    <p>
+      Lythaus uses a layered moderation pipeline to protect the community while
+      keeping humans in the loop.
+    </p>
+
+    <h2>How it works</h2>
+    <ol>
+      <li>
+        <strong>Hive AI (primary)</strong> — every post is scored for toxicity,
+        spam, and policy violations in real time.
+      </li>
+      <li>
+        <strong>Azure Content Safety (fallback)</strong> — a second layer catches
+        anything Hive misses and provides category-level severity scores.
+      </li>
+      <li>
+        <strong>Human review</strong> — flagged content is queued for moderators.
+        No post is removed by AI alone.
+      </li>
+    </ol>
+
+    <h2>Transparency</h2>
+    <p>
+      If your post is flagged, you will see the reason and can appeal. Our
+      moderation console gives moderators full context before any action is
+      taken.
+    </p>
+
+    <h2>Appeals</h2>
+    <p>
+      Every moderation decision can be appealed. Appeals are reviewed by a
+      human moderator — never by the same AI that flagged the content.
+    </p>
+  </section>
+</BaseLayout>
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="AI & Moderation"
+  description="How Lythaus uses AI for content safety and moderation."
+  canonicalPath="/ai-moderation"
+>
+  <section class="section">
+    <h1>AI &amp; Moderation</h1>
+    <p>
+      Lythaus uses AI-assisted screening as part of its content safety pipeline.
+      Automated checks run before publication; human moderators review flagged
+      content and make final decisions.
+    </p>
+
+    <h2>How it works</h2>
+    <ol>
+      <li>Content is submitted by the author.</li>
+      <li>Automated safety screening checks for policy violations.</li>
+      <li>Flagged content is routed to human moderators for review.</li>
+      <li>Authors can appeal any moderation decision.</li>
+      <li>Community members participate in the appeals process.</li>
+    </ol>
+
+    <h2>Transparency</h2>
+    <p>
+      All moderation actions are logged. Authors receive clear explanations
+      for any action taken on their content. The appeals process is
+      available for every decision.
+    </p>
+  </section>
+</BaseLayout>

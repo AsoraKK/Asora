@@ -21,6 +21,7 @@ import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import 'package:asora/core/auth/auth_session_manager.dart';
 
+import 'package:asora/features/auth/application/web_auth_service.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
@@ -146,13 +147,18 @@ class OAuth2Service {
     this.launcher,
     this.sessionManager,
     this.debugForceWeb = false,
+    WebAuthService Function()? webAuthServiceFactory,
   }) : _appAuth = appAuth ?? const FlutterAppAuth(),
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-       _httpClient = httpClient ?? http.Client();
+       _httpClient = httpClient ?? http.Client(),
+       _webAuthServiceFactory =
+           webAuthServiceFactory ??
+           (() => WebAuthService(httpClient: httpClient));
 
   final FlutterAppAuth _appAuth;
   final FlutterSecureStorage _secureStorage;
   final http.Client _httpClient;
+  final WebAuthService Function() _webAuthServiceFactory;
 
   // Optional test/debug hooks that older tests rely on.
   final LauncherFn? launcher;
@@ -169,13 +175,21 @@ class OAuth2Service {
 
   /// Initiates the OAuth2 Authorization Code flow via AppAuth and returns the
   /// authenticated [User].
+  ///
+  /// On web, this initiates a browser redirect via [WebAuthService] and never
+  /// returns (the page navigates away). The callback is handled separately
+  /// by the `/auth/callback` route.
   Future<User> signInWithOAuth2({
     OAuth2Provider provider = OAuth2Provider.google,
   }) async {
-    if (kIsWeb) {
-      throw AuthFailure.platformError(
-        'Microsoft Entra sign-in is not supported on web builds yet.',
-      );
+    if (kIsWeb || debugForceWeb) {
+      // Web: redirect the browser to the authorization endpoint.
+      // This method will not return — the page navigates away.
+      // Import is conditional; on non-web this code path is unreachable.
+      final webAuth = _webAuthServiceFactory();
+      webAuth.startSignIn(provider: provider);
+      // This future never completes because the browser navigates away.
+      return Future<User>.delayed(const Duration(days: 365));
     }
 
     try {
@@ -245,6 +259,9 @@ class OAuth2Service {
 
   /// Refresh access token using the stored refresh token. Returns the refreshed
   /// [User] or `null` when refresh fails.
+  ///
+  /// On web, tokens live in sessionStorage and die on tab close. Refresh is
+  /// not supported — users re-authenticate by opening the app again.
   Future<User?> refreshToken() async {
     if (kIsWeb) return null;
 

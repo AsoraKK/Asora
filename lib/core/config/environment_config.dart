@@ -135,7 +135,9 @@ const _devMobileSecurity = MobileSecurityConfig(
 const _devConfig = EnvironmentConfig(
   environment: Environment.development,
   apiBaseUrl: kDebugMode
-      ? 'http://10.0.2.2:7072/api' // Local emulator
+      ? (kIsWeb
+            ? 'http://localhost:7072/api' // Local Functions on web
+            : 'http://10.0.2.2:7072/api') // Android emulator loopback
       : 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api',
   security: _devMobileSecurity,
 );

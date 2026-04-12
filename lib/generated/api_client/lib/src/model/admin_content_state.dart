@@ -10,15 +10,15 @@ import 'package:built_value/serializer.dart';
 part 'admin_content_state.g.dart';
 
 class AdminContentState extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'PUBLISHED')
   static const AdminContentState PUBLISHED = _$PUBLISHED;
   @BuiltValueEnumConst(wireName: r'BLOCKED')
   static const AdminContentState BLOCKED = _$BLOCKED;
 
-  static Serializer<AdminContentState> get serializer =>
-      _$adminContentStateSerializer;
+  static Serializer<AdminContentState> get serializer => _$adminContentStateSerializer;
 
-  const AdminContentState._(String name) : super(name);
+  const AdminContentState._(String name): super(name);
 
   static BuiltSet<AdminContentState> get values => _$values;
   static AdminContentState valueOf(String name) => _$valueOf(name);
@@ -31,3 +31,4 @@ class AdminContentState extends EnumClass {
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
 abstract class AdminContentStateMixin = Object with _$AdminContentStateMixin;
+

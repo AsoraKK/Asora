@@ -19,17 +19,21 @@ import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.userId});
+
+  /// When non-null, display this user's profile (read-only if not the
+  /// current user). When null, falls back to the signed-in user's own profile.
+  final String? userId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
+    final targetUserId = userId ?? currentUser?.id;
 
-    if (currentUser == null) {
+    if (targetUserId == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile')),
         body: const Center(
@@ -38,7 +42,7 @@ class ProfileScreen extends ConsumerWidget {
       );
     }
 
-    final profileState = ref.watch(publicUserProvider(currentUser.id));
+    final profileState = ref.watch(publicUserProvider(targetUserId));
     return profileState.when(
       data: (profile) => _buildProfile(context, ref, profile),
       loading: () => Scaffold(
@@ -63,7 +67,8 @@ class ProfileScreen extends ConsumerWidget {
     PublicUser profile,
   ) {
     final currentUser = ref.read(currentUserProvider);
-    if (currentUser != null && currentUser.id == profile.id) {
+    final isOwner = currentUser != null && currentUser.id == profile.id;
+    if (isOwner) {
       _logProfileComplete(ref, profile, currentUser.id);
     }
 
@@ -142,7 +147,7 @@ class ProfileScreen extends ConsumerWidget {
                   .toList(),
             ),
           ],
-          if (currentUser != null && currentUser.id != profile.id) ...[
+          if (!isOwner && currentUser != null) ...[
             const SizedBox(height: Spacing.lg),
             _FollowSection(
               profileId: profile.id,
@@ -155,52 +160,49 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('Reputation'),
             subtitle: Text('${profile.reputationScore} points'),
             trailing: TierBadge(label: profile.tier),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const RewardsDashboardScreen(),
-                ),
-              );
-            },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.shield_outlined),
-            title: const Text('Moderation hub'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ModerationConsoleScreen(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.admin_panel_settings_outlined),
-            title: const Text('Control Panel'),
-            subtitle: const Text('Admin tools & app preview'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ControlPanelShell(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
+          if (isOwner) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Moderation hub'),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ModerationConsoleScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              title: const Text('Control Panel'),
+              subtitle: const Text('Admin tools & app preview'),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ControlPanelShell(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: Spacing.lg),
           _TrustPassportCard(
             userId: profile.id,
             visibility: profile.trustPassportVisibility,
-            isOwner: currentUser != null && currentUser.id == profile.id,
+            isOwner: isOwner,
           ),
         ],
       ),

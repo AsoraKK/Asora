@@ -13,14 +13,13 @@ part 'admin_flag_detail_flags.g.dart';
 /// AdminFlagDetailFlags
 ///
 /// Properties:
-/// * [flagId]
-/// * [status]
-/// * [flagCount]
-/// * [reporterCount]
-/// * [reasons]
+/// * [flagId] 
+/// * [status] 
+/// * [flagCount] 
+/// * [reporterCount] 
+/// * [reasons] 
 @BuiltValue()
-abstract class AdminFlagDetailFlags
-    implements Built<AdminFlagDetailFlags, AdminFlagDetailFlagsBuilder> {
+abstract class AdminFlagDetailFlags implements Built<AdminFlagDetailFlags, AdminFlagDetailFlagsBuilder> {
   @BuiltValueField(wireName: r'flagId')
   String? get flagId;
 
@@ -38,24 +37,18 @@ abstract class AdminFlagDetailFlags
 
   AdminFlagDetailFlags._();
 
-  factory AdminFlagDetailFlags([void updates(AdminFlagDetailFlagsBuilder b)]) =
-      _$AdminFlagDetailFlags;
+  factory AdminFlagDetailFlags([void updates(AdminFlagDetailFlagsBuilder b)]) = _$AdminFlagDetailFlags;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagDetailFlagsBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagDetailFlags> get serializer =>
-      _$AdminFlagDetailFlagsSerializer();
+  static Serializer<AdminFlagDetailFlags> get serializer => _$AdminFlagDetailFlagsSerializer();
 }
 
-class _$AdminFlagDetailFlagsSerializer
-    implements PrimitiveSerializer<AdminFlagDetailFlags> {
+class _$AdminFlagDetailFlagsSerializer implements PrimitiveSerializer<AdminFlagDetailFlags> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagDetailFlags,
-    _$AdminFlagDetailFlags,
-  ];
+  final Iterable<Type> types = const [AdminFlagDetailFlags, _$AdminFlagDetailFlags];
 
   @override
   final String wireName = r'AdminFlagDetailFlags';
@@ -97,9 +90,7 @@ class _$AdminFlagDetailFlagsSerializer
       yield r'reasons';
       yield serializers.serialize(
         object.reasons,
-        specifiedType: const FullType(BuiltList, [
-          FullType(AdminFlagDetailReason),
-        ]),
+        specifiedType: const FullType(BuiltList, [FullType(AdminFlagDetailReason)]),
       );
     }
   }
@@ -110,11 +101,7 @@ class _$AdminFlagDetailFlagsSerializer
     AdminFlagDetailFlags object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -130,44 +117,38 @@ class _$AdminFlagDetailFlagsSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'flagId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.flagId = valueDes;
           break;
         case r'status':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.status = valueDes;
           break;
         case r'flagCount':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.flagCount = valueDes;
           break;
         case r'reporterCount':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.reporterCount = valueDes;
           break;
         case r'reasons':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminFlagDetailReason),
-                    ]),
-                  )
-                  as BuiltList<AdminFlagDetailReason>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminFlagDetailReason)]),
+          ) as BuiltList<AdminFlagDetailReason>;
           result.reasons.replace(valueDes);
           break;
         default:
@@ -198,3 +179,4 @@ class _$AdminFlagDetailFlagsSerializer
     return result.build();
   }
 }
+

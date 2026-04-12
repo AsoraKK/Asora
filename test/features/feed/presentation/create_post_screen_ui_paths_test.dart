@@ -63,6 +63,10 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> validateToken() async {}
   @override
   Future<void> continueAsGuest() async {}
+  @override
+  void setUser(User user) {
+    state = AsyncValue.data(user);
+  }
 }
 
 User _testUser() => User(

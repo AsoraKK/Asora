@@ -13,13 +13,11 @@ part 'admin_appeal_queue_response.g.dart';
 /// AdminAppealQueueResponse
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
-/// * [count]
+/// * [items] 
+/// * [nextCursor] 
+/// * [count] 
 @BuiltValue()
-abstract class AdminAppealQueueResponse
-    implements
-        Built<AdminAppealQueueResponse, AdminAppealQueueResponseBuilder> {
+abstract class AdminAppealQueueResponse implements Built<AdminAppealQueueResponse, AdminAppealQueueResponseBuilder> {
   @BuiltValueField(wireName: r'items')
   BuiltList<AdminAppealQueueItem> get items;
 
@@ -31,25 +29,18 @@ abstract class AdminAppealQueueResponse
 
   AdminAppealQueueResponse._();
 
-  factory AdminAppealQueueResponse([
-    void updates(AdminAppealQueueResponseBuilder b),
-  ]) = _$AdminAppealQueueResponse;
+  factory AdminAppealQueueResponse([void updates(AdminAppealQueueResponseBuilder b)]) = _$AdminAppealQueueResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealQueueResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealQueueResponse> get serializer =>
-      _$AdminAppealQueueResponseSerializer();
+  static Serializer<AdminAppealQueueResponse> get serializer => _$AdminAppealQueueResponseSerializer();
 }
 
-class _$AdminAppealQueueResponseSerializer
-    implements PrimitiveSerializer<AdminAppealQueueResponse> {
+class _$AdminAppealQueueResponseSerializer implements PrimitiveSerializer<AdminAppealQueueResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealQueueResponse,
-    _$AdminAppealQueueResponse,
-  ];
+  final Iterable<Type> types = const [AdminAppealQueueResponse, _$AdminAppealQueueResponse];
 
   @override
   final String wireName = r'AdminAppealQueueResponse';
@@ -62,9 +53,7 @@ class _$AdminAppealQueueResponseSerializer
     yield r'items';
     yield serializers.serialize(
       object.items,
-      specifiedType: const FullType(BuiltList, [
-        FullType(AdminAppealQueueItem),
-      ]),
+      specifiedType: const FullType(BuiltList, [FullType(AdminAppealQueueItem)]),
     );
     if (object.nextCursor != null) {
       yield r'nextCursor';
@@ -86,11 +75,7 @@ class _$AdminAppealQueueResponseSerializer
     AdminAppealQueueResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -106,29 +91,24 @@ class _$AdminAppealQueueResponseSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'items':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminAppealQueueItem),
-                    ]),
-                  )
-                  as BuiltList<AdminAppealQueueItem>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminAppealQueueItem)]),
+          ) as BuiltList<AdminAppealQueueItem>;
           result.items.replace(valueDes);
           break;
         case r'nextCursor':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.nextCursor = valueDes;
           break;
         case r'count':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(int))
-                  as int;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
           result.count = valueDes;
           break;
         default:
@@ -159,3 +139,4 @@ class _$AdminAppealQueueResponseSerializer
     return result.build();
   }
 }
+

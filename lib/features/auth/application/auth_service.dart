@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
@@ -308,6 +309,7 @@ class AuthService {
   }
 
   Future<bool> authenticateWithBiometrics() async {
+    if (kIsWeb) return false; // Biometrics not available on web.
     final canCheck = await _localAuth.canCheckBiometrics;
     if (!canCheck) return false;
     return _localAuth.authenticate(

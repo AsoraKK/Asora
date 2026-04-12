@@ -12,6 +12,7 @@ import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
 
 class ModerationApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -22,7 +23,7 @@ class ModerationApi {
   /// Flag content for review.
   ///
   /// Parameters:
-  /// * [flagContentRequest]
+  /// * [flagContentRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +33,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FlagContent202Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FlagContent202Response>> flagContent({
+  Future<Response<FlagContent202Response>> flagContent({ 
     required FlagContentRequest flagContentRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -44,10 +45,16 @@ class ModerationApi {
     final _path = r'/moderation/flag';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
         ],
         ...?extra,
       },
@@ -59,13 +66,14 @@ class ModerationApi {
 
     try {
       const _type = FullType(FlagContentRequest);
-      _bodyData = _serializers.serialize(
-        flagContentRequest,
-        specifiedType: _type,
-      );
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(flagContentRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -85,13 +93,11 @@ class ModerationApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(FlagContent202Response),
-                )
-                as FlagContent202Response;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(FlagContent202Response),
+      ) as FlagContent202Response;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -113,4 +119,5 @@ class ModerationApi {
       extra: _response.extra,
     );
   }
+
 }

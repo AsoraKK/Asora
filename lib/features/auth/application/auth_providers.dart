@@ -9,6 +9,7 @@
 /// 🤖 OAuth2: Complete PKCE flow integration
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -18,6 +19,7 @@ import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/application/auth_service.dart';
 import 'package:asora/features/auth/application/invite_redeem_service.dart';
+import 'package:asora/features/auth/application/web_auth_service.dart';
 import 'package:asora/core/network/dio_client.dart';
 
 /// OAuth2Service provider - manages OAuth2 PKCE flow
@@ -68,9 +70,34 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     notifier.state = notifier.state + 1;
   }
 
-  /// Load current authenticated user on app startup
+  /// Directly set the authenticated user (used by web auth callback).
+  void setUser(User user) {
+    _ref.read(guestModeProvider.notifier).state = false;
+    state = AsyncValue.data(user);
+    _bumpTokenVersion();
+  }
+
+  /// Load current authenticated user on app startup.
+  ///
+  /// On web the canonical token store is [sessionStorage] (managed by
+  /// [WebAuthService]).  [AuthService.getCurrentUser] reads
+  /// [FlutterSecureStorage] (IndexedDB on web) which is NOT where the
+  /// web callback stores tokens, so a page-reload would otherwise always
+  /// appear unauthenticated.  We therefore try [WebAuthService] first on
+  /// web before falling through to the platform path.
   Future<void> _loadCurrentUser() async {
     try {
+      if (kIsWeb) {
+        final webAuth = WebAuthService();
+        if (webAuth.isSignedIn()) {
+          final user = webAuth.getStoredUser();
+          if (user != null) {
+            state = AsyncValue.data(user);
+            return;
+          }
+        }
+      }
+
       final user = await _authService.getCurrentUser();
       state = AsyncValue.data(user);
     } catch (error, stackTrace) {
@@ -225,6 +252,13 @@ final authErrorProvider = Provider<AuthFailure?>((ref) {
 final jwtProvider = FutureProvider<String?>((ref) async {
   // Recompute whenever auth state bumps the token version counter.
   ref.watch(tokenVersionProvider);
+
+  // On web, tokens live in sessionStorage — read them directly.
+  if (kIsWeb) {
+    final token = WebAuthService().getAccessToken();
+    if (token != null && token.isNotEmpty) return token;
+    return null;
+  }
 
   final oauth2 = ref.watch(oauth2ServiceProvider);
   try {

@@ -13,6 +13,7 @@ import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 
 class AuthApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -33,7 +34,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [InviteValidationResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<InviteValidationResponse>> authInviteValidate({
+  Future<Response<InviteValidationResponse>> authInviteValidate({ 
     String? code,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -45,18 +46,18 @@ class AuthApi {
     final _path = r'/auth/invite/validate';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
     final _queryParameters = <String, dynamic>{
-      if (code != null)
-        r'code': encodeQueryParameter(
-          _serializers,
-          code,
-          const FullType(String),
-        ),
+      if (code != null) r'code': encodeQueryParameter(_serializers, code, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(
@@ -72,13 +73,11 @@ class AuthApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(InviteValidationResponse),
-                )
-                as InviteValidationResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(InviteValidationResponse),
+      ) as InviteValidationResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -100,4 +99,5 @@ class AuthApi {
       extra: _response.extra,
     );
   }
+
 }

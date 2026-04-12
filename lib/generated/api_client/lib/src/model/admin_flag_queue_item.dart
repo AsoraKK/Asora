@@ -17,15 +17,14 @@ part 'admin_flag_queue_item.g.dart';
 /// AdminFlagQueueItem
 ///
 /// Properties:
-/// * [content]
-/// * [author]
-/// * [flags]
-/// * [state]
-/// * [moderation]
-/// * [status]
+/// * [content] 
+/// * [author] 
+/// * [flags] 
+/// * [state] 
+/// * [moderation] 
+/// * [status] 
 @BuiltValue()
-abstract class AdminFlagQueueItem
-    implements Built<AdminFlagQueueItem, AdminFlagQueueItemBuilder> {
+abstract class AdminFlagQueueItem implements Built<AdminFlagQueueItem, AdminFlagQueueItemBuilder> {
   @BuiltValueField(wireName: r'content')
   AdminFlagQueueContent get content;
 
@@ -48,19 +47,16 @@ abstract class AdminFlagQueueItem
 
   AdminFlagQueueItem._();
 
-  factory AdminFlagQueueItem([void updates(AdminFlagQueueItemBuilder b)]) =
-      _$AdminFlagQueueItem;
+  factory AdminFlagQueueItem([void updates(AdminFlagQueueItemBuilder b)]) = _$AdminFlagQueueItem;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueItemBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueItem> get serializer =>
-      _$AdminFlagQueueItemSerializer();
+  static Serializer<AdminFlagQueueItem> get serializer => _$AdminFlagQueueItemSerializer();
 }
 
-class _$AdminFlagQueueItemSerializer
-    implements PrimitiveSerializer<AdminFlagQueueItem> {
+class _$AdminFlagQueueItemSerializer implements PrimitiveSerializer<AdminFlagQueueItem> {
   @override
   final Iterable<Type> types = const [AdminFlagQueueItem, _$AdminFlagQueueItem];
 
@@ -112,11 +108,7 @@ class _$AdminFlagQueueItemSerializer
     AdminFlagQueueItem object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -132,57 +124,45 @@ class _$AdminFlagQueueItemSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'content':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminFlagQueueContent),
-                  )
-                  as AdminFlagQueueContent;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminFlagQueueContent),
+          ) as AdminFlagQueueContent;
           result.content.replace(valueDes);
           break;
         case r'author':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminFlagQueueAuthor),
-                  )
-                  as AdminFlagQueueAuthor;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminFlagQueueAuthor),
+          ) as AdminFlagQueueAuthor;
           result.author.replace(valueDes);
           break;
         case r'flags':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminFlagQueueFlags),
-                  )
-                  as AdminFlagQueueFlags;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminFlagQueueFlags),
+          ) as AdminFlagQueueFlags;
           result.flags.replace(valueDes);
           break;
         case r'state':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminContentState),
-                  )
-                  as AdminContentState;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminContentState),
+          ) as AdminContentState;
           result.state = valueDes;
           break;
         case r'moderation':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminModerationSummary),
-                  )
-                  as AdminModerationSummary;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminModerationSummary),
+          ) as AdminModerationSummary;
           result.moderation.replace(valueDes);
           break;
         case r'status':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminQueueStatus),
-                  )
-                  as AdminQueueStatus;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminQueueStatus),
+          ) as AdminQueueStatus;
           result.status = valueDes;
           break;
         default:
@@ -213,3 +193,4 @@ class _$AdminFlagQueueItemSerializer
     return result.build();
   }
 }
+

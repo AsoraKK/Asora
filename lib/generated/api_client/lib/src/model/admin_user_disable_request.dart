@@ -11,11 +11,10 @@ part 'admin_user_disable_request.g.dart';
 /// AdminUserDisableRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
-abstract class AdminUserDisableRequest
-    implements Built<AdminUserDisableRequest, AdminUserDisableRequestBuilder> {
+abstract class AdminUserDisableRequest implements Built<AdminUserDisableRequest, AdminUserDisableRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
 
@@ -24,25 +23,18 @@ abstract class AdminUserDisableRequest
 
   AdminUserDisableRequest._();
 
-  factory AdminUserDisableRequest([
-    void updates(AdminUserDisableRequestBuilder b),
-  ]) = _$AdminUserDisableRequest;
+  factory AdminUserDisableRequest([void updates(AdminUserDisableRequestBuilder b)]) = _$AdminUserDisableRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserDisableRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserDisableRequest> get serializer =>
-      _$AdminUserDisableRequestSerializer();
+  static Serializer<AdminUserDisableRequest> get serializer => _$AdminUserDisableRequestSerializer();
 }
 
-class _$AdminUserDisableRequestSerializer
-    implements PrimitiveSerializer<AdminUserDisableRequest> {
+class _$AdminUserDisableRequestSerializer implements PrimitiveSerializer<AdminUserDisableRequest> {
   @override
-  final Iterable<Type> types = const [
-    AdminUserDisableRequest,
-    _$AdminUserDisableRequest,
-  ];
+  final Iterable<Type> types = const [AdminUserDisableRequest, _$AdminUserDisableRequest];
 
   @override
   final String wireName = r'AdminUserDisableRequest';
@@ -70,11 +62,7 @@ class _$AdminUserDisableRequestSerializer
     AdminUserDisableRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -90,21 +78,17 @@ class _$AdminUserDisableRequestSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'reasonCode':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.note = valueDes;
           break;
         default:
@@ -135,3 +119,4 @@ class _$AdminUserDisableRequestSerializer
     return result.build();
   }
 }
+

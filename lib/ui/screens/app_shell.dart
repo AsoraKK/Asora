@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +33,9 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
   }
 
   Future<void> _initializeNotifications() async {
+    // Push notifications via FCM are not supported on web yet.
+    if (kIsWeb) return;
+
     try {
       final pushService = ref.read(pushNotificationServiceProvider);
       await pushService.initialize();

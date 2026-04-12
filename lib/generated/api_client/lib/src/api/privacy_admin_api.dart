@@ -15,6 +15,7 @@ import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
 
 class PrivacyAdminApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -25,7 +26,7 @@ class PrivacyAdminApi {
   /// Removes a previously placed legal hold, allowing normal data lifecycle operations (including deletion) to resume.
   ///
   /// Parameters:
-  /// * [legalHoldClear]
+  /// * [legalHoldClear] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +36,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> clearLegalHold({
+  Future<Response<void>> clearLegalHold({ 
     required LegalHoldClear legalHoldClear,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -47,10 +48,16 @@ class PrivacyAdminApi {
     final _path = r'/admin/legal-hold/clear';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
         ],
         ...?extra,
       },
@@ -63,9 +70,13 @@ class PrivacyAdminApi {
     try {
       const _type = FullType(LegalHoldClear);
       _bodyData = _serializers.serialize(legalHoldClear, specifiedType: _type);
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -88,7 +99,7 @@ class PrivacyAdminApi {
   /// Queues a deletion job for a user&#39;s data as part of GDPR/CCPA right-to-erasure compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
-  /// * [dsrRequestInput]
+  /// * [dsrRequestInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -98,7 +109,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DsrRequestSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DsrRequestSummary>> enqueueDsrDelete({
+  Future<Response<DsrRequestSummary>> enqueueDsrDelete({ 
     required DsrRequestInput dsrRequestInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -110,10 +121,16 @@ class PrivacyAdminApi {
     final _path = r'/admin/dsr/delete';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
         ],
         ...?extra,
       },
@@ -126,9 +143,13 @@ class PrivacyAdminApi {
     try {
       const _type = FullType(DsrRequestInput);
       _bodyData = _serializers.serialize(dsrRequestInput, specifiedType: _type);
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -148,13 +169,11 @@ class PrivacyAdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(DsrRequestSummary),
-                )
-                as DsrRequestSummary;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DsrRequestSummary),
+      ) as DsrRequestSummary;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -181,7 +200,7 @@ class PrivacyAdminApi {
   /// Queues an export job for a user&#39;s data as part of GDPR/CCPA compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
-  /// * [dsrRequestInput]
+  /// * [dsrRequestInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -191,7 +210,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DsrRequestSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DsrRequestSummary>> enqueueDsrExport({
+  Future<Response<DsrRequestSummary>> enqueueDsrExport({ 
     required DsrRequestInput dsrRequestInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -203,10 +222,16 @@ class PrivacyAdminApi {
     final _path = r'/admin/dsr/export';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
         ],
         ...?extra,
       },
@@ -219,9 +244,13 @@ class PrivacyAdminApi {
     try {
       const _type = FullType(DsrRequestInput);
       _bodyData = _serializers.serialize(dsrRequestInput, specifiedType: _type);
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -241,13 +270,11 @@ class PrivacyAdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(DsrRequestSummary),
-                )
-                as DsrRequestSummary;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DsrRequestSummary),
+      ) as DsrRequestSummary;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -274,7 +301,7 @@ class PrivacyAdminApi {
   /// Places a legal hold on a user&#39;s data, preventing deletion until the hold is cleared. Used for litigation or regulatory preservation.
   ///
   /// Parameters:
-  /// * [legalHoldInput]
+  /// * [legalHoldInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -284,7 +311,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [LegalHoldRecord] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<LegalHoldRecord>> placeLegalHold({
+  Future<Response<LegalHoldRecord>> placeLegalHold({ 
     required LegalHoldInput legalHoldInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -296,10 +323,16 @@ class PrivacyAdminApi {
     final _path = r'/admin/legal-hold/place';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'bearerAuth'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
         ],
         ...?extra,
       },
@@ -312,9 +345,13 @@ class PrivacyAdminApi {
     try {
       const _type = FullType(LegalHoldInput);
       _bodyData = _serializers.serialize(legalHoldInput, specifiedType: _type);
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -334,13 +371,11 @@ class PrivacyAdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(LegalHoldRecord),
-                )
-                as LegalHoldRecord;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(LegalHoldRecord),
+      ) as LegalHoldRecord;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -362,4 +397,5 @@ class PrivacyAdminApi {
       extra: _response.extra,
     );
   }
+
 }

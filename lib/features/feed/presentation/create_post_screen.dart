@@ -8,6 +8,7 @@
 /// 📱 Platform: Flutter Material Design 3
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -489,11 +490,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 title: Text('Choose from gallery', style: GoogleFonts.sora()),
                 onTap: () => Navigator.of(context).pop('gallery'),
               ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: Text('Take a photo', style: GoogleFonts.sora()),
-                onTap: () => Navigator.of(context).pop('camera'),
-              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: Text('Take a photo', style: GoogleFonts.sora()),
+                  onTap: () => Navigator.of(context).pop('camera'),
+                ),
               ListTile(
                 leading: const Icon(Icons.link),
                 title: Text('Paste image URL', style: GoogleFonts.sora()),

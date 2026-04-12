@@ -178,7 +178,15 @@ class OAuth2Service {
   final FlutterSecureStorage _secureStorage;
   final String? _configEndpoint;
   final Tracer _tracer;
-  final FlutterAppAuth _appAuth = const FlutterAppAuth();
+
+  // Lazy-init: FlutterAppAuth is a native plugin that crashes on web if
+  // instantiated eagerly.  On web the new OAuth2Service in
+  // lib/features/auth/application/ handles auth instead.
+  FlutterAppAuth? _appAuthInstance;
+  FlutterAppAuth get _appAuth {
+    assert(!kIsWeb, 'Legacy OAuth2Service._appAuth must not be used on web');
+    return _appAuthInstance ??= const FlutterAppAuth();
+  }
 
   AuthConfig? _config;
   final StreamController<AuthState> _authStateController =

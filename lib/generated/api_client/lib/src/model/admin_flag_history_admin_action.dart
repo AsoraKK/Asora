@@ -11,15 +11,13 @@ part 'admin_flag_history_admin_action.g.dart';
 /// AdminFlagHistoryAdminAction
 ///
 /// Properties:
-/// * [type]
-/// * [at]
-/// * [action]
-/// * [reasonCode]
-/// * [note]
+/// * [type] 
+/// * [at] 
+/// * [action] 
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
-abstract class AdminFlagHistoryAdminAction
-    implements
-        Built<AdminFlagHistoryAdminAction, AdminFlagHistoryAdminActionBuilder> {
+abstract class AdminFlagHistoryAdminAction implements Built<AdminFlagHistoryAdminAction, AdminFlagHistoryAdminActionBuilder> {
   @BuiltValueField(wireName: r'type')
   String? get type;
 
@@ -37,25 +35,18 @@ abstract class AdminFlagHistoryAdminAction
 
   AdminFlagHistoryAdminAction._();
 
-  factory AdminFlagHistoryAdminAction([
-    void updates(AdminFlagHistoryAdminActionBuilder b),
-  ]) = _$AdminFlagHistoryAdminAction;
+  factory AdminFlagHistoryAdminAction([void updates(AdminFlagHistoryAdminActionBuilder b)]) = _$AdminFlagHistoryAdminAction;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagHistoryAdminActionBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagHistoryAdminAction> get serializer =>
-      _$AdminFlagHistoryAdminActionSerializer();
+  static Serializer<AdminFlagHistoryAdminAction> get serializer => _$AdminFlagHistoryAdminActionSerializer();
 }
 
-class _$AdminFlagHistoryAdminActionSerializer
-    implements PrimitiveSerializer<AdminFlagHistoryAdminAction> {
+class _$AdminFlagHistoryAdminActionSerializer implements PrimitiveSerializer<AdminFlagHistoryAdminAction> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagHistoryAdminAction,
-    _$AdminFlagHistoryAdminAction,
-  ];
+  final Iterable<Type> types = const [AdminFlagHistoryAdminAction, _$AdminFlagHistoryAdminAction];
 
   @override
   final String wireName = r'AdminFlagHistoryAdminAction';
@@ -108,11 +99,7 @@ class _$AdminFlagHistoryAdminActionSerializer
     AdminFlagHistoryAdminAction object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -128,48 +115,38 @@ class _$AdminFlagHistoryAdminActionSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'type':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.type = valueDes;
           break;
         case r'at':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
           result.at = valueDes;
           break;
         case r'action':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.action = valueDes;
           break;
         case r'reasonCode':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.reasonCode = valueDes;
           break;
         case r'note':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.note = valueDes;
           break;
         default:
@@ -200,3 +177,4 @@ class _$AdminFlagHistoryAdminActionSerializer
     return result.build();
   }
 }
+

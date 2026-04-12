@@ -93,9 +93,15 @@ class PushNotificationService {
   String? get currentToken => _currentToken;
 
   /// Get platform identifier ('fcm' for Android, 'apns' for iOS)
-  String get platform => Platform.isIOS ? 'apns' : 'fcm';
+  String get platform {
+    if (kIsWeb) return 'web';
+    return Platform.isIOS ? 'apns' : 'fcm';
+  }
 
   Future<void> _initializeLocalNotifications() async {
+    // Local notifications use platform channels not available on web.
+    if (kIsWeb) return;
+
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -116,7 +122,7 @@ class PushNotificationService {
     );
 
     // Create Android notification channel for high-priority notifications
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       const androidChannel = AndroidNotificationChannel(
         'lythaus_notifications', // id
         'Lythaus Notifications', // title

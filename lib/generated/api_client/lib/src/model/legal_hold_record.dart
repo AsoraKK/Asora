@@ -11,13 +11,12 @@ part 'legal_hold_record.g.dart';
 /// LegalHoldRecord
 ///
 /// Properties:
-/// * [id]
-/// * [scope]
-/// * [scopeId]
-/// * [reason]
+/// * [id] 
+/// * [scope] 
+/// * [scopeId] 
+/// * [reason] 
 @BuiltValue()
-abstract class LegalHoldRecord
-    implements Built<LegalHoldRecord, LegalHoldRecordBuilder> {
+abstract class LegalHoldRecord implements Built<LegalHoldRecord, LegalHoldRecordBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -32,19 +31,16 @@ abstract class LegalHoldRecord
 
   LegalHoldRecord._();
 
-  factory LegalHoldRecord([void updates(LegalHoldRecordBuilder b)]) =
-      _$LegalHoldRecord;
+  factory LegalHoldRecord([void updates(LegalHoldRecordBuilder b)]) = _$LegalHoldRecord;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(LegalHoldRecordBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<LegalHoldRecord> get serializer =>
-      _$LegalHoldRecordSerializer();
+  static Serializer<LegalHoldRecord> get serializer => _$LegalHoldRecordSerializer();
 }
 
-class _$LegalHoldRecordSerializer
-    implements PrimitiveSerializer<LegalHoldRecord> {
+class _$LegalHoldRecordSerializer implements PrimitiveSerializer<LegalHoldRecord> {
   @override
   final Iterable<Type> types = const [LegalHoldRecord, _$LegalHoldRecord];
 
@@ -92,11 +88,7 @@ class _$LegalHoldRecordSerializer
     LegalHoldRecord object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -112,39 +104,31 @@ class _$LegalHoldRecordSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'id':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.id = valueDes;
           break;
         case r'scope':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.scope = valueDes;
           break;
         case r'scopeId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.scopeId = valueDes;
           break;
         case r'reason':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
           result.reason = valueDes;
           break;
         default:
@@ -175,3 +159,4 @@ class _$LegalHoldRecordSerializer
     return result.build();
   }
 }
+

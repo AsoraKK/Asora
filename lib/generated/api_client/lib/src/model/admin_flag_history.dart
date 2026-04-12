@@ -15,12 +15,11 @@ part 'admin_flag_history.g.dart';
 /// AdminFlagHistory
 ///
 /// Properties:
-/// * [flags]
-/// * [adminActions]
-/// * [appeal]
+/// * [flags] 
+/// * [adminActions] 
+/// * [appeal] 
 @BuiltValue()
-abstract class AdminFlagHistory
-    implements Built<AdminFlagHistory, AdminFlagHistoryBuilder> {
+abstract class AdminFlagHistory implements Built<AdminFlagHistory, AdminFlagHistoryBuilder> {
   @BuiltValueField(wireName: r'flags')
   BuiltList<AdminFlagHistoryFlag>? get flags;
 
@@ -32,19 +31,16 @@ abstract class AdminFlagHistory
 
   AdminFlagHistory._();
 
-  factory AdminFlagHistory([void updates(AdminFlagHistoryBuilder b)]) =
-      _$AdminFlagHistory;
+  factory AdminFlagHistory([void updates(AdminFlagHistoryBuilder b)]) = _$AdminFlagHistory;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagHistoryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagHistory> get serializer =>
-      _$AdminFlagHistorySerializer();
+  static Serializer<AdminFlagHistory> get serializer => _$AdminFlagHistorySerializer();
 }
 
-class _$AdminFlagHistorySerializer
-    implements PrimitiveSerializer<AdminFlagHistory> {
+class _$AdminFlagHistorySerializer implements PrimitiveSerializer<AdminFlagHistory> {
   @override
   final Iterable<Type> types = const [AdminFlagHistory, _$AdminFlagHistory];
 
@@ -60,18 +56,14 @@ class _$AdminFlagHistorySerializer
       yield r'flags';
       yield serializers.serialize(
         object.flags,
-        specifiedType: const FullType(BuiltList, [
-          FullType(AdminFlagHistoryFlag),
-        ]),
+        specifiedType: const FullType(BuiltList, [FullType(AdminFlagHistoryFlag)]),
       );
     }
     if (object.adminActions != null) {
       yield r'adminActions';
       yield serializers.serialize(
         object.adminActions,
-        specifiedType: const FullType(BuiltList, [
-          FullType(AdminFlagHistoryAdminAction),
-        ]),
+        specifiedType: const FullType(BuiltList, [FullType(AdminFlagHistoryAdminAction)]),
       );
     }
     if (object.appeal != null) {
@@ -89,11 +81,7 @@ class _$AdminFlagHistorySerializer
     AdminFlagHistory object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -109,34 +97,24 @@ class _$AdminFlagHistorySerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'flags':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminFlagHistoryFlag),
-                    ]),
-                  )
-                  as BuiltList<AdminFlagHistoryFlag>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminFlagHistoryFlag)]),
+          ) as BuiltList<AdminFlagHistoryFlag>;
           result.flags.replace(valueDes);
           break;
         case r'adminActions':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(AdminFlagHistoryAdminAction),
-                    ]),
-                  )
-                  as BuiltList<AdminFlagHistoryAdminAction>;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(AdminFlagHistoryAdminAction)]),
+          ) as BuiltList<AdminFlagHistoryAdminAction>;
           result.adminActions.replace(valueDes);
           break;
         case r'appeal':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(AdminFlagHistoryAppeal),
-                  )
-                  as AdminFlagHistoryAppeal;
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AdminFlagHistoryAppeal),
+          ) as AdminFlagHistoryAppeal;
           result.appeal.replace(valueDes);
           break;
         default:
@@ -167,3 +145,4 @@ class _$AdminFlagHistorySerializer
     return result.build();
   }
 }
+
