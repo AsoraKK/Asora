@@ -26,8 +26,8 @@ class SocialFeedService implements SocialFeedRepository {
   final Dio _dio;
   final String _baseUrl;
 
-  SocialFeedService(this._dio, {String baseUrl = 'http://localhost:7072/api'})
-    : _baseUrl = baseUrl;
+  SocialFeedService(this._dio, {String? baseUrl})
+    : _baseUrl = baseUrl ?? _dio.options.baseUrl;
 
   Future<FeedResponse> _fetchCursorFeed({
     required String operation,
