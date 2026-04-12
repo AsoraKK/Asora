@@ -449,6 +449,8 @@ jobs:
         with:
           flutter-version-file: .fvmrc
 
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Flutter pub get
         run: flutter pub get
 
@@ -470,7 +472,16 @@ jobs:
         working-directory: android
         run: |
           set -euo pipefail
-          ./gradlew :app:processReleaseMainManifest
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon :app:processReleaseMainManifest; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "Gradle manifest task failed on attempt $attempt; retrying after backoff..."
+            sleep $((attempt * 15))
+          done
 
       - name: Validate required permissions in merged manifest
         run: |
