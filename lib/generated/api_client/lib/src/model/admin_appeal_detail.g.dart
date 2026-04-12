@@ -30,7 +30,8 @@ class _$AdminAppealDetail extends AdminAppealDetail {
 
   factory _$AdminAppealDetail([
     void Function(AdminAppealDetailBuilder)? updates,
-  ]) => (AdminAppealDetailBuilder()..update(updates))._build();
+  ]) =>
+      (AdminAppealDetailBuilder()..update(updates))._build();
 
   _$AdminAppealDetail._({
     this.appealId,
@@ -187,8 +188,7 @@ class AdminAppealDetailBuilder
   _$AdminAppealDetail _build() {
     _$AdminAppealDetail _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminAppealDetail._(
             appealId: appealId,
             contentId: contentId,

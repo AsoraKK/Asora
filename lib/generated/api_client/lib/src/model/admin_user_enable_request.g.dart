@@ -14,13 +14,15 @@ class _$AdminUserEnableRequest extends AdminUserEnableRequest {
 
   factory _$AdminUserEnableRequest([
     void Function(AdminUserEnableRequestBuilder)? updates,
-  ]) => (AdminUserEnableRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminUserEnableRequestBuilder()..update(updates))._build();
 
   _$AdminUserEnableRequest._({this.reasonCode, this.note}) : super._();
   @override
   AdminUserEnableRequest rebuild(
     void Function(AdminUserEnableRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminUserEnableRequestBuilder toBuilder() =>

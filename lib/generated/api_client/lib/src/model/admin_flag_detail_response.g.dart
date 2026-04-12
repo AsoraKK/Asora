@@ -20,7 +20,8 @@ class _$AdminFlagDetailResponse extends AdminFlagDetailResponse {
 
   factory _$AdminFlagDetailResponse([
     void Function(AdminFlagDetailResponseBuilder)? updates,
-  ]) => (AdminFlagDetailResponseBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagDetailResponseBuilder()..update(updates))._build();
 
   _$AdminFlagDetailResponse._({
     this.content,
@@ -32,7 +33,8 @@ class _$AdminFlagDetailResponse extends AdminFlagDetailResponse {
   @override
   AdminFlagDetailResponse rebuild(
     void Function(AdminFlagDetailResponseBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailResponseBuilder toBuilder() =>
@@ -138,8 +140,7 @@ class AdminFlagDetailResponseBuilder
   _$AdminFlagDetailResponse _build() {
     _$AdminFlagDetailResponse _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminFlagDetailResponse._(
             content: _content?.build(),
             flags: _flags?.build(),

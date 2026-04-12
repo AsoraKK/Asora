@@ -28,10 +28,10 @@ LegalHoldInputScopeEnum _$legalHoldInputScopeEnumValueOf(String name) {
 
 final BuiltSet<LegalHoldInputScopeEnum> _$legalHoldInputScopeEnumValues =
     BuiltSet<LegalHoldInputScopeEnum>(const <LegalHoldInputScopeEnum>[
-      _$legalHoldInputScopeEnum_user,
-      _$legalHoldInputScopeEnum_post,
-      _$legalHoldInputScopeEnum_case_,
-    ]);
+  _$legalHoldInputScopeEnum_user,
+  _$legalHoldInputScopeEnum_post,
+  _$legalHoldInputScopeEnum_case_,
+]);
 
 Serializer<LegalHoldInputScopeEnum> _$legalHoldInputScopeEnumSerializer =
     _$LegalHoldInputScopeEnumSerializer();
@@ -59,16 +59,18 @@ class _$LegalHoldInputScopeEnumSerializer
     Serializers serializers,
     LegalHoldInputScopeEnum object, {
     FullType specifiedType = FullType.unspecified,
-  }) => _toWire[object.name] ?? object.name;
+  }) =>
+      _toWire[object.name] ?? object.name;
 
   @override
   LegalHoldInputScopeEnum deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) => LegalHoldInputScopeEnum.valueOf(
-    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-  );
+  }) =>
+      LegalHoldInputScopeEnum.valueOf(
+        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+      );
 }
 
 class _$LegalHoldInput extends LegalHoldInput {
@@ -168,8 +170,7 @@ class LegalHoldInputBuilder
   LegalHoldInput build() => _build();
 
   _$LegalHoldInput _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$LegalHoldInput._(
           scope: BuiltValueNullFieldError.checkNotNull(
             scope,

@@ -18,7 +18,8 @@ class _$AdminFlagQueueFlags extends AdminFlagQueueFlags {
 
   factory _$AdminFlagQueueFlags([
     void Function(AdminFlagQueueFlagsBuilder)? updates,
-  ]) => (AdminFlagQueueFlagsBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagQueueFlagsBuilder()..update(updates))._build();
 
   _$AdminFlagQueueFlags._({
     this.flagId,
@@ -29,7 +30,8 @@ class _$AdminFlagQueueFlags extends AdminFlagQueueFlags {
   @override
   AdminFlagQueueFlags rebuild(
     void Function(AdminFlagQueueFlagsBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueFlagsBuilder toBuilder() =>
@@ -122,8 +124,7 @@ class AdminFlagQueueFlagsBuilder
   _$AdminFlagQueueFlags _build() {
     _$AdminFlagQueueFlags _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminFlagQueueFlags._(
             flagId: flagId,
             flagCount: flagCount,

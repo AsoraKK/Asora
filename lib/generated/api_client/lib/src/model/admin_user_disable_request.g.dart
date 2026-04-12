@@ -14,14 +14,16 @@ class _$AdminUserDisableRequest extends AdminUserDisableRequest {
 
   factory _$AdminUserDisableRequest([
     void Function(AdminUserDisableRequestBuilder)? updates,
-  ]) => (AdminUserDisableRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminUserDisableRequestBuilder()..update(updates))._build();
 
   _$AdminUserDisableRequest._({required this.reasonCode, required this.note})
-    : super._();
+      : super._();
   @override
   AdminUserDisableRequest rebuild(
     void Function(AdminUserDisableRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminUserDisableRequestBuilder toBuilder() =>
@@ -94,8 +96,7 @@ class AdminUserDisableRequestBuilder
   AdminUserDisableRequest build() => _build();
 
   _$AdminUserDisableRequest _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminUserDisableRequest._(
           reasonCode: BuiltValueNullFieldError.checkNotNull(
             reasonCode,

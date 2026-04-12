@@ -18,7 +18,8 @@ class _$AdminAppealContent extends AdminAppealContent {
 
   factory _$AdminAppealContent([
     void Function(AdminAppealContentBuilder)? updates,
-  ]) => (AdminAppealContentBuilder()..update(updates))._build();
+  ]) =>
+      (AdminAppealContentBuilder()..update(updates))._build();
 
   _$AdminAppealContent._({
     this.contentId,
@@ -29,7 +30,8 @@ class _$AdminAppealContent extends AdminAppealContent {
   @override
   AdminAppealContent rebuild(
     void Function(AdminAppealContentBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealContentBuilder toBuilder() =>
@@ -117,8 +119,7 @@ class AdminAppealContentBuilder
   AdminAppealContent build() => _build();
 
   _$AdminAppealContent _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminAppealContent._(
           contentId: contentId,
           type: type,

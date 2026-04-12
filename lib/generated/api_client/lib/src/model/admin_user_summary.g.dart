@@ -22,7 +22,8 @@ class _$AdminUserSummary extends AdminUserSummary {
 
   factory _$AdminUserSummary([
     void Function(AdminUserSummaryBuilder)? updates,
-  ]) => (AdminUserSummaryBuilder()..update(updates))._build();
+  ]) =>
+      (AdminUserSummaryBuilder()..update(updates))._build();
 
   _$AdminUserSummary._({
     this.userId,
@@ -138,8 +139,7 @@ class AdminUserSummaryBuilder
   AdminUserSummary build() => _build();
 
   _$AdminUserSummary _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminUserSummary._(
           userId: userId,
           displayName: displayName,

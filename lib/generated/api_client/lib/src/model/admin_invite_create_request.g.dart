@@ -18,7 +18,8 @@ class _$AdminInviteCreateRequest extends AdminInviteCreateRequest {
 
   factory _$AdminInviteCreateRequest([
     void Function(AdminInviteCreateRequestBuilder)? updates,
-  ]) => (AdminInviteCreateRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminInviteCreateRequestBuilder()..update(updates))._build();
 
   _$AdminInviteCreateRequest._({
     this.email,
@@ -29,7 +30,8 @@ class _$AdminInviteCreateRequest extends AdminInviteCreateRequest {
   @override
   AdminInviteCreateRequest rebuild(
     void Function(AdminInviteCreateRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteCreateRequestBuilder toBuilder() =>
@@ -119,8 +121,7 @@ class AdminInviteCreateRequestBuilder
   AdminInviteCreateRequest build() => _build();
 
   _$AdminInviteCreateRequest _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminInviteCreateRequest._(
           email: email,
           expiresInDays: expiresInDays,

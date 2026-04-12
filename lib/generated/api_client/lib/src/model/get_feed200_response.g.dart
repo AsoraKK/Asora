@@ -14,13 +14,15 @@ class _$GetFeed200Response extends GetFeed200Response {
 
   factory _$GetFeed200Response([
     void Function(GetFeed200ResponseBuilder)? updates,
-  ]) => (GetFeed200ResponseBuilder()..update(updates))._build();
+  ]) =>
+      (GetFeed200ResponseBuilder()..update(updates))._build();
 
   _$GetFeed200Response._({required this.items, required this.meta}) : super._();
   @override
   GetFeed200Response rebuild(
     void Function(GetFeed200ResponseBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   GetFeed200ResponseBuilder toBuilder() =>
@@ -97,8 +99,7 @@ class GetFeed200ResponseBuilder
   _$GetFeed200Response _build() {
     _$GetFeed200Response _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$GetFeed200Response._(items: items.build(), meta: meta.build());
     } catch (_) {
       late String _$failedField;

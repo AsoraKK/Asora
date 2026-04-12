@@ -16,7 +16,8 @@ class _$AdminContentActionRequest extends AdminContentActionRequest {
 
   factory _$AdminContentActionRequest([
     void Function(AdminContentActionRequestBuilder)? updates,
-  ]) => (AdminContentActionRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminContentActionRequestBuilder()..update(updates))._build();
 
   _$AdminContentActionRequest._({
     required this.contentType,
@@ -26,7 +27,8 @@ class _$AdminContentActionRequest extends AdminContentActionRequest {
   @override
   AdminContentActionRequest rebuild(
     void Function(AdminContentActionRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminContentActionRequestBuilder toBuilder() =>
@@ -108,8 +110,7 @@ class AdminContentActionRequestBuilder
   AdminContentActionRequest build() => _build();
 
   _$AdminContentActionRequest _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminContentActionRequest._(
           contentType: BuiltValueNullFieldError.checkNotNull(
             contentType,

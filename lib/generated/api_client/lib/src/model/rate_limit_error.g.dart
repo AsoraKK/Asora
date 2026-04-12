@@ -20,8 +20,8 @@ RateLimitErrorErrorEnum _$rateLimitErrorErrorEnumValueOf(String name) {
 
 final BuiltSet<RateLimitErrorErrorEnum> _$rateLimitErrorErrorEnumValues =
     BuiltSet<RateLimitErrorErrorEnum>(const <RateLimitErrorErrorEnum>[
-      _$rateLimitErrorErrorEnum_rateLimited,
-    ]);
+  _$rateLimitErrorErrorEnum_rateLimited,
+]);
 
 const RateLimitErrorScopeEnum _$rateLimitErrorScopeEnum_ip =
     const RateLimitErrorScopeEnum._('ip');
@@ -49,11 +49,11 @@ RateLimitErrorScopeEnum _$rateLimitErrorScopeEnumValueOf(String name) {
 
 final BuiltSet<RateLimitErrorScopeEnum> _$rateLimitErrorScopeEnumValues =
     BuiltSet<RateLimitErrorScopeEnum>(const <RateLimitErrorScopeEnum>[
-      _$rateLimitErrorScopeEnum_ip,
-      _$rateLimitErrorScopeEnum_user,
-      _$rateLimitErrorScopeEnum_route,
-      _$rateLimitErrorScopeEnum_authBackoff,
-    ]);
+  _$rateLimitErrorScopeEnum_ip,
+  _$rateLimitErrorScopeEnum_user,
+  _$rateLimitErrorScopeEnum_route,
+  _$rateLimitErrorScopeEnum_authBackoff,
+]);
 
 const RateLimitErrorReasonEnum _$rateLimitErrorReasonEnum_authBackoff =
     const RateLimitErrorReasonEnum._('authBackoff');
@@ -69,8 +69,8 @@ RateLimitErrorReasonEnum _$rateLimitErrorReasonEnumValueOf(String name) {
 
 final BuiltSet<RateLimitErrorReasonEnum> _$rateLimitErrorReasonEnumValues =
     BuiltSet<RateLimitErrorReasonEnum>(const <RateLimitErrorReasonEnum>[
-      _$rateLimitErrorReasonEnum_authBackoff,
-    ]);
+  _$rateLimitErrorReasonEnum_authBackoff,
+]);
 
 Serializer<RateLimitErrorErrorEnum> _$rateLimitErrorErrorEnumSerializer =
     _$RateLimitErrorErrorEnumSerializer();
@@ -98,16 +98,18 @@ class _$RateLimitErrorErrorEnumSerializer
     Serializers serializers,
     RateLimitErrorErrorEnum object, {
     FullType specifiedType = FullType.unspecified,
-  }) => _toWire[object.name] ?? object.name;
+  }) =>
+      _toWire[object.name] ?? object.name;
 
   @override
   RateLimitErrorErrorEnum deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) => RateLimitErrorErrorEnum.valueOf(
-    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-  );
+  }) =>
+      RateLimitErrorErrorEnum.valueOf(
+        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+      );
 }
 
 class _$RateLimitErrorScopeEnumSerializer
@@ -135,16 +137,18 @@ class _$RateLimitErrorScopeEnumSerializer
     Serializers serializers,
     RateLimitErrorScopeEnum object, {
     FullType specifiedType = FullType.unspecified,
-  }) => _toWire[object.name] ?? object.name;
+  }) =>
+      _toWire[object.name] ?? object.name;
 
   @override
   RateLimitErrorScopeEnum deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) => RateLimitErrorScopeEnum.valueOf(
-    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-  );
+  }) =>
+      RateLimitErrorScopeEnum.valueOf(
+        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+      );
 }
 
 class _$RateLimitErrorReasonEnumSerializer
@@ -166,16 +170,18 @@ class _$RateLimitErrorReasonEnumSerializer
     Serializers serializers,
     RateLimitErrorReasonEnum object, {
     FullType specifiedType = FullType.unspecified,
-  }) => _toWire[object.name] ?? object.name;
+  }) =>
+      _toWire[object.name] ?? object.name;
 
   @override
   RateLimitErrorReasonEnum deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) => RateLimitErrorReasonEnum.valueOf(
-    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-  );
+  }) =>
+      RateLimitErrorReasonEnum.valueOf(
+        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+      );
 }
 
 class _$RateLimitError extends RateLimitError {
@@ -321,8 +327,7 @@ class RateLimitErrorBuilder
   RateLimitError build() => _build();
 
   _$RateLimitError _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$RateLimitError._(
           error: BuiltValueNullFieldError.checkNotNull(
             error,

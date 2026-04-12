@@ -91,10 +91,9 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(CreatePost201Response),
-                )
-                as CreatePost201Response;
+              rawResponse,
+              specifiedType: const FullType(CreatePost201Response),
+            ) as CreatePost201Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -187,10 +186,9 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(FlagContent202Response),
-                )
-                as FlagContent202Response;
+              rawResponse,
+              specifiedType: const FullType(FlagContent202Response),
+            ) as FlagContent202Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -282,10 +280,9 @@ class DefaultApi {
       _responseData = rawResponse == null
           ? null
           : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(GetFeed200Response),
-                )
-                as GetFeed200Response;
+              rawResponse,
+              specifiedType: const FullType(GetFeed200Response),
+            ) as GetFeed200Response;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,

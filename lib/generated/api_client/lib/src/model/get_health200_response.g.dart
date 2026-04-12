@@ -20,7 +20,8 @@ class _$GetHealth200Response extends GetHealth200Response {
 
   factory _$GetHealth200Response([
     void Function(GetHealth200ResponseBuilder)? updates,
-  ]) => (GetHealth200ResponseBuilder()..update(updates))._build();
+  ]) =>
+      (GetHealth200ResponseBuilder()..update(updates))._build();
 
   _$GetHealth200Response._({
     this.ok,
@@ -32,7 +33,8 @@ class _$GetHealth200Response extends GetHealth200Response {
   @override
   GetHealth200Response rebuild(
     void Function(GetHealth200ResponseBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   GetHealth200ResponseBuilder toBuilder() =>
@@ -128,8 +130,7 @@ class GetHealth200ResponseBuilder
   GetHealth200Response build() => _build();
 
   _$GetHealth200Response _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$GetHealth200Response._(
           ok: ok,
           status: status,

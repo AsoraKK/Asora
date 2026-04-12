@@ -86,8 +86,7 @@ class ErrorBuilder implements Builder<Error, ErrorBuilder> {
   Error build() => _build();
 
   _$Error _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$Error._(
           code: BuiltValueNullFieldError.checkNotNull(code, r'Error', 'code'),
           message: BuiltValueNullFieldError.checkNotNull(

@@ -16,10 +16,11 @@ class _$AdminFlagHistory extends AdminFlagHistory {
 
   factory _$AdminFlagHistory([
     void Function(AdminFlagHistoryBuilder)? updates,
-  ]) => (AdminFlagHistoryBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagHistoryBuilder()..update(updates))._build();
 
   _$AdminFlagHistory._({this.flags, this.adminActions, this.appeal})
-    : super._();
+      : super._();
   @override
   AdminFlagHistory rebuild(void Function(AdminFlagHistoryBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -108,8 +109,7 @@ class AdminFlagHistoryBuilder
   _$AdminFlagHistory _build() {
     _$AdminFlagHistory _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminFlagHistory._(
             flags: _flags?.build(),
             adminActions: _adminActions?.build(),

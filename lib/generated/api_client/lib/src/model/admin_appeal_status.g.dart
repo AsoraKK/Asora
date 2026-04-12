@@ -68,16 +68,18 @@ class _$AdminAppealStatusSerializer
     Serializers serializers,
     AdminAppealStatus object, {
     FullType specifiedType = FullType.unspecified,
-  }) => _toWire[object.name] ?? object.name;
+  }) =>
+      _toWire[object.name] ?? object.name;
 
   @override
   AdminAppealStatus deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) => AdminAppealStatus.valueOf(
-    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-  );
+  }) =>
+      AdminAppealStatus.valueOf(
+        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+      );
 }
 
 // ignore_for_file: deprecated_member_use_from_same_package,type=lint

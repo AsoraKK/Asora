@@ -16,13 +16,15 @@ class _$AdminFlagHistoryAppeal extends AdminFlagHistoryAppeal {
 
   factory _$AdminFlagHistoryAppeal([
     void Function(AdminFlagHistoryAppealBuilder)? updates,
-  ]) => (AdminFlagHistoryAppealBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagHistoryAppealBuilder()..update(updates))._build();
 
   _$AdminFlagHistoryAppeal._({this.type, this.at, this.status}) : super._();
   @override
   AdminFlagHistoryAppeal rebuild(
     void Function(AdminFlagHistoryAppealBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagHistoryAppealBuilder toBuilder() =>

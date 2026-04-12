@@ -14,13 +14,15 @@ class _$AdminUserActionResponse extends AdminUserActionResponse {
 
   factory _$AdminUserActionResponse([
     void Function(AdminUserActionResponseBuilder)? updates,
-  ]) => (AdminUserActionResponseBuilder()..update(updates))._build();
+  ]) =>
+      (AdminUserActionResponseBuilder()..update(updates))._build();
 
   _$AdminUserActionResponse._({this.userId, this.status}) : super._();
   @override
   AdminUserActionResponse rebuild(
     void Function(AdminUserActionResponseBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminUserActionResponseBuilder toBuilder() =>

@@ -24,7 +24,8 @@ class _$AdminAppealQueueItem extends AdminAppealQueueItem {
 
   factory _$AdminAppealQueueItem([
     void Function(AdminAppealQueueItemBuilder)? updates,
-  ]) => (AdminAppealQueueItemBuilder()..update(updates))._build();
+  ]) =>
+      (AdminAppealQueueItemBuilder()..update(updates))._build();
 
   _$AdminAppealQueueItem._({
     this.appealId,
@@ -38,7 +39,8 @@ class _$AdminAppealQueueItem extends AdminAppealQueueItem {
   @override
   AdminAppealQueueItem rebuild(
     void Function(AdminAppealQueueItemBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealQueueItemBuilder toBuilder() =>
@@ -152,8 +154,7 @@ class AdminAppealQueueItemBuilder
   AdminAppealQueueItem build() => _build();
 
   _$AdminAppealQueueItem _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminAppealQueueItem._(
           appealId: appealId,
           contentId: contentId,

@@ -14,14 +14,16 @@ class _$AdminAppealDecisionRequest extends AdminAppealDecisionRequest {
 
   factory _$AdminAppealDecisionRequest([
     void Function(AdminAppealDecisionRequestBuilder)? updates,
-  ]) => (AdminAppealDecisionRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminAppealDecisionRequestBuilder()..update(updates))._build();
 
   _$AdminAppealDecisionRequest._({required this.reasonCode, this.note})
-    : super._();
+      : super._();
   @override
   AdminAppealDecisionRequest rebuild(
     void Function(AdminAppealDecisionRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealDecisionRequestBuilder toBuilder() =>
@@ -94,8 +96,7 @@ class AdminAppealDecisionRequestBuilder
   AdminAppealDecisionRequest build() => _build();
 
   _$AdminAppealDecisionRequest _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminAppealDecisionRequest._(
           reasonCode: BuiltValueNullFieldError.checkNotNull(
             reasonCode,

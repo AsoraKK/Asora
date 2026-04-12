@@ -18,7 +18,8 @@ class _$AdminInviteBatchRequest extends AdminInviteBatchRequest {
 
   factory _$AdminInviteBatchRequest([
     void Function(AdminInviteBatchRequestBuilder)? updates,
-  ]) => (AdminInviteBatchRequestBuilder()..update(updates))._build();
+  ]) =>
+      (AdminInviteBatchRequestBuilder()..update(updates))._build();
 
   _$AdminInviteBatchRequest._({
     required this.count,
@@ -29,7 +30,8 @@ class _$AdminInviteBatchRequest extends AdminInviteBatchRequest {
   @override
   AdminInviteBatchRequest rebuild(
     void Function(AdminInviteBatchRequestBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteBatchRequestBuilder toBuilder() =>
@@ -119,8 +121,7 @@ class AdminInviteBatchRequestBuilder
   AdminInviteBatchRequest build() => _build();
 
   _$AdminInviteBatchRequest _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminInviteBatchRequest._(
           count: BuiltValueNullFieldError.checkNotNull(
             count,

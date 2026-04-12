@@ -16,14 +16,16 @@ class _$AdminFlagDetailReason extends AdminFlagDetailReason {
 
   factory _$AdminFlagDetailReason([
     void Function(AdminFlagDetailReasonBuilder)? updates,
-  ]) => (AdminFlagDetailReasonBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagDetailReasonBuilder()..update(updates))._build();
 
   _$AdminFlagDetailReason._({this.reason, this.createdAt, this.status})
-    : super._();
+      : super._();
   @override
   AdminFlagDetailReason rebuild(
     void Function(AdminFlagDetailReasonBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailReasonBuilder toBuilder() =>
@@ -103,8 +105,7 @@ class AdminFlagDetailReasonBuilder
   AdminFlagDetailReason build() => _build();
 
   _$AdminFlagDetailReason _build() {
-    final _$result =
-        _$v ??
+    final _$result = _$v ??
         _$AdminFlagDetailReason._(
           reason: reason,
           createdAt: createdAt,

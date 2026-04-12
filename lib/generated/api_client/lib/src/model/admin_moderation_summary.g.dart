@@ -16,7 +16,8 @@ class _$AdminModerationSummary extends AdminModerationSummary {
 
   factory _$AdminModerationSummary([
     void Function(AdminModerationSummaryBuilder)? updates,
-  ]) => (AdminModerationSummaryBuilder()..update(updates))._build();
+  ]) =>
+      (AdminModerationSummaryBuilder()..update(updates))._build();
 
   _$AdminModerationSummary._({
     this.lastDecisionAt,
@@ -26,7 +27,8 @@ class _$AdminModerationSummary extends AdminModerationSummary {
   @override
   AdminModerationSummary rebuild(
     void Function(AdminModerationSummaryBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminModerationSummaryBuilder toBuilder() =>
@@ -112,8 +114,7 @@ class AdminModerationSummaryBuilder
   _$AdminModerationSummary _build() {
     _$AdminModerationSummary _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminModerationSummary._(
             lastDecisionAt: lastDecisionAt,
             configVersionUsed: configVersionUsed,

@@ -20,7 +20,8 @@ class _$AdminFlagDetailFlags extends AdminFlagDetailFlags {
 
   factory _$AdminFlagDetailFlags([
     void Function(AdminFlagDetailFlagsBuilder)? updates,
-  ]) => (AdminFlagDetailFlagsBuilder()..update(updates))._build();
+  ]) =>
+      (AdminFlagDetailFlagsBuilder()..update(updates))._build();
 
   _$AdminFlagDetailFlags._({
     this.flagId,
@@ -32,7 +33,8 @@ class _$AdminFlagDetailFlags extends AdminFlagDetailFlags {
   @override
   AdminFlagDetailFlags rebuild(
     void Function(AdminFlagDetailFlagsBuilder) updates,
-  ) => (toBuilder()..update(updates)).build();
+  ) =>
+      (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailFlagsBuilder toBuilder() =>
@@ -133,8 +135,7 @@ class AdminFlagDetailFlagsBuilder
   _$AdminFlagDetailFlags _build() {
     _$AdminFlagDetailFlags _$result;
     try {
-      _$result =
-          _$v ??
+      _$result = _$v ??
           _$AdminFlagDetailFlags._(
             flagId: flagId,
             status: status,
