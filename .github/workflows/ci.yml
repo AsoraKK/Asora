@@ -449,7 +449,7 @@ jobs:
         with:
           flutter-version-file: .fvmrc
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Flutter pub get
         run: flutter pub get
