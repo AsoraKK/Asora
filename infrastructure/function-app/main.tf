@@ -33,7 +33,11 @@ resource "azurerm_linux_function_app_slot" "main" {
 
   site_config {
     application_stack {
-      node_version = "22"
+      # Schema placeholder: azurerm ~>3 requires one of the stack fields.
+      # This slot resource is count=0 for Flex Consumption (use_slot=false default)
+      # and is never deployed. The live Node 22 runtime is managed via
+      # functionAppConfig.runtime through the ARM PATCH in the deploy workflow.
+      node_version = "20"
     }
 
     # Health endpoint must be accessible
