@@ -33,7 +33,7 @@ resource "azurerm_linux_function_app_slot" "main" {
 
   site_config {
     application_stack {
-      node_version = "20"
+      node_version = "22"
     }
 
     # Health endpoint must be accessible
@@ -53,7 +53,7 @@ resource "azurerm_linux_function_app_slot" "main" {
       AUDIT_HMAC_KEY           = "@Microsoft.KeyVault(SecretUri=${data.azurerm_key_vault.target.vault_uri}secrets/audit-hmac-key/)"
 
       # Runtime settings (do NOT set FUNCTIONS_WORKER_RUNTIME for Flex)
-      WEBSITE_NODE_DEFAULT_VERSION = "~20"
+      WEBSITE_NODE_DEFAULT_VERSION = "~22"
       FUNCTIONS_EXTENSION_VERSION  = "~4"
 
       # Observability
@@ -99,16 +99,12 @@ resource "null_resource" "enforce_app_settings" {
   }
 }
 
-# Grant Key Vault access to the function app's managed identity
-resource "azurerm_key_vault_access_policy" "function_app" {
-  key_vault_id = data.azurerm_key_vault.target.id
-  tenant_id    = data.azurerm_linux_function_app.target.identity[0].tenant_id
-  object_id    = data.azurerm_linux_function_app.target.identity[0].principal_id
-
-  secret_permissions = [
-    "Get",
-    "List"
-  ]
+# Grant Key Vault Secrets User role to the function app's managed identity (Azure RBAC).
+# enableRbacAuthorization must be true on the Key Vault; legacy access policies are not used.
+resource "azurerm_role_assignment" "function_app_kv_secrets_user" {
+  scope                = data.azurerm_key_vault.target.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = data.azurerm_linux_function_app.target.identity[0].principal_id
 }
 
 output "function_app_identity" {
