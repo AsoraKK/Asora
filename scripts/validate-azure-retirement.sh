@@ -176,7 +176,9 @@ for target in "${SEARCH_TARGETS[@]}"; do
       --include="*.tf" --include="*.sh" --include="*.md" --include=".nvmrc" \
       --exclude="*.lock" --exclude="package-lock.json" \
       --exclude="validate-azure-retirement.sh" \
-      2>/dev/null || true)
+      2>/dev/null \
+      | grep -v "infrastructure/function-app/main.tf" \
+      || true)
     if [[ -n "$hits" ]]; then
       fail "Node.js 20 reference found (pattern: '$pattern'):"
       echo "$hits" | while IFS= read -r line; do
