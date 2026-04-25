@@ -17,7 +17,7 @@ echo "Creating CANARY Function App (${CANARY}) in ${RG}/${REGION} (Flex)";
 # NOTE: FlexConsumption creation flags can vary by CLI version. Options:
 # 1) If supported by your az CLI:
 # az functionapp create -g "$RG" -n "$CANARY" --consumption-plan-location "$REGION" \
-#   --runtime node --runtime-version 20 --functions-version 4 --os-type linux --sku FlexConsumption
+#   --runtime node --runtime-version 22 --functions-version 4 --os-type linux --sku FlexConsumption
 # 2) Otherwise, provision via Portal/ARM/Bicep and reuse here.
 
 echo "Ensure Application Insights is linked via app setting (optional).";

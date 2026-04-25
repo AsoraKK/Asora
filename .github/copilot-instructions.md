@@ -9,7 +9,7 @@
 
 ## What to know first
 - Start with `docs/ADR_001_TLDR.md` for the product vision, target KPIs, and how the Flutter front end aligns with Azure Functions + Cosmos.
-- The repo is split: Flutter app in `lib/` (Riverpod-based clean architecture) and Node.js 20 Azure Functions in `functions/` (TypeScript → CJS build output under `dist/`).
+- The repo is split: Flutter app in `lib/` (Riverpod-based clean architecture) and Node.js 22 Azure Functions in `functions/` (TypeScript → CJS build output under `dist/`).
 
 ## Architecture hot points
 - **Flutter**: Features live under `lib/features/<feature>` with `domain/`, `application/`, `presentation/` layers. Navigation is gated by `lib/features/auth/presentation/auth_gate.dart`. Critical security/privacy flows sit in `lib/p1_modules/` and must keep ≥80 % coverage (enforced via `check_p1_coverage.sh`).
@@ -23,7 +23,7 @@
 - **CI helpers**: `quick-check.sh` executes format + targeted tests; `quick_coverage_demo.sh` is a minimal coverage smoke.
 
 ## Deployment workflow essentials
-- `.github/workflows/deploy-asora-function-dev.yml` builds from `functions/`, uploads to blob storage, and deploys to Flex Consumption via ARM `/publish` API (no Kudu). Uses storage-based deployment with OIDC authentication. The PATCH step merges `functionAppConfig` to preserve `deployment.storage` and other critical fields. Flex apps must **not** set `FUNCTIONS_WORKER_RUNTIME`, `WEBSITE_RUN_FROM_PACKAGE`, or Kudu-related settings; runtime is configured via ARM PATCH (`node@20`, `instanceMemoryMB: 2048`).
+- `.github/workflows/deploy-asora-function-dev.yml` builds from `functions/`, uploads to blob storage, and deploys to Flex Consumption via ARM `/publish` API (no Kudu). Uses storage-based deployment with OIDC authentication. The PATCH step merges `functionAppConfig` to preserve `deployment.storage` and other critical fields. Flex apps must **not** set `FUNCTIONS_WORKER_RUNTIME`, `WEBSITE_RUN_FROM_PACKAGE`, or Kudu-related settings; runtime is configured via ARM PATCH (`node@22`, `instanceMemoryMB: 2048`).
 - Scripts like `.github/scripts/normalize_flex.sh` and `fix-flex-settings.sh` exist to clean legacy settings—rely on ARM patches rather than app-setting writes.
 - PR validations: `canary.yml` handles prerelease tagging, `e2e-integration.yml` fetches admin keys post-deploy and runs smoke requests.
 

@@ -7,9 +7,9 @@ if [ -d "$HOME/.nvm" ]; then
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
   
-  # Use Node.js 20 if available
-  if nvm ls 20 >/dev/null 2>&1; then
-    nvm use 20 >/dev/null || true
+  # Use Node.js 22 if available
+  if nvm ls 22 >/dev/null 2>&1; then
+    nvm use 22 >/dev/null || true
   fi
 fi
 
@@ -28,8 +28,8 @@ echo "Flutter version: $FLUTTER_VERSION"
 echo "Azure Functions Core Tools version: $FUNC_VERSION"
 
 # Version checks
-if [[ ! "$NODE_VERSION" =~ ^v20\. ]]; then
-  echo "⚠️  WARNING: Node.js $NODE_VERSION detected, CI expects v20.x"
+if [[ ! "$NODE_VERSION" =~ ^v22\. ]]; then
+  echo "⚠️  WARNING: Node.js $NODE_VERSION detected, CI expects v22.x"
   echo "   This will cause Azure Functions compatibility issues"
 fi
 
@@ -107,7 +107,7 @@ cp host.json dist/ 2>/dev/null || true
 cp local.settings.json dist/ 2>/dev/null || true
 popd > /dev/null
 
-if [[ "$NODE_VERSION" =~ ^v20\. ]]; then
+if [[ "$NODE_VERSION" =~ ^v22\. ]]; then
   echo "Testing function host startup..."
   pushd functions/dist > /dev/null
   timeout 15s func start --port 7072 --javascript > /tmp/func-test.log 2>&1 &
@@ -140,16 +140,16 @@ if [[ "$NODE_VERSION" =~ ^v20\. ]]; then
   fi
   popd > /dev/null
 else
-  echo "⚠️  Skipping function host test - Node.js v20.x required"
+  echo "⚠️  Skipping function host test - Node.js v22.x required"
   echo "   Current version: $NODE_VERSION"
 fi
 
 echo ""
 echo "✅ All CI parity checks completed!"
 echo "=================================="
-if [[ "$NODE_VERSION" =~ ^v20\. ]]; then
+if [[ "$NODE_VERSION" =~ ^v22\. ]]; then
   echo "🎯 Ready for commit - no surprises expected in GitHub Actions"
 else
   echo "⚠️  Ready for commit, but Node.js version mismatch detected"
-  echo "   Consider using Node.js v20.x for full local testing"
+  echo "   Consider using Node.js v22.x for full local testing"
 fi

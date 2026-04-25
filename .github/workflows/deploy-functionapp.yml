@@ -33,7 +33,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   FUNCTIONS_WORKER_RUNTIME: 'node'
   WORKING_DIR: 'functions'
 
@@ -100,17 +100,17 @@ jobs:
       - name: Show Azure context
         run: az account show -o table
 
-      - name: Configure Function App for Node 20
+      - name: Configure Function App for Node 22
         run: |
-          echo "Configuring Function App runtime and app settings for Node 20..."
+          echo "Configuring Function App runtime and app settings for Node 22..."
           az functionapp config appsettings set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~20
+            --settings FUNCTIONS_EXTENSION_VERSION=~4 FUNCTIONS_WORKER_RUNTIME=node WEBSITE_NODE_DEFAULT_VERSION=~22
           az functionapp config set \
             --name "$AZURE_FUNCTIONAPP_NAME" \
             --resource-group "$AZURE_RESOURCE_GROUP" \
-            --linux-fx-version "Node|20"
+            --linux-fx-version "Node|22"
 
       - name: Build functions
         working-directory: ${{ env.WORKING_DIR }}

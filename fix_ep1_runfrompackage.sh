@@ -26,7 +26,7 @@ cat > package.json <<'JSON'
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
-  "engines": { "node": ">=20 <21" },
+  "engines": { "node": ">=22 <23" },
   "dependencies": { "@azure/functions": "^4.7.2" }
 }
 JSON

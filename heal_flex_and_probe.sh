@@ -29,7 +29,7 @@ cat >"$APPDIR/package.json" <<'JSON'
 {
   "name": "flex-probe",
   "version": "1.0.0",
-  "engines": { "node": ">=20 <21" },
+  "engines": { "node": ">=22 <23" },
   "dependencies": { "@azure/functions": "^3.5.1" }
 }
 JSON

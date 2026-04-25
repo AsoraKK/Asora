@@ -50,7 +50,7 @@ env:
   TARGET_ENV: ${{ github.event.inputs.target_environment || 'dev' }}
   RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
   FUNC_APP: ${{ github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
-  NODE_VERSION: 20
+  NODE_VERSION: 22
 
 jobs:
   deploy:
