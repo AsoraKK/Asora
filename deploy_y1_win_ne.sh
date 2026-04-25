@@ -29,13 +29,14 @@ az group create -n "${RG}" -l "${LOC}" -o none
 
 echo "== 2) Storage account (Functions backend) =="
 az storage account create -g "${RG}" -n "${SA}" -l "${LOC}" \
-  --sku Standard_LRS --kind StorageV2 --https-only true -o none
+  --sku Standard_LRS --kind StorageV2 --https-only true \
+  --min-tls-version TLS1_2 -o none
 
-echo "== 3) Windows Consumption (Y1) Function App, Node v20, Functions v4 =="
+echo "== 3) Windows Consumption (Y1) Function App, Node v22, Functions v4 =="
 az functionapp create -g "${RG}" -n "${APP}" \
   --consumption-plan-location "${LOC}" \
   --os-type Windows \
-  --runtime node --runtime-version 20 \
+  --runtime node --runtime-version 22 \
   --functions-version 4 \
   --storage-account "${SA}" -o none
 
