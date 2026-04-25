@@ -50,11 +50,11 @@ echo -e "${YELLOW}Step 1: One-time Function App hardening...${NC}"
 az functionapp config appsettings set -g "$RG" -n "$APP" --settings \
     FUNCTIONS_EXTENSION_VERSION=~4 \
     FUNCTIONS_WORKER_RUNTIME=node \
-    WEBSITE_NODE_DEFAULT_VERSION=~20 \
+    WEBSITE_NODE_DEFAULT_VERSION=~22 \
     WEBSITE_RUN_FROM_PACKAGE=1
 
 # Set runtime stack
-az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "NODE|20"
+az functionapp config set -g "$RG" -n "$APP" --linux-fx-version "NODE|22"
 
 echo -e "${GREEN}✅ Function App hardened${NC}"
 

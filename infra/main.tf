@@ -117,6 +117,10 @@ resource "azurerm_postgresql_flexible_server" "pg" {
   administrator_login    = var.postgresql_admin
   administrator_password = var.postgresql_password
 
+  # ha-posture: none (burstable-sku-ha-not-supported)
+  # B_Standard_B1ms is a Burstable SKU; HA requires General Purpose or Memory Optimized tier.
+  # This is a dev/non-critical environment. Upgrade sku_name for HA-capable deployments.
+  # Reviewed for Azure HA auto-migration (1 Sept 2026): not affected — Burstable tier is exempt.
   sku_name   = "B_Standard_B1ms" # 1 vCPU / 2 GiB RAM
   storage_mb = 32768             # 32 GiB
   version    = 16
@@ -334,14 +338,14 @@ resource "azurerm_linux_function_app" "function_app" {
 
   site_config {
     application_stack {
-      node_version = "20"
+      node_version = "22"
     }
   }
 
   app_settings = {
     FUNCTIONS_EXTENSION_VERSION  = "~4"
     FUNCTIONS_WORKER_RUNTIME     = "node"
-    WEBSITE_NODE_DEFAULT_VERSION = "~20"
+    WEBSITE_NODE_DEFAULT_VERSION = "~22"
   }
 
   tags = {

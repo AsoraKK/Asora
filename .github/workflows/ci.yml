@@ -121,7 +121,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Run validator unit tests (node:test)
         run: node --test scripts/tests/validate-cosmos-contract.test.js
@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Run route guard unit tests
         run: node --test scripts/tests/validate-functions-route-guards.test.js
@@ -185,7 +185,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Regenerate TODO triage markdown
         run: node scripts/generate-todo-triage.js
@@ -222,7 +222,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: npm ci
@@ -252,7 +252,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/control-panel/package-lock.json
 
@@ -277,7 +277,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/marketing-site/package-lock.json
 
@@ -577,7 +577,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Verify functions build script exists
@@ -663,3 +663,12 @@ jobs:
           name: functions-v4-artifact
           path: dist-v4-final.zip
           if-no-files-found: error
+
+  azure-retirement-validation:
+    name: Azure Retirement Hardening Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Azure retirement validation
+        run: bash scripts/validate-azure-retirement.sh

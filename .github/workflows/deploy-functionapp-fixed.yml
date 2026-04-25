@@ -27,7 +27,7 @@ env:
   AZURE_FUNCTIONAPP_NAME: 'asora-function-dev'
   AZURE_RESOURCE_GROUP: 'asora-psql-flex'
   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   FUNCTIONS_WORKER_RUNTIME: 'node'
 
 jobs:
@@ -46,10 +46,10 @@ jobs:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v4
 
-    - name: 'Setup Node.js 20'
+    - name: 'Setup Node.js 22'
       uses: actions/setup-node@v4
       with:
-        node-version: '20.x'
+        node-version: '22.x'
         cache: 'npm'
         cache-dependency-path: functions/package-lock.json
 
@@ -68,21 +68,21 @@ jobs:
         echo "📋 Current subscription: $(az account show --query name -o tsv)"
         echo "📋 Tenant ID: $(az account show --query tenantId -o tsv)"
 
-    - name: 'Configure Function App for Node 20'
+    - name: 'Configure Function App for Node 22'
       run: |
-        echo "🔧 Configuring Function App runtime for Node 20..."
+        echo "🔧 Configuring Function App runtime for Node 22..."
         az functionapp config appsettings set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --settings FUNCTIONS_EXTENSION_VERSION=~4 \
                     FUNCTIONS_WORKER_RUNTIME=node \
-                    WEBSITE_NODE_DEFAULT_VERSION=~20
+                    WEBSITE_NODE_DEFAULT_VERSION=~22
         
-        echo "🔧 Setting Node 20 runtime stack..."
+        echo "🔧 Setting Node 22 runtime stack..."
         az functionapp config set \
           --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-          --linux-fx-version "Node|20"
+          --linux-fx-version "Node|22"
 
     - name: 'Install, Build, and Deploy'
       working-directory: ./functions
@@ -96,7 +96,7 @@ jobs:
         echo "📋 Installing Azure Functions Core Tools..."
         npm i -g azure-functions-core-tools@4 --unsafe-perm true
         
-        echo "🚀 Deploying to Azure Functions with Node 20..."
+        echo "🚀 Deploying to Azure Functions with Node 22..."
         func azure functionapp publish ${{ env.AZURE_FUNCTIONAPP_NAME }} --javascript --force --build remote
 
     - name: 'Post-deployment validation'

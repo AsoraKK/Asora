@@ -17,12 +17,13 @@ ts(){ date -u +'%Y-%m-%dT%H:%M:%SZ'; }
 echo "[$(ts)] Create RG/Plan/Storage"
 az group create -n "$RG" -l "$REGION" -o none
 az functionapp plan create -g "$RG" -n "$PLAN" -l "$REGION" --sku EP1 --is-linux true -o none
-az storage account create -g "$RG" -n "$SA" -l "$REGION" --sku Standard_LRS -o none
+az storage account create -g "$RG" -n "$SA" -l "$REGION" --sku Standard_LRS \
+  --min-tls-version TLS1_2 --https-only true -o none
 KEY="$(az storage account keys list -g "$RG" -n "$SA" -o tsv --query '[0].value')"
 az storage container create --account-name "$SA" --name "$CONT" --account-key "$KEY" -o none
 
-echo "[$(ts)] Create Flex Function App (Node 20, system MI)"
-az functionapp create -g "$RG" -n "$APP" --plan "$PLAN" --runtime node --runtime-version 20 \
+echo "[$(ts)] Create Flex Function App (Node 22, system MI)"
+az functionapp create -g "$RG" -n "$APP" --plan "$PLAN" --runtime node --runtime-version 22 \
   --functions-version 4 --storage-account "$SA" --assign-identity -o none
 
 echo "[$(ts)] Grant MI read on container (wait for propagation)"
@@ -43,7 +44,7 @@ cat > "$APPDIR/package.json" <<'JSON'
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
-  "engines": { "node": ">=20 <21" },
+  "engines": { "node": ">=22 <23" },
   "dependencies": { "@azure/functions": "^4.7.2" }
 }
 JSON
