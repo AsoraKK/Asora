@@ -49,10 +49,10 @@
     "ts-node": "^10.9.1",
     "tsc-alias": "^1.8.8",
     "tsx": "^3.12.6",
-    "typescript": "5.5.4"
+    "typescript": "6.0.3"
   },
   "overrides": {
-    "typescript": "5.5.4"
+    "typescript": "6.0.3"
   },
   "keywords": [
     "azure-functions",
