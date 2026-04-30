@@ -656,6 +656,59 @@ void main() {
         expect(fakeStore.data.containsKey('session_expiry'), isFalse);
       });
 
+      test('createSession persists a namespaced session record', () async {
+        final session = await manager.createSession(
+          state: 'state-1',
+          nonce: 'nonce-1',
+          codeChallenge: 'challenge-1',
+        );
+
+        final storedKey = fakeStore.data.keys.singleWhere(
+          (key) => key.startsWith('oauth_session_'),
+        );
+
+        expect(session.id, startsWith('session_'));
+        expect(storedKey, equals('oauth_session_${session.id}'));
+        expect(fakeStore.data[storedKey], isNotNull);
+        expect(
+          fakeStore.data[storedKey],
+          contains('"codeChallenge":"challenge-1"'),
+        );
+      });
+
+      test('completeSession removes the stored session record', () async {
+        final session = await manager.createSession(
+          state: 'state-2',
+          nonce: 'nonce-2',
+          codeChallenge: 'challenge-2',
+        );
+
+        await manager.completeSession(session.id);
+
+        expect(
+          fakeStore.data.containsKey('oauth_session_${session.id}'),
+          isFalse,
+        );
+      });
+
+      test('clearAllSessions removes all storage entries', () async {
+        await manager.createTokenSession(
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          userId: 'user',
+          expiresAt: DateTime.now().add(const Duration(minutes: 30)),
+        );
+        await manager.createSession(
+          state: 'state-3',
+          nonce: 'nonce-3',
+          codeChallenge: 'challenge-3',
+        );
+
+        await manager.clearAllSessions();
+
+        expect(fakeStore.data, isEmpty);
+      });
+
       test('validateSession fails when state inconsistent', () async {
         final expiry = DateTime.now().add(const Duration(minutes: 30));
         await manager.createTokenSession(

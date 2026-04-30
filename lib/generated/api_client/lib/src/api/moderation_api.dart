@@ -7,9 +7,18 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
+import 'package:asora_api_client/src/api_util.dart';
+import 'package:asora_api_client/src/model/appeal_created_response.dart';
+import 'package:asora_api_client/src/model/appeal_vote_request.dart';
+import 'package:asora_api_client/src/model/appeal_vote_response.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
+import 'package:asora_api_client/src/model/forbidden_error.dart';
+import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
+import 'package:asora_api_client/src/model/rate_limit_error.dart';
+import 'package:asora_api_client/src/model/unauthorized_error.dart';
+import 'package:asora_api_client/src/model/validation_error_response.dart';
 
 class ModerationApi {
   final Dio _dio;
@@ -109,6 +118,215 @@ class ModerationApi {
     }
 
     return Response<FlagContent202Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Submit a moderation appeal
+  /// File an appeal against a moderation decision. Authenticated users with active accounts may appeal content removals. Daily appeal limits are tier-gated.
+  ///
+  /// Parameters:
+  /// * [moderationAppealRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AppealCreatedResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AppealCreatedResponse>> submitModerationAppeal({
+    required ModerationAppealRequest moderationAppealRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/moderation/appeals';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ModerationAppealRequest);
+      _bodyData =
+          _serializers.serialize(moderationAppealRequest, specifiedType: _type);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AppealCreatedResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(AppealCreatedResponse),
+            ) as AppealCreatedResponse;
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AppealCreatedResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Cast a community vote on an appeal
+  /// Authenticated community members may cast a weighted vote (&#x60;uphold&#x60; or &#x60;deny&#x60;) on an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules are enforced server-side.
+  ///
+  /// Parameters:
+  /// * [appealId] - Appeal identifier
+  /// * [appealVoteRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AppealVoteResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AppealVoteResponse>> voteOnModerationAppeal({
+    required String appealId,
+    required AppealVoteRequest appealVoteRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/moderation/appeals/{appealId}/vote'.replaceAll(
+        '{' r'appealId' '}',
+        encodeQueryParameter(_serializers, appealId, const FullType(String))
+            .toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AppealVoteRequest);
+      _bodyData =
+          _serializers.serialize(appealVoteRequest, specifiedType: _type);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AppealVoteResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null
+          ? null
+          : _serializers.deserialize(
+              rawResponse,
+              specifiedType: const FullType(AppealVoteResponse),
+            ) as AppealVoteResponse;
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AppealVoteResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

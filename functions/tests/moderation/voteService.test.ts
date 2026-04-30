@@ -98,7 +98,7 @@ describe('voteService - validation', () => {
 
 describe('voteService - appeal lookup', () => {
   it('returns 404 when appeal does not exist', async () => {
-    mockRead.mockRejectedValueOnce({ code: 404 });
+    mockQuery.mockResolvedValueOnce({ resources: [] }); // appeal not found
 
     const req = httpReqMock({
       method: 'POST',
@@ -115,8 +115,8 @@ describe('voteService - appeal lookup', () => {
   });
 
   it('returns 409 when appeal is already decided', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: { id: 'appeal-1', status: 'approved', finalDecision: 'approved' },
+    mockQuery.mockResolvedValueOnce({
+      resources: [{ id: 'appeal-1', status: 'approved', finalDecision: 'approved', contentId: 'post-1' }],
     });
 
     const req = httpReqMock({
@@ -136,12 +136,13 @@ describe('voteService - appeal lookup', () => {
 
 describe('voteService - duplicate voting', () => {
   it('returns 409 when user has already voted', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: { id: 'appeal-1', status: 'pending' },
-    });
-    mockQuery.mockResolvedValueOnce({
-      resources: [{ id: 'vote-1', voterId: 'user-1', vote: 'approve' }],
-    });
+    mockQuery
+      .mockResolvedValueOnce({
+        resources: [{ id: 'appeal-1', status: 'pending', contentId: 'post-1', expiresAt: new Date(Date.now() + 86400000).toISOString() }],
+      })
+      .mockResolvedValueOnce({
+        resources: [{ id: 'vote-1', voterId: 'user-1', vote: 'approve' }],
+      });
 
     const req = httpReqMock({
       method: 'POST',
@@ -159,11 +160,12 @@ describe('voteService - duplicate voting', () => {
 });
 
 describe('voteService - successful voting', () => {
-  it('records vote and returns 201', async () => {
-    mockRead.mockResolvedValueOnce({
-      resource: { id: 'appeal-1', status: 'pending', votes: { approve: 1, reject: 0 } },
-    });
-    mockQuery.mockResolvedValueOnce({ resources: [] }); // No existing vote
+  it('records vote and returns 200', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        resources: [{ id: 'appeal-1', status: 'pending', contentId: 'post-1', expiresAt: new Date(Date.now() + 86400000).toISOString() }],
+      })
+      .mockResolvedValueOnce({ resources: [] }); // No existing vote
     mockCreate.mockResolvedValueOnce({ resource: { id: 'vote-new' } });
     mockReplace.mockResolvedValueOnce({});
 
@@ -179,7 +181,7 @@ describe('voteService - successful voting', () => {
       claims: { roles: ['moderator'] },
       appealId: 'appeal-1',
     });
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     expect(mockCreate).toHaveBeenCalled();
   });
 
@@ -196,14 +198,14 @@ describe('voteService - successful voting', () => {
       submitterId: 'user-123',
       urgencyScore: 7,
       flagCount: 3,
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
     };
     const contentDoc = { id: 'post-1', authorId: 'user-123', status: 'blocked' };
 
-    mockRead
-      .mockResolvedValueOnce({ resource: appealDoc })
-      .mockResolvedValueOnce({ resource: contentDoc })
-      .mockResolvedValueOnce({ resource: contentDoc });
-    mockQuery.mockResolvedValueOnce({ resources: [] });
+    mockQuery
+      .mockResolvedValueOnce({ resources: [appealDoc] }) // appeal lookup
+      .mockResolvedValueOnce({ resources: [] }); // no duplicate vote
+    mockRead.mockResolvedValue({ resource: contentDoc }); // voter info + content lookups
 
     const response = await voteOnAppealHandler({
       request: httpReqMock({

@@ -162,4 +162,48 @@ void main() {
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authStarted));
     expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
+
+  testWidgets('cancelling provider picker does not start auth flow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final analytics = _FakeAnalyticsClient();
+    final notifier = _MockAuthStateNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(analytics),
+          authStateProvider.overrideWith((ref) => notifier),
+          deviceIntegrityGuardProvider.overrideWith(
+            (ref) => _buildIntegrityGuard(),
+          ),
+          deviceSecurityStateProvider.overrideWith(
+            (ref) => _FakeDeviceSecurityService().evaluateSecurity(),
+          ),
+        ],
+        child: const MaterialApp(home: AuthChoiceScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Google'), findsOneWidget);
+
+    await tester.tapAt(const Offset(12, 12));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => notifier.signInWithProvider(OAuth2Provider.google));
+    expect(
+      analytics.loggedEvents,
+      contains(AnalyticsEvents.authChoiceSelected),
+    );
+    expect(
+      analytics.loggedEvents,
+      isNot(contains(AnalyticsEvents.authStarted)),
+    );
+  });
 }

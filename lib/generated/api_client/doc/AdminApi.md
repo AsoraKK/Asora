@@ -22,6 +22,7 @@ Method | HTTP request | Description
 [**adminFlagsResolve**](AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
 [**adminInvitesBatch**](AdminApi.md#admininvitesbatch) | **POST** /_admin/invites/batch | Batch create invite codes
 [**adminInvitesCreate**](AdminApi.md#admininvitescreate) | **POST** /_admin/invites | Create an invite code
+[**adminInvitesDelete**](AdminApi.md#admininvitesdelete) | **DELETE** /_admin/invites/{code} | Hard-delete an invite code
 [**adminInvitesGet**](AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
 [**adminInvitesList**](AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
 [**adminInvitesRevoke**](AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
@@ -607,6 +608,48 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminInvitesDelete**
+> adminInvitesDelete(code)
+
+Hard-delete an invite code
+
+Permanently removes an invite code record. Use revoke to soft-revoke instead.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String code = code_example; // String | Invite code to delete
+
+try {
+    api.adminInvitesDelete(code);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminInvitesDelete: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **code** | **String**| Invite code to delete | 
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

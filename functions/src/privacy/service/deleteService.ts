@@ -18,6 +18,8 @@ import {
   defaultKeyGenerator,
 } from '@shared/utils/rateLimiter';
 import { getErrorMessage, isNotFoundError, getErrorStatusCode } from '@shared/errorUtils';
+import { executeCascadeDelete } from './cascadeDelete';
+import { revokeAllUserTokens } from '@auth/service/refreshTokenStore';
 
 // Rate limiter for deletion requests (safety measure - 1 per hour)
 const deleteRateLimiter = createRateLimiter({
@@ -86,252 +88,66 @@ export async function deleteUserHandler({
       });
     }
 
-    // 4. Initialize Cosmos DB
+    // 4. Initialize Cosmos DB and check idempotency
     const activeDatabase = getCosmosDatabase();
     database = activeDatabase;
 
     const usersContainer = activeDatabase.container('users');
-    const postsContainer = activeDatabase.container('posts');
-    const commentsContainer = activeDatabase.container('comments');
-    const likesContainer = activeDatabase.container('likes');
-    const flagsContainer = activeDatabase.container('content_flags');
-    const appealsContainer = activeDatabase.container('appeals');
-    const votesContainer = activeDatabase.container('appeal_votes');
-
-    context.log(`Starting complete account deletion for user: ${userId}`);
-
-    const warnings: string[] = [];
-    const itemsProcessed = {
-      userProfile: false,
-      posts: 0,
-      comments: 0,
-      likes: 0,
-      flags: 0,
-      appeals: 0,
-      votes: 0,
-    };
-    const contentMarking = {
-      postsAnonymized: 0,
-      commentsAnonymized: 0,
-    };
 
     // 5. Check if user exists first (idempotent check)
-    let userExists = false;
     try {
       const { resource: existingUser } = await usersContainer.item(userId, userId).read();
-      userExists = !!existingUser;
+      if (!existingUser) {
+        return json(200, {
+          message: 'Account deletion completed (user already deleted)',
+          userId,
+          deletionId,
+          deletedAt: new Date().toISOString(),
+          alreadyDeleted: true,
+        });
+      }
     } catch (error: unknown) {
       if (isNotFoundError(error)) {
-        context.log(`User ${userId} already deleted or never existed`);
-        // Return success for idempotent behavior
-        return {
-          status: 200,
-          jsonBody: {
-            message: 'Account deletion completed (user already deleted)',
-            userId,
-            deletionId,
-            deletedAt: new Date().toISOString(),
-            alreadyDeleted: true,
-          },
-        };
+        return json(200, {
+          message: 'Account deletion completed (user already deleted)',
+          userId,
+          deletionId,
+          deletedAt: new Date().toISOString(),
+          alreadyDeleted: true,
+        });
       }
-      context.log(`Error checking user existence: ${getErrorMessage(error)}`);
-      warnings.push(`Could not verify user existence: ${getErrorMessage(error)}`);
+      // Non-fatal – proceed with deletion even if we cannot confirm existence
+      context.log('privacy.delete.idempotency_check_failed', { deletionId });
     }
 
-    // 6. Anonymize/mark user's posts as deleted (preserve for forum integrity)
+    // 6. Cascade delete: Cosmos containers + Postgres (auth_identities, profiles, follows, users)
+    const cascadeResult = await executeCascadeDelete({
+      userId,
+      deletedBy: 'user_request',
+    });
+
+    // 7. Revoke all active refresh tokens / sessions
+    let revokedTokenCount = 0;
     try {
-      const postsQuery = {
-        query:
-          'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userPosts } = await postsContainer.items.query(postsQuery).fetchAll();
-
-      for (const post of userPosts) {
-        try {
-          // Mark as deleted and anonymize author info
-          const updatedPost = {
-            ...post,
-            authorName: '[Deleted User]',
-            authorId: 'deleted_user',
-            authorEmail: null,
-            deletedAt: new Date().toISOString(),
-            deletedBy: 'user_request',
-            originalAuthorId: userId, // Keep for audit purposes only
-            lastModified: new Date().toISOString(),
-          };
-
-          await postsContainer.item(post.id, post.id).replace(updatedPost);
-          contentMarking.postsAnonymized++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to anonymize post ${post.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      itemsProcessed.posts = userPosts.length;
-      context.log(`Processed ${userPosts.length} posts for anonymization`);
-    } catch (error: unknown) {
-      warnings.push(`Error processing posts: ${getErrorMessage(error)}`);
+      revokedTokenCount = await revokeAllUserTokens(userId);
+    } catch (tokenErr) {
+      // Non-fatal – log for follow-up but do not fail the deletion
+      context.log('privacy.delete.token_revocation_failed', { deletionId });
+      cascadeResult.errors.push({
+        container: 'refresh_tokens',
+        error: `Token revocation failed: ${getErrorMessage(tokenErr)}`,
+      });
     }
 
-    // 7. Anonymize/mark user's comments as deleted
-    try {
-      const commentsQuery = {
-        query:
-          'SELECT * FROM c WHERE c.authorId = @userId AND (IS_NULL(c.deletedAt) OR c.deletedAt = "")',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userComments } = await commentsContainer.items
-        .query(commentsQuery)
-        .fetchAll();
-
-      for (const comment of userComments) {
-        try {
-          // Mark as deleted and anonymize author info
-          const updatedComment = {
-            ...comment,
-            authorName: '[Deleted User]',
-            authorId: 'deleted_user',
-            content: '[Comment deleted by user request]',
-            deletedAt: new Date().toISOString(),
-            deletedBy: 'user_request',
-            originalAuthorId: userId, // Keep for audit purposes only
-            lastModified: new Date().toISOString(),
-          };
-
-          await commentsContainer.item(comment.id, comment.id).replace(updatedComment);
-          contentMarking.commentsAnonymized++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to anonymize comment ${comment.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      itemsProcessed.comments = userComments.length;
-      context.log(`Processed ${userComments.length} comments for anonymization`);
-    } catch (error: unknown) {
-      warnings.push(`Error processing comments: ${getErrorMessage(error)}`);
-    }
-
-    // 8. Delete user's likes/interactions
-    try {
-      const likesQuery = {
-        query: 'SELECT * FROM c WHERE c.userId = @userId',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userLikes } = await likesContainer.items.query(likesQuery).fetchAll();
-
-      for (const like of userLikes) {
-        try {
-          await likesContainer.item(like.id, like.userId).delete();
-          itemsProcessed.likes++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to delete like ${like.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      context.log(`Deleted ${itemsProcessed.likes} likes`);
-    } catch (error: unknown) {
-      warnings.push(`Error deleting likes: ${getErrorMessage(error)}`);
-    }
-
-    // 9. Delete user's flags/reports
-    try {
-      const flagsQuery = {
-        query: 'SELECT * FROM c WHERE c.flaggerId = @userId',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userFlags } = await flagsContainer.items.query(flagsQuery).fetchAll();
-
-      for (const flag of userFlags) {
-        try {
-          await flagsContainer.item(flag.id, flag.id).delete();
-          itemsProcessed.flags++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to delete flag ${flag.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      context.log(`Deleted ${itemsProcessed.flags} flags`);
-    } catch (error: unknown) {
-      warnings.push(`Error deleting flags: ${getErrorMessage(error)}`);
-    }
-
-    // 10. Delete user's appeals
-    try {
-      const appealsQuery = {
-        query: 'SELECT * FROM c WHERE c.submitterId = @userId',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userAppeals } = await appealsContainer.items
-        .query(appealsQuery)
-        .fetchAll();
-
-      for (const appeal of userAppeals) {
-        try {
-          await appealsContainer.item(appeal.id, appeal.id).delete();
-          itemsProcessed.appeals++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to delete appeal ${appeal.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      context.log(`Deleted ${itemsProcessed.appeals} appeals`);
-    } catch (error: unknown) {
-      warnings.push(`Error deleting appeals: ${getErrorMessage(error)}`);
-    }
-
-    // 11. Delete user's votes on appeals
-    try {
-      const votesQuery = {
-        query: 'SELECT * FROM c WHERE c.voterId = @userId',
-        parameters: [{ name: '@userId', value: userId }],
-      };
-      const { resources: userVotes } = await votesContainer.items.query(votesQuery).fetchAll();
-
-      for (const vote of userVotes) {
-        try {
-          await votesContainer.item(vote.id, vote.appealId).delete();
-          itemsProcessed.votes++;
-        } catch (error: unknown) {
-          warnings.push(`Failed to delete vote ${vote.id}: ${getErrorMessage(error)}`);
-        }
-      }
-
-      context.log(`Deleted ${itemsProcessed.votes} votes`);
-    } catch (error: unknown) {
-      warnings.push(`Error deleting votes: ${getErrorMessage(error)}`);
-    }
-
-    // 12. Finally, delete the user profile (main record)
-    if (userExists) {
-      try {
-        await usersContainer.item(userId, userId).delete();
-        itemsProcessed.userProfile = true;
-        context.log(`Deleted user profile for ${userId}`);
-      } catch (error: unknown) {
-        if (!isNotFoundError(error)) {
-          warnings.push(`Failed to delete user profile: ${getErrorMessage(error)}`);
-        } else {
-          // Already deleted, which is fine for idempotent operation
-          itemsProcessed.userProfile = true;
-        }
-      }
-    }
-
-    // 13. Log comprehensive deletion audit
-    context.log(`Account deletion completed successfully for user ${userId}:`, {
+    // 8. Log comprehensive deletion audit (no PII – userId only, no email/JWT)
+    context.log('privacy.delete.completed', {
       deletionId,
-      totalItemsDeleted: Object.values(itemsProcessed).reduce((sum: number, val) => {
-        return sum + (typeof val === 'number' ? val : val ? 1 : 0);
-      }, 0),
-      postsAnonymized: contentMarking.postsAnonymized,
-      commentsAnonymized: contentMarking.commentsAnonymized,
-      warningCount: warnings.length,
-      rateLimitInfo: {
-        blocked: rateLimitResult.blocked,
-        remaining: rateLimitResult.remaining,
-      },
+      cosmosDeleted: Object.values(cascadeResult.cosmos.deleted).reduce((a, b) => a + b, 0),
+      cosmosAnonymized: Object.values(cascadeResult.cosmos.anonymized).reduce((a, b) => a + b, 0),
+      postgresDeleted: Object.values(cascadeResult.postgres.deleted).reduce((a, b) => a + b, 0),
+      revokedTokens: revokedTokenCount,
+      errorCount: cascadeResult.errors.length,
+      partialFailure: cascadeResult.errors.length > 0,
     });
 
     try {
@@ -340,15 +156,20 @@ export async function deleteUserHandler({
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId,
         action: 'delete',
-        result: 'success',
+        result: cascadeResult.errors.length > 0 ? 'partial' : 'success',
         operator: 'self',
+        deletionId,
         timestamp: new Date().toISOString(),
+        cosmos: cascadeResult.cosmos,
+        postgres: cascadeResult.postgres,
+        revokedTokens: revokedTokenCount,
+        errors: cascadeResult.errors,
       });
     } catch (auditErr) {
       // Non-fatal: log audit write failures for later investigation
       try {
-        context.log('Failed to write privacy audit record:', String(auditErr));
-      } catch (logErr) {
+        context.log('privacy.delete.audit_write_failed', { deletionId });
+      } catch {
         // best-effort logging; swallow to avoid masking deletion success
       }
     }
@@ -358,6 +179,7 @@ export async function deleteUserHandler({
       userId,
       deletedAt: new Date().toISOString(),
       deletionId,
+      partialFailure: cascadeResult.errors.length > 0,
     });
   } catch (error) {
     // Handle structured HTTP errors (like 401 from auth)
@@ -366,7 +188,7 @@ export async function deleteUserHandler({
     }
 
     // Handle unexpected errors
-    context.error('Critical error during account deletion:', error);
+    context.log('privacy.delete.critical_error', { deletionId });
     try {
       const auditDatabase = database ?? getCosmosDatabase();
       const audit = auditDatabase.container('privacy_audit');
@@ -380,8 +202,8 @@ export async function deleteUserHandler({
       });
     } catch (auditErr) {
       try {
-        context.log('Failed to write failure audit record:', String(auditErr));
-      } catch (logErr) {
+        context.log('privacy.delete.failure_audit_write_failed', { deletionId });
+      } catch {
         // best-effort logging only
       }
     }

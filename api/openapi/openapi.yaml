@@ -5,6 +5,7 @@ info:
   description: HTTP contract for Lythaus (formerly Asora) Functions v1.
   license:
     name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
     description: Azure Functions staging edge endpoint
@@ -28,7 +29,7 @@ tags:
   - name: Admin
     description: Lythaus admin moderation and safety operations.
   - name: Privacy
-    description: User data and privacy controls.
+    description: User data portability and account deletion (GDPR/CCPA).
   - name: Privacy Admin
     description: Data Subject Request and legal hold administration.
 paths:
@@ -42,92 +43,74 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: cursor
-          in: query
-          description: Cursor for pagination
-          required: false
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: Number of items to return (1-50)
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 50
+        - $ref: '#/components/parameters/cursorParam'
+        - $ref: '#/components/parameters/limitParam'
       responses:
         '200':
           description: Feed items retrieved successfully
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+            Cache-Control:
+              description: Cache directive (private for authenticated, public for anonymous)
+              schema:
+                type: string
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - items
-                  - meta
-                properties:
-                  items:
-                    type: array
+                $ref: '#/components/schemas/FeedPageResponse'
+              examples:
+                authenticated:
+                  summary: Authenticated feed page
+                  value:
                     items:
-                      type: object
-                      additionalProperties: true
-                  meta:
-                    type: object
-                    required:
-                      - count
-                    properties:
-                      count:
-                        type: integer
-                        minimum: 0
-                      nextCursor:
-                        type: string
-                        x-nullable: true
-                      timingsMs:
-                        type: object
-                        additionalProperties:
-                          type: number
-                      applied:
-                        type: object
-                        additionalProperties: true
+                      - id: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
+                        text: Hello Lythaus!
+                        authorId: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                        createdAt: '2026-04-30T10:00:00Z'
+                    meta:
+                      count: 1
+                      nextCursor: eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0
         '400':
           description: Invalid query parameters
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UnauthorizedError'
         '403':
           description: Authenticated caller lacks required permissions
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ForbiddenError'
         '429':
           description: Rate limit enforced
           headers:
             Retry-After:
-              description: Seconds until the client may retry
-              schema:
-                type: integer
-                minimum: 0
+              $ref: '#/components/headers/RetryAfter'
             X-RateLimit-Limit:
-              description: Maximum requests allowed in the enforced window
-              schema:
-                type: integer
+              $ref: '#/components/headers/XRateLimitLimit'
             X-RateLimit-Remaining:
-              description: Remaining requests before hitting the limit
-              schema:
-                type: integer
+              $ref: '#/components/headers/XRateLimitRemaining'
             X-RateLimit-Reset:
-              description: Unix epoch seconds when the window resets
-              schema:
-                type: integer
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
@@ -278,6 +261,9 @@ paths:
       responses:
         '201':
           description: Post created successfully
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
@@ -294,22 +280,48 @@ paths:
                       - blocked
         '400':
           description: Invalid payload
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ValidationErrorResponse'
         '401':
           description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UnauthorizedError'
         '403':
-          description: Authenticated caller lacks required permissions
+          description: Authenticated caller lacks required permissions or content blocked
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ModerationBlockedResponse'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
   /moderation/flag:
     post:
       operationId: flagContent
@@ -354,6 +366,9 @@ paths:
       responses:
         '202':
           description: Flag accepted for review
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
@@ -370,22 +385,48 @@ paths:
                       - received
         '400':
           description: Invalid payload
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ValidationErrorResponse'
         '401':
           description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UnauthorizedError'
         '403':
           description: Authenticated caller lacks required permissions
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ForbiddenError'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
   /_admin/flags:
     get:
       operationId: adminFlagsList
@@ -1135,18 +1176,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminInviteListResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Missing or invalid authentication
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UnauthorizedError'
         '403':
           description: Authenticated caller lacks required permissions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ForbiddenError'
     post:
       operationId: adminInvitesCreate
       summary: Create an invite code
@@ -1245,24 +1292,97 @@ paths:
       responses:
         '200':
           description: Invite response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminInviteResponse'
+              examples:
+                inviteActive:
+                  summary: Active invite
+                  value:
+                    inviteCode: ABCD-1234
+                    email: user@example.com
+                    createdBy: admin-uid-123
+                    createdAt: '2026-04-01T10:00:00Z'
+                    expiresAt: '2026-05-01T10:00:00Z'
+                    maxUses: 1
+                    usageCount: 0
+                    status: ACTIVE
+                    label: beta-tester
         '401':
           description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/UnauthorizedError'
         '403':
           description: Authenticated caller lacks required permissions
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Invite not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    delete:
+      operationId: adminInvitesDelete
+      summary: Hard-delete an invite code
+      description: Permanently removes an invite code record. Use revoke to soft-revoke instead.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          description: Invite code to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Invite deleted
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Authenticated caller lacks required permissions
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
         '404':
           description: Invite not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
           content:
             application/json:
               schema:
@@ -1472,6 +1592,692 @@ paths:
           description: Hold cleared
         '404':
           description: Hold not found
+  /auth/token:
+    post:
+      operationId: authToken
+      summary: Issue OAuth2 tokens
+      description: |
+        Exchange an authorization code or refresh token for an access token and refresh token.
+        Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants.
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenRequest'
+            examples:
+              authCode:
+                summary: Authorization code grant
+                value:
+                  grant_type: authorization_code
+                  client_id: asora-mobile
+                  code: SplxlOBeZQQYbYS6WxSbIA
+                  redirect_uri: 'com.asora.app://callback'
+                  code_verifier: dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+              refreshToken:
+                summary: Refresh token grant
+                value:
+                  grant_type: refresh_token
+                  client_id: asora-mobile
+                  refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: Token response
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+            Cache-Control:
+              description: Must be no-store per RFC 6749
+              schema:
+                type: string
+                example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthTokenResponse'
+              examples:
+                success:
+                  summary: Successful token issuance
+                  value:
+                    success: true
+                    data:
+                      access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      token_type: Bearer
+                      expires_in: 900
+                    timestamp: '2026-04-30T12:00:00Z'
+        '400':
+          description: Invalid grant or missing parameters
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /auth/authorize:
+    get:
+      operationId: authAuthorize
+      summary: OAuth2 authorization endpoint
+      description: |
+        Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to
+        the `redirect_uri` with an authorization `code` and the `state` parameter echoed back.
+      tags:
+        - Auth
+      security: []
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - code
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: code_challenge
+          in: query
+          required: false
+          description: PKCE code challenge (S256 method required)
+          schema:
+            type: string
+        - name: code_challenge_method
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - S256
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            example: openid profile email
+      responses:
+        '200':
+          description: Authorization page rendered (browser-based interactive flow)
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            text/html:
+              schema:
+                type: string
+        '302':
+          description: Redirect to redirect_uri with authorization code
+          headers:
+            Location:
+              description: Redirect URI with code and state query parameters
+              schema:
+                type: string
+                format: uri
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+        '400':
+          description: Invalid authorization request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /auth/userinfo:
+    get:
+      operationId: authUserInfo
+      summary: OIDC UserInfo endpoint
+      description: Returns claims about the authenticated user per OpenID Connect Core 1.0.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: UserInfo claims
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+            Cache-Control:
+              description: Cache control for user info
+              schema:
+                type: string
+                example: 'private, no-store'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+              examples:
+                authenticated:
+                  summary: Authenticated user claims
+                  value:
+                    success: true
+                    data:
+                      sub: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      email: alice@example.com
+                      displayName: Alice Example
+                      handle: alice
+                      tier: free
+                      roles:
+                        - user
+                    timestamp: '2026-04-30T12:00:00Z'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+    post:
+      operationId: authUserInfoPost
+      summary: OIDC UserInfo endpoint (POST)
+      description: POST variant of the UserInfo endpoint for clients that cannot use query strings.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: UserInfo claims
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /auth/redeem-invite:
+    post:
+      operationId: authRedeemInvite
+      summary: Redeem an invite code to activate account
+      description: |
+        Allows an authenticated but inactive user to redeem a valid invite code.
+        On success the user is activated and a fresh token pair is returned.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedeemInviteRequest'
+            examples:
+              redeem:
+                summary: Redeem invite
+                value:
+                  inviteCode: ABCD-1234
+      responses:
+        '200':
+          description: Invite redeemed – account activated
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeemInviteResponse'
+              examples:
+                success:
+                  summary: Successful redemption
+                  value:
+                    success: true
+                    data:
+                      access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      token_type: Bearer
+                      expires_in: 900
+                      activated: true
+                    timestamp: '2026-04-30T12:00:00Z'
+        '400':
+          description: Invalid or expired invite code
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '409':
+          description: Account is already active
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /moderation/appeals:
+    post:
+      operationId: submitModerationAppeal
+      summary: Submit a moderation appeal
+      description: |
+        File an appeal against a moderation decision. Authenticated users with active
+        accounts may appeal content removals. Daily appeal limits are tier-gated.
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationAppealRequest'
+            examples:
+              standard:
+                summary: Standard appeal
+                value:
+                  caseId: case_01HZPQ2B3C4D5E6F7G8H9JABCD
+                  statement: I believe this was flagged in error because...
+                  evidenceUrls:
+                    - 'https://example.com/evidence/screenshot.png'
+      responses:
+        '201':
+          description: Appeal created
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealCreatedResponse'
+        '400':
+          description: Invalid appeal payload or daily limit exceeded
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Account disabled or does not meet eligibility
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Moderation case not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /moderation/appeals/{appealId}/vote:
+    post:
+      operationId: voteOnModerationAppeal
+      summary: Cast a community vote on an appeal
+      description: |
+        Authenticated community members may cast a weighted vote (`uphold` or `deny`) on
+        an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules
+        are enforced server-side.
+      tags:
+        - Moderation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appealId
+          in: path
+          description: Appeal identifier
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealVoteRequest'
+            examples:
+              uphold:
+                summary: Vote to uphold (keep content removed)
+                value:
+                  vote: uphold
+              deny:
+                summary: Vote to deny (restore content)
+                value:
+                  vote: deny
+      responses:
+        '200':
+          description: Vote recorded
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealVoteResponse'
+        '400':
+          description: Invalid vote value or duplicate vote
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Appeal not found
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /user/export:
+    get:
+      operationId: exportUserData
+      summary: Export personal data (GDPR Article 20)
+      description: |
+        Returns a structured copy of all personal data held for the authenticated user.
+        Export cooldown periods are tier-gated. The `X-Export-ID` response header
+        contains the export identifier for tracking.
+      tags:
+        - Privacy
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User data export payload
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+            X-Export-ID:
+              description: Unique identifier for this export job
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DSRExportResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '429':
+          description: Rate limit or export cooldown active
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+  /user/delete:
+    delete:
+      operationId: deleteUserAccount
+      summary: Delete own account (GDPR Article 17)
+      description: |
+        Permanently deletes the authenticated user's account and anonymises all authored
+        content. Requires the `X-Confirm-Delete: true` header to guard against accidental
+        invocations. This action is **irreversible**.
+      tags:
+        - Privacy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Confirm-Delete
+          in: header
+          required: true
+          description: Must be set to "true" to confirm deletion
+          schema:
+            type: string
+            enum:
+              - 'true'
+      responses:
+        '200':
+          description: Account deleted
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeleteResponse'
+              examples:
+                deleted:
+                  summary: Successful deletion
+                  value:
+                    message: Account deletion completed
+                    userId: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                    deletedAt: '2026-04-30T12:00:00Z'
+                    alreadyDeleted: false
+        '400':
+          description: Missing confirmation header or invalid request
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Missing or invalid authentication
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '429':
+          description: Rate limit enforced
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Correlation-ID:
+              $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
 components:
   securitySchemes:
     bearerAuth:
@@ -2067,3 +2873,551 @@ components:
       type: object
       properties:
         revoked: { type: boolean }
+    # ---------------------------------------------------------------------------
+    # Standardised error schemas
+    # ---------------------------------------------------------------------------
+    ErrorResponse:
+      description: Canonical error envelope returned by handler-based endpoints.
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              example: INVALID_REQUEST
+            message:
+              type: string
+              description: Human-readable description
+              example: The request body is missing required field "text"
+            correlationId:
+              type: string
+              description: Correlation ID for distributed tracing
+              example: 01HZPQ2B3C4D5E6F7G8H9JABCD
+            details:
+              type: object
+              additionalProperties: true
+              description: Optional structured details (e.g. field-level validation errors)
+    ValidationErrorResponse:
+      description: 400 response with structured field-level validation failures.
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: VALIDATION_FAILED
+            message:
+              type: string
+              example: Request validation failed
+            correlationId:
+              type: string
+            fields:
+              type: array
+              description: Per-field validation errors
+              items:
+                type: object
+                required:
+                  - field
+                  - message
+                properties:
+                  field:
+                    type: string
+                    example: text
+                  message:
+                    type: string
+                    example: Field is required
+                  constraint:
+                    type: string
+                    example: minLength
+    UnauthorizedError:
+      description: 401 – missing or invalid bearer token.
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+                - TOKEN_EXPIRED
+                - TOKEN_INVALID
+              example: UNAUTHORIZED
+            message:
+              type: string
+              example: Authorization token is missing or invalid
+            correlationId:
+              type: string
+    ForbiddenError:
+      description: 403 – authenticated caller lacks required role or permission.
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - FORBIDDEN
+                - INSUFFICIENT_ROLE
+                - ACCOUNT_DISABLED
+              example: FORBIDDEN
+            message:
+              type: string
+              example: You do not have permission to perform this action
+            correlationId:
+              type: string
+    ModerationBlockedResponse:
+      description: Returned when content is rejected by the moderation pipeline.
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-supplied post identifier
+          example: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
+        status:
+          type: string
+          enum:
+            - blocked
+          description: Content was rejected by automated moderation
+        moderationCategory:
+          type: string
+          description: Primary moderation class that triggered the block
+          example: hate_speech
+    AppealCreatedResponse:
+      description: 201 response after successfully filing a moderation appeal.
+      type: object
+      required:
+        - appeal
+      properties:
+        appeal:
+          type: object
+          required:
+            - id
+            - caseId
+            - status
+            - createdAt
+          properties:
+            id:
+              type: string
+              description: Generated appeal identifier
+              example: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+            caseId:
+              type: string
+              description: Linked moderation case
+              example: case_01HZPQ2B3C4D5E6F7G8H9JABCD
+            status:
+              type: string
+              enum:
+                - pending
+              example: pending
+            createdAt:
+              type: string
+              format: date-time
+    AppealVoteRequest:
+      description: Payload for casting a community vote on an appeal.
+      type: object
+      required:
+        - vote
+      properties:
+        vote:
+          type: string
+          enum:
+            - uphold
+            - deny
+          description: "`uphold` keeps content removed; `deny` requests restoration"
+    AppealVoteResponse:
+      description: Confirmation of a recorded appeal vote.
+      type: object
+      required:
+        - vote
+      properties:
+        vote:
+          type: object
+          required:
+            - id
+            - appealId
+            - vote
+            - recordedAt
+          properties:
+            id:
+              type: string
+              example: vtx_01HZPQ2B3C4D5E6F7G8H9JABCD
+            appealId:
+              type: string
+              example: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+            vote:
+              type: string
+              enum:
+                - uphold
+                - deny
+            recordedAt:
+              type: string
+              format: date-time
+    DSRExportResponse:
+      description: GDPR Article 20 data portability export payload.
+      type: object
+      required:
+        - exportId
+        - exportedAt
+        - exportedBy
+        - userId
+      properties:
+        exportId:
+          type: string
+          description: Unique identifier for this export
+          example: exp_1714478400000_abc123
+        exportedAt:
+          type: string
+          format: date-time
+        exportedBy:
+          type: string
+          description: User ID of the exporting account
+        userId:
+          type: string
+          description: User whose data is contained in this export
+        profile:
+          type: object
+          additionalProperties: true
+          description: User profile data
+        posts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        comments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        bookmarks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        notifications:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        previousExports:
+          type: array
+          items:
+            type: object
+            properties:
+              exportId: { type: string }
+              exportedAt: { type: string, format: date-time }
+              type:
+                type: string
+                enum: [export, deletion]
+    AccountDeleteResponse:
+      description: Confirmation of account deletion.
+      type: object
+      required:
+        - message
+        - userId
+        - deletedAt
+      properties:
+        message:
+          type: string
+          example: Account deletion completed
+        userId:
+          type: string
+          example: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+        deletedAt:
+          type: string
+          format: date-time
+        alreadyDeleted:
+          type: boolean
+          description: True when the account was already in a deleted state
+          default: false
+    FeedPageResponse:
+      description: Paginated feed page with metadata.
+      type: object
+      required:
+        - items
+        - meta
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Feed items for this page
+        meta:
+          type: object
+          required:
+            - count
+          properties:
+            count:
+              type: integer
+              minimum: 0
+              description: Number of items returned
+            nextCursor:
+              type: string
+              nullable: true
+              description: Cursor for fetching the next page; null when no further pages exist
+              example: eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0
+            timingsMs:
+              type: object
+              additionalProperties:
+                type: number
+              description: Server-side timing breakdown (ms)
+            applied:
+              type: object
+              additionalProperties: true
+              description: Applied ranking modifiers and personalization signals
+    OAuthTokenResponse:
+      description: OAuth 2.0 token response envelope (success wrapped).
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required:
+            - access_token
+            - refresh_token
+            - token_type
+            - expires_in
+          properties:
+            access_token:
+              type: string
+              description: Short-lived JWT bearer token (15 min)
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            refresh_token:
+              type: string
+              description: Long-lived opaque refresh token (7 days)
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            token_type:
+              type: string
+              enum: [Bearer]
+            expires_in:
+              type: integer
+              description: Access token lifetime in seconds
+              example: 900
+        timestamp:
+          type: string
+          format: date-time
+    UserInfoResponse:
+      description: OIDC UserInfo claims envelope.
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required:
+            - sub
+          properties:
+            sub:
+              type: string
+              description: Subject identifier (user ID)
+              example: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+            email:
+              type: string
+              format: email
+              example: alice@example.com
+            displayName:
+              type: string
+              example: Alice Example
+            handle:
+              type: string
+              example: alice
+            tier:
+              type: string
+              enum: [free, creator, premium, enterprise]
+            roles:
+              type: array
+              items:
+                type: string
+            avatarUrl:
+              type: string
+              format: uri
+        timestamp:
+          type: string
+          format: date-time
+    AuthTokenRequest:
+      description: OAuth 2.0 token request body.
+      type: object
+      required:
+        - grant_type
+        - client_id
+      properties:
+        grant_type:
+          type: string
+          enum:
+            - authorization_code
+            - refresh_token
+          description: Grant type
+        client_id:
+          type: string
+          description: Registered client identifier
+          example: asora-mobile
+        code:
+          type: string
+          description: Authorization code (required for authorization_code grant)
+        redirect_uri:
+          type: string
+          format: uri
+          description: Must match the redirect URI used during authorization
+        code_verifier:
+          type: string
+          description: PKCE code verifier (required when code_challenge was provided)
+        refresh_token:
+          type: string
+          description: Refresh token (required for refresh_token grant)
+    RedeemInviteRequest:
+      description: Request body for redeeming an invite code.
+      type: object
+      required:
+        - inviteCode
+      properties:
+        inviteCode:
+          type: string
+          pattern: '^[A-Z0-9]{4}-[A-Z0-9]{4}$'
+          description: Invite code in XXXX-XXXX format
+          example: ABCD-1234
+    RedeemInviteResponse:
+      description: Successful invite redemption – includes fresh token pair.
+      type: object
+      required:
+        - success
+        - data
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          required:
+            - access_token
+            - refresh_token
+            - token_type
+            - expires_in
+            - activated
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+              enum: [Bearer]
+            expires_in:
+              type: integer
+              example: 900
+            activated:
+              type: boolean
+              description: True when account was newly activated by this redemption
+        timestamp:
+          type: string
+          format: date-time
+    ModerationAppealRequest:
+      description: Request body for filing a moderation appeal.
+      type: object
+      required:
+        - caseId
+        - statement
+      properties:
+        caseId:
+          type: string
+          description: Identifier of the moderation case being appealed
+          example: case_01HZPQ2B3C4D5E6F7G8H9JABCD
+        statement:
+          type: string
+          description: User's statement explaining why the decision should be reversed
+          maxLength: 2000
+          example: I believe this content was flagged in error because...
+        evidenceUrls:
+          type: array
+          description: Optional supporting evidence URLs
+          maxItems: 5
+          items:
+            type: string
+            format: uri
+  parameters:
+    cursorParam:
+      name: cursor
+      in: query
+      description: Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+      required: false
+      schema:
+        type: string
+        example: eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0
+    limitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return per page
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 25
+        example: 25
+  headers:
+    XCorrelationID:
+      description: Server-generated correlation identifier for distributed tracing. Include in support requests.
+      schema:
+        type: string
+        example: 01HZPQ2B3C4D5E6F7G8H9JABCD
+    RetryAfter:
+      description: Seconds until the client may retry the request
+      schema:
+        type: integer
+        minimum: 0
+        example: 60
+    XRateLimitLimit:
+      description: Maximum requests allowed in the enforced window
+      schema:
+        type: integer
+        example: 100
+    XRateLimitRemaining:
+      description: Remaining requests before the limit is hit
+      schema:
+        type: integer
+        example: 42
+    XRateLimitReset:
+      description: Unix epoch seconds when the current rate-limit window resets
+      schema:
+        type: integer
+        example: 1714480000

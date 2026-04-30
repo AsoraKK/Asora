@@ -24,6 +24,7 @@ import {
   recordExportTimestamp,
   ExportCooldownActiveError,
 } from '@shared/services/exportCooldownService';
+import { redactRecord } from '../common/redaction';
 
 interface UserDataExport {
   metadata: {
@@ -157,7 +158,7 @@ export async function exportUserHandler({
 }: ExportUserParams): Promise<HttpResponseInit> {
   let database: Database | null = null;
   const exportId = `exp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  context.log(`Data export request received - Export ID: ${exportId}`);
+  context.log('privacy.export.requested', { exportId });
 
   try {
     if (!userId) {
@@ -167,7 +168,7 @@ export async function exportUserHandler({
     // 2. Rate limiting check
     const rateLimitResult = await exportRateLimiter.checkRateLimit(request);
     if (rateLimitResult.blocked) {
-      context.log(`Export rate limited for user: ${userId}`);
+      context.log('privacy.export.rate_limited', { exportId });
       return json(429, {
         code: 'rate_limit_exceeded',
         message: 'You can only export your data once every 24 hours',
@@ -213,7 +214,7 @@ export async function exportUserHandler({
     const votesContainer = activeDatabase.container('appeal_votes');
     const likesContainer = activeDatabase.container('likes');
 
-    context.log(`Starting comprehensive data export for user: ${userId}`);
+    context.log('privacy.export.started', { exportId });
 
     // 4. Get user profile data
     let userProfile: any = {};
@@ -242,7 +243,7 @@ export async function exportUserHandler({
           },
         };
       } else {
-        context.log(`Warning: User profile not found for ${userId}, using minimal data`);
+        context.log('privacy.export.user_not_found', { exportId });
         userProfile = {
           id: userId,
           displayName: 'User',
@@ -258,7 +259,7 @@ export async function exportUserHandler({
         };
       }
     } catch (error) {
-      context.log(`Error fetching user profile for ${userId}:`, error);
+      context.log('privacy.export.profile_fetch_error', { exportId });
       userProfile = {
         id: userId,
         displayName: 'User',
@@ -303,9 +304,9 @@ export async function exportUserHandler({
       });
 
       userProfile.statistics.totalPosts = userPosts.length;
-      context.log(`Found ${userPosts.length} posts for user ${userId}`);
+      context.log('privacy.export.posts_fetched', { exportId, count: userPosts.length });
     } catch (error) {
-      context.log(`Error fetching posts for ${userId}:`, error);
+      context.log('privacy.export.posts_fetch_error', { exportId });
     }
 
     // 6. Get all user comments
@@ -330,9 +331,9 @@ export async function exportUserHandler({
       });
 
       userProfile.statistics.totalComments = userComments.length;
-      context.log(`Found ${userComments.length} comments for user ${userId}`);
+      context.log('privacy.export.comments_fetched', { exportId, count: userComments.length });
     } catch (error) {
-      context.log(`Error fetching comments for ${userId}:`, error);
+      context.log('privacy.export.comments_fetch_error', { exportId });
     }
 
     // 7. Get all user likes/interactions
@@ -353,9 +354,9 @@ export async function exportUserHandler({
       });
 
       userProfile.statistics.totalLikes = userLikes.length;
-      context.log(`Found ${userLikes.length} likes for user ${userId}`);
+      context.log('privacy.export.likes_fetched', { exportId, count: userLikes.length });
     } catch (error) {
-      context.log(`Error fetching likes for ${userId}:`, error);
+      context.log('privacy.export.likes_fetch_error', { exportId });
     }
 
     // 8. Get all user flags/reports
@@ -380,9 +381,9 @@ export async function exportUserHandler({
       });
 
       userProfile.statistics.totalFlags = userFlags.length;
-      context.log(`Found ${userFlags.length} flags for user ${userId}`);
+      context.log('privacy.export.flags_fetched', { exportId, count: userFlags.length });
     } catch (error) {
-      context.log(`Error fetching flags for ${userId}:`, error);
+      context.log('privacy.export.flags_fetch_error', { exportId });
     }
 
     // 9. Get all user appeals
@@ -406,9 +407,9 @@ export async function exportUserHandler({
         });
       });
 
-      context.log(`Found ${userAppeals.length} appeals for user ${userId}`);
+      context.log('privacy.export.appeals_fetched', { exportId, count: userAppeals.length });
     } catch (error) {
-      context.log(`Error fetching appeals for ${userId}:`, error);
+      context.log('privacy.export.appeals_fetch_error', { exportId });
     }
 
     // 10. Get all user votes on appeals
@@ -429,9 +430,9 @@ export async function exportUserHandler({
         });
       });
 
-      context.log(`Found ${userVotes.length} votes for user ${userId}`);
+      context.log('privacy.export.votes_fetched', { exportId, count: userVotes.length });
     } catch (error) {
-      context.log(`Error fetching votes for ${userId}:`, error);
+      context.log('privacy.export.votes_fetch_error', { exportId });
     }
 
     // 11. Get previous export history (if any)
@@ -440,7 +441,7 @@ export async function exportUserHandler({
     // Note: In a full implementation, you might track these in a separate container
     // For now, we'll return empty arrays but the structure is ready
 
-    // 12. Assemble complete data export
+    // 12. Assemble complete data export (apply redaction to all content)
     const exportData: UserDataExport = {
       metadata: {
         exportedAt: new Date().toISOString(),
@@ -452,16 +453,16 @@ export async function exportUserHandler({
       },
       userProfile,
       content: {
-        posts: userPosts,
-        comments: userComments,
+        posts: userPosts.map(p => redactRecord(p)),
+        comments: userComments.map(c => redactRecord(c)),
       },
       interactions: {
-        likes: userLikes,
-        flags: userFlags,
+        likes: userLikes.map(l => redactRecord(l)),
+        flags: userFlags.map(f => redactRecord(f)),
       },
       moderation: {
-        appeals: userAppeals,
-        votes: userVotes,
+        appeals: userAppeals.map(a => redactRecord(a)),
+        votes: userVotes.map(v => redactRecord(v)),
       },
       privacy: {
         previousExports,
@@ -469,8 +470,8 @@ export async function exportUserHandler({
       },
     };
 
-    // 13. Log export completion for audit
-    context.log(`Data export completed successfully for user ${userId}:`, {
+    // 13. Log export completion for audit (no raw userId/email in log line)
+    context.log('privacy.export.completed', {
       exportId,
       totalPosts: userPosts.length,
       totalComments: userComments.length,
@@ -480,8 +481,8 @@ export async function exportUserHandler({
       totalVotes: userVotes.length,
     });
 
-    // 14. Rate limiting is automatically handled by the checkRateLimit call above
-    context.log(`Data export request processed with rate limit status:`, {
+    // 14. Rate limiting status recorded (no PII)
+    context.log('privacy.export.rate_limit_status', {
       rateLimited: rateLimitResult.blocked,
       remaining: rateLimitResult.remaining,
       resetTime: rateLimitResult.resetTime,
@@ -535,14 +536,15 @@ export async function exportUserHandler({
     if (isHttpError(err)) {
       return json(err.status, { error: err.message });
     }
-    // Type-safe error logging
+    // Type-safe error logging (no PII – exportId only)
     const errorDetails = getErrorDetails(err);
     context.log &&
-      context.log('error', 'exportUser error', errorDetails);
+      context.log('privacy.export.error', { exportId });
     const failure = {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'INTERNAL_ERROR', detail: getErrorMessage(err), exportId }),
+      // Do NOT include error detail in user-facing response to avoid leaking internals
+      body: JSON.stringify({ error: 'INTERNAL_ERROR', exportId }),
     };
     try {
       const auditDatabase = database ?? getCosmosDatabase();

@@ -14,13 +14,17 @@ const contextStub = { log: jest.fn(), invocationId: 'test-123' } as unknown as I
 
 const mockQuery = jest.fn();
 const mockCreate = jest.fn();
+const mockRead = jest.fn();
 const mockContainer = {
-  item: jest.fn().mockReturnValue({ read: jest.fn() }),
+  item: jest.fn().mockReturnValue({ read: mockRead }),
   items: {
     query: jest.fn().mockReturnValue({ fetchAll: mockQuery }),
     create: mockCreate,
   },
 };
+
+// Valid base64url code_challenge (43 characters, satisfies RFC 7636)
+const VALID_CODE_CHALLENGE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -48,7 +52,7 @@ describe('authorizeService - parameter validation', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
     });
@@ -65,7 +69,7 @@ describe('authorizeService - parameter validation', () => {
         client_id: 'test-client',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
     });
@@ -82,7 +86,7 @@ describe('authorizeService - parameter validation', () => {
         response_type: 'token',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
     });
@@ -98,14 +102,16 @@ describe('authorizeService - parameter validation', () => {
         client_id: 'test-client',
         response_type: 'code',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
     });
 
+    // When redirect_uri is missing/invalid, the service cannot redirect back to it,
+    // so it returns a 400 error directly rather than a 302 redirect.
     const response = await authorizeHandler(req, contextStub);
-    expect(response.status).toBe(302);
-    expect(response.headers?.Location).toContain('error=invalid_request');
+    expect(response.status).toBe(400);
+    expect(response.headers?.Location).toBeUndefined();
   });
 
   it('returns error for missing code_challenge in PKCE flow', async () => {
@@ -131,7 +137,7 @@ describe('authorizeService - parameter validation', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'plain',
       },
     });
@@ -150,7 +156,7 @@ describe('authorizeService - user verification', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
     });
@@ -171,7 +177,7 @@ describe('authorizeService - user verification', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
         user_id: 'user-123',
       },
@@ -180,11 +186,12 @@ describe('authorizeService - user verification', () => {
     const response = await authorizeHandler(req, contextStub);
     expect(response.status).toBe(302);
     expect(response.headers?.Location).toContain('error=access_denied');
-    expect(mockCreate).not.toHaveBeenCalled();
+    // No auth code generated (audit writes are intentional fire-and-forget side effects)
+    expect(response.headers?.Location).not.toContain('code=');
   });
 
   it('accepts authenticated subject from upstream principal header', async () => {
-    mockQuery.mockResolvedValueOnce({ resources: [{ id: 'user-123' }] });
+    mockRead.mockResolvedValueOnce({ resource: { id: 'user-123', isActive: true } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 
     const req = httpReqMock({
@@ -193,7 +200,7 @@ describe('authorizeService - user verification', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
       },
       headers: {
@@ -208,15 +215,14 @@ describe('authorizeService - user verification', () => {
   });
 
   it('returns error when user not found', async () => {
-    mockQuery.mockResolvedValueOnce({ resources: [] });
-
+    // mockRead returns undefined (default) → verifyUserExists catches and returns false
     const req = httpReqMock({
       query: {
         client_id: 'test-client',
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
         user_id: 'missing-user',
       },
@@ -228,7 +234,7 @@ describe('authorizeService - user verification', () => {
   });
 
   it('generates authorization code when user exists', async () => {
-    mockQuery.mockResolvedValueOnce({ resources: [{ id: 'user-123' }] });
+    mockRead.mockResolvedValueOnce({ resource: { id: 'user-123', isActive: true } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 
     const req = httpReqMock({
@@ -237,7 +243,7 @@ describe('authorizeService - user verification', () => {
         response_type: 'code',
         redirect_uri: 'https://example.com/callback',
         state: 'xyz',
-        code_challenge: 'abc123',
+        code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
         user_id: 'user-123',
       },

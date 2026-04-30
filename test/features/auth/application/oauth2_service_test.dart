@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 
 import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 
 class _MockFlutterAppAuth extends Mock implements FlutterAppAuth {}
@@ -141,6 +143,46 @@ void main() {
   });
 
   test(
+    'signInWithOAuth2 maps cancelled platform exception to user cancel',
+    () async {
+      when(() => appAuth.authorizeAndExchangeCode(any())).thenThrow(
+        PlatformException(
+          code: 'user_cancelled',
+          message: 'User cancelled login flow',
+        ),
+      );
+
+      await expectLater(
+        service.signInWithOAuth2(),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            'Cancelled by user',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('signInWithOAuth2 maps platform errors to platformError', () async {
+    when(() => appAuth.authorizeAndExchangeCode(any())).thenThrow(
+      PlatformException(code: 'auth_error', message: 'Network failure'),
+    );
+
+    await expectLater(
+      service.signInWithOAuth2(),
+      throwsA(
+        isA<AuthFailure>().having(
+          (failure) => failure.message,
+          'message',
+          'OAuth2 platform error: Network failure',
+        ),
+      ),
+    );
+  });
+
+  test(
     'refreshToken clears credentials when no access token returned',
     () async {
       when(
@@ -158,6 +200,30 @@ void main() {
       );
 
       when(() => appAuth.token(any())).thenAnswer((_) async => failedResponse);
+
+      final result = await service.refreshToken();
+
+      expect(result, isNull);
+      verify(() => secureStorage.delete(key: 'oauth2_access_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_refresh_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_id_token')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_token_expiry')).called(1);
+      verify(() => secureStorage.delete(key: 'oauth2_user_data')).called(1);
+    },
+  );
+
+  test(
+    'refreshToken clears credentials when app auth throws PlatformException',
+    () async {
+      when(
+        () => secureStorage.read(key: 'oauth2_refresh_token'),
+      ).thenAnswer((_) async => 'refresh-token');
+      when(() => appAuth.token(any())).thenThrow(
+        PlatformException(
+          code: 'refresh_error',
+          message: 'token endpoint unavailable',
+        ),
+      );
 
       final result = await service.refreshToken();
 

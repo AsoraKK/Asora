@@ -19,6 +19,20 @@ import { exportUserRoute } from '@privacy/routes/exportUser';
 import { deleteUserRoute } from '@privacy/routes/deleteUser';
 import { httpReqMock } from '../helpers/http';
 
+jest.mock('../../src/privacy/service/cascadeDelete', () => ({
+  executeCascadeDelete: jest.fn().mockResolvedValue({
+    userId: 'user123',
+    deletedAt: new Date().toISOString(),
+    deletedBy: 'user_request',
+    cosmos: { deleted: {}, anonymized: {}, skippedDueToHold: {} },
+    postgres: { deleted: {} },
+    errors: [],
+  }),
+}));
+jest.mock('@auth/service/refreshTokenStore', () => ({
+  revokeAllUserTokens: jest.fn().mockResolvedValue(0),
+}));
+
 function createUnsignedJwt(payload: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -129,7 +143,7 @@ jest.mock('@shared/clients/cosmos', () => {
     item: jest.fn().mockReturnValue({
       delete: jest.fn().mockResolvedValue({}),
       replace: jest.fn().mockResolvedValue({}),
-      read: jest.fn().mockResolvedValue({}),
+      read: jest.fn().mockResolvedValue({ resource: { id: 'user123', email: 'test@example.com' } }),
     }),
   };
 

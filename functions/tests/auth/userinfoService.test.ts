@@ -55,7 +55,7 @@ describe('userinfoService - token validation', () => {
     const req = httpReqMock({ method: 'GET' });
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ error: 'Bearer token required' });
+    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Bearer token required' });
   });
 
   it('returns 401 when authorization header format is invalid', async () => {
@@ -74,7 +74,7 @@ describe('userinfoService - token validation', () => {
     });
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ error: 'Invalid token' });
+    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Invalid token' });
   });
 
   it('returns 401 when JWT token is expired', async () => {
@@ -91,7 +91,7 @@ describe('userinfoService - token validation', () => {
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ error: 'Invalid token' });
+    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Invalid token' });
   });
 });
 
@@ -106,7 +106,7 @@ describe('userinfoService - user lookup', () => {
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(404);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ error: 'User not found' });
+    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'User not found' });
   });
 
   it('returns user profile for valid token', async () => {
@@ -117,6 +117,7 @@ describe('userinfoService - user lookup', () => {
         email: 'test@example.com',
         email_verified: true,
         created_at: '2025-01-01T00:00:00Z',
+        isActive: true,
       },
     });
 
@@ -128,9 +129,10 @@ describe('userinfoService - user lookup', () => {
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(200);
     const body = JSON.parse(response.body || '{}');
-    expect(body).toMatchObject({
+    const claims = body.data ?? body;
+    expect(claims).toMatchObject({
       sub: 'user-789',
-      username: 'testuser',
+      preferred_username: 'testuser',
       email: 'test@example.com',
       email_verified: true,
     });
@@ -146,6 +148,6 @@ describe('userinfoService - user lookup', () => {
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(500);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ error: 'Internal server error' });
+    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'UserInfo request failed' });
   });
 });

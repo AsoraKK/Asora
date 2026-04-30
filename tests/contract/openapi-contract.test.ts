@@ -5,7 +5,7 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import fetch, { Response } from 'cross-fetch';
 
-type HttpMethod = 'get' | 'post';
+type HttpMethod = 'get' | 'post' | 'delete';
 
 interface RequestOptions {
   method: HttpMethod;
@@ -216,7 +216,14 @@ const unauthorizedCases: Array<{ method: HttpMethod; path: string; body?: () => 
     method: 'post',
     path: '/moderation/flag',
     body: () => ({ targetId: randomUUID(), reason: 'spam' })
-  }
+  },
+  { method: 'get', path: '/auth/userinfo' },
+  {
+    method: 'post',
+    path: '/moderation/appeals',
+    body: () => ({ caseId: `case_${randomUUID()}`, statement: 'Contract smoke appeal' })
+  },
+  { method: 'get', path: '/user/export' }
 ];
 
 describeIfServer('Authorization guards', () => {
@@ -391,5 +398,96 @@ Object {
       const unauthValidator = getValidator('/feed', 'get', '401');
       expect(unauthValidator(payload)).toBe(true);
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Auth endpoints
+  // ---------------------------------------------------------------------------
+
+  test('GET /auth/userinfo returns UserInfo claims when authenticated', async () => {
+    const result = await runOrSkip(() => request({ method: 'get', pathKey: '/auth/userinfo', auth: true }));
+    if (!result) return;
+    const { response, payload } = result;
+    expect(response.status).toBe(200);
+    const validate = getValidator('/auth/userinfo', 'get', '200');
+    const ok = validate(payload);
+    if (!ok) console.error(validate.errors);
+    expect(ok).toBe(true);
+    // OIDC subject claim must be present
+    expect(typeof (payload as any)?.data?.sub).toBe('string');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Moderation appeals
+  // ---------------------------------------------------------------------------
+
+  test('POST /moderation/appeals rejects missing caseId with 400', async () => {
+    const result = await runOrSkip(() =>
+      request({ method: 'post', pathKey: '/moderation/appeals', auth: true, body: { statement: 'no caseId' } })
+    );
+    if (!result) return;
+    const { response } = result;
+    expect([400, 422]).toContain(response.status);
+  });
+
+  test('POST /moderation/appeals/{appealId}/vote rejects unauthenticated request', async () => {
+    const fakeAppealId = `apl_${randomUUID()}`;
+    const result = await runOrSkip(() =>
+      request({
+        method: 'post',
+        pathKey: `/moderation/appeals/${fakeAppealId}/vote`,
+        auth: false,
+        body: { vote: 'uphold' }
+      })
+    );
+    if (!result) return;
+    expect(result.response.status).toBe(401);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Privacy / DSR
+  // ---------------------------------------------------------------------------
+
+  test('GET /user/export returns DSRExportResponse when authenticated', async () => {
+    const result = await runOrSkip(() => request({ method: 'get', pathKey: '/user/export', auth: true }));
+    if (!result) return;
+    const { response, payload } = result;
+    // 200 OK or 429 if cooldown active — both are valid
+    expect([200, 429]).toContain(response.status);
+    if (response.status === 200) {
+      const validate = getValidator('/user/export', 'get', '200');
+      const ok = validate(payload);
+      if (!ok) console.error(validate.errors);
+      expect(ok).toBe(true);
+    }
+  });
+
+  test('DELETE /user/delete requires X-Confirm-Delete header', async () => {
+    // Without the required header the endpoint must return 400 (missing header guard)
+    const result = await runOrSkip(async () => {
+      ensureServerAvailable();
+      if (!(await isServerReachable())) {
+        throw new StagingUnavailableError(`Staging endpoint ${baseUrl} is unreachable.`);
+      }
+      const url = new URL('/user/delete', baseUrl);
+      const headers: Record<string, string> = {};
+      if (jwt) headers.Authorization = `Bearer ${jwt}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const res = await fetch(url.toString(), {
+          method: 'DELETE',
+          headers,
+          signal: controller.signal
+        });
+        const payload = await res.json().catch(() => ({}));
+        return { response: res, payload };
+      } finally {
+        clearTimeout(timeout);
+      }
+    });
+    if (!result) return;
+    // Without X-Confirm-Delete: true the API should reject with 400 or 401
+    expect([400, 401]).toContain(result.response.status);
   });
 });

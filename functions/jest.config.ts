@@ -27,12 +27,7 @@ const config: Config = {
   ],
   coverageReporters: ['json-summary', 'lcov', 'text', 'clover'],
   coveragePathIgnorePatterns: ['/node_modules/', '/tests/'],
-  testPathIgnorePatterns: [
-    // Ignore WIP/placeholder test files until implementation
-    'reviewAppealedContent.*test\\.ts',
-    // Ignore service tests temporarily (need proper Cosmos mocking infrastructure)
-    '.*Service\\.test\\.ts',
-  ],
+  testPathIgnorePatterns: [],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.(ts|tsx)$': [

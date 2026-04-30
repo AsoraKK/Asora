@@ -276,6 +276,13 @@ async function processPostgres(
       );
       result.postgres.deleted['auth_identities'] = authResult.rowCount ?? 0;
 
+      // Revoke all refresh tokens
+      const tokensResult = await client.query(
+        'DELETE FROM refresh_tokens WHERE user_uuid = $1',
+        [options.userId],
+      );
+      result.postgres.deleted['refresh_tokens'] = tokensResult.rowCount ?? 0;
+
       // Delete user record
       const userResult = await client.query(
         'DELETE FROM users WHERE user_uuid = $1',
