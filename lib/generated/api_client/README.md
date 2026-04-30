@@ -79,17 +79,27 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsResolve**](doc/AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesBatch**](doc/AdminApi.md#admininvitesbatch) | **POST** /_admin/invites/batch | Batch create invite codes
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesCreate**](doc/AdminApi.md#admininvitescreate) | **POST** /_admin/invites | Create an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesDelete**](doc/AdminApi.md#admininvitesdelete) | **DELETE** /_admin/invites/{code} | Hard-delete an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesGet**](doc/AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesList**](doc/AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersDisable**](doc/AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersEnable**](doc/AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersSearch**](doc/AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
+[*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
 [*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
+[*AuthApi*](doc/AuthApi.md) | [**authRedeemInvite**](doc/AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
+[*AuthApi*](doc/AuthApi.md) | [**authToken**](doc/AuthApi.md#authtoken) | **POST** /auth/token | Issue OAuth2 tokens
+[*AuthApi*](doc/AuthApi.md) | [**authUserInfo**](doc/AuthApi.md#authuserinfo) | **GET** /auth/userinfo | OIDC UserInfo endpoint
+[*AuthApi*](doc/AuthApi.md) | [**authUserInfoPost**](doc/AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
 [*FeedApi*](doc/FeedApi.md) | [**getFeed**](doc/FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
+[*ModerationApi*](doc/ModerationApi.md) | [**submitModerationAppeal**](doc/ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
+[*ModerationApi*](doc/ModerationApi.md) | [**voteOnModerationAppeal**](doc/ModerationApi.md#voteonmoderationappeal) | **POST** /moderation/appeals/{appealId}/vote | Cast a community vote on an appeal
 [*PostsApi*](doc/PostsApi.md) | [**createPost**](doc/PostsApi.md#createpost) | **POST** /post | Create a new post
+[*PrivacyApi*](doc/PrivacyApi.md) | [**deleteUserAccount**](doc/PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Delete own account (GDPR Article 17)
+[*PrivacyApi*](doc/PrivacyApi.md) | [**exportUserData**](doc/PrivacyApi.md#exportuserdata) | **GET** /user/export | Export personal data (GDPR Article 20)
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**clearLegalHold**](doc/PrivacyAdminApi.md#clearlegalhold) | **POST** /admin/legal-hold/clear | Clear an existing legal hold
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrDelete**](doc/PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /admin/dsr/delete | Enqueue a Data Subject Request delete
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrExport**](doc/PrivacyAdminApi.md#enqueuedsrexport) | **POST** /admin/dsr/export | Enqueue a Data Subject Request export
@@ -98,6 +108,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AccountDeleteResponse](doc/AccountDeleteResponse.md)
  - [AdminAppealAuditSummary](doc/AdminAppealAuditSummary.md)
  - [AdminAppealContent](doc/AdminAppealContent.md)
  - [AdminAppealDecisionRequest](doc/AdminAppealDecisionRequest.md)
@@ -154,22 +165,48 @@ Class | Method | HTTP request | Description
  - [AdminUserSearchResponse](doc/AdminUserSearchResponse.md)
  - [AdminUserStatus](doc/AdminUserStatus.md)
  - [AdminUserSummary](doc/AdminUserSummary.md)
+ - [AppealCreatedResponse](doc/AppealCreatedResponse.md)
+ - [AppealCreatedResponseAppeal](doc/AppealCreatedResponseAppeal.md)
+ - [AppealVoteRequest](doc/AppealVoteRequest.md)
+ - [AppealVoteResponse](doc/AppealVoteResponse.md)
+ - [AppealVoteResponseVote](doc/AppealVoteResponseVote.md)
+ - [AuthTokenRequest](doc/AuthTokenRequest.md)
  - [CreatePost201Response](doc/CreatePost201Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
+ - [DSRExportResponse](doc/DSRExportResponse.md)
+ - [DSRExportResponsePreviousExportsInner](doc/DSRExportResponsePreviousExportsInner.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)
  - [DsrRequestSummary](doc/DsrRequestSummary.md)
  - [Error](doc/Error.md)
+ - [ErrorResponse](doc/ErrorResponse.md)
+ - [ErrorResponseError](doc/ErrorResponseError.md)
+ - [FeedPageResponse](doc/FeedPageResponse.md)
+ - [FeedPageResponseMeta](doc/FeedPageResponseMeta.md)
  - [FlagContent202Response](doc/FlagContent202Response.md)
  - [FlagContentRequest](doc/FlagContentRequest.md)
- - [GetFeed200Response](doc/GetFeed200Response.md)
- - [GetFeed200ResponseMeta](doc/GetFeed200ResponseMeta.md)
+ - [ForbiddenError](doc/ForbiddenError.md)
+ - [ForbiddenErrorError](doc/ForbiddenErrorError.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
  - [InviteValidationPayload](doc/InviteValidationPayload.md)
  - [InviteValidationResponse](doc/InviteValidationResponse.md)
  - [LegalHoldClear](doc/LegalHoldClear.md)
  - [LegalHoldInput](doc/LegalHoldInput.md)
  - [LegalHoldRecord](doc/LegalHoldRecord.md)
+ - [ModerationAppealRequest](doc/ModerationAppealRequest.md)
+ - [ModerationBlockedResponse](doc/ModerationBlockedResponse.md)
+ - [OAuthTokenResponse](doc/OAuthTokenResponse.md)
+ - [OAuthTokenResponseData](doc/OAuthTokenResponseData.md)
  - [RateLimitError](doc/RateLimitError.md)
+ - [RedeemInviteRequest](doc/RedeemInviteRequest.md)
+ - [RedeemInviteResponse](doc/RedeemInviteResponse.md)
+ - [RedeemInviteResponseData](doc/RedeemInviteResponseData.md)
+ - [UnauthorizedError](doc/UnauthorizedError.md)
+ - [UnauthorizedErrorError](doc/UnauthorizedErrorError.md)
+ - [UserInfoResponse](doc/UserInfoResponse.md)
+ - [UserInfoResponseData](doc/UserInfoResponseData.md)
+ - [ValidationErrorResponse](doc/ValidationErrorResponse.md)
+ - [ValidationErrorResponseError](doc/ValidationErrorResponseError.md)
+ - [ValidationErrorResponseErrorFieldsInner](doc/ValidationErrorResponseErrorFieldsInner.md)
 
 
 ## Documentation For Authorization

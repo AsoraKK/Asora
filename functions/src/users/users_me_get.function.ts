@@ -14,6 +14,7 @@ import type { UserProfile } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { usersService } from '@auth/service/usersService';
 import { profileService } from '@users/service/profileService';
+import { getReputationScore } from '@shared/services/reputationService';
 
 export const users_me_get = httpHandler<void, UserProfile>(async (ctx) => {
   ctx.context.log(`[users_me_get] Fetching current user profile [${ctx.correlationId}]`);
@@ -43,7 +44,7 @@ export const users_me_get = httpHandler<void, UserProfile>(async (ctx) => {
       avatarUrl: cosmosProfile.avatarUrl,
       tier: pgUser.tier,
       roles: pgUser.roles,
-      reputation: 0, // TODO: Fetch from reputation service if available
+      reputation: (await getReputationScore(auth.userId)) ?? 0,
       createdAt: pgUser.created_at,
       updatedAt: pgUser.updated_at,
     };

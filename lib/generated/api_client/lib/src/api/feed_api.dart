@@ -9,8 +9,10 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/get_feed200_response.dart';
+import 'package:asora_api_client/src/model/feed_page_response.dart';
+import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
+import 'package:asora_api_client/src/model/unauthorized_error.dart';
 
 class FeedApi {
   final Dio _dio;
@@ -23,8 +25,8 @@ class FeedApi {
   /// Return a page of feed items.
   ///
   /// Parameters:
-  /// * [cursor] - Cursor for pagination
-  /// * [limit] - Number of items to return (1-50)
+  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+  /// * [limit] - Maximum number of items to return per page
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,11 +34,11 @@ class FeedApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [GetFeed200Response] as data
+  /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetFeed200Response>> getFeed({
+  Future<Response<FeedPageResponse>> getFeed({
     String? cursor,
-    int? limit,
+    int? limit = 25,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -81,7 +83,7 @@ class FeedApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    GetFeed200Response? _responseData;
+    FeedPageResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
@@ -89,8 +91,8 @@ class FeedApi {
           ? null
           : _serializers.deserialize(
               rawResponse,
-              specifiedType: const FullType(GetFeed200Response),
-            ) as GetFeed200Response;
+              specifiedType: const FullType(FeedPageResponse),
+            ) as FeedPageResponse;
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -101,7 +103,7 @@ class FeedApi {
       );
     }
 
-    return Response<GetFeed200Response>(
+    return Response<FeedPageResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

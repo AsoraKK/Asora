@@ -88,13 +88,15 @@ class _CircleSkeleton extends LythSkeleton {
 
 class _LythSkeletonState extends State<LythSkeleton>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  AnimationController? _controller;
   late Animation<double> _opacity;
+  bool _animationInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimation();
+    // _setupAnimation() must be called from didChangeDependencies because it
+    // needs MediaQuery, which is an inherited widget unavailable in initState.
   }
 
   void _setupAnimation() {
@@ -110,7 +112,7 @@ class _LythSkeletonState extends State<LythSkeleton>
       _opacity = Tween<double>(
         begin: 0.5,
         end: 1.0,
-      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
     } else {
       _opacity = const AlwaysStoppedAnimation<double>(0.7);
     }
@@ -119,20 +121,26 @@ class _LythSkeletonState extends State<LythSkeleton>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_animationInitialized) {
+      _setupAnimation();
+      _animationInitialized = true;
+      return;
+    }
     // Re-check animation settings if they change
     final mediaQuery = MediaQuery.of(context);
-    if (_controller.isAnimating == mediaQuery.disableAnimations) {
+    final ctrl = _controller;
+    if (ctrl != null && ctrl.isAnimating == mediaQuery.disableAnimations) {
       if (mediaQuery.disableAnimations) {
-        _controller.stop();
-      } else if (!_controller.isAnimating) {
-        _controller.repeat(reverse: true);
+        ctrl.stop();
+      } else if (!ctrl.isAnimating) {
+        ctrl.repeat(reverse: true);
       }
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -150,7 +158,10 @@ class _LythSkeletonState extends State<LythSkeleton>
         child: Container(
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.7 * _opacity.value),
-            borderRadius: widget.borderRadius != null
+            // borderRadius and BoxShape.circle are mutually exclusive in Flutter.
+            borderRadius:
+                widget.borderRadius != null &&
+                    widget._shape != _SkeletonShape.circle
                 ? BorderRadius.circular(widget.borderRadius!)
                 : null,
             shape: widget._shape == _SkeletonShape.circle

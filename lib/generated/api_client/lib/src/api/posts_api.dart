@@ -9,7 +9,10 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
-import 'package:asora_api_client/src/model/error.dart';
+import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/rate_limit_error.dart';
+import 'package:asora_api_client/src/model/unauthorized_error.dart';
+import 'package:asora_api_client/src/model/validation_error_response.dart';
 
 class PostsApi {
   final Dio _dio;

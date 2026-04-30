@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'package:asora/features/auth/domain/user.dart';
 
 class _FakeAuthService extends AuthService {
   bool shouldThrow = false;
+  Completer<User>? pendingUserCompleter;
   User user = User(
     id: 'test123',
     email: 'test@example.com',
@@ -22,6 +25,9 @@ class _FakeAuthService extends AuthService {
   @override
   Future<User> signInWithGoogle() async {
     if (shouldThrow) throw AuthFailure.serverError('Oops');
+    if (pendingUserCompleter != null) {
+      return pendingUserCompleter!.future;
+    }
     return user;
   }
 }
@@ -56,5 +62,27 @@ void main() {
     await tester.tap(find.text('Sign in with Google'));
     await tester.pumpAndSettle();
     expect(find.text('Oops'), findsOneWidget);
+  });
+
+  testWidgets('shows loading indicator while sign-in is pending', (
+    tester,
+  ) async {
+    final fake = _FakeAuthService()..pendingUserCompleter = Completer<User>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [authServiceProvider.overrideWithValue(fake)],
+        child: const MaterialApp(home: AuthScreen()),
+      ),
+    );
+
+    await tester.tap(find.text('Sign in with Google'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    fake.pendingUserCompleter!.complete(fake.user);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Logged in as'), findsOneWidget);
   });
 }

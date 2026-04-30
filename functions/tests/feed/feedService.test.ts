@@ -37,9 +37,12 @@ function setupCosmosResponse(
   headers: Record<string, string> = {},
   continuationToken?: string
 ) {
+  const requestCharge = headers['x-ms-request-charge']
+    ? parseFloat(headers['x-ms-request-charge'])
+    : 0;
   mockFetchNext.mockResolvedValue({
     resources,
-    headers,
+    requestCharge,
     continuationToken,
   });
 }

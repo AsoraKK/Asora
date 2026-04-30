@@ -13,7 +13,7 @@ Method | HTTP request | Description
 
 
 # **getFeed**
-> GetFeed200Response getFeed(cursor, limit)
+> FeedPageResponse getFeed(cursor, limit)
 
 Retrieve personalized feed items
 
@@ -24,8 +24,8 @@ Return a page of feed items.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getFeedApi();
-final String cursor = cursor_example; // String | Cursor for pagination
-final int limit = 56; // int | Number of items to return (1-50)
+final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+final int limit = 25; // int | Maximum number of items to return per page
 
 try {
     final response = api.getFeed(cursor, limit);
@@ -39,12 +39,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Cursor for pagination | [optional] 
- **limit** | **int**| Number of items to return (1-50) | [optional] 
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional] 
+ **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
 
-[**GetFeed200Response**](GetFeed200Response.md)
+[**FeedPageResponse**](FeedPageResponse.md)
 
 ### Authorization
 

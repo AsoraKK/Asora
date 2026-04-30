@@ -124,7 +124,7 @@ async function healthCheck(
       jsonBody: {
         status: 'error',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Health check failed'
       },
       headers: {
         'Content-Type': 'application/json',
