@@ -11,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:asora/design_system/index.dart';
 import 'package:asora/design_system/components/lyth_empty_state.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
 import 'package:asora/design_system/components/lyth_confirm_dialog.dart';
 import 'package:asora/design_system/components/lyth_skeleton.dart';
 

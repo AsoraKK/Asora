@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/state/providers/feed_providers.dart';
 import 'package:asora/ui/screens/onboarding/onboarding_custom_feed_prompt.dart';
 
