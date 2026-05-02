@@ -32,8 +32,8 @@ const requiredPaths = [
   '/_admin/users/{userId}/enable',
   '/_admin/content/{contentId}/block',
   '/_admin/content/{contentId}/publish',
-  '/admin/dsr/export',
-  '/admin/dsr/delete'
+  '/_admin/dsr/export',
+  '/_admin/dsr/delete'
 ];
 
 const missing = requiredPaths.filter(p => {
