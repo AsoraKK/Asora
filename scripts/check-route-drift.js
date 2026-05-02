@@ -64,8 +64,20 @@ while ((m = specPathRegex.exec(specText)) !== null) {
 function normaliseRoute(r) {
   // Ensure leading slash
   if (!r.startsWith('/')) r = `/${r}`;
-  // Convert Azure-style {param} (already correct) – nothing to do
+  // Azure Functions wildcard params use {*param} syntax; OpenAPI uses {param}.
+  // Strip the leading * so the two representations compare equal.
+  r = r.replace(/\{\*([^}]+)\}/g, '{$1}');
   return r;
+}
+
+/**
+ * Structural key for a path: replace every {paramName} with {_} so that
+ * /posts/{id}/like and /posts/{postId}/like hash to the same key.
+ * This lets us match inventory routes that differ only in parameter name
+ * from spec paths (both are valid for the same route structure).
+ */
+function structuralKey(p) {
+  return p.replace(/\{[^}]+\}/g, '{_}');
 }
 
 const inventoryRoutes = (inventory.inventory || inventory.routes || inventory)
@@ -76,7 +88,18 @@ const inventoryRoutes = (inventory.inventory || inventory.routes || inventory)
 // ---------------------------------------------------------------------------
 // Compare
 // ---------------------------------------------------------------------------
-const undocumented = inventoryRoutes.filter(r => !specPaths.has(r));
+// Build a structural-key set from the spec for param-name-agnostic matching.
+// /posts/{id}/like and /posts/{postId}/like are structurally identical —
+// both are valid representations of the same route template.
+const specStructuralKeys = new Set([...specPaths].map(structuralKey));
+
+// Deduplicate inventory routes before comparison (multiple HTTP methods on
+// the same route each have their own inventory entry).
+const uniqueInventoryRoutes = [...new Set(inventoryRoutes)];
+
+const undocumented = uniqueInventoryRoutes.filter(
+  r => !specPaths.has(r) && !specStructuralKeys.has(structuralKey(r))
+);
 const phantom = [...specPaths].filter(p => !inventoryRoutes.includes(p));
 
 // ---------------------------------------------------------------------------

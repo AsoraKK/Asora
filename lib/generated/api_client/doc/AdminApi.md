@@ -15,8 +15,24 @@ Method | HTTP request | Description
 [**adminAppealsOverride**](AdminApi.md#adminappealsoverride) | **POST** /_admin/appeals/{appealId}/override | Override an appeal
 [**adminAppealsReject**](AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
 [**adminAuditList**](AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
+[**adminBudgetGet**](AdminApi.md#adminbudgetget) | **GET** /_admin/budget | Get budget configuration
+[**adminBudgetUpdate**](AdminApi.md#adminbudgetupdate) | **PUT** /_admin/budget | Update budget configuration
+[**adminConfigGet**](AdminApi.md#adminconfigget) | **GET** /_admin/config | Get admin runtime configuration
+[**adminConfigPublicGet**](AdminApi.md#adminconfigpublicget) | **GET** /admin/config | Get public admin configuration
+[**adminConfigPublicUpdate**](AdminApi.md#adminconfigpublicupdate) | **PUT** /admin/config | Update public admin configuration
+[**adminConfigUpdate**](AdminApi.md#adminconfigupdate) | **PUT** /_admin/config | Update admin runtime configuration
 [**adminContentBlock**](AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
 [**adminContentPublish**](AdminApi.md#admincontentpublish) | **POST** /_admin/content/{contentId}/publish | Publish content
+[**adminDsrCancel**](AdminApi.md#admindsrcancel) | **POST** /_admin/dsr/{id}/cancel | Cancel a data subject request
+[**adminDsrDownload**](AdminApi.md#admindsrdownload) | **GET** /_admin/dsr/{id}/download | Download data subject request export
+[**adminDsrGet**](AdminApi.md#admindsrget) | **GET** /_admin/dsr/{id} | Get data subject request detail
+[**adminDsrLegalHoldClear**](AdminApi.md#admindsrlegalholdclear) | **POST** /_admin/dsr/legal-holds/{id}/clear | Clear a legal hold
+[**adminDsrLegalHoldPlace**](AdminApi.md#admindsrlegalholdplace) | **POST** /_admin/dsr/legal-holds | Place a legal hold
+[**adminDsrList**](AdminApi.md#admindsrlist) | **GET** /_admin/dsr | List data subject requests
+[**adminDsrRelease**](AdminApi.md#admindsrrelease) | **POST** /_admin/dsr/{id}/release | Release a data subject request
+[**adminDsrRetry**](AdminApi.md#admindsrretry) | **POST** /_admin/dsr/{id}/retry | Retry a failed data subject request
+[**adminDsrReviewA**](AdminApi.md#admindsrreviewa) | **POST** /_admin/dsr/{id}/reviewA | First-reviewer decision on DSR
+[**adminDsrReviewB**](AdminApi.md#admindsrreviewb) | **POST** /_admin/dsr/{id}/reviewB | Second-reviewer decision on DSR
 [**adminFlagsGet**](AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
 [**adminFlagsList**](AdminApi.md#adminflagslist) | **GET** /_admin/flags | List flagged content queue
 [**adminFlagsResolve**](AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
@@ -26,6 +42,18 @@ Method | HTTP request | Description
 [**adminInvitesGet**](AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
 [**adminInvitesList**](AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
 [**adminInvitesRevoke**](AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
+[**adminModerationClassReset**](AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
+[**adminModerationClassesList**](AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
+[**adminModerationTestDelete**](AdminApi.md#adminmoderationtestdelete) | **DELETE** /admin/moderation/test/{path} | Proxy DELETE to Hive AI test endpoint
+[**adminModerationTestGet**](AdminApi.md#adminmoderationtestget) | **GET** /admin/moderation/test/{path} | Proxy GET to Hive AI test endpoint
+[**adminModerationTestPatch**](AdminApi.md#adminmoderationtestpatch) | **PATCH** /admin/moderation/test/{path} | Proxy PATCH to Hive AI test endpoint
+[**adminModerationTestPost**](AdminApi.md#adminmoderationtestpost) | **POST** /admin/moderation/test/{path} | Proxy POST to Hive AI test endpoint
+[**adminModerationTestPut**](AdminApi.md#adminmoderationtestput) | **PUT** /admin/moderation/test/{path} | Proxy PUT to Hive AI test endpoint
+[**adminModerationWeightsUpdate**](AdminApi.md#adminmoderationweightsupdate) | **POST** /admin/moderation-classes/weights | Bulk-update moderation class weights
+[**adminNewsIngest**](AdminApi.md#adminnewsingest) | **POST** /_admin/news/ingest | Ingest news items into the news board
+[**adminOpsMetrics**](AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
+[**adminOpsStateGet**](AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
+[**adminOpsStateUpdate**](AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
 [**adminUsersDisable**](AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [**adminUsersEnable**](AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [**adminUsersSearch**](AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
@@ -301,6 +329,240 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminBudgetGet**
+> JsonObject adminBudgetGet()
+
+Get budget configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminBudgetGet();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminBudgetGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminBudgetUpdate**
+> JsonObject adminBudgetUpdate(body)
+
+Update budget configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminBudgetUpdate(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminBudgetUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminConfigGet**
+> JsonObject adminConfigGet()
+
+Get admin runtime configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminConfigGet();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminConfigGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminConfigPublicGet**
+> JsonObject adminConfigPublicGet()
+
+Get public admin configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminConfigPublicGet();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminConfigPublicGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminConfigPublicUpdate**
+> JsonObject adminConfigPublicUpdate(body)
+
+Update public admin configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminConfigPublicUpdate(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminConfigPublicUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminConfigUpdate**
+> JsonObject adminConfigUpdate(body)
+
+Update admin runtime configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminConfigUpdate(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminConfigUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminContentBlock**
 > AdminContentActionResponse adminContentBlock(contentId, adminContentActionRequest)
 
@@ -379,6 +641,424 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AdminContentActionResponse**](AdminContentActionResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrCancel**
+> JsonObject adminDsrCancel(id, body)
+
+Cancel a data subject request
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrCancel(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrCancel: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrDownload**
+> JsonObject adminDsrDownload(id)
+
+Download data subject request export
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+
+try {
+    final response = api.adminDsrDownload(id);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrDownload: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrGet**
+> JsonObject adminDsrGet(id)
+
+Get data subject request detail
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+
+try {
+    final response = api.adminDsrGet(id);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrGet: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrLegalHoldClear**
+> JsonObject adminDsrLegalHoldClear(id, body)
+
+Clear a legal hold
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrLegalHoldClear(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrLegalHoldClear: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrLegalHoldPlace**
+> JsonObject adminDsrLegalHoldPlace(body)
+
+Place a legal hold
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrLegalHoldPlace(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrLegalHoldPlace: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrList**
+> JsonObject adminDsrList()
+
+List data subject requests
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminDsrList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrRelease**
+> JsonObject adminDsrRelease(id, body)
+
+Release a data subject request
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrRelease(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrRelease: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrRetry**
+> JsonObject adminDsrRetry(id, body)
+
+Retry a failed data subject request
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrRetry(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrRetry: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrReviewA**
+> JsonObject adminDsrReviewA(id, body)
+
+First-reviewer decision on DSR
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrReviewA(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrReviewA: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminDsrReviewB**
+> JsonObject adminDsrReviewB(id, body)
+
+Second-reviewer decision on DSR
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminDsrReviewB(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminDsrReviewB: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
 
 ### Authorization
 
@@ -779,6 +1459,494 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AdminInviteRevokeResponse**](AdminInviteRevokeResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationClassReset**
+> JsonObject adminModerationClassReset(className, body)
+
+Reset a moderation class to defaults
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String className = className_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminModerationClassReset(className, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationClassReset: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **className** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationClassesList**
+> JsonObject adminModerationClassesList()
+
+List moderation label classes
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminModerationClassesList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationClassesList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationTestDelete**
+> JsonObject adminModerationTestDelete(path)
+
+Proxy DELETE to Hive AI test endpoint
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String path = path_example; // String | 
+
+try {
+    final response = api.adminModerationTestDelete(path);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationTestDelete: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **path** | **String**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationTestGet**
+> JsonObject adminModerationTestGet(path)
+
+Proxy GET to Hive AI test endpoint
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String path = path_example; // String | 
+
+try {
+    final response = api.adminModerationTestGet(path);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationTestGet: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **path** | **String**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationTestPatch**
+> JsonObject adminModerationTestPatch(path, body)
+
+Proxy PATCH to Hive AI test endpoint
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String path = path_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminModerationTestPatch(path, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationTestPatch: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **path** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationTestPost**
+> JsonObject adminModerationTestPost(path, body)
+
+Proxy POST to Hive AI test endpoint
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String path = path_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminModerationTestPost(path, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationTestPost: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **path** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationTestPut**
+> JsonObject adminModerationTestPut(path, body)
+
+Proxy PUT to Hive AI test endpoint
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String path = path_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminModerationTestPut(path, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationTestPut: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **path** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationWeightsUpdate**
+> JsonObject adminModerationWeightsUpdate(body)
+
+Bulk-update moderation class weights
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminModerationWeightsUpdate(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationWeightsUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminNewsIngest**
+> JsonObject adminNewsIngest(body)
+
+Ingest news items into the news board
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminNewsIngest(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminNewsIngest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminOpsMetrics**
+> JsonObject adminOpsMetrics()
+
+Get operational metrics
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminOpsMetrics();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminOpsMetrics: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminOpsStateGet**
+> JsonObject adminOpsStateGet()
+
+Get operational state flags
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+
+try {
+    final response = api.adminOpsStateGet();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminOpsStateGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminOpsStateUpdate**
+> JsonObject adminOpsStateUpdate(body)
+
+Update operational state flags
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.adminOpsStateUpdate(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminOpsStateUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
 
 ### Authorization
 

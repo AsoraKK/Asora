@@ -116,7 +116,7 @@ class PrivacyAdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/dsr/delete';
+    final _path = r'/_admin/dsr/delete';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -217,7 +217,7 @@ class PrivacyAdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/dsr/export';
+    final _path = r'/_admin/dsr/export';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{

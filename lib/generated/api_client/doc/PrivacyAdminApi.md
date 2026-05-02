@@ -10,8 +10,8 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**clearLegalHold**](PrivacyAdminApi.md#clearlegalhold) | **POST** /admin/legal-hold/clear | Clear an existing legal hold
-[**enqueueDsrDelete**](PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /admin/dsr/delete | Enqueue a Data Subject Request delete
-[**enqueueDsrExport**](PrivacyAdminApi.md#enqueuedsrexport) | **POST** /admin/dsr/export | Enqueue a Data Subject Request export
+[**enqueueDsrDelete**](PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /_admin/dsr/delete | Enqueue a Data Subject Request delete
+[**enqueueDsrExport**](PrivacyAdminApi.md#enqueuedsrexport) | **POST** /_admin/dsr/export | Enqueue a Data Subject Request export
 [**placeLegalHold**](PrivacyAdminApi.md#placelegalhold) | **POST** /admin/legal-hold/place | Place a legal hold
 
 
