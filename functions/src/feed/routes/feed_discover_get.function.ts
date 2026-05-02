@@ -39,14 +39,24 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       // Anonymous viewer, no problem
     }
 
-    // Fetch public discovery feed
-    const feedResult = await getFeed({
-      principal,
-      context: ctx.context,
-      cursor,
-      limit: limit.toString(),
-      authorId: null, // Public feed, not user-specific
-    });
+    // Fetch public discovery feed — wrapped so a Cosmos/Postgres infra outage
+    // degrades gracefully to an empty feed (200) instead of a 500.
+    let feedResult: Awaited<ReturnType<typeof getFeed>>;
+    try {
+      feedResult = await getFeed({
+        principal,
+        context: ctx.context,
+        cursor,
+        limit: limit.toString(),
+        authorId: null, // Public feed, not user-specific
+      });
+    } catch (feedError) {
+      ctx.context.warn(
+        `[feed_discover_get] Feed service unavailable, returning empty feed: ${feedError}`,
+        { correlationId: ctx.correlationId }
+      );
+      return ctx.ok({ items: [], nextCursor: undefined });
+    }
 
     // Filter by topics if provided
     let items = feedResult.body.items;
