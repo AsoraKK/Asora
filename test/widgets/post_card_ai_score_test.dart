@@ -23,7 +23,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
-          home: Scaffold(body: PostCard(post: post, showAiScores: true)),
+          home: Scaffold(body: PostCard(post: post)),
         ),
       ),
     );

@@ -249,10 +249,3 @@ lib/src/model/validation_error_response_error.dart
 lib/src/model/validation_error_response_error_fields_inner.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/analytics_api_test.dart
-test/appeals_api_test.dart
-test/custom_feeds_api_test.dart
-test/notifications_api_test.dart
-test/payments_api_test.dart
-test/subscription_api_test.dart
-test/users_api_test.dart

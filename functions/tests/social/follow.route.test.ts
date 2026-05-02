@@ -1,6 +1,6 @@
 import type { InvocationContext } from '@azure/functions';
 
-import { follow_create, follow_delete } from '@social/follow';
+import { follow_create, follow_delete } from '@social/follow.function';
 import { httpReqMock } from '../helpers/http';
 
 jest.mock('@shared/http/authContext', () => ({
@@ -63,7 +63,7 @@ describe('follow route — POST (create)', () => {
     });
     const res = await follow_create(req as any, contextStub);
     expect(res.status).toBe(200);
-    const body = JSON.parse(res.body as string);
+    const body = res.jsonBody as { following: boolean; followerCount: number };
     expect(body.following).toBe(true);
     expect(body.followerCount).toBe(5);
   });
@@ -110,7 +110,7 @@ describe('follow route — DELETE (unfollow)', () => {
     });
     const res = await follow_delete(req as any, contextStub);
     expect(res.status).toBe(200);
-    const body = JSON.parse(res.body as string);
+    const body = res.jsonBody as { following: boolean; followerCount: number };
     expect(body.following).toBe(false);
     expect(body.followerCount).toBe(4);
   });
