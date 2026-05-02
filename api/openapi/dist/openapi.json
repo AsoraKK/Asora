@@ -699,6 +699,149 @@
         }
       }
     },
+    "/moderation/flag-content": {
+      "post": {
+        "operationId": "flagContentV1",
+        "summary": "Flag content for moderation review (v1 route)",
+        "description": "Alias of `/moderation/flag` — legacy v1 route used by the function runtime.",
+        "tags": [
+          "Moderation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetId",
+                  "reason"
+                ],
+                "properties": {
+                  "targetId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identifier of the content being flagged"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Moderation reason",
+                    "enum": [
+                      "spam",
+                      "harassment",
+                      "hate_speech",
+                      "violence",
+                      "adult_content",
+                      "misinformation",
+                      "copyright",
+                      "privacy",
+                      "other"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Additional details supporting the flag",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Flag accepted for review",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flagId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "received"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/XRateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/XRateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/XRateLimitReset"
+              },
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/_admin/flags": {
       "get": {
         "operationId": "adminFlagsList",
@@ -3160,6 +3303,363 @@
           },
           "409": {
             "description": "Account is already active",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/XRateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/XRateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/XRateLimitReset"
+              },
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/moderation/my-appeals": {
+      "get": {
+        "operationId": "getMyAppeals",
+        "summary": "List the authenticated user's moderation appeals",
+        "description": "Returns all appeals filed by the calling user, ordered by creation date descending.",
+        "tags": [
+          "Moderation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by appeal status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "overridden"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of the user's appeals",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "appealId": {
+                            "type": "string"
+                          },
+                          "caseId": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/XRateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/XRateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/XRateLimitReset"
+              },
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/moderation/submit-appeal": {
+      "post": {
+        "operationId": "submitAppealV1",
+        "summary": "Submit a moderation appeal (v1 route)",
+        "description": "Alias of `/moderation/appeals` — legacy v1 route used by the function runtime.",
+        "tags": [
+          "Moderation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationAppealRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Appeal created",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppealCreatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid appeal payload or daily limit exceeded",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/XRateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/XRateLimitRemaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/XRateLimitReset"
+              },
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/moderation/vote-appeal": {
+      "post": {
+        "operationId": "voteOnAppealV1",
+        "summary": "Cast a community vote on an appeal (v1 route)",
+        "description": "Alias of `/moderation/appeals/{appealId}/vote` — accepts appealId in the request body.",
+        "tags": [
+          "Moderation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "appealId",
+                  "vote"
+                ],
+                "properties": {
+                  "appealId": {
+                    "type": "string",
+                    "description": "Appeal identifier"
+                  },
+                  "vote": {
+                    "type": "string",
+                    "enum": [
+                      "uphold",
+                      "deny"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote recorded",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppealVoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid vote value or duplicate vote",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "headers": {
+              "X-Correlation-ID": {
+                "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Appeal not found",
             "headers": {
               "X-Correlation-ID": {
                 "$ref": "#/components/headers/XCorrelationID"
