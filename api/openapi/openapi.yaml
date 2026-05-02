@@ -3374,6 +3374,57 @@ components:
           items:
             type: string
             format: uri
+    ServiceUnavailableError:
+      description: 503 – service temporarily unavailable (dependency outage, maintenance window, or upstream timeout).
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - SERVICE_UNAVAILABLE
+                - DEPENDENCY_UNAVAILABLE
+                - MAINTENANCE
+              example: SERVICE_UNAVAILABLE
+            message:
+              type: string
+              example: Service temporarily unavailable. Please retry after the indicated delay.
+            retryAfterSeconds:
+              type: integer
+              description: Suggested number of seconds to wait before retrying
+              example: 30
+            correlationId:
+              type: string
+    BadGatewayError:
+      description: 502 – bad gateway (upstream service returned an invalid or unexpected response).
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - BAD_GATEWAY
+                - UPSTREAM_ERROR
+              example: BAD_GATEWAY
+            message:
+              type: string
+              example: An upstream service returned an unexpected response. Please try again.
+            correlationId:
+              type: string
   parameters:
     cursorParam:
       name: cursor

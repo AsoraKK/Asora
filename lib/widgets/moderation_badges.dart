@@ -9,10 +9,10 @@ import 'package:asora/features/moderation/domain/appeal.dart';
 
 /// ASORA MODERATION BADGES
 ///
-/// 🎯 Purpose: Display moderation status and AI scores on content
+/// 🎯 Purpose: Display moderation status and appeal state on content
 /// ✅ Features: Flagged warnings, appeal status
 /// 🎨 Design: Subtle badges with color coding and icons
-/// 🔒 Privacy: Optional toggle for AI scores (user preference)
+/// 🔒 Privacy: No public AI score display
 
 class ModerationBadges extends StatelessWidget {
   final ModerationStatus status;

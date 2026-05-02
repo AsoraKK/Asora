@@ -240,6 +240,13 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     throw new Error('Redirect URI mismatch');
   }
 
+  // Enforce S256 PKCE method — reject any session that does not use it.
+  // PLAIN is blocked at the authorize endpoint, but we defend-in-depth here
+  // to guard against any tampered or legacy session document.
+  if (session.codeChallengeMethod !== 'S256') {
+    throw new Error('Unsupported code_challenge_method: only S256 is accepted');
+  }
+
   // Validate PKCE code verifier (accept base64 or base64url, ignore padding)
   const sha = crypto.createHash('sha256').update(body.code_verifier!).digest();
   const b64url = sha.toString('base64url');

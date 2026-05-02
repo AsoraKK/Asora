@@ -175,8 +175,18 @@ describe('feed_discover_get cache headers', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('feed_news_get cache headers', () => {
-  it('sets Cache-Control: private, no-store for authenticated requests', async () => {
-    mockAuthenticated();
+  // News Board is Black-tier only. mockAuthenticated must supply tier: 'black'.
+  function mockBlackTier(userId = 'user-feed-test') {
+    extractAuthContextMock.mockImplementation(async (ctx: any) => ({
+      userId,
+      roles: ['user'],
+      tier: 'black',
+      correlationId: ctx.correlationId,
+    }));
+  }
+
+  it('sets Cache-Control: private, no-store for Black-tier authenticated requests', async () => {
+    mockBlackTier();
     const token = await signedToken();
     const req = httpReqMock({ headers: { authorization: `Bearer ${token}` } });
 
@@ -185,29 +195,19 @@ describe('feed_news_get cache headers', () => {
     expect(headers['Cache-Control']).toBe('private, no-store');
   });
 
-  it('sets Cache-Control: public for anonymous requests', async () => {
+  it('returns 401 for anonymous requests (News Board is authenticated-only)', async () => {
     mockAnonymous();
     const req = httpReqMock({});
 
     const response = await feed_news_get(req, makeContext('news-anon'));
-    const headers = response.headers as Record<string, string>;
-    expect(headers['Cache-Control']).toContain('public');
-    expect(headers['Cache-Control']).toContain('max-age=');
+    expect(response.status).toBe(401);
   });
 
-  it('includes Vary: Authorization in both cases', async () => {
-    // authenticated
-    mockAuthenticated();
+  it('includes Vary: Authorization for authenticated Black-tier response', async () => {
+    mockBlackTier();
     const token = await signedToken();
     const authReq = httpReqMock({ headers: { authorization: `Bearer ${token}` } });
     const authRes = await feed_news_get(authReq, makeContext('news-vary-auth'));
     expect((authRes.headers as Record<string, string>)['Vary']).toBe('Authorization');
-
-    // anonymous
-    jest.clearAllMocks();
-    mockAnonymous();
-    const anonReq = httpReqMock({});
-    const anonRes = await feed_news_get(anonReq, makeContext('news-vary-anon'));
-    expect((anonRes.headers as Record<string, string>)['Vary']).toBe('Authorization');
   });
 });

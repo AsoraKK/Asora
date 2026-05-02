@@ -416,7 +416,7 @@ export class NotificationDispatcher {
 
       case NotificationEventType.NEWS_ALERT:
         return {
-          title: 'Asora News',
+          title: 'Lythaus News',
           body: event.payload.snippet || "Check out what's new",
           deeplink: (event.payload.deeplink as string | undefined) || 'asora://news',
         };
@@ -430,7 +430,7 @@ export class NotificationDispatcher {
 
       default:
         return {
-          title: 'Asora Notification',
+          title: 'Lythaus Notification',
           body: 'You have a new notification',
         };
     }

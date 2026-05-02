@@ -153,6 +153,46 @@ void main() {
       expect(c.read(authStateProvider).value, user);
     });
 
+    test('signInWithProvider forwards World ID provider', () async {
+      final user = _fakeUser(id: 'world-1');
+      when(() => mockAuth.getCurrentUser()).thenAnswer((_) async => null);
+      when(
+        () => mockAuth.signInWithOAuth2(provider: any(named: 'provider')),
+      ).thenAnswer((_) async => user);
+
+      final c = makeContainer();
+      await settle();
+
+      await c
+          .read(authStateProvider.notifier)
+          .signInWithProvider(OAuth2Provider.world);
+
+      verify(
+        () => mockAuth.signInWithOAuth2(provider: OAuth2Provider.world),
+      ).called(1);
+      expect(c.read(authStateProvider).value, user);
+    });
+
+    test('signInWithProvider forwards Email provider', () async {
+      final user = _fakeUser(id: 'email-1');
+      when(() => mockAuth.getCurrentUser()).thenAnswer((_) async => null);
+      when(
+        () => mockAuth.signInWithOAuth2(provider: any(named: 'provider')),
+      ).thenAnswer((_) async => user);
+
+      final c = makeContainer();
+      await settle();
+
+      await c
+          .read(authStateProvider.notifier)
+          .signInWithProvider(OAuth2Provider.email);
+
+      verify(
+        () => mockAuth.signInWithOAuth2(provider: OAuth2Provider.email),
+      ).called(1);
+      expect(c.read(authStateProvider).value, user);
+    });
+
     test('signInWithProvider error', () async {
       when(() => mockAuth.getCurrentUser()).thenAnswer((_) async => null);
       when(

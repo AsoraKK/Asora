@@ -667,6 +667,7 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="AzureWebJobsStorage" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_MAX_CONCURRENCY="5" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_SIGNED_URL_TTL_HOURS="12" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_RETENTION_DAYS="30" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_PURGE_WINDOW_DAYS="30" --output none
           
           echo "✅ DSR environment variables configured"

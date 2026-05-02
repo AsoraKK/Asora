@@ -341,6 +341,23 @@ export async function awardPostCreated(
 }
 
 /**
+ * Award reputation for creating a comment.
+ */
+export async function awardCommentCreated(
+  userId: string,
+  commentId: string
+): Promise<ReputationResult> {
+  return adjustReputation({
+    userId,
+    delta: REPUTATION_ADJUSTMENTS.COMMENT_CREATED,
+    reason: 'COMMENT_CREATED',
+    idempotencyKey: `comment_created:${commentId}`,
+    sourceId: commentId,
+    sourceType: 'comment',
+  });
+}
+
+/**
  * Award reputation when a post is liked (to the post author).
  */
 export async function awardPostLiked(
@@ -395,6 +412,45 @@ export async function penalizeContentRemoval(
     delta: REPUTATION_ADJUSTMENTS[reason],
     reason,
     idempotencyKey: `content_removed:${contentId}`,
+    sourceId: contentId,
+    sourceType: contentType,
+  });
+}
+
+/**
+ * Restore reputation when a moderation decision is reversed on appeal.
+ * Applies the inverse of the penalty that was originally issued.
+ * Idempotent: safe to call multiple times for the same contentId.
+ */
+export async function restoreReputationOnReversal(
+  userId: string,
+  contentId: string,
+  contentType: 'post' | 'comment',
+  violationType?: string
+): Promise<ReputationResult> {
+  // Mirror the same reason-mapping logic used in penalizeContentRemoval
+  let reason: ReputationReason = 'CONTENT_REMOVED_DEFAULT';
+
+  const normalizedViolation = violationType?.toLowerCase() ?? '';
+
+  if (normalizedViolation.includes('spam')) {
+    reason = 'CONTENT_REMOVED_SPAM';
+  } else if (normalizedViolation.includes('harass')) {
+    reason = 'CONTENT_REMOVED_HARASSMENT';
+  } else if (normalizedViolation.includes('hate')) {
+    reason = 'CONTENT_REMOVED_HATE_SPEECH';
+  } else if (normalizedViolation.includes('violen')) {
+    reason = 'CONTENT_REMOVED_VIOLENCE';
+  } else if (violationType) {
+    reason = 'CONTENT_REMOVED_OTHER';
+  }
+
+  // Restore is the inverse of the penalty (positive delta)
+  return adjustReputation({
+    userId,
+    delta: -REPUTATION_ADJUSTMENTS[reason], // REPUTATION_ADJUSTMENTS values are negative, so negating gives positive
+    reason,
+    idempotencyKey: `content_reversal:${contentId}`,
     sourceId: contentId,
     sourceType: contentType,
   });

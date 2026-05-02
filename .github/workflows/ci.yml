@@ -157,6 +157,11 @@ jobs:
           set -euo pipefail
           node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json
 
+      - name: Check route / OpenAPI spec drift
+        run: |
+          set -euo pipefail
+          node scripts/check-route-drift.js route-inventory.json api/openapi/openapi.yaml
+
       - name: Upload route inventory artifact
         uses: actions/upload-artifact@v4
         with:
@@ -175,6 +180,19 @@ jobs:
 
       - name: Scan docs/markdown for embedded secrets
         run: bash scripts/scan-doc-secrets.sh
+
+  branding_guard:
+    name: Lythaus / Asora naming guard
+    runs-on: ubuntu-latest
+    needs: [workflow_lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+
+      - name: Check no 'Asora' in user-facing UI strings
+        run: bash scripts/check-branding.sh
 
   todo_triage_report:
     name: Generate TODO triage report
@@ -233,6 +251,19 @@ jobs:
 
       - name: Bundle OpenAPI spec
         run: npm run openapi:bundle
+
+      - name: Validate bundled OpenAPI artifact structure
+        run: |
+          set -euo pipefail
+          BUNDLE="api/openapi/dist/openapi.json"
+          [[ -f "$BUNDLE" ]] || { echo "❌ Bundled spec not found at $BUNDLE"; exit 1; }
+          node -e "
+            const s = JSON.parse(require('fs').readFileSync('$BUNDLE', 'utf8'));
+            if (!s.openapi && !s.swagger) { console.error('Missing openapi/swagger field'); process.exit(1); }
+            if (!s.info || !s.info.version) { console.error('Missing info.version'); process.exit(1); }
+            if (!s.paths || Object.keys(s.paths).length === 0) { console.error('Empty paths object'); process.exit(1); }
+            console.log('✅ Bundle valid: openapi=' + (s.openapi||s.swagger) + ' version=' + s.info.version + ' paths=' + Object.keys(s.paths).length);
+          "
 
       - name: Upload bundled spec
         uses: actions/upload-artifact@v4
@@ -591,13 +622,39 @@ jobs:
       - name: TypeScript type-check (fail fast)
         run: npm run typecheck
 
-      - name: Run tests (if present)
+      - name: Run tests with coverage (enforces thresholds in jest.config.ts)
+        id: functions_test
         run: |
           set -euo pipefail
-          if jq -e '.scripts.test|length>0' package.json >/dev/null 2>&1; then
-            npm test
+          if jq -e '(.scripts["test:coverage"] // .scripts.test) | length > 0' package.json >/dev/null 2>&1; then
+            npm run test:coverage 2>&1 | tee ../functions-test-output.txt
           else
             echo "No test script; skipping"
+          fi
+
+      - name: Functions coverage summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "## Functions Test Coverage" >> "$SUMMARY_FILE"
+          # Jest --coverage writes coverage/coverage-summary.json
+          SUMMARY_JSON="coverage/coverage-summary.json"
+          if [[ -f "$SUMMARY_JSON" ]]; then
+            node -e "
+              const s = require('./$SUMMARY_JSON').total;
+              const row = (k) => '| ' + k + ' | ' + s[k].pct + '% (' + s[k].covered + '/' + s[k].total + ') |';
+              console.log('| Metric | Coverage |');
+              console.log('|--------|----------|');
+              ['statements','branches','functions','lines'].forEach(row => {
+                const v = s[row];
+                const icon = v.pct >= 85 ? ':white_check_mark:' : ':x:';
+                console.log('| ' + icon + ' ' + row + ' | ' + v.pct + '% (' + v.covered + '/' + v.total + ') |');
+              });
+            " >> "$SUMMARY_FILE" 2>/dev/null || echo "_Coverage summary unavailable_" >> "$SUMMARY_FILE"
+          else
+            echo "_No coverage/coverage-summary.json found_" >> "$SUMMARY_FILE"
           fi
 
       - name: Build (TS -> dist)
@@ -672,3 +729,127 @@ jobs:
 
       - name: Run Azure retirement validation
         run: bash scripts/validate-azure-retirement.sh
+
+  dependency_review:
+    name: Dependency CVE review
+    runs-on: ubuntu-latest
+    # Only meaningful on pull_request events (compares base vs head manifests)
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review (block high/critical CVEs)
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always
+          # Allow runtime advisories for scoped packages used only in tests
+          allow-dependencies-licenses: ''
+
+  dsr_runbook_guard:
+    name: DSR runbook ↔ deploy consistency
+    runs-on: ubuntu-latest
+    needs: [workflow_lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check DSR required keys match deploy workflow
+        run: bash scripts/check-dsr-runbook-consistency.sh
+
+  launch_blockers_summary:
+    name: Launch blockers summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - docs_placement
+      - legal_register_validation
+      - workflow_lint
+      - flutter_toolchain_contract
+      - observability_alert_contract
+      - cosmos_contract_guard
+      - route_guard_inventory
+      - docs_secret_hygiene
+      - branding_guard
+      - validate_extension_bundle
+      - openapi_validation
+      - secret-scan
+      - verify-secrets
+      - pin_verification
+      - flutter_tests
+      - android_manifest_contract
+      - ios_archive_validation
+      - functions_build
+      - azure-retirement-validation
+      - dsr_runbook_guard
+    steps:
+      - name: Write launch blockers summary
+        shell: bash
+        env:
+          DOCS_PLACEMENT:            ${{ needs.docs_placement.result }}
+          LEGAL_REGISTER:            ${{ needs.legal_register_validation.result }}
+          WORKFLOW_LINT:             ${{ needs.workflow_lint.result }}
+          FLUTTER_TOOLCHAIN:         ${{ needs.flutter_toolchain_contract.result }}
+          OBSERVABILITY_ALERTS:      ${{ needs.observability_alert_contract.result }}
+          COSMOS_CONTRACT:           ${{ needs.cosmos_contract_guard.result }}
+          ROUTE_GUARD:               ${{ needs.route_guard_inventory.result }}
+          DOCS_SECRET_HYGIENE:       ${{ needs.docs_secret_hygiene.result }}
+          BRANDING_GUARD:            ${{ needs.branding_guard.result }}
+          EXTENSION_BUNDLE:          ${{ needs.validate_extension_bundle.result }}
+          OPENAPI_VALIDATION:        ${{ needs.openapi_validation.result }}
+          SECRET_SCAN:               ${{ needs.secret-scan.result }}
+          VERIFY_SECRETS:            ${{ needs.verify-secrets.result }}
+          PIN_VERIFICATION:          ${{ needs.pin_verification.result }}
+          FLUTTER_TESTS:             ${{ needs.flutter_tests.result }}
+          ANDROID_MANIFEST:          ${{ needs.android_manifest_contract.result }}
+          IOS_ARCHIVE:               ${{ needs.ios_archive_validation.result }}
+          FUNCTIONS_BUILD:           ${{ needs.functions_build.result }}
+          AZURE_RETIREMENT:          ${{ needs.azure-retirement-validation.result }}
+          DSR_RUNBOOK_GUARD:         ${{ needs.dsr_runbook_guard.result }}
+        run: |
+          icon() { [[ "$1" == "success" ]] && echo ":white_check_mark:" || [[ "$1" == "skipped" ]] && echo ":next_track_button:" || echo ":x:"; }
+          blockers=0
+          {
+            echo "## :rocket: Launch Blockers CI Summary"
+            echo ""
+            echo "| Gate | Status |"
+            echo "|------|--------|"
+            declare -A GATES=(
+              ["Docs placement"]="$DOCS_PLACEMENT"
+              ["Legal registers"]="$LEGAL_REGISTER"
+              ["Workflow lint"]="$WORKFLOW_LINT"
+              ["Flutter toolchain contract"]="$FLUTTER_TOOLCHAIN"
+              ["Observability alerts contract"]="$OBSERVABILITY_ALERTS"
+              ["Cosmos contract guard"]="$COSMOS_CONTRACT"
+              ["Route guard / spec drift"]="$ROUTE_GUARD"
+              ["Docs & config secret hygiene"]="$DOCS_SECRET_HYGIENE"
+              ["Branding guard (Lythaus/Asora)"]="$BRANDING_GUARD"
+              ["Extension bundle version"]="$EXTENSION_BUNDLE"
+              ["OpenAPI validation"]="$OPENAPI_VALIDATION"
+              ["Secret scan (gitleaks)"]="$SECRET_SCAN"
+              ["Secrets present in repo"]="$VERIFY_SECRETS"
+              ["Dependency pin verification"]="$PIN_VERIFICATION"
+              ["Flutter tests + coverage"]="$FLUTTER_TESTS"
+              ["Android manifest contract"]="$ANDROID_MANIFEST"
+              ["iOS archive validation"]="$IOS_ARCHIVE"
+              ["Functions build + coverage"]="$FUNCTIONS_BUILD"
+              ["Azure retirement hardening"]="$AZURE_RETIREMENT"
+              ["DSR runbook consistency"]="$DSR_RUNBOOK_GUARD"
+            )
+            for gate in "${!GATES[@]}"; do
+              result="${GATES[$gate]}"
+              echo "| $(icon "$result") $gate | $result |"
+              [[ "$result" != "success" && "$result" != "skipped" ]] && blockers=$((blockers+1))
+            done
+            echo ""
+            if [[ $blockers -gt 0 ]]; then
+              echo "> :warning: **$blockers gate(s) failed** — resolve before merging to main."
+            else
+              echo "> :white_check_mark: **All gates passed.** Ready for merge."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Do not fail this job itself (it's observational)
+          exit 0
+

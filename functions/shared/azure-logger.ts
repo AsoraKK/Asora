@@ -5,6 +5,8 @@
 /// 📊 Observability: Integration with Azure Monitor and custom telemetry
 /// 🔍 Debugging: Rich context and correlation for troubleshooting
 
+import { redactMessageString } from '../src/privacy/common/redaction';
+
 export interface LogContext {
   requestId?: string;
   userId?: string;
@@ -43,11 +45,12 @@ class StructuredAzureLogger implements AzureLogger {
 
   private log(level: string, message: string, context?: LogContext): void {
     const emitConsoleLogs = this.shouldEmitConsoleLogs();
+    const safeMessage = redactMessageString(message);
     const logEntry = {
       timestamp: new Date().toISOString(),
       level,
       component: this.component,
-      message,
+      message: safeMessage,
       ...context,
     };
 
@@ -82,14 +85,15 @@ class StructuredAzureLogger implements AzureLogger {
   private sendToApplicationInsights(level: string, message: string, logEntry: any): void {
     // This would integrate with Application Insights SDK
     // For now, we'll just ensure the log format is AI-friendly
+    const safeMessage = redactMessageString(message);
     try {
       // Application Insights will automatically pick up console.log
       // But we can also send custom telemetry if needed
       if (level === 'ERROR') {
         // Custom error tracking
-        console.error(`[AI_ERROR] ${this.component}: ${message}`, logEntry);
+        console.error(`[AI_ERROR] ${this.component}: ${safeMessage}`, logEntry);
       } else if (level === 'WARN') {
-        console.warn(`[AI_WARN] ${this.component}: ${message}`, logEntry);
+        console.warn(`[AI_WARN] ${this.component}: ${safeMessage}`, logEntry);
       }
     } catch (error) {
       // Fallback logging if AI integration fails

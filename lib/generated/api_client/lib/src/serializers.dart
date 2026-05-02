@@ -77,6 +77,8 @@ import 'package:asora_api_client/src/model/appeal_vote_request.dart';
 import 'package:asora_api_client/src/model/appeal_vote_response.dart';
 import 'package:asora_api_client/src/model/appeal_vote_response_vote.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
+import 'package:asora_api_client/src/model/bad_gateway_error.dart';
+import 'package:asora_api_client/src/model/bad_gateway_error_error.dart';
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
 import 'package:asora_api_client/src/model/dsr_export_response.dart';
@@ -106,6 +108,8 @@ import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response_data.dart';
+import 'package:asora_api_client/src/model/service_unavailable_error.dart';
+import 'package:asora_api_client/src/model/service_unavailable_error_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error_error.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
@@ -181,6 +185,8 @@ part 'serializers.g.dart';
   AppealVoteResponse,
   AppealVoteResponseVote,
   AuthTokenRequest,
+  BadGatewayError,
+  BadGatewayErrorError,
   CreatePost201Response,
   CreatePostRequest,
   DSRExportResponse,
@@ -210,6 +216,8 @@ part 'serializers.g.dart';
   RedeemInviteRequest,
   RedeemInviteResponse,
   RedeemInviteResponseData,
+  ServiceUnavailableError,
+  ServiceUnavailableErrorError,
   UnauthorizedError,
   UnauthorizedErrorError,
   UserInfoResponse,

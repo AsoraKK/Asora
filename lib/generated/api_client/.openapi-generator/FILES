@@ -66,6 +66,8 @@ doc/AppealVoteResponse.md
 doc/AppealVoteResponseVote.md
 doc/AuthApi.md
 doc/AuthTokenRequest.md
+doc/BadGatewayError.md
+doc/BadGatewayErrorError.md
 doc/CreatePost201Response.md
 doc/CreatePostRequest.md
 doc/DSRExportResponse.md
@@ -101,6 +103,8 @@ doc/RateLimitError.md
 doc/RedeemInviteRequest.md
 doc/RedeemInviteResponse.md
 doc/RedeemInviteResponseData.md
+doc/ServiceUnavailableError.md
+doc/ServiceUnavailableErrorError.md
 doc/UnauthorizedError.md
 doc/UnauthorizedErrorError.md
 doc/UserInfoResponse.md
@@ -188,6 +192,8 @@ lib/src/model/appeal_vote_request.dart
 lib/src/model/appeal_vote_response.dart
 lib/src/model/appeal_vote_response_vote.dart
 lib/src/model/auth_token_request.dart
+lib/src/model/bad_gateway_error.dart
+lib/src/model/bad_gateway_error_error.dart
 lib/src/model/create_post201_response.dart
 lib/src/model/create_post_request.dart
 lib/src/model/date.dart
@@ -218,6 +224,8 @@ lib/src/model/rate_limit_error.dart
 lib/src/model/redeem_invite_request.dart
 lib/src/model/redeem_invite_response.dart
 lib/src/model/redeem_invite_response_data.dart
+lib/src/model/service_unavailable_error.dart
+lib/src/model/service_unavailable_error_error.dart
 lib/src/model/unauthorized_error.dart
 lib/src/model/unauthorized_error_error.dart
 lib/src/model/user_info_response.dart
@@ -227,3 +235,7 @@ lib/src/model/validation_error_response_error.dart
 lib/src/model/validation_error_response_error_fields_inner.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/bad_gateway_error_error_test.dart
+test/bad_gateway_error_test.dart
+test/service_unavailable_error_error_test.dart
+test/service_unavailable_error_test.dart

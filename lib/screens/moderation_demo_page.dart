@@ -20,26 +20,12 @@ class ModerationDemoPage extends ConsumerStatefulWidget {
 }
 
 class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
-  bool _showAiScores = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Moderation Demo'),
         actions: [
-          Switch(
-            value: _showAiScores,
-            onChanged: (value) {
-              setState(() {
-                _showAiScores = value;
-              });
-            },
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Text('AI Scores'),
-          ),
           PopupMenuButton<String>(
             onSelected: _handleMenuSelection,
             itemBuilder: (context) => [
@@ -104,7 +90,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 Text(
                   'This demo showcases the complete moderation system:\n'
                   '• Flag/Report posts with detailed reasons\n'
-                  '• View moderation status and AI scores\n'
+                  '• View moderation status and appeal flow\n'
                   '• Appeal flagged content with democratic voting\n'
                   '• Track appeal progress and outcomes',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -129,7 +115,6 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
               ),
               moderationStatus: ModerationStatus.clean,
             ),
-            showAiScores: _showAiScores,
           ),
 
           // Flagged post (not hidden yet)
@@ -145,9 +130,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.flagged,
-              aiScore: 0.65,
             ),
-            showAiScores: _showAiScores,
           ),
 
           // Own flagged post (can appeal)
@@ -163,10 +146,8 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.flagged,
-              aiScore: 0.45,
             ),
             isOwnPost: true,
-            showAiScores: _showAiScores,
           ),
 
           // Hidden post (own content)
@@ -182,10 +163,8 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.hidden,
-              aiScore: 0.82,
             ),
             isOwnPost: true,
-            showAiScores: _showAiScores,
           ),
 
           // Community approved post
@@ -201,10 +180,8 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.communityApproved,
-              aiScore: 0.72,
               appealStatus: 'approved',
             ),
-            showAiScores: _showAiScores,
           ),
 
           // Hidden post (other user's content - shows placeholder)
@@ -220,9 +197,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.hidden,
-              aiScore: 0.91,
             ),
-            showAiScores: _showAiScores,
           ),
 
           // Under review post
@@ -238,9 +213,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 avatarUrl: null,
               ),
               moderationStatus: ModerationStatus.flagged,
-              aiScore: 0.58,
             ),
-            showAiScores: _showAiScores,
           ),
 
           // Demo instructions
@@ -268,7 +241,7 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
                 const Text(
                   '🏛️ Tap appeal badges on your own posts to open appeal dialog',
                 ),
-                const Text('🧠 Toggle AI scores to see confidence ratings'),
+                const Text('🧠 Review moderation states and appeal flows'),
                 const Text(
                   '📊 Use the menu to access appeals and voting (coming next!)',
                 ),
@@ -288,7 +261,6 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
     required String content,
     required Author author,
     required ModerationStatus moderationStatus,
-    double? aiScore,
     String? appealStatus,
   }) {
     return Post(
@@ -303,7 +275,6 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
         ),
       ),
       moderationStatus: moderationStatus,
-      aiScore: aiScore,
       appealStatus: appealStatus,
       likeCount: (id.hashCode % 100).abs(),
       commentCount: (id.hashCode % 20).abs(),
@@ -341,26 +312,15 @@ class _ModerationDemoPageState extends ConsumerState<ModerationDemoPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Moderation Settings'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SwitchListTile(
-              title: const Text('Show AI Scores'),
-              subtitle: const Text('Display AI confidence ratings on posts'),
-              value: _showAiScores,
-              onChanged: (value) {
-                setState(() {
-                  _showAiScores = value;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            const ListTile(
+            ListTile(
               title: Text('Community Voting'),
               subtitle: Text('Participate in democratic content moderation'),
               trailing: Icon(Icons.arrow_forward_ios),
             ),
-            const ListTile(
+            ListTile(
               title: Text('Appeal Notifications'),
               subtitle: Text('Get notified about appeal decisions'),
               trailing: Icon(Icons.arrow_forward_ios),

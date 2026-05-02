@@ -70,6 +70,42 @@
           }
         }
       }
+    },
+    {
+      "type": "query",
+      "content": {
+        "json": {
+          "title": "feed_page event – feed type distribution and pagination depth",
+          "subtitle": "Custom event emitted on every feed request; breakdowns by feed type and hasMore",
+          "visualization": "barchart",
+          "query": "customEvents\n| where name == \"feed_page\"\n| extend feedType = tostring(customDimensions[\"feed.type\"]),\n         hasMore   = tobool(customDimensions[\"hasMore\"]),\n         itemCount = toint(customDimensions[\"count\"])\n| summarize requests=count(), avgItems=avg(itemCount) by feedType, bin(timestamp, 5m)",
+          "resourceType": "microsoft.insights/components",
+          "resourceIds": [
+            "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/microsoft.insights/components/appi-asora-dev"
+          ],
+          "timeContext": {
+            "durationMs": 3600000
+          }
+        }
+      }
+    },
+    {
+      "type": "query",
+      "content": {
+        "json": {
+          "title": "Feed p95 latency vs 200 ms ADR target",
+          "subtitle": "p95 must stay below 200 ms per ADR-001; red reference line at 200 ms",
+          "visualization": "linechart",
+          "query": "requests\n| where url has \"/api/feed\"\n| summarize p95=percentile(duration,95) by bin(timestamp, 5m)\n| extend target_ms=200\n| project timestamp, p95, target_ms",
+          "resourceType": "microsoft.insights/components",
+          "resourceIds": [
+            "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP>/providers/microsoft.insights/components/appi-asora-dev"
+          ],
+          "timeContext": {
+            "durationMs": 3600000
+          }
+        }
+      }
     }
   ]
 }

@@ -4,7 +4,24 @@ const DEFAULT_HASH_ALG = 'sha256';
 const DEFAULT_SALT = 'asora-dsr-redaction';
 
 const ipIndicators = ['ip', 'ipAddress', 'clientIp', 'remoteIp', 'sourceIp', 'connectionIp'];
-const sensitivePatterns = [/secret/i, /token/i, /vendor/i, /third[\s_]?party/i, /credential/i, /password/i];
+const sensitivePatterns = [
+  /secret/i,
+  /token/i,
+  /vendor/i,
+  /third[\s_]?party/i,
+  /credential/i,
+  /password/i,
+  // PII identifiers
+  /email/i,
+  /\bsub\b|\boid\b|\bsid\b/i,        // OAuth / OIDC claims
+  /providerSub|providerId|oauthSub|oauthId/i, // provider-specific IDs
+  // Service keys
+  /hiveKey|hiveApi|hiveSecret/i,      // Hive AI
+  /\bapiKey\b|\bapiSecret\b/i,        // generic API keys
+  /accountKey/i,                       // Azure Storage account key
+  /connectionString/i,                 // Azure connection strings
+  /instrumentationKey/i,               // Application Insights ikey
+];
 
 const HASH_ALGORITHM = (process.env.DSR_IP_HASH_ALG ?? DEFAULT_HASH_ALG).toLowerCase();
 const HASH_SALT = process.env.DSR_IP_HASH_SALT ?? DEFAULT_SALT;
@@ -60,4 +77,17 @@ export function redactRecord<T extends Record<string, unknown>>(record: T): T {
   }
 
   return sanitized as T;
+}
+
+/** JWT compact-serialisation pattern:  header.payload.signature */
+const JWT_PATTERN = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g;
+
+/**
+ * Strip JWT values from a log-message string.
+ *
+ * Matches compact JWT serialisation (eyJ…).
+ * Safe to call on any string — returns the string unchanged when no JWTs are found.
+ */
+export function redactMessageString(message: string): string {
+  return message.replace(JWT_PATTERN, '[jwt-redacted]');
 }

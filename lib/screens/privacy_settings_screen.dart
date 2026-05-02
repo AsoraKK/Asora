@@ -76,7 +76,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Asora respects your privacy. You have the right to access, export, and delete your personal data in accordance with GDPR and POPIA regulations.',
+              'Lythaus respects your privacy. You have the right to access, export, and delete your personal data in accordance with GDPR and POPIA regulations.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -224,7 +224,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () => _showInfoDialog(
                 'Privacy Policy',
-                'Asora collects minimal personal data necessary for platform functionality. We do not sell or share your data with third parties for marketing purposes.',
+                'Lythaus collects minimal personal data necessary for platform functionality. We do not sell or share your data with third parties for marketing purposes.',
               ),
             ),
             ListTile(
@@ -409,8 +409,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       final result = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          text: 'Your Asora data export from $timestamp',
-          subject: 'Asora Data Export - $timestamp',
+          text: 'Your Lythaus data export from $timestamp',
+          subject: 'Lythaus Data Export - $timestamp',
         ),
       );
 

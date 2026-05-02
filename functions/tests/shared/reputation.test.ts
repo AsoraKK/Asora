@@ -68,6 +68,18 @@ jest.mock('@shared/clients/cosmos', () => ({
                 auditStore.set(doc.id, { ...doc });
                 return { resource: doc };
               }),
+              query: jest.fn(({ query, parameters }: any) => ({
+                fetchAll: async () => {
+                  const userIdParam = parameters?.find((p: any) => p.name === '@userId');
+                  const userId = userIdParam?.value;
+                  const rows = [...auditStore.values()].filter(
+                    (r: any) => !userId || r.userId === userId
+                  );
+                  // Sort descending by createdAt
+                  rows.sort((a: any, b: any) => (b.createdAt > a.createdAt ? 1 : -1));
+                  return { resources: rows };
+                },
+              })),
             },
             item: jest.fn((id: string) => ({
               read: jest.fn(async () => {
@@ -101,9 +113,12 @@ import {
   adjustReputation,
   awardPostCreated,
   awardPostLiked,
+  awardCommentCreated,
   penalizeContentRemoval,
+  restoreReputationOnReversal,
   revokePostLiked,
   getReputationScore,
+  getReputationHistory,
   REPUTATION_ADJUSTMENTS,
   resetContainerCache,
 } from '../../src/shared/services/reputationService';
@@ -589,6 +604,189 @@ describe('Reputation Service', () => {
       expect(getReputationHistory).toBeDefined();
       // Verify function signature accepts limit
       expect(getReputationHistory.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // awardCommentCreated — Workstream 10 gap fill
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('awardCommentCreated', () => {
+    it('awards +1 reputation for comment creation', async () => {
+      userStore.set('commenter-1', { id: 'commenter-1', reputationScore: 10 });
+
+      const result = await awardCommentCreated('commenter-1', 'comment-abc');
+
+      expect(result.success).toBe(true);
+      expect(result.newScore).toBe(11);
+      expect(userStore.get('commenter-1').reputationScore).toBe(11);
+    });
+
+    it('uses correct idempotency key (comment_created:<commentId>)', async () => {
+      userStore.set('commenter-2', { id: 'commenter-2', reputationScore: 0 });
+
+      await awardCommentCreated('commenter-2', 'comment-xyz');
+
+      const audit = auditStore.get('rep_comment_created:comment-xyz');
+      expect(audit).toBeDefined();
+      expect(audit.reason).toBe('COMMENT_CREATED');
+      expect(audit.sourceType).toBe('comment');
+    });
+
+    it('is idempotent — duplicate call for same commentId is skipped', async () => {
+      userStore.set('commenter-3', { id: 'commenter-3', reputationScore: 5 });
+
+      await awardCommentCreated('commenter-3', 'comment-dup');
+      const second = await awardCommentCreated('commenter-3', 'comment-dup');
+
+      expect(second.alreadyApplied).toBe(true);
+      expect(userStore.get('commenter-3').reputationScore).toBe(6); // only once
+    });
+
+    it('awards COMMENT_CREATED delta (+1) matching the constant', async () => {
+      userStore.set('commenter-delta', { id: 'commenter-delta', reputationScore: 100 });
+
+      const result = await awardCommentCreated('commenter-delta', 'comment-delta');
+
+      expect(result.newScore).toBe(100 + REPUTATION_ADJUSTMENTS.COMMENT_CREATED);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // restoreReputationOnReversal — Workstream 10 gap fill
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('restoreReputationOnReversal', () => {
+    it('restores the spam penalty on appeal reversal', async () => {
+      userStore.set('appeal-user-spam', { id: 'appeal-user-spam', reputationScore: 45 });
+
+      // Original penalty was -5 (spam)
+      const result = await restoreReputationOnReversal(
+        'appeal-user-spam',
+        'bad-post-spam',
+        'post',
+        'spam'
+      );
+
+      // CONTENT_REMOVED_SPAM = -5, reversal = +5
+      expect(result.success).toBe(true);
+      expect(result.newScore).toBe(50);
+    });
+
+    it('restores the harassment penalty on appeal reversal', async () => {
+      userStore.set('appeal-user-harass', { id: 'appeal-user-harass', reputationScore: 90 });
+
+      const result = await restoreReputationOnReversal(
+        'appeal-user-harass',
+        'bad-post-harass',
+        'post',
+        'harassment'
+      );
+
+      // CONTENT_REMOVED_HARASSMENT = -10, reversal = +10
+      expect(result.success).toBe(true);
+      expect(result.newScore).toBe(100);
+    });
+
+    it('restores the violence penalty on appeal reversal', async () => {
+      userStore.set('appeal-user-viol', { id: 'appeal-user-viol', reputationScore: 80 });
+
+      const result = await restoreReputationOnReversal(
+        'appeal-user-viol',
+        'bad-post-viol',
+        'post',
+        'violence'
+      );
+
+      // CONTENT_REMOVED_VIOLENCE = -20, reversal = +20
+      expect(result.success).toBe(true);
+      expect(result.newScore).toBe(100);
+    });
+
+    it('is idempotent — double-reversal is skipped', async () => {
+      userStore.set('appeal-user-dup', { id: 'appeal-user-dup', reputationScore: 45 });
+
+      await restoreReputationOnReversal('appeal-user-dup', 'dup-post', 'post', 'spam');
+      const second = await restoreReputationOnReversal('appeal-user-dup', 'dup-post', 'post', 'spam');
+
+      expect(second.alreadyApplied).toBe(true);
+      expect(userStore.get('appeal-user-dup').reputationScore).toBe(50); // +5 once only
+    });
+
+    it('uses a separate idempotency key from the original penalty', async () => {
+      userStore.set('appeal-keys', { id: 'appeal-keys', reputationScore: 90 });
+
+      await restoreReputationOnReversal('appeal-keys', 'post-kcheck', 'post', 'spam');
+
+      // The reversal key must differ from the removal key
+      const removalAudit = auditStore.get('rep_content_removed:post-kcheck');
+      const reversalAudit = auditStore.get('rep_content_reversal:post-kcheck');
+      expect(removalAudit).toBeUndefined(); // removal was never called in this test
+      expect(reversalAudit).toBeDefined();
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // AI-labelled content eligibility (integration guard verification)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('REPUTATION_ADJUSTMENTS — AI content guard (spec verification)', () => {
+    it('COMMENT_CREATED constant is > 0 (human comment earns rep)', () => {
+      expect(REPUTATION_ADJUSTMENTS.COMMENT_CREATED).toBeGreaterThan(0);
+    });
+
+    it('POST_CREATED constant is > 0 (human post earns rep)', () => {
+      expect(REPUTATION_ADJUSTMENTS.POST_CREATED).toBeGreaterThan(0);
+    });
+
+    it('no constant exists for AI-generated post creation (no rep award path)', () => {
+      // The reputation service deliberately has no AI_POST_CREATED constant.
+      // Enforcement is done at posts_create.function.ts before calling awardPostCreated.
+      const keys = Object.keys(REPUTATION_ADJUSTMENTS);
+      expect(keys).not.toContain('AI_POST_CREATED');
+      expect(keys).not.toContain('AI_CONTENT_CREATED');
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // getReputationHistory — audit log retrieval
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('getReputationHistory', () => {
+    it('returns audit records for a specific user', async () => {
+      userStore.set('hist-user', { id: 'hist-user', reputationScore: 10 });
+
+      await awardPostCreated('hist-user', 'post-h1');
+      await awardPostCreated('hist-user', 'post-h2');
+
+      const history = await getReputationHistory('hist-user');
+
+      expect(Array.isArray(history)).toBe(true);
+      // Both audit records should reference the correct user
+      expect(history.every((r) => r.userId === 'hist-user')).toBe(true);
+    });
+
+    it('returns empty array when user has no history', async () => {
+      const history = await getReputationHistory('user-no-history');
+      expect(history).toEqual([]);
+    });
+
+    it('audit records contain required schema fields', async () => {
+      userStore.set('hist-schema', { id: 'hist-schema', reputationScore: 0 });
+
+      await awardPostCreated('hist-schema', 'post-schema');
+
+      const history = await getReputationHistory('hist-schema');
+      expect(history.length).toBeGreaterThan(0);
+
+      const record = history[0];
+      expect(record).toHaveProperty('id');
+      expect(record).toHaveProperty('userId');
+      expect(record).toHaveProperty('delta');
+      expect(record).toHaveProperty('reason');
+      expect(record).toHaveProperty('previousScore');
+      expect(record).toHaveProperty('newScore');
+      expect(record).toHaveProperty('createdAt');
     });
   });
 });

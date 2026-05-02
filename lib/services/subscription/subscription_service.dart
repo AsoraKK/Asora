@@ -172,10 +172,9 @@ class BackendSubscriptionService implements SubscriptionService {
 
   @override
   Future<List<SubscriptionProduct>> getProducts() async {
-    // TODO: Return products from provider SDK when wired
-    throw UnimplementedError(
-      'IAP products not available — payment provider not configured.',
-    );
+    // Payment provider not yet wired — return empty list so UI can show
+    // a graceful "not available" state instead of crashing.
+    return const [];
   }
 
   @override
@@ -183,17 +182,19 @@ class BackendSubscriptionService implements SubscriptionService {
     required String productId,
     required String token,
   }) async {
-    // TODO: Delegate to provider SDK when wired
-    throw UnimplementedError(
-      'In-app purchase not available — payment provider not configured.',
+    // Payment provider not yet wired — surface a user-friendly error.
+    return const PurchaseError(
+      message: 'In-app purchases are not available yet.',
+      code: 'PROVIDER_NOT_CONFIGURED',
     );
   }
 
   @override
   Future<PurchaseResult> restorePurchases({required String token}) async {
-    // TODO: Delegate to provider SDK when wired
-    throw UnimplementedError(
-      'Purchase restoration not available — payment provider not configured.',
+    // Payment provider not yet wired — surface a user-friendly error.
+    return const PurchaseError(
+      message: 'Purchase restoration is not available yet.',
+      code: 'PROVIDER_NOT_CONFIGURED',
     );
   }
 }

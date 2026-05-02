@@ -34,9 +34,18 @@ function parsePositiveInteger(value: string | undefined, fallback: number): numb
   return Math.floor(parsed);
 }
 
+/** Minimum byte length for JWT_SECRET to ensure sufficient entropy (256-bit key) */
+const MIN_JWT_SECRET_BYTES = 32;
+
 function initialiseConfig(): AuthConfig {
   const secret = process.env.JWT_SECRET?.trim();
   assert(secret, 'Missing required environment variable JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
+
+  const secretBytes = new TextEncoder().encode(secret);
+  assert(
+    secretBytes.length >= MIN_JWT_SECRET_BYTES,
+    `JWT_SECRET must be at least ${MIN_JWT_SECRET_BYTES} bytes (${MIN_JWT_SECRET_BYTES * 8} bits). Current length: ${secretBytes.length} bytes.`
+  );
 
   const expectedIssuer = (process.env.JWT_ISSUER ?? 'asora-auth').trim();
 
@@ -45,10 +54,15 @@ function initialiseConfig(): AuthConfig {
     ? audienceRaw.split(',').map(item => item.trim()).filter(Boolean)
     : [];
 
-  const maxClockSkewSeconds = parsePositiveInteger(process.env.AUTH_MAX_SKEW_SECONDS, 120);
+  if (expectedAudiences.length === 0) {
+    // Warn but do not block startup — callers must enforce audience for sensitive endpoints
+    console.warn('[auth/config] JWT_AUDIENCE is not set: audience claim will NOT be validated. Set JWT_AUDIENCE for production deployments.');
+  }
+
+  const maxClockSkewSeconds = parsePositiveInteger(process.env.AUTH_MAX_SKEW_SECONDS, 60);
 
   return {
-    jwtSecret: new TextEncoder().encode(secret),
+    jwtSecret: secretBytes,
     expectedIssuer,
     expectedAudiences,
     maxClockSkewSeconds,

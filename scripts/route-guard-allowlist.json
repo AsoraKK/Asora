@@ -1,4 +1,8 @@
 {
+  "_comments": {
+    "rateLimitExempt/moderation_test": "moderation_test is a dev/demo endpoint that returns mock Hive scores; it has no auth guard but is intentionally public for local testing only — do NOT expose in production without adding requireAuth",
+    "authGuardExempt/moderation-test-proxy": "moderation-test-proxy is protected by cryptographic JWT verification + admin role check inside the handler (proxy_moderation_test.function.ts); exempt here because auth is handled in-function, not by the route guard middleware"
+  },
   "rateLimitExempt": [
     "admin_test_data_purge",
     "moderation-test-proxy",

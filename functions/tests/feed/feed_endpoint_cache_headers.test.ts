@@ -90,14 +90,28 @@ describe('feed endpoint cache headers', () => {
     expect(response.headers?.['Vary']).toBe('Authorization');
   });
 
-  it('sets public cache headers for anonymous news feed', async () => {
+  it('returns 401 for anonymous news feed (News Board requires authentication)', async () => {
     mockedExtractAuthContext.mockRejectedValueOnce(new Error('unauthenticated'));
 
     const response = await feed_news_get(httpReqMock({ method: 'GET' }), context);
 
+    expect(response.status).toBe(401);
+  });
+
+  it('sets no-store for authenticated Black-tier news feed', async () => {
+    mockedExtractAuthContext.mockResolvedValueOnce({
+      userId: 'user-black',
+      roles: ['user'],
+      tier: 'black',
+    } as any);
+
+    const response = await feed_news_get(
+      httpReqMock({ method: 'GET', headers: { authorization: 'Bearer token' } }),
+      context
+    );
+
     expect(response.status).toBe(200);
-    expect(response.headers?.['Cache-Control']).toBe('public, max-age=60, stale-while-revalidate=30');
-    expect(response.headers?.['Vary']).toBe('Authorization');
+    expect(response.headers?.['Cache-Control']).toBe('private, no-store');
   });
 
   it('always sets no-store for user feed', async () => {
