@@ -67,10 +67,14 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       });
     }
 
-    // Enrich posts with author details
-    const enrichedPosts = await Promise.all(
+    // Enrich posts with author details — use allSettled so a single
+    // malformed/missing document doesn't fail the whole feed.
+    const settled = await Promise.allSettled(
       items.map((item: any) => postsService.enrichPost(item, viewerId))
     );
+    const enrichedPosts = settled
+      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof postsService.enrichPost>>> => r.status === 'fulfilled')
+      .map(r => r.value);
 
     const response = ctx.ok({
       items: enrichedPosts,
