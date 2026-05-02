@@ -335,9 +335,11 @@ class PostsService {
    * Enrich post with author details to create PostView
    */
   async enrichPost(post: PostDocument, viewerId?: string): Promise<PostView> {
-    // Fetch author details
-    const pgUser = await usersService.getUserById(post.authorId);
-    const cosmosProfile = await profileService.getProfile(post.authorId);
+    // Fetch author details — wrapped defensively so a DB outage doesn't cascade to a 500.
+    let pgUser: Awaited<ReturnType<typeof usersService.getUserById>> = null;
+    let cosmosProfile: Awaited<ReturnType<typeof profileService.getProfile>> = null;
+    try { pgUser = await usersService.getUserById(post.authorId); } catch { /* fallback to defaults below */ }
+    try { cosmosProfile = await profileService.getProfile(post.authorId); } catch { /* fallback to defaults below */ }
 
     const author: PublicUserProfile = {
       id: post.authorId,
@@ -489,8 +491,8 @@ class PostsService {
       isNews: post.isNews,
       source: post.source,
       clusterId: post.clusterId,
-      createdAt: new Date(post.createdAt).toISOString(),
-      updatedAt: new Date(post.updatedAt).toISOString(),
+      createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : new Date().toISOString(),
       author,
       authorRole,
       likeCount: post.stats?.likes || 0,
