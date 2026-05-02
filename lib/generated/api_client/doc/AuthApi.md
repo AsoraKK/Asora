@@ -10,8 +10,12 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
+[**authB2cConfig**](AuthApi.md#authb2cconfig) | **GET** /auth/b2c-config | Return Azure AD B2C OIDC configuration
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
+[**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
+[**authRefresh**](AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
+[**authSessionsRevoke**](AuthApi.md#authsessionsrevoke) | **POST** /auth/sessions/revoke | Revoke an active session
 [**authToken**](AuthApi.md#authtoken) | **POST** /auth/token | Issue OAuth2 tokens
 [**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | OIDC UserInfo endpoint
 [**authUserInfoPost**](AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
@@ -72,6 +76,43 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **authB2cConfig**
+> JsonObject authB2cConfig()
+
+Return Azure AD B2C OIDC configuration
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+
+try {
+    final response = api.authB2cConfig();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authB2cConfig: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **authInviteValidate**
 > InviteValidationResponse authInviteValidate(code)
 
@@ -115,6 +156,43 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **authPing**
+> JsonObject authPing()
+
+Verify authentication token is valid
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+
+try {
+    final response = api.authPing();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authPing: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **authRedeemInvite**
 > RedeemInviteResponse authRedeemInvite(redeemInviteRequest)
 
@@ -146,6 +224,88 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**RedeemInviteResponse**](RedeemInviteResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authRefresh**
+> JsonObject authRefresh(body)
+
+Rotate a refresh token
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.authRefresh(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authRefresh: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authSessionsRevoke**
+> JsonObject authSessionsRevoke(body)
+
+Revoke an active session
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAuthApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.authSessionsRevoke(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authSessionsRevoke: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
 
 ### Authorization
 

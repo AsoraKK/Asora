@@ -10,13 +10,20 @@ import 'package:asora_api_client/src/auth/basic_auth.dart';
 import 'package:asora_api_client/src/auth/bearer_auth.dart';
 import 'package:asora_api_client/src/auth/oauth.dart';
 import 'package:asora_api_client/src/api/admin_api.dart';
+import 'package:asora_api_client/src/api/analytics_api.dart';
+import 'package:asora_api_client/src/api/appeals_api.dart';
 import 'package:asora_api_client/src/api/auth_api.dart';
+import 'package:asora_api_client/src/api/custom_feeds_api.dart';
 import 'package:asora_api_client/src/api/feed_api.dart';
 import 'package:asora_api_client/src/api/health_api.dart';
 import 'package:asora_api_client/src/api/moderation_api.dart';
+import 'package:asora_api_client/src/api/notifications_api.dart';
+import 'package:asora_api_client/src/api/payments_api.dart';
 import 'package:asora_api_client/src/api/posts_api.dart';
 import 'package:asora_api_client/src/api/privacy_api.dart';
 import 'package:asora_api_client/src/api/privacy_admin_api.dart';
+import 'package:asora_api_client/src/api/subscription_api.dart';
+import 'package:asora_api_client/src/api/users_api.dart';
 
 class AsoraApiClient {
   static const String basePath =
@@ -90,10 +97,28 @@ class AsoraApiClient {
     return AdminApi(dio, serializers);
   }
 
+  /// Get AnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AnalyticsApi getAnalyticsApi() {
+    return AnalyticsApi(dio, serializers);
+  }
+
+  /// Get AppealsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AppealsApi getAppealsApi() {
+    return AppealsApi(dio, serializers);
+  }
+
   /// Get AuthApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AuthApi getAuthApi() {
     return AuthApi(dio, serializers);
+  }
+
+  /// Get CustomFeedsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  CustomFeedsApi getCustomFeedsApi() {
+    return CustomFeedsApi(dio, serializers);
   }
 
   /// Get FeedApi instance, base route and serializer can be overridden by a given but be careful,
@@ -114,6 +139,18 @@ class AsoraApiClient {
     return ModerationApi(dio, serializers);
   }
 
+  /// Get NotificationsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  NotificationsApi getNotificationsApi() {
+    return NotificationsApi(dio, serializers);
+  }
+
+  /// Get PaymentsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  PaymentsApi getPaymentsApi() {
+    return PaymentsApi(dio, serializers);
+  }
+
   /// Get PostsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   PostsApi getPostsApi() {
@@ -130,5 +167,17 @@ class AsoraApiClient {
   /// by doing that all interceptors will not be executed
   PrivacyAdminApi getPrivacyAdminApi() {
     return PrivacyAdminApi(dio, serializers);
+  }
+
+  /// Get SubscriptionApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SubscriptionApi getSubscriptionApi() {
+    return SubscriptionApi(dio, serializers);
+  }
+
+  /// Get UsersApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  UsersApi getUsersApi() {
+    return UsersApi(dio, serializers);
   }
 }

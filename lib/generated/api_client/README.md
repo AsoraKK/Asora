@@ -72,8 +72,24 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsOverride**](doc/AdminApi.md#adminappealsoverride) | **POST** /_admin/appeals/{appealId}/override | Override an appeal
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsReject**](doc/AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
 [*AdminApi*](doc/AdminApi.md) | [**adminAuditList**](doc/AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
+[*AdminApi*](doc/AdminApi.md) | [**adminBudgetGet**](doc/AdminApi.md#adminbudgetget) | **GET** /_admin/budget | Get budget configuration
+[*AdminApi*](doc/AdminApi.md) | [**adminBudgetUpdate**](doc/AdminApi.md#adminbudgetupdate) | **PUT** /_admin/budget | Update budget configuration
+[*AdminApi*](doc/AdminApi.md) | [**adminConfigGet**](doc/AdminApi.md#adminconfigget) | **GET** /_admin/config | Get admin runtime configuration
+[*AdminApi*](doc/AdminApi.md) | [**adminConfigPublicGet**](doc/AdminApi.md#adminconfigpublicget) | **GET** /admin/config | Get public admin configuration
+[*AdminApi*](doc/AdminApi.md) | [**adminConfigPublicUpdate**](doc/AdminApi.md#adminconfigpublicupdate) | **PUT** /admin/config | Update public admin configuration
+[*AdminApi*](doc/AdminApi.md) | [**adminConfigUpdate**](doc/AdminApi.md#adminconfigupdate) | **PUT** /_admin/config | Update admin runtime configuration
 [*AdminApi*](doc/AdminApi.md) | [**adminContentBlock**](doc/AdminApi.md#admincontentblock) | **POST** /_admin/content/{contentId}/block | Block content
 [*AdminApi*](doc/AdminApi.md) | [**adminContentPublish**](doc/AdminApi.md#admincontentpublish) | **POST** /_admin/content/{contentId}/publish | Publish content
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrCancel**](doc/AdminApi.md#admindsrcancel) | **POST** /_admin/dsr/{id}/cancel | Cancel a data subject request
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrDownload**](doc/AdminApi.md#admindsrdownload) | **GET** /_admin/dsr/{id}/download | Download data subject request export
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrGet**](doc/AdminApi.md#admindsrget) | **GET** /_admin/dsr/{id} | Get data subject request detail
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrLegalHoldClear**](doc/AdminApi.md#admindsrlegalholdclear) | **POST** /_admin/dsr/legal-holds/{id}/clear | Clear a legal hold
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrLegalHoldPlace**](doc/AdminApi.md#admindsrlegalholdplace) | **POST** /_admin/dsr/legal-holds | Place a legal hold
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrList**](doc/AdminApi.md#admindsrlist) | **GET** /_admin/dsr | List data subject requests
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrRelease**](doc/AdminApi.md#admindsrrelease) | **POST** /_admin/dsr/{id}/release | Release a data subject request
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrRetry**](doc/AdminApi.md#admindsrretry) | **POST** /_admin/dsr/{id}/retry | Retry a failed data subject request
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrReviewA**](doc/AdminApi.md#admindsrreviewa) | **POST** /_admin/dsr/{id}/reviewA | First-reviewer decision on DSR
+[*AdminApi*](doc/AdminApi.md) | [**adminDsrReviewB**](doc/AdminApi.md#admindsrreviewb) | **POST** /_admin/dsr/{id}/reviewB | Second-reviewer decision on DSR
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsGet**](doc/AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsList**](doc/AdminApi.md#adminflagslist) | **GET** /_admin/flags | List flagged content queue
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsResolve**](doc/AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
@@ -83,27 +99,93 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesGet**](doc/AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesList**](doc/AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationClassReset**](doc/AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationClassesList**](doc/AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestDelete**](doc/AdminApi.md#adminmoderationtestdelete) | **DELETE** /admin/moderation/test/{path} | Proxy DELETE to Hive AI test endpoint
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestGet**](doc/AdminApi.md#adminmoderationtestget) | **GET** /admin/moderation/test/{path} | Proxy GET to Hive AI test endpoint
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPatch**](doc/AdminApi.md#adminmoderationtestpatch) | **PATCH** /admin/moderation/test/{path} | Proxy PATCH to Hive AI test endpoint
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPost**](doc/AdminApi.md#adminmoderationtestpost) | **POST** /admin/moderation/test/{path} | Proxy POST to Hive AI test endpoint
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationTestPut**](doc/AdminApi.md#adminmoderationtestput) | **PUT** /admin/moderation/test/{path} | Proxy PUT to Hive AI test endpoint
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationWeightsUpdate**](doc/AdminApi.md#adminmoderationweightsupdate) | **POST** /admin/moderation-classes/weights | Bulk-update moderation class weights
+[*AdminApi*](doc/AdminApi.md) | [**adminNewsIngest**](doc/AdminApi.md#adminnewsingest) | **POST** /_admin/news/ingest | Ingest news items into the news board
+[*AdminApi*](doc/AdminApi.md) | [**adminOpsMetrics**](doc/AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
+[*AdminApi*](doc/AdminApi.md) | [**adminOpsStateGet**](doc/AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
+[*AdminApi*](doc/AdminApi.md) | [**adminOpsStateUpdate**](doc/AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersDisable**](doc/AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersEnable**](doc/AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersSearch**](doc/AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
+[*AnalyticsApi*](doc/AnalyticsApi.md) | [**analyticsEventsCreate**](doc/AnalyticsApi.md#analyticseventscreate) | **POST** /analytics/events | Ingest client-side analytics events
+[*AppealsApi*](doc/AppealsApi.md) | [**appealsCreate**](doc/AppealsApi.md#appealscreate) | **POST** /appeals | Submit a new appeal
+[*AppealsApi*](doc/AppealsApi.md) | [**appealsGet**](doc/AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get appeal detail
+[*AppealsApi*](doc/AppealsApi.md) | [**appealsVote**](doc/AppealsApi.md#appealsvote) | **POST** /appeals/{id}/votes | Cast a community vote on an appeal
 [*AuthApi*](doc/AuthApi.md) | [**authAuthorize**](doc/AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
+[*AuthApi*](doc/AuthApi.md) | [**authB2cConfig**](doc/AuthApi.md#authb2cconfig) | **GET** /auth/b2c-config | Return Azure AD B2C OIDC configuration
 [*AuthApi*](doc/AuthApi.md) | [**authInviteValidate**](doc/AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
+[*AuthApi*](doc/AuthApi.md) | [**authPing**](doc/AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [*AuthApi*](doc/AuthApi.md) | [**authRedeemInvite**](doc/AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
+[*AuthApi*](doc/AuthApi.md) | [**authRefresh**](doc/AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
+[*AuthApi*](doc/AuthApi.md) | [**authSessionsRevoke**](doc/AuthApi.md#authsessionsrevoke) | **POST** /auth/sessions/revoke | Revoke an active session
 [*AuthApi*](doc/AuthApi.md) | [**authToken**](doc/AuthApi.md#authtoken) | **POST** /auth/token | Issue OAuth2 tokens
 [*AuthApi*](doc/AuthApi.md) | [**authUserInfo**](doc/AuthApi.md#authuserinfo) | **GET** /auth/userinfo | OIDC UserInfo endpoint
 [*AuthApi*](doc/AuthApi.md) | [**authUserInfoPost**](doc/AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsCreate**](doc/CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a new custom feed
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsDelete**](doc/CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete a custom feed
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsGet**](doc/CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get a custom feed
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsItemsList**](doc/CustomFeedsApi.md#customfeedsitemslist) | **GET** /custom-feeds/{id}/items | List items in a custom feed
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsList**](doc/CustomFeedsApi.md#customfeedslist) | **GET** /custom-feeds | List custom feeds for the current user
+[*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsUpdate**](doc/CustomFeedsApi.md#customfeedsupdate) | **PATCH** /custom-feeds/{id} | Update a custom feed
+[*FeedApi*](doc/FeedApi.md) | [**feedDiscover**](doc/FeedApi.md#feeddiscover) | **GET** /feed/discover | Return discovery/explore feed
+[*FeedApi*](doc/FeedApi.md) | [**feedNews**](doc/FeedApi.md#feednews) | **GET** /feed/news | Return news board feed
+[*FeedApi*](doc/FeedApi.md) | [**feedUser**](doc/FeedApi.md#feeduser) | **GET** /feed/user/{userId} | Return a public user&#39;s post feed
 [*FeedApi*](doc/FeedApi.md) | [**getFeed**](doc/FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
+[*HealthApi*](doc/HealthApi.md) | [**ready**](doc/HealthApi.md#ready) | **GET** /ready | Readiness probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
+[*ModerationApi*](doc/ModerationApi.md) | [**moderationCasesDecision**](doc/ModerationApi.md#moderationcasesdecision) | **POST** /moderation/cases/{id}/decision | Record a decision on a moderation case
+[*ModerationApi*](doc/ModerationApi.md) | [**moderationCasesGet**](doc/ModerationApi.md#moderationcasesget) | **GET** /moderation/cases/{id} | Get moderation case detail
+[*ModerationApi*](doc/ModerationApi.md) | [**moderationQueueList**](doc/ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
+[*ModerationApi*](doc/ModerationApi.md) | [**moderationReviewQueueList**](doc/ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
+[*ModerationApi*](doc/ModerationApi.md) | [**moderationTest**](doc/ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
 [*ModerationApi*](doc/ModerationApi.md) | [**submitModerationAppeal**](doc/ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
 [*ModerationApi*](doc/ModerationApi.md) | [**voteOnModerationAppeal**](doc/ModerationApi.md#voteonmoderationappeal) | **POST** /moderation/appeals/{appealId}/vote | Cast a community vote on an appeal
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDevicesCreate**](doc/NotificationsApi.md#notificationsdevicescreate) | **POST** /notifications/devices | Register a push device token
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDevicesList**](doc/NotificationsApi.md#notificationsdeviceslist) | **GET** /notifications/devices | List registered push devices
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDevicesRevoke**](doc/NotificationsApi.md#notificationsdevicesrevoke) | **POST** /notifications/devices/{id}/revoke | Revoke a push device registration
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDismiss**](doc/NotificationsApi.md#notificationsdismiss) | **POST** /notifications/{id}/dismiss | Dismiss a notification
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsList**](doc/NotificationsApi.md#notificationslist) | **GET** /notifications | List notifications for the current user
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsPreferencesGet**](doc/NotificationsApi.md#notificationspreferencesget) | **GET** /notifications/preferences | Get notification preferences
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsPreferencesUpdate**](doc/NotificationsApi.md#notificationspreferencesupdate) | **PUT** /notifications/preferences | Update notification preferences
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsRead**](doc/NotificationsApi.md#notificationsread) | **POST** /notifications/{id}/read | Mark a notification as read
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsSend**](doc/NotificationsApi.md#notificationssend) | **POST** /notifications/send | Send an admin-triggered notification
+[*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsUnreadCount**](doc/NotificationsApi.md#notificationsunreadcount) | **GET** /notifications/unread-count | Get unread notification count
+[*PaymentsApi*](doc/PaymentsApi.md) | [**paymentsWebhook**](doc/PaymentsApi.md#paymentswebhook) | **POST** /payments/webhook | Handle payment provider webhook
 [*PostsApi*](doc/PostsApi.md) | [**createPost**](doc/PostsApi.md#createpost) | **POST** /post | Create a new post
+[*PostsApi*](doc/PostsApi.md) | [**postsBookmarkCreate**](doc/PostsApi.md#postsbookmarkcreate) | **POST** /posts/{id}/bookmark | Bookmark a post
+[*PostsApi*](doc/PostsApi.md) | [**postsBookmarkDelete**](doc/PostsApi.md#postsbookmarkdelete) | **DELETE** /posts/{id}/bookmark | Remove a bookmark
+[*PostsApi*](doc/PostsApi.md) | [**postsBookmarkGet**](doc/PostsApi.md#postsbookmarkget) | **GET** /posts/{id}/bookmark | Get bookmark status for a post
+[*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Create a comment on a post
+[*PostsApi*](doc/PostsApi.md) | [**postsCommentsList**](doc/PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List comments on a post
+[*PostsApi*](doc/PostsApi.md) | [**postsGet**](doc/PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
+[*PostsApi*](doc/PostsApi.md) | [**postsInsights**](doc/PostsApi.md#postsinsights) | **GET** /posts/{id}/insights | Get engagement insights for a post
+[*PostsApi*](doc/PostsApi.md) | [**postsLikeCreate**](doc/PostsApi.md#postslikecreate) | **POST** /posts/{id}/like | Like a post
+[*PostsApi*](doc/PostsApi.md) | [**postsLikeDelete**](doc/PostsApi.md#postslikedelete) | **DELETE** /posts/{id}/like | Unlike a post
+[*PostsApi*](doc/PostsApi.md) | [**postsLikeGet**](doc/PostsApi.md#postslikeget) | **GET** /posts/{id}/like | Get like status for a post
+[*PostsApi*](doc/PostsApi.md) | [**postsReceipt**](doc/PostsApi.md#postsreceipt) | **GET** /posts/{id}/receipt | Get read receipt for a post
+[*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post
+[*PostsApi*](doc/PostsApi.md) | [**postsView**](doc/PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
 [*PrivacyApi*](doc/PrivacyApi.md) | [**deleteUserAccount**](doc/PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Delete own account (GDPR Article 17)
 [*PrivacyApi*](doc/PrivacyApi.md) | [**exportUserData**](doc/PrivacyApi.md#exportuserdata) | **GET** /user/export | Export personal data (GDPR Article 20)
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**clearLegalHold**](doc/PrivacyAdminApi.md#clearlegalhold) | **POST** /admin/legal-hold/clear | Clear an existing legal hold
-[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrDelete**](doc/PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /admin/dsr/delete | Enqueue a Data Subject Request delete
-[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrExport**](doc/PrivacyAdminApi.md#enqueuedsrexport) | **POST** /admin/dsr/export | Enqueue a Data Subject Request export
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrDelete**](doc/PrivacyAdminApi.md#enqueuedsrdelete) | **POST** /_admin/dsr/delete | Enqueue a Data Subject Request delete
+[*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**enqueueDsrExport**](doc/PrivacyAdminApi.md#enqueuedsrexport) | **POST** /_admin/dsr/export | Enqueue a Data Subject Request export
 [*PrivacyAdminApi*](doc/PrivacyAdminApi.md) | [**placeLegalHold**](doc/PrivacyAdminApi.md#placelegalhold) | **POST** /admin/legal-hold/place | Place a legal hold
+[*SubscriptionApi*](doc/SubscriptionApi.md) | [**subscriptionStatus**](doc/SubscriptionApi.md#subscriptionstatus) | **GET** /subscription/status | Get current user subscription status
+[*UsersApi*](doc/UsersApi.md) | [**usersFollowCreate**](doc/UsersApi.md#usersfollowcreate) | **POST** /users/{id}/follow | Follow a user
+[*UsersApi*](doc/UsersApi.md) | [**usersFollowDelete**](doc/UsersApi.md#usersfollowdelete) | **DELETE** /users/{id}/follow | Unfollow a user
+[*UsersApi*](doc/UsersApi.md) | [**usersFollowGet**](doc/UsersApi.md#usersfollowget) | **GET** /users/{id}/follow | Get follow status for a user
+[*UsersApi*](doc/UsersApi.md) | [**usersGet**](doc/UsersApi.md#usersget) | **GET** /users/{id} | Get a public user profile
+[*UsersApi*](doc/UsersApi.md) | [**usersPostsList**](doc/UsersApi.md#userspostslist) | **GET** /users/{userId}/posts | List posts by a user
+[*UsersApi*](doc/UsersApi.md) | [**usersTrustPassport**](doc/UsersApi.md#userstrustpassport) | **GET** /users/{id}/trust-passport | Get trust passport for a user
 
 
 ## Documentation For Models

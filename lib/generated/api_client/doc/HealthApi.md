@@ -10,6 +10,7 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**getHealth**](HealthApi.md#gethealth) | **GET** /health | Service health probe
+[**ready**](HealthApi.md#ready) | **GET** /ready | Readiness probe
 
 
 # **getHealth**
@@ -43,6 +44,43 @@ This endpoint does not need any parameter.
 ### Authorization
 
 No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **ready**
+> JsonObject ready()
+
+Readiness probe
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getHealthApi();
+
+try {
+    final response = api.ready();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling HealthApi->ready: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

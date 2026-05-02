@@ -10,6 +10,11 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**flagContent**](ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
+[**moderationCasesDecision**](ModerationApi.md#moderationcasesdecision) | **POST** /moderation/cases/{id}/decision | Record a decision on a moderation case
+[**moderationCasesGet**](ModerationApi.md#moderationcasesget) | **GET** /moderation/cases/{id} | Get moderation case detail
+[**moderationQueueList**](ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
+[**moderationReviewQueueList**](ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
+[**moderationTest**](ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
 [**submitModerationAppeal**](ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
 [**voteOnModerationAppeal**](ModerationApi.md#voteonmoderationappeal) | **POST** /moderation/appeals/{appealId}/vote | Cast a community vote on an appeal
 
@@ -45,6 +50,205 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**FlagContent202Response**](FlagContent202Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationCasesDecision**
+> JsonObject moderationCasesDecision(id, body)
+
+Record a decision on a moderation case
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.moderationCasesDecision(id, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationCasesDecision: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationCasesGet**
+> JsonObject moderationCasesGet(id)
+
+Get moderation case detail
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+final String id = id_example; // String | 
+
+try {
+    final response = api.moderationCasesGet(id);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationCasesGet: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationQueueList**
+> JsonObject moderationQueueList()
+
+List moderation queue items
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+
+try {
+    final response = api.moderationQueueList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationQueueList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationReviewQueueList**
+> JsonObject moderationReviewQueueList()
+
+List items in the review queue
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+
+try {
+    final response = api.moderationReviewQueueList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationReviewQueueList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationTest**
+> JsonObject moderationTest(body)
+
+Submit content to moderation pipeline for testing
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+final JsonObject body = Object; // JsonObject | 
+
+try {
+    final response = api.moderationTest(body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationTest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
 
 ### Authorization
 

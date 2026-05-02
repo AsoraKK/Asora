@@ -10,13 +10,20 @@ export 'package:asora_api_client/src/serializers.dart';
 export 'package:asora_api_client/src/model/date.dart';
 
 export 'package:asora_api_client/src/api/admin_api.dart';
+export 'package:asora_api_client/src/api/analytics_api.dart';
+export 'package:asora_api_client/src/api/appeals_api.dart';
 export 'package:asora_api_client/src/api/auth_api.dart';
+export 'package:asora_api_client/src/api/custom_feeds_api.dart';
 export 'package:asora_api_client/src/api/feed_api.dart';
 export 'package:asora_api_client/src/api/health_api.dart';
 export 'package:asora_api_client/src/api/moderation_api.dart';
+export 'package:asora_api_client/src/api/notifications_api.dart';
+export 'package:asora_api_client/src/api/payments_api.dart';
 export 'package:asora_api_client/src/api/posts_api.dart';
 export 'package:asora_api_client/src/api/privacy_api.dart';
 export 'package:asora_api_client/src/api/privacy_admin_api.dart';
+export 'package:asora_api_client/src/api/subscription_api.dart';
+export 'package:asora_api_client/src/api/users_api.dart';
 
 export 'package:asora_api_client/src/model/account_delete_response.dart';
 export 'package:asora_api_client/src/model/admin_appeal_audit_summary.dart';
