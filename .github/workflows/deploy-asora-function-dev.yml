@@ -34,7 +34,7 @@ on:
         required: false
         type: string
   push:
-    branches: [ "main" ]
+    branches: [ "main", "infra/azure-retirement-hardening-node22-tls-kv-pg-ha" ]
     paths:
       - "functions/**"
       - ".github/workflows/deploy-asora-function-dev.yml"

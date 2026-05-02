@@ -11,8 +11,13 @@ on:
 jobs:
   contract:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -55,12 +60,23 @@ jobs:
           java-version: '17'
       - run: npx openapi-generator-cli version-manager set 7.7.0
       - run: npm run openapi:gen:dart
-      - name: Fail if client drift
+      - name: Commit Dart client if drifted (auto-fix on PRs), fail on push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ -n "$(git status --porcelain lib/generated/api_client)" ]]; then
-            echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
-            git --no-pager diff -- lib/generated/api_client | head -n 200
-            exit 1
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+              git add lib/generated/api_client
+              git commit -m "chore(auto): regenerate Dart API client [skip ci]"
+              git push origin HEAD:${{ github.head_ref }}
+            else
+              echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
+              git --no-pager diff -- lib/generated/api_client | head -n 200
+              exit 1
+            fi
           fi
       - name: Generate OpenAPI docs pre-release bundle
         run: npm run openapi:docs

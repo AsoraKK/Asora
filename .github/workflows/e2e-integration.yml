@@ -23,7 +23,7 @@ on:
   workflow_run:
     workflows: ["deploy-asora-function-dev", "deploy-asora-function-staging"]
     types: [completed]
-    branches: [main]
+    branches: [main, "infra/azure-retirement-hardening-node22-tls-kv-pg-ha"]
 
 permissions:
   id-token: write
