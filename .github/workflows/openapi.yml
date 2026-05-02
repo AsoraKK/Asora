@@ -63,6 +63,7 @@ jobs:
       - name: Commit Dart client if drifted (auto-fix on PRs), fail on push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
         run: |
           if [[ -n "$(git status --porcelain lib/generated/api_client)" ]]; then
             if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -71,7 +72,7 @@ jobs:
               git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
               git add lib/generated/api_client
               git commit -m "chore(auto): regenerate Dart API client [skip ci]"
-              git push origin HEAD:${{ github.head_ref }}
+              git push origin HEAD:${GITHUB_HEAD_REF}
             else
               echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
               git --no-pager diff -- lib/generated/api_client | head -n 200
