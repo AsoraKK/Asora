@@ -16,7 +16,7 @@ const MAX_FEED_LIMIT = 50;
 const TIER_CUSTOM_FEED_LIMITS: Record<'free' | 'premium' | 'black' | 'admin', number> = {
   free: 1,
   premium: 2,
-  black: 5,
+  black: 3,
   admin: 20,
 };
 

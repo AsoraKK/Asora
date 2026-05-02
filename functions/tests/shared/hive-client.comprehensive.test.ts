@@ -218,6 +218,127 @@ describe('HiveAIClient', () => {
     });
   });
 
+  describe('moderateImage', () => {
+    it('returns the raw Hive response for safe image content', async () => {
+      const client = new HiveAIClient(testApiKey);
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(createHiveResponse([]))
+      );
+
+      const result = await client.moderateImage(
+        'user-123',
+        'https://example.com/image.jpg'
+      );
+
+      expect(result.code).toBe(200);
+      expect(result.status).toHaveLength(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.thehive.ai/api/v2/task/sync',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: `Token ${testApiKey}`,
+          }),
+          body: expect.stringContaining('"image_url":"https://example.com/image.jpg"'),
+        })
+      );
+    });
+
+    it('uses custom image models when provided', async () => {
+      const client = new HiveAIClient(testApiKey);
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse(createHiveResponse([]))
+      );
+
+      await client.moderateImage(
+        'user-123',
+        'https://example.com/image.jpg',
+        ['custom_image_model']
+      );
+
+      const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(callBody.models).toEqual(['custom_image_model']);
+    });
+
+    it('retries on 429 rate limit for image moderation', async () => {
+      jest.useRealTimers();
+
+      const client = new HiveAIClient({
+        apiKey: testApiKey,
+        retries: 1,
+        retryDelayMs: 10,
+      });
+
+      mockFetch
+        .mockResolvedValueOnce(mockFetchResponse({}, 429, 'Too Many Requests'))
+        .mockResolvedValueOnce(mockFetchResponse(createHiveResponse([])));
+
+      const result = await client.moderateImage(
+        'user-123',
+        'https://example.com/image.jpg'
+      );
+
+      expect(result.code).toBe(200);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      jest.useFakeTimers();
+    });
+
+    it('throws HiveAPIError on timeout while moderating image content', async () => {
+      const client = new HiveAIClient({
+        apiKey: testApiKey,
+        retries: 0,
+      });
+
+      mockFetch.mockRejectedValueOnce(
+        new DOMException('The operation was aborted', 'AbortError')
+      );
+
+      await expect(
+        client.moderateImage('user-123', 'https://example.com/image.jpg')
+      ).rejects.toMatchObject({
+        code: 'TIMEOUT',
+      });
+    });
+
+    it('throws HiveAPIError on invalid JSON response for image moderation', async () => {
+      const client = new HiveAIClient(testApiKey);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+      } as Response);
+
+      await expect(
+        client.moderateImage('user-123', 'https://example.com/image.jpg')
+      ).rejects.toMatchObject({
+        code: 'PARSE_ERROR',
+        message: 'Invalid JSON response from Hive API',
+      });
+    });
+
+    it('throws HiveAPIError on invalid response structure for image moderation', async () => {
+      const client = new HiveAIClient(testApiKey);
+      mockFetch.mockResolvedValueOnce(
+        mockFetchResponse({
+          id: 'test-123',
+          code: 200,
+          project_id: 1108522403,
+          user_id: 4762,
+          created_on: new Date().toISOString(),
+          status: [],
+        })
+      );
+
+      await expect(
+        client.moderateImage('user-123', 'https://example.com/image.jpg')
+      ).rejects.toMatchObject({
+        code: 'INVALID_RESPONSE',
+      });
+    });
+  });
+
   describe('error handling', () => {
     it('throws HiveAPIError on 400 response', async () => {
       const client = new HiveAIClient({

@@ -61,6 +61,9 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  // Prevent caching of authenticated API responses by default.
+  // Callers may override with additionalHeaders (e.g. health/ready can pass Cache-Control: public, max-age=30).
+  'Cache-Control': 'no-store, no-cache, private',
 };
 
 export function createSuccessResponse<T>(

@@ -139,6 +139,7 @@ describe('Refresh Token Rotation', () => {
         expiresAt: new Date(Date.now() + 60000).toISOString(),
         redirectUri: 'http://callback',
         codeChallenge,
+        codeChallengeMethod: 'S256',
         nonce: 'nonce-store',
         userId: 'u-store',
       }];

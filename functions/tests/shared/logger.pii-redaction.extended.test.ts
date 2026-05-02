@@ -127,7 +127,7 @@ describe('redactRecord — extended PII coverage', () => {
 
   // ── Safe (non-sensitive) fields are preserved ──────────────────────────────
   describe('safe fields are preserved intact', () => {
-    it('preserves userId, email, displayName unchanged', () => {
+    it('preserves userId, displayName, createdAt unchanged; redacts email (PII)', () => {
       const { redactRecord } = require('../../src/privacy/common/redaction');
       const record = {
         userId: 'usr-123',
@@ -136,9 +136,9 @@ describe('redactRecord — extended PII coverage', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
       const result = redactRecord(record);
-      // email is NOT in the sensitive patterns — it is kept
+      // email IS now in the sensitive patterns — it is redacted
       expect(result.userId).toBe('usr-123');
-      expect(result.email).toBe('alice@example.com');
+      expect(result.email).toBeUndefined();
       expect(result.displayName).toBe('Alice');
       expect(result.createdAt).toBe('2024-01-01T00:00:00Z');
     });

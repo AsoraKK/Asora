@@ -19,6 +19,21 @@ export interface ProviderLink {
   created_at: string;
 }
 
+const VALID_PROVIDER_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+function normalizeProvider(provider: string): string {
+  const normalized = provider.trim().toLowerCase();
+  if (!normalized) {
+    throw new Error('Provider is required');
+  }
+
+  if (!VALID_PROVIDER_PATTERN.test(normalized)) {
+    throw new Error(`Invalid provider: ${provider}`);
+  }
+
+  return normalized;
+}
+
 class UsersService {
   /**
    * Get user by ID from PostgreSQL
@@ -97,12 +112,14 @@ class UsersService {
     provider: string,
     providerSub: string
   ): Promise<ProviderLink | null> {
+    const normalizedProvider = normalizeProvider(provider);
+
     return withClient(async (client) => {
       const result = await client.query(
         `SELECT provider, provider_sub, user_id, created_at
          FROM provider_links
          WHERE provider = $1 AND provider_sub = $2`,
-        [provider, providerSub]
+        [normalizedProvider, providerSub]
       );
       return result.rows[0] || null;
     });
@@ -116,6 +133,7 @@ class UsersService {
     providerSub: string,
     userId: string
   ): Promise<ProviderLink> {
+    const normalizedProvider = normalizeProvider(provider);
     const now = new Date().toISOString();
 
     return withClient(async (client) => {
@@ -123,7 +141,7 @@ class UsersService {
         `INSERT INTO provider_links (provider, provider_sub, user_id, created_at)
          VALUES ($1, $2, $3, $4)
          RETURNING provider, provider_sub, user_id, created_at`,
-        [provider, providerSub, userId, now]
+        [normalizedProvider, providerSub, userId, now]
       );
       return result.rows[0];
     });
@@ -138,8 +156,10 @@ class UsersService {
     providerSub: string,
     email: string
   ): Promise<[PGUser, boolean]> {
+    const normalizedProvider = normalizeProvider(provider);
+
     // Check if provider link exists
-    const existingLink = await this.getProviderLink(provider, providerSub);
+    const existingLink = await this.getProviderLink(normalizedProvider, providerSub);
     if (existingLink) {
       const user = await this.getUserById(existingLink.user_id);
       if (user) {
@@ -159,7 +179,7 @@ class UsersService {
 
     // Create provider link if it doesn't exist
     if (!existingLink) {
-      await this.createProviderLink(provider, providerSub, user.id);
+      await this.createProviderLink(normalizedProvider, providerSub, user.id);
     }
 
     return [user, isNewUser];

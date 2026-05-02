@@ -27,22 +27,25 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
   );
 
   try {
-    // Get viewer ID if authenticated (optional)
-    let isAuthenticated = false;
-    let principal = null;
-    let viewerId: string | undefined;
+    // ─────────────────────────────────────────────────────────────
+    // Tier Gate: News Board is a Black-tier feature
+    // ─────────────────────────────────────────────────────────────
+    let auth;
     try {
-      const auth = await extractAuthContext(ctx);
-      isAuthenticated = true;
-      principal = { sub: auth.userId, roles: auth.roles };
-      viewerId = auth.userId;
+      auth = await extractAuthContext(ctx);
     } catch {
-      // Anonymous viewer, no problem
+      return ctx.unauthorized('Authentication required for News Board access', 'UNAUTHORIZED');
     }
+
+    if (auth.tier !== 'black' && auth.tier !== 'admin') {
+      return ctx.forbidden('News Board requires a Black tier subscription', 'TIER_REQUIRED');
+    }
+
+    const viewerId = auth.userId;
 
     // Fetch public feed
     const feedResult = await getFeed({
-      principal,
+      principal: { sub: auth.userId, roles: auth.roles },
       context: ctx.context,
       cursor,
       limit: limit.toString(),
@@ -80,9 +83,7 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
     });
     response.headers = {
       ...response.headers,
-      'Cache-Control': isAuthenticated
-        ? 'private, no-store'
-        : 'public, max-age=60, stale-while-revalidate=30',
+      'Cache-Control': 'private, no-store',
       Vary: 'Authorization',
     };
     return response;

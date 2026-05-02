@@ -474,6 +474,63 @@ describe('moderation_test route', () => {
       expect(body.reasons).toContain('API Error: API timeout');
     });
 
+    it('returns an internal error response when Hive rate limits text moderation', async () => {
+      mockHiveClient.moderateTextContent.mockRejectedValue(
+        new Error('Hive API error: 429 Too Many Requests')
+      );
+
+      const response = await moderation_test(
+        httpReqMock({
+          method: 'POST',
+          body: { type: 'text', content: 'Rate limited content' },
+        }),
+        makeContext()
+      );
+
+      expect(response.status).toBe(200);
+      const body = parseBody<{ action: string; reasons: string[] }>(response);
+      expect(body.action).toBe('ERROR');
+      expect(body.reasons[0]).toContain('429');
+    });
+
+    it('returns an internal error response when image moderation times out', async () => {
+      mockHiveClient.moderateImage.mockRejectedValue(
+        new Error('Hive API request timed out after 10000ms')
+      );
+
+      const response = await moderation_test(
+        httpReqMock({
+          method: 'POST',
+          body: { type: 'image', url: 'https://example.com/timeout.jpg' },
+        }),
+        makeContext()
+      );
+
+      expect(response.status).toBe(200);
+      const body = parseBody<{ action: string; reasons: string[] }>(response);
+      expect(body.action).toBe('ERROR');
+      expect(body.reasons[0]).toContain('timed out');
+    });
+
+    it('returns an internal error response for invalid Hive image responses', async () => {
+      mockHiveClient.moderateImage.mockRejectedValue(
+        new Error('Invalid response structure from Hive API')
+      );
+
+      const response = await moderation_test(
+        httpReqMock({
+          method: 'POST',
+          body: { type: 'image', url: 'https://example.com/bad-response.jpg' },
+        }),
+        makeContext()
+      );
+
+      expect(response.status).toBe(200);
+      const body = parseBody<{ action: string; reasons: string[] }>(response);
+      expect(body.action).toBe('ERROR');
+      expect(body.reasons[0]).toContain('Invalid response structure');
+    });
+
     it('extracts class scores from raw response', async () => {
       mockHiveClient.moderateTextContent.mockResolvedValue({
         action: 'ALLOW',

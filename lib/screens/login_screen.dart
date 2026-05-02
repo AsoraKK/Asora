@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const Icon(Icons.lock_outline, size: 80, color: Colors.blue),
             const SizedBox(height: 32),
             const Text(
-              'Welcome to Asora',
+              'Welcome to Lythaus',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),

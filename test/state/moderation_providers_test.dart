@@ -9,19 +9,19 @@ import 'package:mocktail/mocktail.dart';
 import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/services/appeal_provider.dart';
-import 'package:asora/services/oauth2_service.dart';
+import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/state/models/moderation.dart';
 import 'package:asora/state/providers/moderation_providers.dart';
 
 class _MockDio extends Mock implements Dio {}
 
 class _FakeOAuth2Service extends OAuth2Service {
-  _FakeOAuth2Service(this._token) : super();
+  _FakeOAuth2Service(this._fakeToken);
 
-  final String? _token;
+  final String? _fakeToken;
 
   @override
-  Future<String?> getAccessToken() async => _token;
+  Future<String?> getAccessToken() async => _fakeToken;
 }
 
 void main() {

@@ -25,14 +25,8 @@ import 'package:asora/features/feed/presentation/comment_thread_screen.dart';
 class PostCard extends ConsumerStatefulWidget {
   final Post post;
   final bool isOwnPost;
-  final bool showAiScores;
 
-  const PostCard({
-    super.key,
-    required this.post,
-    this.isOwnPost = false,
-    this.showAiScores = false,
-  });
+  const PostCard({super.key, required this.post, this.isOwnPost = false});
 
   @override
   ConsumerState<PostCard> createState() => _PostCardState();

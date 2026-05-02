@@ -200,10 +200,20 @@ export async function tryGetPrincipal(header: string | null | undefined): Promis
   try {
     return await verifyAuthorizationHeader(header);
   } catch (error) {
-    if (error instanceof AuthError && error.code === 'invalid_request') {
+    if (error instanceof AuthError) {
+      // invalid_request means no token was provided — this is expected for optional-auth routes.
+      // Any other AuthError (expired, bad signature, wrong audience, etc.) means a token WAS
+      // provided but is not trustworthy. Log a warning so operators can detect abuse.
+      if (error.code !== 'invalid_request') {
+        console.warn('[auth/tryGetPrincipal] Rejected token with auth error', { code: error.code });
+      }
       return null;
     }
 
+    // Unexpected non-auth error — log for observability but do not crash the request.
+    console.warn('[auth/tryGetPrincipal] Unexpected error during optional auth', {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

@@ -25,6 +25,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import axios, { AxiosError } from 'axios';
+import { tryGetPrincipal } from '../../auth/verifyJwt';
 
 interface RateLimitBucket {
   tokens: number;
@@ -69,21 +70,6 @@ function checkRateLimit(clientIp: string): boolean {
   return false;
 }
 
-function validateAdminJwt(authHeader: string | null): boolean {
-  if (!authHeader) return false;
-
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || !parts[0] || parts[0].toLowerCase() !== 'bearer') {
-    return false;
-  }
-
-  const token = parts[1];
-  if (!token) return false;
-  // Basic validation: token should be non-empty and look like a JWT (3 parts separated by .)
-  // Full JWT verification is optional here since control-panel validates it;
-  // this is a secondary check to prevent token reuse outside control-panel context
-  return token.length > 0 && token.split('.').length === 3;
-}
 
 async function proxyModerationTest(
   request: HttpRequest,
@@ -132,11 +118,12 @@ async function proxyModerationTest(
     };
   }
 
-  // Validate admin JWT from control-panel
+  // Validate admin JWT — full cryptographic verification (signature, expiry, issuer, audience, roles)
   const authHeader = request.headers.get('Authorization');
-  if (!validateAdminJwt(authHeader)) {
+  const principal = await tryGetPrincipal(authHeader);
+  if (!principal) {
     context.warn(
-      `[proxy/moderation/test ${method}] Invalid or missing admin JWT [${correlationId}]`
+      `[proxy/moderation/test ${method}] Missing or invalid admin JWT [${correlationId}]`
     );
     return {
       status: 401,
@@ -144,6 +131,25 @@ async function proxyModerationTest(
         error: {
           code: 'UNAUTHORIZED',
           message: 'Admin JWT required. Ensure you are logged in to control-panel.',
+          correlationId,
+        },
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Correlation-ID': correlationId,
+      },
+    };
+  }
+  if (!principal.roles?.includes('admin')) {
+    context.warn(
+      `[proxy/moderation/test ${method}] Forbidden — principal ${principal.sub} lacks admin role [${correlationId}]`
+    );
+    return {
+      status: 403,
+      jsonBody: {
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Admin role required.',
           correlationId,
         },
       },
@@ -264,7 +270,7 @@ async function proxyModerationTest(
 
     // Preserve content-type from upstream
     const upstreamContentType = response.headers['content-type'];
-    if (upstreamContentType) {
+    if (upstreamContentType && typeof upstreamContentType === 'string') {
       responseHeaders['Content-Type'] = upstreamContentType;
     }
 
