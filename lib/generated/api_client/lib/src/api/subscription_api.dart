@@ -11,6 +11,7 @@ import 'package:asora_api_client/src/model/error.dart';
 import 'package:built_value/json_object.dart';
 
 class SubscriptionApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -18,7 +19,7 @@ class SubscriptionApi {
   const SubscriptionApi(this._dio, this._serializers);
 
   /// Get current user subscription status
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -30,7 +31,7 @@ class SubscriptionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> subscriptionStatus({
+  Future<Response<JsonObject>> subscriptionStatus({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -69,12 +70,11 @@ class SubscriptionApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -96,4 +96,5 @@ class SubscriptionApi {
       extra: _response.extra,
     );
   }
+
 }

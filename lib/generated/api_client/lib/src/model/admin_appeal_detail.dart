@@ -13,25 +13,24 @@ part 'admin_appeal_detail.g.dart';
 /// AdminAppealDetail
 ///
 /// Properties:
-/// * [appealId]
-/// * [contentId]
-/// * [authorId]
-/// * [submittedAt]
-/// * [status]
-/// * [appealType]
-/// * [appealReason]
-/// * [userStatement]
-/// * [evidenceUrls]
-/// * [internalNote]
-/// * [votesFor]
-/// * [votesAgainst]
-/// * [totalVotes]
-/// * [votingStatus]
-/// * [expiresAt]
-/// * [timeRemainingSeconds]
+/// * [appealId] 
+/// * [contentId] 
+/// * [authorId] 
+/// * [submittedAt] 
+/// * [status] 
+/// * [appealType] 
+/// * [appealReason] 
+/// * [userStatement] 
+/// * [evidenceUrls] 
+/// * [internalNote] 
+/// * [votesFor] 
+/// * [votesAgainst] 
+/// * [totalVotes] 
+/// * [votingStatus] 
+/// * [expiresAt] 
+/// * [timeRemainingSeconds] 
 @BuiltValue()
-abstract class AdminAppealDetail
-    implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
+abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -83,19 +82,16 @@ abstract class AdminAppealDetail
 
   AdminAppealDetail._();
 
-  factory AdminAppealDetail([void updates(AdminAppealDetailBuilder b)]) =
-      _$AdminAppealDetail;
+  factory AdminAppealDetail([void updates(AdminAppealDetailBuilder b)]) = _$AdminAppealDetail;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealDetailBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealDetail> get serializer =>
-      _$AdminAppealDetailSerializer();
+  static Serializer<AdminAppealDetail> get serializer => _$AdminAppealDetailSerializer();
 }
 
-class _$AdminAppealDetailSerializer
-    implements PrimitiveSerializer<AdminAppealDetail> {
+class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDetail> {
   @override
   final Iterable<Type> types = const [AdminAppealDetail, _$AdminAppealDetail];
 
@@ -227,9 +223,7 @@ class _$AdminAppealDetailSerializer
     AdminAppealDetail object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -387,3 +381,4 @@ class _$AdminAppealDetailSerializer
     return result.build();
   }
 }
+

@@ -13,14 +13,12 @@ part 'admin_appeal_decision_response.g.dart';
 /// AdminAppealDecisionResponse
 ///
 /// Properties:
-/// * [appealId]
-/// * [status]
-/// * [contentId]
-/// * [contentStatus]
+/// * [appealId] 
+/// * [status] 
+/// * [contentId] 
+/// * [contentStatus] 
 @BuiltValue()
-abstract class AdminAppealDecisionResponse
-    implements
-        Built<AdminAppealDecisionResponse, AdminAppealDecisionResponseBuilder> {
+abstract class AdminAppealDecisionResponse implements Built<AdminAppealDecisionResponse, AdminAppealDecisionResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -37,25 +35,18 @@ abstract class AdminAppealDecisionResponse
 
   AdminAppealDecisionResponse._();
 
-  factory AdminAppealDecisionResponse(
-          [void updates(AdminAppealDecisionResponseBuilder b)]) =
-      _$AdminAppealDecisionResponse;
+  factory AdminAppealDecisionResponse([void updates(AdminAppealDecisionResponseBuilder b)]) = _$AdminAppealDecisionResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealDecisionResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealDecisionResponse> get serializer =>
-      _$AdminAppealDecisionResponseSerializer();
+  static Serializer<AdminAppealDecisionResponse> get serializer => _$AdminAppealDecisionResponseSerializer();
 }
 
-class _$AdminAppealDecisionResponseSerializer
-    implements PrimitiveSerializer<AdminAppealDecisionResponse> {
+class _$AdminAppealDecisionResponseSerializer implements PrimitiveSerializer<AdminAppealDecisionResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealDecisionResponse,
-    _$AdminAppealDecisionResponse
-  ];
+  final Iterable<Type> types = const [AdminAppealDecisionResponse, _$AdminAppealDecisionResponse];
 
   @override
   final String wireName = r'AdminAppealDecisionResponse';
@@ -101,9 +92,7 @@ class _$AdminAppealDecisionResponseSerializer
     AdminAppealDecisionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -174,3 +163,4 @@ class _$AdminAppealDecisionResponseSerializer
     return result.build();
   }
 }
+

@@ -16,8 +16,7 @@ part 'moderation_appeal_request.g.dart';
 /// * [statement] - User's statement explaining why the decision should be reversed
 /// * [evidenceUrls] - Optional supporting evidence URLs
 @BuiltValue()
-abstract class ModerationAppealRequest
-    implements Built<ModerationAppealRequest, ModerationAppealRequestBuilder> {
+abstract class ModerationAppealRequest implements Built<ModerationAppealRequest, ModerationAppealRequestBuilder> {
   /// Identifier of the moderation case being appealed
   @BuiltValueField(wireName: r'caseId')
   String get caseId;
@@ -32,25 +31,18 @@ abstract class ModerationAppealRequest
 
   ModerationAppealRequest._();
 
-  factory ModerationAppealRequest(
-          [void updates(ModerationAppealRequestBuilder b)]) =
-      _$ModerationAppealRequest;
+  factory ModerationAppealRequest([void updates(ModerationAppealRequestBuilder b)]) = _$ModerationAppealRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ModerationAppealRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ModerationAppealRequest> get serializer =>
-      _$ModerationAppealRequestSerializer();
+  static Serializer<ModerationAppealRequest> get serializer => _$ModerationAppealRequestSerializer();
 }
 
-class _$ModerationAppealRequestSerializer
-    implements PrimitiveSerializer<ModerationAppealRequest> {
+class _$ModerationAppealRequestSerializer implements PrimitiveSerializer<ModerationAppealRequest> {
   @override
-  final Iterable<Type> types = const [
-    ModerationAppealRequest,
-    _$ModerationAppealRequest
-  ];
+  final Iterable<Type> types = const [ModerationAppealRequest, _$ModerationAppealRequest];
 
   @override
   final String wireName = r'ModerationAppealRequest';
@@ -85,9 +77,7 @@ class _$ModerationAppealRequestSerializer
     ModerationAppealRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -151,3 +141,4 @@ class _$ModerationAppealRequestSerializer
     return result.build();
   }
 }
+

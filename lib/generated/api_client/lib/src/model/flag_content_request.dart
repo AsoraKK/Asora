@@ -16,8 +16,7 @@ part 'flag_content_request.g.dart';
 /// * [reason] - Moderation reason
 /// * [notes] - Additional details supporting the flag
 @BuiltValue()
-abstract class FlagContentRequest
-    implements Built<FlagContentRequest, FlagContentRequestBuilder> {
+abstract class FlagContentRequest implements Built<FlagContentRequest, FlagContentRequestBuilder> {
   /// Identifier of the content being flagged
   @BuiltValueField(wireName: r'targetId')
   String get targetId;
@@ -33,19 +32,16 @@ abstract class FlagContentRequest
 
   FlagContentRequest._();
 
-  factory FlagContentRequest([void updates(FlagContentRequestBuilder b)]) =
-      _$FlagContentRequest;
+  factory FlagContentRequest([void updates(FlagContentRequestBuilder b)]) = _$FlagContentRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(FlagContentRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<FlagContentRequest> get serializer =>
-      _$FlagContentRequestSerializer();
+  static Serializer<FlagContentRequest> get serializer => _$FlagContentRequestSerializer();
 }
 
-class _$FlagContentRequestSerializer
-    implements PrimitiveSerializer<FlagContentRequest> {
+class _$FlagContentRequestSerializer implements PrimitiveSerializer<FlagContentRequest> {
   @override
   final Iterable<Type> types = const [FlagContentRequest, _$FlagContentRequest];
 
@@ -82,9 +78,7 @@ class _$FlagContentRequestSerializer
     FlagContentRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -150,58 +144,40 @@ class _$FlagContentRequestSerializer
 }
 
 class FlagContentRequestReasonEnum extends EnumClass {
+
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'spam')
-  static const FlagContentRequestReasonEnum spam =
-      _$flagContentRequestReasonEnum_spam;
-
+  static const FlagContentRequestReasonEnum spam = _$flagContentRequestReasonEnum_spam;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'harassment')
-  static const FlagContentRequestReasonEnum harassment =
-      _$flagContentRequestReasonEnum_harassment;
-
+  static const FlagContentRequestReasonEnum harassment = _$flagContentRequestReasonEnum_harassment;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'hate_speech')
-  static const FlagContentRequestReasonEnum hateSpeech =
-      _$flagContentRequestReasonEnum_hateSpeech;
-
+  static const FlagContentRequestReasonEnum hateSpeech = _$flagContentRequestReasonEnum_hateSpeech;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'violence')
-  static const FlagContentRequestReasonEnum violence =
-      _$flagContentRequestReasonEnum_violence;
-
+  static const FlagContentRequestReasonEnum violence = _$flagContentRequestReasonEnum_violence;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'adult_content')
-  static const FlagContentRequestReasonEnum adultContent =
-      _$flagContentRequestReasonEnum_adultContent;
-
+  static const FlagContentRequestReasonEnum adultContent = _$flagContentRequestReasonEnum_adultContent;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'misinformation')
-  static const FlagContentRequestReasonEnum misinformation =
-      _$flagContentRequestReasonEnum_misinformation;
-
+  static const FlagContentRequestReasonEnum misinformation = _$flagContentRequestReasonEnum_misinformation;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'copyright')
-  static const FlagContentRequestReasonEnum copyright =
-      _$flagContentRequestReasonEnum_copyright;
-
+  static const FlagContentRequestReasonEnum copyright = _$flagContentRequestReasonEnum_copyright;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'privacy')
-  static const FlagContentRequestReasonEnum privacy =
-      _$flagContentRequestReasonEnum_privacy;
-
+  static const FlagContentRequestReasonEnum privacy = _$flagContentRequestReasonEnum_privacy;
   /// Moderation reason
   @BuiltValueEnumConst(wireName: r'other')
-  static const FlagContentRequestReasonEnum other =
-      _$flagContentRequestReasonEnum_other;
+  static const FlagContentRequestReasonEnum other = _$flagContentRequestReasonEnum_other;
 
-  static Serializer<FlagContentRequestReasonEnum> get serializer =>
-      _$flagContentRequestReasonEnumSerializer;
+  static Serializer<FlagContentRequestReasonEnum> get serializer => _$flagContentRequestReasonEnumSerializer;
 
-  const FlagContentRequestReasonEnum._(String name) : super(name);
+  const FlagContentRequestReasonEnum._(String name): super(name);
 
-  static BuiltSet<FlagContentRequestReasonEnum> get values =>
-      _$flagContentRequestReasonEnumValues;
-  static FlagContentRequestReasonEnum valueOf(String name) =>
-      _$flagContentRequestReasonEnumValueOf(name);
+  static BuiltSet<FlagContentRequestReasonEnum> get values => _$flagContentRequestReasonEnumValues;
+  static FlagContentRequestReasonEnum valueOf(String name) => _$flagContentRequestReasonEnumValueOf(name);
 }
+

@@ -12,15 +12,12 @@ part 'service_unavailable_error_error.g.dart';
 /// ServiceUnavailableErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
+/// * [code] 
+/// * [message] 
 /// * [retryAfterSeconds] - Suggested number of seconds to wait before retrying
-/// * [correlationId]
+/// * [correlationId] 
 @BuiltValue()
-abstract class ServiceUnavailableErrorError
-    implements
-        Built<ServiceUnavailableErrorError,
-            ServiceUnavailableErrorErrorBuilder> {
+abstract class ServiceUnavailableErrorError implements Built<ServiceUnavailableErrorError, ServiceUnavailableErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
   ServiceUnavailableErrorErrorCodeEnum get code;
   // enum codeEnum {  SERVICE_UNAVAILABLE,  DEPENDENCY_UNAVAILABLE,  MAINTENANCE,  };
@@ -37,25 +34,18 @@ abstract class ServiceUnavailableErrorError
 
   ServiceUnavailableErrorError._();
 
-  factory ServiceUnavailableErrorError(
-          [void updates(ServiceUnavailableErrorErrorBuilder b)]) =
-      _$ServiceUnavailableErrorError;
+  factory ServiceUnavailableErrorError([void updates(ServiceUnavailableErrorErrorBuilder b)]) = _$ServiceUnavailableErrorError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ServiceUnavailableErrorErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ServiceUnavailableErrorError> get serializer =>
-      _$ServiceUnavailableErrorErrorSerializer();
+  static Serializer<ServiceUnavailableErrorError> get serializer => _$ServiceUnavailableErrorErrorSerializer();
 }
 
-class _$ServiceUnavailableErrorErrorSerializer
-    implements PrimitiveSerializer<ServiceUnavailableErrorError> {
+class _$ServiceUnavailableErrorErrorSerializer implements PrimitiveSerializer<ServiceUnavailableErrorError> {
   @override
-  final Iterable<Type> types = const [
-    ServiceUnavailableErrorError,
-    _$ServiceUnavailableErrorError
-  ];
+  final Iterable<Type> types = const [ServiceUnavailableErrorError, _$ServiceUnavailableErrorError];
 
   @override
   final String wireName = r'ServiceUnavailableErrorError';
@@ -97,9 +87,7 @@ class _$ServiceUnavailableErrorErrorSerializer
     ServiceUnavailableErrorError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -172,23 +160,19 @@ class _$ServiceUnavailableErrorErrorSerializer
 }
 
 class ServiceUnavailableErrorErrorCodeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'SERVICE_UNAVAILABLE')
-  static const ServiceUnavailableErrorErrorCodeEnum SERVICE_UNAVAILABLE =
-      _$serviceUnavailableErrorErrorCodeEnum_SERVICE_UNAVAILABLE;
+  static const ServiceUnavailableErrorErrorCodeEnum SERVICE_UNAVAILABLE = _$serviceUnavailableErrorErrorCodeEnum_SERVICE_UNAVAILABLE;
   @BuiltValueEnumConst(wireName: r'DEPENDENCY_UNAVAILABLE')
-  static const ServiceUnavailableErrorErrorCodeEnum DEPENDENCY_UNAVAILABLE =
-      _$serviceUnavailableErrorErrorCodeEnum_DEPENDENCY_UNAVAILABLE;
+  static const ServiceUnavailableErrorErrorCodeEnum DEPENDENCY_UNAVAILABLE = _$serviceUnavailableErrorErrorCodeEnum_DEPENDENCY_UNAVAILABLE;
   @BuiltValueEnumConst(wireName: r'MAINTENANCE')
-  static const ServiceUnavailableErrorErrorCodeEnum MAINTENANCE =
-      _$serviceUnavailableErrorErrorCodeEnum_MAINTENANCE;
+  static const ServiceUnavailableErrorErrorCodeEnum MAINTENANCE = _$serviceUnavailableErrorErrorCodeEnum_MAINTENANCE;
 
-  static Serializer<ServiceUnavailableErrorErrorCodeEnum> get serializer =>
-      _$serviceUnavailableErrorErrorCodeEnumSerializer;
+  static Serializer<ServiceUnavailableErrorErrorCodeEnum> get serializer => _$serviceUnavailableErrorErrorCodeEnumSerializer;
 
-  const ServiceUnavailableErrorErrorCodeEnum._(String name) : super(name);
+  const ServiceUnavailableErrorErrorCodeEnum._(String name): super(name);
 
-  static BuiltSet<ServiceUnavailableErrorErrorCodeEnum> get values =>
-      _$serviceUnavailableErrorErrorCodeEnumValues;
-  static ServiceUnavailableErrorErrorCodeEnum valueOf(String name) =>
-      _$serviceUnavailableErrorErrorCodeEnumValueOf(name);
+  static BuiltSet<ServiceUnavailableErrorErrorCodeEnum> get values => _$serviceUnavailableErrorErrorCodeEnumValues;
+  static ServiceUnavailableErrorErrorCodeEnum valueOf(String name) => _$serviceUnavailableErrorErrorCodeEnumValueOf(name);
 }
+

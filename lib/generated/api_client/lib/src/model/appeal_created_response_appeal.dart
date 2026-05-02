@@ -14,12 +14,10 @@ part 'appeal_created_response_appeal.g.dart';
 /// Properties:
 /// * [id] - Generated appeal identifier
 /// * [caseId] - Linked moderation case
-/// * [status]
-/// * [createdAt]
+/// * [status] 
+/// * [createdAt] 
 @BuiltValue()
-abstract class AppealCreatedResponseAppeal
-    implements
-        Built<AppealCreatedResponseAppeal, AppealCreatedResponseAppealBuilder> {
+abstract class AppealCreatedResponseAppeal implements Built<AppealCreatedResponseAppeal, AppealCreatedResponseAppealBuilder> {
   /// Generated appeal identifier
   @BuiltValueField(wireName: r'id')
   String get id;
@@ -37,25 +35,18 @@ abstract class AppealCreatedResponseAppeal
 
   AppealCreatedResponseAppeal._();
 
-  factory AppealCreatedResponseAppeal(
-          [void updates(AppealCreatedResponseAppealBuilder b)]) =
-      _$AppealCreatedResponseAppeal;
+  factory AppealCreatedResponseAppeal([void updates(AppealCreatedResponseAppealBuilder b)]) = _$AppealCreatedResponseAppeal;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AppealCreatedResponseAppealBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AppealCreatedResponseAppeal> get serializer =>
-      _$AppealCreatedResponseAppealSerializer();
+  static Serializer<AppealCreatedResponseAppeal> get serializer => _$AppealCreatedResponseAppealSerializer();
 }
 
-class _$AppealCreatedResponseAppealSerializer
-    implements PrimitiveSerializer<AppealCreatedResponseAppeal> {
+class _$AppealCreatedResponseAppealSerializer implements PrimitiveSerializer<AppealCreatedResponseAppeal> {
   @override
-  final Iterable<Type> types = const [
-    AppealCreatedResponseAppeal,
-    _$AppealCreatedResponseAppeal
-  ];
+  final Iterable<Type> types = const [AppealCreatedResponseAppeal, _$AppealCreatedResponseAppeal];
 
   @override
   final String wireName = r'AppealCreatedResponseAppeal';
@@ -93,9 +84,7 @@ class _$AppealCreatedResponseAppealSerializer
     AppealCreatedResponseAppeal object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -127,8 +116,7 @@ class _$AppealCreatedResponseAppealSerializer
         case r'status':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType:
-                const FullType(AppealCreatedResponseAppealStatusEnum),
+            specifiedType: const FullType(AppealCreatedResponseAppealStatusEnum),
           ) as AppealCreatedResponseAppealStatusEnum;
           result.status = valueDes;
           break;
@@ -169,17 +157,15 @@ class _$AppealCreatedResponseAppealSerializer
 }
 
 class AppealCreatedResponseAppealStatusEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'pending')
-  static const AppealCreatedResponseAppealStatusEnum pending =
-      _$appealCreatedResponseAppealStatusEnum_pending;
+  static const AppealCreatedResponseAppealStatusEnum pending = _$appealCreatedResponseAppealStatusEnum_pending;
 
-  static Serializer<AppealCreatedResponseAppealStatusEnum> get serializer =>
-      _$appealCreatedResponseAppealStatusEnumSerializer;
+  static Serializer<AppealCreatedResponseAppealStatusEnum> get serializer => _$appealCreatedResponseAppealStatusEnumSerializer;
 
-  const AppealCreatedResponseAppealStatusEnum._(String name) : super(name);
+  const AppealCreatedResponseAppealStatusEnum._(String name): super(name);
 
-  static BuiltSet<AppealCreatedResponseAppealStatusEnum> get values =>
-      _$appealCreatedResponseAppealStatusEnumValues;
-  static AppealCreatedResponseAppealStatusEnum valueOf(String name) =>
-      _$appealCreatedResponseAppealStatusEnumValueOf(name);
+  static BuiltSet<AppealCreatedResponseAppealStatusEnum> get values => _$appealCreatedResponseAppealStatusEnumValues;
+  static AppealCreatedResponseAppealStatusEnum valueOf(String name) => _$appealCreatedResponseAppealStatusEnumValueOf(name);
 }
+

@@ -16,6 +16,7 @@ import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
 
 class FeedApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -23,7 +24,7 @@ class FeedApi {
   const FeedApi(this._dio, this._serializers);
 
   /// Return discovery/explore feed
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -35,7 +36,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedDiscover({
+  Future<Response<JsonObject>> feedDiscover({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -74,12 +75,11 @@ class FeedApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -103,7 +103,7 @@ class FeedApi {
   }
 
   /// Return news board feed
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -115,7 +115,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedNews({
+  Future<Response<JsonObject>> feedNews({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -154,12 +154,11 @@ class FeedApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -183,10 +182,10 @@ class FeedApi {
   }
 
   /// Return a public user&#39;s post feed
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [userId]
+  /// * [userId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -196,7 +195,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedUser({
+  Future<Response<JsonObject>> feedUser({ 
     required String userId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -205,10 +204,7 @@ class FeedApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/feed/user/{userId}'.replaceAll(
-        '{' r'userId' '}',
-        encodeQueryParameter(_serializers, userId, const FullType(String))
-            .toString());
+    final _path = r'/feed/user/{userId}'.replaceAll('{' r'userId' '}', encodeQueryParameter(_serializers, userId, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -239,12 +235,11 @@ class FeedApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -282,7 +277,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FeedPageResponse>> getFeed({
+  Future<Response<FeedPageResponse>> getFeed({ 
     String? cursor,
     int? limit = 25,
     CancelToken? cancelToken,
@@ -312,12 +307,8 @@ class FeedApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -333,12 +324,11 @@ class FeedApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(FeedPageResponse),
-            ) as FeedPageResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(FeedPageResponse),
+      ) as FeedPageResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -360,4 +350,5 @@ class FeedApi {
       extra: _response.extra,
     );
   }
+
 }

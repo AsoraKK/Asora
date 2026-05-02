@@ -92,9 +92,13 @@ import 'package:asora_api_client/src/model/feed_page_response.dart';
 import 'package:asora_api_client/src/model/feed_page_response_meta.dart';
 import 'package:asora_api_client/src/model/flag_content202_response.dart';
 import 'package:asora_api_client/src/model/flag_content_request.dart';
+import 'package:asora_api_client/src/model/flag_content_v1202_response.dart';
+import 'package:asora_api_client/src/model/flag_content_v1_request.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/forbidden_error_error.dart';
 import 'package:asora_api_client/src/model/get_health200_response.dart';
+import 'package:asora_api_client/src/model/get_my_appeals200_response.dart';
+import 'package:asora_api_client/src/model/get_my_appeals200_response_items_inner.dart';
 import 'package:asora_api_client/src/model/invite_validation_payload.dart';
 import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/legal_hold_clear.dart';
@@ -117,6 +121,7 @@ import 'package:asora_api_client/src/model/user_info_response_data.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
 import 'package:asora_api_client/src/model/validation_error_response_error.dart';
 import 'package:asora_api_client/src/model/validation_error_response_error_fields_inner.dart';
+import 'package:asora_api_client/src/model/vote_on_appeal_v1_request.dart';
 
 part 'serializers.g.dart';
 
@@ -160,8 +165,7 @@ part 'serializers.g.dart';
   AdminFlagQueueItem,
   AdminFlagQueueResponse,
   AdminFlagResolveRequest,
-  AdminInvite,
-  $AdminInvite,
+  AdminInvite,$AdminInvite,
   AdminInviteBatchRequest,
   AdminInviteBatchResponse,
   AdminInviteCreateRequest,
@@ -200,9 +204,13 @@ part 'serializers.g.dart';
   FeedPageResponseMeta,
   FlagContent202Response,
   FlagContentRequest,
+  FlagContentV1202Response,
+  FlagContentV1Request,
   ForbiddenError,
   ForbiddenErrorError,
   GetHealth200Response,
+  GetMyAppeals200Response,
+  GetMyAppeals200ResponseItemsInner,
   InviteValidationPayload,
   InviteValidationResponse,
   LegalHoldClear,
@@ -225,11 +233,11 @@ part 'serializers.g.dart';
   ValidationErrorResponse,
   ValidationErrorResponseError,
   ValidationErrorResponseErrorFieldsInner,
+  VoteOnAppealV1Request,
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
         () => MapBuilder<String, JsonObject>(),
       )
       ..add(AdminInvite.serializer)

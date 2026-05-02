@@ -11,14 +11,13 @@ part 'get_health200_response.g.dart';
 /// GetHealth200Response
 ///
 /// Properties:
-/// * [ok]
-/// * [status]
-/// * [timestamp]
-/// * [service]
-/// * [version]
+/// * [ok] 
+/// * [status] 
+/// * [timestamp] 
+/// * [service] 
+/// * [version] 
 @BuiltValue()
-abstract class GetHealth200Response
-    implements Built<GetHealth200Response, GetHealth200ResponseBuilder> {
+abstract class GetHealth200Response implements Built<GetHealth200Response, GetHealth200ResponseBuilder> {
   @BuiltValueField(wireName: r'ok')
   bool? get ok;
 
@@ -36,24 +35,18 @@ abstract class GetHealth200Response
 
   GetHealth200Response._();
 
-  factory GetHealth200Response([void updates(GetHealth200ResponseBuilder b)]) =
-      _$GetHealth200Response;
+  factory GetHealth200Response([void updates(GetHealth200ResponseBuilder b)]) = _$GetHealth200Response;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(GetHealth200ResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<GetHealth200Response> get serializer =>
-      _$GetHealth200ResponseSerializer();
+  static Serializer<GetHealth200Response> get serializer => _$GetHealth200ResponseSerializer();
 }
 
-class _$GetHealth200ResponseSerializer
-    implements PrimitiveSerializer<GetHealth200Response> {
+class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth200Response> {
   @override
-  final Iterable<Type> types = const [
-    GetHealth200Response,
-    _$GetHealth200Response
-  ];
+  final Iterable<Type> types = const [GetHealth200Response, _$GetHealth200Response];
 
   @override
   final String wireName = r'GetHealth200Response';
@@ -106,9 +99,7 @@ class _$GetHealth200ResponseSerializer
     GetHealth200Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -186,3 +177,4 @@ class _$GetHealth200ResponseSerializer
     return result.build();
   }
 }
+

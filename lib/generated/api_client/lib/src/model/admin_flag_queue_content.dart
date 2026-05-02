@@ -12,13 +12,12 @@ part 'admin_flag_queue_content.g.dart';
 /// AdminFlagQueueContent
 ///
 /// Properties:
-/// * [contentId]
-/// * [type]
-/// * [createdAt]
-/// * [preview]
+/// * [contentId] 
+/// * [type] 
+/// * [createdAt] 
+/// * [preview] 
 @BuiltValue()
-abstract class AdminFlagQueueContent
-    implements Built<AdminFlagQueueContent, AdminFlagQueueContentBuilder> {
+abstract class AdminFlagQueueContent implements Built<AdminFlagQueueContent, AdminFlagQueueContentBuilder> {
   @BuiltValueField(wireName: r'contentId')
   String? get contentId;
 
@@ -34,24 +33,18 @@ abstract class AdminFlagQueueContent
 
   AdminFlagQueueContent._();
 
-  factory AdminFlagQueueContent(
-      [void updates(AdminFlagQueueContentBuilder b)]) = _$AdminFlagQueueContent;
+  factory AdminFlagQueueContent([void updates(AdminFlagQueueContentBuilder b)]) = _$AdminFlagQueueContent;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueContentBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueContent> get serializer =>
-      _$AdminFlagQueueContentSerializer();
+  static Serializer<AdminFlagQueueContent> get serializer => _$AdminFlagQueueContentSerializer();
 }
 
-class _$AdminFlagQueueContentSerializer
-    implements PrimitiveSerializer<AdminFlagQueueContent> {
+class _$AdminFlagQueueContentSerializer implements PrimitiveSerializer<AdminFlagQueueContent> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagQueueContent,
-    _$AdminFlagQueueContent
-  ];
+  final Iterable<Type> types = const [AdminFlagQueueContent, _$AdminFlagQueueContent];
 
   @override
   final String wireName = r'AdminFlagQueueContent';
@@ -97,9 +90,7 @@ class _$AdminFlagQueueContentSerializer
     AdminFlagQueueContent object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -170,3 +161,4 @@ class _$AdminFlagQueueContentSerializer
     return result.build();
   }
 }
+

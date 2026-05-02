@@ -12,34 +12,26 @@ part 'validation_error_response.g.dart';
 /// 400 response with structured field-level validation failures.
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
-abstract class ValidationErrorResponse
-    implements Built<ValidationErrorResponse, ValidationErrorResponseBuilder> {
+abstract class ValidationErrorResponse implements Built<ValidationErrorResponse, ValidationErrorResponseBuilder> {
   @BuiltValueField(wireName: r'error')
   ValidationErrorResponseError get error;
 
   ValidationErrorResponse._();
 
-  factory ValidationErrorResponse(
-          [void updates(ValidationErrorResponseBuilder b)]) =
-      _$ValidationErrorResponse;
+  factory ValidationErrorResponse([void updates(ValidationErrorResponseBuilder b)]) = _$ValidationErrorResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ValidationErrorResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ValidationErrorResponse> get serializer =>
-      _$ValidationErrorResponseSerializer();
+  static Serializer<ValidationErrorResponse> get serializer => _$ValidationErrorResponseSerializer();
 }
 
-class _$ValidationErrorResponseSerializer
-    implements PrimitiveSerializer<ValidationErrorResponse> {
+class _$ValidationErrorResponseSerializer implements PrimitiveSerializer<ValidationErrorResponse> {
   @override
-  final Iterable<Type> types = const [
-    ValidationErrorResponse,
-    _$ValidationErrorResponse
-  ];
+  final Iterable<Type> types = const [ValidationErrorResponse, _$ValidationErrorResponse];
 
   @override
   final String wireName = r'ValidationErrorResponse';
@@ -62,9 +54,7 @@ class _$ValidationErrorResponseSerializer
     ValidationErrorResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -114,3 +104,4 @@ class _$ValidationErrorResponseSerializer
     return result.build();
   }
 }
+

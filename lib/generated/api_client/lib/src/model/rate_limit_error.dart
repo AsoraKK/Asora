@@ -20,8 +20,7 @@ part 'rate_limit_error.g.dart';
 /// * [traceId] - Correlation identifier for tracing
 /// * [reason] - Additional context for specialized scopes (e.g. auth backoff)
 @BuiltValue()
-abstract class RateLimitError
-    implements Built<RateLimitError, RateLimitErrorBuilder> {
+abstract class RateLimitError implements Built<RateLimitError, RateLimitErrorBuilder> {
   /// Constant identifier for rate limit breaches
   @BuiltValueField(wireName: r'error')
   RateLimitErrorErrorEnum get error;
@@ -55,19 +54,16 @@ abstract class RateLimitError
 
   RateLimitError._();
 
-  factory RateLimitError([void updates(RateLimitErrorBuilder b)]) =
-      _$RateLimitError;
+  factory RateLimitError([void updates(RateLimitErrorBuilder b)]) = _$RateLimitError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(RateLimitErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<RateLimitError> get serializer =>
-      _$RateLimitErrorSerializer();
+  static Serializer<RateLimitError> get serializer => _$RateLimitErrorSerializer();
 }
 
-class _$RateLimitErrorSerializer
-    implements PrimitiveSerializer<RateLimitError> {
+class _$RateLimitErrorSerializer implements PrimitiveSerializer<RateLimitError> {
   @override
   final Iterable<Type> types = const [RateLimitError, _$RateLimitError];
 
@@ -124,9 +120,7 @@ class _$RateLimitErrorSerializer
     RateLimitError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -220,64 +214,53 @@ class _$RateLimitErrorSerializer
 }
 
 class RateLimitErrorErrorEnum extends EnumClass {
+
   /// Constant identifier for rate limit breaches
   @BuiltValueEnumConst(wireName: r'rate_limited')
-  static const RateLimitErrorErrorEnum rateLimited =
-      _$rateLimitErrorErrorEnum_rateLimited;
+  static const RateLimitErrorErrorEnum rateLimited = _$rateLimitErrorErrorEnum_rateLimited;
 
-  static Serializer<RateLimitErrorErrorEnum> get serializer =>
-      _$rateLimitErrorErrorEnumSerializer;
+  static Serializer<RateLimitErrorErrorEnum> get serializer => _$rateLimitErrorErrorEnumSerializer;
 
-  const RateLimitErrorErrorEnum._(String name) : super(name);
+  const RateLimitErrorErrorEnum._(String name): super(name);
 
-  static BuiltSet<RateLimitErrorErrorEnum> get values =>
-      _$rateLimitErrorErrorEnumValues;
-  static RateLimitErrorErrorEnum valueOf(String name) =>
-      _$rateLimitErrorErrorEnumValueOf(name);
+  static BuiltSet<RateLimitErrorErrorEnum> get values => _$rateLimitErrorErrorEnumValues;
+  static RateLimitErrorErrorEnum valueOf(String name) => _$rateLimitErrorErrorEnumValueOf(name);
 }
 
 class RateLimitErrorScopeEnum extends EnumClass {
+
   /// Scope of the limit that triggered the breach
   @BuiltValueEnumConst(wireName: r'ip')
   static const RateLimitErrorScopeEnum ip = _$rateLimitErrorScopeEnum_ip;
-
   /// Scope of the limit that triggered the breach
   @BuiltValueEnumConst(wireName: r'user')
   static const RateLimitErrorScopeEnum user = _$rateLimitErrorScopeEnum_user;
-
   /// Scope of the limit that triggered the breach
   @BuiltValueEnumConst(wireName: r'route')
   static const RateLimitErrorScopeEnum route = _$rateLimitErrorScopeEnum_route;
-
   /// Scope of the limit that triggered the breach
   @BuiltValueEnumConst(wireName: r'auth_backoff')
-  static const RateLimitErrorScopeEnum authBackoff =
-      _$rateLimitErrorScopeEnum_authBackoff;
+  static const RateLimitErrorScopeEnum authBackoff = _$rateLimitErrorScopeEnum_authBackoff;
 
-  static Serializer<RateLimitErrorScopeEnum> get serializer =>
-      _$rateLimitErrorScopeEnumSerializer;
+  static Serializer<RateLimitErrorScopeEnum> get serializer => _$rateLimitErrorScopeEnumSerializer;
 
-  const RateLimitErrorScopeEnum._(String name) : super(name);
+  const RateLimitErrorScopeEnum._(String name): super(name);
 
-  static BuiltSet<RateLimitErrorScopeEnum> get values =>
-      _$rateLimitErrorScopeEnumValues;
-  static RateLimitErrorScopeEnum valueOf(String name) =>
-      _$rateLimitErrorScopeEnumValueOf(name);
+  static BuiltSet<RateLimitErrorScopeEnum> get values => _$rateLimitErrorScopeEnumValues;
+  static RateLimitErrorScopeEnum valueOf(String name) => _$rateLimitErrorScopeEnumValueOf(name);
 }
 
 class RateLimitErrorReasonEnum extends EnumClass {
+
   /// Additional context for specialized scopes (e.g. auth backoff)
   @BuiltValueEnumConst(wireName: r'auth_backoff')
-  static const RateLimitErrorReasonEnum authBackoff =
-      _$rateLimitErrorReasonEnum_authBackoff;
+  static const RateLimitErrorReasonEnum authBackoff = _$rateLimitErrorReasonEnum_authBackoff;
 
-  static Serializer<RateLimitErrorReasonEnum> get serializer =>
-      _$rateLimitErrorReasonEnumSerializer;
+  static Serializer<RateLimitErrorReasonEnum> get serializer => _$rateLimitErrorReasonEnumSerializer;
 
-  const RateLimitErrorReasonEnum._(String name) : super(name);
+  const RateLimitErrorReasonEnum._(String name): super(name);
 
-  static BuiltSet<RateLimitErrorReasonEnum> get values =>
-      _$rateLimitErrorReasonEnumValues;
-  static RateLimitErrorReasonEnum valueOf(String name) =>
-      _$rateLimitErrorReasonEnumValueOf(name);
+  static BuiltSet<RateLimitErrorReasonEnum> get values => _$rateLimitErrorReasonEnumValues;
+  static RateLimitErrorReasonEnum valueOf(String name) => _$rateLimitErrorReasonEnumValueOf(name);
 }
+

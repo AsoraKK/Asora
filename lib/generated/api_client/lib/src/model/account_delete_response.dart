@@ -11,13 +11,12 @@ part 'account_delete_response.g.dart';
 /// Confirmation of account deletion.
 ///
 /// Properties:
-/// * [message]
-/// * [userId]
-/// * [deletedAt]
+/// * [message] 
+/// * [userId] 
+/// * [deletedAt] 
 /// * [alreadyDeleted] - True when the account was already in a deleted state
 @BuiltValue()
-abstract class AccountDeleteResponse
-    implements Built<AccountDeleteResponse, AccountDeleteResponseBuilder> {
+abstract class AccountDeleteResponse implements Built<AccountDeleteResponse, AccountDeleteResponseBuilder> {
   @BuiltValueField(wireName: r'message')
   String get message;
 
@@ -33,25 +32,19 @@ abstract class AccountDeleteResponse
 
   AccountDeleteResponse._();
 
-  factory AccountDeleteResponse(
-      [void updates(AccountDeleteResponseBuilder b)]) = _$AccountDeleteResponse;
+  factory AccountDeleteResponse([void updates(AccountDeleteResponseBuilder b)]) = _$AccountDeleteResponse;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AccountDeleteResponseBuilder b) =>
-      b..alreadyDeleted = false;
+  static void _defaults(AccountDeleteResponseBuilder b) => b
+      ..alreadyDeleted = false;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AccountDeleteResponse> get serializer =>
-      _$AccountDeleteResponseSerializer();
+  static Serializer<AccountDeleteResponse> get serializer => _$AccountDeleteResponseSerializer();
 }
 
-class _$AccountDeleteResponseSerializer
-    implements PrimitiveSerializer<AccountDeleteResponse> {
+class _$AccountDeleteResponseSerializer implements PrimitiveSerializer<AccountDeleteResponse> {
   @override
-  final Iterable<Type> types = const [
-    AccountDeleteResponse,
-    _$AccountDeleteResponse
-  ];
+  final Iterable<Type> types = const [AccountDeleteResponse, _$AccountDeleteResponse];
 
   @override
   final String wireName = r'AccountDeleteResponse';
@@ -91,9 +84,7 @@ class _$AccountDeleteResponseSerializer
     AccountDeleteResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -164,3 +155,4 @@ class _$AccountDeleteResponseSerializer
     return result.build();
   }
 }
+

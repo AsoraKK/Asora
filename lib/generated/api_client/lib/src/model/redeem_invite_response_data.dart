@@ -12,15 +12,13 @@ part 'redeem_invite_response_data.g.dart';
 /// RedeemInviteResponseData
 ///
 /// Properties:
-/// * [accessToken]
-/// * [refreshToken]
-/// * [tokenType]
-/// * [expiresIn]
+/// * [accessToken] 
+/// * [refreshToken] 
+/// * [tokenType] 
+/// * [expiresIn] 
 /// * [activated] - True when account was newly activated by this redemption
 @BuiltValue()
-abstract class RedeemInviteResponseData
-    implements
-        Built<RedeemInviteResponseData, RedeemInviteResponseDataBuilder> {
+abstract class RedeemInviteResponseData implements Built<RedeemInviteResponseData, RedeemInviteResponseDataBuilder> {
   @BuiltValueField(wireName: r'access_token')
   String get accessToken;
 
@@ -40,25 +38,18 @@ abstract class RedeemInviteResponseData
 
   RedeemInviteResponseData._();
 
-  factory RedeemInviteResponseData(
-          [void updates(RedeemInviteResponseDataBuilder b)]) =
-      _$RedeemInviteResponseData;
+  factory RedeemInviteResponseData([void updates(RedeemInviteResponseDataBuilder b)]) = _$RedeemInviteResponseData;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(RedeemInviteResponseDataBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<RedeemInviteResponseData> get serializer =>
-      _$RedeemInviteResponseDataSerializer();
+  static Serializer<RedeemInviteResponseData> get serializer => _$RedeemInviteResponseDataSerializer();
 }
 
-class _$RedeemInviteResponseDataSerializer
-    implements PrimitiveSerializer<RedeemInviteResponseData> {
+class _$RedeemInviteResponseDataSerializer implements PrimitiveSerializer<RedeemInviteResponseData> {
   @override
-  final Iterable<Type> types = const [
-    RedeemInviteResponseData,
-    _$RedeemInviteResponseData
-  ];
+  final Iterable<Type> types = const [RedeemInviteResponseData, _$RedeemInviteResponseData];
 
   @override
   final String wireName = r'RedeemInviteResponseData';
@@ -101,9 +92,7 @@ class _$RedeemInviteResponseDataSerializer
     RedeemInviteResponseData object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -135,8 +124,7 @@ class _$RedeemInviteResponseDataSerializer
         case r'token_type':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType:
-                const FullType(RedeemInviteResponseDataTokenTypeEnum),
+            specifiedType: const FullType(RedeemInviteResponseDataTokenTypeEnum),
           ) as RedeemInviteResponseDataTokenTypeEnum;
           result.tokenType = valueDes;
           break;
@@ -184,17 +172,15 @@ class _$RedeemInviteResponseDataSerializer
 }
 
 class RedeemInviteResponseDataTokenTypeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'Bearer')
-  static const RedeemInviteResponseDataTokenTypeEnum bearer =
-      _$redeemInviteResponseDataTokenTypeEnum_bearer;
+  static const RedeemInviteResponseDataTokenTypeEnum bearer = _$redeemInviteResponseDataTokenTypeEnum_bearer;
 
-  static Serializer<RedeemInviteResponseDataTokenTypeEnum> get serializer =>
-      _$redeemInviteResponseDataTokenTypeEnumSerializer;
+  static Serializer<RedeemInviteResponseDataTokenTypeEnum> get serializer => _$redeemInviteResponseDataTokenTypeEnumSerializer;
 
-  const RedeemInviteResponseDataTokenTypeEnum._(String name) : super(name);
+  const RedeemInviteResponseDataTokenTypeEnum._(String name): super(name);
 
-  static BuiltSet<RedeemInviteResponseDataTokenTypeEnum> get values =>
-      _$redeemInviteResponseDataTokenTypeEnumValues;
-  static RedeemInviteResponseDataTokenTypeEnum valueOf(String name) =>
-      _$redeemInviteResponseDataTokenTypeEnumValueOf(name);
+  static BuiltSet<RedeemInviteResponseDataTokenTypeEnum> get values => _$redeemInviteResponseDataTokenTypeEnumValues;
+  static RedeemInviteResponseDataTokenTypeEnum valueOf(String name) => _$redeemInviteResponseDataTokenTypeEnumValueOf(name);
 }
+

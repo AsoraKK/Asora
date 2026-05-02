@@ -12,28 +12,24 @@ part 'bad_gateway_error.g.dart';
 /// 502 – bad gateway (upstream service returned an invalid or unexpected response).
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
-abstract class BadGatewayError
-    implements Built<BadGatewayError, BadGatewayErrorBuilder> {
+abstract class BadGatewayError implements Built<BadGatewayError, BadGatewayErrorBuilder> {
   @BuiltValueField(wireName: r'error')
   BadGatewayErrorError get error;
 
   BadGatewayError._();
 
-  factory BadGatewayError([void updates(BadGatewayErrorBuilder b)]) =
-      _$BadGatewayError;
+  factory BadGatewayError([void updates(BadGatewayErrorBuilder b)]) = _$BadGatewayError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(BadGatewayErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<BadGatewayError> get serializer =>
-      _$BadGatewayErrorSerializer();
+  static Serializer<BadGatewayError> get serializer => _$BadGatewayErrorSerializer();
 }
 
-class _$BadGatewayErrorSerializer
-    implements PrimitiveSerializer<BadGatewayError> {
+class _$BadGatewayErrorSerializer implements PrimitiveSerializer<BadGatewayError> {
   @override
   final Iterable<Type> types = const [BadGatewayError, _$BadGatewayError];
 
@@ -58,9 +54,7 @@ class _$BadGatewayErrorSerializer
     BadGatewayError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -110,3 +104,4 @@ class _$BadGatewayErrorSerializer
     return result.build();
   }
 }
+

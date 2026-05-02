@@ -12,13 +12,12 @@ part 'admin_flag_queue_flags.g.dart';
 /// AdminFlagQueueFlags
 ///
 /// Properties:
-/// * [flagId]
-/// * [flagCount]
-/// * [reasonCategories]
-/// * [lastFlaggedAt]
+/// * [flagId] 
+/// * [flagCount] 
+/// * [reasonCategories] 
+/// * [lastFlaggedAt] 
 @BuiltValue()
-abstract class AdminFlagQueueFlags
-    implements Built<AdminFlagQueueFlags, AdminFlagQueueFlagsBuilder> {
+abstract class AdminFlagQueueFlags implements Built<AdminFlagQueueFlags, AdminFlagQueueFlagsBuilder> {
   @BuiltValueField(wireName: r'flagId')
   String? get flagId;
 
@@ -33,24 +32,18 @@ abstract class AdminFlagQueueFlags
 
   AdminFlagQueueFlags._();
 
-  factory AdminFlagQueueFlags([void updates(AdminFlagQueueFlagsBuilder b)]) =
-      _$AdminFlagQueueFlags;
+  factory AdminFlagQueueFlags([void updates(AdminFlagQueueFlagsBuilder b)]) = _$AdminFlagQueueFlags;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagQueueFlagsBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagQueueFlags> get serializer =>
-      _$AdminFlagQueueFlagsSerializer();
+  static Serializer<AdminFlagQueueFlags> get serializer => _$AdminFlagQueueFlagsSerializer();
 }
 
-class _$AdminFlagQueueFlagsSerializer
-    implements PrimitiveSerializer<AdminFlagQueueFlags> {
+class _$AdminFlagQueueFlagsSerializer implements PrimitiveSerializer<AdminFlagQueueFlags> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagQueueFlags,
-    _$AdminFlagQueueFlags
-  ];
+  final Iterable<Type> types = const [AdminFlagQueueFlags, _$AdminFlagQueueFlags];
 
   @override
   final String wireName = r'AdminFlagQueueFlags';
@@ -96,9 +89,7 @@ class _$AdminFlagQueueFlagsSerializer
     AdminFlagQueueFlags object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -169,3 +160,4 @@ class _$AdminFlagQueueFlagsSerializer
     return result.build();
   }
 }
+

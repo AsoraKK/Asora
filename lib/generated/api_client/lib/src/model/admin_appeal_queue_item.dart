@@ -12,21 +12,20 @@ part 'admin_appeal_queue_item.g.dart';
 /// AdminAppealQueueItem
 ///
 /// Properties:
-/// * [appealId]
-/// * [contentId]
-/// * [authorId]
-/// * [submittedAt]
-/// * [status]
-/// * [originalReasonCategory]
-/// * [votesFor]
-/// * [votesAgainst]
-/// * [totalVotes]
-/// * [votingStatus]
-/// * [expiresAt]
-/// * [timeRemainingSeconds]
+/// * [appealId] 
+/// * [contentId] 
+/// * [authorId] 
+/// * [submittedAt] 
+/// * [status] 
+/// * [originalReasonCategory] 
+/// * [votesFor] 
+/// * [votesAgainst] 
+/// * [totalVotes] 
+/// * [votingStatus] 
+/// * [expiresAt] 
+/// * [timeRemainingSeconds] 
 @BuiltValue()
-abstract class AdminAppealQueueItem
-    implements Built<AdminAppealQueueItem, AdminAppealQueueItemBuilder> {
+abstract class AdminAppealQueueItem implements Built<AdminAppealQueueItem, AdminAppealQueueItemBuilder> {
   @BuiltValueField(wireName: r'appealId')
   String? get appealId;
 
@@ -66,24 +65,18 @@ abstract class AdminAppealQueueItem
 
   AdminAppealQueueItem._();
 
-  factory AdminAppealQueueItem([void updates(AdminAppealQueueItemBuilder b)]) =
-      _$AdminAppealQueueItem;
+  factory AdminAppealQueueItem([void updates(AdminAppealQueueItemBuilder b)]) = _$AdminAppealQueueItem;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealQueueItemBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealQueueItem> get serializer =>
-      _$AdminAppealQueueItemSerializer();
+  static Serializer<AdminAppealQueueItem> get serializer => _$AdminAppealQueueItemSerializer();
 }
 
-class _$AdminAppealQueueItemSerializer
-    implements PrimitiveSerializer<AdminAppealQueueItem> {
+class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppealQueueItem> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealQueueItem,
-    _$AdminAppealQueueItem
-  ];
+  final Iterable<Type> types = const [AdminAppealQueueItem, _$AdminAppealQueueItem];
 
   @override
   final String wireName = r'AdminAppealQueueItem';
@@ -185,9 +178,7 @@ class _$AdminAppealQueueItemSerializer
     AdminAppealQueueItem object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -317,3 +308,4 @@ class _$AdminAppealQueueItemSerializer
     return result.build();
   }
 }
+

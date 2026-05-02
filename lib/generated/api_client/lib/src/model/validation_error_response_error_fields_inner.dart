@@ -11,14 +11,11 @@ part 'validation_error_response_error_fields_inner.g.dart';
 /// ValidationErrorResponseErrorFieldsInner
 ///
 /// Properties:
-/// * [field]
-/// * [message]
-/// * [constraint]
+/// * [field] 
+/// * [message] 
+/// * [constraint] 
 @BuiltValue()
-abstract class ValidationErrorResponseErrorFieldsInner
-    implements
-        Built<ValidationErrorResponseErrorFieldsInner,
-            ValidationErrorResponseErrorFieldsInnerBuilder> {
+abstract class ValidationErrorResponseErrorFieldsInner implements Built<ValidationErrorResponseErrorFieldsInner, ValidationErrorResponseErrorFieldsInnerBuilder> {
   @BuiltValueField(wireName: r'field')
   String get field;
 
@@ -30,25 +27,18 @@ abstract class ValidationErrorResponseErrorFieldsInner
 
   ValidationErrorResponseErrorFieldsInner._();
 
-  factory ValidationErrorResponseErrorFieldsInner(
-          [void updates(ValidationErrorResponseErrorFieldsInnerBuilder b)]) =
-      _$ValidationErrorResponseErrorFieldsInner;
+  factory ValidationErrorResponseErrorFieldsInner([void updates(ValidationErrorResponseErrorFieldsInnerBuilder b)]) = _$ValidationErrorResponseErrorFieldsInner;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ValidationErrorResponseErrorFieldsInnerBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ValidationErrorResponseErrorFieldsInner> get serializer =>
-      _$ValidationErrorResponseErrorFieldsInnerSerializer();
+  static Serializer<ValidationErrorResponseErrorFieldsInner> get serializer => _$ValidationErrorResponseErrorFieldsInnerSerializer();
 }
 
-class _$ValidationErrorResponseErrorFieldsInnerSerializer
-    implements PrimitiveSerializer<ValidationErrorResponseErrorFieldsInner> {
+class _$ValidationErrorResponseErrorFieldsInnerSerializer implements PrimitiveSerializer<ValidationErrorResponseErrorFieldsInner> {
   @override
-  final Iterable<Type> types = const [
-    ValidationErrorResponseErrorFieldsInner,
-    _$ValidationErrorResponseErrorFieldsInner
-  ];
+  final Iterable<Type> types = const [ValidationErrorResponseErrorFieldsInner, _$ValidationErrorResponseErrorFieldsInner];
 
   @override
   final String wireName = r'ValidationErrorResponseErrorFieldsInner';
@@ -83,9 +73,7 @@ class _$ValidationErrorResponseErrorFieldsInnerSerializer
     ValidationErrorResponseErrorFieldsInner object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -149,3 +137,4 @@ class _$ValidationErrorResponseErrorFieldsInnerSerializer
     return result.build();
   }
 }
+

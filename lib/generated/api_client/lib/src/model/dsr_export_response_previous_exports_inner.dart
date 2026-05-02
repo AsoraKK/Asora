@@ -12,14 +12,11 @@ part 'dsr_export_response_previous_exports_inner.g.dart';
 /// DSRExportResponsePreviousExportsInner
 ///
 /// Properties:
-/// * [exportId]
-/// * [exportedAt]
-/// * [type]
+/// * [exportId] 
+/// * [exportedAt] 
+/// * [type] 
 @BuiltValue()
-abstract class DSRExportResponsePreviousExportsInner
-    implements
-        Built<DSRExportResponsePreviousExportsInner,
-            DSRExportResponsePreviousExportsInnerBuilder> {
+abstract class DSRExportResponsePreviousExportsInner implements Built<DSRExportResponsePreviousExportsInner, DSRExportResponsePreviousExportsInnerBuilder> {
   @BuiltValueField(wireName: r'exportId')
   String? get exportId;
 
@@ -32,25 +29,18 @@ abstract class DSRExportResponsePreviousExportsInner
 
   DSRExportResponsePreviousExportsInner._();
 
-  factory DSRExportResponsePreviousExportsInner(
-          [void updates(DSRExportResponsePreviousExportsInnerBuilder b)]) =
-      _$DSRExportResponsePreviousExportsInner;
+  factory DSRExportResponsePreviousExportsInner([void updates(DSRExportResponsePreviousExportsInnerBuilder b)]) = _$DSRExportResponsePreviousExportsInner;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(DSRExportResponsePreviousExportsInnerBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<DSRExportResponsePreviousExportsInner> get serializer =>
-      _$DSRExportResponsePreviousExportsInnerSerializer();
+  static Serializer<DSRExportResponsePreviousExportsInner> get serializer => _$DSRExportResponsePreviousExportsInnerSerializer();
 }
 
-class _$DSRExportResponsePreviousExportsInnerSerializer
-    implements PrimitiveSerializer<DSRExportResponsePreviousExportsInner> {
+class _$DSRExportResponsePreviousExportsInnerSerializer implements PrimitiveSerializer<DSRExportResponsePreviousExportsInner> {
   @override
-  final Iterable<Type> types = const [
-    DSRExportResponsePreviousExportsInner,
-    _$DSRExportResponsePreviousExportsInner
-  ];
+  final Iterable<Type> types = const [DSRExportResponsePreviousExportsInner, _$DSRExportResponsePreviousExportsInner];
 
   @override
   final String wireName = r'DSRExportResponsePreviousExportsInner';
@@ -78,8 +68,7 @@ class _$DSRExportResponsePreviousExportsInnerSerializer
       yield r'type';
       yield serializers.serialize(
         object.type,
-        specifiedType:
-            const FullType(DSRExportResponsePreviousExportsInnerTypeEnum),
+        specifiedType: const FullType(DSRExportResponsePreviousExportsInnerTypeEnum),
       );
     }
   }
@@ -90,9 +79,7 @@ class _$DSRExportResponsePreviousExportsInnerSerializer
     DSRExportResponsePreviousExportsInner object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -124,8 +111,7 @@ class _$DSRExportResponsePreviousExportsInnerSerializer
         case r'type':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType:
-                const FullType(DSRExportResponsePreviousExportsInnerTypeEnum),
+            specifiedType: const FullType(DSRExportResponsePreviousExportsInnerTypeEnum),
           ) as DSRExportResponsePreviousExportsInnerTypeEnum;
           result.type = valueDes;
           break;
@@ -159,22 +145,17 @@ class _$DSRExportResponsePreviousExportsInnerSerializer
 }
 
 class DSRExportResponsePreviousExportsInnerTypeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'export')
-  static const DSRExportResponsePreviousExportsInnerTypeEnum export_ =
-      _$dSRExportResponsePreviousExportsInnerTypeEnum_export_;
+  static const DSRExportResponsePreviousExportsInnerTypeEnum export_ = _$dSRExportResponsePreviousExportsInnerTypeEnum_export_;
   @BuiltValueEnumConst(wireName: r'deletion')
-  static const DSRExportResponsePreviousExportsInnerTypeEnum deletion =
-      _$dSRExportResponsePreviousExportsInnerTypeEnum_deletion;
+  static const DSRExportResponsePreviousExportsInnerTypeEnum deletion = _$dSRExportResponsePreviousExportsInnerTypeEnum_deletion;
 
-  static Serializer<DSRExportResponsePreviousExportsInnerTypeEnum>
-      get serializer =>
-          _$dSRExportResponsePreviousExportsInnerTypeEnumSerializer;
+  static Serializer<DSRExportResponsePreviousExportsInnerTypeEnum> get serializer => _$dSRExportResponsePreviousExportsInnerTypeEnumSerializer;
 
-  const DSRExportResponsePreviousExportsInnerTypeEnum._(String name)
-      : super(name);
+  const DSRExportResponsePreviousExportsInnerTypeEnum._(String name): super(name);
 
-  static BuiltSet<DSRExportResponsePreviousExportsInnerTypeEnum> get values =>
-      _$dSRExportResponsePreviousExportsInnerTypeEnumValues;
-  static DSRExportResponsePreviousExportsInnerTypeEnum valueOf(String name) =>
-      _$dSRExportResponsePreviousExportsInnerTypeEnumValueOf(name);
+  static BuiltSet<DSRExportResponsePreviousExportsInnerTypeEnum> get values => _$dSRExportResponsePreviousExportsInnerTypeEnumValues;
+  static DSRExportResponsePreviousExportsInnerTypeEnum valueOf(String name) => _$dSRExportResponsePreviousExportsInnerTypeEnumValueOf(name);
 }
+

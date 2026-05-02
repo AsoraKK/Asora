@@ -13,13 +13,11 @@ part 'admin_appeal_override_request.g.dart';
 /// AdminAppealOverrideRequest
 ///
 /// Properties:
-/// * [decision]
-/// * [reasonCode]
-/// * [reasonNote]
+/// * [decision] 
+/// * [reasonCode] 
+/// * [reasonNote] 
 @BuiltValue()
-abstract class AdminAppealOverrideRequest
-    implements
-        Built<AdminAppealOverrideRequest, AdminAppealOverrideRequestBuilder> {
+abstract class AdminAppealOverrideRequest implements Built<AdminAppealOverrideRequest, AdminAppealOverrideRequestBuilder> {
   @BuiltValueField(wireName: r'decision')
   AdminAppealFinalDecision get decision;
   // enum decisionEnum {  allow,  block,  };
@@ -33,25 +31,18 @@ abstract class AdminAppealOverrideRequest
 
   AdminAppealOverrideRequest._();
 
-  factory AdminAppealOverrideRequest(
-          [void updates(AdminAppealOverrideRequestBuilder b)]) =
-      _$AdminAppealOverrideRequest;
+  factory AdminAppealOverrideRequest([void updates(AdminAppealOverrideRequestBuilder b)]) = _$AdminAppealOverrideRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAppealOverrideRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAppealOverrideRequest> get serializer =>
-      _$AdminAppealOverrideRequestSerializer();
+  static Serializer<AdminAppealOverrideRequest> get serializer => _$AdminAppealOverrideRequestSerializer();
 }
 
-class _$AdminAppealOverrideRequestSerializer
-    implements PrimitiveSerializer<AdminAppealOverrideRequest> {
+class _$AdminAppealOverrideRequestSerializer implements PrimitiveSerializer<AdminAppealOverrideRequest> {
   @override
-  final Iterable<Type> types = const [
-    AdminAppealOverrideRequest,
-    _$AdminAppealOverrideRequest
-  ];
+  final Iterable<Type> types = const [AdminAppealOverrideRequest, _$AdminAppealOverrideRequest];
 
   @override
   final String wireName = r'AdminAppealOverrideRequest';
@@ -86,9 +77,7 @@ class _$AdminAppealOverrideRequestSerializer
     AdminAppealOverrideRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -113,8 +102,7 @@ class _$AdminAppealOverrideRequestSerializer
         case r'reasonCode':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType:
-                const FullType(AdminAppealOverrideRequestReasonCodeEnum),
+            specifiedType: const FullType(AdminAppealOverrideRequestReasonCodeEnum),
           ) as AdminAppealOverrideRequestReasonCodeEnum;
           result.reasonCode = valueDes;
           break;
@@ -155,26 +143,21 @@ class _$AdminAppealOverrideRequestSerializer
 }
 
 class AdminAppealOverrideRequestReasonCodeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'policy_exception')
-  static const AdminAppealOverrideRequestReasonCodeEnum policyException =
-      _$adminAppealOverrideRequestReasonCodeEnum_policyException;
+  static const AdminAppealOverrideRequestReasonCodeEnum policyException = _$adminAppealOverrideRequestReasonCodeEnum_policyException;
   @BuiltValueEnumConst(wireName: r'false_positive')
-  static const AdminAppealOverrideRequestReasonCodeEnum falsePositive =
-      _$adminAppealOverrideRequestReasonCodeEnum_falsePositive;
+  static const AdminAppealOverrideRequestReasonCodeEnum falsePositive = _$adminAppealOverrideRequestReasonCodeEnum_falsePositive;
   @BuiltValueEnumConst(wireName: r'safety_risk')
-  static const AdminAppealOverrideRequestReasonCodeEnum safetyRisk =
-      _$adminAppealOverrideRequestReasonCodeEnum_safetyRisk;
+  static const AdminAppealOverrideRequestReasonCodeEnum safetyRisk = _$adminAppealOverrideRequestReasonCodeEnum_safetyRisk;
   @BuiltValueEnumConst(wireName: r'other')
-  static const AdminAppealOverrideRequestReasonCodeEnum other =
-      _$adminAppealOverrideRequestReasonCodeEnum_other;
+  static const AdminAppealOverrideRequestReasonCodeEnum other = _$adminAppealOverrideRequestReasonCodeEnum_other;
 
-  static Serializer<AdminAppealOverrideRequestReasonCodeEnum> get serializer =>
-      _$adminAppealOverrideRequestReasonCodeEnumSerializer;
+  static Serializer<AdminAppealOverrideRequestReasonCodeEnum> get serializer => _$adminAppealOverrideRequestReasonCodeEnumSerializer;
 
-  const AdminAppealOverrideRequestReasonCodeEnum._(String name) : super(name);
+  const AdminAppealOverrideRequestReasonCodeEnum._(String name): super(name);
 
-  static BuiltSet<AdminAppealOverrideRequestReasonCodeEnum> get values =>
-      _$adminAppealOverrideRequestReasonCodeEnumValues;
-  static AdminAppealOverrideRequestReasonCodeEnum valueOf(String name) =>
-      _$adminAppealOverrideRequestReasonCodeEnumValueOf(name);
+  static BuiltSet<AdminAppealOverrideRequestReasonCodeEnum> get values => _$adminAppealOverrideRequestReasonCodeEnumValues;
+  static AdminAppealOverrideRequestReasonCodeEnum valueOf(String name) => _$adminAppealOverrideRequestReasonCodeEnumValueOf(name);
 }
+

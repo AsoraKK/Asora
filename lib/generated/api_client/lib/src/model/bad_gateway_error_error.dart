@@ -12,12 +12,11 @@ part 'bad_gateway_error_error.g.dart';
 /// BadGatewayErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 @BuiltValue()
-abstract class BadGatewayErrorError
-    implements Built<BadGatewayErrorError, BadGatewayErrorErrorBuilder> {
+abstract class BadGatewayErrorError implements Built<BadGatewayErrorError, BadGatewayErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
   BadGatewayErrorErrorCodeEnum get code;
   // enum codeEnum {  BAD_GATEWAY,  UPSTREAM_ERROR,  };
@@ -30,24 +29,18 @@ abstract class BadGatewayErrorError
 
   BadGatewayErrorError._();
 
-  factory BadGatewayErrorError([void updates(BadGatewayErrorErrorBuilder b)]) =
-      _$BadGatewayErrorError;
+  factory BadGatewayErrorError([void updates(BadGatewayErrorErrorBuilder b)]) = _$BadGatewayErrorError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(BadGatewayErrorErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<BadGatewayErrorError> get serializer =>
-      _$BadGatewayErrorErrorSerializer();
+  static Serializer<BadGatewayErrorError> get serializer => _$BadGatewayErrorErrorSerializer();
 }
 
-class _$BadGatewayErrorErrorSerializer
-    implements PrimitiveSerializer<BadGatewayErrorError> {
+class _$BadGatewayErrorErrorSerializer implements PrimitiveSerializer<BadGatewayErrorError> {
   @override
-  final Iterable<Type> types = const [
-    BadGatewayErrorError,
-    _$BadGatewayErrorError
-  ];
+  final Iterable<Type> types = const [BadGatewayErrorError, _$BadGatewayErrorError];
 
   @override
   final String wireName = r'BadGatewayErrorError';
@@ -82,9 +75,7 @@ class _$BadGatewayErrorErrorSerializer
     BadGatewayErrorError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -150,20 +141,17 @@ class _$BadGatewayErrorErrorSerializer
 }
 
 class BadGatewayErrorErrorCodeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'BAD_GATEWAY')
-  static const BadGatewayErrorErrorCodeEnum BAD_GATEWAY =
-      _$badGatewayErrorErrorCodeEnum_BAD_GATEWAY;
+  static const BadGatewayErrorErrorCodeEnum BAD_GATEWAY = _$badGatewayErrorErrorCodeEnum_BAD_GATEWAY;
   @BuiltValueEnumConst(wireName: r'UPSTREAM_ERROR')
-  static const BadGatewayErrorErrorCodeEnum UPSTREAM_ERROR =
-      _$badGatewayErrorErrorCodeEnum_UPSTREAM_ERROR;
+  static const BadGatewayErrorErrorCodeEnum UPSTREAM_ERROR = _$badGatewayErrorErrorCodeEnum_UPSTREAM_ERROR;
 
-  static Serializer<BadGatewayErrorErrorCodeEnum> get serializer =>
-      _$badGatewayErrorErrorCodeEnumSerializer;
+  static Serializer<BadGatewayErrorErrorCodeEnum> get serializer => _$badGatewayErrorErrorCodeEnumSerializer;
 
-  const BadGatewayErrorErrorCodeEnum._(String name) : super(name);
+  const BadGatewayErrorErrorCodeEnum._(String name): super(name);
 
-  static BuiltSet<BadGatewayErrorErrorCodeEnum> get values =>
-      _$badGatewayErrorErrorCodeEnumValues;
-  static BadGatewayErrorErrorCodeEnum valueOf(String name) =>
-      _$badGatewayErrorErrorCodeEnumValueOf(name);
+  static BuiltSet<BadGatewayErrorErrorCodeEnum> get values => _$badGatewayErrorErrorCodeEnumValues;
+  static BadGatewayErrorErrorCodeEnum valueOf(String name) => _$badGatewayErrorErrorCodeEnumValueOf(name);
 }
+

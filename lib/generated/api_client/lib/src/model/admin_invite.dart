@@ -12,19 +12,19 @@ part 'admin_invite.g.dart';
 /// AdminInvite
 ///
 /// Properties:
-/// * [inviteCode]
-/// * [email]
-/// * [createdBy]
-/// * [createdAt]
-/// * [expiresAt]
-/// * [maxUses]
-/// * [usageCount]
-/// * [lastUsedAt]
-/// * [status]
-/// * [label]
-/// * [usedByUserId]
+/// * [inviteCode] 
+/// * [email] 
+/// * [createdBy] 
+/// * [createdAt] 
+/// * [expiresAt] 
+/// * [maxUses] 
+/// * [usageCount] 
+/// * [lastUsedAt] 
+/// * [status] 
+/// * [label] 
+/// * [usedByUserId] 
 @BuiltValue(instantiable: false)
-abstract class AdminInvite {
+abstract class AdminInvite  {
   @BuiltValueField(wireName: r'inviteCode')
   String? get inviteCode;
 
@@ -160,9 +160,7 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
     AdminInvite object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   @override
@@ -171,19 +169,16 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return serializers.deserialize(serialized,
-        specifiedType: FullType($AdminInvite)) as $AdminInvite;
+    return serializers.deserialize(serialized, specifiedType: FullType($AdminInvite)) as $AdminInvite;
   }
 }
 
 /// a concrete implementation of [AdminInvite], since [AdminInvite] is not instantiable
 @BuiltValue(instantiable: true)
-abstract class $AdminInvite
-    implements AdminInvite, Built<$AdminInvite, $AdminInviteBuilder> {
+abstract class $AdminInvite implements AdminInvite, Built<$AdminInvite, $AdminInviteBuilder> {
   $AdminInvite._();
 
-  factory $AdminInvite([void Function($AdminInviteBuilder)? updates]) =
-      _$$AdminInvite;
+  factory $AdminInvite([void Function($AdminInviteBuilder)? updates]) = _$$AdminInvite;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults($AdminInviteBuilder b) => b;
@@ -325,3 +320,4 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
     return result.build();
   }
 }
+

@@ -12,33 +12,26 @@ part 'appeal_created_response.g.dart';
 /// 201 response after successfully filing a moderation appeal.
 ///
 /// Properties:
-/// * [appeal]
+/// * [appeal] 
 @BuiltValue()
-abstract class AppealCreatedResponse
-    implements Built<AppealCreatedResponse, AppealCreatedResponseBuilder> {
+abstract class AppealCreatedResponse implements Built<AppealCreatedResponse, AppealCreatedResponseBuilder> {
   @BuiltValueField(wireName: r'appeal')
   AppealCreatedResponseAppeal get appeal;
 
   AppealCreatedResponse._();
 
-  factory AppealCreatedResponse(
-      [void updates(AppealCreatedResponseBuilder b)]) = _$AppealCreatedResponse;
+  factory AppealCreatedResponse([void updates(AppealCreatedResponseBuilder b)]) = _$AppealCreatedResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AppealCreatedResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AppealCreatedResponse> get serializer =>
-      _$AppealCreatedResponseSerializer();
+  static Serializer<AppealCreatedResponse> get serializer => _$AppealCreatedResponseSerializer();
 }
 
-class _$AppealCreatedResponseSerializer
-    implements PrimitiveSerializer<AppealCreatedResponse> {
+class _$AppealCreatedResponseSerializer implements PrimitiveSerializer<AppealCreatedResponse> {
   @override
-  final Iterable<Type> types = const [
-    AppealCreatedResponse,
-    _$AppealCreatedResponse
-  ];
+  final Iterable<Type> types = const [AppealCreatedResponse, _$AppealCreatedResponse];
 
   @override
   final String wireName = r'AppealCreatedResponse';
@@ -61,9 +54,7 @@ class _$AppealCreatedResponseSerializer
     AppealCreatedResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -113,3 +104,4 @@ class _$AppealCreatedResponseSerializer
     return result.build();
   }
 }
+

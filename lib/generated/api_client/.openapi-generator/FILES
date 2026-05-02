@@ -85,9 +85,13 @@ doc/FeedPageResponse.md
 doc/FeedPageResponseMeta.md
 doc/FlagContent202Response.md
 doc/FlagContentRequest.md
+doc/FlagContentV1202Response.md
+doc/FlagContentV1Request.md
 doc/ForbiddenError.md
 doc/ForbiddenErrorError.md
 doc/GetHealth200Response.md
+doc/GetMyAppeals200Response.md
+doc/GetMyAppeals200ResponseItemsInner.md
 doc/HealthApi.md
 doc/InviteValidationPayload.md
 doc/InviteValidationResponse.md
@@ -119,6 +123,7 @@ doc/UsersApi.md
 doc/ValidationErrorResponse.md
 doc/ValidationErrorResponseError.md
 doc/ValidationErrorResponseErrorFieldsInner.md
+doc/VoteOnAppealV1Request.md
 lib/asora_api_client.dart
 lib/src/api.dart
 lib/src/api/admin_api.dart
@@ -222,9 +227,13 @@ lib/src/model/feed_page_response.dart
 lib/src/model/feed_page_response_meta.dart
 lib/src/model/flag_content202_response.dart
 lib/src/model/flag_content_request.dart
+lib/src/model/flag_content_v1202_response.dart
+lib/src/model/flag_content_v1_request.dart
 lib/src/model/forbidden_error.dart
 lib/src/model/forbidden_error_error.dart
 lib/src/model/get_health200_response.dart
+lib/src/model/get_my_appeals200_response.dart
+lib/src/model/get_my_appeals200_response_items_inner.dart
 lib/src/model/invite_validation_payload.dart
 lib/src/model/invite_validation_response.dart
 lib/src/model/legal_hold_clear.dart
@@ -247,5 +256,11 @@ lib/src/model/user_info_response_data.dart
 lib/src/model/validation_error_response.dart
 lib/src/model/validation_error_response_error.dart
 lib/src/model/validation_error_response_error_fields_inner.dart
+lib/src/model/vote_on_appeal_v1_request.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/flag_content_v1202_response_test.dart
+test/flag_content_v1_request_test.dart
+test/get_my_appeals200_response_items_inner_test.dart
+test/get_my_appeals200_response_test.dart
+test/vote_on_appeal_v1_request_test.dart

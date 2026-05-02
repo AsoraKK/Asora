@@ -12,15 +12,14 @@ part 'admin_user_summary.g.dart';
 /// AdminUserSummary
 ///
 /// Properties:
-/// * [userId]
-/// * [displayName]
-/// * [handle]
-/// * [email]
-/// * [createdAt]
-/// * [status]
+/// * [userId] 
+/// * [displayName] 
+/// * [handle] 
+/// * [email] 
+/// * [createdAt] 
+/// * [status] 
 @BuiltValue()
-abstract class AdminUserSummary
-    implements Built<AdminUserSummary, AdminUserSummaryBuilder> {
+abstract class AdminUserSummary implements Built<AdminUserSummary, AdminUserSummaryBuilder> {
   @BuiltValueField(wireName: r'userId')
   String? get userId;
 
@@ -42,19 +41,16 @@ abstract class AdminUserSummary
 
   AdminUserSummary._();
 
-  factory AdminUserSummary([void updates(AdminUserSummaryBuilder b)]) =
-      _$AdminUserSummary;
+  factory AdminUserSummary([void updates(AdminUserSummaryBuilder b)]) = _$AdminUserSummary;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminUserSummaryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminUserSummary> get serializer =>
-      _$AdminUserSummarySerializer();
+  static Serializer<AdminUserSummary> get serializer => _$AdminUserSummarySerializer();
 }
 
-class _$AdminUserSummarySerializer
-    implements PrimitiveSerializer<AdminUserSummary> {
+class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSummary> {
   @override
   final Iterable<Type> types = const [AdminUserSummary, _$AdminUserSummary];
 
@@ -116,9 +112,7 @@ class _$AdminUserSummarySerializer
     AdminUserSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -203,3 +197,4 @@ class _$AdminUserSummarySerializer
     return result.build();
   }
 }
+

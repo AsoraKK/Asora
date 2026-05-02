@@ -13,21 +13,20 @@ part 'admin_audit_entry.g.dart';
 /// AdminAuditEntry
 ///
 /// Properties:
-/// * [id]
-/// * [timestamp]
-/// * [actorId]
-/// * [action]
-/// * [targetType]
-/// * [subjectId]
-/// * [reasonCode]
-/// * [note]
-/// * [before]
-/// * [after]
-/// * [correlationId]
-/// * [metadata]
+/// * [id] 
+/// * [timestamp] 
+/// * [actorId] 
+/// * [action] 
+/// * [targetType] 
+/// * [subjectId] 
+/// * [reasonCode] 
+/// * [note] 
+/// * [before] 
+/// * [after] 
+/// * [correlationId] 
+/// * [metadata] 
 @BuiltValue()
-abstract class AdminAuditEntry
-    implements Built<AdminAuditEntry, AdminAuditEntryBuilder> {
+abstract class AdminAuditEntry implements Built<AdminAuditEntry, AdminAuditEntryBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -66,19 +65,16 @@ abstract class AdminAuditEntry
 
   AdminAuditEntry._();
 
-  factory AdminAuditEntry([void updates(AdminAuditEntryBuilder b)]) =
-      _$AdminAuditEntry;
+  factory AdminAuditEntry([void updates(AdminAuditEntryBuilder b)]) = _$AdminAuditEntry;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminAuditEntryBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminAuditEntry> get serializer =>
-      _$AdminAuditEntrySerializer();
+  static Serializer<AdminAuditEntry> get serializer => _$AdminAuditEntrySerializer();
 }
 
-class _$AdminAuditEntrySerializer
-    implements PrimitiveSerializer<AdminAuditEntry> {
+class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry> {
   @override
   final Iterable<Type> types = const [AdminAuditEntry, _$AdminAuditEntry];
 
@@ -150,16 +146,14 @@ class _$AdminAuditEntrySerializer
       yield r'before';
       yield serializers.serialize(
         object.before,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
     if (object.after != null) {
       yield r'after';
       yield serializers.serialize(
         object.after,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
     if (object.correlationId != null) {
@@ -173,8 +167,7 @@ class _$AdminAuditEntrySerializer
       yield r'metadata';
       yield serializers.serialize(
         object.metadata,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
   }
@@ -185,9 +178,7 @@ class _$AdminAuditEntrySerializer
     AdminAuditEntry object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -261,16 +252,14 @@ class _$AdminAuditEntrySerializer
         case r'before':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.before.replace(valueDes);
           break;
         case r'after':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.after.replace(valueDes);
           break;
@@ -284,8 +273,7 @@ class _$AdminAuditEntrySerializer
         case r'metadata':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.metadata.replace(valueDes);
           break;
@@ -317,3 +305,4 @@ class _$AdminAuditEntrySerializer
     return result.build();
   }
 }
+

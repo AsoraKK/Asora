@@ -11,6 +11,7 @@ import 'package:asora_api_client/src/model/error.dart';
 import 'package:built_value/json_object.dart';
 
 class AnalyticsApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -18,10 +19,10 @@ class AnalyticsApi {
   const AnalyticsApi(this._dio, this._serializers);
 
   /// Ingest client-side analytics events
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -31,7 +32,7 @@ class AnalyticsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> analyticsEventsCreate({
+  Future<Response<JsonObject>> analyticsEventsCreate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -64,9 +65,10 @@ class AnalyticsApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -89,12 +91,11 @@ class AnalyticsApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -116,4 +117,5 @@ class AnalyticsApi {
       extra: _response.extra,
     );
   }
+
 }

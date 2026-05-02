@@ -18,8 +18,7 @@ part 'error_response_error.g.dart';
 /// * [correlationId] - Correlation ID for distributed tracing
 /// * [details] - Optional structured details (e.g. field-level validation errors)
 @BuiltValue()
-abstract class ErrorResponseError
-    implements Built<ErrorResponseError, ErrorResponseErrorBuilder> {
+abstract class ErrorResponseError implements Built<ErrorResponseError, ErrorResponseErrorBuilder> {
   /// Machine-readable error code
   @BuiltValueField(wireName: r'code')
   String get code;
@@ -38,19 +37,16 @@ abstract class ErrorResponseError
 
   ErrorResponseError._();
 
-  factory ErrorResponseError([void updates(ErrorResponseErrorBuilder b)]) =
-      _$ErrorResponseError;
+  factory ErrorResponseError([void updates(ErrorResponseErrorBuilder b)]) = _$ErrorResponseError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ErrorResponseErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ErrorResponseError> get serializer =>
-      _$ErrorResponseErrorSerializer();
+  static Serializer<ErrorResponseError> get serializer => _$ErrorResponseErrorSerializer();
 }
 
-class _$ErrorResponseErrorSerializer
-    implements PrimitiveSerializer<ErrorResponseError> {
+class _$ErrorResponseErrorSerializer implements PrimitiveSerializer<ErrorResponseError> {
   @override
   final Iterable<Type> types = const [ErrorResponseError, _$ErrorResponseError];
 
@@ -83,8 +79,7 @@ class _$ErrorResponseErrorSerializer
       yield r'details';
       yield serializers.serialize(
         object.details,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
   }
@@ -95,9 +90,7 @@ class _$ErrorResponseErrorSerializer
     ErrorResponseError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -136,8 +129,7 @@ class _$ErrorResponseErrorSerializer
         case r'details':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.details.replace(valueDes);
           break;
@@ -169,3 +161,4 @@ class _$ErrorResponseErrorSerializer
     return result.build();
   }
 }
+

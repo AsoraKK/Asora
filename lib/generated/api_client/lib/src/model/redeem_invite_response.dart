@@ -12,12 +12,11 @@ part 'redeem_invite_response.g.dart';
 /// Successful invite redemption – includes fresh token pair.
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [success] 
+/// * [data] 
+/// * [timestamp] 
 @BuiltValue()
-abstract class RedeemInviteResponse
-    implements Built<RedeemInviteResponse, RedeemInviteResponseBuilder> {
+abstract class RedeemInviteResponse implements Built<RedeemInviteResponse, RedeemInviteResponseBuilder> {
   @BuiltValueField(wireName: r'success')
   bool get success;
 
@@ -29,24 +28,18 @@ abstract class RedeemInviteResponse
 
   RedeemInviteResponse._();
 
-  factory RedeemInviteResponse([void updates(RedeemInviteResponseBuilder b)]) =
-      _$RedeemInviteResponse;
+  factory RedeemInviteResponse([void updates(RedeemInviteResponseBuilder b)]) = _$RedeemInviteResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(RedeemInviteResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<RedeemInviteResponse> get serializer =>
-      _$RedeemInviteResponseSerializer();
+  static Serializer<RedeemInviteResponse> get serializer => _$RedeemInviteResponseSerializer();
 }
 
-class _$RedeemInviteResponseSerializer
-    implements PrimitiveSerializer<RedeemInviteResponse> {
+class _$RedeemInviteResponseSerializer implements PrimitiveSerializer<RedeemInviteResponse> {
   @override
-  final Iterable<Type> types = const [
-    RedeemInviteResponse,
-    _$RedeemInviteResponse
-  ];
+  final Iterable<Type> types = const [RedeemInviteResponse, _$RedeemInviteResponse];
 
   @override
   final String wireName = r'RedeemInviteResponse';
@@ -79,9 +72,7 @@ class _$RedeemInviteResponseSerializer
     RedeemInviteResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -145,3 +136,4 @@ class _$RedeemInviteResponseSerializer
     return result.build();
   }
 }
+

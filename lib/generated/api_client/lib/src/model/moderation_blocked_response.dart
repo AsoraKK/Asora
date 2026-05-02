@@ -16,9 +16,7 @@ part 'moderation_blocked_response.g.dart';
 /// * [status] - Content was rejected by automated moderation
 /// * [moderationCategory] - Primary moderation class that triggered the block
 @BuiltValue()
-abstract class ModerationBlockedResponse
-    implements
-        Built<ModerationBlockedResponse, ModerationBlockedResponseBuilder> {
+abstract class ModerationBlockedResponse implements Built<ModerationBlockedResponse, ModerationBlockedResponseBuilder> {
   /// Client-supplied post identifier
   @BuiltValueField(wireName: r'id')
   String get id;
@@ -34,25 +32,18 @@ abstract class ModerationBlockedResponse
 
   ModerationBlockedResponse._();
 
-  factory ModerationBlockedResponse(
-          [void updates(ModerationBlockedResponseBuilder b)]) =
-      _$ModerationBlockedResponse;
+  factory ModerationBlockedResponse([void updates(ModerationBlockedResponseBuilder b)]) = _$ModerationBlockedResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ModerationBlockedResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ModerationBlockedResponse> get serializer =>
-      _$ModerationBlockedResponseSerializer();
+  static Serializer<ModerationBlockedResponse> get serializer => _$ModerationBlockedResponseSerializer();
 }
 
-class _$ModerationBlockedResponseSerializer
-    implements PrimitiveSerializer<ModerationBlockedResponse> {
+class _$ModerationBlockedResponseSerializer implements PrimitiveSerializer<ModerationBlockedResponse> {
   @override
-  final Iterable<Type> types = const [
-    ModerationBlockedResponse,
-    _$ModerationBlockedResponse
-  ];
+  final Iterable<Type> types = const [ModerationBlockedResponse, _$ModerationBlockedResponse];
 
   @override
   final String wireName = r'ModerationBlockedResponse';
@@ -87,9 +78,7 @@ class _$ModerationBlockedResponseSerializer
     ModerationBlockedResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -155,18 +144,16 @@ class _$ModerationBlockedResponseSerializer
 }
 
 class ModerationBlockedResponseStatusEnum extends EnumClass {
+
   /// Content was rejected by automated moderation
   @BuiltValueEnumConst(wireName: r'blocked')
-  static const ModerationBlockedResponseStatusEnum blocked =
-      _$moderationBlockedResponseStatusEnum_blocked;
+  static const ModerationBlockedResponseStatusEnum blocked = _$moderationBlockedResponseStatusEnum_blocked;
 
-  static Serializer<ModerationBlockedResponseStatusEnum> get serializer =>
-      _$moderationBlockedResponseStatusEnumSerializer;
+  static Serializer<ModerationBlockedResponseStatusEnum> get serializer => _$moderationBlockedResponseStatusEnumSerializer;
 
-  const ModerationBlockedResponseStatusEnum._(String name) : super(name);
+  const ModerationBlockedResponseStatusEnum._(String name): super(name);
 
-  static BuiltSet<ModerationBlockedResponseStatusEnum> get values =>
-      _$moderationBlockedResponseStatusEnumValues;
-  static ModerationBlockedResponseStatusEnum valueOf(String name) =>
-      _$moderationBlockedResponseStatusEnumValueOf(name);
+  static BuiltSet<ModerationBlockedResponseStatusEnum> get values => _$moderationBlockedResponseStatusEnumValues;
+  static ModerationBlockedResponseStatusEnum valueOf(String name) => _$moderationBlockedResponseStatusEnumValueOf(name);
 }
+

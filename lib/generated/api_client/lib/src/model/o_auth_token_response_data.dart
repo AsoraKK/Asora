@@ -14,11 +14,10 @@ part 'o_auth_token_response_data.g.dart';
 /// Properties:
 /// * [accessToken] - Short-lived JWT bearer token (15 min)
 /// * [refreshToken] - Long-lived opaque refresh token (7 days)
-/// * [tokenType]
+/// * [tokenType] 
 /// * [expiresIn] - Access token lifetime in seconds
 @BuiltValue()
-abstract class OAuthTokenResponseData
-    implements Built<OAuthTokenResponseData, OAuthTokenResponseDataBuilder> {
+abstract class OAuthTokenResponseData implements Built<OAuthTokenResponseData, OAuthTokenResponseDataBuilder> {
   /// Short-lived JWT bearer token (15 min)
   @BuiltValueField(wireName: r'access_token')
   String get accessToken;
@@ -37,25 +36,18 @@ abstract class OAuthTokenResponseData
 
   OAuthTokenResponseData._();
 
-  factory OAuthTokenResponseData(
-          [void updates(OAuthTokenResponseDataBuilder b)]) =
-      _$OAuthTokenResponseData;
+  factory OAuthTokenResponseData([void updates(OAuthTokenResponseDataBuilder b)]) = _$OAuthTokenResponseData;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(OAuthTokenResponseDataBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<OAuthTokenResponseData> get serializer =>
-      _$OAuthTokenResponseDataSerializer();
+  static Serializer<OAuthTokenResponseData> get serializer => _$OAuthTokenResponseDataSerializer();
 }
 
-class _$OAuthTokenResponseDataSerializer
-    implements PrimitiveSerializer<OAuthTokenResponseData> {
+class _$OAuthTokenResponseDataSerializer implements PrimitiveSerializer<OAuthTokenResponseData> {
   @override
-  final Iterable<Type> types = const [
-    OAuthTokenResponseData,
-    _$OAuthTokenResponseData
-  ];
+  final Iterable<Type> types = const [OAuthTokenResponseData, _$OAuthTokenResponseData];
 
   @override
   final String wireName = r'OAuthTokenResponseData';
@@ -93,9 +85,7 @@ class _$OAuthTokenResponseDataSerializer
     OAuthTokenResponseData object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -168,17 +158,15 @@ class _$OAuthTokenResponseDataSerializer
 }
 
 class OAuthTokenResponseDataTokenTypeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'Bearer')
-  static const OAuthTokenResponseDataTokenTypeEnum bearer =
-      _$oAuthTokenResponseDataTokenTypeEnum_bearer;
+  static const OAuthTokenResponseDataTokenTypeEnum bearer = _$oAuthTokenResponseDataTokenTypeEnum_bearer;
 
-  static Serializer<OAuthTokenResponseDataTokenTypeEnum> get serializer =>
-      _$oAuthTokenResponseDataTokenTypeEnumSerializer;
+  static Serializer<OAuthTokenResponseDataTokenTypeEnum> get serializer => _$oAuthTokenResponseDataTokenTypeEnumSerializer;
 
-  const OAuthTokenResponseDataTokenTypeEnum._(String name) : super(name);
+  const OAuthTokenResponseDataTokenTypeEnum._(String name): super(name);
 
-  static BuiltSet<OAuthTokenResponseDataTokenTypeEnum> get values =>
-      _$oAuthTokenResponseDataTokenTypeEnumValues;
-  static OAuthTokenResponseDataTokenTypeEnum valueOf(String name) =>
-      _$oAuthTokenResponseDataTokenTypeEnumValueOf(name);
+  static BuiltSet<OAuthTokenResponseDataTokenTypeEnum> get values => _$oAuthTokenResponseDataTokenTypeEnumValues;
+  static OAuthTokenResponseDataTokenTypeEnum valueOf(String name) => _$oAuthTokenResponseDataTokenTypeEnumValueOf(name);
 }
+

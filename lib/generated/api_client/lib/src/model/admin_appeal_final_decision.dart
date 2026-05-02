@@ -10,15 +10,15 @@ import 'package:built_value/serializer.dart';
 part 'admin_appeal_final_decision.g.dart';
 
 class AdminAppealFinalDecision extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'allow')
   static const AdminAppealFinalDecision allow = _$allow;
   @BuiltValueEnumConst(wireName: r'block')
   static const AdminAppealFinalDecision block = _$block;
 
-  static Serializer<AdminAppealFinalDecision> get serializer =>
-      _$adminAppealFinalDecisionSerializer;
+  static Serializer<AdminAppealFinalDecision> get serializer => _$adminAppealFinalDecisionSerializer;
 
-  const AdminAppealFinalDecision._(String name) : super(name);
+  const AdminAppealFinalDecision._(String name): super(name);
 
   static BuiltSet<AdminAppealFinalDecision> get values => _$values;
   static AdminAppealFinalDecision valueOf(String name) => _$valueOf(name);
@@ -30,5 +30,5 @@ class AdminAppealFinalDecision extends EnumClass {
 /// corresponding Angular template.
 ///
 /// Trigger mixin generation by writing a line like this one next to your enum.
-abstract class AdminAppealFinalDecisionMixin = Object
-    with _$AdminAppealFinalDecisionMixin;
+abstract class AdminAppealFinalDecisionMixin = Object with _$AdminAppealFinalDecisionMixin;
+

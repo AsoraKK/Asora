@@ -14,8 +14,7 @@ part 'appeal_vote_request.g.dart';
 /// Properties:
 /// * [vote] - `uphold` keeps content removed; `deny` requests restoration
 @BuiltValue()
-abstract class AppealVoteRequest
-    implements Built<AppealVoteRequest, AppealVoteRequestBuilder> {
+abstract class AppealVoteRequest implements Built<AppealVoteRequest, AppealVoteRequestBuilder> {
   /// `uphold` keeps content removed; `deny` requests restoration
   @BuiltValueField(wireName: r'vote')
   AppealVoteRequestVoteEnum get vote;
@@ -23,19 +22,16 @@ abstract class AppealVoteRequest
 
   AppealVoteRequest._();
 
-  factory AppealVoteRequest([void updates(AppealVoteRequestBuilder b)]) =
-      _$AppealVoteRequest;
+  factory AppealVoteRequest([void updates(AppealVoteRequestBuilder b)]) = _$AppealVoteRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AppealVoteRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AppealVoteRequest> get serializer =>
-      _$AppealVoteRequestSerializer();
+  static Serializer<AppealVoteRequest> get serializer => _$AppealVoteRequestSerializer();
 }
 
-class _$AppealVoteRequestSerializer
-    implements PrimitiveSerializer<AppealVoteRequest> {
+class _$AppealVoteRequestSerializer implements PrimitiveSerializer<AppealVoteRequest> {
   @override
   final Iterable<Type> types = const [AppealVoteRequest, _$AppealVoteRequest];
 
@@ -60,9 +56,7 @@ class _$AppealVoteRequestSerializer
     AppealVoteRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -114,23 +108,19 @@ class _$AppealVoteRequestSerializer
 }
 
 class AppealVoteRequestVoteEnum extends EnumClass {
+
   /// `uphold` keeps content removed; `deny` requests restoration
   @BuiltValueEnumConst(wireName: r'uphold')
-  static const AppealVoteRequestVoteEnum uphold =
-      _$appealVoteRequestVoteEnum_uphold;
-
+  static const AppealVoteRequestVoteEnum uphold = _$appealVoteRequestVoteEnum_uphold;
   /// `uphold` keeps content removed; `deny` requests restoration
   @BuiltValueEnumConst(wireName: r'deny')
-  static const AppealVoteRequestVoteEnum deny =
-      _$appealVoteRequestVoteEnum_deny;
+  static const AppealVoteRequestVoteEnum deny = _$appealVoteRequestVoteEnum_deny;
 
-  static Serializer<AppealVoteRequestVoteEnum> get serializer =>
-      _$appealVoteRequestVoteEnumSerializer;
+  static Serializer<AppealVoteRequestVoteEnum> get serializer => _$appealVoteRequestVoteEnumSerializer;
 
-  const AppealVoteRequestVoteEnum._(String name) : super(name);
+  const AppealVoteRequestVoteEnum._(String name): super(name);
 
-  static BuiltSet<AppealVoteRequestVoteEnum> get values =>
-      _$appealVoteRequestVoteEnumValues;
-  static AppealVoteRequestVoteEnum valueOf(String name) =>
-      _$appealVoteRequestVoteEnumValueOf(name);
+  static BuiltSet<AppealVoteRequestVoteEnum> get values => _$appealVoteRequestVoteEnumValues;
+  static AppealVoteRequestVoteEnum valueOf(String name) => _$appealVoteRequestVoteEnumValueOf(name);
 }
+
