@@ -11,11 +11,10 @@ part 'admin_flag_resolve_request.g.dart';
 /// AdminFlagResolveRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
-abstract class AdminFlagResolveRequest
-    implements Built<AdminFlagResolveRequest, AdminFlagResolveRequestBuilder> {
+abstract class AdminFlagResolveRequest implements Built<AdminFlagResolveRequest, AdminFlagResolveRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
 
@@ -24,25 +23,18 @@ abstract class AdminFlagResolveRequest
 
   AdminFlagResolveRequest._();
 
-  factory AdminFlagResolveRequest(
-          [void updates(AdminFlagResolveRequestBuilder b)]) =
-      _$AdminFlagResolveRequest;
+  factory AdminFlagResolveRequest([void updates(AdminFlagResolveRequestBuilder b)]) = _$AdminFlagResolveRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminFlagResolveRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminFlagResolveRequest> get serializer =>
-      _$AdminFlagResolveRequestSerializer();
+  static Serializer<AdminFlagResolveRequest> get serializer => _$AdminFlagResolveRequestSerializer();
 }
 
-class _$AdminFlagResolveRequestSerializer
-    implements PrimitiveSerializer<AdminFlagResolveRequest> {
+class _$AdminFlagResolveRequestSerializer implements PrimitiveSerializer<AdminFlagResolveRequest> {
   @override
-  final Iterable<Type> types = const [
-    AdminFlagResolveRequest,
-    _$AdminFlagResolveRequest
-  ];
+  final Iterable<Type> types = const [AdminFlagResolveRequest, _$AdminFlagResolveRequest];
 
   @override
   final String wireName = r'AdminFlagResolveRequest';
@@ -72,9 +64,7 @@ class _$AdminFlagResolveRequestSerializer
     AdminFlagResolveRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -131,3 +121,4 @@ class _$AdminFlagResolveRequestSerializer
     return result.build();
   }
 }
+

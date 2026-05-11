@@ -12,13 +12,12 @@ part 'appeal_vote_response_vote.g.dart';
 /// AppealVoteResponseVote
 ///
 /// Properties:
-/// * [id]
-/// * [appealId]
-/// * [vote]
-/// * [recordedAt]
+/// * [id] 
+/// * [appealId] 
+/// * [vote] 
+/// * [recordedAt] 
 @BuiltValue()
-abstract class AppealVoteResponseVote
-    implements Built<AppealVoteResponseVote, AppealVoteResponseVoteBuilder> {
+abstract class AppealVoteResponseVote implements Built<AppealVoteResponseVote, AppealVoteResponseVoteBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -34,25 +33,18 @@ abstract class AppealVoteResponseVote
 
   AppealVoteResponseVote._();
 
-  factory AppealVoteResponseVote(
-          [void updates(AppealVoteResponseVoteBuilder b)]) =
-      _$AppealVoteResponseVote;
+  factory AppealVoteResponseVote([void updates(AppealVoteResponseVoteBuilder b)]) = _$AppealVoteResponseVote;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AppealVoteResponseVoteBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AppealVoteResponseVote> get serializer =>
-      _$AppealVoteResponseVoteSerializer();
+  static Serializer<AppealVoteResponseVote> get serializer => _$AppealVoteResponseVoteSerializer();
 }
 
-class _$AppealVoteResponseVoteSerializer
-    implements PrimitiveSerializer<AppealVoteResponseVote> {
+class _$AppealVoteResponseVoteSerializer implements PrimitiveSerializer<AppealVoteResponseVote> {
   @override
-  final Iterable<Type> types = const [
-    AppealVoteResponseVote,
-    _$AppealVoteResponseVote
-  ];
+  final Iterable<Type> types = const [AppealVoteResponseVote, _$AppealVoteResponseVote];
 
   @override
   final String wireName = r'AppealVoteResponseVote';
@@ -90,9 +82,7 @@ class _$AppealVoteResponseVoteSerializer
     AppealVoteResponseVote object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -165,20 +155,17 @@ class _$AppealVoteResponseVoteSerializer
 }
 
 class AppealVoteResponseVoteVoteEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'uphold')
-  static const AppealVoteResponseVoteVoteEnum uphold =
-      _$appealVoteResponseVoteVoteEnum_uphold;
+  static const AppealVoteResponseVoteVoteEnum uphold = _$appealVoteResponseVoteVoteEnum_uphold;
   @BuiltValueEnumConst(wireName: r'deny')
-  static const AppealVoteResponseVoteVoteEnum deny =
-      _$appealVoteResponseVoteVoteEnum_deny;
+  static const AppealVoteResponseVoteVoteEnum deny = _$appealVoteResponseVoteVoteEnum_deny;
 
-  static Serializer<AppealVoteResponseVoteVoteEnum> get serializer =>
-      _$appealVoteResponseVoteVoteEnumSerializer;
+  static Serializer<AppealVoteResponseVoteVoteEnum> get serializer => _$appealVoteResponseVoteVoteEnumSerializer;
 
-  const AppealVoteResponseVoteVoteEnum._(String name) : super(name);
+  const AppealVoteResponseVoteVoteEnum._(String name): super(name);
 
-  static BuiltSet<AppealVoteResponseVoteVoteEnum> get values =>
-      _$appealVoteResponseVoteVoteEnumValues;
-  static AppealVoteResponseVoteVoteEnum valueOf(String name) =>
-      _$appealVoteResponseVoteVoteEnumValueOf(name);
+  static BuiltSet<AppealVoteResponseVoteVoteEnum> get values => _$appealVoteResponseVoteVoteEnumValues;
+  static AppealVoteResponseVoteVoteEnum valueOf(String name) => _$appealVoteResponseVoteVoteEnumValueOf(name);
 }
+

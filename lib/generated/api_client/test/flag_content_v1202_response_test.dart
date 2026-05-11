@@ -1,0 +1,21 @@
+import 'package:test/test.dart';
+import 'package:asora_api_client/asora_api_client.dart';
+
+// tests for FlagContentV1202Response
+void main() {
+  final instance = FlagContentV1202ResponseBuilder();
+  // TODO add properties to the builder and call build()
+
+  group(FlagContentV1202Response, () {
+    // String flagId
+    test('to test the property `flagId`', () async {
+      // TODO
+    });
+
+    // String status
+    test('to test the property `status`', () async {
+      // TODO
+    });
+
+  });
+}

@@ -12,28 +12,24 @@ part 'unauthorized_error.g.dart';
 /// 401 – missing or invalid bearer token.
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
-abstract class UnauthorizedError
-    implements Built<UnauthorizedError, UnauthorizedErrorBuilder> {
+abstract class UnauthorizedError implements Built<UnauthorizedError, UnauthorizedErrorBuilder> {
   @BuiltValueField(wireName: r'error')
   UnauthorizedErrorError get error;
 
   UnauthorizedError._();
 
-  factory UnauthorizedError([void updates(UnauthorizedErrorBuilder b)]) =
-      _$UnauthorizedError;
+  factory UnauthorizedError([void updates(UnauthorizedErrorBuilder b)]) = _$UnauthorizedError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(UnauthorizedErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UnauthorizedError> get serializer =>
-      _$UnauthorizedErrorSerializer();
+  static Serializer<UnauthorizedError> get serializer => _$UnauthorizedErrorSerializer();
 }
 
-class _$UnauthorizedErrorSerializer
-    implements PrimitiveSerializer<UnauthorizedError> {
+class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedError> {
   @override
   final Iterable<Type> types = const [UnauthorizedError, _$UnauthorizedError];
 
@@ -58,9 +54,7 @@ class _$UnauthorizedErrorSerializer
     UnauthorizedError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -110,3 +104,4 @@ class _$UnauthorizedErrorSerializer
     return result.build();
   }
 }
+

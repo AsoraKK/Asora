@@ -11,35 +11,26 @@ part 'admin_invite_revoke_response.g.dart';
 /// AdminInviteRevokeResponse
 ///
 /// Properties:
-/// * [revoked]
+/// * [revoked] 
 @BuiltValue()
-abstract class AdminInviteRevokeResponse
-    implements
-        Built<AdminInviteRevokeResponse, AdminInviteRevokeResponseBuilder> {
+abstract class AdminInviteRevokeResponse implements Built<AdminInviteRevokeResponse, AdminInviteRevokeResponseBuilder> {
   @BuiltValueField(wireName: r'revoked')
   bool? get revoked;
 
   AdminInviteRevokeResponse._();
 
-  factory AdminInviteRevokeResponse(
-          [void updates(AdminInviteRevokeResponseBuilder b)]) =
-      _$AdminInviteRevokeResponse;
+  factory AdminInviteRevokeResponse([void updates(AdminInviteRevokeResponseBuilder b)]) = _$AdminInviteRevokeResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteRevokeResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteRevokeResponse> get serializer =>
-      _$AdminInviteRevokeResponseSerializer();
+  static Serializer<AdminInviteRevokeResponse> get serializer => _$AdminInviteRevokeResponseSerializer();
 }
 
-class _$AdminInviteRevokeResponseSerializer
-    implements PrimitiveSerializer<AdminInviteRevokeResponse> {
+class _$AdminInviteRevokeResponseSerializer implements PrimitiveSerializer<AdminInviteRevokeResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminInviteRevokeResponse,
-    _$AdminInviteRevokeResponse
-  ];
+  final Iterable<Type> types = const [AdminInviteRevokeResponse, _$AdminInviteRevokeResponse];
 
   @override
   final String wireName = r'AdminInviteRevokeResponse';
@@ -64,9 +55,7 @@ class _$AdminInviteRevokeResponseSerializer
     AdminInviteRevokeResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -116,3 +105,4 @@ class _$AdminInviteRevokeResponseSerializer
     return result.build();
   }
 }
+

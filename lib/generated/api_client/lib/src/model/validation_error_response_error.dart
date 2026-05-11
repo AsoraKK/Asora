@@ -13,15 +13,12 @@ part 'validation_error_response_error.g.dart';
 /// ValidationErrorResponseError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 /// * [fields] - Per-field validation errors
 @BuiltValue()
-abstract class ValidationErrorResponseError
-    implements
-        Built<ValidationErrorResponseError,
-            ValidationErrorResponseErrorBuilder> {
+abstract class ValidationErrorResponseError implements Built<ValidationErrorResponseError, ValidationErrorResponseErrorBuilder> {
   @BuiltValueField(wireName: r'code')
   String get code;
 
@@ -37,25 +34,18 @@ abstract class ValidationErrorResponseError
 
   ValidationErrorResponseError._();
 
-  factory ValidationErrorResponseError(
-          [void updates(ValidationErrorResponseErrorBuilder b)]) =
-      _$ValidationErrorResponseError;
+  factory ValidationErrorResponseError([void updates(ValidationErrorResponseErrorBuilder b)]) = _$ValidationErrorResponseError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ValidationErrorResponseErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ValidationErrorResponseError> get serializer =>
-      _$ValidationErrorResponseErrorSerializer();
+  static Serializer<ValidationErrorResponseError> get serializer => _$ValidationErrorResponseErrorSerializer();
 }
 
-class _$ValidationErrorResponseErrorSerializer
-    implements PrimitiveSerializer<ValidationErrorResponseError> {
+class _$ValidationErrorResponseErrorSerializer implements PrimitiveSerializer<ValidationErrorResponseError> {
   @override
-  final Iterable<Type> types = const [
-    ValidationErrorResponseError,
-    _$ValidationErrorResponseError
-  ];
+  final Iterable<Type> types = const [ValidationErrorResponseError, _$ValidationErrorResponseError];
 
   @override
   final String wireName = r'ValidationErrorResponseError';
@@ -86,8 +76,7 @@ class _$ValidationErrorResponseErrorSerializer
       yield r'fields';
       yield serializers.serialize(
         object.fields,
-        specifiedType: const FullType(
-            BuiltList, [FullType(ValidationErrorResponseErrorFieldsInner)]),
+        specifiedType: const FullType(BuiltList, [FullType(ValidationErrorResponseErrorFieldsInner)]),
       );
     }
   }
@@ -98,9 +87,7 @@ class _$ValidationErrorResponseErrorSerializer
     ValidationErrorResponseError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -139,8 +126,7 @@ class _$ValidationErrorResponseErrorSerializer
         case r'fields':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltList, [FullType(ValidationErrorResponseErrorFieldsInner)]),
+            specifiedType: const FullType(BuiltList, [FullType(ValidationErrorResponseErrorFieldsInner)]),
           ) as BuiltList<ValidationErrorResponseErrorFieldsInner>;
           result.fields.replace(valueDes);
           break;
@@ -172,3 +158,4 @@ class _$ValidationErrorResponseErrorSerializer
     return result.build();
   }
 }
+
