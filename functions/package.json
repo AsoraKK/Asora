@@ -22,7 +22,7 @@
     "@azure/storage-blob": "^12.29.1",
     "@azure/storage-queue": "^12.28.1",
     "applicationinsights": "^2.9.2",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "axios": "1.15.2",
     "fast-json-stable-stringify": "^2.1.0",
     "google-auth-library": "^9.15.1",
