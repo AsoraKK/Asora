@@ -86,8 +86,7 @@ void main() {
       adapter.respondWith({'success': false, 'message': 'Bad request'});
 
       expect(
-        () =>
-            service.getFeed(params: const FeedParams(type: FeedType.notable)),
+        () => service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(isA<SocialFeedException>()),
       );
     });
@@ -96,8 +95,7 @@ void main() {
       adapter.respondWith({'success': true, 'data': 'string'});
 
       expect(
-        () =>
-            service.getFeed(params: const FeedParams(type: FeedType.notable)),
+        () => service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(isA<SocialFeedException>()),
       );
     });
@@ -106,8 +104,7 @@ void main() {
       adapter.respondWith(<String, dynamic>{});
 
       expect(
-        () =>
-            service.getFeed(params: const FeedParams(type: FeedType.notable)),
+        () => service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(anything),
       );
     });

@@ -796,28 +796,67 @@ void main() {
     });
 
     test('fromString with canonical authorship values', () {
-      expect(ContentAuthorship.fromString('human_authored'), ContentAuthorship.humanAuthored);
-      expect(ContentAuthorship.fromString('human'), ContentAuthorship.humanAuthored);
-      expect(ContentAuthorship.fromString('ai_assisted'), ContentAuthorship.aiAssisted);
-      expect(ContentAuthorship.fromString('ai_generated'), ContentAuthorship.aiGenerated);
-      expect(ContentAuthorship.fromString('ai_gen'), ContentAuthorship.aiGenerated);
-      expect(ContentAuthorship.fromString('under_review'), ContentAuthorship.underReview);
+      expect(
+        ContentAuthorship.fromString('human_authored'),
+        ContentAuthorship.humanAuthored,
+      );
+      expect(
+        ContentAuthorship.fromString('human'),
+        ContentAuthorship.humanAuthored,
+      );
+      expect(
+        ContentAuthorship.fromString('ai_assisted'),
+        ContentAuthorship.aiAssisted,
+      );
+      expect(
+        ContentAuthorship.fromString('ai_generated'),
+        ContentAuthorship.aiGenerated,
+      );
+      expect(
+        ContentAuthorship.fromString('ai_gen'),
+        ContentAuthorship.aiGenerated,
+      );
+      expect(
+        ContentAuthorship.fromString('under_review'),
+        ContentAuthorship.underReview,
+      );
     });
 
     test('fromString with legacy confidence values', () {
-      expect(ContentAuthorship.fromString('high'), ContentAuthorship.humanAuthored);
-      expect(ContentAuthorship.fromString('HIGH'), ContentAuthorship.humanAuthored);
-      expect(ContentAuthorship.fromString('medium'), ContentAuthorship.aiAssisted);
-      expect(ContentAuthorship.fromString('MEDIUM'), ContentAuthorship.aiAssisted);
+      expect(
+        ContentAuthorship.fromString('high'),
+        ContentAuthorship.humanAuthored,
+      );
+      expect(
+        ContentAuthorship.fromString('HIGH'),
+        ContentAuthorship.humanAuthored,
+      );
+      expect(
+        ContentAuthorship.fromString('medium'),
+        ContentAuthorship.aiAssisted,
+      );
+      expect(
+        ContentAuthorship.fromString('MEDIUM'),
+        ContentAuthorship.aiAssisted,
+      );
       expect(ContentAuthorship.fromString('low'), ContentAuthorship.aiAssisted);
       expect(ContentAuthorship.fromString('LOW'), ContentAuthorship.aiAssisted);
-      expect(ContentAuthorship.fromString('AI_GENERATED'), ContentAuthorship.aiGenerated);
+      expect(
+        ContentAuthorship.fromString('AI_GENERATED'),
+        ContentAuthorship.aiGenerated,
+      );
     });
 
     test('fromString defaults to underReview for unknown values', () {
-      expect(ContentAuthorship.fromString('invalid'), ContentAuthorship.underReview);
+      expect(
+        ContentAuthorship.fromString('invalid'),
+        ContentAuthorship.underReview,
+      );
       expect(ContentAuthorship.fromString(''), ContentAuthorship.underReview);
-      expect(ContentAuthorship.fromString('unknown'), ContentAuthorship.underReview);
+      expect(
+        ContentAuthorship.fromString('unknown'),
+        ContentAuthorship.underReview,
+      );
       expect(ContentAuthorship.fromString(null), ContentAuthorship.underReview);
     });
 
