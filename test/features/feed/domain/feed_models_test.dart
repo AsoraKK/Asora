@@ -173,7 +173,7 @@ void main() {
 
       expect(params.page, equals(1));
       expect(params.pageSize, equals(20));
-      expect(params.type, equals(FeedType.trending));
+      expect(params.type, equals(FeedType.notable));
       expect(params.cursor, isNull);
       expect(params.location, isNull);
       expect(params.tags, isNull);
@@ -202,8 +202,8 @@ void main() {
 
     test('supports all FeedType values', () {
       expect(
-        const FeedParams(type: FeedType.trending).type,
-        equals(FeedType.trending),
+        const FeedParams(type: FeedType.notable).type,
+        equals(FeedType.notable),
       );
       expect(
         const FeedParams(type: FeedType.newest).type,
@@ -240,7 +240,7 @@ void main() {
     });
 
     test('toJson excludes null optional fields', () {
-      const params = FeedParams(page: 1, pageSize: 20, type: FeedType.trending);
+      const params = FeedParams(page: 1, pageSize: 20, type: FeedType.notable);
 
       final json = params.toJson();
 
@@ -295,7 +295,7 @@ void main() {
   group('FeedType enum', () {
     test('has all expected values', () {
       expect(FeedType.values, hasLength(5));
-      expect(FeedType.values, contains(FeedType.trending));
+      expect(FeedType.values, contains(FeedType.notable));
       expect(FeedType.values, contains(FeedType.newest));
       expect(FeedType.values, contains(FeedType.local));
       expect(FeedType.values, contains(FeedType.following));
@@ -303,7 +303,7 @@ void main() {
     });
 
     test('can be converted to string', () {
-      expect(FeedType.trending.name, equals('trending'));
+      expect(FeedType.notable.name, equals('notable'));
       expect(FeedType.newest.name, equals('newest'));
       expect(FeedType.local.name, equals('local'));
       expect(FeedType.following.name, equals('following'));

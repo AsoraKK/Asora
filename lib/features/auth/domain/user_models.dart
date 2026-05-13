@@ -8,6 +8,20 @@
 /// 🏗️ Architecture: Immutable data classes with JSON serialization
 library;
 
+/// Editorial membership status per the Lythaus Editorial Framework.
+/// Editorial is merit-based and earned; it is distinct from paid subscription tiers.
+enum EditorialStatus {
+  none,       // Standard user, no editorial application
+  applied,    // Application submitted, pending review
+  editorial;  // Active editorial member (approved)
+
+  static EditorialStatus fromString(String? value) => switch (value) {
+    'applied'   => EditorialStatus.applied,
+    'editorial' => EditorialStatus.editorial,
+    _           => EditorialStatus.none,
+  };
+}
+
 /// User profile model matching Azure Functions userProfile endpoint
 class UserProfile {
   final String id;
@@ -20,6 +34,7 @@ class UserProfile {
   // Private fields only available for own profile
   final String? email;
   final String? lastLogin; // ISO string
+  final EditorialStatus editorialStatus;
 
   const UserProfile({
     required this.id,
@@ -30,6 +45,7 @@ class UserProfile {
     required this.isOwnProfile,
     this.email,
     this.lastLogin,
+    this.editorialStatus = EditorialStatus.none,
   });
 
   /// Parse DateTime from ISO timestamp string
@@ -50,6 +66,7 @@ class UserProfile {
       isOwnProfile: json['isOwnProfile'] as bool,
       email: json['email'] as String?,
       lastLogin: json['lastLogin'] as String?,
+      editorialStatus: EditorialStatus.fromString(json['editorialStatus'] as String?),
     );
   }
 
@@ -62,6 +79,7 @@ class UserProfile {
       'tier': tier,
       'stats': stats.toJson(),
       'isOwnProfile': isOwnProfile,
+      if (editorialStatus != EditorialStatus.none) 'editorialStatus': editorialStatus.name,
       if (email != null) 'email': email,
       if (lastLogin != null) 'lastLogin': lastLogin,
     };

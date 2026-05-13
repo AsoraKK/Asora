@@ -695,7 +695,7 @@ void main() {
       expect(params.page, 1);
       expect(params.pageSize, 20);
       expect(params.cursor, isNull);
-      expect(params.type, FeedType.trending);
+      expect(params.type, FeedType.notable);
       expect(params.location, isNull);
       expect(params.tags, isNull);
       expect(params.category, isNull);
@@ -728,7 +728,7 @@ void main() {
 
       expect(json['page'], 1);
       expect(json['pageSize'], 20);
-      expect(json['type'], 'trending');
+      expect(json['type'], 'notable');
       expect(json.containsKey('cursor'), false);
       expect(json.containsKey('location'), false);
       expect(json.containsKey('tags'), false);
@@ -761,7 +761,7 @@ void main() {
   group('FeedType Enum', () {
     test('all values', () {
       expect(FeedType.values, [
-        FeedType.trending,
+        FeedType.notable,
         FeedType.newest,
         FeedType.local,
         FeedType.following,
@@ -770,7 +770,7 @@ void main() {
     });
 
     test('enum names', () {
-      expect(FeedType.trending.name, 'trending');
+      expect(FeedType.notable.name, 'notable');
       expect(FeedType.newest.name, 'newest');
       expect(FeedType.local.name, 'local');
       expect(FeedType.following.name, 'following');
@@ -778,46 +778,54 @@ void main() {
     });
   });
 
-  group('HumanConfidence Enum', () {
+  group('ContentAuthorship Enum', () {
     test('all values', () {
-      expect(HumanConfidence.values, [
-        HumanConfidence.high,
-        HumanConfidence.medium,
-        HumanConfidence.low,
-        HumanConfidence.aiGen,
+      expect(ContentAuthorship.values, [
+        ContentAuthorship.humanAuthored,
+        ContentAuthorship.aiAssisted,
+        ContentAuthorship.aiGenerated,
+        ContentAuthorship.underReview,
       ]);
     });
 
     test('labels', () {
-      expect(HumanConfidence.high.label, 'High');
-      expect(HumanConfidence.medium.label, 'Medium');
-      expect(HumanConfidence.low.label, 'Low');
-      expect(HumanConfidence.aiGen.label, 'AI Gen');
+      expect(ContentAuthorship.humanAuthored.label, 'Human-authored');
+      expect(ContentAuthorship.aiAssisted.label, 'AI-assisted');
+      expect(ContentAuthorship.aiGenerated.label, 'AI-generated');
+      expect(ContentAuthorship.underReview.label, 'Under review');
     });
 
-    test('fromString with valid values', () {
-      expect(HumanConfidence.fromString('high'), HumanConfidence.high);
-      expect(HumanConfidence.fromString('HIGH'), HumanConfidence.high);
-      expect(HumanConfidence.fromString('medium'), HumanConfidence.medium);
-      expect(HumanConfidence.fromString('MEDIUM'), HumanConfidence.medium);
-      expect(HumanConfidence.fromString('low'), HumanConfidence.low);
-      expect(HumanConfidence.fromString('LOW'), HumanConfidence.low);
-      expect(HumanConfidence.fromString('ai_generated'), HumanConfidence.aiGen);
-      expect(HumanConfidence.fromString('ai_gen'), HumanConfidence.aiGen);
-      expect(HumanConfidence.fromString('AI_GENERATED'), HumanConfidence.aiGen);
+    test('fromString with canonical authorship values', () {
+      expect(ContentAuthorship.fromString('human_authored'), ContentAuthorship.humanAuthored);
+      expect(ContentAuthorship.fromString('human'), ContentAuthorship.humanAuthored);
+      expect(ContentAuthorship.fromString('ai_assisted'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('ai_generated'), ContentAuthorship.aiGenerated);
+      expect(ContentAuthorship.fromString('ai_gen'), ContentAuthorship.aiGenerated);
+      expect(ContentAuthorship.fromString('under_review'), ContentAuthorship.underReview);
     });
 
-    test('fromString with invalid value defaults to medium', () {
-      expect(HumanConfidence.fromString('invalid'), HumanConfidence.medium);
-      expect(HumanConfidence.fromString(''), HumanConfidence.medium);
-      expect(HumanConfidence.fromString('unknown'), HumanConfidence.medium);
+    test('fromString with legacy confidence values', () {
+      expect(ContentAuthorship.fromString('high'), ContentAuthorship.humanAuthored);
+      expect(ContentAuthorship.fromString('HIGH'), ContentAuthorship.humanAuthored);
+      expect(ContentAuthorship.fromString('medium'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('MEDIUM'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('low'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('LOW'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('AI_GENERATED'), ContentAuthorship.aiGenerated);
+    });
+
+    test('fromString defaults to underReview for unknown values', () {
+      expect(ContentAuthorship.fromString('invalid'), ContentAuthorship.underReview);
+      expect(ContentAuthorship.fromString(''), ContentAuthorship.underReview);
+      expect(ContentAuthorship.fromString('unknown'), ContentAuthorship.underReview);
+      expect(ContentAuthorship.fromString(null), ContentAuthorship.underReview);
     });
 
     test('displayLabel', () {
-      expect(HumanConfidence.high.displayLabel, 'High');
-      expect(HumanConfidence.medium.displayLabel, 'Medium');
-      expect(HumanConfidence.low.displayLabel, 'Low');
-      expect(HumanConfidence.aiGen.displayLabel, 'AI Generated');
+      expect(ContentAuthorship.humanAuthored.displayLabel, 'Human-authored');
+      expect(ContentAuthorship.aiAssisted.displayLabel, 'AI-assisted');
+      expect(ContentAuthorship.aiGenerated.displayLabel, 'AI-generated');
+      expect(ContentAuthorship.underReview.displayLabel, 'Under review');
     });
   });
 }

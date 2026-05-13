@@ -76,7 +76,7 @@ void main() {
       });
 
       final result = await service.getFeed(
-        params: const FeedParams(type: FeedType.trending),
+        params: const FeedParams(type: FeedType.notable),
       );
       expect(result.posts, isEmpty);
       expect(result.hasMore, isFalse);
@@ -87,7 +87,7 @@ void main() {
 
       expect(
         () =>
-            service.getFeed(params: const FeedParams(type: FeedType.trending)),
+            service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(isA<SocialFeedException>()),
       );
     });
@@ -97,7 +97,7 @@ void main() {
 
       expect(
         () =>
-            service.getFeed(params: const FeedParams(type: FeedType.trending)),
+            service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(isA<SocialFeedException>()),
       );
     });
@@ -107,7 +107,7 @@ void main() {
 
       expect(
         () =>
-            service.getFeed(params: const FeedParams(type: FeedType.trending)),
+            service.getFeed(params: const FeedParams(type: FeedType.notable)),
         throwsA(anything),
       );
     });

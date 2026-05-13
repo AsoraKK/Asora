@@ -536,31 +536,31 @@ void main() {
     });
   });
 
-  group('HumanConfidence', () {
+  group('ContentAuthorship', () {
     test('label returns correct strings', () {
-      expect(HumanConfidence.high.label, 'High');
-      expect(HumanConfidence.medium.label, 'Medium');
-      expect(HumanConfidence.low.label, 'Low');
-      expect(HumanConfidence.aiGen.label, 'AI Gen');
+      expect(ContentAuthorship.humanAuthored.label, 'Human-authored');
+      expect(ContentAuthorship.aiAssisted.label, 'AI-assisted');
+      expect(ContentAuthorship.aiGenerated.label, 'AI-generated');
+      expect(ContentAuthorship.underReview.label, 'Under review');
     });
 
     test('fromString parses known values', () {
-      expect(HumanConfidence.fromString('high'), HumanConfidence.high);
-      expect(HumanConfidence.fromString('medium'), HumanConfidence.medium);
-      expect(HumanConfidence.fromString('low'), HumanConfidence.low);
-      expect(HumanConfidence.fromString('ai_generated'), HumanConfidence.aiGen);
-      expect(HumanConfidence.fromString('ai_gen'), HumanConfidence.aiGen);
+      expect(ContentAuthorship.fromString('high'), ContentAuthorship.humanAuthored);
+      expect(ContentAuthorship.fromString('medium'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('low'), ContentAuthorship.aiAssisted);
+      expect(ContentAuthorship.fromString('ai_generated'), ContentAuthorship.aiGenerated);
+      expect(ContentAuthorship.fromString('ai_gen'), ContentAuthorship.aiGenerated);
     });
 
-    test('fromString defaults to medium for unknown', () {
-      expect(HumanConfidence.fromString('xyz'), HumanConfidence.medium);
+    test('fromString defaults to underReview for unknown', () {
+      expect(ContentAuthorship.fromString('xyz'), ContentAuthorship.underReview);
     });
 
     test('displayLabel returns full display strings', () {
-      expect(HumanConfidence.high.displayLabel, 'High');
-      expect(HumanConfidence.medium.displayLabel, 'Medium');
-      expect(HumanConfidence.low.displayLabel, 'Low');
-      expect(HumanConfidence.aiGen.displayLabel, 'AI Generated');
+      expect(ContentAuthorship.humanAuthored.displayLabel, 'Human-authored');
+      expect(ContentAuthorship.aiAssisted.displayLabel, 'AI-assisted');
+      expect(ContentAuthorship.aiGenerated.displayLabel, 'AI-generated');
+      expect(ContentAuthorship.underReview.displayLabel, 'Under review');
     });
   });
 }

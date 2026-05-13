@@ -186,7 +186,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    const params = FeedParams(type: FeedType.trending, page: 1);
+    const params = FeedParams(type: FeedType.notable, page: 1);
     final initial = await container.read(feedProvider(params).future);
     expect(initial.posts, hasLength(1));
 
@@ -293,7 +293,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    const params = FeedParams(type: FeedType.trending, page: 1);
+    const params = FeedParams(type: FeedType.notable, page: 1);
     await container.read(feedProvider(params).future);
     await container.read(feedProvider(params).notifier).refresh();
 

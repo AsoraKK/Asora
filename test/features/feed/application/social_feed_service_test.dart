@@ -129,7 +129,7 @@ void main() {
     );
 
     final response = await service.getFeed(
-      params: const FeedParams(type: FeedType.trending),
+      params: const FeedParams(type: FeedType.notable),
       token: 't1',
     );
     expect(response.posts, hasLength(1));
@@ -147,7 +147,7 @@ void main() {
 
     expect(
       () => service.getFeed(
-        params: const FeedParams(type: FeedType.trending),
+        params: const FeedParams(type: FeedType.notable),
         token: 't1',
       ),
       throwsA(isA<SocialFeedException>()),

@@ -207,7 +207,7 @@ export function validateRadius(radius: number): ValidationResult {
  * Validate feed type
  */
 export function validateFeedType(type: string): ValidationResult {
-  const validTypes = ['trending', 'newest', 'local', 'following', 'newCreators'];
+  const validTypes = ['notable', 'trending', 'newest', 'local', 'following', 'newCreators'];
 
   if (!validTypes.includes(type)) {
     return {
