@@ -531,9 +531,9 @@ enum ContentAuthorship {
 
   String get label => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
-    ContentAuthorship.aiAssisted    => 'AI-assisted',
-    ContentAuthorship.aiGenerated   => 'AI-generated',
-    ContentAuthorship.underReview   => 'Under review',
+    ContentAuthorship.aiAssisted => 'AI-assisted',
+    ContentAuthorship.aiGenerated => 'AI-generated',
+    ContentAuthorship.underReview => 'Under review',
   };
 
   /// Map raw API/moderation values to an authorship label.
@@ -542,10 +542,10 @@ enum ContentAuthorship {
   static ContentAuthorship fromString(String? confidence) {
     return switch (confidence?.toLowerCase()) {
       'human_authored' || 'human' || 'high' => ContentAuthorship.humanAuthored,
-      'ai_assisted' || 'medium' || 'low'    => ContentAuthorship.aiAssisted,
-      'ai_generated' || 'ai_gen'            => ContentAuthorship.aiGenerated,
-      'under_review'                         => ContentAuthorship.underReview,
-      _                                      => ContentAuthorship.underReview,
+      'ai_assisted' || 'medium' || 'low' => ContentAuthorship.aiAssisted,
+      'ai_generated' || 'ai_gen' => ContentAuthorship.aiGenerated,
+      'under_review' => ContentAuthorship.underReview,
+      _ => ContentAuthorship.underReview,
     };
   }
 }
@@ -553,8 +553,8 @@ enum ContentAuthorship {
 extension ContentAuthorshipExtension on ContentAuthorship {
   String get displayLabel => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
-    ContentAuthorship.aiAssisted    => 'AI-assisted',
-    ContentAuthorship.aiGenerated   => 'AI-generated',
-    ContentAuthorship.underReview   => 'Under review',
+    ContentAuthorship.aiAssisted => 'AI-assisted',
+    ContentAuthorship.aiGenerated => 'AI-generated',
+    ContentAuthorship.underReview => 'Under review',
   };
 }

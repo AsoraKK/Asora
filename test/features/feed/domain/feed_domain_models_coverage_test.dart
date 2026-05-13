@@ -545,15 +545,30 @@ void main() {
     });
 
     test('fromString parses known values', () {
-      expect(ContentAuthorship.fromString('high'), ContentAuthorship.humanAuthored);
-      expect(ContentAuthorship.fromString('medium'), ContentAuthorship.aiAssisted);
+      expect(
+        ContentAuthorship.fromString('high'),
+        ContentAuthorship.humanAuthored,
+      );
+      expect(
+        ContentAuthorship.fromString('medium'),
+        ContentAuthorship.aiAssisted,
+      );
       expect(ContentAuthorship.fromString('low'), ContentAuthorship.aiAssisted);
-      expect(ContentAuthorship.fromString('ai_generated'), ContentAuthorship.aiGenerated);
-      expect(ContentAuthorship.fromString('ai_gen'), ContentAuthorship.aiGenerated);
+      expect(
+        ContentAuthorship.fromString('ai_generated'),
+        ContentAuthorship.aiGenerated,
+      );
+      expect(
+        ContentAuthorship.fromString('ai_gen'),
+        ContentAuthorship.aiGenerated,
+      );
     });
 
     test('fromString defaults to underReview for unknown', () {
-      expect(ContentAuthorship.fromString('xyz'), ContentAuthorship.underReview);
+      expect(
+        ContentAuthorship.fromString('xyz'),
+        ContentAuthorship.underReview,
+      );
     });
 
     test('displayLabel returns full display strings', () {

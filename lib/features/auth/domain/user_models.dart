@@ -11,14 +11,14 @@ library;
 /// Editorial membership status per the Lythaus Editorial Framework.
 /// Editorial is merit-based and earned; it is distinct from paid subscription tiers.
 enum EditorialStatus {
-  none,       // Standard user, no editorial application
-  applied,    // Application submitted, pending review
-  editorial;  // Active editorial member (approved)
+  none, // Standard user, no editorial application
+  applied, // Application submitted, pending review
+  editorial; // Active editorial member (approved)
 
   static EditorialStatus fromString(String? value) => switch (value) {
-    'applied'   => EditorialStatus.applied,
+    'applied' => EditorialStatus.applied,
     'editorial' => EditorialStatus.editorial,
-    _           => EditorialStatus.none,
+    _ => EditorialStatus.none,
   };
 }
 
@@ -66,7 +66,9 @@ class UserProfile {
       isOwnProfile: json['isOwnProfile'] as bool,
       email: json['email'] as String?,
       lastLogin: json['lastLogin'] as String?,
-      editorialStatus: EditorialStatus.fromString(json['editorialStatus'] as String?),
+      editorialStatus: EditorialStatus.fromString(
+        json['editorialStatus'] as String?,
+      ),
     );
   }
 
@@ -79,7 +81,8 @@ class UserProfile {
       'tier': tier,
       'stats': stats.toJson(),
       'isOwnProfile': isOwnProfile,
-      if (editorialStatus != EditorialStatus.none) 'editorialStatus': editorialStatus.name,
+      if (editorialStatus != EditorialStatus.none)
+        'editorialStatus': editorialStatus.name,
       if (email != null) 'email': email,
       if (lastLogin != null) 'lastLogin': lastLogin,
     };
