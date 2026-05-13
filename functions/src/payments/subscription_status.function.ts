@@ -15,6 +15,7 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { getTargetDatabase } from '@shared/clients/cosmos';
 import {
   normalizeTier,
   getLimitsForTier,
@@ -32,23 +33,34 @@ app.http('subscription_status', {
       return ctx.unauthorized('Authentication required');
     }
 
-    const tier = normalizeTier(auth.tier);
-    const limits = getLimitsForTier(tier);
+    // Resolve effective tier: Cosmos user doc takes precedence over JWT claim.
+    // This enables manual Black tier assignment via PATCH /api/admin/users/:userId/tier
+    // without requiring a payment provider or JWT re-issuance.
+    //
+    // Priority: Cosmos user.tier → JWT tier claim → 'free' (default)
+    //
+    // TODO: When Cosmos subscriptions container exists, switch to querying it
+    //       (which will be populated by the payment webhook on provider wiring).
+    let effectiveTier = normalizeTier(auth.tier);
 
-    // TODO: When Cosmos subscriptions container exists, query it:
-    //
-    // const sub = await cosmosClient
-    //   .database('asora')
-    //   .container('subscriptions')
-    //   .item(auth.userId, auth.userId)
-    //   .read<SubscriptionDocument>();
-    //
-    // For now, derive status from JWT tier claim.
+    try {
+      const db = getTargetDatabase();
+      const { resource: userDoc } = await db.users
+        .item(auth.userId, auth.userId)
+        .read<{ tier?: string }>();
+      if (userDoc?.tier) {
+        effectiveTier = normalizeTier(userDoc.tier);
+      }
+    } catch {
+      // Cosmos unavailable — fall back to JWT tier claim already set above.
+    }
+
+    const limits = getLimitsForTier(effectiveTier);
 
     const response: SubscriptionStatusResponse = {
       userId: auth.userId,
-      tier,
-      status: 'active', // Default — actual status comes from Cosmos later
+      tier: effectiveTier,
+      status: 'active', // Default — actual status comes from Cosmos subscriptions container later
       provider: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,

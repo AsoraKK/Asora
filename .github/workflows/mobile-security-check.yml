@@ -126,9 +126,87 @@ jobs:
             echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
 
+      - name: Fail if staging/prod SPKI pins are empty
+        shell: bash
+        run: |
+          set -euo pipefail
+          ENV_FILE="lib/core/config/environment_config.dart"
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "::error::$ENV_FILE not found"
+            exit 1
+          fi
+
+          # Detect empty spkiPinsBase64 arrays inside the staging/prod security blocks.
+          # The awk range covers the _stagingMobileSecurity and _prodMobileSecurity const blocks.
+          empty_staging=$(awk '/_stagingMobileSecurity/,/^\);/' "$ENV_FILE" \
+            | grep -c "spkiPinsBase64:\s*\[" | xargs -I{} sh -c \
+              'awk "/_stagingMobileSecurity/,/^\);/" '"$ENV_FILE"' | grep -c "spkiPinsBase64:\s*\[\]" || true')
+          empty_prod=$(awk '/_prodMobileSecurity/,/^\);/' "$ENV_FILE" \
+            | grep -c "spkiPinsBase64:\s*\[" | xargs -I{} sh -c \
+              'awk "/_prodMobileSecurity/,/^\);/" '"$ENV_FILE"' | grep -c "spkiPinsBase64:\s*\[\]" || true')
+
+          # Simpler direct check: search the entire file for the empty array patterns
+          # inside the staging and prod security const blocks
+          staging_empty=false
+          prod_empty=false
+
+          # Extract staging block and check for empty array
+          if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+              | grep -q "spkiPinsBase64:\s*\["; then
+            if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
+              staging_empty=true
+            fi
+          fi
+
+          # Extract prod block and check for empty array
+          if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
+              | grep -q "spkiPinsBase64:\s*\["; then
+            if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
+                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
+              prod_empty=true
+            fi
+          fi
+
+          failed=false
+          if [ "$staging_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: staging spkiPinsBase64 is empty in $ENV_FILE."
+            echo "  Staging API host: asora-function-staging.northeurope-01.azurewebsites.net"
+            echo "  TLS pinning is currently FAIL-OPEN for staging (all connections pass unchecked)."
+            echo ""
+            echo "  To fix, extract and populate the staging SPKI pin:"
+            echo "    ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net"
+            echo "  Then add the output to _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
+            echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
+            failed=true
+          fi
+
+          if [ "$prod_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: production spkiPinsBase64 is empty in $ENV_FILE."
+            echo "  Production API host: asora-function-prod.northeurope-01.azurewebsites.net"
+            echo "  TLS pinning is currently FAIL-OPEN for production (all connections pass unchecked)."
+            echo ""
+            echo "  To fix, extract and populate the production SPKI pins (include a backup):"
+            echo "    ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
+            echo "    CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
+            echo "  Then add both outputs to _prodMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
+            echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
+            failed=true
+          fi
+
+          if [ "$failed" = "true" ]; then
+            echo ""
+            echo "  NOTE: These environments may not be provisioned yet. If the Azure Function Apps"
+            echo "  (asora-function-staging, asora-function-prod) are not deployed, pin extraction"
+            echo "  will fail gracefully. Once deployed, re-run pin extraction and update the config."
+            exit 1
+          fi
+
+          echo "✓ Staging and production SPKI pin arrays are populated."
+
       - name: Verify live certificate pins
         env:
-          EXTRA_PIN_HOSTS: asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
+          EXTRA_PIN_HOSTS: asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net,asora-function-staging.northeurope-01.azurewebsites.net,asora-function-prod.northeurope-01.azurewebsites.net
         shell: bash
         run: |
           set -euo pipefail

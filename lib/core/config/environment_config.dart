@@ -108,6 +108,22 @@ class EnvironmentConfig {
     }
   }
 
+  /// Returns the [EnvironmentConfig] for the specified [env].
+  ///
+  /// Intended for tests and tooling (launch-readiness gate, pin validation).
+  /// Production code should use [EnvironmentConfig.fromEnvironment].
+  @visibleForTesting
+  static EnvironmentConfig configForEnvironment(Environment env) {
+    switch (env) {
+      case Environment.development:
+        return _devConfig;
+      case Environment.staging:
+        return _stagingConfig;
+      case Environment.production:
+        return _prodConfig;
+    }
+  }
+
   Map<String, dynamic> toJson() => {
     'environment': environment.name,
     'apiBaseUrl': apiBaseUrl,

@@ -17,7 +17,9 @@ EXPECTED_FILE = Path("mobile-expected-pins.json")
 def load_expected() -> dict[str, list[str]]:
     if not EXPECTED_FILE.exists():
         raise SystemExit(f"Expected pins file not found: {EXPECTED_FILE}")
-    data = json.loads(EXPECTED_FILE.read_text(encoding="utf-8"))
+    raw = json.loads(EXPECTED_FILE.read_text(encoding="utf-8"))
+    # Skip comment keys (keys starting with underscore)
+    data = {k: v for k, v in raw.items() if not k.startswith("_")}
     return {host: list(dict.fromkeys(pins)) for host, pins in data.items()}
 
 
@@ -95,6 +97,7 @@ def main() -> int:
     hosts = collect_hosts()
 
     report: dict[str, dict[str, object]] = {}
+    has_hard_failure = False
 
     for host in hosts:
         allowed = set(expected.get(host, []))
@@ -104,12 +107,40 @@ def main() -> int:
             error_msg = str(exc)
             # Don't fail on DNS resolution errors (host not live yet)
             if "Name or service not known" in error_msg or "errno=2" in error_msg:
-                report[host] = {"ok": True, "skipped": "DNS resolution failed", "expected": list(allowed)}
+                if not allowed:
+                    # Host not provisioned AND no pins configured — expected state pre-launch
+                    report[host] = {
+                        "ok": True,
+                        "skipped": "DNS resolution failed (host not provisioned; pins not yet required)",
+                        "expected": list(allowed),
+                    }
+                else:
+                    report[host] = {"ok": True, "skipped": "DNS resolution failed", "expected": list(allowed)}
                 continue
             report[host] = {"ok": False, "error": error_msg, "expected": list(allowed)}
+            has_hard_failure = True
             continue
 
-        ok = observed in allowed and bool(allowed)
+        # Host resolves but has no expected pins — this is a launch blocker
+        if not allowed:
+            print(
+                f"✗ LAUNCH BLOCKER: {host} resolves but has no expected pins in {EXPECTED_FILE}.\n"
+                f"  Extract the SPKI pin with:\n"
+                f"    ./scripts/extract-spki-pins.sh {host}\n"
+                f"  Observed pin (add to {EXPECTED_FILE} and environment_config.dart):\n"
+                f"    {observed}\n"
+                f"  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
+            )
+            report[host] = {
+                "ok": False,
+                "error": "no_expected_pins_configured",
+                "observed": observed,
+                "expected": [],
+            }
+            has_hard_failure = True
+            continue
+
+        ok = observed in allowed
         report[host] = {
             "ok": ok,
             "observed": observed,
@@ -128,7 +159,7 @@ def main() -> int:
     )
     print("Wrote mobile-pin-report.json")
 
-    return 0
+    return 1 if has_hard_failure else 0
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -10,6 +10,7 @@ export type AdminAuditAction =
   | 'APPEAL_REJECT'
   | 'USER_DISABLE'
   | 'USER_ENABLE'
+  | 'USER_TIER_SET'
   | 'INVITE_CREATE'
   | 'INVITE_BATCH_CREATE'
   | 'INVITE_REVOKE'

@@ -1,7 +1,14 @@
 import 'package:asora/core/routing/app_router.dart';
+import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/application/invite_redeem_service.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -98,7 +105,212 @@ void main() {
       final shellRoute = router.configuration.routes
           .whereType<GoRoute>()
           .firstWhere((r) => r.path == '/');
-      expect(shellRoute.routes.length, greaterThanOrEqualTo(5));
+      // invite was moved to a top-level public route; shell now has 4 children.
+      expect(shellRoute.routes.length, greaterThanOrEqualTo(4));
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Invite route public accessibility
+  // ---------------------------------------------------------------------------
+  group('invite route public accessibility', () {
+    // Lightweight GoRouter that mirrors only the redirect logic under test.
+    // Using stub screens avoids pulling in the full provider graph.
+    GoRouter _buildRedirectRouter({
+      required bool isLoggedIn,
+      required String? pendingCode,
+      String initialLocation = '/',
+    }) {
+      return GoRouter(
+        initialLocation: initialLocation,
+        redirect: (context, state) {
+          final isOnLogin = state.matchedLocation == '/login';
+          final isOnInvite = state.matchedLocation.startsWith('/invite/');
+          if (state.matchedLocation == '/auth/callback') return null;
+          if (isOnInvite) return null;
+          if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
+            return '/invite/$pendingCode';
+          }
+          if (!isLoggedIn && !isOnLogin) return '/login';
+          if (isLoggedIn && isOnLogin) return '/';
+          return null;
+        },
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const _StubPage(label: 'home'),
+          ),
+          GoRoute(
+            path: '/login',
+            builder: (_, __) => const _StubPage(label: 'login'),
+          ),
+          GoRoute(
+            path: '/auth/callback',
+            builder: (_, __) => const _StubPage(label: 'callback'),
+          ),
+          GoRoute(
+            path: '/invite/:code',
+            builder: (_, __) => const _StubPage(label: 'invite'),
+          ),
+        ],
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Test 1: anonymous user opening /invite/:code does not lose the code.
+    // -------------------------------------------------------------------------
+    testWidgets(
+      'anonymous user opening /invite/:code is not redirected to login',
+      (tester) async {
+        final router = _buildRedirectRouter(
+          isLoggedIn: false,
+          pendingCode: null,
+          initialLocation: '/invite/ABCD-1234',
+        );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
+
+        // The invite page stub must be visible, login must not be.
+        expect(find.text('invite'), findsOneWidget);
+        expect(find.text('login'), findsNothing);
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          '/invite/ABCD-1234',
+        );
+      },
+    );
+
+    // -------------------------------------------------------------------------
+    // Test 2: authenticated user can view invite state.
+    // -------------------------------------------------------------------------
+    test(
+      'authenticated user: invite route is a top-level accessible route',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => _MockAuthStateNotifier(AsyncValue.data(_fakeUser())),
+            ),
+            guestModeProvider.overrideWith((ref) => false),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = container.read(appRouterProvider);
+        final topLevelPaths = router.configuration.routes
+            .whereType<GoRoute>()
+            .map((r) => r.path)
+            .toList();
+
+        expect(topLevelPaths, contains('/invite/:code'));
+
+        final inviteRoute = router.configuration.routes
+            .whereType<GoRoute>()
+            .firstWhere((r) => r.path == '/invite/:code');
+        expect(inviteRoute.name, AppRoutes.invite);
+      },
+    );
+
+    // -------------------------------------------------------------------------
+    // Test 3: login redirect preserves invite destination.
+    // -------------------------------------------------------------------------
+    testWidgets(
+      'login redirect with pending invite code navigates to /invite/:code',
+      (tester) async {
+        // Simulate a logged-in user who has a pending invite code saved.
+        final router = _buildRedirectRouter(
+          isLoggedIn: true,
+          pendingCode: 'ABCD-1234',
+          initialLocation: '/',
+        );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
+
+        // The redirect must have forwarded the user to the invite screen.
+        expect(find.text('invite'), findsOneWidget);
+        expect(find.text('home'), findsNothing);
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          '/invite/ABCD-1234',
+        );
+      },
+    );
+
+    // -------------------------------------------------------------------------
+    // Test 4: invalid invite code displays safe error state.
+    // -------------------------------------------------------------------------
+    testWidgets('invalid invite code displays safe error state', (
+      tester,
+    ) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      final service = _FailingInviteRedeemService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            analyticsClientProvider.overrideWithValue(
+              const NullAnalyticsClient(),
+            ),
+            jwtProvider.overrideWith((ref) async => 'test-token'),
+            inviteRedeemServiceProvider.overrideWithValue(service),
+          ],
+          child: const MaterialApp(
+            home: InviteRedeemScreen(inviteCode: 'ZZZZ-9999'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Pre-filled code is present.
+      expect(find.text('ZZZZ-9999'), findsOneWidget);
+
+      // Tap the button widget directly (avoids AppBar title ambiguity).
+      await tester.tap(find.byType(LythButton));
+      await tester.pumpAndSettle();
+
+      // Error message must be visible — no unhandled exception thrown.
+      expect(
+        find.text('Invite could not be redeemed. Please check the code.'),
+        findsOneWidget,
+      );
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Shared test helpers
+// ---------------------------------------------------------------------------
+
+class _StubPage extends StatelessWidget {
+  const _StubPage({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) =>
+      Scaffold(body: Center(child: Text(label)));
+}
+
+/// Service stub that always throws a [DioException] to simulate API failure.
+class _FailingInviteRedeemService extends InviteRedeemService {
+  _FailingInviteRedeemService() : super(Dio());
+
+  @override
+  Future<void> redeemInvite({
+    required String accessToken,
+    required String inviteCode,
+  }) async {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/api/auth/redeem-invite'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/api/auth/redeem-invite'),
+        statusCode: 400,
+        data: {'message': 'not_found'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+  }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs
+
 /// ASORA SERVICE PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for dependency injection
@@ -13,6 +15,7 @@ import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/services/auth_service.dart';
 import 'package:asora/services/post_service.dart';
 import 'package:asora/services/moderation_service.dart';
+import 'package:asora/core/config/b2c_config_service.dart';
 import 'package:asora/services/oauth2_service.dart';
 import 'package:asora/services/push/push_notification_service.dart';
 import 'package:asora/services/push/device_token_service.dart';
@@ -24,6 +27,18 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
 });
 
+/// B2C config service — fetch → cache → bundled fallback.
+const _kB2CConfigEndpoint =
+    'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config';
+
+final b2cConfigServiceProvider = Provider<B2CConfigService>((ref) {
+  return B2CConfigService(
+    dio: ref.watch(secureDioProvider),
+    storage: ref.watch(secureStorageProvider),
+    endpoint: _kB2CConfigEndpoint,
+  );
+});
+
 /// OAuth2 service provider for B2C authentication
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
   final dio = ref.watch(secureDioProvider);
@@ -31,9 +46,8 @@ final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
   return OAuth2Service(
     dio: dio,
     secureStorage: storage,
-    configEndpoint:
-        'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config',
     tracer: globalTracerProvider.getTracer('oauth2_service'),
+    b2cConfigService: ref.watch(b2cConfigServiceProvider),
   );
 });
 

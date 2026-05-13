@@ -146,8 +146,17 @@ export class NotificationDispatcher {
             eventType: event.eventType,
             deviceCount: devices.length,
             failed: result.failed,
+            iosDeferred: result.iosDeferred,
           },
         });
+
+        // iOS push is not implemented — log explicitly so it is never silently lost
+        if (result.iosDeferred > 0) {
+          console.warn(
+            `[Dispatcher] iOS push deferred for ${result.iosDeferred} device(s): ` +
+              `APNS delivery is not implemented. iOS users will not receive this notification.`
+          );
+        }
 
         // Handle invalid tokens - remove from database to avoid repeated failures
         if (result.invalidTokens.length > 0) {

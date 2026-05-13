@@ -137,14 +137,16 @@ Each item is tagged:
 |---|------|------|--------------------|--------|
 | 9.1 | No secrets committed to repo (gitleaks scan) | AUTO | `bash scripts/secret-scan.sh` | |
 | 9.2 | No secrets in docs/markdown (doc secret hygiene) | AUTO | `bash scripts/scan-doc-secrets.sh` (also in `ci.yml`) | |
-| 9.3 | TLS pinning: cert pin files present and verified | AUTO | `bash scripts/verify_pins.py` (or `python3 scripts/verify_pins.py`) | |
+| 9.3 | TLS pinning: dev cert pin files present and verified | AUTO | `python3 scripts/verify_pins.py` (fails if a configured host resolves but has no expected pins) | |
 | 9.4 | TLS pinning rotation runbook reviewed | MANUAL | `docs/runbooks/tls-pinning-rotation.md` — confirm current pins match production certs | |
 | 9.5 | `Cache-Control: no-store, no-cache, private` on auth endpoints | AUTO | `grep 'no-store' functions/shared/utils/http.ts` | |
 | 9.6 | JWT minimum secret length ≥ 32 bytes enforced | AUTO | `grep MIN_JWT_SECRET_BYTES functions/src/auth/config.ts` | |
-| 9.7 | Mobile security checks pass (obfuscation, root detection) | AUTO | `mobile-security-check.yml` | |
+| 9.7 | Mobile security checks pass (obfuscation, root detection) | AUTO | `mobile-security-check.yml` (now hard-fails on empty staging/prod SPKI pins on push to main/release) | |
 | 9.8 | Android obfuscation mapping file uploaded as CI artifact | AUTO | `mobile-release-build.yml` → `android-release` artifact | |
 | 9.9 | External penetration test completed (pre-GA) | MANUAL | Attach pentest report or sign-off letter to `docs/compliance/`; record finding count and resolution status | |
 | 9.10 | Secret rotation runbook reviewed by on-call | MANUAL | `docs/runbooks/secret-rotation.md` — confirm Key Vault rotation schedule is active | |
+| 9.11 | **[LAUNCH BLOCKER]** Staging SPKI pins provisioned | MANUAL | Requires `asora-function-staging` deployed. Run: `./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net` → paste into `_stagingMobileSecurity.tlsPins.spkiPinsBase64` in `lib/core/config/environment_config.dart` and into `mobile-expected-pins.json`. Then run `SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart` to verify. | |
+| 9.12 | **[LAUNCH BLOCKER]** Production SPKI pins provisioned (leaf + backup) | MANUAL | Requires `asora-function-prod` deployed. Run: `./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` and `CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` → paste both into `_prodMobileSecurity.tlsPins.spkiPinsBase64`. Also update `mobile-expected-pins.json` and `lib/core/security/cert_pinning_common.dart` (`kPinnedDomains`). Full procedure: `docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning`. | |
 
 ---
 
@@ -209,7 +211,51 @@ Each item is tagged:
 
 ---
 
-## 14. Known Residual Risks
+## 14. Payments (Deferred — Soft Launch)
+
+> **Status: DEFERRED.** No payment provider is wired for launch. Payments are intentionally
+> excluded from the initial soft launch. Black tier is granted manually by an admin for
+> invited testers.
+
+| # | Item | Type | Command / Evidence | Status |
+|---|------|------|--------------------|--------|
+| 14.1 | No paywall or purchase UI route is reachable by end users | AUTO | `grep -rn 'paywall\|startPurchase\|PurchaseScreen' lib/ --include="*.dart"` must return zero app-layer hits | |
+| 14.2 | `BackendSubscriptionService.startPurchase()` returns `PROVIDER_NOT_CONFIGURED` (not `UnimplementedError`) | AUTO | `flutter test test/services/subscription/subscription_service_test.dart` | |
+| 14.3 | `BackendSubscriptionService.restorePurchases()` returns `PROVIDER_NOT_CONFIGURED` | AUTO | same as 14.2 | |
+| 14.4 | `BackendSubscriptionService.getProducts()` returns empty list | AUTO | same as 14.2 | |
+| 14.5 | Admin can manually grant Black tier via `PATCH /api/admin/users/:userId/tier` | AUTO | `npm test -- --testPathPattern=users_set_tier` (from `functions/`) | |
+| 14.6 | Manual Black tier is reflected by `GET /api/subscription/status` without JWT re-issuance | MANUAL | Set tier via admin endpoint; verify status endpoint returns `"tier":"black"` | |
+| 14.7 | Webhook endpoint returns `501 Not Implemented` when no provider is wired | AUTO | `curl -X POST .../api/payments/webhook` returns `{ "error": "not_implemented" }` | |
+
+### Manual Black Tier Assignment (Soft Launch Process)
+
+To grant Black tier to a tester during soft launch:
+
+```bash
+# Requires an admin JWT (role: admin) in AUTH_TOKEN
+curl -X PATCH "https://asora-function-dev.azurewebsites.net/api/admin/users/<USER_ID>/tier" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tier":"black"}'
+```
+
+The user's tier is persisted in their Cosmos document. `GET /api/subscription/status`
+reads Cosmos tier with priority over the JWT claim, so the change is effective immediately
+without requiring the user to sign out and back in.
+
+### When Payments Are Ready
+
+Remove or supersede items 14.1–14.7 once a payment provider is wired:
+1. Choose provider (RevenueCat / StoreKit 2 / Google Billing Library)
+2. Implement `PaymentProviderAdapter` in `functions/src/payments/adapters/`
+3. Set `PAYMENT_PROVIDER` env var and provider-specific secrets in Key Vault
+4. Create Cosmos `subscriptions` container (`/userId` partition key)
+5. Wire `subscription_status` to Cosmos subscriptions container (replace user-doc tier override)
+6. Remove the `admin_set_user_tier` endpoint or gate it behind a feature flag
+
+---
+
+## 15. Known Residual Risks
 
 These items are **accepted risks** for GA. Each has a mitigation plan and owner.
 

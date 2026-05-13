@@ -7,6 +7,7 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
+import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
 import 'package:asora/ui/screens/app_shell.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
 
@@ -41,6 +42,23 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       final analytics = ref.read(analyticsClientProvider);
       final user = next.valueOrNull;
       analytics.setUserId(user?.id);
+
+      // After a successful sign-in, open the invite redemption screen if a
+      // code was saved while the user was unauthenticated.
+      if (user != null && previous?.valueOrNull == null) {
+        final pendingCode = ref.read(pendingInviteCodeProvider);
+        if (pendingCode != null && pendingCode.isNotEmpty) {
+          ref.read(pendingInviteCodeProvider.notifier).state = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => InviteRedeemScreen(inviteCode: pendingCode),
+              ),
+            );
+          });
+        }
+      }
     });
   }
 
