@@ -18,8 +18,7 @@ part 'feed_page_response_meta.g.dart';
 /// * [timingsMs] - Server-side timing breakdown (ms)
 /// * [applied] - Applied ranking modifiers and personalization signals
 @BuiltValue()
-abstract class FeedPageResponseMeta
-    implements Built<FeedPageResponseMeta, FeedPageResponseMetaBuilder> {
+abstract class FeedPageResponseMeta implements Built<FeedPageResponseMeta, FeedPageResponseMetaBuilder> {
   /// Number of items returned
   @BuiltValueField(wireName: r'count')
   int get count;
@@ -38,24 +37,18 @@ abstract class FeedPageResponseMeta
 
   FeedPageResponseMeta._();
 
-  factory FeedPageResponseMeta([void updates(FeedPageResponseMetaBuilder b)]) =
-      _$FeedPageResponseMeta;
+  factory FeedPageResponseMeta([void updates(FeedPageResponseMetaBuilder b)]) = _$FeedPageResponseMeta;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(FeedPageResponseMetaBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<FeedPageResponseMeta> get serializer =>
-      _$FeedPageResponseMetaSerializer();
+  static Serializer<FeedPageResponseMeta> get serializer => _$FeedPageResponseMetaSerializer();
 }
 
-class _$FeedPageResponseMetaSerializer
-    implements PrimitiveSerializer<FeedPageResponseMeta> {
+class _$FeedPageResponseMetaSerializer implements PrimitiveSerializer<FeedPageResponseMeta> {
   @override
-  final Iterable<Type> types = const [
-    FeedPageResponseMeta,
-    _$FeedPageResponseMeta
-  ];
+  final Iterable<Type> types = const [FeedPageResponseMeta, _$FeedPageResponseMeta];
 
   @override
   final String wireName = r'FeedPageResponseMeta';
@@ -81,16 +74,14 @@ class _$FeedPageResponseMetaSerializer
       yield r'timingsMs';
       yield serializers.serialize(
         object.timingsMs,
-        specifiedType:
-            const FullType(BuiltMap, [FullType(String), FullType(num)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(num)]),
       );
     }
     if (object.applied != null) {
       yield r'applied';
       yield serializers.serialize(
         object.applied,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
   }
@@ -101,9 +92,7 @@ class _$FeedPageResponseMetaSerializer
     FeedPageResponseMeta object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -136,16 +125,14 @@ class _$FeedPageResponseMetaSerializer
         case r'timingsMs':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType:
-                const FullType(BuiltMap, [FullType(String), FullType(num)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType(num)]),
           ) as BuiltMap<String, num>;
           result.timingsMs.replace(valueDes);
           break;
         case r'applied':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.applied.replace(valueDes);
           break;
@@ -177,3 +164,4 @@ class _$FeedPageResponseMetaSerializer
     return result.build();
   }
 }
+

@@ -13,32 +13,25 @@ part 'redeem_invite_request.g.dart';
 /// Properties:
 /// * [inviteCode] - Invite code in XXXX-XXXX format
 @BuiltValue()
-abstract class RedeemInviteRequest
-    implements Built<RedeemInviteRequest, RedeemInviteRequestBuilder> {
+abstract class RedeemInviteRequest implements Built<RedeemInviteRequest, RedeemInviteRequestBuilder> {
   /// Invite code in XXXX-XXXX format
   @BuiltValueField(wireName: r'inviteCode')
   String get inviteCode;
 
   RedeemInviteRequest._();
 
-  factory RedeemInviteRequest([void updates(RedeemInviteRequestBuilder b)]) =
-      _$RedeemInviteRequest;
+  factory RedeemInviteRequest([void updates(RedeemInviteRequestBuilder b)]) = _$RedeemInviteRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(RedeemInviteRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<RedeemInviteRequest> get serializer =>
-      _$RedeemInviteRequestSerializer();
+  static Serializer<RedeemInviteRequest> get serializer => _$RedeemInviteRequestSerializer();
 }
 
-class _$RedeemInviteRequestSerializer
-    implements PrimitiveSerializer<RedeemInviteRequest> {
+class _$RedeemInviteRequestSerializer implements PrimitiveSerializer<RedeemInviteRequest> {
   @override
-  final Iterable<Type> types = const [
-    RedeemInviteRequest,
-    _$RedeemInviteRequest
-  ];
+  final Iterable<Type> types = const [RedeemInviteRequest, _$RedeemInviteRequest];
 
   @override
   final String wireName = r'RedeemInviteRequest';
@@ -61,9 +54,7 @@ class _$RedeemInviteRequestSerializer
     RedeemInviteRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -113,3 +104,4 @@ class _$RedeemInviteRequestSerializer
     return result.build();
   }
 }
+

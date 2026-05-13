@@ -12,28 +12,24 @@ part 'forbidden_error.g.dart';
 /// 403 – authenticated caller lacks required role or permission.
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
-abstract class ForbiddenError
-    implements Built<ForbiddenError, ForbiddenErrorBuilder> {
+abstract class ForbiddenError implements Built<ForbiddenError, ForbiddenErrorBuilder> {
   @BuiltValueField(wireName: r'error')
   ForbiddenErrorError get error;
 
   ForbiddenError._();
 
-  factory ForbiddenError([void updates(ForbiddenErrorBuilder b)]) =
-      _$ForbiddenError;
+  factory ForbiddenError([void updates(ForbiddenErrorBuilder b)]) = _$ForbiddenError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ForbiddenErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ForbiddenError> get serializer =>
-      _$ForbiddenErrorSerializer();
+  static Serializer<ForbiddenError> get serializer => _$ForbiddenErrorSerializer();
 }
 
-class _$ForbiddenErrorSerializer
-    implements PrimitiveSerializer<ForbiddenError> {
+class _$ForbiddenErrorSerializer implements PrimitiveSerializer<ForbiddenError> {
   @override
   final Iterable<Type> types = const [ForbiddenError, _$ForbiddenError];
 
@@ -58,9 +54,7 @@ class _$ForbiddenErrorSerializer
     ForbiddenError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -110,3 +104,4 @@ class _$ForbiddenErrorSerializer
     return result.build();
   }
 }
+

@@ -42,7 +42,7 @@ final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
   final token = await ref.read(jwtProvider.future);
   return feedService.getFeed(
     params: FeedParams(
-      type: FeedType.trending,
+      type: FeedType.notable,
       page: 1,
       pageSize: 20,
       tags: [query],

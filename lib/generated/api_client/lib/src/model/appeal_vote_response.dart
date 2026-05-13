@@ -12,28 +12,24 @@ part 'appeal_vote_response.g.dart';
 /// Confirmation of a recorded appeal vote.
 ///
 /// Properties:
-/// * [vote]
+/// * [vote] 
 @BuiltValue()
-abstract class AppealVoteResponse
-    implements Built<AppealVoteResponse, AppealVoteResponseBuilder> {
+abstract class AppealVoteResponse implements Built<AppealVoteResponse, AppealVoteResponseBuilder> {
   @BuiltValueField(wireName: r'vote')
   AppealVoteResponseVote get vote;
 
   AppealVoteResponse._();
 
-  factory AppealVoteResponse([void updates(AppealVoteResponseBuilder b)]) =
-      _$AppealVoteResponse;
+  factory AppealVoteResponse([void updates(AppealVoteResponseBuilder b)]) = _$AppealVoteResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AppealVoteResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AppealVoteResponse> get serializer =>
-      _$AppealVoteResponseSerializer();
+  static Serializer<AppealVoteResponse> get serializer => _$AppealVoteResponseSerializer();
 }
 
-class _$AppealVoteResponseSerializer
-    implements PrimitiveSerializer<AppealVoteResponse> {
+class _$AppealVoteResponseSerializer implements PrimitiveSerializer<AppealVoteResponse> {
   @override
   final Iterable<Type> types = const [AppealVoteResponse, _$AppealVoteResponse];
 
@@ -58,9 +54,7 @@ class _$AppealVoteResponseSerializer
     AppealVoteResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -110,3 +104,4 @@ class _$AppealVoteResponseSerializer
     return result.build();
   }
 }
+

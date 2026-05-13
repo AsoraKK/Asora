@@ -13,15 +13,14 @@ part 'user_info_response_data.g.dart';
 ///
 /// Properties:
 /// * [sub] - Subject identifier (user ID)
-/// * [email]
-/// * [displayName]
-/// * [handle]
-/// * [tier]
-/// * [roles]
-/// * [avatarUrl]
+/// * [email] 
+/// * [displayName] 
+/// * [handle] 
+/// * [tier] 
+/// * [roles] 
+/// * [avatarUrl] 
 @BuiltValue()
-abstract class UserInfoResponseData
-    implements Built<UserInfoResponseData, UserInfoResponseDataBuilder> {
+abstract class UserInfoResponseData implements Built<UserInfoResponseData, UserInfoResponseDataBuilder> {
   /// Subject identifier (user ID)
   @BuiltValueField(wireName: r'sub')
   String get sub;
@@ -47,24 +46,18 @@ abstract class UserInfoResponseData
 
   UserInfoResponseData._();
 
-  factory UserInfoResponseData([void updates(UserInfoResponseDataBuilder b)]) =
-      _$UserInfoResponseData;
+  factory UserInfoResponseData([void updates(UserInfoResponseDataBuilder b)]) = _$UserInfoResponseData;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(UserInfoResponseDataBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UserInfoResponseData> get serializer =>
-      _$UserInfoResponseDataSerializer();
+  static Serializer<UserInfoResponseData> get serializer => _$UserInfoResponseDataSerializer();
 }
 
-class _$UserInfoResponseDataSerializer
-    implements PrimitiveSerializer<UserInfoResponseData> {
+class _$UserInfoResponseDataSerializer implements PrimitiveSerializer<UserInfoResponseData> {
   @override
-  final Iterable<Type> types = const [
-    UserInfoResponseData,
-    _$UserInfoResponseData
-  ];
+  final Iterable<Type> types = const [UserInfoResponseData, _$UserInfoResponseData];
 
   @override
   final String wireName = r'UserInfoResponseData';
@@ -129,9 +122,7 @@ class _$UserInfoResponseDataSerializer
     UserInfoResponseData object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -225,26 +216,21 @@ class _$UserInfoResponseDataSerializer
 }
 
 class UserInfoResponseDataTierEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'free')
-  static const UserInfoResponseDataTierEnum free =
-      _$userInfoResponseDataTierEnum_free;
+  static const UserInfoResponseDataTierEnum free = _$userInfoResponseDataTierEnum_free;
   @BuiltValueEnumConst(wireName: r'creator')
-  static const UserInfoResponseDataTierEnum creator =
-      _$userInfoResponseDataTierEnum_creator;
+  static const UserInfoResponseDataTierEnum creator = _$userInfoResponseDataTierEnum_creator;
   @BuiltValueEnumConst(wireName: r'premium')
-  static const UserInfoResponseDataTierEnum premium =
-      _$userInfoResponseDataTierEnum_premium;
+  static const UserInfoResponseDataTierEnum premium = _$userInfoResponseDataTierEnum_premium;
   @BuiltValueEnumConst(wireName: r'enterprise')
-  static const UserInfoResponseDataTierEnum enterprise =
-      _$userInfoResponseDataTierEnum_enterprise;
+  static const UserInfoResponseDataTierEnum enterprise = _$userInfoResponseDataTierEnum_enterprise;
 
-  static Serializer<UserInfoResponseDataTierEnum> get serializer =>
-      _$userInfoResponseDataTierEnumSerializer;
+  static Serializer<UserInfoResponseDataTierEnum> get serializer => _$userInfoResponseDataTierEnumSerializer;
 
-  const UserInfoResponseDataTierEnum._(String name) : super(name);
+  const UserInfoResponseDataTierEnum._(String name): super(name);
 
-  static BuiltSet<UserInfoResponseDataTierEnum> get values =>
-      _$userInfoResponseDataTierEnumValues;
-  static UserInfoResponseDataTierEnum valueOf(String name) =>
-      _$userInfoResponseDataTierEnumValueOf(name);
+  static BuiltSet<UserInfoResponseDataTierEnum> get values => _$userInfoResponseDataTierEnumValues;
+  static UserInfoResponseDataTierEnum valueOf(String name) => _$userInfoResponseDataTierEnumValueOf(name);
 }
+

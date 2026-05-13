@@ -141,12 +141,16 @@ Class | Method | HTTP request | Description
 [*HealthApi*](doc/HealthApi.md) | [**getHealth**](doc/HealthApi.md#gethealth) | **GET** /health | Service health probe
 [*HealthApi*](doc/HealthApi.md) | [**ready**](doc/HealthApi.md#ready) | **GET** /ready | Readiness probe
 [*ModerationApi*](doc/ModerationApi.md) | [**flagContent**](doc/ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
+[*ModerationApi*](doc/ModerationApi.md) | [**flagContentV1**](doc/ModerationApi.md#flagcontentv1) | **POST** /moderation/flag-content | Flag content for moderation review (v1 route)
+[*ModerationApi*](doc/ModerationApi.md) | [**getMyAppeals**](doc/ModerationApi.md#getmyappeals) | **GET** /moderation/my-appeals | List the authenticated user&#39;s moderation appeals
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationCasesDecision**](doc/ModerationApi.md#moderationcasesdecision) | **POST** /moderation/cases/{id}/decision | Record a decision on a moderation case
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationCasesGet**](doc/ModerationApi.md#moderationcasesget) | **GET** /moderation/cases/{id} | Get moderation case detail
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationQueueList**](doc/ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationReviewQueueList**](doc/ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationTest**](doc/ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
+[*ModerationApi*](doc/ModerationApi.md) | [**submitAppealV1**](doc/ModerationApi.md#submitappealv1) | **POST** /moderation/submit-appeal | Submit a moderation appeal (v1 route)
 [*ModerationApi*](doc/ModerationApi.md) | [**submitModerationAppeal**](doc/ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
+[*ModerationApi*](doc/ModerationApi.md) | [**voteOnAppealV1**](doc/ModerationApi.md#voteonappealv1) | **POST** /moderation/vote-appeal | Cast a community vote on an appeal (v1 route)
 [*ModerationApi*](doc/ModerationApi.md) | [**voteOnModerationAppeal**](doc/ModerationApi.md#voteonmoderationappeal) | **POST** /moderation/appeals/{appealId}/vote | Cast a community vote on an appeal
 [*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDevicesCreate**](doc/NotificationsApi.md#notificationsdevicescreate) | **POST** /notifications/devices | Register a push device token
 [*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsDevicesList**](doc/NotificationsApi.md#notificationsdeviceslist) | **GET** /notifications/devices | List registered push devices
@@ -268,9 +272,13 @@ Class | Method | HTTP request | Description
  - [FeedPageResponseMeta](doc/FeedPageResponseMeta.md)
  - [FlagContent202Response](doc/FlagContent202Response.md)
  - [FlagContentRequest](doc/FlagContentRequest.md)
+ - [FlagContentV1202Response](doc/FlagContentV1202Response.md)
+ - [FlagContentV1Request](doc/FlagContentV1Request.md)
  - [ForbiddenError](doc/ForbiddenError.md)
  - [ForbiddenErrorError](doc/ForbiddenErrorError.md)
  - [GetHealth200Response](doc/GetHealth200Response.md)
+ - [GetMyAppeals200Response](doc/GetMyAppeals200Response.md)
+ - [GetMyAppeals200ResponseItemsInner](doc/GetMyAppeals200ResponseItemsInner.md)
  - [InviteValidationPayload](doc/InviteValidationPayload.md)
  - [InviteValidationResponse](doc/InviteValidationResponse.md)
  - [LegalHoldClear](doc/LegalHoldClear.md)
@@ -293,6 +301,7 @@ Class | Method | HTTP request | Description
  - [ValidationErrorResponse](doc/ValidationErrorResponse.md)
  - [ValidationErrorResponseError](doc/ValidationErrorResponseError.md)
  - [ValidationErrorResponseErrorFieldsInner](doc/ValidationErrorResponseErrorFieldsInner.md)
+ - [VoteOnAppealV1Request](doc/VoteOnAppealV1Request.md)
 
 
 ## Documentation For Authorization

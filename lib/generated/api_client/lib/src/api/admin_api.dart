@@ -39,6 +39,7 @@ import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
 
 class AdminApi {
+
   final Dio _dio;
 
   final Serializers _serializers;
@@ -50,7 +51,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealDecisionRequest]
+  /// * [adminAppealDecisionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -60,7 +61,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDecisionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDecisionResponse>> adminAppealsApprove({
+  Future<Response<AdminAppealDecisionResponse>> adminAppealsApprove({ 
     required String appealId,
     required AdminAppealDecisionRequest adminAppealDecisionRequest,
     CancelToken? cancelToken,
@@ -70,10 +71,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/appeals/{appealId}/approve'.replaceAll(
-        '{' r'appealId' '}',
-        encodeQueryParameter(_serializers, appealId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/appeals/{appealId}/approve'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -97,11 +95,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminAppealDecisionRequest);
-      _bodyData = _serializers.serialize(adminAppealDecisionRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminAppealDecisionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -124,12 +122,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAppealDecisionResponse),
-            ) as AdminAppealDecisionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealDecisionResponse),
+      ) as AdminAppealDecisionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -166,7 +163,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDetailResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDetailResponse>> adminAppealsGet({
+  Future<Response<AdminAppealDetailResponse>> adminAppealsGet({ 
     required String appealId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -175,10 +172,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/appeals/{appealId}'.replaceAll(
-        '{' r'appealId' '}',
-        encodeQueryParameter(_serializers, appealId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/appeals/{appealId}'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -209,12 +203,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAppealDetailResponse),
-            ) as AdminAppealDetailResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealDetailResponse),
+      ) as AdminAppealDetailResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -253,7 +246,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealQueueResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealQueueResponse>> adminAppealsList({
+  Future<Response<AdminAppealQueueResponse>> adminAppealsList({ 
     String? status,
     String? cursor,
     int? limit,
@@ -284,15 +277,9 @@ class AdminApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (status != null)
-        r'status':
-            encodeQueryParameter(_serializers, status, const FullType(String)),
-      if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -308,12 +295,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAppealQueueResponse),
-            ) as AdminAppealQueueResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealQueueResponse),
+      ) as AdminAppealQueueResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -341,7 +327,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealOverrideRequest]
+  /// * [adminAppealOverrideRequest] 
   /// * [idempotencyKey] - Idempotency key for safe retries
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -352,7 +338,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealOverrideResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealOverrideResponse>> adminAppealsOverride({
+  Future<Response<AdminAppealOverrideResponse>> adminAppealsOverride({ 
     required String appealId,
     required AdminAppealOverrideRequest adminAppealOverrideRequest,
     String? idempotencyKey,
@@ -363,10 +349,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/appeals/{appealId}/override'.replaceAll(
-        '{' r'appealId' '}',
-        encodeQueryParameter(_serializers, appealId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/appeals/{appealId}/override'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -391,11 +374,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminAppealOverrideRequest);
-      _bodyData = _serializers.serialize(adminAppealOverrideRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminAppealOverrideRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -418,12 +401,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAppealOverrideResponse),
-            ) as AdminAppealOverrideResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealOverrideResponse),
+      ) as AdminAppealOverrideResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -451,7 +433,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealDecisionRequest]
+  /// * [adminAppealDecisionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -461,7 +443,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDecisionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDecisionResponse>> adminAppealsReject({
+  Future<Response<AdminAppealDecisionResponse>> adminAppealsReject({ 
     required String appealId,
     required AdminAppealDecisionRequest adminAppealDecisionRequest,
     CancelToken? cancelToken,
@@ -471,10 +453,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/appeals/{appealId}/reject'.replaceAll(
-        '{' r'appealId' '}',
-        encodeQueryParameter(_serializers, appealId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/appeals/{appealId}/reject'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -498,11 +477,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminAppealDecisionRequest);
-      _bodyData = _serializers.serialize(adminAppealDecisionRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminAppealDecisionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -525,12 +504,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAppealDecisionResponse),
-            ) as AdminAppealDecisionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAppealDecisionResponse),
+      ) as AdminAppealDecisionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -567,7 +545,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAuditListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAuditListResponse>> adminAuditList({
+  Future<Response<AdminAuditListResponse>> adminAuditList({ 
     int? limit,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -596,9 +574,7 @@ class AdminApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -614,12 +590,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminAuditListResponse),
-            ) as AdminAuditListResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminAuditListResponse),
+      ) as AdminAuditListResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -643,7 +618,7 @@ class AdminApi {
   }
 
   /// Get budget configuration
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -655,7 +630,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminBudgetGet({
+  Future<Response<JsonObject>> adminBudgetGet({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -694,12 +669,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -723,10 +697,10 @@ class AdminApi {
   }
 
   /// Update budget configuration
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -736,7 +710,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminBudgetUpdate({
+  Future<Response<JsonObject>> adminBudgetUpdate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -769,9 +743,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -794,12 +769,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -823,7 +797,7 @@ class AdminApi {
   }
 
   /// Get admin runtime configuration
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -835,7 +809,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigGet({
+  Future<Response<JsonObject>> adminConfigGet({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -874,12 +848,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -903,7 +876,7 @@ class AdminApi {
   }
 
   /// Get public admin configuration
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -915,7 +888,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigPublicGet({
+  Future<Response<JsonObject>> adminConfigPublicGet({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -954,12 +927,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -983,10 +955,10 @@ class AdminApi {
   }
 
   /// Update public admin configuration
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -996,7 +968,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigPublicUpdate({
+  Future<Response<JsonObject>> adminConfigPublicUpdate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1029,9 +1001,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1054,12 +1027,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1083,10 +1055,10 @@ class AdminApi {
   }
 
   /// Update admin runtime configuration
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1096,7 +1068,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigUpdate({
+  Future<Response<JsonObject>> adminConfigUpdate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1129,9 +1101,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1154,12 +1127,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1187,7 +1159,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [contentId] - Content identifier
-  /// * [adminContentActionRequest]
+  /// * [adminContentActionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1197,7 +1169,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminContentActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminContentActionResponse>> adminContentBlock({
+  Future<Response<AdminContentActionResponse>> adminContentBlock({ 
     required String contentId,
     required AdminContentActionRequest adminContentActionRequest,
     CancelToken? cancelToken,
@@ -1207,10 +1179,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/content/{contentId}/block'.replaceAll(
-        '{' r'contentId' '}',
-        encodeQueryParameter(_serializers, contentId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/content/{contentId}/block'.replaceAll('{' r'contentId' '}', encodeQueryParameter(_serializers, contentId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1234,11 +1203,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminContentActionRequest);
-      _bodyData = _serializers.serialize(adminContentActionRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminContentActionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1261,12 +1230,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminContentActionResponse),
-            ) as AdminContentActionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminContentActionResponse),
+      ) as AdminContentActionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1294,7 +1262,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [contentId] - Content identifier
-  /// * [adminContentActionRequest]
+  /// * [adminContentActionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1304,7 +1272,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminContentActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminContentActionResponse>> adminContentPublish({
+  Future<Response<AdminContentActionResponse>> adminContentPublish({ 
     required String contentId,
     required AdminContentActionRequest adminContentActionRequest,
     CancelToken? cancelToken,
@@ -1314,10 +1282,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/content/{contentId}/publish'.replaceAll(
-        '{' r'contentId' '}',
-        encodeQueryParameter(_serializers, contentId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/content/{contentId}/publish'.replaceAll('{' r'contentId' '}', encodeQueryParameter(_serializers, contentId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1341,11 +1306,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminContentActionRequest);
-      _bodyData = _serializers.serialize(adminContentActionRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminContentActionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1368,12 +1333,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminContentActionResponse),
-            ) as AdminContentActionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminContentActionResponse),
+      ) as AdminContentActionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1397,11 +1361,11 @@ class AdminApi {
   }
 
   /// Cancel a data subject request
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1411,7 +1375,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrCancel({
+  Future<Response<JsonObject>> adminDsrCancel({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -1421,10 +1385,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/cancel'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/cancel'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1448,9 +1409,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1473,12 +1435,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1502,10 +1463,10 @@ class AdminApi {
   }
 
   /// Download data subject request export
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1515,7 +1476,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrDownload({
+  Future<Response<JsonObject>> adminDsrDownload({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1524,10 +1485,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/download'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/download'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -1558,12 +1516,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1587,10 +1544,10 @@ class AdminApi {
   }
 
   /// Get data subject request detail
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1600,7 +1557,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrGet({
+  Future<Response<JsonObject>> adminDsrGet({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1609,10 +1566,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -1643,12 +1597,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1672,11 +1625,11 @@ class AdminApi {
   }
 
   /// Clear a legal hold
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1686,7 +1639,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrLegalHoldClear({
+  Future<Response<JsonObject>> adminDsrLegalHoldClear({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -1696,10 +1649,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/legal-holds/{id}/clear'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/legal-holds/{id}/clear'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1723,9 +1673,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1748,12 +1699,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1777,10 +1727,10 @@ class AdminApi {
   }
 
   /// Place a legal hold
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1790,7 +1740,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrLegalHoldPlace({
+  Future<Response<JsonObject>> adminDsrLegalHoldPlace({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1823,9 +1773,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -1848,12 +1799,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1877,7 +1827,7 @@ class AdminApi {
   }
 
   /// List data subject requests
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1889,7 +1839,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrList({
+  Future<Response<JsonObject>> adminDsrList({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1928,12 +1878,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1957,11 +1906,11 @@ class AdminApi {
   }
 
   /// Release a data subject request
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1971,7 +1920,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrRelease({
+  Future<Response<JsonObject>> adminDsrRelease({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -1981,10 +1930,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/release'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/release'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2008,9 +1954,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2033,12 +1980,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2062,11 +2008,11 @@ class AdminApi {
   }
 
   /// Retry a failed data subject request
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2076,7 +2022,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrRetry({
+  Future<Response<JsonObject>> adminDsrRetry({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2086,10 +2032,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/retry'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/retry'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2113,9 +2056,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2138,12 +2082,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2167,11 +2110,11 @@ class AdminApi {
   }
 
   /// First-reviewer decision on DSR
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2181,7 +2124,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrReviewA({
+  Future<Response<JsonObject>> adminDsrReviewA({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2191,10 +2134,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/reviewA'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/reviewA'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2218,9 +2158,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2243,12 +2184,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2272,11 +2212,11 @@ class AdminApi {
   }
 
   /// Second-reviewer decision on DSR
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [id] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2286,7 +2226,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrReviewB({
+  Future<Response<JsonObject>> adminDsrReviewB({ 
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2296,10 +2236,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/dsr/{id}/reviewB'.replaceAll(
-        '{' r'id' '}',
-        encodeQueryParameter(_serializers, id, const FullType(String))
-            .toString());
+    final _path = r'/_admin/dsr/{id}/reviewB'.replaceAll('{' r'id' '}', encodeQueryParameter(_serializers, id, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2323,9 +2260,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2348,12 +2286,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2390,7 +2327,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminFlagDetailResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminFlagDetailResponse>> adminFlagsGet({
+  Future<Response<AdminFlagDetailResponse>> adminFlagsGet({ 
     required String flagId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2399,10 +2336,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/flags/{flagId}'.replaceAll(
-        '{' r'flagId' '}',
-        encodeQueryParameter(_serializers, flagId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/flags/{flagId}'.replaceAll('{' r'flagId' '}', encodeQueryParameter(_serializers, flagId, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -2433,12 +2367,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminFlagDetailResponse),
-            ) as AdminFlagDetailResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminFlagDetailResponse),
+      ) as AdminFlagDetailResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2477,7 +2410,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminFlagQueueResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminFlagQueueResponse>> adminFlagsList({
+  Future<Response<AdminFlagQueueResponse>> adminFlagsList({ 
     String? status,
     String? cursor,
     int? limit,
@@ -2508,15 +2441,9 @@ class AdminApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (status != null)
-        r'status':
-            encodeQueryParameter(_serializers, status, const FullType(String)),
-      if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -2532,12 +2459,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminFlagQueueResponse),
-            ) as AdminFlagQueueResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminFlagQueueResponse),
+      ) as AdminFlagQueueResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2565,7 +2491,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [flagId] - Flag identifier
-  /// * [adminFlagResolveRequest]
+  /// * [adminFlagResolveRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2575,7 +2501,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminResolveResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminResolveResponse>> adminFlagsResolve({
+  Future<Response<AdminResolveResponse>> adminFlagsResolve({ 
     required String flagId,
     required AdminFlagResolveRequest adminFlagResolveRequest,
     CancelToken? cancelToken,
@@ -2585,10 +2511,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/flags/{flagId}/resolve'.replaceAll(
-        '{' r'flagId' '}',
-        encodeQueryParameter(_serializers, flagId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/flags/{flagId}/resolve'.replaceAll('{' r'flagId' '}', encodeQueryParameter(_serializers, flagId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2612,11 +2535,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminFlagResolveRequest);
-      _bodyData =
-          _serializers.serialize(adminFlagResolveRequest, specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminFlagResolveRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2639,12 +2562,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminResolveResponse),
-            ) as AdminResolveResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminResolveResponse),
+      ) as AdminResolveResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2671,7 +2593,7 @@ class AdminApi {
   /// Creates multiple invite codes in a single request.
   ///
   /// Parameters:
-  /// * [adminInviteBatchRequest]
+  /// * [adminInviteBatchRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2681,7 +2603,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteBatchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteBatchResponse>> adminInvitesBatch({
+  Future<Response<AdminInviteBatchResponse>> adminInvitesBatch({ 
     required AdminInviteBatchRequest adminInviteBatchRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2714,11 +2636,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminInviteBatchRequest);
-      _bodyData =
-          _serializers.serialize(adminInviteBatchRequest, specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminInviteBatchRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2741,12 +2663,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminInviteBatchResponse),
-            ) as AdminInviteBatchResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteBatchResponse),
+      ) as AdminInviteBatchResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2773,7 +2694,7 @@ class AdminApi {
   /// Creates a single admin invite code.
   ///
   /// Parameters:
-  /// * [adminInviteCreateRequest]
+  /// * [adminInviteCreateRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2783,7 +2704,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteResponse>> adminInvitesCreate({
+  Future<Response<AdminInviteResponse>> adminInvitesCreate({ 
     required AdminInviteCreateRequest adminInviteCreateRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2816,11 +2737,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminInviteCreateRequest);
-      _bodyData = _serializers.serialize(adminInviteCreateRequest,
-          specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminInviteCreateRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -2843,12 +2764,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminInviteResponse),
-            ) as AdminInviteResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteResponse),
+      ) as AdminInviteResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2885,7 +2805,7 @@ class AdminApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminInvitesDelete({
+  Future<Response<void>> adminInvitesDelete({ 
     required String code,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2894,10 +2814,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}'.replaceAll(
-        '{' r'code' '}',
-        encodeQueryParameter(_serializers, code, const FullType(String))
-            .toString());
+    final _path = r'/_admin/invites/{code}'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
     final _options = Options(
       method: r'DELETE',
       headers: <String, dynamic>{
@@ -2941,7 +2858,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteResponse>> adminInvitesGet({
+  Future<Response<AdminInviteResponse>> adminInvitesGet({ 
     required String code,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2950,10 +2867,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}'.replaceAll(
-        '{' r'code' '}',
-        encodeQueryParameter(_serializers, code, const FullType(String))
-            .toString());
+    final _path = r'/_admin/invites/{code}'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -2984,12 +2898,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminInviteResponse),
-            ) as AdminInviteResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteResponse),
+      ) as AdminInviteResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3029,7 +2942,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteListResponse>> adminInvitesList({
+  Future<Response<AdminInviteListResponse>> adminInvitesList({ 
     String? createdBy,
     bool? unused,
     String? cursor,
@@ -3061,18 +2974,10 @@ class AdminApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (createdBy != null)
-        r'createdBy': encodeQueryParameter(
-            _serializers, createdBy, const FullType(String)),
-      if (unused != null)
-        r'unused':
-            encodeQueryParameter(_serializers, unused, const FullType(bool)),
-      if (cursor != null)
-        r'cursor':
-            encodeQueryParameter(_serializers, cursor, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (createdBy != null) r'createdBy': encodeQueryParameter(_serializers, createdBy, const FullType(String)),
+      if (unused != null) r'unused': encodeQueryParameter(_serializers, unused, const FullType(bool)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -3088,12 +2993,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminInviteListResponse),
-            ) as AdminInviteListResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteListResponse),
+      ) as AdminInviteListResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3121,7 +3025,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [code] - Invite code
-  /// * [adminInviteRevokeRequest]
+  /// * [adminInviteRevokeRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3131,7 +3035,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteRevokeResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteRevokeResponse>> adminInvitesRevoke({
+  Future<Response<AdminInviteRevokeResponse>> adminInvitesRevoke({ 
     required String code,
     AdminInviteRevokeRequest? adminInviteRevokeRequest,
     CancelToken? cancelToken,
@@ -3141,10 +3045,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}/revoke'.replaceAll(
-        '{' r'code' '}',
-        encodeQueryParameter(_serializers, code, const FullType(String))
-            .toString());
+    final _path = r'/_admin/invites/{code}/revoke'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -3168,13 +3069,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminInviteRevokeRequest);
-      _bodyData = adminInviteRevokeRequest == null
-          ? null
-          : _serializers.serialize(adminInviteRevokeRequest,
-              specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = adminInviteRevokeRequest == null ? null : _serializers.serialize(adminInviteRevokeRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3197,12 +3096,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminInviteRevokeResponse),
-            ) as AdminInviteRevokeResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteRevokeResponse),
+      ) as AdminInviteRevokeResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3226,11 +3124,11 @@ class AdminApi {
   }
 
   /// Reset a moderation class to defaults
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [className]
-  /// * [body]
+  /// * [className] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3240,7 +3138,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationClassReset({
+  Future<Response<JsonObject>> adminModerationClassReset({ 
     required String className,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3250,10 +3148,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation-classes/{className}/reset'.replaceAll(
-        '{' r'className' '}',
-        encodeQueryParameter(_serializers, className, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation-classes/{className}/reset'.replaceAll('{' r'className' '}', encodeQueryParameter(_serializers, className, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -3277,9 +3172,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3302,12 +3198,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3331,7 +3226,7 @@ class AdminApi {
   }
 
   /// List moderation label classes
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -3343,7 +3238,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationClassesList({
+  Future<Response<JsonObject>> adminModerationClassesList({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -3382,12 +3277,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3411,10 +3305,10 @@ class AdminApi {
   }
 
   /// Proxy DELETE to Hive AI test endpoint
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [path]
+  /// * [path] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3424,7 +3318,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestDelete({
+  Future<Response<JsonObject>> adminModerationTestDelete({ 
     required String path,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3433,10 +3327,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation/test/{path}'.replaceAll(
-        '{' r'path' '}',
-        encodeQueryParameter(_serializers, path, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation/test/{path}'.replaceAll('{' r'path' '}', encodeQueryParameter(_serializers, path, const FullType(String)).toString());
     final _options = Options(
       method: r'DELETE',
       headers: <String, dynamic>{
@@ -3467,12 +3358,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3496,10 +3386,10 @@ class AdminApi {
   }
 
   /// Proxy GET to Hive AI test endpoint
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [path]
+  /// * [path] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3509,7 +3399,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestGet({
+  Future<Response<JsonObject>> adminModerationTestGet({ 
     required String path,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3518,10 +3408,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation/test/{path}'.replaceAll(
-        '{' r'path' '}',
-        encodeQueryParameter(_serializers, path, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation/test/{path}'.replaceAll('{' r'path' '}', encodeQueryParameter(_serializers, path, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -3552,12 +3439,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3581,11 +3467,11 @@ class AdminApi {
   }
 
   /// Proxy PATCH to Hive AI test endpoint
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [path]
-  /// * [body]
+  /// * [path] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3595,7 +3481,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPatch({
+  Future<Response<JsonObject>> adminModerationTestPatch({ 
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3605,10 +3491,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation/test/{path}'.replaceAll(
-        '{' r'path' '}',
-        encodeQueryParameter(_serializers, path, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation/test/{path}'.replaceAll('{' r'path' '}', encodeQueryParameter(_serializers, path, const FullType(String)).toString());
     final _options = Options(
       method: r'PATCH',
       headers: <String, dynamic>{
@@ -3632,9 +3515,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3657,12 +3541,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3686,11 +3569,11 @@ class AdminApi {
   }
 
   /// Proxy POST to Hive AI test endpoint
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [path]
-  /// * [body]
+  /// * [path] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3700,7 +3583,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPost({
+  Future<Response<JsonObject>> adminModerationTestPost({ 
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3710,10 +3593,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation/test/{path}'.replaceAll(
-        '{' r'path' '}',
-        encodeQueryParameter(_serializers, path, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation/test/{path}'.replaceAll('{' r'path' '}', encodeQueryParameter(_serializers, path, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -3737,9 +3617,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3762,12 +3643,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3791,11 +3671,11 @@ class AdminApi {
   }
 
   /// Proxy PUT to Hive AI test endpoint
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [path]
-  /// * [body]
+  /// * [path] 
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3805,7 +3685,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPut({
+  Future<Response<JsonObject>> adminModerationTestPut({ 
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3815,10 +3695,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/moderation/test/{path}'.replaceAll(
-        '{' r'path' '}',
-        encodeQueryParameter(_serializers, path, const FullType(String))
-            .toString());
+    final _path = r'/admin/moderation/test/{path}'.replaceAll('{' r'path' '}', encodeQueryParameter(_serializers, path, const FullType(String)).toString());
     final _options = Options(
       method: r'PUT',
       headers: <String, dynamic>{
@@ -3842,9 +3719,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3867,12 +3745,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3896,10 +3773,10 @@ class AdminApi {
   }
 
   /// Bulk-update moderation class weights
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3909,7 +3786,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationWeightsUpdate({
+  Future<Response<JsonObject>> adminModerationWeightsUpdate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3942,9 +3819,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -3967,12 +3845,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -3996,10 +3873,10 @@ class AdminApi {
   }
 
   /// Ingest news items into the news board
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4009,7 +3886,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminNewsIngest({
+  Future<Response<JsonObject>> adminNewsIngest({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -4042,9 +3919,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -4067,12 +3945,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4096,7 +3973,7 @@ class AdminApi {
   }
 
   /// Get operational metrics
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -4108,7 +3985,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsMetrics({
+  Future<Response<JsonObject>> adminOpsMetrics({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -4147,12 +4024,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4176,7 +4052,7 @@ class AdminApi {
   }
 
   /// Get operational state flags
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -4188,7 +4064,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsStateGet({
+  Future<Response<JsonObject>> adminOpsStateGet({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -4227,12 +4103,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4256,10 +4131,10 @@ class AdminApi {
   }
 
   /// Update operational state flags
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [body]
+  /// * [body] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4269,7 +4144,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsStateUpdate({
+  Future<Response<JsonObject>> adminOpsStateUpdate({ 
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -4302,9 +4177,10 @@ class AdminApi {
 
     try {
       _bodyData = body;
-    } catch (error, stackTrace) {
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -4327,12 +4203,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(JsonObject),
-            ) as JsonObject;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(JsonObject),
+      ) as JsonObject;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4360,7 +4235,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [userId] - User identifier
-  /// * [adminUserDisableRequest]
+  /// * [adminUserDisableRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4370,7 +4245,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserActionResponse>> adminUsersDisable({
+  Future<Response<AdminUserActionResponse>> adminUsersDisable({ 
     required String userId,
     required AdminUserDisableRequest adminUserDisableRequest,
     CancelToken? cancelToken,
@@ -4380,10 +4255,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/users/{userId}/disable'.replaceAll(
-        '{' r'userId' '}',
-        encodeQueryParameter(_serializers, userId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/users/{userId}/disable'.replaceAll('{' r'userId' '}', encodeQueryParameter(_serializers, userId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -4407,11 +4279,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminUserDisableRequest);
-      _bodyData =
-          _serializers.serialize(adminUserDisableRequest, specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = _serializers.serialize(adminUserDisableRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -4434,12 +4306,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminUserActionResponse),
-            ) as AdminUserActionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminUserActionResponse),
+      ) as AdminUserActionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4467,7 +4338,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [userId] - User identifier
-  /// * [adminUserEnableRequest]
+  /// * [adminUserEnableRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4477,7 +4348,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserActionResponse>> adminUsersEnable({
+  Future<Response<AdminUserActionResponse>> adminUsersEnable({ 
     required String userId,
     AdminUserEnableRequest? adminUserEnableRequest,
     CancelToken? cancelToken,
@@ -4487,10 +4358,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/users/{userId}/enable'.replaceAll(
-        '{' r'userId' '}',
-        encodeQueryParameter(_serializers, userId, const FullType(String))
-            .toString());
+    final _path = r'/_admin/users/{userId}/enable'.replaceAll('{' r'userId' '}', encodeQueryParameter(_serializers, userId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -4514,13 +4382,11 @@ class AdminApi {
 
     try {
       const _type = FullType(AdminUserEnableRequest);
-      _bodyData = adminUserEnableRequest == null
-          ? null
-          : _serializers.serialize(adminUserEnableRequest,
-              specifiedType: _type);
-    } catch (error, stackTrace) {
+      _bodyData = adminUserEnableRequest == null ? null : _serializers.serialize(adminUserEnableRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
         ),
@@ -4543,12 +4409,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminUserActionResponse),
-            ) as AdminUserActionResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminUserActionResponse),
+      ) as AdminUserActionResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4586,7 +4451,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserSearchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserSearchResponse>> adminUsersSearch({
+  Future<Response<AdminUserSearchResponse>> adminUsersSearch({ 
     required String q,
     int? limit,
     CancelToken? cancelToken,
@@ -4617,9 +4482,7 @@ class AdminApi {
 
     final _queryParameters = <String, dynamic>{
       r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
-      if (limit != null)
-        r'limit':
-            encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(
@@ -4635,12 +4498,11 @@ class AdminApi {
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null
-          ? null
-          : _serializers.deserialize(
-              rawResponse,
-              specifiedType: const FullType(AdminUserSearchResponse),
-            ) as AdminUserSearchResponse;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminUserSearchResponse),
+      ) as AdminUserSearchResponse;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -4662,4 +4524,5 @@ class AdminApi {
       extra: _response.extra,
     );
   }
+
 }

@@ -13,12 +13,10 @@ part 'admin_invite_batch_response.g.dart';
 /// AdminInviteBatchResponse
 ///
 /// Properties:
-/// * [count]
-/// * [invites]
+/// * [count] 
+/// * [invites] 
 @BuiltValue()
-abstract class AdminInviteBatchResponse
-    implements
-        Built<AdminInviteBatchResponse, AdminInviteBatchResponseBuilder> {
+abstract class AdminInviteBatchResponse implements Built<AdminInviteBatchResponse, AdminInviteBatchResponseBuilder> {
   @BuiltValueField(wireName: r'count')
   int get count;
 
@@ -27,25 +25,18 @@ abstract class AdminInviteBatchResponse
 
   AdminInviteBatchResponse._();
 
-  factory AdminInviteBatchResponse(
-          [void updates(AdminInviteBatchResponseBuilder b)]) =
-      _$AdminInviteBatchResponse;
+  factory AdminInviteBatchResponse([void updates(AdminInviteBatchResponseBuilder b)]) = _$AdminInviteBatchResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AdminInviteBatchResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AdminInviteBatchResponse> get serializer =>
-      _$AdminInviteBatchResponseSerializer();
+  static Serializer<AdminInviteBatchResponse> get serializer => _$AdminInviteBatchResponseSerializer();
 }
 
-class _$AdminInviteBatchResponseSerializer
-    implements PrimitiveSerializer<AdminInviteBatchResponse> {
+class _$AdminInviteBatchResponseSerializer implements PrimitiveSerializer<AdminInviteBatchResponse> {
   @override
-  final Iterable<Type> types = const [
-    AdminInviteBatchResponse,
-    _$AdminInviteBatchResponse
-  ];
+  final Iterable<Type> types = const [AdminInviteBatchResponse, _$AdminInviteBatchResponse];
 
   @override
   final String wireName = r'AdminInviteBatchResponse';
@@ -73,9 +64,7 @@ class _$AdminInviteBatchResponseSerializer
     AdminInviteBatchResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -132,3 +121,4 @@ class _$AdminInviteBatchResponseSerializer
     return result.build();
   }
 }
+

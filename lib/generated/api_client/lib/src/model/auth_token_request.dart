@@ -19,8 +19,7 @@ part 'auth_token_request.g.dart';
 /// * [codeVerifier] - PKCE code verifier (required when code_challenge was provided)
 /// * [refreshToken] - Refresh token (required for refresh_token grant)
 @BuiltValue()
-abstract class AuthTokenRequest
-    implements Built<AuthTokenRequest, AuthTokenRequestBuilder> {
+abstract class AuthTokenRequest implements Built<AuthTokenRequest, AuthTokenRequestBuilder> {
   /// Grant type
   @BuiltValueField(wireName: r'grant_type')
   AuthTokenRequestGrantTypeEnum get grantType;
@@ -48,19 +47,16 @@ abstract class AuthTokenRequest
 
   AuthTokenRequest._();
 
-  factory AuthTokenRequest([void updates(AuthTokenRequestBuilder b)]) =
-      _$AuthTokenRequest;
+  factory AuthTokenRequest([void updates(AuthTokenRequestBuilder b)]) = _$AuthTokenRequest;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(AuthTokenRequestBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<AuthTokenRequest> get serializer =>
-      _$AuthTokenRequestSerializer();
+  static Serializer<AuthTokenRequest> get serializer => _$AuthTokenRequestSerializer();
 }
 
-class _$AuthTokenRequestSerializer
-    implements PrimitiveSerializer<AuthTokenRequest> {
+class _$AuthTokenRequestSerializer implements PrimitiveSerializer<AuthTokenRequest> {
   @override
   final Iterable<Type> types = const [AuthTokenRequest, _$AuthTokenRequest];
 
@@ -118,9 +114,7 @@ class _$AuthTokenRequestSerializer
     AuthTokenRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -207,23 +201,19 @@ class _$AuthTokenRequestSerializer
 }
 
 class AuthTokenRequestGrantTypeEnum extends EnumClass {
+
   /// Grant type
   @BuiltValueEnumConst(wireName: r'authorization_code')
-  static const AuthTokenRequestGrantTypeEnum authorizationCode =
-      _$authTokenRequestGrantTypeEnum_authorizationCode;
-
+  static const AuthTokenRequestGrantTypeEnum authorizationCode = _$authTokenRequestGrantTypeEnum_authorizationCode;
   /// Grant type
   @BuiltValueEnumConst(wireName: r'refresh_token')
-  static const AuthTokenRequestGrantTypeEnum refreshToken =
-      _$authTokenRequestGrantTypeEnum_refreshToken;
+  static const AuthTokenRequestGrantTypeEnum refreshToken = _$authTokenRequestGrantTypeEnum_refreshToken;
 
-  static Serializer<AuthTokenRequestGrantTypeEnum> get serializer =>
-      _$authTokenRequestGrantTypeEnumSerializer;
+  static Serializer<AuthTokenRequestGrantTypeEnum> get serializer => _$authTokenRequestGrantTypeEnumSerializer;
 
-  const AuthTokenRequestGrantTypeEnum._(String name) : super(name);
+  const AuthTokenRequestGrantTypeEnum._(String name): super(name);
 
-  static BuiltSet<AuthTokenRequestGrantTypeEnum> get values =>
-      _$authTokenRequestGrantTypeEnumValues;
-  static AuthTokenRequestGrantTypeEnum valueOf(String name) =>
-      _$authTokenRequestGrantTypeEnumValueOf(name);
+  static BuiltSet<AuthTokenRequestGrantTypeEnum> get values => _$authTokenRequestGrantTypeEnumValues;
+  static AuthTokenRequestGrantTypeEnum valueOf(String name) => _$authTokenRequestGrantTypeEnumValueOf(name);
 }
+

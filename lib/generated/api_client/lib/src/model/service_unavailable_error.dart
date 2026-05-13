@@ -12,34 +12,26 @@ part 'service_unavailable_error.g.dart';
 /// 503 – service temporarily unavailable (dependency outage, maintenance window, or upstream timeout).
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
-abstract class ServiceUnavailableError
-    implements Built<ServiceUnavailableError, ServiceUnavailableErrorBuilder> {
+abstract class ServiceUnavailableError implements Built<ServiceUnavailableError, ServiceUnavailableErrorBuilder> {
   @BuiltValueField(wireName: r'error')
   ServiceUnavailableErrorError get error;
 
   ServiceUnavailableError._();
 
-  factory ServiceUnavailableError(
-          [void updates(ServiceUnavailableErrorBuilder b)]) =
-      _$ServiceUnavailableError;
+  factory ServiceUnavailableError([void updates(ServiceUnavailableErrorBuilder b)]) = _$ServiceUnavailableError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ServiceUnavailableErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ServiceUnavailableError> get serializer =>
-      _$ServiceUnavailableErrorSerializer();
+  static Serializer<ServiceUnavailableError> get serializer => _$ServiceUnavailableErrorSerializer();
 }
 
-class _$ServiceUnavailableErrorSerializer
-    implements PrimitiveSerializer<ServiceUnavailableError> {
+class _$ServiceUnavailableErrorSerializer implements PrimitiveSerializer<ServiceUnavailableError> {
   @override
-  final Iterable<Type> types = const [
-    ServiceUnavailableError,
-    _$ServiceUnavailableError
-  ];
+  final Iterable<Type> types = const [ServiceUnavailableError, _$ServiceUnavailableError];
 
   @override
   final String wireName = r'ServiceUnavailableError';
@@ -62,9 +54,7 @@ class _$ServiceUnavailableErrorSerializer
     ServiceUnavailableError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -114,3 +104,4 @@ class _$ServiceUnavailableErrorSerializer
     return result.build();
   }
 }
+

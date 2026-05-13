@@ -12,12 +12,11 @@ part 'forbidden_error_error.g.dart';
 /// ForbiddenErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 @BuiltValue()
-abstract class ForbiddenErrorError
-    implements Built<ForbiddenErrorError, ForbiddenErrorErrorBuilder> {
+abstract class ForbiddenErrorError implements Built<ForbiddenErrorError, ForbiddenErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
   ForbiddenErrorErrorCodeEnum get code;
   // enum codeEnum {  FORBIDDEN,  INSUFFICIENT_ROLE,  ACCOUNT_DISABLED,  };
@@ -30,24 +29,18 @@ abstract class ForbiddenErrorError
 
   ForbiddenErrorError._();
 
-  factory ForbiddenErrorError([void updates(ForbiddenErrorErrorBuilder b)]) =
-      _$ForbiddenErrorError;
+  factory ForbiddenErrorError([void updates(ForbiddenErrorErrorBuilder b)]) = _$ForbiddenErrorError;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(ForbiddenErrorErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ForbiddenErrorError> get serializer =>
-      _$ForbiddenErrorErrorSerializer();
+  static Serializer<ForbiddenErrorError> get serializer => _$ForbiddenErrorErrorSerializer();
 }
 
-class _$ForbiddenErrorErrorSerializer
-    implements PrimitiveSerializer<ForbiddenErrorError> {
+class _$ForbiddenErrorErrorSerializer implements PrimitiveSerializer<ForbiddenErrorError> {
   @override
-  final Iterable<Type> types = const [
-    ForbiddenErrorError,
-    _$ForbiddenErrorError
-  ];
+  final Iterable<Type> types = const [ForbiddenErrorError, _$ForbiddenErrorError];
 
   @override
   final String wireName = r'ForbiddenErrorError';
@@ -82,9 +75,7 @@ class _$ForbiddenErrorErrorSerializer
     ForbiddenErrorError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -150,23 +141,19 @@ class _$ForbiddenErrorErrorSerializer
 }
 
 class ForbiddenErrorErrorCodeEnum extends EnumClass {
+
   @BuiltValueEnumConst(wireName: r'FORBIDDEN')
-  static const ForbiddenErrorErrorCodeEnum FORBIDDEN =
-      _$forbiddenErrorErrorCodeEnum_FORBIDDEN;
+  static const ForbiddenErrorErrorCodeEnum FORBIDDEN = _$forbiddenErrorErrorCodeEnum_FORBIDDEN;
   @BuiltValueEnumConst(wireName: r'INSUFFICIENT_ROLE')
-  static const ForbiddenErrorErrorCodeEnum INSUFFICIENT_ROLE =
-      _$forbiddenErrorErrorCodeEnum_INSUFFICIENT_ROLE;
+  static const ForbiddenErrorErrorCodeEnum INSUFFICIENT_ROLE = _$forbiddenErrorErrorCodeEnum_INSUFFICIENT_ROLE;
   @BuiltValueEnumConst(wireName: r'ACCOUNT_DISABLED')
-  static const ForbiddenErrorErrorCodeEnum ACCOUNT_DISABLED =
-      _$forbiddenErrorErrorCodeEnum_ACCOUNT_DISABLED;
+  static const ForbiddenErrorErrorCodeEnum ACCOUNT_DISABLED = _$forbiddenErrorErrorCodeEnum_ACCOUNT_DISABLED;
 
-  static Serializer<ForbiddenErrorErrorCodeEnum> get serializer =>
-      _$forbiddenErrorErrorCodeEnumSerializer;
+  static Serializer<ForbiddenErrorErrorCodeEnum> get serializer => _$forbiddenErrorErrorCodeEnumSerializer;
 
-  const ForbiddenErrorErrorCodeEnum._(String name) : super(name);
+  const ForbiddenErrorErrorCodeEnum._(String name): super(name);
 
-  static BuiltSet<ForbiddenErrorErrorCodeEnum> get values =>
-      _$forbiddenErrorErrorCodeEnumValues;
-  static ForbiddenErrorErrorCodeEnum valueOf(String name) =>
-      _$forbiddenErrorErrorCodeEnumValueOf(name);
+  static BuiltSet<ForbiddenErrorErrorCodeEnum> get values => _$forbiddenErrorErrorCodeEnumValues;
+  static ForbiddenErrorErrorCodeEnum valueOf(String name) => _$forbiddenErrorErrorCodeEnumValueOf(name);
 }
+

@@ -12,12 +12,11 @@ part 'user_info_response.g.dart';
 /// OIDC UserInfo claims envelope.
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [success] 
+/// * [data] 
+/// * [timestamp] 
 @BuiltValue()
-abstract class UserInfoResponse
-    implements Built<UserInfoResponse, UserInfoResponseBuilder> {
+abstract class UserInfoResponse implements Built<UserInfoResponse, UserInfoResponseBuilder> {
   @BuiltValueField(wireName: r'success')
   bool get success;
 
@@ -29,19 +28,16 @@ abstract class UserInfoResponse
 
   UserInfoResponse._();
 
-  factory UserInfoResponse([void updates(UserInfoResponseBuilder b)]) =
-      _$UserInfoResponse;
+  factory UserInfoResponse([void updates(UserInfoResponseBuilder b)]) = _$UserInfoResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(UserInfoResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<UserInfoResponse> get serializer =>
-      _$UserInfoResponseSerializer();
+  static Serializer<UserInfoResponse> get serializer => _$UserInfoResponseSerializer();
 }
 
-class _$UserInfoResponseSerializer
-    implements PrimitiveSerializer<UserInfoResponse> {
+class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoResponse> {
   @override
   final Iterable<Type> types = const [UserInfoResponse, _$UserInfoResponse];
 
@@ -76,9 +72,7 @@ class _$UserInfoResponseSerializer
     UserInfoResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -142,3 +136,4 @@ class _$UserInfoResponseSerializer
     return result.build();
   }
 }
+

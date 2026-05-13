@@ -498,7 +498,7 @@ class FeedParams {
     this.page = 1,
     this.pageSize = 20,
     this.cursor,
-    this.type = FeedType.trending,
+    this.type = FeedType.notable,
     this.location,
     this.tags,
     this.category,
@@ -518,39 +518,43 @@ class FeedParams {
 }
 
 /// Types of feeds available
-enum FeedType { trending, newest, local, following, newCreators }
+enum FeedType { notable, newest, local, following, newCreators }
 
-/// Human confidence levels for AI moderation display
-enum HumanConfidence {
-  high,
-  medium,
-  low,
-  aiGen;
+/// Content authorship labels for AI transparency display.
+/// Labels match the Lythaus public transparency taxonomy:
+/// Human-authored, AI-assisted, AI-generated, Under review.
+enum ContentAuthorship {
+  humanAuthored,
+  aiAssisted,
+  aiGenerated,
+  underReview;
 
   String get label => switch (this) {
-    HumanConfidence.high => 'High',
-    HumanConfidence.medium => 'Medium',
-    HumanConfidence.low => 'Low',
-    HumanConfidence.aiGen => 'AI Gen',
+    ContentAuthorship.humanAuthored => 'Human-authored',
+    ContentAuthorship.aiAssisted    => 'AI-assisted',
+    ContentAuthorship.aiGenerated   => 'AI-generated',
+    ContentAuthorship.underReview   => 'Under review',
   };
 
-  /// Convert from moderation confidence string
-  static HumanConfidence fromString(String confidence) {
-    return switch (confidence.toLowerCase()) {
-      'high' => HumanConfidence.high,
-      'medium' => HumanConfidence.medium,
-      'low' => HumanConfidence.low,
-      'ai_generated' || 'ai_gen' => HumanConfidence.aiGen,
-      _ => HumanConfidence.medium, // Default fallback
+  /// Map raw API/moderation values to an authorship label.
+  /// Handles both legacy confidence levels (high/medium/low) and
+  /// canonical authorship strings (human_authored/ai_assisted/ai_generated/under_review).
+  static ContentAuthorship fromString(String? confidence) {
+    return switch (confidence?.toLowerCase()) {
+      'human_authored' || 'human' || 'high' => ContentAuthorship.humanAuthored,
+      'ai_assisted' || 'medium' || 'low'    => ContentAuthorship.aiAssisted,
+      'ai_generated' || 'ai_gen'            => ContentAuthorship.aiGenerated,
+      'under_review'                         => ContentAuthorship.underReview,
+      _                                      => ContentAuthorship.underReview,
     };
   }
 }
 
-extension HumanConfidenceExtension on HumanConfidence {
+extension ContentAuthorshipExtension on ContentAuthorship {
   String get displayLabel => switch (this) {
-    HumanConfidence.high => 'High',
-    HumanConfidence.medium => 'Medium',
-    HumanConfidence.low => 'Low',
-    HumanConfidence.aiGen => 'AI Generated',
+    ContentAuthorship.humanAuthored => 'Human-authored',
+    ContentAuthorship.aiAssisted    => 'AI-assisted',
+    ContentAuthorship.aiGenerated   => 'AI-generated',
+    ContentAuthorship.underReview   => 'Under review',
   };
 }

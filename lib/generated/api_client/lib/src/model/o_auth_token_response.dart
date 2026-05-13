@@ -12,12 +12,11 @@ part 'o_auth_token_response.g.dart';
 /// OAuth 2.0 token response envelope (success wrapped).
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [success] 
+/// * [data] 
+/// * [timestamp] 
 @BuiltValue()
-abstract class OAuthTokenResponse
-    implements Built<OAuthTokenResponse, OAuthTokenResponseBuilder> {
+abstract class OAuthTokenResponse implements Built<OAuthTokenResponse, OAuthTokenResponseBuilder> {
   @BuiltValueField(wireName: r'success')
   bool get success;
 
@@ -29,19 +28,16 @@ abstract class OAuthTokenResponse
 
   OAuthTokenResponse._();
 
-  factory OAuthTokenResponse([void updates(OAuthTokenResponseBuilder b)]) =
-      _$OAuthTokenResponse;
+  factory OAuthTokenResponse([void updates(OAuthTokenResponseBuilder b)]) = _$OAuthTokenResponse;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(OAuthTokenResponseBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<OAuthTokenResponse> get serializer =>
-      _$OAuthTokenResponseSerializer();
+  static Serializer<OAuthTokenResponse> get serializer => _$OAuthTokenResponseSerializer();
 }
 
-class _$OAuthTokenResponseSerializer
-    implements PrimitiveSerializer<OAuthTokenResponse> {
+class _$OAuthTokenResponseSerializer implements PrimitiveSerializer<OAuthTokenResponse> {
   @override
   final Iterable<Type> types = const [OAuthTokenResponse, _$OAuthTokenResponse];
 
@@ -76,9 +72,7 @@ class _$OAuthTokenResponseSerializer
     OAuthTokenResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
   }
 
   void _deserializeProperties(
@@ -142,3 +136,4 @@ class _$OAuthTokenResponseSerializer
     return result.build();
   }
 }
+
