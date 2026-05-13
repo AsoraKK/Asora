@@ -48,6 +48,12 @@ final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
 final tokenVersionProvider = StateProvider<int>((ref) => 0);
 final guestModeProvider = StateProvider<bool>((ref) => false);
 
+/// Stores an invite code pending redemption after the user signs in.
+/// Set by [InviteRedeemScreen] when a user tries to redeem without being
+/// authenticated; cleared by [AuthGate] once the user is logged in and
+/// the invite screen has been pushed.
+final pendingInviteCodeProvider = StateProvider<String?>((ref) => null);
+
 /// Current user authentication state provider
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<User?>>((ref) {

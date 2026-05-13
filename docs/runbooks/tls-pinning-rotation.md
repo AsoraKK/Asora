@@ -1,53 +1,157 @@
-# Runbook: TLS Pinning Rotation
+# Runbook: TLS Pinning — Initial Provisioning and Rotation
 
 ## Overview
 
-This runbook guides you through rotating TLS certificate pins for ASORA mobile app when Azure Function App certificates change.
+This runbook covers two scenarios:
+
+1. **Initial pin provisioning** — run once when staging/production environments are first deployed. Required before GA launch (items 9.11 and 9.12 in `launch-readiness.md`).
+2. **Pin rotation** — run when Azure Function App TLS certificates are renewed or rotated (every 6–12 months).
 
 ## When to Use
 
-- Azure automatically rotates certificates (every 6-12 months)
+- **Initial provisioning**: `asora-function-staging` or `asora-function-prod` is deployed for the first time
+- Azure automatically rotates certificates (every 6–12 months)
 - Manual certificate renewal
 - Moving to new Azure Function App hostname
-- Upgrading to higher-tier certificate
+- CI fails with "LAUNCH BLOCKER: staging/prod spkiPinsBase64 is empty"
 
-## Prerequisites
+---
 
-- [ ] Access to ASORA codebase (`lib/core/config/environment_config.dart`)
-- [ ] OpenSSL installed locally
-- [ ] Ability to deploy app updates
-- [ ] Access to telemetry dashboard
+## §Initial Pin Provisioning (pre-GA, first time)
 
-## Timeline
+These steps populate the empty `spkiPinsBase64` arrays in `environment_config.dart`.
 
-**Total duration: 14-21 days**
+### Prerequisites
+
+- [ ] Target Azure Function App deployed and publicly reachable
+- [ ] OpenSSL installed (`openssl version` → ≥ 1.1.1)
+- [ ] `scripts/extract-spki-pins.sh` executable (`chmod +x scripts/extract-spki-pins.sh`)
+
+### Step 1 — Extract staging SPKI pin
+
+```bash
+./scripts/extract-spki-pins.sh \
+    asora-function-staging.northeurope-01.azurewebsites.net
+```
+
+Copy the base64 output (example: `abcDEF+123/=...`).
+
+### Step 2 — Extract production SPKI pins (leaf + intermediate backup)
+
+```bash
+# Leaf certificate (primary pin)
+./scripts/extract-spki-pins.sh \
+    asora-function-prod.northeurope-01.azurewebsites.net
+
+# Intermediate CA (backup pin — survives leaf cert rotation)
+CERT_INDEX=1 ./scripts/extract-spki-pins.sh \
+    asora-function-prod.northeurope-01.azurewebsites.net
+```
+
+Copy both base64 outputs.
+
+### Step 3 — Update `environment_config.dart`
+
+Open `lib/core/config/environment_config.dart` and populate:
+
+```dart
+// Staging
+const _stagingMobileSecurity = MobileSecurityConfig(
+  tlsPins: TlsPinConfig(
+    enabled: true,
+    strictMode: true,
+    spkiPinsBase64: [
+      'PASTE_STAGING_LEAF_PIN_HERE',
+    ],
+  ),
+  ...
+);
+
+// Production
+const _prodMobileSecurity = MobileSecurityConfig(
+  tlsPins: TlsPinConfig(
+    enabled: true,
+    strictMode: true,
+    spkiPinsBase64: [
+      'PASTE_PROD_LEAF_PIN_HERE',       // primary
+      'PASTE_PROD_INTERMEDIATE_PIN_HERE', // backup for rotation
+    ],
+  ),
+  ...
+);
+```
+
+### Step 4 — Update `mobile-expected-pins.json`
+
+```json
+{
+  "asora-function-staging.northeurope-01.azurewebsites.net": [
+    "PASTE_STAGING_LEAF_PIN_HERE"
+  ],
+  "asora-function-prod.northeurope-01.azurewebsites.net": [
+    "PASTE_PROD_LEAF_PIN_HERE",
+    "PASTE_PROD_INTERMEDIATE_PIN_HERE"
+  ]
+}
+```
+
+### Step 5 — Update `cert_pinning_common.dart`
+
+Add the staging and production hosts to `kPinnedDomains` in
+`lib/core/security/cert_pinning_common.dart`:
+
+```dart
+const Map<String, List<String>> kPinnedDomains = {
+  // ... existing dev entries ...
+  'asora-function-staging.northeurope-01.azurewebsites.net': [
+    'PASTE_STAGING_LEAF_PIN_HERE',
+  ],
+  'asora-function-prod.northeurope-01.azurewebsites.net': [
+    'PASTE_PROD_LEAF_PIN_HERE',
+    'PASTE_PROD_INTERMEDIATE_PIN_HERE',
+  ],
+};
+```
+
+### Step 6 — Verify with launch-gate tests
+
+```bash
+SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart
+```
+
+All 4 tests must pass. Then run the full security check locally:
+
+```bash
+python3 scripts/verify_pins.py   # requires BASE_URL or EXTRA_PIN_HOSTS set
+```
+
+### Step 7 — Commit and push
+
+```bash
+git add lib/core/config/environment_config.dart \
+        mobile-expected-pins.json \
+        lib/core/security/cert_pinning_common.dart
+git commit -m "security: populate staging/prod SPKI pins for GA launch"
+```
+
+CI (`mobile-security-check.yml`) will now pass the pin check.
+
+---
+
+## §Rotation Procedure
+
+**Total duration: 14–21 days**
 
 | Phase | Duration | Description |
 |-------|----------|-------------|
 | Preparation | Day 0 | Extract new pin, update config |
-| Deploy dual pins | Day 0-7 | Release app with old + new pins |
-| User adoption | Day 7-14 | Wait for users to update |
+| Deploy dual pins | Day 0–7 | Release app with old + new pins |
+| User adoption | Day 7–14 | Wait for users to update |
 | Rotate certificate | Day 14 | Deploy new cert to Azure |
-| Monitor | Day 14-17 | Watch telemetry for issues |
-| Remove old pin | Day 17-21 | Release app with new pin only |
+| Monitor | Day 14–17 | Watch telemetry for issues |
+| Remove old pin | Day 17–21 | Release app with new pin only |
 
-## Step-by-Step Procedure
 
-### Phase 1: Extract New Certificate Pin
-
-1. **Identify new certificate source:**
-   - If Azure auto-rotation: New cert may already be deployed
-   - If manual: Obtain new certificate file (.pem or .crt)
-
-2. **Extract SPKI hash using OpenSSL:**
-
-   ```bash
-   # For live server (if cert already deployed)
-   echo | openssl s_client -servername asora-function-prod.azurewebsites.net \
-     -connect asora-function-prod.azurewebsites.net:443 2>/dev/null | \
-     openssl x509 -pubkey -noout | \
-     openssl pkey -pubin -outform der | \
-     openssl dgst -sha256 -binary | \
      base64
    ```
 

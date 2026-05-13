@@ -170,77 +170,14 @@ describe('Moderation System Tests', () => {
     });
   });
 
-  describe.skip('Get My Appeals Endpoint', () => {
-    it('should return user appeals with pagination', async () => {
-      const mockRequest = {
-        headers: {
-          get: jest.fn(header => {
-            if (header === 'authorization') return MOCK_USER_TOKEN;
-            return null;
-          }),
-        },
-        url: 'https://test.com/api/moderation/my-appeals?page=1&limit=10&status=all',
-      } as unknown as HttpRequest;
+  // NOTE: 'Get My Appeals Endpoint' tests have been moved to
+  // functions/tests/moderation/getMyAppeals.comprehensive.test.ts
+  // (explicit deferred gate — endpoint not yet implemented in canonical routes).
 
-      // expect(typeof getMyAppeals).toBe('function');
-      expect(mockRequest).toBeDefined();
-    });
-
-    it('should validate pagination parameters', () => {
-      const validatePagination = (page: number, limit: number) => {
-        if (page < 1) return { valid: false, error: 'Page must be greater than 0' };
-        if (limit > 50) return { valid: false, error: 'Limit must be 50 or less' };
-        return { valid: true };
-      };
-
-      expect(validatePagination(0, 20).valid).toBe(false);
-      expect(validatePagination(1, 100).valid).toBe(false);
-      expect(validatePagination(1, 20).valid).toBe(true);
-    });
-  });
-
-  describe.skip('Review Appealed Content Endpoint', () => {
-    it('should require moderator role', async () => {
-      const mockRequest = {
-        headers: {
-          get: jest.fn(header => {
-            if (header === 'authorization') return MOCK_USER_TOKEN; // Regular user token
-            return null;
-          }),
-        },
-        url: 'https://test.com/api/moderation/review-queue',
-      } as unknown as HttpRequest;
-
-      // expect(typeof reviewAppealedContent).toBe('function');
-      expect(mockRequest).toBeDefined();
-    });
-
-    it('should prioritize appeals correctly', () => {
-      const prioritizeAppeals = (appeals: Array<{ urgency: string; expiresAt: string }>) => {
-        return appeals.sort((a, b) => {
-          const urgencyOrder = { critical: 1, high: 2, medium: 3, low: 4 };
-          const urgencyA = urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 5;
-          const urgencyB = urgencyOrder[b.urgency as keyof typeof urgencyOrder] || 5;
-
-          if (urgencyA !== urgencyB) return urgencyA - urgencyB;
-
-          // If same urgency, sort by expiration time
-          return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime();
-        });
-      };
-
-      const appeals = [
-        { urgency: 'low', expiresAt: '2024-01-01T00:00:00Z' },
-        { urgency: 'critical', expiresAt: '2024-01-02T00:00:00Z' },
-        { urgency: 'high', expiresAt: '2024-01-01T12:00:00Z' },
-      ];
-
-      const sorted = prioritizeAppeals(appeals);
-      expect(sorted[0].urgency).toBe('critical');
-      expect(sorted[1].urgency).toBe('high');
-      expect(sorted[2].urgency).toBe('low');
-    });
-  });
+  // NOTE: 'Review Appealed Content Endpoint' tests have been replaced by
+  // functions/src/__tests__/reviewAppealedContent.focused.test.ts and
+  // functions/src/__tests__/reviewAppealedContent.serverSideFilter.test.ts
+  // which cover the canonical POST /moderation/appeals/{appealId}/review handler.
 
   describe('Rate Limiting Tests', () => {
     it('should create rate limiter with correct configuration', () => {

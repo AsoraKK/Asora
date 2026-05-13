@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   role TEXT DEFAULT 'user' CHECK (role IN ('user', 'moderator', 'admin')),
   reputation_score INT DEFAULT 0 CHECK (reputation_score >= 0),
-  tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'premium', 'enterprise'))
+  tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'premium', 'black', 'admin')),
 );
 
 -- Create indexes for performance

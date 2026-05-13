@@ -25,11 +25,14 @@ jest.mock('../../shared/appInsights', () => ({
   trackAppMetric: jest.fn(),
 }));
 
+import { trackAppEvent } from '../../shared/appInsights';
+
 // Now import the module - it will use the mocked env
 import {
   isFcmConfigured,
   getFcmConfigStatus,
   _resetConfig,
+  sendToDevices,
   type FcmSendRequest,
   type FcmSendResult,
   type FcmBatchResult,
@@ -198,6 +201,68 @@ describe('FCM Client', () => {
 
     it('should not classify PERMISSION_DENIED as token invalid', () => {
       expect(isTokenInvalidError('PERMISSION_DENIED')).toBe(false);
+    });
+  });
+
+  describe('iOS push deferral (sendToDevices)', () => {
+    // iOS-only device lists never call sendToDevice (and therefore never call
+    // fetch or JWT-sign), so these tests run without FCM credentials.
+    it('places iOS devices in iosDeferred — not in failed or success', async () => {
+      const devices = [
+        { id: 'd1', userId: 'u1', deviceId: 'd1', pushToken: 'apns-token-1', platform: 'ios' as const, createdAt: '', lastSeenAt: '' },
+        { id: 'd2', userId: 'u1', deviceId: 'd2', pushToken: 'apns-token-2', platform: 'ios' as const, createdAt: '', lastSeenAt: '' },
+      ];
+      const result = await sendToDevices(devices, { title: 'T', body: 'B' }, 'SOCIAL');
+      expect(result.iosDeferred).toBe(2);
+      expect(result.success).toBe(0);
+      expect(result.failed).toBe(0);
+    });
+
+    it('does not add iOS devices to result.errors', async () => {
+      const devices = [
+        { id: 'd1', userId: 'u1', deviceId: 'd1', pushToken: 'apns-token', platform: 'ios' as const, createdAt: '', lastSeenAt: '' },
+      ];
+      const result = await sendToDevices(devices, { title: 'T', body: 'B' }, 'SAFETY');
+      expect(result.errors).toHaveLength(0);
+      expect(result.invalidTokens).toHaveLength(0);
+    });
+
+    it('emits ios_push_deferred App Insights event with correct device count and category', async () => {
+      const mockFn = trackAppEvent as jest.Mock;
+      const devices = [
+        { id: 'd1', userId: 'u1', deviceId: 'd1', pushToken: 'apns-token', platform: 'ios' as const, createdAt: '', lastSeenAt: '' },
+      ];
+      await sendToDevices(devices, { title: 'T', body: 'B' }, 'SECURITY');
+      const call = mockFn.mock.calls.find(
+        (args: unknown[]) => (args[0] as { name: string }).name === 'ios_push_deferred'
+      );
+      expect(call).toBeDefined();
+      const callArg = call![0] as { properties: { deviceCount: number; category: string } };
+      expect(callArg.properties.deviceCount).toBe(1);
+      expect(callArg.properties.category).toBe('SECURITY');
+    });
+
+    it('returns iosDeferred: 0 and no event when there are no iOS devices', async () => {
+      // Android-only: sendToDevice would be called, but with no devices the loop is empty
+      const mockFn = trackAppEvent as jest.Mock;
+      const result = await sendToDevices([], { title: 'T', body: 'B' }, 'SOCIAL');
+      expect(result.iosDeferred).toBe(0);
+      const deferredCall = mockFn.mock.calls.find(
+        (args: unknown[]) => (args[0] as { name: string }).name === 'ios_push_deferred'
+      );
+      expect(deferredCall).toBeUndefined();
+    });
+
+    it('FcmBatchResult type includes iosDeferred field', () => {
+      // Compile-time structural check — fails if iosDeferred is removed from the interface
+      const result: FcmBatchResult = {
+        success: 0,
+        failed: 0,
+        iosDeferred: 3,
+        invalidTokens: [],
+        errors: [],
+      };
+      expect(result.iosDeferred).toBe(3);
     });
   });
 });

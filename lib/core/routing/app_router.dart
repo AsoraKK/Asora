@@ -32,6 +32,7 @@ abstract final class AppRoutes {
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final isGuest = ref.watch(guestModeProvider);
+  final pendingCode = ref.watch(pendingInviteCodeProvider);
 
   return GoRouter(
     debugLogDiagnostics: false,
@@ -39,9 +40,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.valueOrNull != null || isGuest;
       final isOnLogin = state.matchedLocation == '/login';
+      final isOnInvite = state.matchedLocation.startsWith('/invite/');
 
-      // Auth callback must be reachable regardless of auth state.
+      // Auth callback and invite routes are always publicly accessible.
       if (state.matchedLocation == '/auth/callback') return null;
+      if (isOnInvite) return null;
+
+      // After login, send the user to redeem their saved invite code.
+      if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
+        return '/invite/$pendingCode';
+      }
 
       if (!isLoggedIn && !isOnLogin) return '/login';
       if (isLoggedIn && isOnLogin) return '/';
@@ -60,6 +68,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoutes.authCallback,
         path: '/auth/callback',
         builder: (context, state) => const AuthCallbackScreen(),
+      ),
+
+      // Invite redemption — top-level public route so anonymous users can
+      // open deep-links and the invite code is never lost by an auth wall.
+      GoRoute(
+        name: AppRoutes.invite,
+        path: '/invite/:code',
+        builder: (context, state) =>
+            InviteRedeemScreen(inviteCode: state.pathParameters['code']),
       ),
 
       // Main app shell (tabs: Discover, Create, Alerts, Profile)
@@ -84,14 +101,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'user/:userId',
             builder: (context, state) =>
                 ProfileScreen(userId: state.pathParameters['userId']),
-          ),
-
-          // Invite redemption
-          GoRoute(
-            name: AppRoutes.invite,
-            path: 'invite/:code',
-            builder: (context, state) =>
-                InviteRedeemScreen(inviteCode: state.pathParameters['code']),
           ),
 
           // Moderation

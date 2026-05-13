@@ -455,6 +455,13 @@ export async function sendToDevice(req: FcmSendRequest): Promise<FcmSendResult> 
 export interface FcmBatchResult {
   success: number;
   failed: number;
+  /**
+   * Count of iOS device tokens that were intentionally not attempted because
+   * APNS delivery is not yet implemented. These are NOT delivery failures —
+   * they are explicit deferrals. iOS users will not receive push notifications
+   * until APNS is implemented.
+   */
+  iosDeferred: number;
   invalidTokens: string[];
   errors: Array<{ deviceId: string; error: string; isRetryable: boolean }>;
 }
@@ -471,26 +478,29 @@ export async function sendToDevices(
   const result: FcmBatchResult = {
     success: 0,
     failed: 0,
+    iosDeferred: 0,
     invalidTokens: [],
     errors: [],
   };
 
   // Filter to Android devices only for FCM
-  // iOS devices will be handled separately when APNS is implemented
+  // iOS devices require a separate APNS client (not yet implemented)
   const fcmDevices = devices.filter((d) => d.platform === 'android');
   const iosDevices = devices.filter((d) => d.platform === 'ios');
 
   if (iosDevices.length > 0) {
-    console.log(`[FCM] Skipping ${iosDevices.length} iOS devices (APNS not yet implemented)`);
-    // Mark iOS as failed with retryable=false (not a transient error)
-    for (const device of iosDevices) {
-      result.failed++;
-      result.errors.push({
-        deviceId: device.deviceId,
-        error: 'APNS_NOT_IMPLEMENTED',
-        isRetryable: false,
-      });
-    }
+    console.warn(
+      `[FCM] iOS push DEFERRED: ${iosDevices.length} device(s) will NOT receive this notification. ` +
+        `APNS delivery is not implemented. iOS users are excluded from push delivery until APNS is built.`
+    );
+    result.iosDeferred = iosDevices.length;
+    trackAppEvent({
+      name: 'ios_push_deferred',
+      properties: {
+        deviceCount: iosDevices.length,
+        category,
+      },
+    });
   }
 
   // Send to each FCM device

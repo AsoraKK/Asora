@@ -10,8 +10,24 @@ permissions:
   id-token: write
 
 jobs:
+  launch-readiness-gate:
+    name: Launch Readiness Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - name: Validate store submission evidence
+        run: bash scripts/validate-store-submission-evidence.sh
+
+      - name: Validate signing material
+        run: bash scripts/validate-signing-material.sh
+
+      - name: Validate alert routing config
+        run: bash scripts/validate-alert-routing-config.sh
+
   deploy:
     name: Production Deploy
+    needs: launch-readiness-gate
     uses: ./.github/workflows/deploy-asora-function-dev.yml
     with:
       target_environment: production

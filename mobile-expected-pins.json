@@ -11,5 +11,9 @@
     "x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=",
     "sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=",
     "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
-  ]
+  ],
+  "_comment_staging": "LAUNCH BLOCKER: run ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net and populate this array",
+  "asora-function-staging.northeurope-01.azurewebsites.net": [],
+  "_comment_prod": "LAUNCH BLOCKER: run ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net (leaf + intermediate) and populate this array",
+  "asora-function-prod.northeurope-01.azurewebsites.net": []
 }

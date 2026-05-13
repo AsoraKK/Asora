@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
@@ -31,7 +32,15 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.inviteCode ?? '');
-    WidgetsBinding.instance.addPostFrameCallback((_) => _logScreenView());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _logScreenView();
+      // Arriving at the invite screen means the pending-code redirect already
+      // fired (or the user navigated directly). Clear the saved code so the
+      // router does not loop back here after a subsequent rebuild.
+      if (mounted) {
+        ref.read(pendingInviteCodeProvider.notifier).state = null;
+      }
+    });
   }
 
   @override
@@ -119,14 +128,15 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     try {
       final token = await ref.read(jwtProvider.future);
       if (token == null || token.isEmpty) {
-        await analytics.logEvent(
-          AnalyticsEvents.inviteRedeemFail,
-          properties: {
-            AnalyticsEvents.propInviteRedeemReason:
-                InviteRedeemFailureReason.unauthorized.value,
-          },
+        // Preserve the code through the login flow so the router redirects
+        // back here once the user has authenticated.
+        ref.read(pendingInviteCodeProvider.notifier).state = code;
+        if (!mounted) return;
+        LythSnackbar.info(
+          context: context,
+          message: 'Sign in first — your invite code has been saved.',
         );
-        setState(() => _error = 'Sign in to redeem an invite.');
+        context.go('/login');
         return;
       }
 
@@ -139,7 +149,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
         context: context,
         message: 'Invite redeemed. Welcome to Lythaus.',
       );
-      Navigator.of(context).pop();
+      context.go('/');
     } on DioException catch (error) {
       final reason = _mapInviteFailure(error);
       await analytics.logEvent(

@@ -8,6 +8,9 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:dio/dio.dart';
 import 'package:opentelemetry/api.dart';
 
+import 'package:asora/core/config/b2c_config_service.dart'
+    show B2CConfigService;
+
 /// Authentication configuration loaded from backend or environment
 @immutable
 class AuthConfig {
@@ -47,6 +50,18 @@ class AuthConfig {
       googleIdpHint: json['googleIdpHint'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'tenant': tenant,
+    if (tenantId != null) 'tenantId': tenantId,
+    'clientId': clientId,
+    'policy': policy,
+    'authorityHost': authorityHost,
+    'scopes': scopes,
+    'redirectUris': redirectUris,
+    'knownAuthorities': knownAuthorities,
+    if (googleIdpHint != null) 'googleIdpHint': googleIdpHint,
+  };
 
   /// Build endpoints. Prefer CIAM tenantId path when available; fallback to tenant name
   String get _tenantPath =>
@@ -178,6 +193,7 @@ class OAuth2Service {
   final FlutterSecureStorage _secureStorage;
   final String? _configEndpoint;
   final Tracer _tracer;
+  final B2CConfigService? _b2cConfigService;
 
   // Lazy-init: FlutterAppAuth is a native plugin that crashes on web if
   // instantiated eagerly.  On web the new OAuth2Service in
@@ -199,10 +215,12 @@ class OAuth2Service {
     required FlutterSecureStorage secureStorage,
     String? configEndpoint,
     Tracer? tracer,
+    B2CConfigService? b2cConfigService,
   }) : _dio = dio,
        _secureStorage = secureStorage,
        _configEndpoint = configEndpoint,
-       _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
+       _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service'),
+       _b2cConfigService = b2cConfigService;
 
   /// Get current auth state stream
   Stream<AuthState> get authState => _authStateController.stream;
@@ -242,8 +260,15 @@ class OAuth2Service {
     }
   }
 
-  /// Load config from server or fallback to environment
+  /// Load config: delegate to [B2CConfigService] when available, otherwise
+  /// fall back to a direct fetch → env-var chain.
   Future<AuthConfig> _loadConfig() async {
+    // Prefer the injected service (fetch → cache → bundled).
+    if (_b2cConfigService != null) {
+      return _b2cConfigService.load();
+    }
+
+    // Legacy path: simple fetch with no caching.
     final span = _tracer.startSpan('auth.config.fetch');
     try {
       if (_configEndpoint != null) {
@@ -259,7 +284,7 @@ class OAuth2Service {
       span.end();
     }
 
-    // Fallback to environment variables
+    // Fallback to environment variables.
     return AuthConfig.fromEnvironment();
   }
 
