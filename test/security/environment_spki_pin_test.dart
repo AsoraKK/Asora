@@ -100,8 +100,7 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
           expect(
             pinPattern.hasMatch(pin),
             isTrue,
-            reason:
-                'Invalid base64 SHA-256 format for staging pin: $pin '
+            reason: 'Invalid base64 SHA-256 format for staging pin: $pin '
                 '(expected 43-44 base64 chars)',
           );
         }
@@ -163,8 +162,7 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
           expect(
             pinPattern.hasMatch(pin),
             isTrue,
-            reason:
-                'Invalid base64 SHA-256 format for production pin: $pin '
+            reason: 'Invalid base64 SHA-256 format for production pin: $pin '
                 '(expected 43-44 base64 chars)',
           );
         }
@@ -180,8 +178,7 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
         expect(
           config.security.tlsPins.spkiPinsBase64.length >= 2,
           isTrue,
-          reason:
-              'Production must have at least 2 SPKI pins (leaf + backup) '
+          reason: 'Production must have at least 2 SPKI pins (leaf + backup) '
               'to survive certificate rotation without a forced app update. '
               'Extract the intermediate CA pin with: '
               'CERT_INDEX=1 ./scripts/extract-spki-pins.sh $_prodHost',

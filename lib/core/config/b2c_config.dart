@@ -47,4 +47,3 @@ const Map<String, dynamic> kB2CConfig = {
   'knownAuthorities': [_kAuthorityHost],
   'googleIdpHint': 'Google',
 };
-
