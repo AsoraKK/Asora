@@ -136,17 +136,7 @@ jobs:
             exit 1
           fi
 
-          # Detect empty spkiPinsBase64 arrays inside the staging/prod security blocks.
-          # The awk range covers the _stagingMobileSecurity and _prodMobileSecurity const blocks.
-          empty_staging=$(awk '/_stagingMobileSecurity/,/^\);/' "$ENV_FILE" \
-            | grep -c "spkiPinsBase64:\s*\[" | xargs -I{} sh -c \
-              'awk "/_stagingMobileSecurity/,/^\);/" '"$ENV_FILE"' | grep -c "spkiPinsBase64:\s*\[\]" || true')
-          empty_prod=$(awk '/_prodMobileSecurity/,/^\);/' "$ENV_FILE" \
-            | grep -c "spkiPinsBase64:\s*\[" | xargs -I{} sh -c \
-              'awk "/_prodMobileSecurity/,/^\);/" '"$ENV_FILE"' | grep -c "spkiPinsBase64:\s*\[\]" || true')
-
-          # Simpler direct check: search the entire file for the empty array patterns
-          # inside the staging and prod security const blocks
+          # Check for empty spkiPinsBase64 arrays inside the staging/prod security const blocks
           staging_empty=false
           prod_empty=false
 
