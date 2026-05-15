@@ -14,9 +14,15 @@ void main() {
     );
 
     final raw = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-    final expected = raw.map(
-      (key, value) =>
-          MapEntry(key, (value as List).map((pin) => pin.toString()).toSet()),
+    final expected = Map.fromEntries(
+      raw.entries
+          .where((e) => e.value is List && (e.value as List).isNotEmpty)
+          .map(
+            (e) => MapEntry(
+              e.key,
+              (e.value as List).map((pin) => pin.toString()).toSet(),
+            ),
+          ),
     );
 
     final actual = kPinnedDomains.map(

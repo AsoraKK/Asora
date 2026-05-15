@@ -290,6 +290,10 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createAnonymousPolicy('auth/invite/validate', 30);
     case 'health':
   return createAnonymousPolicy('health', ANON_IP_LIMIT.limit);
+    case 'admin_set_user_tier':
+      return createWritePolicy('admin/users/set-tier');
+    case 'moderation-review-appeal':
+      return createWritePolicy('moderation/appeals/review');
     default:
       return createGenericPolicy(routeId);
   }

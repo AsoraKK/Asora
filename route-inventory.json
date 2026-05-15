@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-05-02T14:58:41.150Z",
+  "generatedAt": "2026-05-15T18:12:25.286Z",
   "functionsRoot": "functions/src",
-  "totalRoutes": 118,
-  "writeRoutes": 70,
+  "totalRoutes": 120,
+  "writeRoutes": 72,
   "missingRateLimit": [],
   "missingAuthGuard": [],
   "anonymousTodoViolations": [],
@@ -873,6 +873,23 @@
       "missingTestEnvGuard": false
     },
     {
+      "file": "functions/src/admin/routes/users_set_tier.function.ts",
+      "functionName": "admin_set_user_tier",
+      "methods": [
+        "PATCH"
+      ],
+      "route": "admin/users/{userId}/tier",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
       "file": "functions/src/analytics/ingest/ingest.function.ts",
       "functionName": "ingestAnalytics",
       "methods": [
@@ -1294,6 +1311,24 @@
         "OPTIONS"
       ],
       "route": "moderation/appeals",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/moderation/reviewAppealedContent.ts",
+      "functionName": "moderation-review-appeal",
+      "methods": [
+        "POST",
+        "OPTIONS"
+      ],
+      "route": "moderation/appeals/{appealId}/review",
       "authLevel": "anonymous",
       "isWrite": true,
       "hasRateLimit": true,

@@ -32,7 +32,7 @@ final _validConfigJson = <String, dynamic>{
 
 /// Cached JSON string matching the structure above but representing a
 /// previously saved successful fetch (tenant = 'cached.onmicrosoft.com').
-final _cachedConfigJson =
+const _cachedConfigJson =
     '{"tenant":"cached.onmicrosoft.com","clientId":"cached-client-id",'
     '"policy":"B2C_1_signupsignin","authorityHost":"cached.ciamlogin.com",'
     '"scopes":["openid"],"redirectUris":{"android":"com.cached://callback"},'

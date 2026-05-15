@@ -19,6 +19,8 @@ import { createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { requireActiveAdmin } from '../adminAuthUtils';
 import { recordAdminAudit } from '../auditLogger';
 import { normalizeTier } from '@shared/services/tierLimits';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 import type { UserTier } from '@shared/services/tierLimits';
 import type { Principal } from '@shared/middleware/auth';
 
@@ -77,9 +79,14 @@ export async function setUserTier(
   return createSuccessResponse({ userId, tier, updatedAt: now });
 }
 
+const rateLimitedSetUserTier = withRateLimit(
+  requireActiveAdmin(setUserTier),
+  (req, context) => getPolicyForFunction('admin_set_user_tier'),
+);
+
 app.http('admin_set_user_tier', {
   methods: ['PATCH'],
   route: 'admin/users/{userId}/tier',
   authLevel: 'anonymous',
-  handler: requireActiveAdmin(setUserTier),
+  handler: rateLimitedSetUserTier,
 });

@@ -36,8 +36,7 @@ import 'package:asora/core/config/environment_config.dart';
 ///
 /// Full procedure: docs/runbooks/tls-pinning-rotation.md
 
-const _stagingHost =
-    'asora-function-staging.northeurope-01.azurewebsites.net';
+const _stagingHost = 'asora-function-staging.northeurope-01.azurewebsites.net';
 const _prodHost = 'asora-function-prod.northeurope-01.azurewebsites.net';
 
 void main() {
@@ -54,12 +53,14 @@ void main() {
       'staging spkiPinsBase64 is non-empty [LAUNCH BLOCKER]',
       skip: enforceGate ? null : gateSkipReason,
       () {
-        final config =
-            EnvironmentConfig.configForEnvironment(Environment.staging);
+        final config = EnvironmentConfig.configForEnvironment(
+          Environment.staging,
+        );
         expect(
           config.security.tlsPins.spkiPinsBase64,
           isNotEmpty,
-          reason: '''
+          reason:
+              '''
 LAUNCH BLOCKER: staging spkiPinsBase64 is empty in environment_config.dart.
 
 Staging API host: $_stagingHost
@@ -85,8 +86,9 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
       'staging pins have valid base64 format and no placeholders',
       skip: enforceGate ? null : gateSkipReason,
       () {
-        final config =
-            EnvironmentConfig.configForEnvironment(Environment.staging);
+        final config = EnvironmentConfig.configForEnvironment(
+          Environment.staging,
+        );
         final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
 
         for (final pin in config.security.tlsPins.spkiPinsBase64) {
@@ -100,7 +102,8 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
           expect(
             pinPattern.hasMatch(pin),
             isTrue,
-            reason: 'Invalid base64 SHA-256 format for staging pin: $pin '
+            reason:
+                'Invalid base64 SHA-256 format for staging pin: $pin '
                 '(expected 43-44 base64 chars)',
           );
         }
@@ -113,12 +116,14 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
       'production spkiPinsBase64 is non-empty [LAUNCH BLOCKER]',
       skip: enforceGate ? null : gateSkipReason,
       () {
-        final config =
-            EnvironmentConfig.configForEnvironment(Environment.production);
+        final config = EnvironmentConfig.configForEnvironment(
+          Environment.production,
+        );
         expect(
           config.security.tlsPins.spkiPinsBase64,
           isNotEmpty,
-          reason: '''
+          reason:
+              '''
 LAUNCH BLOCKER: production spkiPinsBase64 is empty in environment_config.dart.
 
 Production API host: $_prodHost
@@ -147,8 +152,9 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
       'production pins have valid base64 format and no placeholders',
       skip: enforceGate ? null : gateSkipReason,
       () {
-        final config =
-            EnvironmentConfig.configForEnvironment(Environment.production);
+        final config = EnvironmentConfig.configForEnvironment(
+          Environment.production,
+        );
         final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
 
         for (final pin in config.security.tlsPins.spkiPinsBase64) {
@@ -162,7 +168,8 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
           expect(
             pinPattern.hasMatch(pin),
             isTrue,
-            reason: 'Invalid base64 SHA-256 format for production pin: $pin '
+            reason:
+                'Invalid base64 SHA-256 format for production pin: $pin '
                 '(expected 43-44 base64 chars)',
           );
         }
@@ -173,12 +180,14 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
       'production has at least two pins (primary + backup for rotation)',
       skip: enforceGate ? null : gateSkipReason,
       () {
-        final config =
-            EnvironmentConfig.configForEnvironment(Environment.production);
+        final config = EnvironmentConfig.configForEnvironment(
+          Environment.production,
+        );
         expect(
           config.security.tlsPins.spkiPinsBase64.length >= 2,
           isTrue,
-          reason: 'Production must have at least 2 SPKI pins (leaf + backup) '
+          reason:
+              'Production must have at least 2 SPKI pins (leaf + backup) '
               'to survive certificate rotation without a forced app update. '
               'Extract the intermediate CA pin with: '
               'CERT_INDEX=1 ./scripts/extract-spki-pins.sh $_prodHost',

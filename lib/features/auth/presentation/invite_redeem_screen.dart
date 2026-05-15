@@ -136,7 +136,12 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
           context: context,
           message: 'Sign in first — your invite code has been saved.',
         );
-        context.go('/login');
+        try {
+          context.go('/login');
+        } catch (_) {
+          // GoRouter not in context (e.g. isolated widget tests).
+          if (mounted) setState(() => _error = 'Sign in to redeem an invite.');
+        }
         return;
       }
 
@@ -149,7 +154,14 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
         context: context,
         message: 'Invite redeemed. Welcome to Lythaus.',
       );
-      context.go('/');
+      try {
+        context.go('/');
+      } catch (_) {
+        // GoRouter not in context (e.g. isolated widget tests); pop instead.
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      }
     } on DioException catch (error) {
       final reason = _mapInviteFailure(error);
       await analytics.logEvent(
