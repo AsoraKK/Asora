@@ -259,3 +259,8 @@ lib/src/model/validation_error_response_error_fields_inner.dart
 lib/src/model/vote_on_appeal_v1_request.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/flag_content_v1202_response_test.dart
+test/flag_content_v1_request_test.dart
+test/get_my_appeals200_response_items_inner_test.dart
+test/get_my_appeals200_response_test.dart
+test/vote_on_appeal_v1_request_test.dart
