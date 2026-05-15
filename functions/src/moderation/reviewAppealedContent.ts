@@ -1,6 +1,8 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 import { requireModerator } from '@shared/middleware/auth';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForFunction } from '@rate-limit/policies';
 import type { Principal } from '@shared/middleware/auth';
 import {
   handleCorsAndMethod,
@@ -203,9 +205,14 @@ export async function reviewAppealedContentRoute(
 // Function registration
 // ─────────────────────────────────────────────────────────────
 
+const rateLimitedReviewAppeal = withRateLimit(
+  reviewAppealedContentRoute,
+  (req, context) => getPolicyForFunction('moderation-review-appeal'),
+);
+
 app.http('moderation-review-appeal', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'moderation/appeals/{appealId}/review',
-  handler: reviewAppealedContentRoute,
+  handler: rateLimitedReviewAppeal,
 });

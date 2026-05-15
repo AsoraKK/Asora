@@ -116,7 +116,7 @@ void main() {
   group('invite route public accessibility', () {
     // Lightweight GoRouter that mirrors only the redirect logic under test.
     // Using stub screens avoids pulling in the full provider graph.
-    GoRouter _buildRedirectRouter({
+    GoRouter buildRedirectRouter({
       required bool isLoggedIn,
       required String? pendingCode,
       String initialLocation = '/',
@@ -162,7 +162,7 @@ void main() {
     testWidgets(
       'anonymous user opening /invite/:code is not redirected to login',
       (tester) async {
-        final router = _buildRedirectRouter(
+        final router = buildRedirectRouter(
           isLoggedIn: false,
           pendingCode: null,
           initialLocation: '/invite/ABCD-1234',
@@ -218,7 +218,7 @@ void main() {
       'login redirect with pending invite code navigates to /invite/:code',
       (tester) async {
         // Simulate a logged-in user who has a pending invite code saved.
-        final router = _buildRedirectRouter(
+        final router = buildRedirectRouter(
           isLoggedIn: true,
           pendingCode: 'ABCD-1234',
           initialLocation: '/',
