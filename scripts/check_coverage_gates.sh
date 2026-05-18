@@ -6,7 +6,7 @@ set -euo pipefail
 # ============================================================================
 
 LCOV_FILE="coverage/lcov.info"
-BASELINE_FILE="coverage/coverage_baseline.json"
+BASELINE_FILE="scripts/coverage_baseline.json"
 
 P1_PATTERNS=(
   "lib/p1_modules/"
