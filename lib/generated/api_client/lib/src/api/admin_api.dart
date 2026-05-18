@@ -28,6 +28,7 @@ import 'package:asora_api_client/src/model/admin_invite_response.dart';
 import 'package:asora_api_client/src/model/admin_invite_revoke_request.dart';
 import 'package:asora_api_client/src/model/admin_invite_revoke_response.dart';
 import 'package:asora_api_client/src/model/admin_resolve_response.dart';
+import 'package:asora_api_client/src/model/admin_set_user_tier_request.dart';
 import 'package:asora_api_client/src/model/admin_user_action_response.dart';
 import 'package:asora_api_client/src/model/admin_user_disable_request.dart';
 import 'package:asora_api_client/src/model/admin_user_enable_request.dart';
@@ -35,6 +36,7 @@ import 'package:asora_api_client/src/model/admin_user_search_response.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/error_response.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
+import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
 
@@ -4219,6 +4221,109 @@ class AdminApi {
     }
 
     return Response<JsonObject>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Set user subscription tier
+  /// Update the subscription tier of a specific user. Requires active admin privileges.
+  ///
+  /// Parameters:
+  /// * [userId] - User identifier
+  /// * [adminSetUserTierRequest] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AdminUserActionResponse>> adminSetUserTier({ 
+    required String userId,
+    required AdminSetUserTierRequest adminSetUserTierRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/users/{userId}/tier'.replaceAll('{' r'userId' '}', encodeQueryParameter(_serializers, userId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'PATCH',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AdminSetUserTierRequest);
+      _bodyData = _serializers.serialize(adminSetUserTierRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AdminUserActionResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminUserActionResponse),
+      ) as AdminUserActionResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AdminUserActionResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

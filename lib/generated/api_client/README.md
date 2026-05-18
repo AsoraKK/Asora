@@ -111,6 +111,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminOpsMetrics**](doc/AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
 [*AdminApi*](doc/AdminApi.md) | [**adminOpsStateGet**](doc/AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
 [*AdminApi*](doc/AdminApi.md) | [**adminOpsStateUpdate**](doc/AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
+[*AdminApi*](doc/AdminApi.md) | [**adminSetUserTier**](doc/AdminApi.md#adminsetusertier) | **PATCH** /admin/users/{userId}/tier | Set user subscription tier
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersDisable**](doc/AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersEnable**](doc/AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersSearch**](doc/AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
@@ -148,6 +149,7 @@ Class | Method | HTTP request | Description
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationQueueList**](doc/ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationReviewQueueList**](doc/ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
 [*ModerationApi*](doc/ModerationApi.md) | [**moderationTest**](doc/ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
+[*ModerationApi*](doc/ModerationApi.md) | [**reviewAppealedContent**](doc/ModerationApi.md#reviewappealedcontent) | **POST** /moderation/appeals/{appealId}/review | Moderator review decision on an appeal
 [*ModerationApi*](doc/ModerationApi.md) | [**submitAppealV1**](doc/ModerationApi.md#submitappealv1) | **POST** /moderation/submit-appeal | Submit a moderation appeal (v1 route)
 [*ModerationApi*](doc/ModerationApi.md) | [**submitModerationAppeal**](doc/ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
 [*ModerationApi*](doc/ModerationApi.md) | [**voteOnAppealV1**](doc/ModerationApi.md#voteonappealv1) | **POST** /moderation/vote-appeal | Cast a community vote on an appeal (v1 route)
@@ -245,6 +247,7 @@ Class | Method | HTTP request | Description
  - [AdminModerationSummary](doc/AdminModerationSummary.md)
  - [AdminQueueStatus](doc/AdminQueueStatus.md)
  - [AdminResolveResponse](doc/AdminResolveResponse.md)
+ - [AdminSetUserTierRequest](doc/AdminSetUserTierRequest.md)
  - [AdminUserActionResponse](doc/AdminUserActionResponse.md)
  - [AdminUserDisableRequest](doc/AdminUserDisableRequest.md)
  - [AdminUserEnableRequest](doc/AdminUserEnableRequest.md)
@@ -292,6 +295,7 @@ Class | Method | HTTP request | Description
  - [RedeemInviteRequest](doc/RedeemInviteRequest.md)
  - [RedeemInviteResponse](doc/RedeemInviteResponse.md)
  - [RedeemInviteResponseData](doc/RedeemInviteResponseData.md)
+ - [ReviewAppealedContentRequest](doc/ReviewAppealedContentRequest.md)
  - [ServiceUnavailableError](doc/ServiceUnavailableError.md)
  - [ServiceUnavailableErrorError](doc/ServiceUnavailableErrorError.md)
  - [UnauthorizedError](doc/UnauthorizedError.md)
