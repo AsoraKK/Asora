@@ -1,0 +1,24 @@
+{
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      { "path": "/userId", "order": "ascending" },
+      { "path": "/createdAt", "order": "descending" }
+    ],
+    [
+      { "path": "/userId", "order": "ascending" },
+      { "path": "/eventCategory", "order": "ascending" },
+      { "path": "/createdAt", "order": "descending" }
+    ]
+  ]
+}

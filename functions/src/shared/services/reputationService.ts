@@ -26,14 +26,17 @@ export const REPUTATION_ADJUSTMENTS = {
   POST_CREATED: 1,
   POST_LIKED: 2,
   COMMENT_CREATED: 1,
-  
+
+  // AI policy penalties
+  AI_UNDISCLOSED: -8,
+
   // Penalties (negative values)
   CONTENT_REMOVED_SPAM: -5,
   CONTENT_REMOVED_HARASSMENT: -10,
   CONTENT_REMOVED_HATE_SPEECH: -15,
   CONTENT_REMOVED_VIOLENCE: -20,
   CONTENT_REMOVED_OTHER: -3,
-  
+
   // Default penalty for unknown violations
   CONTENT_REMOVED_DEFAULT: -5,
 } as const;
@@ -60,6 +63,10 @@ export interface ReputationAdjustment {
   idempotencyKey: string;
   sourceId?: string; // postId, commentId, etc.
   sourceType?: 'post' | 'comment' | 'moderation';
+  /** Pillar tag — stored in audit record; existing callers may omit. */
+  pillar?: string;
+  /** Impact band — stored in audit record; existing callers may omit. */
+  impactBand?: string;
 }
 
 export interface ReputationResult {
@@ -86,6 +93,10 @@ interface ReputationAuditDocument {
   newScore: number;
   sourceId?: string;
   sourceType?: string;
+  /** Pillar tag from reputationEventService — present when event is pillar-aware. */
+  pillar?: string;
+  /** Impact band from reputationEventService — present when event is pillar-aware. */
+  impactBand?: string;
   createdAt: string;
   _partitionKey: string;
 }
@@ -162,6 +173,8 @@ async function recordAudit(
     newScore,
     sourceId: adjustment.sourceId,
     sourceType: adjustment.sourceType,
+    pillar: adjustment.pillar,
+    impactBand: adjustment.impactBand,
     createdAt: new Date().toISOString(),
     _partitionKey: auditId, // Self-partitioned for point reads
   };

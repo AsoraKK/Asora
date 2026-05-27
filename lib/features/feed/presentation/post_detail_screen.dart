@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/feed/application/post_creation_providers.dart';
 import 'package:asora/features/feed/domain/models.dart' as domain;
+import 'package:asora/features/reactions/presentation/reaction_bar.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/ui/components/receipt_drawer.dart';
 import 'package:asora/ui/components/trust_strip_row.dart';
@@ -98,6 +99,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   const SizedBox(height: 12),
                   _PostMedia(mediaUrls: post.mediaUrls!),
                 ],
+                const SizedBox(height: 12),
+                // ── Reaction Bar (Phase 2) ──
+                ReactionBar(
+                  contentId: post.id,
+                  authorUserId: post.authorId,
+                ),
                 const SizedBox(height: 12),
                 TrustStripRow(
                   summary: FeedTrustSummary(

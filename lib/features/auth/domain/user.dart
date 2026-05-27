@@ -2,6 +2,8 @@
 
 // lib/features/auth/domain/user.dart
 
+import 'subscription_tier.dart';
+
 /// User model representing an authenticated user in the Asora system
 class User {
   const User({
@@ -12,6 +14,7 @@ class User {
     required this.reputationScore,
     required this.createdAt,
     required this.lastLoginAt,
+    this.subscriptionTier = SubscriptionTier.free,
     this.isTemporary = false,
     this.tokenExpires,
   });
@@ -20,6 +23,9 @@ class User {
   final String email;
   final UserRole role;
   final UserTier tier;
+
+  /// Subscription tier. Prefer this over the legacy `tier` field.
+  final SubscriptionTier subscriptionTier;
   final int reputationScore;
   final DateTime createdAt;
   final DateTime lastLoginAt;
@@ -34,6 +40,10 @@ class User {
       email: json['email'] as String,
       role: UserRole.fromString(json['role'] as String),
       tier: UserTier.fromString(json['tier'] as String),
+      subscriptionTier: SubscriptionTier.fromString(
+        json['subscriptionTier'] as String? ??
+            json['subscription_tier'] as String?,
+      ),
       // API sends reputation_score, cached data uses reputationScore
       reputationScore:
           json['reputation_score'] as int? ??
@@ -59,6 +69,7 @@ class User {
       'email': email,
       'role': role.name,
       'tier': tier.name,
+      'subscriptionTier': subscriptionTier.value,
       'reputationScore': reputationScore,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
@@ -73,6 +84,7 @@ class User {
     String? email,
     UserRole? role,
     UserTier? tier,
+    SubscriptionTier? subscriptionTier,
     int? reputationScore,
     DateTime? createdAt,
     DateTime? lastLoginAt,
@@ -84,6 +96,7 @@ class User {
       email: email ?? this.email,
       role: role ?? this.role,
       tier: tier ?? this.tier,
+      subscriptionTier: subscriptionTier ?? this.subscriptionTier,
       reputationScore: reputationScore ?? this.reputationScore,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
@@ -100,6 +113,7 @@ class User {
         other.email == email &&
         other.role == role &&
         other.tier == tier &&
+        other.subscriptionTier == subscriptionTier &&
         other.reputationScore == reputationScore &&
         other.createdAt == createdAt &&
         other.lastLoginAt == lastLoginAt &&
@@ -114,6 +128,7 @@ class User {
       email,
       role,
       tier,
+      subscriptionTier,
       reputationScore,
       createdAt,
       lastLoginAt,
@@ -146,6 +161,9 @@ enum UserRole {
 }
 
 /// User tiers based on reputation and engagement
+///
+/// @Deprecated: Use [SubscriptionTier] for new code.
+@Deprecated('Use SubscriptionTier instead')
 enum UserTier {
   bronze('bronze'),
   silver('silver'),

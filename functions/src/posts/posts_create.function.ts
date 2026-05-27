@@ -23,6 +23,8 @@ import {
 } from '@posts/service/moderationUtil';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { awardPostCreated } from '@shared/services/reputationService';
+import { recordReputationEvent } from '../reputation/reputationEventService';
+import { LedgerEventType } from '../reputation/types';
 import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
 import {
   checkAndIncrementPostCount,
@@ -229,6 +231,23 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     }
 
     if (aiDetected && effectiveAiLabel !== 'generated') {
+      // Phase 1: apply undisclosed-AI reputation penalty before returning 400
+      // (hard-block remains regardless of reputation action)
+      if (content && content.length >= 250) {
+        void recordReputationEvent({
+          userId: auth.userId,
+          ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
+          sourceId: postId,
+          sourceType: 'post',
+        }).catch((error) => {
+          ctx.context.warn?.('[posts_create] Failed to record undisclosed AI reputation event', {
+            postId,
+            userId: auth.userId.slice(0, 8),
+            message: (error as Error).message,
+          });
+        });
+      }
+
       return ctx.badRequest(
         'Potential AI-generated content must be labeled and is not publishable.',
         'AI_LABEL_REQUIRED',
@@ -318,13 +337,29 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     }
 
     if (!aiDetected && effectiveAiLabel !== 'generated') {
-      void awardPostCreated(auth.userId, post.id).catch((error) => {
-        ctx.context.warn?.('[posts_create] Failed to award post-created reputation', {
-          postId: post.id,
-          userId: auth.userId.slice(0, 8),
-          message: (error as Error).message,
+      if (content && content.length >= 250) {
+        // Phase 1: 250+ char human post earns reputation via ledger
+        void recordReputationEvent({
+          userId: auth.userId,
+          ledgerEventType: LedgerEventType.HUMAN_TEXT_250_PLUS,
+          sourceId: post.id,
+          sourceType: 'post',
+        }).catch((error) => {
+          ctx.context.warn?.('[posts_create] Failed to record HUMAN_TEXT_250_PLUS reputation event', {
+            postId: post.id,
+            userId: auth.userId.slice(0, 8),
+            message: (error as Error).message,
+          });
         });
-      });
+      } else {
+        void awardPostCreated(auth.userId, post.id).catch((error) => {
+          ctx.context.warn?.('[posts_create] Failed to award post-created reputation', {
+            postId: post.id,
+            userId: auth.userId.slice(0, 8),
+            message: (error as Error).message,
+          });
+        });
+      }
     }
 
     void appendReceiptEvent({

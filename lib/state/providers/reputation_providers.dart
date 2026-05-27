@@ -2,6 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/services/service_providers.dart';
@@ -62,17 +63,55 @@ final reputationProvider = FutureProvider<UserReputation>((ref) async {
     orElse: () => _lythausReputationTiers.first,
   );
 
+  final rawScore = user?.reputationScore ?? 0;
+  final level = computeLevelFromScore(rawScore);
+
   return UserReputation(
-    xp: user?.reputationScore ?? 0,
+    xp: rawScore,
     tier: tier,
     missions: _buildEntitlementMissions(status?.entitlements),
     recentAchievements: _buildRecentAchievements(status, tier),
+    reputationLevel: level,
+    reputationBand: levelDisplayName(level),
   );
 });
 
 final reputationTiersProvider = Provider<List<ReputationTier>>(
   (ref) => _lythausReputationTiers,
 );
+
+/// Phase 1: Provides the numeric [ReputationLevel] for the current user.
+/// Computed client-side from `reputationScore` using default thresholds.
+final reputationLevelProvider = Provider<ReputationLevel>((ref) {
+  final userAsync = ref.watch(currentUserProvider);
+  final rawScore = userAsync?.reputationScore ?? 0;
+  return computeLevelFromScore(rawScore);
+});
+
+/// Phase 1: Provides a paginated reputation ledger for the current user.
+/// Returns `AsyncValue<List<LedgerEntry>>`.
+final reputationLedgerProvider = FutureProvider<List<LedgerEntry>>((ref) async {
+  final token = await ref.watch(jwtProvider.future);
+  if (token == null || token.isEmpty) {
+    return const [];
+  }
+
+  try {
+    final dio = ref.read(secureDioProvider);
+    final response = await dio.get<Map<String, dynamic>>(
+      '/reputation/me/ledger',
+      queryParameters: {'filter': 'all', 'limit': '20'},
+    );
+
+    final data = response.data;
+    final entriesJson = data?['entries'] as List<dynamic>? ?? [];
+    return entriesJson
+        .map((e) => LedgerEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+});
 
 String _resolveTierId(String? subscriptionTier, User? user) {
   final normalized = (subscriptionTier ?? '').toLowerCase().trim();
@@ -86,13 +125,18 @@ String _resolveTierId(String? subscriptionTier, User? user) {
     return 'free';
   }
 
+  // ignore: deprecated_member_use
   switch (user.tier) {
+    // ignore: deprecated_member_use
     case UserTier.bronze:
       return 'free';
+    // ignore: deprecated_member_use
     case UserTier.silver:
       return 'premium';
+    // ignore: deprecated_member_use
     case UserTier.gold:
       return 'premium';
+    // ignore: deprecated_member_use
     case UserTier.platinum:
       return 'black';
   }
