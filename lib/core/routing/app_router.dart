@@ -13,6 +13,7 @@ import 'package:asora/features/moderation/presentation/screens/appeal_history_sc
 import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:asora/ui/screens/adaptive_shell.dart';
 import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -25,6 +26,7 @@ abstract final class AppRoutes {
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
+  static const String reputationLedger = 'reputation-ledger';
 }
 
 /// Provides the application [GoRouter] that is refreshed when auth state
@@ -122,6 +124,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: AppRoutes.notificationSettings,
             path: 'settings/notifications',
             builder: (context, state) => const NotificationsSettingsScreen(),
+          ),
+
+          // Reputation ledger
+          GoRoute(
+            name: AppRoutes.reputationLedger,
+            path: 'reputation/ledger',
+            builder: (context, state) => const ReputationLedgerScreen(),
           ),
         ],
       ),

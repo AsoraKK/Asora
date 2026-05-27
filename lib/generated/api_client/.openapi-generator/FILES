@@ -53,6 +53,7 @@ doc/AdminInviteStatus.md
 doc/AdminModerationSummary.md
 doc/AdminQueueStatus.md
 doc/AdminResolveResponse.md
+doc/AdminSetUserTierRequest.md
 doc/AdminUserActionResponse.md
 doc/AdminUserDisableRequest.md
 doc/AdminUserEnableRequest.md
@@ -112,6 +113,7 @@ doc/RateLimitError.md
 doc/RedeemInviteRequest.md
 doc/RedeemInviteResponse.md
 doc/RedeemInviteResponseData.md
+doc/ReviewAppealedContentRequest.md
 doc/ServiceUnavailableError.md
 doc/ServiceUnavailableErrorError.md
 doc/SubscriptionApi.md
@@ -199,6 +201,7 @@ lib/src/model/admin_invite_status.dart
 lib/src/model/admin_moderation_summary.dart
 lib/src/model/admin_queue_status.dart
 lib/src/model/admin_resolve_response.dart
+lib/src/model/admin_set_user_tier_request.dart
 lib/src/model/admin_user_action_response.dart
 lib/src/model/admin_user_disable_request.dart
 lib/src/model/admin_user_enable_request.dart
@@ -247,6 +250,7 @@ lib/src/model/rate_limit_error.dart
 lib/src/model/redeem_invite_request.dart
 lib/src/model/redeem_invite_response.dart
 lib/src/model/redeem_invite_response_data.dart
+lib/src/model/review_appealed_content_request.dart
 lib/src/model/service_unavailable_error.dart
 lib/src/model/service_unavailable_error_error.dart
 lib/src/model/unauthorized_error.dart
@@ -259,3 +263,5 @@ lib/src/model/validation_error_response_error_fields_inner.dart
 lib/src/model/vote_on_appeal_v1_request.dart
 lib/src/serializers.dart
 pubspec.yaml
+test/admin_set_user_tier_request_test.dart
+test/review_appealed_content_request_test.dart

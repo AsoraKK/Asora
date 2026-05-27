@@ -1,79 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/state/models/reputation.dart';
-import 'package:asora/state/providers/reputation_providers.dart';
+
+import 'package:asora/features/rewards/application/reward_providers.dart';
+import 'package:asora/features/rewards/domain/reward_models.dart';
 import 'package:asora/ui/screens/rewards/rewards_dashboard.dart';
 
 void main() {
-  const freeTier = ReputationTier(
-    id: 'free',
-    name: 'Free',
-    minXP: 0,
-    privileges: ['Discovery + News feeds'],
+  final snapshot = RewardsSnapshot(
+    subscriptionTier: 'premium',
+    reputationLevel: 3,
+    reputationBand: 'established',
+    availableRewardLevels: [1, 2, 3, 4, 5],
+    maxOptionsPerLevel: 1,
+    redemptionStatus: 'active',
+    fraudRiskStatus: 'normal',
+    offers: [
+      RewardOffer(
+        id: 'lvl1-privacy-basics',
+        rewardLevel: 1,
+        title: 'Privacy Starter Pack',
+        description: 'Starter tools',
+        partnerName: 'Partner A',
+        locked: false,
+        redeemed: false,
+      ),
+      RewardOffer(
+        id: 'lvl4-editorial-tools',
+        rewardLevel: 4,
+        title: 'Editorial Tools Bundle',
+        description: 'Advanced tools',
+        partnerName: 'Partner B',
+        locked: true,
+        redeemed: false,
+        lockReason: 'Tier limitation',
+      ),
+    ],
+    redemptionHistory: [
+      RewardRedemption(
+        id: 'red-1',
+        rewardId: 'lvl1-privacy-basics',
+        rewardLevel: 1,
+        rewardTitle: 'Privacy Starter Pack',
+        redeemedAt: DateTime(2026, 5, 26),
+        status: 'redeemed',
+      ),
+    ],
+    affiliateDisclosure:
+        'Some reward links may include affiliate relationships.',
   );
 
-  // Premium tier available for future tests:
-  // const premiumTier = ReputationTier(
-  //   id: 'premium',
-  //   name: 'Premium',
-  //   minXP: 1200,
-  //   privileges: ['Discovery + News feeds', '2 custom feeds'],
-  // );
-
-  Widget buildDashboard({required AsyncValue<UserReputation> reputationValue}) {
+  Widget buildDashboard({required AsyncValue<RewardsSnapshot> rewardsValue}) {
     return ProviderScope(
       overrides: [
-        reputationProvider.overrideWith(
-          (ref) => reputationValue.when(
+        rewardsSnapshotProvider.overrideWith(
+          (ref) => rewardsValue.when(
             data: (d) => Future.value(d),
             loading: () => Future.delayed(const Duration(days: 1)),
             error: (e, s) => Future.error(e, s),
           ),
         ),
-        reputationTiersProvider.overrideWithValue(const [
-          ReputationTier(
-            id: 'free',
-            name: 'Free',
-            minXP: 0,
-            privileges: ['Discovery + News feeds'],
-          ),
-          ReputationTier(
-            id: 'premium',
-            name: 'Premium',
-            minXP: 1200,
-            privileges: ['2 custom feeds'],
-          ),
-          ReputationTier(
-            id: 'black',
-            name: 'Black',
-            minXP: 3200,
-            privileges: ['All rewards'],
-          ),
-        ]),
       ],
       child: const MaterialApp(home: RewardsDashboardScreen()),
     );
   }
 
+  Future<void> scrollUntilText(WidgetTester tester, String text) async {
+    await tester.scrollUntilVisible(
+      find.text(text),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   group('RewardsDashboardScreen', () {
-    testWidgets('shows app bar title', (tester) async {
+    testWidgets('shows app bar title and status header', (tester) async {
       await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(xp: 0, tier: freeTier),
-          ),
-        ),
+        buildDashboard(rewardsValue: AsyncValue.data(snapshot)),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Rewards & XP'), findsOneWidget);
+      expect(find.text('Lythaus Rewards'), findsOneWidget);
+      expect(find.text('Your rewards status'), findsOneWidget);
+      expect(find.text('Subscription tier: premium'), findsOneWidget);
     });
 
     testWidgets('shows error state with retry button', (tester) async {
       await tester.pumpWidget(
         buildDashboard(
-          reputationValue: AsyncValue.error(
+          rewardsValue: AsyncValue.error(
             Exception('Network error'),
             StackTrace.current,
           ),
@@ -87,152 +103,55 @@ void main() {
 
     testWidgets('shows XP and tier data when loaded', (tester) async {
       await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(
-              xp: 500,
-              tier: freeTier,
-              missions: [
-                Mission(
-                  id: 'm1',
-                  title: 'Daily post limit: 5',
-                  xpReward: 0,
-                  completed: true,
-                ),
-              ],
-              recentAchievements: ['Tier active: Free'],
-            ),
-          ),
-        ),
+        buildDashboard(rewardsValue: AsyncValue.data(snapshot)),
       );
       await tester.pumpAndSettle();
+      await scrollUntilText(tester, 'Available rewards');
 
-      expect(find.text('Rewards & XP'), findsOneWidget);
-      expect(find.text('500 XP'), findsOneWidget);
-      expect(find.text('Missions'), findsOneWidget);
-      expect(find.text('Daily post limit: 5'), findsOneWidget);
+      expect(find.text('Available rewards'), findsOneWidget);
+      expect(find.text('Privacy Starter Pack'), findsOneWidget);
+      expect(find.text('Partner: Partner A'), findsOneWidget);
+      expect(find.text('Redeem'), findsOneWidget);
     });
 
-    testWidgets('shows history section with achievements', (tester) async {
+    testWidgets('shows redemption history section', (tester) async {
       await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(
-              xp: 100,
-              tier: freeTier,
-              recentAchievements: [
-                'Tier active: Free',
-                'Paid tier entitlements active',
-              ],
-            ),
-          ),
-        ),
+        buildDashboard(rewardsValue: AsyncValue.data(snapshot)),
       );
       await tester.pumpAndSettle();
+      await scrollUntilText(tester, 'Redemption history');
 
-      expect(find.text('History'), findsOneWidget);
-      expect(find.text('Tier active: Free'), findsOneWidget);
-      expect(find.text('Paid tier entitlements active'), findsOneWidget);
+      expect(find.text('Redemption history'), findsOneWidget);
+      expect(find.text('Privacy Starter Pack'), findsWidgets);
     });
 
-    testWidgets('shows upcoming rewards section', (tester) async {
+    testWidgets('shows locked reward state', (tester) async {
       await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(xp: 100, tier: freeTier),
-          ),
-        ),
+        buildDashboard(rewardsValue: AsyncValue.data(snapshot)),
       );
       await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -800));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Upcoming rewards'), findsOneWidget);
+      expect(find.textContaining('Editorial Tools Bundle'), findsOneWidget);
+      expect(find.text('Locked'), findsOneWidget);
+      expect(find.text('Tier limitation'), findsOneWidget);
     });
 
-    testWidgets('shows completed mission icon', (tester) async {
+    testWidgets('shows affiliate disclosure', (tester) async {
       await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(
-              xp: 400,
-              tier: freeTier,
-              missions: [
-                Mission(
-                  id: 'm1',
-                  title: 'Complete me',
-                  xpReward: 10,
-                  completed: true,
-                ),
-              ],
-            ),
-          ),
-        ),
+        buildDashboard(rewardsValue: AsyncValue.data(snapshot)),
       );
       await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
-    });
-
-    testWidgets('shows incomplete mission icon', (tester) async {
-      await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(
-              xp: 400,
-              tier: freeTier,
-              missions: [
-                Mission(
-                  id: 'm2',
-                  title: 'In progress',
-                  xpReward: 20,
-                  completed: false,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.timelapse_outlined), findsOneWidget);
-    });
-
-    testWidgets('shows XP reward for missions', (tester) async {
-      await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(
-              xp: 100,
-              tier: freeTier,
-              missions: [
-                Mission(id: 'm1', title: 'Test mission', xpReward: 50),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('+50 XP'), findsOneWidget);
-    });
-
-    testWidgets('renders at max tier with 100% progress', (tester) async {
-      const blackTier = ReputationTier(
-        id: 'black',
-        name: 'Black',
-        minXP: 3200,
-        privileges: ['All rewards'],
+      await scrollUntilText(
+        tester,
+        'Some reward links may include affiliate relationships.',
       );
 
-      await tester.pumpWidget(
-        buildDashboard(
-          reputationValue: const AsyncValue.data(
-            UserReputation(xp: 5000, tier: blackTier),
-          ),
-        ),
+      expect(
+        find.text('Some reward links may include affiliate relationships.'),
+        findsOneWidget,
       );
-      await tester.pumpAndSettle();
-
-      expect(find.text('100%'), findsOneWidget);
     });
   });
 }

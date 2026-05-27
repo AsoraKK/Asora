@@ -30,6 +30,8 @@ tags:
   description: Moderation queue, cases, and decisions.
 - name: appeals
   description: Appeals and appeal voting.
+- name: rewards
+  description: Rewards eligibility, offer discovery, and redemption flows.
 - name: admin
   description: Lythaus admin moderation and safety operations.
 - name: reputation
@@ -1373,32 +1375,86 @@ paths:
     get:
       tags:
       - reputation
-      summary: v2/future - XP totals, current tier, and breakdown.
+      summary: Get authenticated user's full reputation summary.
       operationId: reputation_me_get
-      description: Marked v2/future and driven by PostgreSQL snapshots.
+      description: Returns ReputationSummary including level (0–5), status, pillar scores, and eligibility flags. Raw score deltas are never returned.
       security:
       - bearerAuth: []
       responses:
         '200':
-          description: Reputation overview.
+          description: Reputation summary.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReputationOverview'
-        '400':
-          description: Bad request - invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ReputationSummary'
         '401':
           description: Unauthorized - missing or invalid token
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden - insufficient permissions
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/reputation/me/ledger:
+    get:
+      tags:
+      - reputation
+      summary: Get authenticated user's paginated reputation ledger.
+      operationId: reputation_ledger_get
+      description: |
+        Returns user-visible ledger entries for the authenticated user.
+        Internal fields (rawDelta, internalReasonCode) are stripped.
+        Supports cursor-based pagination and category filtering.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: filter
+        in: query
+        description: 'Filter entries by category: all | positive | neutral | negative | appeal | expired'
+        schema:
+          type: string
+          enum: [all, positive, neutral, negative, appeal, expired]
+          default: all
+      - $ref: '#/components/parameters/cursor'
+      - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Paginated ledger entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerPage'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/reputation/users/{id}:
+    get:
+      tags:
+      - reputation
+      summary: Get public reputation view for any user.
+      operationId: reputation_user_get
+      description: Returns the public reputation view — level, status, and band only. No ledger data or pillar scores.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Target user ID.
+      responses:
+        '200':
+          description: Public reputation view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicReputationView'
+        '404':
+          description: User not found.
           content:
             application/json:
               schema:
@@ -1480,6 +1536,79 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/rewards/me:
+    get:
+      tags:
+      - rewards
+      summary: Get rewards snapshot for the authenticated user.
+      operationId: rewards_me_get
+      description: Returns reward access state, available offers, lock reasons, and redemption history based on subscription tier and eligibility.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Rewards snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardsSnapshot'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /api/rewards/{id}/redeem:
+    post:
+      tags:
+      - rewards
+      summary: Redeem a reward offer for the authenticated user.
+      operationId: rewards_redeem_post
+      description: Redeems a single unlocked reward offer if the account is eligible and within configured redemption limits.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Reward identifier from the rewards catalogue.
+      responses:
+        '201':
+          description: Reward redeemed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardRedemption'
+        '400':
+          description: Bad request - invalid reward id or reward already redeemed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - reward is locked or account is ineligible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reward not found
           content:
             application/json:
               schema:
@@ -3761,8 +3890,240 @@ components:
         createdAt:
           type: string
           format: date-time
+    ReputationSummary:
+      type: object
+      description: Full reputation summary for the authenticated user.
+      required: [userId, reputationLevel, reputationStatus, reputationBand, lastCalculatedAt, version]
+      properties:
+        userId:
+          type: string
+        reputationLevel:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Numeric reputation level (0=New … 5=HighlyCredible)
+        reputationStatus:
+          type: string
+          enum: [standard, editorial]
+        reputationBand:
+          type: string
+        humanContributionScore:
+          type: integer
+        contentQualityScore:
+          type: integer
+        behaviourTrustScore:
+          type: integer
+        interactionQualityScore:
+          type: integer
+        verificationStrengthScore:
+          type: integer
+        communityTrustScore:
+          type: integer
+        publicFeedEligibilityStatus:
+          type: string
+          enum: [eligible, review, ineligible]
+        rewardEligibilityStatus:
+          type: string
+          enum: [eligible, ineligible]
+        lastCalculatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+    PublicReputationView:
+      type: object
+      description: Public-facing reputation info — level, status, and band only.
+      required: [userId, reputationLevel, reputationStatus, reputationBand, levelName]
+      properties:
+        userId:
+          type: string
+        reputationLevel:
+          type: integer
+          minimum: 0
+          maximum: 5
+        reputationStatus:
+          type: string
+          enum: [standard, editorial]
+        reputationBand:
+          type: string
+        levelName:
+          type: string
+    LedgerEntry:
+      type: object
+      description: A single user-visible reputation ledger entry (internal fields stripped).
+      required: [id, userId, eventType, eventCategory, pillar, publicLabel, impactBand, visibility, appealable, status, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        eventType:
+          type: string
+        eventCategory:
+          type: string
+          enum: [positive, neutral, negative]
+        pillar:
+          type: string
+        publicLabel:
+          type: string
+        impactBand:
+          type: string
+        relatedContentId:
+          type: string
+          nullable: true
+        relatedModerationDecisionId:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [user, public]
+        appealable:
+          type: boolean
+        appealStatus:
+          type: string
+          enum: [pending, accepted, rejected]
+          nullable: true
+        status:
+          type: string
+          enum: [active, expired, reversed]
+        createdAt:
+          type: string
+          format: date-time
+        decaysAt:
+          type: string
+          format: date-time
+          nullable: true
+    LedgerPage:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerEntry'
+        nextCursor:
+          type: string
+          nullable: true
+        total:
+          type: integer
+          nullable: true
+    RewardOffer:
+      type: object
+      required:
+      - id
+      - rewardLevel
+      - title
+      - description
+      - partnerName
+      - locked
+      - redeemed
+      properties:
+        id:
+          type: string
+        rewardLevel:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+        description:
+          type: string
+        partnerName:
+          type: string
+        locked:
+          type: boolean
+        lockReason:
+          type: string
+          nullable: true
+        redeemed:
+          type: boolean
+    RewardRedemption:
+      type: object
+      required:
+      - id
+      - userId
+      - rewardId
+      - rewardLevel
+      - rewardTitle
+      - redeemedAt
+      - status
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        rewardId:
+          type: string
+        rewardLevel:
+          type: integer
+          minimum: 1
+          maximum: 5
+        rewardTitle:
+          type: string
+        redeemedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - redeemed
+    RewardsSnapshot:
+      type: object
+      required:
+      - subscriptionTier
+      - reputationLevel
+      - reputationBand
+      - availableRewardLevels
+      - maxOptionsPerLevel
+      - redemptionStatus
+      - fraudRiskStatus
+      - offers
+      - redemptionHistory
+      - affiliateDisclosure
+      properties:
+        subscriptionTier:
+          type: string
+          enum:
+          - guest
+          - free
+          - premium
+          - black
+          - editorial
+        reputationLevel:
+          type: integer
+          minimum: 0
+          maximum: 5
+        reputationBand:
+          type: string
+        availableRewardLevels:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 5
+        maxOptionsPerLevel:
+          type: integer
+          minimum: 0
+        redemptionStatus:
+          type: string
+          enum:
+          - active
+          - restricted
+        fraudRiskStatus:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/RewardOffer'
+        redemptionHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/RewardRedemption'
+        affiliateDisclosure:
+          type: string
     ReputationOverview:
       type: object
+      description: v2/future — legacy schema retained for backward compatibility.
       properties:
         userId:
           type: string

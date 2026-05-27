@@ -152,3 +152,57 @@ export function calculateRankingScore(
 
   return (config.recencyWeight * recencyScore) + (config.reputationWeight * reputationScore);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2: Trust weight by reputation level (spec §10.3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Trust multipliers per reputation level.
+ *
+ * These are applied to the reputation component of the feed score to give
+ * higher-trust authors a probability boost without guaranteeing placement.
+ * Paid tier does NOT contribute to this multiplier (spec §10.4).
+ *
+ * Index = ReputationLevel numeric value (0–5).
+ */
+export const REPUTATION_TRUST_WEIGHTS: readonly number[] = [
+  0.5,  // 0 — New: half-weight; eligible after safety checks
+  1.0,  // 1 — Verified: baseline
+  1.15, // 2 — Trusted: slight boost
+  1.30, // 3 — Established: medium boost
+  1.50, // 4 — Credible: stronger boost
+  1.75, // 5 — Highly Credible: higher featuring probability
+];
+
+/**
+ * Compute the trust weight for a given reputation level index.
+ *
+ * @param reputationLevelIndex — integer 0–5 matching ReputationLevel enum values
+ * @returns multiplier ≥ 0.5, used to scale the reputation component of feed score
+ */
+export function computeTrustWeight(reputationLevelIndex: number): number {
+  const clamped = Math.max(0, Math.min(5, Math.floor(reputationLevelIndex)));
+  return REPUTATION_TRUST_WEIGHTS[clamped] ?? 1.0;
+}
+
+/**
+ * Calculate combined ranking score with Phase 2 trust weight applied.
+ *
+ * Trust weight scales the reputation component only, keeping recency dominant
+ * for fresh content regardless of author level.
+ */
+export function calculateRankingScoreWithTrust(
+  createdAt: number,
+  authorReputation: number,
+  reputationLevelIndex: number,
+  now: number,
+  config: RankingConfig
+): number {
+  const recencyScore    = calculateRecencyScore(createdAt, now, config);
+  const reputationScore = calculateReputationScore(authorReputation, config);
+  const trustWeight     = computeTrustWeight(reputationLevelIndex);
+
+  return (config.recencyWeight * recencyScore)
+       + (config.reputationWeight * reputationScore * trustWeight);
+}

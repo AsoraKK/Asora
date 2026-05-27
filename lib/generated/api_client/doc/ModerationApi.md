@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**moderationQueueList**](ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
 [**moderationReviewQueueList**](ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
 [**moderationTest**](ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
+[**reviewAppealedContent**](ModerationApi.md#reviewappealedcontent) | **POST** /moderation/appeals/{appealId}/review | Moderator review decision on an appeal
 [**submitAppealV1**](ModerationApi.md#submitappealv1) | **POST** /moderation/submit-appeal | Submit a moderation appeal (v1 route)
 [**submitModerationAppeal**](ModerationApi.md#submitmoderationappeal) | **POST** /moderation/appeals | Submit a moderation appeal
 [**voteOnAppealV1**](ModerationApi.md#voteonappealv1) | **POST** /moderation/vote-appeal | Cast a community vote on an appeal (v1 route)
@@ -337,6 +338,51 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **body** | **JsonObject**|  | 
+
+### Return type
+
+[**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reviewAppealedContent**
+> JsonObject reviewAppealedContent(appealId, reviewAppealedContentRequest)
+
+Moderator review decision on an appeal
+
+Submit a moderator review decision for an appealed content case. Requires moderator privileges.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+final String appealId = appealId_example; // String | Appeal identifier
+final ReviewAppealedContentRequest reviewAppealedContentRequest = ; // ReviewAppealedContentRequest | 
+
+try {
+    final response = api.reviewAppealedContent(appealId, reviewAppealedContentRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->reviewAppealedContent: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**| Appeal identifier | 
+ **reviewAppealedContentRequest** | [**ReviewAppealedContentRequest**](ReviewAppealedContentRequest.md)|  | 
 
 ### Return type
 

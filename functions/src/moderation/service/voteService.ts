@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { usersService } from '@auth/service/usersService';
 import { penalizeContentRemoval } from '@shared/services/reputationService';
+import { recordReputationEvent } from '../../reputation/reputationEventService';
+import { LedgerEventType } from '../../reputation/types';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
@@ -565,6 +567,18 @@ async function updateContentBasedOnDecision(
         const violationType =
           content.flagReason || content.moderationCategory || content.moderation?.categories?.[0];
 
+        const normalizedViolation = (violationType ?? '').toLowerCase();
+        let ledgerEventType: LedgerEventType = LedgerEventType.MODERATION_VIOLATION;
+        if (normalizedViolation.includes('spam')) {
+          ledgerEventType = LedgerEventType.MODERATION_VIOLATION_SPAM;
+        } else if (normalizedViolation.includes('harass')) {
+          ledgerEventType = LedgerEventType.MODERATION_VIOLATION_HARASSMENT;
+        } else if (normalizedViolation.includes('hate')) {
+          ledgerEventType = LedgerEventType.MODERATION_VIOLATION_HATE_SPEECH;
+        } else if (normalizedViolation.includes('violen')) {
+          ledgerEventType = LedgerEventType.MODERATION_VIOLATION_VIOLENCE;
+        }
+
         penalizeContentRemoval(
           authorId,
           contentId,
@@ -572,6 +586,22 @@ async function updateContentBasedOnDecision(
           violationType
         ).catch(err => {
           context.log('moderation.reputation_penalty_error', {
+            contentId,
+            authorId,
+            error: err.message,
+          });
+        });
+
+        recordReputationEvent({
+          userId: authorId,
+          ledgerEventType,
+          sourceId: contentId,
+          sourceType: contentType === 'post' || contentType === 'comment'
+            ? (contentType as 'post' | 'comment')
+            : 'moderation',
+          overrides: { appealable: true },
+        }).catch(err => {
+          context.log('moderation.ledger_event_error', {
             contentId,
             authorId,
             error: err.message,

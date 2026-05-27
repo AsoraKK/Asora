@@ -54,6 +54,7 @@ Method | HTTP request | Description
 [**adminOpsMetrics**](AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
 [**adminOpsStateGet**](AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
 [**adminOpsStateUpdate**](AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
+[**adminSetUserTier**](AdminApi.md#adminsetusertier) | **PATCH** /admin/users/{userId}/tier | Set user subscription tier
 [**adminUsersDisable**](AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [**adminUsersEnable**](AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [**adminUsersSearch**](AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
@@ -1947,6 +1948,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminSetUserTier**
+> AdminUserActionResponse adminSetUserTier(userId, adminSetUserTierRequest)
+
+Set user subscription tier
+
+Update the subscription tier of a specific user. Requires active admin privileges.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final String userId = userId_example; // String | User identifier
+final AdminSetUserTierRequest adminSetUserTierRequest = ; // AdminSetUserTierRequest | 
+
+try {
+    final response = api.adminSetUserTier(userId, adminSetUserTierRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminSetUserTier: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **String**| User identifier | 
+ **adminSetUserTierRequest** | [**AdminSetUserTierRequest**](AdminSetUserTierRequest.md)|  | 
+
+### Return type
+
+[**AdminUserActionResponse**](AdminUserActionResponse.md)
 
 ### Authorization
 

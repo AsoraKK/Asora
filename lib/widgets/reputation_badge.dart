@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:asora/state/models/reputation.dart';
 
 /// Size variants for the reputation badge
 enum ReputationBadgeSize {
@@ -18,11 +19,13 @@ enum ReputationBadgeSize {
 
 /// A widget that displays a user's reputation score as a badge.
 ///
-/// The badge color and icon change based on the reputation tier:
-/// - Bronze (0-99): Bronze/brown color
-/// - Silver (100-499): Silver/gray color
-/// - Gold (500-999): Gold/yellow color
-/// - Platinum (1000+): Platinum/blue-white color
+/// The badge colour and label reflect the Phase 1 reputation levels:
+/// - Level 0 — New (score < 10)
+/// - Level 1 — Verified (score 10–49)
+/// - Level 2 — Trusted (score 50–199)
+/// - Level 3 — Established (score 200–499)
+/// - Level 4 — Credible (score 500–999)
+/// - Level 5 — Highly Credible (score ≥ 1000)
 ///
 /// Example usage:
 /// ```dart
@@ -48,33 +51,22 @@ class ReputationBadge extends StatelessWidget {
     this.showLabel = false,
   });
 
-  /// Get the tier name based on score
+  /// Get the level display name based on score
   static String getTierName(int score) {
-    if (score >= 1000) {
-      return 'Platinum';
-    }
-    if (score >= 500) {
-      return 'Gold';
-    }
-    if (score >= 100) {
-      return 'Silver';
-    }
-    return 'Bronze';
+    return computeLevelFromScore(score).displayName;
   }
 
-  /// Get the tier color based on score
-  /// Get the icon for the tier
+  /// Get the icon for the reputation level
   static IconData getTierIcon(int score) {
-    if (score >= 1000) {
-      return Icons.workspace_premium;
-    }
-    if (score >= 500) {
-      return Icons.stars;
-    }
-    if (score >= 100) {
-      return Icons.military_tech;
-    }
-    return Icons.emoji_events_outlined;
+    final level = computeLevelFromScore(score);
+    return switch (level) {
+      ReputationLevel.highlyCredible => Icons.workspace_premium,
+      ReputationLevel.credible => Icons.stars,
+      ReputationLevel.established => Icons.military_tech,
+      ReputationLevel.trusted => Icons.verified_outlined,
+      ReputationLevel.verified => Icons.check_circle_outline,
+      ReputationLevel.newUser => Icons.emoji_events_outlined,
+    };
   }
 
   @override
@@ -112,7 +104,7 @@ class ReputationBadge extends StatelessWidget {
     };
 
     return Tooltip(
-      message: '${getTierName(score)} tier • $score reputation',
+      message: '${getTierName(score)} • $score reputation',
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
         decoration: BoxDecoration(
@@ -136,16 +128,15 @@ class ReputationBadge extends StatelessWidget {
   }
 
   static Color _tierColor(ColorScheme scheme, int score) {
-    if (score >= 1000) {
-      return scheme.primary;
-    }
-    if (score >= 500) {
-      return scheme.onSurface.withValues(alpha: 0.82);
-    }
-    if (score >= 100) {
-      return scheme.onSurface.withValues(alpha: 0.7);
-    }
-    return scheme.onSurface.withValues(alpha: 0.58);
+    final level = computeLevelFromScore(score);
+    return switch (level) {
+      ReputationLevel.highlyCredible => scheme.primary,
+      ReputationLevel.credible => scheme.onSurface.withValues(alpha: 0.82),
+      ReputationLevel.established => scheme.onSurface.withValues(alpha: 0.70),
+      ReputationLevel.trusted => scheme.onSurface.withValues(alpha: 0.64),
+      ReputationLevel.verified => scheme.onSurface.withValues(alpha: 0.58),
+      ReputationLevel.newUser => scheme.onSurface.withValues(alpha: 0.48),
+    };
   }
 }
 

@@ -40,6 +40,9 @@ trySyncImport('users', () => require('./users'));
 trySyncImport('posts', () => require('./posts'));
 trySyncImport('custom-feeds', () => require('./custom-feeds'));
 trySyncImport('appeals', () => require('./appeals'));
+trySyncImport('reputation', () => require('./reputation'));
+trySyncImport('reactions', () => require('./reactions'));
+trySyncImport('rewards', () => require('./rewards'));
 
 // Notifications - FCM-enabled push notification handlers
 trySyncImport('notifications/devices', () => require('./notifications/http/devicesApi.function'));

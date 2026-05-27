@@ -3,27 +3,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/models/reputation.dart';
-import 'package:asora/state/providers/reputation_providers.dart';
-import 'package:asora/ui/components/tier_badge.dart';
-import 'package:asora/ui/components/xp_progress_ring.dart';
+import 'package:asora/features/rewards/application/reward_providers.dart';
+import 'package:asora/features/rewards/domain/reward_models.dart';
 import 'package:asora/ui/theme/spacing.dart';
 
-class RewardsDashboardScreen extends ConsumerWidget {
+class RewardsDashboardScreen extends ConsumerStatefulWidget {
   const RewardsDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tiers = ref.watch(reputationTiersProvider);
-    final reputationAsync = ref.watch(reputationProvider);
+  ConsumerState<RewardsDashboardScreen> createState() =>
+      _RewardsDashboardScreenState();
+}
 
-    return reputationAsync.when(
+class _RewardsDashboardScreenState
+    extends ConsumerState<RewardsDashboardScreen> {
+  final Set<String> _redeemingIds = <String>{};
+
+  Future<void> _redeem(String rewardId) async {
+    if (_redeemingIds.contains(rewardId)) return;
+    setState(() => _redeemingIds.add(rewardId));
+
+    try {
+      await ref.read(redeemRewardProvider(rewardId).future);
+      ref.invalidate(rewardsSnapshotProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reward redeemed successfully.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to redeem this reward right now.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _redeemingIds.remove(rewardId));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rewardsAsync = ref.watch(rewardsSnapshotProvider);
+
+    return rewardsAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Rewards & XP')),
+        appBar: AppBar(title: const Text('Lythaus Rewards')),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (_, __) => Scaffold(
-        appBar: AppBar(title: const Text('Rewards & XP')),
+        appBar: AppBar(title: const Text('Lythaus Rewards')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -31,80 +62,80 @@ class RewardsDashboardScreen extends ConsumerWidget {
               const Text('Unable to load rewards right now.'),
               const SizedBox(height: Spacing.sm),
               FilledButton(
-                onPressed: () => ref.invalidate(reputationProvider),
+                onPressed: () => ref.invalidate(rewardsSnapshotProvider),
                 child: const Text('Retry'),
               ),
             ],
           ),
         ),
       ),
-      data: (reputation) {
-        final nextTier = tiers
-            .where((tier) => tier.minXP > reputation.xp)
-            .fold<ReputationTier?>(null, (prev, tier) {
-              if (prev == null) return tier;
-              return tier.minXP < prev.minXP ? tier : prev;
-            });
-        final progress = nextTier == null
-            ? 1.0
-            : (reputation.xp / nextTier.minXP).clamp(0.0, 1.0).toDouble();
-
+      data: (snapshot) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Rewards & XP')),
+          appBar: AppBar(title: const Text('Lythaus Rewards')),
           body: ListView(
             padding: const EdgeInsets.all(Spacing.lg),
             children: [
-              Center(
-                child: XPProgressRing(
-                  progress: progress,
-                  tierLabel: reputation.tier.name,
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your rewards status',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: Spacing.sm),
+                      Text('Subscription tier: ${snapshot.subscriptionTier}'),
+                      Text('Reputation level: ${snapshot.reputationLevel}'),
+                      Text('Reputation band: ${snapshot.reputationBand}'),
+                      Text('Redemption status: ${snapshot.redemptionStatus}'),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: Spacing.lg),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Missions',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+              Text(
+                'Available rewards',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Spacing.sm),
+              ...snapshot.offers.map(
+                (offer) => _RewardCard(
+                  offer: offer,
+                  isRedeeming: _redeemingIds.contains(offer.id),
+                  onRedeem: () => _redeem(offer.id),
+                ),
+              ),
+              const SizedBox(height: Spacing.lg),
+              Text(
+                'Redemption history',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Spacing.sm),
+              if (snapshot.redemptionHistory.isEmpty)
+                const Text('No rewards redeemed yet.')
+              else
+                ...snapshot.redemptionHistory.map(
+                  (item) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.rewardTitle),
+                    subtitle: Text(
+                      'Level ${item.rewardLevel} · ${item.redeemedAt.toLocal().toIso8601String().split('T').first}',
                     ),
                   ),
-                  Text('${reputation.xp} XP'),
-                ],
-              ),
-              const SizedBox(height: Spacing.sm),
-              ...reputation.missions.map(
-                (mission) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    mission.completed
-                        ? Icons.check_circle
-                        : Icons.timelapse_outlined,
-                  ),
-                  title: Text(mission.title),
-                  trailing: Text('+${mission.xpReward} XP'),
                 ),
-              ),
               const SizedBox(height: Spacing.lg),
               Text(
-                'Upcoming rewards',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: Spacing.sm),
-              if (nextTier != null) _tierTile(nextTier),
-              const SizedBox(height: Spacing.lg),
-              Text(
-                'History',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: Spacing.sm),
-              ...reputation.recentAchievements.map(
-                (item) => ListTile(title: Text(item)),
+                snapshot.affiliateDisclosure,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -112,28 +143,63 @@ class RewardsDashboardScreen extends ConsumerWidget {
       },
     );
   }
+}
 
-  Widget _tierTile(ReputationTier tier) {
+class _RewardCard extends StatelessWidget {
+  const _RewardCard({
+    required this.offer,
+    required this.isRedeeming,
+    required this.onRedeem,
+  });
+
+  final RewardOffer offer;
+  final bool isRedeeming;
+  final VoidCallback onRedeem;
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TierBadge(label: tier.name, highlight: true),
-            const SizedBox(height: Spacing.xs),
-            ...tier.privileges.map(
-              (p) => Padding(
-                padding: const EdgeInsets.only(bottom: Spacing.xxs),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check, size: 16),
-                    const SizedBox(width: Spacing.xs),
-                    Expanded(child: Text(p)),
-                  ],
-                ),
-              ),
+            Text(
+              'Level ${offer.rewardLevel} · ${offer.title}',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: Spacing.xs),
+            Text(offer.description),
+            const SizedBox(height: Spacing.xs),
+            Text(
+              'Partner: ${offer.partnerName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: Spacing.sm),
+            if (offer.redeemed)
+              const Chip(label: Text('Redeemed'))
+            else if (offer.locked)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Chip(label: Text('Locked')),
+                  if (offer.lockReason != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: Spacing.xs),
+                      child: Text(
+                        offer.lockReason!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                ],
+              )
+            else
+              FilledButton(
+                onPressed: isRedeeming ? null : onRedeem,
+                child: Text(isRedeeming ? 'Redeeming...' : 'Redeem'),
+              ),
           ],
         ),
       ),

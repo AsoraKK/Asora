@@ -65,6 +65,7 @@ import 'package:asora_api_client/src/model/admin_invite_status.dart';
 import 'package:asora_api_client/src/model/admin_moderation_summary.dart';
 import 'package:asora_api_client/src/model/admin_queue_status.dart';
 import 'package:asora_api_client/src/model/admin_resolve_response.dart';
+import 'package:asora_api_client/src/model/admin_set_user_tier_request.dart';
 import 'package:asora_api_client/src/model/admin_user_action_response.dart';
 import 'package:asora_api_client/src/model/admin_user_disable_request.dart';
 import 'package:asora_api_client/src/model/admin_user_enable_request.dart';
@@ -112,6 +113,7 @@ import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response_data.dart';
+import 'package:asora_api_client/src/model/review_appealed_content_request.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
@@ -177,6 +179,7 @@ part 'serializers.g.dart';
   AdminModerationSummary,
   AdminQueueStatus,
   AdminResolveResponse,
+  AdminSetUserTierRequest,
   AdminUserActionResponse,
   AdminUserDisableRequest,
   AdminUserEnableRequest,
@@ -224,6 +227,7 @@ part 'serializers.g.dart';
   RedeemInviteRequest,
   RedeemInviteResponse,
   RedeemInviteResponseData,
+  ReviewAppealedContentRequest,
   ServiceUnavailableError,
   ServiceUnavailableErrorError,
   UnauthorizedError,

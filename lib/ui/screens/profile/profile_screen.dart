@@ -19,6 +19,7 @@ import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/components/lyth_snackbar.dart';
 import 'package:asora/ui/components/tier_badge.dart';
 import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -160,6 +161,13 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('Reputation'),
             subtitle: Text('${profile.reputationScore} points'),
             trailing: TierBadge(label: profile.tier),
+            onTap: isOwner
+                ? () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReputationLedgerScreen(),
+                    ),
+                  )
+                : null,
           ),
           if (isOwner) ...[
             const Divider(),
