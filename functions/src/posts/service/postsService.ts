@@ -64,7 +64,7 @@ interface PostDocument {
     reasons?: string[];
     error?: string;
   };
-  aiLabel?: 'human' | 'generated';
+  aiLabel?: 'human' | 'assisted' | 'generated';
   aiDetected?: boolean;
   proofSignals?: {
     captureMetadataHash?: string;
@@ -96,7 +96,7 @@ class PostsService {
     postId?: string,
     moderationMeta?: ModerationMeta,
     testContext?: TestModeContext,
-    aiContext?: { aiLabel?: 'human' | 'generated'; aiDetected?: boolean }
+    aiContext?: { aiLabel?: 'human' | 'assisted' | 'generated'; aiDetected?: boolean }
   ): Promise<Post> {
     const now = Date.now();
     const id = postId || uuidv7();
@@ -173,7 +173,7 @@ class PostsService {
     postId: string,
     updates: UpdatePostRequest,
     moderationMeta?: ModerationMeta,
-    aiContext?: { aiLabel?: 'human' | 'generated'; aiDetected?: boolean }
+    aiContext?: { aiLabel?: 'human' | 'assisted' | 'generated'; aiDetected?: boolean }
   ): Promise<Post | null> {
     const existing = await this.getPostById(postId);
     if (!existing) {

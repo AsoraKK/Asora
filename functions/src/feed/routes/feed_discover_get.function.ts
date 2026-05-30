@@ -111,3 +111,10 @@ app.http('feed_discover_get', {
   route: 'feed/discover',
   handler: feed_discover_get,
 });
+
+app.http('feed_public_get', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  route: 'feed/public',
+  handler: feed_discover_get,
+});

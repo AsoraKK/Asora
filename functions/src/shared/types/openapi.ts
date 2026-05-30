@@ -106,7 +106,7 @@ export interface CreatePostRequest {
   topics?: string[];
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
-  aiLabel?: 'human' | 'generated';
+  aiLabel?: 'human' | 'assisted' | 'generated';
   proofSignals?: PostProofSignals;
 }
 
@@ -129,7 +129,7 @@ export interface UpdatePostRequest {
   topics?: string[];
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
-  aiLabel?: 'human' | 'generated';
+  aiLabel?: 'human' | 'assisted' | 'generated';
   proofSignals?: PostProofSignals;
 }
 

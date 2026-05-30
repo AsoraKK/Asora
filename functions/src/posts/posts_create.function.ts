@@ -34,7 +34,7 @@ import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 
-function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
+function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | undefined {
   if (label === undefined || label === null) {
     return undefined;
   }
@@ -43,7 +43,10 @@ function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
   }
 
   const normalized = label.trim().toLowerCase();
-  if (normalized === 'human' || normalized === 'generated') {
+  if (normalized === 'human' || normalized === 'assisted' || normalized === 'ai_assisted' || normalized === 'generated') {
+    if (normalized === 'ai_assisted') {
+      return 'assisted';
+    }
     return normalized;
   }
   return undefined;
@@ -157,7 +160,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     const rawAiLabel = (ctx.body as unknown as Record<string, unknown>).aiLabel;
     if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
-      return ctx.badRequest('aiLabel must be "human" or "generated"', 'INVALID_AI_LABEL');
+      return ctx.badRequest('aiLabel must be "human", "assisted", or "generated"', 'INVALID_AI_LABEL');
     }
 
     const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? 'human');
@@ -288,7 +291,11 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       },
       testContext,  // Pass test context for data isolation
       {
-        aiLabel: effectiveAiLabel === 'generated' ? 'generated' : 'human',
+        aiLabel: effectiveAiLabel === 'generated'
+          ? 'generated'
+          : effectiveAiLabel === 'assisted'
+          ? 'assisted'
+          : 'human',
         aiDetected,
       }
     );
@@ -337,7 +344,20 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     }
 
     if (!aiDetected && effectiveAiLabel !== 'generated') {
-      if (content && content.length >= 250) {
+      if (effectiveAiLabel === 'assisted' && content && content.length >= 250) {
+        void recordReputationEvent({
+          userId: auth.userId,
+          ledgerEventType: LedgerEventType.AI_ASSISTED_DISCLOSURE,
+          sourceId: post.id,
+          sourceType: 'post',
+        }).catch((error) => {
+          ctx.context.warn?.('[posts_create] Failed to record AI_ASSISTED_DISCLOSURE reputation event', {
+            postId: post.id,
+            userId: auth.userId.slice(0, 8),
+            message: (error as Error).message,
+          });
+        });
+      } else if (content && content.length >= 250) {
         // Phase 1: 250+ char human post earns reputation via ledger
         void recordReputationEvent({
           userId: auth.userId,

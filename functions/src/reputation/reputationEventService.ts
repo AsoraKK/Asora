@@ -392,8 +392,9 @@ export async function recordReputationEvent(input: ReputationEventInput): Promis
   // 2. Increment pillar aggregate on user doc
   await incrementPillarScore(userId, config.pillar, config.rawDelta);
 
-  // 3. Append ledger entry (skip for neutral events with delta=0 and no label value)
-  if (config.eventCategory !== 'neutral' || config.rawDelta !== 0 || config.appealable) {
+  // 3. Append every configured ledger event. Neutral zero-delta entries are
+  // still user-visible explanations for disclosures, appeals, and decay.
+  if (config.publicLabel) {
     try {
       const decaysAt = config.decayDays
         ? new Date(Date.now() + config.decayDays * 24 * 60 * 60 * 1000).toISOString()

@@ -141,13 +141,39 @@ describe('reputationEventService', () => {
       );
     });
 
-    it('does not append ledger for neutral non-appealable zero-delta events', async () => {
+    it('appends ledger for neutral non-appealable zero-delta events', async () => {
       await recordReputationEvent({
         userId: 'user-1',
         ledgerEventType: LedgerEventType.APPEAL_RESTORED,
       });
 
-      expect(appendLedgerEntry).not.toHaveBeenCalled();
+      expect(appendLedgerEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          eventType: LedgerEventType.APPEAL_RESTORED,
+          eventCategory: 'neutral',
+          impactBand: 'neutral',
+        })
+      );
+    });
+
+    it('appends ledger for disclosed AI-assisted content without score adjustment', async () => {
+      await recordReputationEvent({
+        userId: 'user-1',
+        ledgerEventType: LedgerEventType.AI_ASSISTED_DISCLOSURE,
+        sourceId: 'post-1',
+        sourceType: 'post',
+      });
+
+      expect(adjustReputation).not.toHaveBeenCalled();
+      expect(appendLedgerEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: LedgerEventType.AI_ASSISTED_DISCLOSURE,
+          eventCategory: 'neutral',
+          rawDelta: 0,
+          relatedContentId: 'post-1',
+        })
+      );
     });
 
     it('continues if adjustReputation throws', async () => {

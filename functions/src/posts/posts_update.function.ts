@@ -24,7 +24,7 @@ import {
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 
-function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
+function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | undefined {
   if (label === undefined || label === null) {
     return undefined;
   }
@@ -33,7 +33,10 @@ function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
   }
 
   const normalized = label.trim().toLowerCase();
-  if (normalized === 'human' || normalized === 'generated') {
+  if (normalized === 'human' || normalized === 'assisted' || normalized === 'ai_assisted' || normalized === 'generated') {
+    if (normalized === 'ai_assisted') {
+      return 'assisted';
+    }
     return normalized;
   }
   return undefined;
@@ -110,7 +113,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
 
     const rawAiLabel = aiLabel as unknown;
     if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
-      return ctx.badRequest('aiLabel must be "human" or "generated"', 'INVALID_AI_LABEL');
+      return ctx.badRequest('aiLabel must be "human", "assisted", or "generated"', 'INVALID_AI_LABEL');
     }
 
     const effectiveContent = content ?? existing.content;
@@ -212,7 +215,11 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         topics,
         visibility,
         isNews,
-        aiLabel: effectiveAiLabel === 'generated' ? 'generated' : 'human',
+        aiLabel: effectiveAiLabel === 'generated'
+          ? 'generated'
+          : effectiveAiLabel === 'assisted'
+          ? 'assisted'
+          : 'human',
       },
       {
         ...moderationMeta,
@@ -222,7 +229,11 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         error: moderationMeta.error ?? mediaModeration.error,
       },
       {
-        aiLabel: effectiveAiLabel === 'generated' ? 'generated' : 'human',
+        aiLabel: effectiveAiLabel === 'generated'
+          ? 'generated'
+          : effectiveAiLabel === 'assisted'
+          ? 'assisted'
+          : 'human',
         aiDetected,
       }
     );
