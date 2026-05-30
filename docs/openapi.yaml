@@ -1439,6 +1439,7 @@ paths:
       summary: Get public reputation view for any user.
       operationId: reputation_user_get
       description: Returns the public reputation view — level, status, and band only. No ledger data or pillar scores.
+      security: []
       parameters:
       - name: id
         in: path
@@ -3863,17 +3864,6 @@ components:
       properties:
         vote:
           $ref: '#/components/schemas/AppealVote'
-    ReputationTier:
-      type: object
-      properties:
-        name:
-          type: string
-        minXP:
-          type: integer
-        privileges:
-          type: array
-          items:
-            type: string
     ReputationEvent:
       type: object
       properties:
@@ -4121,20 +4111,6 @@ components:
             $ref: '#/components/schemas/RewardRedemption'
         affiliateDisclosure:
           type: string
-    ReputationOverview:
-      type: object
-      description: v2/future — legacy schema retained for backward compatibility.
-      properties:
-        userId:
-          type: string
-        totalXP:
-          type: integer
-        tier:
-          $ref: '#/components/schemas/ReputationTier'
-        breakdown:
-          type: object
-          additionalProperties:
-            type: integer
     ReputationHistoryResponse:
       type: object
       properties:

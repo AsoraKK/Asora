@@ -167,12 +167,27 @@ void main() {
       // Color testing is handled through golden tests and widget integration tests
 
       test('getTierIcon returns correct icons', () {
-        expect(ReputationBadge.getTierIcon(5), Icons.emoji_events_outlined);   // New
-        expect(ReputationBadge.getTierIcon(25), Icons.check_circle_outline);   // Verified
-        expect(ReputationBadge.getTierIcon(100), Icons.verified_outlined);     // Trusted
-        expect(ReputationBadge.getTierIcon(300), Icons.military_tech);         // Established
-        expect(ReputationBadge.getTierIcon(700), Icons.stars);                 // Credible
-        expect(ReputationBadge.getTierIcon(1500), Icons.workspace_premium);    // Highly Credible
+        expect(
+          ReputationBadge.getTierIcon(5),
+          Icons.emoji_events_outlined,
+        ); // New
+        expect(
+          ReputationBadge.getTierIcon(25),
+          Icons.check_circle_outline,
+        ); // Verified
+        expect(
+          ReputationBadge.getTierIcon(100),
+          Icons.verified_outlined,
+        ); // Trusted
+        expect(
+          ReputationBadge.getTierIcon(300),
+          Icons.military_tech,
+        ); // Established
+        expect(ReputationBadge.getTierIcon(700), Icons.stars); // Credible
+        expect(
+          ReputationBadge.getTierIcon(1500),
+          Icons.workspace_premium,
+        ); // Highly Credible
       });
     });
   });

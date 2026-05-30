@@ -165,10 +165,7 @@ void main() {
               redeemedAt: DateTime(2026, 5, 27),
               status: 'redeemed',
             );
-            currentSnapshot = _snapshot(
-              redeemed: true,
-              history: [redemption],
-            );
+            currentSnapshot = _snapshot(redeemed: true, history: [redemption]);
             return redemption;
           }),
         ],
@@ -231,7 +228,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-        expect(find.textContaining('Research Tools Bundle'), findsOneWidget);
+      expect(find.textContaining('Research Tools Bundle'), findsOneWidget);
       expect(find.text('Locked'), findsOneWidget);
       expect(find.text('Tier limitation'), findsOneWidget);
       expect(find.text('Redeem'), findsNothing);
@@ -293,7 +290,9 @@ void main() {
               ),
               redeemRewardProvider.overrideWith((ref, rewardId) async {
                 redemptionCalls++;
-                throw StateError('Should not be called for a restricted account');
+                throw StateError(
+                  'Should not be called for a restricted account',
+                );
               }),
             ],
             child: const MaterialApp(home: RewardsDashboardScreen()),
