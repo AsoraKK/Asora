@@ -101,10 +101,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 ],
                 const SizedBox(height: 12),
                 // ── Reaction Bar (Phase 2) ──
-                ReactionBar(
-                  contentId: post.id,
-                  authorUserId: post.authorId,
-                ),
+                ReactionBar(contentId: post.id, authorUserId: post.authorId),
                 const SizedBox(height: 12),
                 TrustStripRow(
                   summary: FeedTrustSummary(

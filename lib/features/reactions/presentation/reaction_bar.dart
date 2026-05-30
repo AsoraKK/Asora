@@ -190,16 +190,18 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
             child: Wrap(
               spacing: 4,
               runSpacing: 4,
-              children: _negativeTypes.map(
-                (type) => _ReactionChip(
-                  type: type,
-                  count: _countFor(type),
-                  selected: _isSelected(type),
-                  selectedColor: colorScheme.error,
-                  defaultColor: defaultColor,
-                  onTap: _submitting ? null : () => _handleReaction(type),
-                ),
-              ).toList(),
+              children: _negativeTypes
+                  .map(
+                    (type) => _ReactionChip(
+                      type: type,
+                      count: _countFor(type),
+                      selected: _isSelected(type),
+                      selectedColor: colorScheme.error,
+                      defaultColor: defaultColor,
+                      onTap: _submitting ? null : () => _handleReaction(type),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
       ],
@@ -248,10 +250,7 @@ class _ReactionChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              _icon,
-              style: const TextStyle(fontSize: 14),
-            ),
+            Text(_icon, style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 4),
             Text(
               count > 0 ? '${type.label} $count' : type.label,
@@ -269,14 +268,22 @@ class _ReactionChip extends StatelessWidget {
 
   String get _icon {
     switch (type) {
-      case ReactionType.helpful:      return '👍';
-      case ReactionType.well_sourced: return '📚';
-      case ReactionType.thoughtful:   return '💭';
-      case ReactionType.agree:        return '✅';
-      case ReactionType.disagree:     return '🙅';
-      case ReactionType.misleading:   return '⚠️';
-      case ReactionType.low_effort:   return '📉';
-      case ReactionType.report:       return '🚩';
+      case ReactionType.helpful:
+        return '👍';
+      case ReactionType.well_sourced:
+        return '📚';
+      case ReactionType.thoughtful:
+        return '💭';
+      case ReactionType.agree:
+        return '✅';
+      case ReactionType.disagree:
+        return '🙅';
+      case ReactionType.misleading:
+        return '⚠️';
+      case ReactionType.low_effort:
+        return '📉';
+      case ReactionType.report:
+        return '🚩';
     }
   }
 }

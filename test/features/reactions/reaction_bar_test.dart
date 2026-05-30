@@ -25,7 +25,9 @@ class _ReactionSuccessAdapter implements HttpClientAdapter {
     return ResponseBody.fromString(
       jsonEncode(body),
       200,
-      headers: {Headers.contentTypeHeader: ['application/json']},
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
     );
   }
 
@@ -47,9 +49,7 @@ Dio _makeSuccessDio() {
 Widget _wrap(Widget widget, {List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
-    child: MaterialApp(
-      home: Scaffold(body: widget),
-    ),
+    child: MaterialApp(home: Scaffold(body: widget)),
   );
 }
 
@@ -59,15 +59,11 @@ Widget _wrap(Widget widget, {List<Override> overrides = const []}) {
 
 void main() {
   group('ReactionBar', () {
-    testWidgets('renders all four positive reaction chips by default',
-        (tester) async {
+    testWidgets('renders all four positive reaction chips by default', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          const ReactionBar(
-            contentId: 'post-1',
-            authorUserId: 'author-1',
-          ),
-        ),
+        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
       );
 
       expect(find.text('Helpful'), findsOneWidget);
@@ -78,12 +74,7 @@ void main() {
 
     testWidgets('negative reactions are hidden by default', (tester) async {
       await tester.pumpWidget(
-        _wrap(
-          const ReactionBar(
-            contentId: 'post-1',
-            authorUserId: 'author-1',
-          ),
-        ),
+        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
       );
 
       expect(find.text('Disagree'), findsNothing);
@@ -94,12 +85,7 @@ void main() {
 
     testWidgets('toggle reveals negative reactions', (tester) async {
       await tester.pumpWidget(
-        _wrap(
-          const ReactionBar(
-            contentId: 'post-1',
-            authorUserId: 'author-1',
-          ),
-        ),
+        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
       );
 
       // Tap the expand arrow
@@ -111,15 +97,11 @@ void main() {
       expect(find.text('Report'), findsOneWidget);
     });
 
-    testWidgets('toggle collapses negative reactions on second tap',
-        (tester) async {
+    testWidgets('toggle collapses negative reactions on second tap', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          const ReactionBar(
-            contentId: 'post-1',
-            authorUserId: 'author-1',
-          ),
-        ),
+        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
       );
 
       await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
@@ -132,9 +114,7 @@ void main() {
     });
 
     testWidgets('displays non-zero counts from initialSummary', (tester) async {
-      const summary = ReactionSummary(
-        counts: {'helpful': 12, 'agree': 3},
-      );
+      const summary = ReactionSummary(counts: {'helpful': 12, 'agree': 3});
 
       await tester.pumpWidget(
         _wrap(
@@ -155,10 +135,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _wrap(
-          const ReactionBar(
-            contentId: 'post-1',
-            authorUserId: 'author-1',
-          ),
+          const ReactionBar(contentId: 'post-1', authorUserId: 'author-1'),
           overrides: [secureDioProvider.overrideWithValue(_makeSuccessDio())],
         ),
       );

@@ -12,20 +12,22 @@ import 'package:asora/features/reactions/domain/reaction.dart';
 // POST /api/reactions.  Returns [SubmitReactionResponse] on success.
 // ─────────────────────────────────────────────────────────────────────────────
 
-final submitReactionProvider = FutureProvider.family<SubmitReactionResponse, SubmitReactionRequest>(
-  (ref, request) async {
-    final dio = ref.read(secureDioProvider);
-    final response = await dio.post<Map<String, dynamic>>(
-      '/reactions',
-      data: request.toJson(),
-    );
-    final data = response.data;
-    if (data == null) {
-      throw StateError('Empty response from reactions endpoint');
-    }
-    return SubmitReactionResponse.fromJson(data);
-  },
-);
+final submitReactionProvider =
+    FutureProvider.family<SubmitReactionResponse, SubmitReactionRequest>((
+      ref,
+      request,
+    ) async {
+      final dio = ref.read(secureDioProvider);
+      final response = await dio.post<Map<String, dynamic>>(
+        '/reactions',
+        data: request.toJson(),
+      );
+      final data = response.data;
+      if (data == null) {
+        throw StateError('Empty response from reactions endpoint');
+      }
+      return SubmitReactionResponse.fromJson(data);
+    });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // deleteReactionProvider
@@ -34,9 +36,10 @@ final submitReactionProvider = FutureProvider.family<SubmitReactionResponse, Sub
 // /api/reactions/{id}.
 // ─────────────────────────────────────────────────────────────────────────────
 
-final deleteReactionProvider = FutureProvider.family<void, String>(
-  (ref, reactionId) async {
-    final dio = ref.read(secureDioProvider);
-    await dio.delete<void>('/reactions/$reactionId');
-  },
-);
+final deleteReactionProvider = FutureProvider.family<void, String>((
+  ref,
+  reactionId,
+) async {
+  final dio = ref.read(secureDioProvider);
+  await dio.delete<void>('/reactions/$reactionId');
+});

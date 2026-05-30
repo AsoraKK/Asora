@@ -54,7 +54,9 @@ void main() {
             'antiGamingStatus': 'clear',
           }),
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       });
 
@@ -83,7 +85,9 @@ void main() {
         return ResponseBody.fromString(
           'null',
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       });
 
@@ -112,7 +116,9 @@ void main() {
         return ResponseBody.fromString(
           '{}',
           200,
-          headers: {Headers.contentTypeHeader: ['application/json']},
+          headers: {
+            Headers.contentTypeHeader: ['application/json'],
+          },
         );
       });
 

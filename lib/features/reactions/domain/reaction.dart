@@ -20,23 +20,34 @@ enum ReactionType {
   /// Human-readable label for display in the reaction bar.
   String get label {
     switch (this) {
-      case ReactionType.helpful:      return 'Helpful';
-      case ReactionType.well_sourced: return 'Well Sourced';
-      case ReactionType.thoughtful:   return 'Thoughtful';
-      case ReactionType.agree:        return 'Agree';
-      case ReactionType.disagree:     return 'Disagree';
-      case ReactionType.misleading:   return 'Misleading';
-      case ReactionType.low_effort:   return 'Low Effort';
-      case ReactionType.report:       return 'Report';
+      case ReactionType.helpful:
+        return 'Helpful';
+      case ReactionType.well_sourced:
+        return 'Well Sourced';
+      case ReactionType.thoughtful:
+        return 'Thoughtful';
+      case ReactionType.agree:
+        return 'Agree';
+      case ReactionType.disagree:
+        return 'Disagree';
+      case ReactionType.misleading:
+        return 'Misleading';
+      case ReactionType.low_effort:
+        return 'Low Effort';
+      case ReactionType.report:
+        return 'Report';
     }
   }
 
   /// Wire value sent to / received from the API.
   String get apiValue {
     switch (this) {
-      case ReactionType.well_sourced: return 'well_sourced';
-      case ReactionType.low_effort:   return 'low_effort';
-      default:                        return name;
+      case ReactionType.well_sourced:
+        return 'well_sourced';
+      case ReactionType.low_effort:
+        return 'low_effort';
+      default:
+        return name;
     }
   }
 
@@ -73,10 +84,7 @@ enum ReactionType {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ReactionSummary {
-  const ReactionSummary({
-    this.counts = const {},
-    this.myReactionType,
-  });
+  const ReactionSummary({this.counts = const {}, this.myReactionType});
 
   final Map<String, int> counts;
   final String? myReactionType;
