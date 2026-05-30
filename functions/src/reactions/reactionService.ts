@@ -261,7 +261,14 @@ export async function submitReaction(input: SubmitReactionInput): Promise<Submit
   };
 
   const db = getCosmosDatabase();
-  await db.container('reactions').items.create({ ...event, _partitionKey: targetContentId });
+  await db.container('reactions').items.create({
+    ...event,
+    // Legacy fields align with the existing Cosmos partition key and indexes.
+    postId: targetContentId,
+    userId: actorUserId,
+    type: reactionType,
+    _partitionKey: targetContentId,
+  });
 
   logger.info('reactions.submitted', { id, actorUserId, targetUserId, reactionType, includedInReputation });
 

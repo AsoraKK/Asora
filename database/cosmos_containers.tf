@@ -12,7 +12,7 @@
 #   - Moderation: flags, appeals, appeal_votes
 #   - Notifications: notifications, notification_preferences, device_tokens, notification_events
 #   - Social: publicProfiles, messages, counters
-#   - Reputation: reputation_audit
+#   - Reputation: reputation_audit, reputation_ledger, reward_redemptions
 #   - Privacy: privacy_requests, legal_holds, audit_logs
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -789,6 +789,102 @@ resource "azurerm_cosmosdb_sql_container" "reputation_audit" {
   }
 }
 
+resource "azurerm_cosmosdb_sql_container" "reputation_ledger" {
+  name                = "reputation_ledger"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/userId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/userId"
+        order = "ascending"
+      }
+      index {
+        path  = "/createdAt"
+        order = "descending"
+      }
+    }
+
+    composite_index {
+      index {
+        path  = "/userId"
+        order = "ascending"
+      }
+      index {
+        path  = "/eventCategory"
+        order = "ascending"
+      }
+      index {
+        path  = "/createdAt"
+        order = "descending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "azurerm_cosmosdb_sql_container" "reward_redemptions" {
+  name                = "reward_redemptions"
+  account_name        = var.cosmos_account
+  database_name       = var.cosmos_db
+  resource_group_name = var.resource_group
+  partition_key_paths = ["/userId"]
+
+  indexing_policy {
+    indexing_mode = "consistent"
+
+    included_path {
+      path = "/*"
+    }
+
+    excluded_path {
+      path = "/\"_etag\"/?"
+    }
+
+    composite_index {
+      index {
+        path  = "/userId"
+        order = "ascending"
+      }
+      index {
+        path  = "/redeemedAt"
+        order = "descending"
+      }
+    }
+
+    composite_index {
+      index {
+        path  = "/userId"
+        order = "ascending"
+      }
+      index {
+        path  = "/rewardLevel"
+        order = "ascending"
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Privacy/DSR Containers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1242,6 +1338,8 @@ output "container_names" {
     azurerm_cosmosdb_sql_container.messages.name,
     azurerm_cosmosdb_sql_container.counters.name,
     azurerm_cosmosdb_sql_container.reputation_audit.name,
+    azurerm_cosmosdb_sql_container.reputation_ledger.name,
+    azurerm_cosmosdb_sql_container.reward_redemptions.name,
     azurerm_cosmosdb_sql_container.privacy_requests.name,
     azurerm_cosmosdb_sql_container.legal_holds.name,
     azurerm_cosmosdb_sql_container.audit_logs.name,
@@ -1277,6 +1375,8 @@ output "partition_keys" {
     messages                 = "/conversationId"
     counters                 = "/userId"
     reputation_audit         = "/_partitionKey"
+    reputation_ledger        = "/userId"
+    reward_redemptions       = "/userId"
     privacy_requests         = "/id"
     legal_holds              = "/scopeId"
     audit_logs               = "/subjectId"

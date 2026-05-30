@@ -110,6 +110,24 @@ interface UserDataExport {
       votedAt: string;
     }>;
   };
+  reputation: {
+    ledger: Array<{
+      id: string;
+      eventType: string;
+      eventCategory: string;
+      pillar?: string;
+      publicLabel: string;
+      impactBand?: string;
+      relatedContentId?: string;
+      relatedModerationDecisionId?: string;
+      visibility?: string;
+      appealable?: boolean;
+      appealStatus?: string;
+      createdAt: string;
+      decaysAt?: string;
+      status?: string;
+    }>;
+  };
   privacy: {
     previousExports: Array<{
       exportId: string;
@@ -213,6 +231,7 @@ export async function exportUserHandler({
     const appealsContainer = activeDatabase.container('appeals');
     const votesContainer = activeDatabase.container('appeal_votes');
     const likesContainer = activeDatabase.container('likes');
+    const reputationLedgerContainer = activeDatabase.container('reputation_ledger');
 
     context.log('privacy.export.started', { exportId });
 
@@ -435,13 +454,50 @@ export async function exportUserHandler({
       context.log('privacy.export.votes_fetch_error', { exportId });
     }
 
-    // 11. Get previous export history (if any)
+    // 11. Get user-visible reputation ledger entries. Internal anti-abuse
+    // fields such as rawDelta and internalReasonCode are intentionally omitted.
+    const reputationLedger: any[] = [];
+    try {
+      const ledgerQuery = {
+        query: 'SELECT * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC',
+        parameters: [{ name: '@userId', value: userId }],
+      };
+      const { resources: entries } = await reputationLedgerContainer.items.query(ledgerQuery).fetchAll();
+
+      entries.forEach(entry => {
+        reputationLedger.push({
+          id: entry.id,
+          eventType: entry.eventType,
+          eventCategory: entry.eventCategory,
+          pillar: entry.pillar,
+          publicLabel: entry.publicLabel,
+          impactBand: entry.impactBand,
+          relatedContentId: entry.relatedContentId,
+          relatedModerationDecisionId: entry.relatedModerationDecisionId,
+          visibility: entry.visibility,
+          appealable: entry.appealable,
+          appealStatus: entry.appealStatus,
+          createdAt: entry.createdAt,
+          decaysAt: entry.decaysAt,
+          status: entry.status,
+        });
+      });
+
+      context.log('privacy.export.reputation_ledger_fetched', {
+        exportId,
+        count: reputationLedger.length,
+      });
+    } catch (error) {
+      context.log('privacy.export.reputation_ledger_fetch_error', { exportId });
+    }
+
+    // 12. Get previous export history (if any)
     const previousExports: any[] = [];
     const dataRequests: any[] = [];
     // Note: In a full implementation, you might track these in a separate container
     // For now, we'll return empty arrays but the structure is ready
 
-    // 12. Assemble complete data export (apply redaction to all content)
+    // 13. Assemble complete data export (apply redaction to all content)
     const exportData: UserDataExport = {
       metadata: {
         exportedAt: new Date().toISOString(),
@@ -464,13 +520,16 @@ export async function exportUserHandler({
         appeals: userAppeals.map(a => redactRecord(a)),
         votes: userVotes.map(v => redactRecord(v)),
       },
+      reputation: {
+        ledger: reputationLedger.map(e => redactRecord(e)),
+      },
       privacy: {
         previousExports,
         dataRequests,
       },
     };
 
-    // 13. Log export completion for audit (no raw userId/email in log line)
+    // 14. Log export completion for audit (no raw userId/email in log line)
     context.log('privacy.export.completed', {
       exportId,
       totalPosts: userPosts.length,
@@ -479,9 +538,10 @@ export async function exportUserHandler({
       totalFlags: userFlags.length,
       totalAppeals: userAppeals.length,
       totalVotes: userVotes.length,
+      totalReputationLedgerEntries: reputationLedger.length,
     });
 
-    // 14. Rate limiting status recorded (no PII)
+    // 15. Rate limiting status recorded (no PII)
     context.log('privacy.export.rate_limit_status', {
       rateLimited: rateLimitResult.blocked,
       remaining: rateLimitResult.remaining,

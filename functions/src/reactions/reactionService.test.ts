@@ -147,6 +147,14 @@ describe('submitReaction', () => {
     expect(result.includedInReputation).toBe(true);
     expect(result.antiGamingStatus).toBe('clear');
     expect(createMock).toHaveBeenCalledTimes(1);
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        postId: 'post-1',
+        userId: 'actor-1',
+        type: 'helpful',
+        _partitionKey: 'post-1',
+      })
+    );
   });
 
   it('fires a positive ledger event for helpful reaction', async () => {
@@ -180,7 +188,7 @@ describe('submitReaction', () => {
     );
   });
 
-  it('does NOT fire a ledger event for agree (rawDelta=0 tracking only)', async () => {
+  it('fires a weak ledger event for agree (rawDelta=0 tracking only)', async () => {
     setupDb();
     await submitReaction({
       actorUserId: 'actor-1',

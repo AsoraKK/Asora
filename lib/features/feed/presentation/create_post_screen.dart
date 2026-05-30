@@ -185,7 +185,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tell us if this post contains AI-generated content. AI-generated posts are blocked at publish time.',
+                        'Tell us whether AI helped create this post. AI-generated posts are blocked at publish time.',
                         style: GoogleFonts.sora(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -211,6 +211,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           ChoiceChip(
                             label: Text(
                               'Contains AI',
+                              style: GoogleFonts.sora(fontSize: 12),
+                            ),
+                            selected: state.aiLabel == 'assisted',
+                            onSelected: canCreate && !state.isSubmitting
+                                ? (_) => ref
+                                      .read(postCreationProvider.notifier)
+                                      .setAiLabel('assisted')
+                                : null,
+                          ),
+                          ChoiceChip(
+                            label: Text(
+                              'AI-generated',
                               style: GoogleFonts.sora(fontSize: 12),
                             ),
                             selected: state.aiLabel == 'generated',

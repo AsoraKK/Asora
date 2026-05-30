@@ -75,9 +75,10 @@ void main() {
       // Human-authored should be the default
       expect(find.text('Human-authored'), findsOneWidget);
       expect(find.text('Contains AI'), findsOneWidget);
+      expect(find.text('AI-generated'), findsOneWidget);
     });
 
-    testWidgets('selecting Contains AI shows warning and disables Post', (
+    testWidgets('selecting AI-generated shows warning and disables Post', (
       tester,
     ) async {
       await tester.pumpWidget(buildWidget(user: _testUser()));
@@ -87,8 +88,8 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Some content');
       await tester.pump();
 
-      // Select Contains AI
-      await tester.tap(find.text('Contains AI'));
+      // Select AI-generated
+      await tester.tap(find.text('AI-generated'));
       await tester.pump();
 
       // Should show the AI warning text
@@ -109,8 +110,8 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Some content');
       await tester.pump();
 
-      // Select Contains AI
-      await tester.tap(find.text('Contains AI'));
+      // Select AI-generated
+      await tester.tap(find.text('AI-generated'));
       await tester.pump();
       expect(
         find.textContaining('Lythaus blocks AI-generated'),
@@ -203,7 +204,7 @@ void main() {
       await tester.pump();
 
       // Switch to AI-generated
-      await tester.tap(find.text('Contains AI'));
+      await tester.tap(find.text('AI-generated'));
       await tester.pump();
 
       await tester.tap(find.widgetWithText(FilledButton, 'Post'));
