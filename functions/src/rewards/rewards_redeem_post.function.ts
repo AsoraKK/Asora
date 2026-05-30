@@ -7,6 +7,7 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { rateLimitedByRoute } from '@http/rateLimitDecorators';
 import { getAzureLogger } from '@shared/utils/logger';
 import { redeemReward } from './rewardsService';
 import type { RewardRedemption } from './types';
@@ -55,5 +56,5 @@ app.http('rewards_redeem_post', {
   methods: ['POST'],
   route: 'rewards/{id}/redeem',
   authLevel: 'anonymous',
-  handler: rewards_redeem_post,
+  handler: rateLimitedByRoute(rewards_redeem_post),
 });

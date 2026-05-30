@@ -105,7 +105,7 @@ RewardsSnapshot _alreadyRedeemedSnapshot() {
 /// Snapshot for a restricted account where every offer is locked due to
 /// fraud/safety checks.
 RewardsSnapshot _restrictedAccountSnapshot() {
-  return RewardsSnapshot(
+  return const RewardsSnapshot(
     subscriptionTier: 'premium',
     reputationLevel: 2,
     reputationBand: 'trusted',

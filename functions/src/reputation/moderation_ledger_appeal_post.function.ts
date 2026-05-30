@@ -9,6 +9,7 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { rateLimitedByRoute } from '@http/rateLimitDecorators';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { updateAppealStatus } from './ledgerService';
 import type { LedgerEntry } from './types';
@@ -60,5 +61,5 @@ app.http('moderation_ledger_appeal_post', {
   methods: ['POST'],
   route: 'moderation/ledger/{entryId}/appeal',
   authLevel: 'anonymous',
-  handler: moderation_ledger_appeal_post,
+  handler: rateLimitedByRoute(moderation_ledger_appeal_post),
 });

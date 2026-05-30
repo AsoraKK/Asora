@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/widgets/reputation_badge.dart';
-import 'package:asora/state/models/reputation.dart';
 
 void main() {
   group('ReputationBadge.getTierName', () {
@@ -44,7 +43,7 @@ void main() {
   group('ReputationBadge widget', () {
     testWidgets('renders score text', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ReputationBadge(score: 42))),
+        const MaterialApp(home: Scaffold(body: ReputationBadge(score: 42))),
       );
       expect(find.text('42'), findsOneWidget);
     });
@@ -53,7 +52,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(body: ReputationBadge(score: 100, showLabel: true)),
         ),
       );
@@ -62,7 +61,7 @@ void main() {
 
     testWidgets('tooltip contains level name', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ReputationBadge(score: 1000))),
+        const MaterialApp(home: Scaffold(body: ReputationBadge(score: 1000))),
       );
       // Verify badge renders without error; tooltip text is 'Highly Credible • 1000 reputation'
       expect(find.byType(Tooltip), findsOneWidget);

@@ -2,7 +2,7 @@
 
 // lib/features/auth/domain/user.dart
 
-import 'subscription_tier.dart';
+import 'package:asora/features/auth/domain/subscription_tier.dart';
 
 /// User model representing an authenticated user in the Asora system
 class User {
