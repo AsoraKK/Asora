@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-05-15T18:12:25.286Z",
+  "generatedAt": "2026-05-30T16:59:08.188Z",
   "functionsRoot": "functions/src",
-  "totalRoutes": 120,
-  "writeRoutes": 72,
+  "totalRoutes": 130,
+  "writeRoutes": 76,
   "missingRateLimit": [],
   "missingAuthGuard": [],
   "anonymousTodoViolations": [],
@@ -1270,6 +1270,23 @@
       "missingTestEnvGuard": false
     },
     {
+      "file": "functions/src/feed/routes/feed_discover_get.function.ts",
+      "functionName": "feed_public_get",
+      "methods": [
+        "GET"
+      ],
+      "route": "feed/public",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
       "file": "functions/src/feed/routes/feed_user_get.function.ts",
       "functionName": "feed_user_get",
       "methods": [
@@ -1399,6 +1416,23 @@
         "OPTIONS"
       ],
       "route": "moderation/flag",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reputation/moderation_ledger_appeal_post.function.ts",
+      "functionName": "moderation_ledger_appeal_post",
+      "methods": [
+        "POST"
+      ],
+      "route": "moderation/ledger/{entryId}/appeal",
       "authLevel": "anonymous",
       "isWrite": true,
       "hasRateLimit": true,
@@ -1938,6 +1972,40 @@
       "missingTestEnvGuard": false
     },
     {
+      "file": "functions/src/reactions/reactions_post.function.ts",
+      "functionName": "reactions_post",
+      "methods": [
+        "POST"
+      ],
+      "route": "reactions",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reactions/reactions_delete.function.ts",
+      "functionName": "reactions_delete",
+      "methods": [
+        "DELETE"
+      ],
+      "route": "reactions/{id}",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
       "file": "functions/src/shared/routes/ready.ts",
       "functionName": "ready",
       "methods": [
@@ -1948,6 +2016,108 @@
       "isWrite": false,
       "hasRateLimit": false,
       "hasAuthGuard": false,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reputation/reputation_me_get.function.ts",
+      "functionName": "reputation_me_get",
+      "methods": [
+        "GET"
+      ],
+      "route": "reputation/me",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reputation/reputation_ledger_get.function.ts",
+      "functionName": "reputation_ledger_get",
+      "methods": [
+        "GET"
+      ],
+      "route": "reputation/me/ledger",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reputation/reputation_user_get.function.ts",
+      "functionName": "reputation_user_get_singular",
+      "methods": [
+        "GET"
+      ],
+      "route": "reputation/user/{id}",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": false,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/reputation/reputation_user_get.function.ts",
+      "functionName": "reputation_user_get",
+      "methods": [
+        "GET"
+      ],
+      "route": "reputation/users/{id}",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": false,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/rewards/rewards_redeem_post.function.ts",
+      "functionName": "rewards_redeem_post",
+      "methods": [
+        "POST"
+      ],
+      "route": "rewards/{id}/redeem",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": true,
+      "hasAuthGuard": true,
+      "rateLimitExempt": false,
+      "authGuardExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions/src/rewards/rewards_me_get.function.ts",
+      "functionName": "rewards_me_get",
+      "methods": [
+        "GET"
+      ],
+      "route": "rewards/me",
+      "authLevel": "anonymous",
+      "isWrite": false,
+      "hasRateLimit": false,
+      "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
       "hasAnonymousTodo": false,

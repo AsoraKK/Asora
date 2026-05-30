@@ -8,6 +8,7 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { rateLimitedByRoute } from '@http/rateLimitDecorators';
 import { getAzureLogger } from '@shared/utils/logger';
 import { deleteReaction } from './reactionService';
 
@@ -17,7 +18,7 @@ app.http('reactions_delete', {
   methods: ['DELETE'],
   route: 'reactions/{id}',
   authLevel: 'anonymous',
-  handler: httpHandler(async (ctx) => {
+  handler: rateLimitedByRoute(httpHandler(async (ctx) => {
     let auth;
     try {
       auth = await extractAuthContext(ctx);
@@ -41,5 +42,5 @@ app.http('reactions_delete', {
       }
       throw err;
     }
-  }),
+  })),
 });

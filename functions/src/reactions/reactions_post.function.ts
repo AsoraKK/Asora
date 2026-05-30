@@ -8,6 +8,7 @@
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { rateLimitedByRoute } from '@http/rateLimitDecorators';
 import { getAzureLogger } from '@shared/utils/logger';
 import { submitReaction } from './reactionService';
 import type { SubmitReactionRequest, ReactionType } from './types';
@@ -23,7 +24,7 @@ app.http('reactions_post', {
   methods: ['POST'],
   route: 'reactions',
   authLevel: 'anonymous',
-  handler: httpHandler<SubmitReactionRequest>(async (ctx) => {
+  handler: rateLimitedByRoute(httpHandler<SubmitReactionRequest>(async (ctx) => {
     let auth;
     try {
       auth = await extractAuthContext(ctx);
@@ -72,5 +73,5 @@ app.http('reactions_post', {
       }
       throw err;
     }
-  }),
+  })),
 });

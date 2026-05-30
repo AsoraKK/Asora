@@ -16,7 +16,7 @@ void main() {
     redemptionStatus: 'active',
     fraudRiskStatus: 'normal',
     offers: [
-      RewardOffer(
+      const RewardOffer(
         id: 'lvl1-privacy-basics',
         rewardLevel: 1,
         title: 'Privacy Starter Pack',
@@ -25,7 +25,7 @@ void main() {
         locked: false,
         redeemed: false,
       ),
-      RewardOffer(
+      const RewardOffer(
         id: 'lvl4-editorial-tools',
         rewardLevel: 4,
         title: 'Editorial Tools Bundle',

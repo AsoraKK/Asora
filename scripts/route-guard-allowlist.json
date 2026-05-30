@@ -25,6 +25,8 @@
     "posts_view",
     "posts_receipt_get",
     "listComments",
-    "users_get_by_id"
+    "users_get_by_id",
+    "reputation_user_get",
+    "reputation_user_get_singular"
   ]
 }
