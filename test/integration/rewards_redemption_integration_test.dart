@@ -109,12 +109,12 @@ RewardsSnapshot _restrictedAccountSnapshot() {
     subscriptionTier: 'premium',
     reputationLevel: 2,
     reputationBand: 'trusted',
-    availableRewardLevels: const [1, 2, 3, 4, 5],
+    availableRewardLevels: [1, 2, 3, 4, 5],
     maxOptionsPerLevel: 1,
     redemptionStatus: 'restricted',
     fraudRiskStatus: 'elevated',
     offers: [
-      const RewardOffer(
+      RewardOffer(
         id: 'lvl1-privacy-basics',
         rewardLevel: 1,
         title: 'Privacy Starter Pack',
@@ -126,7 +126,7 @@ RewardsSnapshot _restrictedAccountSnapshot() {
             'Redemption is temporarily restricted while account safety checks complete.',
       ),
     ],
-    redemptionHistory: const [],
+    redemptionHistory: [],
     affiliateDisclosure:
         'Some reward links may include affiliate relationships.',
   );
