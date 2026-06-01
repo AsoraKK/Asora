@@ -56,8 +56,22 @@ class _ReputationLedgerScreenState extends ConsumerState<ReputationLedgerScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
 
-  static const _filters = ['all', 'positive', 'neutral', 'negative', 'appeal', 'expired'];
-  static const _filterLabels = ['All', 'Positive', 'Neutral', 'Negative', 'Appeals', 'Expired'];
+  static const _filters = [
+    'all',
+    'positive',
+    'neutral',
+    'negative',
+    'appeal',
+    'expired',
+  ];
+  static const _filterLabels = [
+    'All',
+    'Positive',
+    'Neutral',
+    'Negative',
+    'Appeals',
+    'Expired',
+  ];
 
   @override
   void initState() {
@@ -95,7 +109,9 @@ class _ReputationLedgerScreenState extends ConsumerState<ReputationLedgerScreen>
           Expanded(
             child: TabBarView(
               controller: _tabs,
-              children: _filters.map((filter) => _LedgerList(filter: filter)).toList(),
+              children: _filters
+                  .map((filter) => _LedgerList(filter: filter))
+                  .toList(),
             ),
           ),
         ],
@@ -141,7 +157,8 @@ class _LedgerList extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
             itemCount: entries.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _LedgerEntryTile(filter: filter, entry: entries[i]),
+            itemBuilder: (_, i) =>
+                _LedgerEntryTile(filter: filter, entry: entries[i]),
           ),
         );
       },
@@ -178,16 +195,16 @@ class _LedgerEntryTileState extends ConsumerState<_LedgerEntryTile> {
         return;
       }
       ref.invalidate(_ledgerPageProvider(widget.filter));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appeal submitted.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appeal submitted.')));
     } catch (_) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not submit appeal.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not submit appeal.')));
     } finally {
       if (mounted) {
         setState(() => _appealing = false);
@@ -257,11 +274,7 @@ class _LedgerEntryTileState extends ConsumerState<_LedgerEntryTile> {
                         color: scheme.primary,
                       ),
                     )
-                  : Icon(
-                      Icons.gavel_outlined,
-                      size: 16,
-                      color: scheme.outline,
-                    ),
+                  : Icon(Icons.gavel_outlined, size: 16, color: scheme.outline),
               label: const Text('Appeal'),
             )
           : null,
