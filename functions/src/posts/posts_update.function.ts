@@ -23,6 +23,8 @@ import {
 } from '@posts/service/moderationUtil';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
+import { recordReputationEvent } from '../reputation/reputationEventService';
+import { LedgerEventType } from '../reputation/types';
 
 function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | undefined {
   if (label === undefined || label === null) {
@@ -180,18 +182,18 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
     }
 
     if (aiDetected && effectiveAiLabel !== 'generated') {
-      return ctx.badRequest(
-        'Potential AI-generated content must be labeled and is not publishable.',
-        'AI_LABEL_REQUIRED',
-        {
-          appealEligible: true,
-          caseId: postId,
-          categories: [
-            ...(moderationMeta.categories ?? []),
-            ...mediaModeration.categories,
-          ],
-        }
-      );
+      void recordReputationEvent({
+        userId: auth.userId,
+        ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
+        sourceId: postId,
+        sourceType: 'post',
+      }).catch((error) => {
+        ctx.context.warn?.('[posts_update] Failed to record undisclosed AI reputation event', {
+          postId,
+          userId: auth.userId.slice(0, 8),
+          message: (error as Error).message,
+        });
+      });
     }
 
     const mergedCategories = Array.from(
@@ -202,7 +204,9 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       mediaModeration.confidence ?? 0
     );
     const mergedStatus =
-      moderationMeta.status === 'warned' || mediaModeration.status === 'warned'
+      (aiDetected && effectiveAiLabel !== 'generated') ||
+      moderationMeta.status === 'warned' ||
+      mediaModeration.status === 'warned'
         ? 'warned'
         : moderationMeta.status;
 

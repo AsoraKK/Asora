@@ -9,8 +9,8 @@ import 'package:asora/services/service_providers.dart';
 import 'package:asora/services/subscription/subscription_service.dart';
 import 'package:asora/state/models/reputation.dart';
 
-const List<ReputationTier> _lythausReputationTiers = [
-  ReputationTier(
+const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
+  SubscriptionEntitlementTier(
     id: 'free',
     name: 'Free',
     minXP: 0,
@@ -20,7 +20,7 @@ const List<ReputationTier> _lythausReputationTiers = [
       '1 reputation reward available',
     ],
   ),
-  ReputationTier(
+  SubscriptionEntitlementTier(
     id: 'premium',
     name: 'Premium',
     minXP: 1200,
@@ -30,7 +30,7 @@ const List<ReputationTier> _lythausReputationTiers = [
       '5 reputation rewards available',
     ],
   ),
-  ReputationTier(
+  SubscriptionEntitlementTier(
     id: 'black',
     name: 'Black',
     minXP: 3200,
@@ -58,9 +58,9 @@ final reputationProvider = FutureProvider<UserReputation>((ref) async {
   }
 
   final tierId = _resolveTierId(status?.tier, user);
-  final tier = _lythausReputationTiers.firstWhere(
+  final tier = _lythausSubscriptionEntitlementTiers.firstWhere(
     (candidate) => candidate.id == tierId,
-    orElse: () => _lythausReputationTiers.first,
+    orElse: () => _lythausSubscriptionEntitlementTiers.first,
   );
 
   final rawScore = user?.reputationScore ?? 0;
@@ -76,8 +76,13 @@ final reputationProvider = FutureProvider<UserReputation>((ref) async {
   );
 });
 
-final reputationTiersProvider = Provider<List<ReputationTier>>(
-  (ref) => _lythausReputationTiers,
+final subscriptionEntitlementTiersProvider = Provider<List<SubscriptionEntitlementTier>>(
+  (ref) => _lythausSubscriptionEntitlementTiers,
+);
+
+@Deprecated('Use subscriptionEntitlementTiersProvider instead.')
+final reputationTiersProvider = Provider<List<SubscriptionEntitlementTier>>(
+  (ref) => _lythausSubscriptionEntitlementTiers,
 );
 
 /// Phase 1: Provides the numeric [ReputationLevel] for the current user.
@@ -173,9 +178,9 @@ List<Mission> _buildEntitlementMissions(
 
 List<String> _buildRecentAchievements(
   SubscriptionStatus? status,
-  ReputationTier tier,
+  SubscriptionEntitlementTier tier,
 ) {
-  final achievements = <String>['Tier active: ${tier.name}'];
+  final achievements = <String>['Subscription entitlement active: ${tier.name}'];
 
   if (status?.isPaid == true) {
     achievements.add('Paid tier entitlements active');
