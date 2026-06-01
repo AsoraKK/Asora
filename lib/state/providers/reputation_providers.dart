@@ -76,9 +76,10 @@ final reputationProvider = FutureProvider<UserReputation>((ref) async {
   );
 });
 
-final subscriptionEntitlementTiersProvider = Provider<List<SubscriptionEntitlementTier>>(
-  (ref) => _lythausSubscriptionEntitlementTiers,
-);
+final subscriptionEntitlementTiersProvider =
+    Provider<List<SubscriptionEntitlementTier>>(
+      (ref) => _lythausSubscriptionEntitlementTiers,
+    );
 
 @Deprecated('Use subscriptionEntitlementTiersProvider instead.')
 final reputationTiersProvider = Provider<List<SubscriptionEntitlementTier>>(
@@ -180,7 +181,9 @@ List<String> _buildRecentAchievements(
   SubscriptionStatus? status,
   SubscriptionEntitlementTier tier,
 ) {
-  final achievements = <String>['Subscription entitlement active: ${tier.name}'];
+  final achievements = <String>[
+    'Subscription entitlement active: ${tier.name}',
+  ];
 
   if (status?.isPaid == true) {
     achievements.add('Paid tier entitlements active');
