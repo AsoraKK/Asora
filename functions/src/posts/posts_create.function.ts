@@ -234,8 +234,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
     }
 
     if (aiDetected && effectiveAiLabel !== 'generated') {
-      // Phase 1: apply undisclosed-AI reputation penalty before returning 400
-      // (hard-block remains regardless of reputation action)
+      // Phase 1: apply undisclosed-AI reputation penalty and flag the post for review.
       if (content && content.length >= 250) {
         void recordReputationEvent({
           userId: auth.userId,
@@ -250,19 +249,6 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
           });
         });
       }
-
-      return ctx.badRequest(
-        'Potential AI-generated content must be labeled and is not publishable.',
-        'AI_LABEL_REQUIRED',
-        {
-          appealEligible: true,
-          caseId: postId,
-          categories: [
-            ...(moderationMeta.categories ?? []),
-            ...mediaModeration.categories,
-          ],
-        }
-      );
     }
 
     const mergedCategories = Array.from(
@@ -273,7 +259,9 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       mediaModeration.confidence ?? 0
     );
     const mergedStatus =
-      moderationMeta.status === 'warned' || mediaModeration.status === 'warned'
+      (aiDetected && effectiveAiLabel !== 'generated') ||
+      moderationMeta.status === 'warned' ||
+      mediaModeration.status === 'warned'
         ? 'warned'
         : moderationMeta.status;
 

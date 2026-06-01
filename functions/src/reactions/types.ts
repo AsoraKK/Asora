@@ -2,7 +2,7 @@
  * Reaction types — Phase 2.
  *
  * Structured reactions with reputation weighting and anti-gaming controls.
- * Feature flag STRUCTURED_REACTIONS_ENABLED must be true before deploying endpoints.
+ * Feature flag STRUCTURED_REACTIONS_ENABLED must stay false in Phase 1.
  */
 
 /** All reaction types supported in the system (spec §9.1). */
@@ -100,4 +100,4 @@ export interface SubmitReactionResponse {
  * Feature flag: structured reactions endpoints and ledger scoring.
  * Flip to `true` in Phase 2 once the `reactions` container is provisioned.
  */
-export const STRUCTURED_REACTIONS_ENABLED = true;
+export const STRUCTURED_REACTIONS_ENABLED = false;

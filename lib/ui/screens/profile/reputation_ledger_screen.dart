@@ -56,8 +56,8 @@ class _ReputationLedgerScreenState extends ConsumerState<ReputationLedgerScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
 
-  static const _filters = ['all', 'positive', 'negative', 'appeal'];
-  static const _filterLabels = ['All', 'Positive', 'Negative', 'Appeals'];
+  static const _filters = ['all', 'positive', 'neutral', 'negative', 'appeal', 'expired'];
+  static const _filterLabels = ['All', 'Positive', 'Neutral', 'Negative', 'Appeals', 'Expired'];
 
   @override
   void initState() {
@@ -75,17 +75,30 @@ class _ReputationLedgerScreenState extends ConsumerState<ReputationLedgerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reputation History'),
+        title: const Text('Reputation Activity'),
         bottom: TabBar(
           controller: _tabs,
           tabs: _filterLabels.map((l) => Tab(text: l)).toList(),
         ),
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: _filters
-            .map((filter) => _LedgerList(filter: filter))
-            .toList(),
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Reputation Activity is read-only. Entries cannot be edited or removed.',
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: _filters.map((filter) => _LedgerList(filter: filter)).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -128,7 +141,7 @@ class _LedgerList extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
             itemCount: entries.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _LedgerEntryTile(entry: entries[i]),
+            itemBuilder: (_, i) => _LedgerEntryTile(filter: filter, entry: entries[i]),
           ),
         );
       },
@@ -140,27 +153,76 @@ class _LedgerList extends ConsumerWidget {
 // Individual entry tile
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _LedgerEntryTile extends StatelessWidget {
-  const _LedgerEntryTile({required this.entry});
+class _LedgerEntryTile extends ConsumerStatefulWidget {
+  const _LedgerEntryTile({required this.filter, required this.entry});
+  final String filter;
   final LedgerEntry entry;
+
+  @override
+  ConsumerState<_LedgerEntryTile> createState() => _LedgerEntryTileState();
+}
+
+class _LedgerEntryTileState extends ConsumerState<_LedgerEntryTile> {
+  bool _appealing = false;
+
+  Future<void> _submitAppeal() async {
+    if (_appealing) {
+      return;
+    }
+
+    setState(() => _appealing = true);
+    try {
+      final dio = ref.read(secureDioProvider);
+      await dio.post<void>('/moderation/ledger/${widget.entry.id}/appeal');
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(_ledgerPageProvider(widget.filter));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appeal submitted.')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not submit appeal.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _appealing = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final entry = widget.entry;
     final isPositive = entry.eventCategory == 'positive';
+    final isNeutral = entry.eventCategory == 'neutral';
     final isNegative = entry.eventCategory == 'negative';
+    final isExpired = entry.status == 'expired';
 
     final bandColor = isPositive
         ? Colors.green.shade600
+        : isNeutral
+        ? scheme.tertiary
         : isNegative
         ? scheme.error
+        : isExpired
+        ? scheme.outline
         : scheme.onSurfaceVariant;
 
     final bandIcon = isPositive
         ? Icons.arrow_upward
+        : isNeutral
+        ? Icons.remove
         : isNegative
         ? Icons.arrow_downward
+        : isExpired
+        ? Icons.schedule
         : Icons.remove;
 
     final dateStr = _formatDate(entry.createdAt);
@@ -184,13 +246,23 @@ class _LedgerEntryTile extends StatelessWidget {
         ),
       ),
       trailing: entry.appealable && entry.appealStatus == null
-          ? Tooltip(
-              message: 'Eligible for appeal',
-              child: Icon(
-                Icons.gavel_outlined,
-                size: 16,
-                color: scheme.outline,
-              ),
+          ? TextButton.icon(
+              onPressed: _appealing ? null : _submitAppeal,
+              icon: _appealing
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.primary,
+                      ),
+                    )
+                  : Icon(
+                      Icons.gavel_outlined,
+                      size: 16,
+                      color: scheme.outline,
+                    ),
+              label: const Text('Appeal'),
             )
           : null,
     );

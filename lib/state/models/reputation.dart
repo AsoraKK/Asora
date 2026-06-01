@@ -104,17 +104,27 @@ class LedgerEntry {
 // UserReputation (updated to include level-based model alongside legacy fields)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class ReputationTier {
+class SubscriptionEntitlementTier {
   final String id;
   final String name;
   final int minXP;
   final List<String> privileges;
 
-  const ReputationTier({
+  const SubscriptionEntitlementTier({
     required this.id,
     required this.name,
     required this.minXP,
     required this.privileges,
+  });
+}
+
+@Deprecated('Use SubscriptionEntitlementTier instead.')
+class ReputationTier extends SubscriptionEntitlementTier {
+  const ReputationTier({
+    required super.id,
+    required super.name,
+    required super.minXP,
+    required super.privileges,
   });
 }
 
@@ -134,7 +144,7 @@ class Mission {
 
 class UserReputation {
   final int xp;
-  final ReputationTier tier;
+  final SubscriptionEntitlementTier tier;
   final List<Mission> missions;
   final List<String> recentAchievements;
 
@@ -155,7 +165,7 @@ class UserReputation {
 
   UserReputation copyWith({
     int? xp,
-    ReputationTier? tier,
+    SubscriptionEntitlementTier? tier,
     List<Mission>? missions,
     List<String>? recentAchievements,
     ReputationLevel? reputationLevel,

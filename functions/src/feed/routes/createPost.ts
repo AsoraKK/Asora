@@ -222,19 +222,9 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       };
     }
 
-    if (aiDetected) {
-      return {
-        status: 422,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: 'ai_label_required',
-          message:
-            'Potential AI-generated content must be labeled and is not publishable.',
-          appealEligible: true,
-          categories: moderationMeta.categories ?? [],
-        }),
-      };
-    }
+    const publishedModerationMeta: ModerationMeta = aiDetected
+      ? { ...moderationMeta, status: 'warned' }
+      : moderationMeta;
 
     // ─────────────────────────────────────────────────────────────
     // Create Post Document
@@ -254,7 +244,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
         comments: 0,
         replies: 0,
       },
-      moderation: moderationMeta,
+      moderation: publishedModerationMeta,
     };
 
     const container = getTargetDatabase().posts;
@@ -278,7 +268,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
         authorId: principal.sub,
         textLength: validation.text.length,
         hasMedia: Boolean(validation.mediaUrl),
-        moderationStatus: moderationMeta.status,
+        moderationStatus: publishedModerationMeta.status,
         durationMs: duration,
       },
     });
@@ -286,7 +276,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     context.log('posts.create.success', {
       postId,
       authorId: principal.sub,
-      moderationStatus: moderationMeta.status,
+      moderationStatus: publishedModerationMeta.status,
       durationMs: duration.toFixed(2),
       ru: requestCharge?.toFixed(2) ?? '0',
     });
@@ -312,7 +302,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       createdAt: new Date(resource?.createdAt ?? now).toISOString(),
       updatedAt: new Date(resource?.updatedAt ?? now).toISOString(),
       stats: resource?.stats ?? { likes: 0, comments: 0, replies: 0 },
-      moderation: sanitizeModerationForResponse(moderationMeta),
+      moderation: sanitizeModerationForResponse(publishedModerationMeta),
     };
 
     const result: CreatePostResult = {
