@@ -124,7 +124,10 @@ void main() {
 
         expect(reputation.tier.id, 'premium');
         expect(reputation.missions, hasLength(3));
-        expect(reputation.recentAchievements, contains('Tier active: Premium'));
+        expect(
+          reputation.recentAchievements,
+          contains('Subscription entitlement active: Premium'),
+        );
         expect(
           reputation.recentAchievements,
           contains('Paid tier entitlements active'),
@@ -152,7 +155,10 @@ void main() {
       final reputation = await container.read(reputationProvider.future);
       expect(reputation.tier.id, 'black');
       expect(reputation.missions, isEmpty);
-      expect(reputation.recentAchievements, contains('Tier active: Black'));
+      expect(
+        reputation.recentAchievements,
+        contains('Subscription entitlement active: Black'),
+      );
     });
 
     test(
@@ -172,7 +178,10 @@ void main() {
         final reputation = await container.read(reputationProvider.future);
         expect(reputation.tier.id, 'premium');
         expect(reputation.missions, isEmpty);
-        expect(reputation.recentAchievements, contains('Tier active: Premium'));
+        expect(
+          reputation.recentAchievements,
+          contains('Subscription entitlement active: Premium'),
+        );
       },
     );
   });
