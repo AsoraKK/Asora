@@ -4,28 +4,28 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:asora/core/config/web_release_guard.dart';
+
 class AuthService {
   final Dio _dio;
   final FlutterSecureStorage _storage;
 
-  // Your Azure Functions local development URL (Android emulator compatible)
-  // SECURITY: Environment-based URL configuration
-  static const String _devUrl = 'http://10.0.2.2:7072/api'; // Local dev only
-  static const String _prodUrl =
-      'https://your-secure-function-app.azurewebsites.net/api'; // Production HTTPS
+  static const String _configuredAuthUrl = String.fromEnvironment(
+    'AUTH_URL',
+    defaultValue: '',
+  );
 
-  static String get _baseUrl {
-    // Use environment variable to determine if we're in development
-    const bool isDevelopment = bool.fromEnvironment(
-      'FLUTTER_DEV',
-      defaultValue: false,
-    );
-    return isDevelopment ? _devUrl : _prodUrl;
-  }
+  static String get _baseUrl => _configuredAuthUrl.isNotEmpty
+      ? _configuredAuthUrl
+      : 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api';
 
   AuthService({Dio? dio, FlutterSecureStorage? storage})
     : _dio = dio ?? Dio(),
       _storage = storage ?? const FlutterSecureStorage() {
+    if (isReleaseWebBuild) {
+      requirePublicHttpsOrigin('AUTH_URL', _configuredAuthUrl);
+    }
+
     // Configure Dio with default options
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);

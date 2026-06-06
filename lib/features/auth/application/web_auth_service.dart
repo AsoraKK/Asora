@@ -11,6 +11,7 @@ import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/application/web_token_storage.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
+import 'package:asora/core/config/web_release_guard.dart';
 
 /// Handles the OAuth2 authorization code flow on web using browser redirects
 /// instead of flutter_appauth (which only works on mobile/desktop).
@@ -42,6 +43,7 @@ class WebAuthService {
   /// This method does not return — the page navigates away.
   void startSignIn({OAuth2Provider provider = OAuth2Provider.google}) {
     assert(kIsWeb, 'WebAuthService.startSignIn must only be called on web');
+    _validateReleaseWebEndpoints();
 
     final codeVerifier = _generateCodeVerifier();
     final codeChallenge = _generateCodeChallenge(codeVerifier);
@@ -79,6 +81,7 @@ class WebAuthService {
   /// Handle the OAuth2 callback after the browser redirect.
   /// Exchanges the authorization code for tokens and returns the [User].
   Future<User> handleCallback(Uri callbackUri) async {
+    _validateReleaseWebEndpoints();
     final queryParams = callbackUri.queryParameters;
 
     // Check for error response from IdP.
@@ -249,6 +252,22 @@ class WebAuthService {
     _storage.delete(_codeVerifierKey);
     _storage.delete(_stateKey);
     _storage.delete(_providerKey);
+  }
+
+  void _validateReleaseWebEndpoints() {
+    if (!isReleaseWebBuild) return;
+    requirePublicHttpsOrigin(
+      'OAUTH2_AUTHORIZATION_ENDPOINT',
+      OAuth2Config.authorizationEndpoint,
+    );
+    requirePublicHttpsOrigin(
+      'OAUTH2_TOKEN_ENDPOINT',
+      OAuth2Config.tokenEndpoint,
+    );
+    requirePublicHttpsOrigin(
+      'OAUTH2_USERINFO_ENDPOINT',
+      OAuth2Config.userInfoEndpoint,
+    );
   }
 
   String _idpHintForProvider(OAuth2Provider provider) {

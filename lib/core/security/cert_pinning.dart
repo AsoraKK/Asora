@@ -8,5 +8,4 @@
 library;
 
 export 'cert_pinning_common.dart';
-export 'cert_pinning_io.dart'
-    if (dart.library.js_interop) 'cert_pinning_web.dart';
+export 'cert_pinning_io.dart' if (dart.library.html) 'cert_pinning_web.dart';

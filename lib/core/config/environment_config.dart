@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:asora/core/config/web_release_guard.dart';
 
 /// Environment enumeration
 enum Environment {
@@ -19,8 +20,14 @@ enum Environment {
   static Environment get current {
     const envString = String.fromEnvironment(
       'ENVIRONMENT',
-      defaultValue: 'development',
+      defaultValue: '',
     );
+
+    if (envString.isEmpty) {
+      return kIsWeb && kReleaseMode
+          ? Environment.production
+          : Environment.development;
+    }
 
     switch (envString.toLowerCase()) {
       case 'production':
@@ -97,6 +104,25 @@ class EnvironmentConfig {
   /// Get configuration for current environment
   factory EnvironmentConfig.fromEnvironment() {
     final env = Environment.current;
+
+    if (isReleaseWebBuild) {
+      if (env.isDev) {
+        throw StateError(
+          'ENVIRONMENT=development is not allowed for release web builds.',
+        );
+      }
+
+      final apiBaseUrl = requirePublicHttpsOrigin(
+        'API_BASE_URL',
+        const String.fromEnvironment('API_BASE_URL', defaultValue: ''),
+      ).toString();
+
+      return EnvironmentConfig(
+        environment: env,
+        apiBaseUrl: apiBaseUrl,
+        security: env.isStaging ? _stagingMobileSecurity : _prodMobileSecurity,
+      );
+    }
 
     switch (env) {
       case Environment.development:

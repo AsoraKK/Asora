@@ -79,6 +79,8 @@ void main() {
       expect(AppRoutes.post, 'post');
       expect(AppRoutes.profile, 'profile');
       expect(AppRoutes.invite, 'invite');
+      expect(AppRoutes.userTest, 'user-test');
+      expect(AppRoutes.postTest, 'post-test');
       expect(AppRoutes.moderation, 'moderation');
       expect(AppRoutes.moderationAppeal, 'moderation-appeal');
       expect(AppRoutes.notificationSettings, 'notification-settings');
@@ -107,6 +109,20 @@ void main() {
           .firstWhere((r) => r.path == '/');
       // invite was moved to a top-level public route; shell now has 4 children.
       expect(shellRoute.routes.length, greaterThanOrEqualTo(4));
+      final childPaths = shellRoute.routes
+          .whereType<GoRoute>()
+          .map((r) => r.path)
+          .toList();
+      expect(childPaths, contains('post/:postId'));
+      expect(childPaths, contains('user/:userId'));
+      final topLevelPaths = router.configuration.routes
+          .whereType<GoRoute>()
+          .map((r) => r.path)
+          .toList();
+      expect(
+        topLevelPaths,
+        containsAll(['/login', '/auth/callback', '/user/test', '/post/test']),
+      );
     });
   });
 
@@ -125,9 +141,13 @@ void main() {
         initialLocation: initialLocation,
         redirect: (context, state) {
           final isOnLogin = state.matchedLocation == '/login';
+          final isOnAuthCallback = state.matchedLocation == '/auth/callback';
           final isOnInvite = state.matchedLocation.startsWith('/invite/');
-          if (state.matchedLocation == '/auth/callback') return null;
-          if (isOnInvite) return null;
+          final isOnUserTest = state.matchedLocation == '/user/test';
+          final isOnPostTest = state.matchedLocation == '/post/test';
+          if (isOnAuthCallback || isOnInvite || isOnUserTest || isOnPostTest) {
+            return null;
+          }
           if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
             return '/invite/$pendingCode';
           }
@@ -151,6 +171,14 @@ void main() {
           GoRoute(
             path: '/invite/:code',
             builder: (_, __) => const _StubPage(label: 'invite'),
+          ),
+          GoRoute(
+            path: '/user/test',
+            builder: (_, __) => const _StubPage(label: 'user-test'),
+          ),
+          GoRoute(
+            path: '/post/test',
+            builder: (_, __) => const _StubPage(label: 'post-test'),
           ),
         ],
       );
@@ -176,6 +204,46 @@ void main() {
         expect(
           router.routerDelegate.currentConfiguration.uri.path,
           '/invite/ABCD-1234',
+        );
+      },
+    );
+
+    testWidgets(
+      'anonymous user opening /user/test is not redirected to login',
+      (tester) async {
+        final router = buildRedirectRouter(
+          isLoggedIn: false,
+          pendingCode: null,
+          initialLocation: '/user/test',
+        );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
+
+        expect(find.text('user-test'), findsOneWidget);
+        expect(find.text('login'), findsNothing);
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          '/user/test',
+        );
+      },
+    );
+
+    testWidgets(
+      'anonymous user opening /post/test is not redirected to login',
+      (tester) async {
+        final router = buildRedirectRouter(
+          isLoggedIn: false,
+          pendingCode: null,
+          initialLocation: '/post/test',
+        );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
+
+        expect(find.text('post-test'), findsOneWidget);
+        expect(find.text('login'), findsNothing);
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          '/post/test',
         );
       },
     );

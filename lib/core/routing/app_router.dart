@@ -23,6 +23,8 @@ abstract final class AppRoutes {
   static const String post = 'post';
   static const String profile = 'profile';
   static const String invite = 'invite';
+  static const String userTest = 'user-test';
+  static const String postTest = 'post-test';
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
@@ -42,11 +44,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.valueOrNull != null || isGuest;
       final isOnLogin = state.matchedLocation == '/login';
+      final isOnAuthCallback = state.matchedLocation == '/auth/callback';
       final isOnInvite = state.matchedLocation.startsWith('/invite/');
+      final isOnUserTest = state.matchedLocation == '/user/test';
+      final isOnPostTest = state.matchedLocation == '/post/test';
 
       // Auth callback and invite routes are always publicly accessible.
-      if (state.matchedLocation == '/auth/callback') return null;
-      if (isOnInvite) return null;
+      if (isOnAuthCallback || isOnInvite || isOnUserTest || isOnPostTest) {
+        return null;
+      }
 
       // After login, send the user to redeem their saved invite code.
       if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
@@ -79,6 +85,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/invite/:code',
         builder: (context, state) =>
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
+      ),
+
+      // Public test deep-links used for direct-load / refresh coverage.
+      GoRoute(
+        name: AppRoutes.userTest,
+        path: '/user/test',
+        builder: (context, state) => const ProfileScreen(userId: 'test'),
+      ),
+      GoRoute(
+        name: AppRoutes.postTest,
+        path: '/post/test',
+        builder: (context, state) =>
+            const PostDetailScreen(postId: 'test', initialCommentId: null),
       ),
 
       // Main app shell (tabs: Discover, Create, Alerts, Profile)

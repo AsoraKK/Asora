@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/core/config/web_release_guard.dart';
 
 class AuthService {
   AuthService({
@@ -25,7 +26,9 @@ class AuthService {
        _localAuth = localAuth ?? LocalAuthentication(),
        _httpClient = httpClient ?? http.Client(),
        _oauth2Service = oauth2Service ?? OAuth2Service(),
-       _authUrl = authUrl;
+       _authUrl = isReleaseWebBuild
+           ? requirePublicHttpsOrigin('AUTH_URL', authUrl).toString()
+           : authUrl;
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuth;
   final http.Client _httpClient;

@@ -10,17 +10,18 @@
 library;
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/tls_pinning.dart';
 import 'package:asora/core/security/device_security_service.dart';
 import 'package:asora/core/security/device_integrity.dart';
 import 'package:asora/core/security/security_overrides.dart';
 import 'package:asora/core/security/security_telemetry.dart';
 import 'package:asora/core/error/error_codes.dart';
 import 'package:asora/features/admin/application/test_mode_interceptor.dart';
+import 'package:asora/core/network/dio_client_adapter_stub.dart'
+    if (dart.library.io) 'dio_client_adapter_io.dart'
+    if (dart.library.html) 'dio_client_adapter_web.dart';
 
 /// Secure Dio client provider with certificate pinning and integrity checks
 final secureDioProvider = Provider<Dio>((ref) {
@@ -30,29 +31,7 @@ final secureDioProvider = Provider<Dio>((ref) {
   // Create Dio instance
   final dio = Dio(BaseOptions(baseUrl: baseUrl));
 
-  // Configure TLS pinning for HTTPS (native only — browser handles TLS)
-  if (!kIsWeb &&
-      baseUrl.startsWith('https') &&
-      envConfig.security.tlsPins.enabled) {
-    final uri = Uri.parse(baseUrl);
-    final pinnedHost = uri.host;
-    final validator = TlsPinningValidator(
-      config: envConfig.security.tlsPins,
-      environment: envConfig.environment,
-    );
-
-    dio.httpClientAdapter = IOHttpClientAdapter(
-      validateCertificate: (certificate, host, port) {
-        if (certificate == null) {
-          return false;
-        }
-        if (host != pinnedHost) {
-          return true;
-        }
-        return validator.validateCertificateChain(certificate, host);
-      },
-    );
-  }
+  configureSecureHttpClientAdapter(dio, envConfig, baseUrl);
 
   // Configure timeouts
   dio.options.connectTimeout = const Duration(seconds: 10);
