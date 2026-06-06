@@ -28,6 +28,8 @@ Browser
   ├─ / (AdaptiveShell)       – Discover · Create · Alerts · Profile
   ├─ /login                   – AuthChoiceScreen (provider picker)
   ├─ /auth/callback           – AuthCallbackScreen (PKCE code exchange)
+  ├─ /user/test               – ProfileScreen(test) public deep-link
+  ├─ /post/test               – PostDetailScreen(test) public deep-link
   ├─ /post/:postId            – PostDetailScreen
   ├─ /user/:userId            – ProfileScreen
   ├─ /invite/:code            – InviteRedeemScreen
@@ -54,8 +56,10 @@ Register these redirect URIs in Azure Portal → App registrations →
 
 ```
 https://app.lythaus.asora.co.za/auth/callback
-http://localhost:8080/auth/callback          (local dev)
 ```
+
+Release web builds no longer depend on localhost, private IPs, `.local`, or
+dev fallback origins.
 
 ### PKCE Flow
 
@@ -104,22 +108,24 @@ flutter run -d chrome --dart-define=OAUTH2_REDIRECT_URI=http://localhost:8080/au
 ### Production Build
 
 ```bash
-flutter build web --release
-cp web/_redirects build/web/_redirects
+bash scripts/cf-pages-build.sh
 ```
 
 ### Cloudflare Pages
 
 1. Build output directory: `build/web`
 2. The `_redirects` file handles SPA routing: `/* /index.html 200`
-3. Configure custom domain `app.lythaus.asora.co.za` in Cloudflare dashboard.
+3. The `_headers` file adds security headers and `no-store` rules for auth and
+   user-specific routes.
+4. Configure custom domain `app.lythaus.asora.co.za` in Cloudflare dashboard.
 
 ### CI (flutter-ci.yml)
 
 The `web-build` job:
-1. Runs `flutter build web --release`
-2. Copies `web/_redirects` to `build/web/_redirects`
-3. Uploads the `build/web` artifact
+1. Runs `bash scripts/cf-pages-build.sh`
+2. Produces `build/web`
+3. Copies `web/_redirects` and `web/_headers` into the final output
+4. Uploads the `build/web` artifact
 
 ## Platform Guards
 
@@ -135,10 +141,12 @@ These features are gracefully disabled on web:
 
 - [ ] `flutter analyze` reports no issues
 - [ ] `flutter test` passes
-- [ ] `flutter build web --release` succeeds
-- [ ] `build/web/_redirects` exists with `/* /index.html 200`
+- [ ] `bash scripts/cf-pages-build.sh` succeeds with production env vars
+- [ ] `build/web/_redirects` and `build/web/_headers` exist
 - [ ] B2C redirect URIs registered for target domain
 - [ ] `OAUTH2_*` dart-define values set for production
+- [ ] `/`, `/login`, `/auth/callback`, `/user/test`, and `/post/test` load directly
+- [ ] No release-web code path reaches localhost or private origins
 # Lythaus Web App — Architecture & Deployment Guide
 
 ## Overview
@@ -155,6 +163,8 @@ Declarative routing via `go_router` replaces manual `Navigator.push` calls. Rout
 |------|--------|---------------|
 | `/login` | AuthChoiceScreen | No |
 | `/auth/callback` | AuthCallbackScreen | No |
+| `/user/test` | ProfileScreen(test) | No |
+| `/post/test` | PostDetailScreen(test) | No |
 | `/` | AdaptiveShell (Discover) | Yes or Guest |
 | `/post/:postId` | PostDetailScreen | Yes or Guest |
 | `/user/:userId` | ProfileScreen | Yes or Guest |
@@ -217,7 +227,8 @@ The Azure Functions API handles CORS in application code:
 Configured in `lib/core/config/environment_config.dart`:
 - **Debug (web)**: `http://localhost:7072/api`
 - **Debug (Android emulator)**: `http://10.0.2.2:7072/api`
-- **Release**: `https://asora-function-dev-...azurewebsites.net/api`
+- **Release**: must be a public `https://` origin and cannot be localhost,
+  private IP, or `.local`
 
 ## Build & Deploy
 
@@ -227,22 +238,24 @@ Configured in `lib/core/config/environment_config.dart`:
 # Run web in Chrome
 flutter run -d chrome
 
-# Build web release (includes SPA fallback for Cloudflare Pages)
-flutter build web --release
-cp web/_redirects build/web/_redirects
+# Build web release for Cloudflare Pages
+bash scripts/cf-pages-build.sh
 ```
 
 ### CI
 
-The `flutter-ci.yml` workflow includes a `web-build` job that runs `flutter build web --release` on every push/PR to `main`.
+The `flutter-ci.yml` workflow includes a `web-build` job that runs
+`bash scripts/cf-pages-build.sh` on every push/PR to `main`.
 
 ### Production deployment
 
 The built output in `build/web/` can be deployed to any static hosting (Cloudflare Pages, Azure Static Web Apps, etc.).
 
 **Required configuration before deploying:**
-1. Register `{origin}/auth/callback` as a redirect URI in Azure AD B2C
-2. Set `CORS_ALLOWED_ORIGINS` in Azure Functions to include the web app's origin (if not using wildcard)
+1. Register `{origin}/auth/callback` as a redirect URI in Azure AD B2C.
+2. Set `CORS_ALLOWED_ORIGINS` in Azure Functions to include the web app's origin (if not using wildcard).
+3. Set `API_BASE_URL` and `AUTH_URL` for release web builds.
+4. Ensure the feed route responds with `private, no-store` for authenticated requests.
 
 ## External Blockers
 
@@ -250,6 +263,7 @@ The built output in `build/web/` can be deployed to any static hosting (Cloudfla
 |---------|--------|-------|
 | B2C redirect URI registration | Pending | Azure AD admin |
 | Web domain DNS / hosting | Pending | Infrastructure |
+| Production env var rollout | Pending | App/infra |
 
 ## Files Created/Modified
 
@@ -270,7 +284,7 @@ The built output in `build/web/` can be deployed to any static hosting (Cloudfla
 ### Modified files
 - `lib/main.dart` — MaterialApp.router integration
 - `lib/core/network/dio_client.dart` — kIsWeb guard for TLS pinning
-- `lib/core/config/environment_config.dart` — localhost for web debug
+- `lib/core/config/environment_config.dart` — release-web fail-fast config
 - `lib/features/auth/application/oauth2_service.dart` — web auth delegation
 - `lib/features/auth/application/auth_providers.dart` — setUser() method
 - `lib/features/auth/application/auth_service.dart` — biometrics guard
@@ -293,6 +307,7 @@ The built output in `build/web/` can be deployed to any static hosting (Cloudfla
 | `B2C_CLIENT_ID` | Build-time config | OAuth2 client ID | `xxxxxxxx-xxxx-...` |
 | `B2C_POLICY_NAME` | Build-time config | B2C sign-in/sign-up policy | `B2C_1_signupsignin` |
 | `API_BASE_URL` | Build-time config | Functions API endpoint | `https://asora-function-dev.azurewebsites.net/api` |
+| `AUTH_URL` | Build-time config | Auth service endpoint | `https://asora-auth-dev.azurewebsites.net` |
 
 Build-time values are baked into the JS bundle. They are not secrets (the client ID and tenant are public OAuth2 metadata). Actual secrets (client secrets) are never in the web bundle.
 
@@ -310,11 +325,13 @@ The web app and marketing site are separate origins. No cookie sharing or cross-
 
 1. **Azure AD B2C:** Register `https://app.lythaus.asora.co.za/auth/callback` as a redirect URI under *Single-page application (SPA)* in the **client** app registration (not the backend/API registration). See [B2C Setup Steps](#b2c-redirect-uri-setup) below.
 2. **CORS:** Set `CORS_ALLOWED_ORIGINS=https://app.lythaus.asora.co.za` in Azure Functions app settings (or keep `*` for dev).
-3. **Build:** `flutter build web --release && cp web/_redirects build/web/_redirects` from the repo root.
+3. **Build:** `bash scripts/cf-pages-build.sh` from the repo root.
 4. **Upload:** Deploy `build/web/` to the static hosting target. Ensure the hosting provider returns `index.html` for all 404s (SPA fallback routing).
 5. **Marketing site:** `cd apps/marketing-site && npm ci && npx astro build` → deploy `dist/` to marketing host.
 6. **Canonical URL:** The marketing site domain is set in `astro.config.mjs` (`site` field). Currently `https://lythaus.asora.co.za`. Also update the URLs in `public/sitemap.xml` if the domain changes.
-7. **Localhost callback:** If developing locally, also register `http://localhost:<port>/auth/callback` in B2C (matching the actual `flutter run -d chrome` port).
+7. **Localhost callback:** If developing locally, also register
+   `http://localhost:<port>/auth/callback` in B2C (matching the actual
+   `flutter run -d chrome` port). Release builds do not use localhost.
 
 ### Post-Deploy Smoke Checklist
 
@@ -326,13 +343,14 @@ Run these manually against the deployed web app after each release:
 | 2 | Login screen | `/login` | AuthChoiceScreen renders, sign-in buttons visible |
 | 3 | Guest mode | Click "Continue as guest" | Redirects to `/`, Discover tab loads, Create tab shows snackbar |
 | 4 | Auth callback (no code) | `/auth/callback` (no params) | Shows error with "Back to sign in" button |
-| 5 | Post direct link | `/post/nonexistent-id` | PostDetailScreen loads (shows error for invalid ID) |
-| 6 | Profile direct link | `/user/some-user-id` | ProfileScreen loads (may show error for unknown user) |
-| 7 | Desktop layout | Resize browser ≥ 768px | NavigationRail appears instead of bottom nav |
-| 8 | Mobile layout | Resize browser < 768px | BottomNavigationBar appears |
-| 9 | Browser back | Navigate to a post, click back | Returns to previous route |
-| 10 | Full auth flow | Sign in via B2C → verify feed loads → refresh page → verify session restores | User remains signed in after reload |
-| 11 | Sign out | Sign out → verify redirect to `/login` | sessionStorage cleared, back button does not restore session |
+| 5 | Public test routes | `/user/test` and `/post/test` | Both load directly and survive refresh |
+| 6 | Post direct link | `/post/nonexistent-id` | PostDetailScreen loads (shows error for invalid ID) |
+| 7 | Profile direct link | `/user/some-user-id` | ProfileScreen loads (may show error for unknown user) |
+| 8 | Desktop layout | Resize browser ≥ 768px | NavigationRail appears instead of bottom nav |
+| 9 | Mobile layout | Resize browser < 768px | BottomNavigationBar appears |
+| 10 | Browser back | Navigate to a post, click back | Returns to previous route |
+| 11 | Full auth flow | Sign in via B2C → verify feed loads → refresh page → verify session restores | User remains signed in after reload |
+| 12 | Sign out | Sign out → verify redirect to `/login` | sessionStorage cleared, back button does not restore session |
 
 ### Rollback Path
 
