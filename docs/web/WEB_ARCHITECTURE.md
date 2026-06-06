@@ -111,6 +111,14 @@ flutter run -d chrome --dart-define=OAUTH2_REDIRECT_URI=http://localhost:8080/au
 bash scripts/cf-pages-build.sh
 ```
 
+The build script sources `cloudflare/pages-release.sh`, which is the tracked
+source of truth for the release-web origins used by both Cloudflare Pages and
+GitHub Actions.
+
+The build script sources `cloudflare/pages-release.sh`, which is the tracked
+source of truth for the release-web origins used by both Cloudflare Pages and
+GitHub Actions.
+
 ### Cloudflare Pages
 
 1. Build output directory: `build/web`
@@ -127,6 +135,10 @@ The `web-build` job:
 3. Copies `web/_redirects` and `web/_headers` into the final output
 4. Uploads the `build/web` artifact
 
+The `format-and-analyze` job uses `rg --files` and excludes
+`lib/generated/api_client.dart`, `lib/generated/api_client/**`, and
+`.dart_tool/**` so openapi-generator output never enters the formatter gate.
+
 ## Platform Guards
 
 These features are gracefully disabled on web:
@@ -142,6 +154,7 @@ These features are gracefully disabled on web:
 - [ ] `flutter analyze` reports no issues
 - [ ] `flutter test` passes
 - [ ] `bash scripts/cf-pages-build.sh` succeeds with production env vars
+- [ ] `cloudflare/pages-release.sh` exists and supplies the release-web origins
 - [ ] `build/web/_redirects` and `build/web/_headers` exist
 - [ ] B2C redirect URIs registered for target domain
 - [ ] `OAUTH2_*` dart-define values set for production
@@ -244,8 +257,9 @@ bash scripts/cf-pages-build.sh
 
 ### CI
 
-The `flutter-ci.yml` workflow includes a `web-build` job that runs
-`bash scripts/cf-pages-build.sh` on every push/PR to `main`.
+The `flutter-ci.yml` workflow includes a `web-build` job that sources
+`cloudflare/pages-release.sh` and then runs `bash scripts/cf-pages-build.sh`
+on every push/PR to `main`.
 
 ### Production deployment
 
@@ -254,7 +268,8 @@ The built output in `build/web/` can be deployed to any static hosting (Cloudfla
 **Required configuration before deploying:**
 1. Register `{origin}/auth/callback` as a redirect URI in Azure AD B2C.
 2. Set `CORS_ALLOWED_ORIGINS` in Azure Functions to include the web app's origin (if not using wildcard).
-3. Set `API_BASE_URL` and `AUTH_URL` for release web builds.
+3. Keep the release-web origins in `cloudflare/pages-release.sh` in sync with
+   the deployed API and auth endpoints.
 4. Ensure the feed route responds with `private, no-store` for authenticated requests.
 
 ## External Blockers
@@ -306,8 +321,8 @@ The built output in `build/web/` can be deployed to any static hosting (Cloudfla
 | `B2C_TENANT_NAME` | Build-time config (`environment_config.dart`) | Azure AD B2C tenant | `lythausauth` |
 | `B2C_CLIENT_ID` | Build-time config | OAuth2 client ID | `xxxxxxxx-xxxx-...` |
 | `B2C_POLICY_NAME` | Build-time config | B2C sign-in/sign-up policy | `B2C_1_signupsignin` |
-| `API_BASE_URL` | Build-time config | Functions API endpoint | `https://asora-function-dev.azurewebsites.net/api` |
-| `AUTH_URL` | Build-time config | Auth service endpoint | `https://asora-auth-dev.azurewebsites.net` |
+| `API_BASE_URL` | Build-time config | Functions API endpoint. Release web sources this from `cloudflare/pages-release.sh`. | `https://asora-function-dev.azurewebsites.net/api` |
+| `AUTH_URL` | Build-time config | Auth service endpoint. Release web sources this from `cloudflare/pages-release.sh`. | `https://asora-auth-dev.azurewebsites.net` |
 
 Build-time values are baked into the JS bundle. They are not secrets (the client ID and tenant are public OAuth2 metadata). Actual secrets (client secrets) are never in the web bundle.
 
@@ -325,7 +340,8 @@ The web app and marketing site are separate origins. No cookie sharing or cross-
 
 1. **Azure AD B2C:** Register `https://app.lythaus.asora.co.za/auth/callback` as a redirect URI under *Single-page application (SPA)* in the **client** app registration (not the backend/API registration). See [B2C Setup Steps](#b2c-redirect-uri-setup) below.
 2. **CORS:** Set `CORS_ALLOWED_ORIGINS=https://app.lythaus.asora.co.za` in Azure Functions app settings (or keep `*` for dev).
-3. **Build:** `bash scripts/cf-pages-build.sh` from the repo root.
+3. **Build:** `bash scripts/cf-pages-build.sh` from the repo root; it sources
+   `cloudflare/pages-release.sh`.
 4. **Upload:** Deploy `build/web/` to the static hosting target. Ensure the hosting provider returns `index.html` for all 404s (SPA fallback routing).
 5. **Marketing site:** `cd apps/marketing-site && npm ci && npx astro build` → deploy `dist/` to marketing host.
 6. **Canonical URL:** The marketing site domain is set in `astro.config.mjs` (`site` field). Currently `https://lythaus.asora.co.za`. Also update the URLs in `public/sitemap.xml` if the domain changes.

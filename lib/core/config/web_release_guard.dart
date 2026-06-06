@@ -45,4 +45,3 @@ Uri requirePublicHttpsOrigin(String name, String value) {
 
   return uri;
 }
-

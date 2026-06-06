@@ -18,10 +18,7 @@ enum Environment {
 
   /// Get current environment from build configuration
   static Environment get current {
-    const envString = String.fromEnvironment(
-      'ENVIRONMENT',
-      defaultValue: '',
-    );
+    const envString = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
 
     if (envString.isEmpty) {
       return kIsWeb && kReleaseMode

@@ -28,10 +28,11 @@ jobs:
       run: |
         # Exclude generated API client files — openapi-generator output
         # isn't dart-format-stable across environments.
-        find . -name "*.dart" \
-          -not -path "./lib/generated/*" \
-          -not -path "./.dart_tool/*" \
-          -print0 | xargs -0 dart format --output=none --set-exit-if-changed
+        rg --files -g '*.dart' \
+          -g '!lib/generated/api_client.dart' \
+          -g '!lib/generated/api_client/**' \
+          -g '!.dart_tool/**' \
+          | xargs -r dart format --output=none --set-exit-if-changed
       
     - name: Analyze code
       run: flutter analyze
@@ -61,10 +62,6 @@ jobs:
   web-build:
     runs-on: ubuntu-latest
     needs: format-and-analyze
-    env:
-      ENVIRONMENT: production
-      API_BASE_URL: https://asora-function-prod.northeurope-01.azurewebsites.net/api
-      AUTH_URL: https://asora-function-prod.northeurope-01.azurewebsites.net/api
 
     steps:
     - name: Checkout code
@@ -80,7 +77,9 @@ jobs:
       run: flutter pub get
 
     - name: Build web release
-      run: bash scripts/cf-pages-build.sh
+      run: |
+        source cloudflare/pages-release.sh
+        bash scripts/cf-pages-build.sh
 
     - name: Verify Pages output artifacts
       run: |

@@ -34,10 +34,12 @@ void main() {
         throwsStateError,
       );
       expect(
-        () => requirePublicHttpsOrigin('API_BASE_URL', 'https://app.lythaus.com/api'),
+        () => requirePublicHttpsOrigin(
+          'API_BASE_URL',
+          'https://app.lythaus.com/api',
+        ),
         returnsNormally,
       );
     });
   });
 }
-

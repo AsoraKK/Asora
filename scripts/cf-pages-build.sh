@@ -4,6 +4,19 @@
 # CF Pages output dir:     build/web
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RELEASE_CONFIG="${ROOT_DIR}/cloudflare/pages-release.sh"
+
+if [[ ! -f "${RELEASE_CONFIG}" ]]; then
+  echo "Missing release config: ${RELEASE_CONFIG}" >&2
+  exit 1
+fi
+
+# shellcheck source=/dev/null
+source "${RELEASE_CONFIG}"
+
+cd "${ROOT_DIR}"
+
 : "${API_BASE_URL:?API_BASE_URL is required}"
 : "${AUTH_URL:?AUTH_URL is required}"
 : "${ENVIRONMENT:=production}"
