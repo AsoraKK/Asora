@@ -10,4 +10,3 @@ void configureSecureHttpClientAdapter(
   EnvironmentConfig envConfig,
   String baseUrl,
 ) {}
-
