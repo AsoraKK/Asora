@@ -23,7 +23,7 @@ Scope: `functions/src`, `lib`, `apps/control-panel/src`, `apps/marketing-site/sr
 | `functions/src/moderation/routes/moderation_cases_decide.function.ts:57` | authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware |
 | `functions/src/moderation/routes/moderation_cases_getById.function.ts:51` | authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware |
 | `functions/src/moderation/routes/moderation_queue_list.function.ts:58` | authLevel: 'anonymous', // TODO: Change to 'function' and add requireAuth + requireRoles middleware |
-| `lib/core/config/b2c_config.dart:2` | // TODO: Replace with API call to /api/auth/b2c-config once Key Vault permissions are propagated |
+| `lib/core/config/b2c_config.dart:2` | // TODO: Legacy B2C compatibility config; retire when the old provider path is removed |
 | `lib/core/config/environment_config.dart:171` | // TODO: Add production SPKI pins before GA |
 
 ## P2 (Product/engineering debt)

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// B2C configuration service — fetch, cache, and fallback.
+/// Legacy B2C configuration service — fetch, cache, and fallback.
 ///
 /// Resolution order:
 ///   1. Remote: GET [endpoint] with [timeout].
@@ -19,7 +19,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:asora/services/oauth2_service.dart' show AuthConfig;
 
-/// Manages fetching, caching, and falling back for the Azure AD B2C / CIAM
+/// Manages fetching, caching, and falling back for the legacy Azure AD B2C / CIAM
 /// client configuration served by `/api/auth/b2c-config`.
 class B2CConfigService {
   B2CConfigService({

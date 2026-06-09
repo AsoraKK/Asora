@@ -27,7 +27,7 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
 });
 
-/// B2C config service — fetch → cache → bundled fallback.
+/// Legacy B2C config service — fetch → cache → bundled fallback.
 const _kB2CConfigEndpoint =
     'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config';
 
@@ -39,7 +39,7 @@ final b2cConfigServiceProvider = Provider<B2CConfigService>((ref) {
   );
 });
 
-/// OAuth2 service provider for B2C authentication
+/// Legacy OAuth2 service provider for B2C compatibility
 final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
   final dio = ref.watch(secureDioProvider);
   final storage = ref.watch(secureStorageProvider);

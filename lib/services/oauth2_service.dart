@@ -260,8 +260,9 @@ class OAuth2Service {
     }
   }
 
-  /// Load config: delegate to [B2CConfigService] when available, otherwise
-  /// fall back to a direct fetch → env-var chain.
+  /// Load config for the legacy B2C compatibility path: delegate to
+  /// [B2CConfigService] when available, otherwise fall back to a direct
+  /// fetch → env-var chain.
   Future<AuthConfig> _loadConfig() async {
     // Prefer the injected service (fetch → cache → bundled).
     if (_b2cConfigService != null) {
@@ -288,7 +289,7 @@ class OAuth2Service {
     return AuthConfig.fromEnvironment();
   }
 
-  /// Sign in with Email (standard B2C flow)
+  /// Sign in with Email (legacy B2C flow)
   Future<AuthResult> signInEmail() async {
     final span = _tracer.startSpan('auth.login.start');
 
@@ -330,7 +331,7 @@ class OAuth2Service {
     }
   }
 
-  /// Sign in with Google (B2C flow with IdP hint)
+  /// Sign in with Google (legacy B2C flow with IdP hint)
   Future<AuthResult> signInGoogle() async {
     final span = _tracer.startSpan('auth.login.start');
 
