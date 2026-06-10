@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/core/config/b2c_config.dart';
 
 void main() {
-  group('kB2CConfig structure', () {
+  group('legacy B2C config compatibility', () {
     test('contains required auth keys', () {
       expect(kB2CConfig, contains('tenant'));
       expect(kB2CConfig, contains('clientId'));
@@ -16,7 +16,7 @@ void main() {
       expect(kB2CConfig, contains('googleIdpHint'));
     });
 
-    test('tenant points to B2C tenant', () {
+    test('tenant keeps the legacy tenant format', () {
       expect(kB2CConfig['tenant'], isA<String>());
       expect(kB2CConfig['tenant'] as String, contains('onmicrosoft.com'));
     });
@@ -26,7 +26,7 @@ void main() {
       expect(clientId, matches(RegExp(r'^[a-f0-9\-]{36}$')));
     });
 
-    test('policy starts with B2C_', () {
+    test('policy keeps the legacy B2C prefix', () {
       final policy = kB2CConfig['policy'] as String;
       expect(policy, startsWith('B2C_'));
     });

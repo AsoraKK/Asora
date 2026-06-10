@@ -80,7 +80,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
     await _oauth2Service.initialize();
   }
 
-  /// Sign in with email (B2C email/password)
+  /// Sign in with email through the OAuth2 auth service.
   Future<void> signInEmail() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -96,7 +96,7 @@ class AuthController extends StateNotifier<AuthControllerState> {
     }
   }
 
-  /// Sign in with Google (B2C social IdP)
+  /// Sign in with Google through the OAuth2 auth service.
   Future<void> signInGoogle() async {
     state = state.copyWith(isLoading: true, error: null);
     try {

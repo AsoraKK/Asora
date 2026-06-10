@@ -4083,7 +4083,7 @@ paths:
   /auth/b2c-config:
     get:
       operationId: authB2cConfig
-      summary: Return Azure AD B2C OIDC configuration
+      summary: Return legacy B2C-shaped auth config
       tags:
         - Auth
       security:

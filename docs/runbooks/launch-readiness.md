@@ -40,7 +40,7 @@ Each item is tagged:
 | 1.3 | Auth-required endpoints return HTTP 401 without token | AUTO | `node scripts/validate-functions-route-guards.js` (also covered by `e2e-integration.yml`) | |
 | 1.4 | JWT clock-skew tolerance set to ≤ 60 s | AUTO | `grep MAX_CLOCK_SKEW functions/src/auth/config.ts` | |
 | 1.5 | PKCE S256 enforced for mobile OAuth flow | AUTO | `grep S256 functions/src/auth/service/tokenService.ts` | |
-| 1.6 | Sign-in/sign-out smoke on staging with real B2C tenant | MANUAL | Run `scripts/verify-b2c-google-idp.sh` against staging; attach screenshot | |
+| 1.6 | Sign-in/sign-out smoke on staging with the live auth environment | MANUAL | Run `scripts/verify-b2c-google-idp.sh` against staging; attach screenshot | |
 
 ---
 

@@ -67,7 +67,7 @@ void main() {
     ).thenAnswer((_) async {});
   });
 
-  group('B2CConfigService', () {
+  group('legacy B2C config service', () {
     // -------------------------------------------------------------------------
     // Test 1: successful remote fetch returns and caches config.
     // -------------------------------------------------------------------------

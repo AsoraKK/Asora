@@ -28,7 +28,7 @@ Status: `PARTIAL (in-repo + external)`
 
 Verified in repo:
 - Startup validation exists: `functions/src/shared/startup-validation.ts`
-- Auth config asserts B2C env vars: `functions/src/auth/config.ts`
+- Auth config asserts JWT env vars for the custom OAuth2 server: `functions/src/auth/config.ts`
 - FCM config validation exists: `functions/src/notifications/clients/fcmClient.ts`
 
 External checks required:
@@ -131,7 +131,7 @@ External checks required:
 ## Final external handoff list
 
 1. Activate and verify Apple/Google developer console accounts and app records.
-2. Populate/verify runtime secrets in cloud environments (B2C, Hive, FCM, JWT, CORS, Cosmos).
+2. Populate/verify runtime secrets in cloud environments (auth/JWT, Hive, FCM, CORS, Cosmos).
 3. Decide whether email notifications are required at launch.
 4. Execute live invite operations drill (create/redeem/revoke/audit).
 5. Execute rooted/jailbroken real-device matrix and sign off.

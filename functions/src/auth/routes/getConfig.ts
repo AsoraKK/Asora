@@ -36,7 +36,7 @@ export async function getAuthConfig(
     const credential = new DefaultAzureCredential();
     const client = new SecretClient(kvUrl, credential);
 
-    // Fetch all B2C config secrets in parallel
+    // Fetch the legacy B2C-shaped compatibility config secrets in parallel
     const [tenant, clientId, policy, authorityHost, scopes, androidRedirect, iosRedirect, googleIdp, appleIdp, worldIdp] =
       await Promise.all([
         client.getSecret('b2c-tenant').then((s) => s.value!),
