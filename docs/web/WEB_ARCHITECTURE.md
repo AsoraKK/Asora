@@ -12,6 +12,18 @@ Cloudflare Pages. The web target adds:
 - A responsive shell with NavigationRail on desktop and BottomNav on mobile.
 - Platform guards so FCM, biometrics, and TLS pinning degrade safely on web.
 
+## Trust Boundaries
+
+| Traffic class | Entry points | Guard | Cache policy | State |
+|---|---|---|---|---|
+| Public | Marketing site, public legal pages, app login screens | No user JWT | Not cacheable as personalized content | Live |
+| Authenticated | Flutter app routes and user APIs | `Authorization: Bearer <token>` + `requireAuth` | `private, no-store` | Live |
+| Admin | Control panel and `/_admin/*` APIs | Admin JWT / Cloudflare Access | `private, no-store` | Planned for the Access gate |
+| Anonymous-cacheable | `GET /api/feed/discover`, `GET /api/feed/news` | No `Authorization` header | `public, s-maxage=30, stale-while-revalidate=60` | Live |
+
+Only the anonymous-cacheable boundary is allowed through the feed-cache Worker.
+Public, authenticated, and admin traffic must bypass that edge cache path.
+
 ## Production URLs
 
 | Surface | URL |
@@ -83,6 +95,16 @@ On page reload, `AuthStateNotifier._loadCurrentUser()` checks
 | `lib/core/routing/app_router.dart` | GoRouter configuration with auth redirect |
 | `lib/main.dart` | `MaterialApp.router` with `appRouterProvider` |
 | `web/_redirects` | Cloudflare Pages SPA catch-all |
+
+## Component States
+
+| Component | State | Note |
+|---|---|---|
+| Flutter web app | Live | Authenticated browser experience |
+| Marketing site | Live | Public, crawlable surface |
+| `cloudflare/worker.ts` | Partial | Only anonymous discover/news traffic is cached |
+| `functions/src/admin/accessAuth.ts` | Planned | Separate admin gate, not enabled yet |
+| `workers/feed-cache/src/index.js` | Deprecated | Compatibility wrapper for the legacy route binding |
 
 ## Build And Deploy
 

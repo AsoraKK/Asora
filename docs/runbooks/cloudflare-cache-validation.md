@@ -6,6 +6,13 @@ Last updated: 2026-02-16
 
 Ensure Cloudflare caches only anonymous-safe feed endpoints and never caches personalized responses.
 
+## Boundary summary
+
+- Public browser traffic and authenticated browser traffic are separate surfaces.
+- Only anonymous-cacheable feed reads enter the edge cache path.
+- Admin traffic stays on the admin route and must not pass through the feed cache Worker.
+- Any request with `Authorization` bypasses the edge cache.
+
 ## Endpoint policy
 
 - `GET /api/feed/discover`: cacheable only for anonymous traffic.

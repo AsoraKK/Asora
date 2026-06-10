@@ -126,6 +126,20 @@ Cloudflare Access is enabled on the function app.
 - Requires `CF_ACCESS_TEAM_NAME` env var to be set
 - **Status**: Not yet enabled (deferred)
 
+## Trust Boundaries
+
+| Boundary | Surface | Guard | State |
+|---|---|---|---|
+| Public | Auth start, guest entry, public marketing/legal pages | No user JWT required | Live |
+| Authenticated | User profile, posts, feeds, notifications | `requireAuth` / bearer JWT | Live |
+| Admin | Control panel and `/_admin/*` endpoints | Cloudflare Access + admin role | Planned until the Access gate is enabled |
+| Web session auth | Browser tab session storage and callback flow | `WebAuthService` + PKCE | Partial |
+| Legacy B2C | Archived B2C discovery and JWKS files | Reference only | Deprecated |
+
+Public and authenticated user traffic never traverse the admin auth path.
+The admin path is intentionally isolated so admin access can be enabled
+independently of the user auth flow.
+
 ## Environment Variables
 
 ### Required

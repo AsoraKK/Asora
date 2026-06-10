@@ -22,9 +22,11 @@ export default {
     const cachingEnabled = (env.FEED_CACHE_ENABLED || "true").toLowerCase() === "true";
 
     const isFeed = method === "GET" && url.pathname.startsWith(FEED_PATH_PREFIX);
+    // Only anonymous feed reads are cacheable here; public, authenticated, and
+    // admin traffic bypass this worker path entirely.
     const isAnonCacheableFeedPath = ANON_CACHEABLE_FEED_PATHS.has(url.pathname);
 
-    // Bypass conditions: non-feed, auth present, or disabled via env
+    // Bypass conditions: non-feed, auth present, or disabled via env.
     if (!isFeed || auth || !cachingEnabled || !isAnonCacheableFeedPath) {
       const resp = await fetch(request);
       const r = new Response(resp.body, resp);
