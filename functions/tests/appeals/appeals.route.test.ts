@@ -1,9 +1,11 @@
 import type { HttpRequest, InvocationContext } from '@azure/functions';
+import { app } from '@azure/functions';
 
 import { httpReqMock } from '../helpers/http';
 import { appeals_create } from '../../src/appeals/appeals_create.function';
 import { appeals_getById } from '../../src/appeals/appeals_getById.function';
 import { appeals_vote } from '../../src/appeals/appeals_vote.function';
+import { AuthError, verifyAuthorizationHeader } from '@auth/verifyJwt';
 import { extractAuthContext } from '../../src/shared/http/authContext';
 import { createAppeal, getAppealById, voteOnAppeal } from '../../src/appeals/appealsService';
 import { HttpError } from '../../src/shared/utils/errors';
@@ -11,6 +13,14 @@ import { HttpError } from '../../src/shared/utils/errors';
 jest.mock('../../src/shared/http/authContext', () => ({
   extractAuthContext: jest.fn(),
 }));
+
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
 
 jest.mock('../../src/appeals/appealsService', () => ({
   createAppeal: jest.fn(),
@@ -38,11 +48,27 @@ jest.mock('../../src/shared/clients/cosmos', () => ({
 }));
 
 const mockedAuth = jest.mocked(extractAuthContext);
+const mockedVerifyAuth = jest.mocked(verifyAuthorizationHeader);
 const mockedService = {
   createAppeal: jest.mocked(createAppeal),
   getAppealById: jest.mocked(getAppealById),
   voteOnAppeal: jest.mocked(voteOnAppeal),
 };
+const mockedHttp = jest.mocked(app.http);
+
+function getRegisteredHandler(routeName: string): Function {
+  const call = mockedHttp.mock.calls.find(([name]) => name === routeName);
+  if (!call) {
+    throw new Error(`Route not registered: ${routeName}`);
+  }
+  const route = call[1] as { handler?: Function };
+  if (!route?.handler) {
+    throw new Error(`Route handler missing: ${routeName}`);
+  }
+  return route.handler;
+}
+
+const registeredAppealsCreateHandler = getRegisteredHandler('appeals_create');
 
 const makeContext = (): InvocationContext =>
   ({
@@ -71,6 +97,12 @@ describe('appeals routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedAuth.mockResolvedValue(authResponse);
+    mockedVerifyAuth.mockResolvedValue({
+      sub: authResponse.userId,
+      roles: authResponse.roles,
+      tier: authResponse.tier,
+      raw: {},
+    } as any);
   });
 
   it('creates an appeal successfully', async () => {
@@ -85,7 +117,7 @@ describe('appeals routes', () => {
     };
     mockedService.createAppeal.mockResolvedValue(appeal);
 
-    const response = await appeals_create(
+    const response = await registeredAppealsCreateHandler(
       httpReqMock({
         method: 'POST',
         headers: { authorization: 'Bearer token' },
@@ -96,6 +128,21 @@ describe('appeals routes', () => {
 
     expect(response.status).toBe(201);
     expect(response.jsonBody).toEqual({ appeal });
+  });
+
+  it('blocks guest appeal creation before the handler runs', async () => {
+    mockedVerifyAuth.mockRejectedValueOnce(new AuthError('invalid_request', 'Authorization header missing'));
+
+    const response = await registeredAppealsCreateHandler(
+      httpReqMock({
+        method: 'POST',
+        body: { caseId: 'case-1', statement: 'Please review' },
+      }),
+      makeContext()
+    );
+
+    expect(response.status).toBe(401);
+    expect(mockedService.createAppeal).not.toHaveBeenCalled();
   });
 
   it('returns 404 when creation is forbidden', async () => {

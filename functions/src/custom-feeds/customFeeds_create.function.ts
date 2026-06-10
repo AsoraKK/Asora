@@ -18,6 +18,8 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireAuth } from '@auth/requireAuth';
 
+const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
+
 export const customFeeds_create = httpHandler<CreateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   ctx.context.log(`[customFeeds_create] Creating custom feed [${ctx.correlationId}]`);
 
@@ -51,7 +53,7 @@ export const customFeeds_create = httpHandler<CreateCustomFeedRequest, CustomFee
 // Register HTTP trigger
 app.http('customFeeds_create', {
   methods: ['POST'],
-  authLevel: 'anonymous',
+  authLevel: ANONYMOUS_AUTH_LEVEL,
   route: 'custom-feeds',
   handler: requireAuth(withRateLimit(customFeeds_create, (req) => getPolicyForRoute(req)) as any),
 });

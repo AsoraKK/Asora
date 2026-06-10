@@ -18,6 +18,7 @@ import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireModerator } from '@auth/requireRoles';
 
 const VALID_ACTIONS: ModerationDecisionRequest['action'][] = ['approve', 'reject', 'escalate'];
+const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 
 export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, ModerationDecision>(async (ctx) => {
   const caseId = ctx.params.id;
@@ -55,7 +56,7 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
 // Register HTTP trigger
 app.http('moderation_cases_decide', {
   methods: ['POST'],
-  authLevel: 'anonymous',
+  authLevel: ANONYMOUS_AUTH_LEVEL,
   route: 'moderation/cases/{id}/decision',
   handler: requireModerator(withRateLimit(moderation_cases_decide, (req) => getPolicyForRoute(req)) as any),
 });

@@ -1,4 +1,5 @@
 import type { HttpRequest, InvocationContext } from '@azure/functions';
+import { app } from '@azure/functions';
 
 import { customFeeds_create } from '../../src/custom-feeds/customFeeds_create.function';
 import { customFeeds_list } from '../../src/custom-feeds/customFeeds_list.function';
@@ -7,6 +8,7 @@ import { customFeeds_update } from '../../src/custom-feeds/customFeeds_update.fu
 import { customFeeds_delete } from '../../src/custom-feeds/customFeeds_delete.function';
 import { customFeeds_getItems } from '../../src/custom-feeds/customFeeds_getItems.function';
 import { httpReqMock } from '../helpers/http';
+import { AuthError, verifyAuthorizationHeader } from '@auth/verifyJwt';
 import {
   createCustomFeed,
   listCustomFeeds,
@@ -31,6 +33,14 @@ jest.mock('../../src/shared/http/authContext', () => ({
   extractAuthContext: jest.fn(),
 }));
 
+jest.mock('@auth/verifyJwt', () => {
+  const actual = jest.requireActual('@auth/verifyJwt');
+  return {
+    ...actual,
+    verifyAuthorizationHeader: jest.fn(),
+  };
+});
+
 const mockedService = {
   createCustomFeed: jest.mocked(createCustomFeed),
   listCustomFeeds: jest.mocked(listCustomFeeds),
@@ -40,6 +50,22 @@ const mockedService = {
   getCustomFeedItems: jest.mocked(getCustomFeedItems),
 };
 const mockedAuthContext = jest.mocked(extractAuthContext);
+const mockedVerifyAuth = jest.mocked(verifyAuthorizationHeader);
+const mockedHttp = jest.mocked(app.http);
+
+function getRegisteredHandler(routeName: string): Function {
+  const call = mockedHttp.mock.calls.find(([name]) => name === routeName);
+  if (!call) {
+    throw new Error(`Route not registered: ${routeName}`);
+  }
+  const route = call[1] as { handler?: Function };
+  if (!route?.handler) {
+    throw new Error(`Route handler missing: ${routeName}`);
+  }
+  return route.handler;
+}
+
+const registeredCustomFeedsCreateHandler = getRegisteredHandler('customFeeds_create');
 
 const contextStub = {
   log: jest.fn(),
@@ -67,6 +93,12 @@ describe('custom feed handlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedAuthContext.mockResolvedValue(authResponse);
+    mockedVerifyAuth.mockResolvedValue({
+      sub: authResponse.userId,
+      roles: authResponse.roles,
+      tier: authResponse.tier,
+      raw: {},
+    } as any);
   });
 
   function authRequest(body?: unknown, method = 'POST'): HttpRequest {
@@ -95,7 +127,7 @@ describe('custom feed handlers', () => {
 
     mockedService.createCustomFeed.mockResolvedValue(feed);
 
-    const response = await customFeeds_create(
+    const response = await registeredCustomFeedsCreateHandler(
       authRequest({ name: 'news', contentType: 'text', sorting: 'new' }),
       contextStub
     );
@@ -107,6 +139,21 @@ describe('custom feed handlers', () => {
     );
     expect(response.status).toBe(201);
     expect(response.jsonBody).toEqual(feed);
+  });
+
+  it('blocks guest custom-feed creation before the handler runs', async () => {
+    mockedVerifyAuth.mockRejectedValueOnce(new AuthError('invalid_request', 'Authorization header missing'));
+
+    const response = await registeredCustomFeedsCreateHandler(
+      httpReqMock({
+        method: 'POST',
+        body: { name: 'news', contentType: 'text', sorting: 'new' },
+      }),
+      contextStub
+    );
+
+    expect(response.status).toBe(401);
+    expect(mockedService.createCustomFeed).not.toHaveBeenCalled();
   });
 
   it('returns 403 when the service enforces limits', async () => {
