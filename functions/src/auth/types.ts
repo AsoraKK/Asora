@@ -69,6 +69,7 @@ export interface TokenPayload {
   sub: string;
   email?: string;
   role?: string;
+  roles?: string[];
   tier?: string;
   reputation?: number;
   iss?: string;

@@ -24,15 +24,15 @@ const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(async (ctx) => {
   ctx.context.log(`[appeals_create] Filing new appeal [${ctx.correlationId}]`);
 
-  if (!ctx.body || !ctx.body.caseId || !ctx.body.statement) {
-    return ctx.badRequest('caseId and statement are required', 'INVALID_REQUEST');
-  }
-
   let auth;
   try {
     auth = await extractAuthContext(ctx);
   } catch {
     return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  if (!ctx.body || !ctx.body.caseId || !ctx.body.statement) {
+    return ctx.badRequest('caseId and statement are required', 'INVALID_REQUEST');
   }
 
   try {

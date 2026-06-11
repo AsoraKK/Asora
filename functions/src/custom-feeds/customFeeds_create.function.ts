@@ -23,15 +23,15 @@ const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 export const customFeeds_create = httpHandler<CreateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   ctx.context.log(`[customFeeds_create] Creating custom feed [${ctx.correlationId}]`);
 
-  if (!ctx.body) {
-    return ctx.badRequest('Request body is required');
-  }
-
   let auth;
   try {
     auth = await extractAuthContext(ctx);
   } catch {
     return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
+  if (!ctx.body) {
+    return ctx.badRequest('Request body is required');
   }
 
   try {

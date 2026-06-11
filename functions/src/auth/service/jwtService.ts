@@ -1,4 +1,5 @@
 import * as jose from 'jose';
+import { verifyAuthorizationHeader } from '@auth/verifyJwt';
 
 export interface TokenPayload {
   sub: string;
@@ -76,12 +77,22 @@ class JWTService {
    * Verify and decode a token
    */
   async verifyToken(token: string): Promise<TokenPayload> {
-    const secret = new TextEncoder().encode(this.secret);
-    const { payload } = await jose.jwtVerify(token, secret, {
-      issuer: this.issuer,
-    });
+    const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
+    const roles = Array.isArray(principal.roles)
+      ? principal.roles
+      : typeof principal.roles === 'string'
+        ? principal.roles.split(' ').map((item) => item.trim()).filter(Boolean)
+        : [];
 
-    return payload as unknown as TokenPayload;
+    return {
+      ...(principal.raw as Record<string, unknown>),
+      sub: principal.sub,
+      role: roles[0] ?? undefined,
+      roles,
+      tier: principal.tier ?? 'free',
+      email: principal.email,
+      iss: typeof principal.raw?.iss === 'string' ? principal.raw.iss : this.issuer,
+    } as unknown as TokenPayload;
   }
 
   /**

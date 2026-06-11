@@ -24,6 +24,13 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
   const caseId = ctx.params.id;
   ctx.context.log(`[moderation_cases_decide] Submitting decision for case ${caseId} [${ctx.correlationId}]`);
 
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
+
   if (!caseId) {
     return ctx.badRequest('Case ID is required');
   }
@@ -31,13 +38,6 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
   const request = ctx.body;
   if (!request || !request.action || !VALID_ACTIONS.includes(request.action)) {
     return ctx.badRequest('Invalid decision action', 'INVALID_ACTION');
-  }
-
-  let auth;
-  try {
-    auth = await extractAuthContext(ctx);
-  } catch {
-    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
   }
 
   if (!hasModeratorRole(auth.roles)) {

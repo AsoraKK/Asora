@@ -1,5 +1,5 @@
 import { HttpHandlerContext } from './handler';
-import { jwtService, TokenPayload } from '@auth/service/jwtService';
+import { jwtService, type TokenPayload } from '@auth/service/jwtService';
 
 /**
  * Authentication context injected into protected handlers
@@ -32,10 +32,16 @@ export async function extractAuthContext(ctx: HttpHandlerContext): Promise<AuthC
 
   try {
     const payload = await jwtService.verifyToken(token);
+    const roles = Array.isArray(payload.roles)
+      ? payload.roles
+      : typeof payload.role === 'string'
+        ? payload.role.split(' ').map((item) => item.trim()).filter(Boolean)
+        : [];
+
     return {
       userId: payload.sub,
-      roles: payload.roles,
-      tier: payload.tier,
+      roles,
+      tier: payload.tier ?? 'free',
       token: payload,
     };
   } catch (error) {

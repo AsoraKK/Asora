@@ -64,6 +64,9 @@ HS256 JWTs signed with a shared `JWT_SECRET` stored in Azure Key Vault.
   }
   ```
 
+The API middleware accepts both `role` and `roles` claims from issued JWTs and normalizes them
+into the `roles` array used by route guards.
+
 ### 3. Token Verification (API middleware)
 
 - **File**: `functions/src/auth/verifyJwt.ts`

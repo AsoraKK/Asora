@@ -2,11 +2,13 @@
 ///
 /// Verifies HS256 tokens issued by tokenService.ts using JWT_SECRET.
 /// Replaces the previous B2C RS256 verifier — the custom OAuth2 server
-/// is the sole token issuer.
+/// is the sole token issuer. The verifier accepts both legacy `role`
+/// and canonical `roles` claims and normalizes them for route guards.
 
 import { JWTPayload, jwtVerify } from 'jose';
 
 import { getAuthConfig } from './config';
+export { resetAuthConfigForTesting } from './config';
 import type { Principal as AzurePrincipal } from '../types/azure';
 
 export type AuthErrorCode =
@@ -46,21 +48,26 @@ function extractScpClaim(payload: JWTPayload): string | string[] | undefined {
   return undefined;
 }
 
-function extractRoles(payload: JWTPayload): string[] | undefined {
-  if (Array.isArray(payload.roles)) {
-    const roles = payload.roles.filter((item): item is string => typeof item === 'string');
-    return roles.length > 0 ? roles : undefined;
+function normalizeRoleList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   }
 
-  if (typeof payload.roles === 'string') {
-    const roles = payload.roles
+  if (typeof value === 'string') {
+    return value
       .split(' ')
-      .map(item => item.trim())
+      .map((item) => item.trim())
       .filter(Boolean);
-    return roles.length > 0 ? roles : undefined;
   }
 
-  return undefined;
+  return [];
+}
+
+function extractRoles(payload: JWTPayload): string[] | undefined {
+  const claims = payload as JWTPayload & { role?: unknown; roles?: unknown };
+  const roles = [...normalizeRoleList(claims.roles), ...normalizeRoleList(claims.role)];
+  const uniqueRoles = [...new Set(roles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : undefined;
 }
 
 function extractEmail(payload: JWTPayload): string | undefined {

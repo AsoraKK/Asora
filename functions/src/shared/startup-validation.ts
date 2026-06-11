@@ -19,10 +19,6 @@ const REQUIRED_ENV_VARS: EnvVar[] = [
   { name: 'JWT_ISSUER', required: true, description: 'JWT issuer value' },
   { name: 'HIVE_API_KEY', required: true, description: 'Hive moderation API key' },
   { name: 'KV_URL', required: true, description: 'Azure Key Vault URL' },
-  { name: 'B2C_TENANT', required: true, description: 'B2C tenant domain' },
-  { name: 'B2C_POLICY', required: true, description: 'B2C signin policy' },
-  { name: 'B2C_EXPECTED_ISSUER', required: true, description: 'Expected B2C JWT issuer' },
-  { name: 'B2C_EXPECTED_AUDIENCE', required: true, description: 'Expected B2C JWT audience/client' },
   { name: 'FCM_PROJECT_ID', required: true, description: 'Firebase project id' },
   { name: 'FCM_CLIENT_EMAIL', required: true, description: 'Firebase service account email' },
   { name: 'FCM_PRIVATE_KEY', required: true, description: 'Firebase service account private key' },
@@ -79,7 +75,7 @@ export function validateStartupEnvironment(): void {
   }
 
   // ── EasyAuth configuration drift detection ────────────────────────
-  // In production, assert that EasyAuth/B2C markers are present.
+  // In production, assert that EasyAuth markers are present.
   // Azure injects WEBSITE_AUTH_ENABLED when Authentication is configured.
   // Its absence in production means auth delegation is misconfigured.
   validateEasyAuthPresence();
