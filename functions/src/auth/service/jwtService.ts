@@ -3,6 +3,7 @@ import { verifyAuthorizationHeader } from '@auth/verifyJwt';
 
 export interface TokenPayload {
   sub: string;
+  role?: string;
   roles: string[];
   tier: string;
   iat?: number;
