@@ -14,6 +14,7 @@ import type { Principal as AzurePrincipal } from '../types/azure';
 export type AuthErrorCode =
   | 'invalid_request'
   | 'invalid_token'
+  | 'invalid_algorithm'
   | 'invalid_signature'
   | 'invalid_issuer'
   | 'invalid_audience'
@@ -34,6 +35,15 @@ export class AuthError extends Error {
 }
 
 export type Principal = AzurePrincipal;
+
+export type JwtTokenType = 'access' | 'refresh';
+
+export type VerifyJwtOptions = {
+  expectedType: JwtTokenType;
+};
+
+const UUID_V7_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function extractScpClaim(payload: JWTPayload): string | string[] | undefined {
   if (typeof payload.scp === 'string') {
@@ -155,6 +165,10 @@ function mapJoseError(error: unknown): AuthError {
     return new AuthError('invalid_signature', 'Token signature invalid');
   }
 
+  if (code === 'ERR_JOSE_ALG_NOT_ALLOWED' || message.includes('"alg"')) {
+    return new AuthError('invalid_algorithm', 'Token algorithm not accepted');
+  }
+
   if (message.includes('issuer mismatch') || message.includes('issuer')) {
     return new AuthError('invalid_issuer', 'Token issuer mismatch');
   }
@@ -165,9 +179,10 @@ function mapJoseError(error: unknown): AuthError {
   return new AuthError('invalid_token', 'Unable to validate token');
 }
 
-export async function verifyAuthorizationHeader(header: string | null | undefined): Promise<Principal> {
-  const token = normalizeAuthorizationHeader(header);
-
+export async function verifyJwtToken(
+  token: string,
+  options: VerifyJwtOptions
+): Promise<Principal> {
   try {
     const { jwtSecret, expectedIssuer, expectedAudiences, maxClockSkewSeconds } = getAuthConfig();
 
@@ -183,8 +198,16 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
 
     const { payload } = await jwtVerify(token, jwtSecret, verifyOptions);
 
-    if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
-      throw new AuthError('invalid_claim', 'Token subject missing');
+    if (typeof payload.exp !== 'number') {
+      throw new AuthError('invalid_claim', 'Token expiry missing');
+    }
+
+    if (payload.type !== options.expectedType) {
+      throw new AuthError('invalid_claim', `Expected ${options.expectedType} token`);
+    }
+
+    if (typeof payload.sub !== 'string' || !UUID_V7_REGEX.test(payload.sub)) {
+      throw new AuthError('invalid_claim', 'Token subject is not a valid internal user ID');
     }
 
     const principal: Principal = {
@@ -201,6 +224,13 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
   } catch (error) {
     throw mapJoseError(error);
   }
+}
+
+export async function verifyAuthorizationHeader(
+  header: string | null | undefined
+): Promise<Principal> {
+  const token = normalizeAuthorizationHeader(header);
+  return verifyJwtToken(token, { expectedType: 'access' });
 }
 
 export async function tryGetPrincipal(header: string | null | undefined): Promise<Principal | null> {

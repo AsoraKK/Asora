@@ -7,10 +7,10 @@
 /// OIDC: Standard UserInfo endpoint with profile claims
 
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { createSuccessResponse, createErrorResponse, extractAuthToken } from '@shared/utils/http';
+import { createSuccessResponse, createErrorResponse } from '@shared/utils/http';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
-import { jwtVerify } from 'jose';
+import type { Principal } from '@shared/middleware/auth';
 import type { TokenPayload, UserDocument } from '@auth/types';
 
 const logger = getAzureLogger('auth/userinfo');
@@ -24,21 +24,10 @@ async function ensureContainers() {
   };
 }
 
-// JWT configuration
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret || !secret.trim()) {
-    throw new Error('Missing JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
-  }
-  return secret;
-}
-
-function getJwtSecretBytes(): Uint8Array {
-  return new TextEncoder().encode(getJwtSecret());
-}
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
 export async function userInfoHandler(
-  req: HttpRequest,
+  req: AuthenticatedRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
   const startTime = Date.now();
@@ -50,43 +39,7 @@ export async function userInfoHandler(
       userAgent: req.headers.get('user-agent'),
     });
 
-    // Extract and validate authorization token
-    const authHeader = req.headers.get('authorization');
-    const token = extractAuthToken(authHeader || undefined);
-
-    if (!token) {
-      logAuthAttempt(
-        logger,
-        false,
-        undefined,
-        'Missing or invalid authorization header',
-        context.invocationId
-      );
-      return createErrorResponse(
-        401,
-        'Bearer token required',
-        'Authorization header must contain a valid Bearer token'
-      );
-    }
-
-    // Verify JWT token
-    let tokenPayload: TokenPayload;
-    try {
-      const { payload } = await jwtVerify(token, getJwtSecretBytes());
-      tokenPayload = payload as TokenPayload;
-    } catch (jwtError) {
-      const errorMsg = jwtError instanceof Error ? jwtError.message : 'Token verification failed';
-
-      logAuthAttempt(
-        logger,
-        false,
-        undefined,
-        `Invalid JWT token: ${errorMsg}`,
-        context.invocationId
-      );
-
-      return createErrorResponse(401, 'Invalid token', 'The provided token is invalid or expired');
-    }
+    const tokenPayload = req.principal.raw as TokenPayload;
 
     logger.info('JWT token validated', {
       requestId: context.invocationId,

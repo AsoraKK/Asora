@@ -2,17 +2,7 @@
  * Service-layer tests for OIDC UserInfo endpoint
  */
 import type { InvocationContext } from '@azure/functions';
-import { signHs256Jwt } from '../helpers/hs256Jwt';
-
-// Mock Cosmos DB BEFORE importing the service
-jest.mock('@azure/cosmos');
-
-import { CosmosClient } from '@azure/cosmos';
-import { userInfoHandler } from '../../src/auth/service/userinfoService';
-import { httpReqMock } from '../helpers/http';
-
-const originalSecret = process.env.JWT_SECRET;
-const contextStub = { log: jest.fn(), invocationId: 'test-456' } as unknown as InvocationContext;
+import type { Principal } from '@shared/middleware/auth';
 
 const mockRead = jest.fn();
 const mockContainer = {
@@ -20,89 +10,45 @@ const mockContainer = {
   items: { query: jest.fn() },
 };
 
+jest.mock('@shared/clients/cosmos', () => ({
+  getCosmosClient: jest.fn(async () => ({
+    database: () => ({
+      container: () => mockContainer,
+    }),
+  })),
+}));
+
+import { userInfoHandler } from '../../src/auth/service/userinfoService';
+import { httpReqMock } from '../helpers/http';
+
+const contextStub = { log: jest.fn(), invocationId: 'test-456' } as unknown as InvocationContext;
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.JWT_SECRET = 'test-secret';
-
-  // Setup Cosmos mock
-  (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
-    () =>
-      ({
-        database: () => ({
-          container: () => mockContainer,
-        }),
-      }) as any
-  );
-
-  process.env.COSMOS_CONNECTION_STRING = 'mock-connection';
-  process.env.COSMOS_DATABASE_NAME = 'asora';
 });
 
-afterAll(() => {
-  process.env.JWT_SECRET = originalSecret;
-});
-
-async function validToken(overrides: Record<string, any> = {}): Promise<string> {
-  return signHs256Jwt(
-    { sub: 'user-789', iss: 'asora', ...overrides },
-    process.env.JWT_SECRET!,
-    { expiresIn: '15m' }
-  );
+function authenticatedRequest() {
+  const req = httpReqMock({ method: 'GET' }) as ReturnType<typeof httpReqMock> & {
+    principal: Principal;
+  };
+  req.principal = {
+    sub: USER_ID,
+    raw: {
+      sub: USER_ID,
+      type: 'access',
+      iss: 'asora-auth',
+      exp: Math.floor(Date.now() / 1000) + 900,
+    },
+  };
+  return req;
 }
-
-describe('userinfoService - token validation', () => {
-  it('returns 401 when authorization header is missing', async () => {
-    const req = httpReqMock({ method: 'GET' });
-    const response = await userInfoHandler(req, contextStub);
-    expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Bearer token required' });
-  });
-
-  it('returns 401 when authorization header format is invalid', async () => {
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: 'InvalidFormat abc123' },
-    });
-    const response = await userInfoHandler(req, contextStub);
-    expect(response.status).toBe(401);
-  });
-
-  it('returns 401 when JWT token is invalid', async () => {
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: 'Bearer invalid.token.here' },
-    });
-    const response = await userInfoHandler(req, contextStub);
-    expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Invalid token' });
-  });
-
-  it('returns 401 when JWT token is expired', async () => {
-    const expiredToken = await signHs256Jwt(
-      { sub: 'user-789' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '-1s' }
-    );
-
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: `Bearer ${expiredToken}` },
-    });
-
-    const response = await userInfoHandler(req, contextStub);
-    expect(response.status).toBe(401);
-    expect(JSON.parse(response.body || '{}')).toMatchObject({ message: 'Invalid token' });
-  });
-});
 
 describe('userinfoService - user lookup', () => {
   it('returns 404 when user not found in database', async () => {
     mockRead.mockResolvedValueOnce({ resource: undefined });
 
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: `Bearer ${await validToken()}` },
-    });
+    const req = authenticatedRequest();
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(404);
@@ -112,7 +58,7 @@ describe('userinfoService - user lookup', () => {
   it('returns user profile for valid token', async () => {
     mockRead.mockResolvedValueOnce({
       resource: {
-        id: 'user-789',
+        id: USER_ID,
         username: 'testuser',
         email: 'test@example.com',
         email_verified: true,
@@ -121,17 +67,14 @@ describe('userinfoService - user lookup', () => {
       },
     });
 
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: `Bearer ${await validToken()}` },
-    });
+    const req = authenticatedRequest();
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(200);
     const body = JSON.parse(response.body || '{}');
     const claims = body.data ?? body;
     expect(claims).toMatchObject({
-      sub: 'user-789',
+      sub: USER_ID,
       preferred_username: 'testuser',
       email: 'test@example.com',
       email_verified: true,
@@ -141,10 +84,7 @@ describe('userinfoService - user lookup', () => {
   it('handles Cosmos DB errors gracefully', async () => {
     mockRead.mockRejectedValueOnce(new Error('Cosmos connection failed'));
 
-    const req = httpReqMock({
-      method: 'GET',
-      headers: { authorization: `Bearer ${await validToken()}` },
-    });
+    const req = authenticatedRequest();
 
     const response = await userInfoHandler(req, contextStub);
     expect(response.status).toBe(500);

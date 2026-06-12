@@ -11,10 +11,11 @@ import { httpReqMock } from '../helpers/http';
 
 const JWT_SECRET = 'test-secret-key-for-unit-tests-only-min-32chars!';
 const JWT_ISSUER = 'asora-auth';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
 const secretBytes = new TextEncoder().encode(JWT_SECRET);
 
 async function createToken(audience?: string): Promise<string> {
-  const builder = new SignJWT({ sub: 'user-123' })
+  const builder = new SignJWT({ sub: USER_ID, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(JWT_ISSUER)
     .setIssuedAt()

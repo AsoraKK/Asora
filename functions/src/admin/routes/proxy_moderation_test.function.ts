@@ -25,7 +25,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import axios, { AxiosError } from 'axios';
-import { tryGetPrincipal } from '../../auth/verifyJwt';
+import { requireActiveAdmin } from '../adminAuthUtils';
 
 interface RateLimitBucket {
   tokens: number;
@@ -118,51 +118,10 @@ async function proxyModerationTest(
     };
   }
 
-  // Validate admin JWT — full cryptographic verification (signature, expiry, issuer, audience, roles)
-  const authHeader = request.headers.get('Authorization');
-  const principal = await tryGetPrincipal(authHeader);
-  if (!principal) {
-    context.warn(
-      `[proxy/moderation/test ${method}] Missing or invalid admin JWT [${correlationId}]`
-    );
-    return {
-      status: 401,
-      jsonBody: {
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Admin JWT required. Ensure you are logged in to control-panel.',
-          correlationId,
-        },
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Correlation-ID': correlationId,
-      },
-    };
-  }
-  if (!principal.roles?.includes('admin')) {
-    context.warn(
-      `[proxy/moderation/test ${method}] Forbidden — principal ${principal.sub} lacks admin role [${correlationId}]`
-    );
-    return {
-      status: 403,
-      jsonBody: {
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Admin role required.',
-          correlationId,
-        },
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Correlation-ID': correlationId,
-      },
-    };
-  }
-
   // Get CF Access credentials from environment
   const cfClientId = process.env.CF_ACCESS_CLIENT_ID;
   const cfClientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
+  const authHeader = request.headers.get('Authorization');
 
   if (!cfClientId || !cfClientSecret) {
     context.error(
@@ -336,9 +295,22 @@ async function proxyModerationTest(
   }
 }
 
+const protectedProxyModerationTest = requireActiveAdmin(proxyModerationTest);
+
+async function proxyModerationTestRoute(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
+  if (request.method.toUpperCase() === 'OPTIONS') {
+    return proxyModerationTest(request, context);
+  }
+
+  return protectedProxyModerationTest(request, context);
+}
+
 app.http('moderation-test-proxy', {
   route: 'admin/moderation/test/{*path}',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  authLevel: 'anonymous', // We validate admin JWT manually
-  handler: proxyModerationTest,
+  authLevel: 'anonymous',
+  handler: proxyModerationTestRoute,
 });

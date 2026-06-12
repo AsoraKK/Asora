@@ -91,21 +91,27 @@ jest.mock('@shared/clients/postgres', () => ({
 import { InvocationContext } from '@azure/functions';
 
 import { tokenHandler } from '@auth/service/tokenService';
+import { resetAuthConfigForTesting } from '@auth/config';
 import { httpReqMock } from '../helpers/http';
 
 const logFn = jest.fn();
 const ctx: Partial<InvocationContext> = { invocationId: 'test', log: logFn, error: logFn };
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const INACTIVE_USER_ID = '01944c1d-5672-7001-8000-0c91f95a72a1';
+const MISSING_USER_ID = '01944c1d-5672-7002-8000-0c91f95a72a1';
 
 describe('auth/token validation and method handling', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'test-secret-key-for-token-validation';
     process.env.JWT_ISSUER = 'asora-auth';
+    delete process.env.JWT_AUDIENCE;
   });
 
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
     refreshTokenStore.clear();
+    resetAuthConfigForTesting();
     jest.restoreAllMocks();
     logFn.mockClear();
   });
@@ -326,11 +332,11 @@ describe('auth/token validation and method handling', () => {
         codeChallenge,
         codeChallengeMethod: 'S256',
         nonce: 'n',
-        userId: 'u1',
+        userId: USER_ID,
       },
     ];
     dbStub.user = {
-      id: 'u1',
+      id: USER_ID,
       email: 'u@example.com',
       role: 'user',
       tier: 'free',
@@ -372,8 +378,8 @@ describe('auth/token validation and method handling', () => {
     expect(refreshHeader.alg).toBe('HS256');
     const decoded = await verifyHs256Jwt(payload.data.access_token, process.env.JWT_SECRET!);
     const refreshDecoded = await verifyHs256Jwt(payload.data.refresh_token, process.env.JWT_SECRET!);
-    expect(decoded.sub).toBe('u1');
-    expect(refreshDecoded.sub).toBe('u1');
+    expect(decoded.sub).toBe(USER_ID);
+    expect(refreshDecoded.sub).toBe(USER_ID);
     expect(refreshDecoded.type).toBe('refresh');
     expect(refreshDecoded.jti).toBeDefined();
   });
@@ -492,12 +498,12 @@ describe('auth/token validation and method handling', () => {
     // Create refresh token WITH jti and pre-populate store
     const jti = crypto.randomUUID();
     refreshTokenStore.set(jti, {
-      userId: 'u1',
+      userId: USER_ID,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
     });
     const refresh = await signHs256Jwt(
-      { sub: 'u1', iss: 'asora-auth', type: 'refresh' },
+      { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d', jti }
     );
@@ -515,7 +521,7 @@ describe('auth/token validation and method handling', () => {
 
   it('refresh_token: user not found', async () => {
     const refresh = await signHs256Jwt(
-      { sub: 'missing', iss: 'asora-auth', type: 'refresh' },
+      { sub: MISSING_USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -530,7 +536,7 @@ describe('auth/token validation and method handling', () => {
 
   it('refresh_token: inactive user', async () => {
     dbStub.user = {
-      id: 'u9',
+      id: INACTIVE_USER_ID,
       email: 'u9@example.com',
       role: 'user',
       tier: 'free',
@@ -538,7 +544,7 @@ describe('auth/token validation and method handling', () => {
       isActive: false,
     };
     const refresh = await signHs256Jwt(
-      { sub: 'u9', iss: 'asora-auth', type: 'refresh' },
+      { sub: INACTIVE_USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -553,7 +559,7 @@ describe('auth/token validation and method handling', () => {
   it('refresh_token: invalid token type (access)', async () => {
     // create a signed token with type access so verify succeeds but type check fails
     const tok = await signHs256Jwt(
-      { sub: 'u1', iss: 'asora-auth', type: 'access' },
+      { sub: USER_ID, iss: 'asora-auth', type: 'access' },
       process.env.JWT_SECRET!,
       { expiresIn: '5m' }
     );

@@ -10,10 +10,11 @@ import { requireAuth } from '@auth/requireAuth';
 import { httpReqMock } from '../helpers/http';
 
 const JWT_SECRET = 'test-secret-key-for-unit-tests-only-min-32chars!';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
 const secretBytes = new TextEncoder().encode(JWT_SECRET);
 
 async function createToken(issuer: string): Promise<string> {
-  return new SignJWT({ sub: 'user-123' })
+  return new SignJWT({ sub: USER_ID, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(issuer)
     .setIssuedAt()
