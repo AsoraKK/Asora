@@ -11,6 +11,7 @@ import { createSuccessResponse, createErrorResponse } from '@shared/utils/http';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import type { Principal } from '@shared/middleware/auth';
+import { isInternalUserId } from '@auth/verifyJwt';
 import type { TokenPayload, UserDocument } from '@auth/types';
 
 const logger = getAzureLogger('auth/userinfo');
@@ -67,6 +68,10 @@ export async function userInfoHandler(
     }
 
     const user: UserDocument = userDoc.resource;
+
+    if (!isInternalUserId(user.id) || user.id !== tokenPayload.sub) {
+      throw new Error('Invalid internal user identifier');
+    }
 
     // Check if user account is active
     if (!user.isActive) {

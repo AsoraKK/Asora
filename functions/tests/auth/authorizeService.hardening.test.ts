@@ -21,11 +21,20 @@ jest.mock('../../src/auth/service/authAuditService', () => ({
 // Mock easyAuth validator — return valid by default, overridden per-test where needed
 const mockValidateAndCrossCheck = jest.fn().mockReturnValue({
   valid: true,
-  subjectId: 'user-123',
-  provider: 'aad',
+  subjectId: 'google-oauth2|1234567890',
+  provider: 'google',
 });
 jest.mock('../../src/auth/service/easyAuthValidator', () => ({
   validateAndCrossCheckPrincipal: (...args: any[]) => mockValidateAndCrossCheck(...args),
+}));
+
+const mockGetProviderLink = jest.fn();
+const mockGetUserById = jest.fn();
+jest.mock('../../src/auth/service/usersService', () => ({
+  usersService: {
+    getProviderLink: (...args: any[]) => mockGetProviderLink(...args),
+    getUserById: (...args: any[]) => mockGetUserById(...args),
+  },
 }));
 
 import { CosmosClient } from '@azure/cosmos';
@@ -47,8 +56,9 @@ jest.mock('@shared/utils/logger', () => ({
 // ── Cosmos mocks ───────────────────────────────────────────────────────
 const mockQuery = jest.fn();
 const mockCreate = jest.fn();
+const mockRead = jest.fn();
 const mockContainer = {
-  item: jest.fn().mockReturnValue({ read: jest.fn() }),
+  item: jest.fn().mockReturnValue({ read: mockRead }),
   items: {
     query: jest.fn().mockReturnValue({ fetchAll: mockQuery }),
     create: mockCreate,
@@ -70,24 +80,30 @@ const validQuery = {
   code_challenge_method: 'S256',
 };
 
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const PROVIDER_SUBJECT = 'google-oauth2|1234567890';
+
 function userExists() {
   // verifyUserExists uses item(userId, userId).read()
-  mockContainer.item.mockReturnValueOnce({
-    read: jest.fn().mockResolvedValueOnce({
-      resource: { id: 'user-123', isActive: true },
-    }),
+  mockRead.mockResolvedValue({
+    resource: { id: USER_ID, isActive: true },
   });
   mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRead.mockReset();
   loggerWarnSpy.mockClear();
   mockValidateAndCrossCheck.mockReturnValue({
     valid: true,
-    subjectId: 'user-123',
-    provider: 'aad',
+    subjectId: PROVIDER_SUBJECT,
+    provider: 'google',
   });
+  mockGetProviderLink.mockReset();
+  mockGetProviderLink.mockResolvedValue(null);
+  mockGetUserById.mockReset();
+  mockGetUserById.mockResolvedValue(null);
 
   (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
     () =>
@@ -142,7 +158,7 @@ describe('resolveAuthenticatedUserId — production block of test user ID', () =
     userExists();
 
     const req = httpReqMock({
-      query: { ...validQuery, user_id: 'user-123' },
+      query: { ...validQuery, user_id: USER_ID },
     });
 
     const response = await authorizeHandler(req, contextStub);
@@ -158,7 +174,7 @@ describe('resolveAuthenticatedUserId — production block of test user ID', () =
     userExists();
 
     const req = httpReqMock({
-      query: { ...validQuery, user_id: 'user-123' },
+      query: { ...validQuery, user_id: USER_ID },
     });
 
     const response = await authorizeHandler(req, contextStub);
@@ -212,12 +228,19 @@ describe('resolveAuthenticatedUserId — forged x-ms-client-principal-id', () =>
   it('accepts x-ms-client-principal-id with valid EasyAuth companion in production', async () => {
     process.env.NODE_ENV = 'production';
 
+    mockGetProviderLink.mockResolvedValueOnce({
+      provider: 'google',
+      provider_sub: PROVIDER_SUBJECT,
+      user_id: USER_ID,
+      created_at: new Date().toISOString(),
+    });
+    mockGetUserById.mockResolvedValueOnce({ id: USER_ID } as any);
     userExists();
 
     const req = httpReqMock({
       query: validQuery,
       headers: {
-        'x-ms-client-principal-id': 'user-123',
+        'x-ms-client-principal-id': PROVIDER_SUBJECT,
         'x-ms-client-principal': btoa(JSON.stringify({ claims: [] })),
       },
     });
@@ -236,7 +259,7 @@ describe('resolveAuthenticatedUserId — forged x-ms-client-principal-id', () =>
     const req = httpReqMock({
       query: validQuery,
       headers: {
-        'x-ms-client-principal-id': 'user-123',
+        'x-ms-client-principal-id': USER_ID,
       },
     });
 
@@ -295,7 +318,7 @@ describe('resolveAuthenticatedUserId — forged x-authenticated-user-id', () => 
     const req = httpReqMock({
       query: validQuery,
       headers: {
-        'x-authenticated-user-id': 'user-123',
+        'x-authenticated-user-id': USER_ID,
         'x-ms-client-principal': btoa(JSON.stringify({ claims: [] })),
       },
     });
@@ -324,18 +347,16 @@ describe('resolveAuthenticatedUserId — edge cases', () => {
   it('prefers x-ms-client-principal-id over user_id param', async () => {
     process.env.NODE_ENV = 'test';
 
-    // Mock user lookup for 'principal-user' (the header value)
-    mockContainer.item.mockReturnValueOnce({
-      read: jest.fn().mockResolvedValueOnce({
-        resource: { id: 'principal-user', isActive: true },
-      }),
+    // Mock user lookup for the header value
+    mockRead.mockResolvedValue({
+      resource: { id: USER_ID, isActive: true },
     });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 
     const req = httpReqMock({
       query: { ...validQuery, user_id: 'param-user' },
       headers: {
-        'x-ms-client-principal-id': 'principal-user',
+        'x-ms-client-principal-id': USER_ID,
       },
     });
 
@@ -343,7 +364,7 @@ describe('resolveAuthenticatedUserId — edge cases', () => {
     expect(response.status).toBe(302);
     expect(response.headers?.Location).toContain('code=');
     // Verify Cosmos query was called with the header user, not the param user
-    expect(mockContainer.item).toHaveBeenCalledWith('principal-user', 'principal-user');
+    expect(mockContainer.item).toHaveBeenCalledWith(USER_ID, USER_ID);
   });
 
   it('does not log forged header warning in development env', async () => {
@@ -354,7 +375,7 @@ describe('resolveAuthenticatedUserId — edge cases', () => {
     const req = httpReqMock({
       query: validQuery,
       headers: {
-        'x-ms-client-principal-id': 'user-123',
+        'x-ms-client-principal-id': USER_ID,
         // No companion header — but dev env doesn't enforce
       },
     });

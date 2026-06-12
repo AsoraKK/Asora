@@ -188,8 +188,16 @@ describe('verifyAuthorizationHeader', () => {
     });
   });
 
-  it('throws invalid_claim when sub is not an internal UUIDv7', async () => {
-    const token = await createToken({ sub: 'user-123' });
+  it('throws invalid_claim when sub is a random string', async () => {
+    const token = await createToken({ sub: 'not-a-user-id' });
+
+    await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
+      code: 'invalid_claim',
+    });
+  });
+
+  it('throws invalid_claim when sub is an upstream provider subject', async () => {
+    const token = await createToken({ sub: 'google-oauth2|1234567890' });
 
     await expect(verifyAuthorizationHeader(`Bearer ${token}`)).rejects.toMatchObject({
       code: 'invalid_claim',

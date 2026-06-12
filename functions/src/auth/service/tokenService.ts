@@ -8,7 +8,7 @@ import { SignJWT } from 'jose';
 import { getCosmosClient } from '@shared/clients/cosmos';
 
 import type { AuthSession, TokenPayload, TokenRequest, UserDocument } from '@auth/types';
-import { AuthError, verifyJwtToken } from '@auth/verifyJwt';
+import { AuthError, isInternalUserId, verifyJwtToken } from '@auth/verifyJwt';
 import {
   storeRefreshToken,
   validateRefreshToken,
@@ -282,6 +282,10 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     throw new InviteRequiredError('Awaiting invite');
   }
 
+  if (!isInternalUserId(session.userId) || !isInternalUserId(user.id) || user.id !== session.userId) {
+    throw new Error('User account identifier is not a valid internal UUIDv7');
+  }
+
   // Update last login time
   await users
     .item(user.id, user.id)
@@ -382,6 +386,10 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
 
     if (!user.isActive) {
       throw new Error('User account is inactive');
+    }
+
+    if (!isInternalUserId(decodedSub) || !isInternalUserId(user.id) || user.id !== decodedSub) {
+      throw new Error('User account identifier is not a valid internal UUIDv7');
     }
 
     // Generate new access token

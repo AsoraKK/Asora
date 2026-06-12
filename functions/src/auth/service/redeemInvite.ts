@@ -18,6 +18,7 @@ import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from 
 import { getAzureLogger } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import { requireAuth, type Principal } from '@shared/middleware/auth';
+import { isInternalUserId } from '@auth/verifyJwt';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { redeemInvite, validateInvite } from './inviteStore';
@@ -106,6 +107,10 @@ export async function redeemInviteHandler(
     if (!user) {
       logger.warn('User not found during invite redemption', { userId });
       return createErrorResponse(404, 'user_not_found', 'User not found');
+    }
+
+    if (!isInternalUserId(user.id) || user.id !== userId) {
+      return createErrorResponse(500, 'internal_error', 'Invalid internal user identifier');
     }
 
     // Check if user is already active
