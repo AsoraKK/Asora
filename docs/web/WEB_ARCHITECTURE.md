@@ -19,7 +19,7 @@ Cloudflare Pages. The web target adds:
 | Public | Marketing site, public legal pages, app login screens | No user JWT | Not cacheable as personalized content | Live |
 | Authenticated | Flutter app routes and user APIs | `Authorization: Bearer <token>` + `requireAuth` | `private, no-store` | Live |
 | Admin | Control panel and `/_admin/*` APIs | Admin JWT / Cloudflare Access | `private, no-store` | Planned |
-| Anonymous-cacheable | `GET /api/feed/discover`, `GET /api/feed/news` | No `Authorization` header | `public, s-maxage=30, stale-while-revalidate=60` | Live |
+| Anonymous-cacheable | `GET /api/feed/discover` | No `Authorization` header | `public, s-maxage=30, stale-while-revalidate=60` | Live |
 
 Only the anonymous-cacheable boundary is allowed through the feed-cache Worker.
 Public, authenticated, and admin traffic must bypass that edge cache path.
@@ -102,7 +102,7 @@ On page reload, `AuthStateNotifier._loadCurrentUser()` checks
 |---|---|---|
 | Flutter web app | Live | Authenticated browser experience |
 | Marketing site | Live | Public, crawlable surface |
-| `cloudflare/worker.ts` | Partial (anonymous-cacheable only) | Only anonymous discover/news traffic is cached |
+| `cloudflare/worker.ts` | Partial (anonymous-cacheable only) | Only anonymous discover traffic is cached |
 | `functions/src/admin/accessAuth.ts` | Planned (Cloudflare Access gate) | Separate admin gate, not enabled yet |
 | `workers/feed-cache/src/index.js` | Deprecated (legacy route wrapper) | Compatibility wrapper for the legacy route binding |
 
