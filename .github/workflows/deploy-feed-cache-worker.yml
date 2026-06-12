@@ -42,7 +42,7 @@ jobs:
 
           for attempt in 1 2 3 4 5 6; do
             echo "Smoke test attempt ${attempt}"
-            RESPONSE="$(curl -sSI "${URL}" || true)"
+            RESPONSE="$(curl -sS -D - -o /dev/null "${URL}" || true)"
             echo "${RESPONSE}"
             if echo "${RESPONSE}" | head -n 1 | grep -Eq '^HTTP/[0-9.]+ 200'; then
               exit 0

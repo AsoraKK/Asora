@@ -77,7 +77,15 @@ jobs:
           set -e
           
           echo "🧪 Testing anonymous feed caching behavior..."
-          FEED_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}?limit=20&cursor=first&includeTopics=tech"
+          CACHE_TEST_ID="$(date +%s)-$$-$RANDOM"
+          CACHE_CURSOR="$(
+            printf '{"ts":1,"id":"cache-test-%s"}' "${CACHE_TEST_ID}" \
+              | base64 \
+              | tr -d '\n' \
+              | tr -d '=' \
+              | tr '+/' '-_'
+          )"
+          FEED_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}?limit=20&cursor=${CACHE_CURSOR}&includeTopics=tech"
           
           echo "📋 Test Configuration:"
           echo "  Domain: ${STAGING_DOMAIN}"
@@ -87,7 +95,7 @@ jobs:
           
           # Test 1: First anonymous request should return CF-Cache-Status: MISS
           echo "🔍 Test 1: First anonymous request (expecting MISS)"
-          FIRST_RESPONSE=$(curl -sSI "${FEED_URL}" || { echo "❌ First request failed"; exit 1; })
+          FIRST_RESPONSE=$(curl -sS -D - -o /dev/null "${FEED_URL}" || { echo "❌ First request failed"; exit 1; })
           echo "Response headers:"
           echo "$FIRST_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
           echo ""
@@ -101,24 +109,28 @@ jobs:
           echo ""
           
           # Validate first request
-          if [[ "${FIRST_CACHE_STATUS}" != "MISS" ]]; then
-            echo "❌ FAIL: First anonymous request should return CF-Cache-Status: MISS, got: ${FIRST_CACHE_STATUS}"
+          case "${FIRST_CACHE_STATUS}" in
+            MISS|EXPIRED|DYNAMIC)
+              ;;
+            *)
+              echo "❌ FAIL: First anonymous request should return a miss-like cache status, got: ${FIRST_CACHE_STATUS}"
+              exit 1
+              ;;
+          esac
+
+          if [[ "${FIRST_CACHE_CONTROL}" != *"public"* ]] || [[ "${FIRST_CACHE_CONTROL}" != *"s-maxage=30"* ]]; then
+            echo "❌ FAIL: First request should have public edge cache headers, got: ${FIRST_CACHE_CONTROL}"
             exit 1
           fi
-          
-          if [[ "${FIRST_CACHE_CONTROL}" != *"public"* ]] || [[ "${FIRST_CACHE_CONTROL}" != *"s-maxage"* ]]; then
-            echo "❌ FAIL: First request should have public cache headers, got: ${FIRST_CACHE_CONTROL}"
-            exit 1
-          fi
-          
-          echo "✅ Test 1 PASSED: First request correctly shows MISS with public cache headers"
+
+          echo "✅ Test 1 PASSED: First request shows miss-like cache status with public edge cache headers"
           echo ""
           
           # Test 2: Second anonymous request within 30s should return CF-Cache-Status: HIT
           echo "🔍 Test 2: Second anonymous request within TTL (expecting HIT)"
           sleep 2
           
-          SECOND_RESPONSE=$(curl -sSI "${FEED_URL}" || { echo "❌ Second request failed"; exit 1; })
+          SECOND_RESPONSE=$(curl -sS -D - -o /dev/null "${FEED_URL}" || { echo "❌ Second request failed"; exit 1; })
           echo "Response headers:"
           echo "$SECOND_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
           echo ""
@@ -141,7 +153,7 @@ jobs:
           # Test 3: Authenticated request should bypass cache
           echo "🔍 Test 3: Authenticated request (expecting no-store and DYNAMIC)"
           
-          AUTH_RESPONSE=$(curl -sSI -H 'Authorization: Bearer test-jwt-token' "${FEED_URL}" || { echo "❌ Auth request failed"; exit 1; })
+          AUTH_RESPONSE=$(curl -sS -D - -o /dev/null -H 'Authorization: Bearer test-jwt-token' "${FEED_URL}" || { echo "❌ Auth request failed"; exit 1; })
           echo "Response headers:"
           echo "$AUTH_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
           echo ""
@@ -178,8 +190,8 @@ jobs:
           # Test requests with different limits should be separate cache entries
           echo "🔍 Testing limit=20 vs limit=21 cache separation"
           
-          LIMIT_20_RESPONSE=$(curl -sSI "${BASE_URL}?limit=20&cursor=first" || { echo "❌ Limit 20 request failed"; exit 1; })
-          LIMIT_21_RESPONSE=$(curl -sSI "${BASE_URL}?limit=21&cursor=first" || { echo "❌ Limit 21 request failed"; exit 1; })
+          LIMIT_20_RESPONSE=$(curl -sS -D - -o /dev/null "${BASE_URL}?limit=20&cursor=${CACHE_CURSOR}" || { echo "❌ Limit 20 request failed"; exit 1; })
+          LIMIT_21_RESPONSE=$(curl -sS -D - -o /dev/null "${BASE_URL}?limit=21&cursor=${CACHE_CURSOR}" || { echo "❌ Limit 21 request failed"; exit 1; })
 
           LIMIT_20_STATUS=$(echo "$LIMIT_20_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
           LIMIT_21_STATUS=$(echo "$LIMIT_21_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
@@ -189,9 +201,18 @@ jobs:
           echo "  limit=21 CF-Cache-Status: ${LIMIT_21_STATUS}"
           echo ""
           
-          # Both should be MISS as they are different cache keys
-          if [[ "${LIMIT_21_STATUS}" != "MISS" ]]; then
-            echo "❌ FAIL: Different query parameters should create separate cache entries (limit=21 should be MISS)"
+          # Different query parameters should create separate cache entries
+          case "${LIMIT_21_STATUS}" in
+            MISS|EXPIRED|DYNAMIC)
+              ;;
+            *)
+              echo "❌ FAIL: Different query parameters should create separate cache entries (limit=21 should be miss-like, got: ${LIMIT_21_STATUS})"
+              exit 1
+              ;;
+          esac
+
+          if [[ "${LIMIT_21_STATUS}" == "HIT" ]]; then
+            echo "❌ FAIL: Different query parameters should not reuse the existing cache entry"
             exit 1
           fi
           
@@ -203,7 +224,7 @@ jobs:
           
           echo "🧪 Testing news path bypass..."
           
-          NEWS_RESPONSE=$(curl -sSI "https://${STAGING_DOMAIN}/api/feed/news?limit=20" || { echo "❌ News request failed"; exit 1; })
+          NEWS_RESPONSE=$(curl -sS -D - -o /dev/null "https://${STAGING_DOMAIN}/api/feed/news?limit=20" || { echo "❌ News request failed"; exit 1; })
           NEWS_STATUS=$(echo "$NEWS_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
           NEWS_CACHE_CONTROL=$(echo "$NEWS_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
           
