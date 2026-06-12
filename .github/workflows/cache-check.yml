@@ -24,19 +24,26 @@ on:
   workflow_dispatch:
     inputs:
       staging_domain:
-        description: 'Optional staging domain override for manual runs'
+        description: 'Optional edge host override for manual runs'
         required: false
+  workflow_run:
+    workflows:
+      - "Deploy Feed Cache Worker"
+      - "deploy-asora-function-dev"
+    types: [completed]
+    branches: [main]
 
 env:
-  STAGING_DOMAIN: ${{ github.event.inputs.staging_domain || 'dev.asora.co.za' }}
+  DEFAULT_EDGE_DOMAIN: dev.asora.co.za
   TEST_ENDPOINT: '/api/feed/discover'
 
 jobs:
-  cache-validation:
-    name: Validate Edge Cache Behavior
+  worker-unit-tests:
+    if: ${{ github.event_name != 'workflow_run' }}
+    name: Worker Cache Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,174 +67,51 @@ jobs:
         env:
           NODE_ENV: test
 
+  live-cache-validation:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    name: Validate Edge Cache Behavior
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Wait for deployment to settle
+        if: ${{ github.event_name == 'workflow_run' }}
         run: sleep 30
 
-      - name: Validate staging domain
+      - name: Resolve validation domain
+        env:
+          REQUESTED_DOMAIN: ${{ github.event.inputs.staging_domain }}
         run: |
-          if [[ -z "${STAGING_DOMAIN:-}" ]]; then
-            echo "❌ STAGING_DOMAIN is not configured."
-            echo "Set the repo secret STAGING_DOMAIN or pass workflow_dispatch input staging_domain."
+          set -euo pipefail
+
+          DOMAIN="${REQUESTED_DOMAIN:-${DEFAULT_EDGE_DOMAIN}}"
+          if ! getent ahosts "${DOMAIN}" >/dev/null 2>&1; then
+            echo "❌ Cache validation domain '${DOMAIN}' does not resolve."
+            echo "Pass a valid workflow_dispatch input or restore the canonical edge host."
             exit 1
           fi
 
-      - name: Test Anonymous Feed Caching Behavior
-        id: cache_test
+          echo "CACHE_VALIDATION_DOMAIN=${DOMAIN}" >> "$GITHUB_ENV"
+          echo "Using cache validation host: ${DOMAIN}"
+
+      - name: Validate discover cache behavior
         run: |
-          set -e
-          
-          echo "🧪 Testing anonymous feed caching behavior..."
-          CACHE_TEST_ID="$(date +%s)-$$-$RANDOM"
-          CACHE_CURSOR="$(
-            printf '{"ts":1,"id":"cache-test-%s"}' "${CACHE_TEST_ID}" \
-              | base64 \
-              | tr -d '\n' \
-              | tr -d '=' \
-              | tr '+/' '-_'
-          )"
-          FEED_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}?limit=20&cursor=${CACHE_CURSOR}&includeTopics=tech"
-          
-          echo "📋 Test Configuration:"
-          echo "  Domain: ${STAGING_DOMAIN}"
-          echo "  Endpoint: ${TEST_ENDPOINT}"
-          echo "  Full URL: ${FEED_URL}"
-          echo ""
-          
-          # Test 1: First anonymous request should return CF-Cache-Status: MISS
-          echo "🔍 Test 1: First anonymous request (expecting MISS)"
-          FIRST_RESPONSE=$(curl -sS -D - -o /dev/null "${FEED_URL}" || { echo "❌ First request failed"; exit 1; })
-          echo "Response headers:"
-          echo "$FIRST_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
-          echo ""
-          
-          FIRST_CACHE_STATUS=$(echo "$FIRST_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
-          FIRST_CACHE_CONTROL=$(echo "$FIRST_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
-          
-          echo "📊 First request results:"
-          echo "  CF-Cache-Status: ${FIRST_CACHE_STATUS}"
-          echo "  Cache-Control: ${FIRST_CACHE_CONTROL}"
-          echo ""
-          
-          # Validate first request
-          case "${FIRST_CACHE_STATUS}" in
-            MISS|EXPIRED|DYNAMIC)
-              ;;
-            *)
-              echo "❌ FAIL: First anonymous request should return a miss-like cache status, got: ${FIRST_CACHE_STATUS}"
-              exit 1
-              ;;
-          esac
-
-          if [[ "${FIRST_CACHE_CONTROL}" != *"public"* ]] || [[ "${FIRST_CACHE_CONTROL}" != *"s-maxage=30"* ]]; then
-            echo "❌ FAIL: First request should have public edge cache headers, got: ${FIRST_CACHE_CONTROL}"
-            exit 1
-          fi
-
-          echo "✅ Test 1 PASSED: First request shows miss-like cache status with public edge cache headers"
-          echo ""
-          
-          # Test 2: Second anonymous request within 30s should return CF-Cache-Status: HIT
-          echo "🔍 Test 2: Second anonymous request within TTL (expecting HIT)"
-          sleep 2
-          
-          SECOND_RESPONSE=$(curl -sS -D - -o /dev/null "${FEED_URL}" || { echo "❌ Second request failed"; exit 1; })
-          echo "Response headers:"
-          echo "$SECOND_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
-          echo ""
-          
-          SECOND_CACHE_STATUS=$(echo "$SECOND_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
-          
-          echo "📊 Second request results:"
-          echo "  CF-Cache-Status: ${SECOND_CACHE_STATUS}"
-          echo ""
-          
-          # Validate second request
-          if [[ "${SECOND_CACHE_STATUS}" != "HIT" ]]; then
-            echo "❌ FAIL: Second anonymous request within TTL should return CF-Cache-Status: HIT, got: ${SECOND_CACHE_STATUS}"
-            exit 1
-          fi
-          
-          echo "✅ Test 2 PASSED: Second request correctly shows HIT"
-          echo ""
-          
-          # Test 3: Authenticated request should bypass cache
-          echo "🔍 Test 3: Authenticated request (expecting no-store and DYNAMIC)"
-          
-          AUTH_RESPONSE=$(curl -sS -D - -o /dev/null -H 'Authorization: Bearer test-jwt-token' "${FEED_URL}" || { echo "❌ Auth request failed"; exit 1; })
-          echo "Response headers:"
-          echo "$AUTH_RESPONSE" | grep -E '^(CF-Cache-Status|Cache-Control|Vary|X-Cache-Backend)' || echo "  (No cache headers found)"
-          echo ""
-          
-          AUTH_CACHE_STATUS=$(echo "$AUTH_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
-          AUTH_CACHE_CONTROL=$(echo "$AUTH_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
-          
-          echo "📊 Authenticated request results:"
-          echo "  CF-Cache-Status: ${AUTH_CACHE_STATUS}"
-          echo "  Cache-Control: ${AUTH_CACHE_CONTROL}"
-          echo ""
-          
-          # Validate authenticated request
-          if [[ "${AUTH_CACHE_CONTROL}" != *"no-store"* ]] && [[ "${AUTH_CACHE_CONTROL}" != *"private"* ]]; then
-            echo "❌ FAIL: Authenticated request should have no-store or private cache control, got: ${AUTH_CACHE_CONTROL}"
-            exit 1
-          fi
-          
-          if [[ "${AUTH_CACHE_STATUS}" == "HIT" ]]; then
-            echo "❌ FAIL: Authenticated request should not return CF-Cache-Status: HIT, got: ${AUTH_CACHE_STATUS}"
-            exit 1
-          fi
-          
-          echo "✅ Test 3 PASSED: Authenticated request correctly bypasses cache"
-          echo ""
-
-      - name: Test Different Query Parameters
-        run: |
-          set -e
-          
-          echo "🧪 Testing cache key separation for different query parameters..."
-          BASE_URL="https://${STAGING_DOMAIN}${TEST_ENDPOINT}"
-          
-          # Test requests with different limits should be separate cache entries
-          echo "🔍 Testing limit=20 vs limit=21 cache separation"
-          
-          LIMIT_20_RESPONSE=$(curl -sS -D - -o /dev/null "${BASE_URL}?limit=20&cursor=${CACHE_CURSOR}" || { echo "❌ Limit 20 request failed"; exit 1; })
-          LIMIT_21_RESPONSE=$(curl -sS -D - -o /dev/null "${BASE_URL}?limit=21&cursor=${CACHE_CURSOR}" || { echo "❌ Limit 21 request failed"; exit 1; })
-
-          LIMIT_20_STATUS=$(echo "$LIMIT_20_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
-          LIMIT_21_STATUS=$(echo "$LIMIT_21_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
-
-          echo "📊 Query parameter separation results:"
-          echo "  limit=20 CF-Cache-Status: ${LIMIT_20_STATUS}"
-          echo "  limit=21 CF-Cache-Status: ${LIMIT_21_STATUS}"
-          echo ""
-          
-          # Different query parameters should create separate cache entries
-          case "${LIMIT_21_STATUS}" in
-            MISS|EXPIRED|DYNAMIC)
-              ;;
-            *)
-              echo "❌ FAIL: Different query parameters should create separate cache entries (limit=21 should be miss-like, got: ${LIMIT_21_STATUS})"
-              exit 1
-              ;;
-          esac
-
-          if [[ "${LIMIT_21_STATUS}" == "HIT" ]]; then
-            echo "❌ FAIL: Different query parameters should not reuse the existing cache entry"
-            exit 1
-          fi
-          
-          echo "✅ Query parameter separation test PASSED"
+          set -euo pipefail
+          DOMAIN="${CACHE_VALIDATION_DOMAIN}" PATH_FEED="${TEST_ENDPOINT}" ./scripts/validate_edge_cache.sh
 
       - name: Test News Path Bypass
         run: |
-          set -e
-          
+          set -euo pipefail
+
           echo "🧪 Testing news path bypass..."
-          
-          NEWS_RESPONSE=$(curl -sS -D - -o /dev/null "https://${STAGING_DOMAIN}/api/feed/news?limit=20" || { echo "❌ News request failed"; exit 1; })
+
+          NEWS_RESPONSE=$(curl -sS -D - -o /dev/null "https://${CACHE_VALIDATION_DOMAIN}/api/feed/news?limit=20" || { echo "❌ News request failed"; exit 1; })
           NEWS_STATUS=$(echo "$NEWS_RESPONSE" | grep -i 'CF-Cache-Status' | cut -d: -f2 | tr -d ' \r\n' || echo "UNKNOWN")
           NEWS_CACHE_CONTROL=$(echo "$NEWS_RESPONSE" | grep -i 'Cache-Control' | cut -d: -f2- | tr -d '\r\n' || echo "UNKNOWN")
-          
+
           echo "📊 News path results:"
           echo "  /api/feed/news CF-Cache-Status: ${NEWS_STATUS}"
           echo "  /api/feed/news Cache-Control: ${NEWS_CACHE_CONTROL}"
@@ -244,42 +128,3 @@ jobs:
           fi
 
           echo "✅ News path bypass test PASSED"
-
-      - name: Summary
-        if: always()
-        run: |
-          echo ""
-          echo "🎉 Edge Cache Validation Summary"
-          echo "================================"
-          echo "✅ Anonymous first request: MISS with public cache headers"
-          echo "✅ Anonymous second request: HIT within TTL window"
-          echo "✅ Authenticated request: Bypasses cache with private headers"
-          echo "✅ Different query parameters: Separate cache entries"
-          echo "✅ News path: Bypasses cache with private headers"
-          echo ""
-          echo "🚀 Edge caching is working correctly!"
-
-  deploy-staging:
-    name: Deploy to Staging (if needed)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Deploy Cloudflare Worker to Staging
-        run: |
-          cd cloudflare
-          echo " Deploying Worker to staging environment..."
-          # Example: use wrangler with env using CLOUDFLARE_API_TOKEN
-          # npx wrangler deploy --env staging --api-token "$CLOUDFLARE_API_TOKEN"
-          echo "Worker deployment completed"

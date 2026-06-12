@@ -2,7 +2,7 @@ name: Staging Edge Cache Validate
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Staging Deploy"]
+    workflows: ["deploy-asora-function-staging"]
     types: [completed]
 
 jobs:
@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Wait for deployment to settle
+        if: ${{ github.event_name == 'workflow_run' }}
+        run: sleep 30
       - name: Run validation
         env:
           DOMAIN: ${{ secrets.STAGING_DOMAIN }}

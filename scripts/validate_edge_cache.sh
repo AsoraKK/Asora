@@ -11,8 +11,30 @@ QS2="${QS2:-cursor=${CACHE_CURSOR}&limit=21&includeTopics=tech}"   # different l
 
 fail() { echo "FAIL: $*"; exit 1; }
 need() { command -v "$1" >/dev/null || fail "Missing dependency: $1"; }
+resolve_host() {
+  if command -v getent >/dev/null 2>&1; then
+    getent ahosts "$1" >/dev/null 2>&1
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$1" <<'PY'
+import socket
+import sys
+
+try:
+    socket.getaddrinfo(sys.argv[1], 443)
+except socket.gaierror:
+    raise SystemExit(1)
+PY
+    return
+  fi
+
+  return 0
+}
 
 need curl
+resolve_host "$DOMAIN" || fail "Domain '$DOMAIN' does not resolve. Update STAGING_DOMAIN or pass DOMAIN=<valid-host>."
 URL1="https://${DOMAIN}${PATH_FEED}?${QS1}"
 URL2="https://${DOMAIN}${PATH_FEED}?${QS2}"
 

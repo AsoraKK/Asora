@@ -31,6 +31,12 @@ Ensure Cloudflare caches only the smallest anonymous-safe feed surface and never
 - `workers/feed-cache/src/index.js`:
   - Compatibility wrapper only; delegates to `cloudflare/worker.ts`.
 
+## CI and live validation
+
+- `.github/workflows/cache-check.yml` keeps push and pull-request checks deterministic by running the Worker unit tests only.
+- The same workflow runs live edge validation on `workflow_dispatch` and after successful `Deploy Feed Cache Worker` or `deploy-asora-function-dev` runs.
+- `.github/workflows/staging-validate.yml` runs the shared shell probe manually or after `deploy-asora-function-staging`.
+
 ## Staging validation commands
 
 Use your staging host:
