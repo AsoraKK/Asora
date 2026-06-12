@@ -4,11 +4,13 @@ import { applyEdgeRateLimitHeaders, enforceEdgeRateLimit } from '../edge/worker/
 
 export interface Env {
   FEED_CACHE_ENABLED?: string;
+  ORIGIN_BASE?: string;
   RATE_LIMIT_KV?: KVNamespace;
   EMAIL_HASH_SALT?: string;
 }
 
 const FEED_PATH_PREFIX = '/api/feed';
+const DEFAULT_ORIGIN_BASE = 'https://asora-function-dev.azurewebsites.net';
 export const ANON_CACHEABLE_FEED_PATHS = new Set(['/api/feed/discover']);
 const CACHE_KEY_PARAMS = new Set([
   'cursor',
@@ -24,6 +26,17 @@ const CACHE_KEY_PARAMS = new Set([
   'since',
 ]);
 const EDGE_LIMIT = { limit: 60, windowSeconds: 60 };
+
+function getOriginBase(env: Env): string {
+  return (env.ORIGIN_BASE || DEFAULT_ORIGIN_BASE).replace(/\/+$/, '');
+}
+
+function buildOriginRequest(request: Request, env: Env): Request {
+  const requestUrl = new URL(request.url);
+  const originBase = getOriginBase(env);
+  const originUrl = new URL(`${requestUrl.pathname}${requestUrl.search}`, originBase);
+  return new Request(originUrl.toString(), request);
+}
 
 export function isAnonymousCacheRequest(request: Request, url = new URL(request.url)): boolean {
   if (request.method.toUpperCase() !== 'GET') {
@@ -89,10 +102,11 @@ export default {
     // Only anonymous feed reads are cacheable here; public, authenticated, and
     // admin traffic bypass this worker path entirely.
     const isAnonCacheableFeedPath = isAnonymousCacheRequest(request, url);
+    const originRequest = buildOriginRequest(request, env);
 
     // Bypass conditions: non-feed, auth present, or disabled via env.
     if (!isFeed || auth || hasCookie || !cachingEnabled || !isAnonCacheableFeedPath) {
-      const resp = await fetch(request);
+      const resp = await fetch(originRequest);
       const r = new Response(resp.body, resp);
       r.headers.set("Vary", "Authorization");
       if (auth || hasCookie || (isFeed && !isAnonCacheableFeedPath)) {
@@ -131,7 +145,7 @@ export default {
     }
 
     // Miss: fetch origin
-    const originResp = await fetch(request);
+    const originResp = await fetch(originRequest);
     const resp = new Response(originResp.body, originResp);
 
     if (!shouldCacheFeedResponse(resp)) {

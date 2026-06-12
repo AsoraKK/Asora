@@ -10,6 +10,8 @@ describe('Cloudflare feed cache worker', () => {
     match: jest.fn(),
     put: jest.fn(),
   };
+  const originBase = 'https://origin.example.com';
+  const workerEnv = { FEED_CACHE_ENABLED: 'true', ORIGIN_BASE: originBase } as any;
 
   const fetchSpy = jest.spyOn(globalThis, 'fetch');
 
@@ -125,27 +127,30 @@ describe('Cloudflare feed cache worker', () => {
 
   it('caches anonymous discover responses and bypasses authenticated requests', async () => {
     let storedCache: Response | null = null;
+    const fetchUrls: string[] = [];
 
     mockCache.match.mockImplementation(async () => storedCache?.clone() ?? null);
     mockCache.put.mockImplementation(async (_key: Request, value: Response) => {
       storedCache = value.clone();
     });
-    fetchSpy.mockImplementation(async () =>
-      new Response(JSON.stringify({ items: [{ id: 'origin' }] }), {
+    fetchSpy.mockImplementation(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(String(input));
+      fetchUrls.push(request.url);
+      return new Response(JSON.stringify({ items: [{ id: 'origin' }] }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
-      })
-    );
+      });
+    });
 
     const anonRequest = makeRequest('/api/feed/discover?limit=20&cursor=abc&includeTopics=tech');
-    const first = await worker.fetch(anonRequest, { FEED_CACHE_ENABLED: 'true' } as any, {
+    const first = await worker.fetch(anonRequest, workerEnv, {
       waitUntil: jest.fn(),
     } as any);
     expect(first.status).toBe(200);
     expect(first.headers.get('X-Cache')).toBe('MISS');
     expect(mockCache.put).toHaveBeenCalledTimes(1);
 
-    const second = await worker.fetch(anonRequest, { FEED_CACHE_ENABLED: 'true' } as any, {
+    const second = await worker.fetch(anonRequest, workerEnv, {
       waitUntil: jest.fn(),
     } as any);
     expect(second.status).toBe(200);
@@ -154,7 +159,7 @@ describe('Cloudflare feed cache worker', () => {
 
     const authed = await worker.fetch(
       makeRequest('/api/feed/discover?limit=20', { authorization: 'Bearer token' }),
-      { FEED_CACHE_ENABLED: 'true' } as any,
+      workerEnv,
       { waitUntil: jest.fn() } as any
     );
     expect(authed.headers.get('Cache-Control')).toBe('private, no-store');
@@ -164,44 +169,56 @@ describe('Cloudflare feed cache worker', () => {
 
     const cookieBypass = await worker.fetch(
       makeRequest('/api/feed/discover?limit=20', { cookie: 'session=abc' }),
-      { FEED_CACHE_ENABLED: 'true' } as any,
+      workerEnv,
       { waitUntil: jest.fn() } as any
     );
     expect(cookieBypass.headers.get('Cache-Control')).toBe('private, no-store');
     expect(cookieBypass.headers.get('Vary')).toBe('Authorization');
     expect(cookieBypass.headers.get('X-Cache')).toBe('BYPASS');
     expect(mockCache.put).toHaveBeenCalledTimes(1);
+    expect(fetchUrls).toEqual([
+      `${originBase}/api/feed/discover?limit=20&cursor=abc&includeTopics=tech`,
+      `${originBase}/api/feed/discover?limit=20`,
+      `${originBase}/api/feed/discover?limit=20`,
+    ]);
   });
 
   it('never caches news and refuses non-200 or Set-Cookie responses', async () => {
+    const fetchUrls: string[] = [];
     fetchSpy
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ items: [] }), {
+      .mockImplementationOnce(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(String(input));
+        fetchUrls.push(request.url);
+        return new Response(JSON.stringify({ items: [] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: 'nope' }), {
+        });
+      })
+      .mockImplementationOnce(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(String(input));
+        fetchUrls.push(request.url);
+        return new Response(JSON.stringify({ error: 'nope' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
-        })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ items: [] }), {
+        });
+      })
+      .mockImplementationOnce(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(String(input));
+        fetchUrls.push(request.url);
+        return new Response(JSON.stringify({ items: [] }), {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
             'Set-Cookie': 'sid=1; Path=/; HttpOnly',
           },
-        })
-      );
+        });
+      });
 
     const waitUntil = jest.fn();
 
     const newsResponse = await worker.fetch(
       makeRequest('/api/feed/news?limit=20&region=us'),
-      { FEED_CACHE_ENABLED: 'true' } as any,
+      workerEnv,
       { waitUntil } as any
     );
     expect(newsResponse.headers.get('Cache-Control')).toBe('private, no-store');
@@ -209,7 +226,7 @@ describe('Cloudflare feed cache worker', () => {
 
     const errorResponse = await worker.fetch(
       makeRequest('/api/feed/discover?limit=20'),
-      { FEED_CACHE_ENABLED: 'true' } as any,
+      workerEnv,
       { waitUntil } as any
     );
     expect(errorResponse.headers.get('Cache-Control')).toBe('private, no-store');
@@ -217,11 +234,16 @@ describe('Cloudflare feed cache worker', () => {
 
     const cookieResponse = await worker.fetch(
       makeRequest('/api/feed/discover?limit=20'),
-      { FEED_CACHE_ENABLED: 'true' } as any,
+      workerEnv,
       { waitUntil } as any
     );
     expect(cookieResponse.headers.get('Cache-Control')).toBe('private, no-store');
     expect(cookieResponse.headers.get('X-Cache')).toBe('BYPASS');
     expect(mockCache.put).not.toHaveBeenCalled();
+    expect(fetchUrls).toEqual([
+      `${originBase}/api/feed/news?limit=20&region=us`,
+      `${originBase}/api/feed/discover?limit=20`,
+      `${originBase}/api/feed/discover?limit=20`,
+    ]);
   });
 });

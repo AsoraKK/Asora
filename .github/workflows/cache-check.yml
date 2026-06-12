@@ -28,7 +28,7 @@ on:
         required: false
 
 env:
-  STAGING_DOMAIN: ${{ github.event.inputs.staging_domain || secrets.STAGING_DOMAIN }}
+  STAGING_DOMAIN: ${{ github.event.inputs.staging_domain || 'dev.asora.co.za' }}
   TEST_ENDPOINT: '/api/feed/discover'
 
 jobs:
