@@ -5,13 +5,16 @@ import { resetAuthConfigForTesting, verifyAuthorizationHeader } from './verifyJw
 const JWT_SECRET = '0123456789abcdef0123456789abcdef';
 const JWT_ISSUER = 'asora-auth';
 const JWT_AUDIENCE = 'lythaus-mobile';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const OTHER_USER_ID = '01944c1d-5672-7001-8000-0c91f95a72a1';
 
 async function signToken(payload: Record<string, unknown>): Promise<string> {
-  return new SignJWT(payload)
+  return new SignJWT({ type: 'access', ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setIssuer(JWT_ISSUER)
     .setAudience(JWT_AUDIENCE)
+    .setExpirationTime('5m')
     .sign(new TextEncoder().encode(JWT_SECRET));
 }
 
@@ -32,21 +35,21 @@ describe('verifyAuthorizationHeader', () => {
 
   it('normalizes a legacy singular role claim into roles', async () => {
     const token = await signToken({
-      sub: 'user-1',
+      sub: USER_ID,
       role: 'moderator',
       tier: 'premium',
     });
 
     const principal = await verifyAuthorizationHeader(`Bearer ${token}`);
 
-    expect(principal.sub).toBe('user-1');
+    expect(principal.sub).toBe(USER_ID);
     expect(principal.roles).toEqual(['moderator']);
     expect(principal.tier).toBe('premium');
   });
 
   it('preserves canonical roles claims and deduplicates mixed inputs', async () => {
     const token = await signToken({
-      sub: 'user-2',
+      sub: OTHER_USER_ID,
       role: 'admin',
       roles: ['moderator', 'admin'],
       tier: 'gold',

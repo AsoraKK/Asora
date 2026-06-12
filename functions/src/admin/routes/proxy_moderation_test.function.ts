@@ -297,7 +297,7 @@ async function proxyModerationTest(
 
 const protectedProxyModerationTest = requireActiveAdmin(proxyModerationTest);
 
-async function proxyModerationTestRoute(
+export async function proxyModerationTestRoute(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {

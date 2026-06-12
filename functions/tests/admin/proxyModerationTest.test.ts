@@ -6,8 +6,25 @@
  * actually importing the registered handler (which has side effects).
  */
 
+import type { InvocationContext } from '@azure/functions';
+import { httpReqMock } from '../helpers/http';
+
+jest.mock('@azure/functions', () => ({
+  app: {
+    http: jest.fn(),
+  },
+}));
+
+import { proxyModerationTestRoute } from '../../src/admin/routes/proxy_moderation_test.function';
+
 // Store original environment
 const originalEnv = { ...process.env };
+const contextStub = {
+  invocationId: 'proxy-moderation-test',
+  log: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+} as unknown as InvocationContext;
 
 describe('proxy_moderation_test.function', () => {
   beforeAll(() => {
@@ -27,6 +44,21 @@ describe('proxy_moderation_test.function', () => {
 
   afterAll(() => {
     process.env = originalEnv;
+  });
+
+  it('handles OPTIONS before authentication', async () => {
+    const req = httpReqMock({
+      method: 'OPTIONS',
+      url: 'https://control.asora.co.za/api/admin/moderation/test',
+      headers: {
+        origin: 'https://control.asora.co.za',
+        'cf-connecting-ip': '1.2.3.4',
+      },
+    });
+
+    const response = await proxyModerationTestRoute(req, contextStub);
+
+    expect(response.status).toBe(204);
   });
 
   describe('rate limiting', () => {

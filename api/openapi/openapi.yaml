@@ -3700,6 +3700,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/test-data/purge:
+    post:
+      operationId: adminTestDataPurge
+      summary: Purge test data outside production
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                purgeExpired:
+                  type: boolean
+                  default: false
+              anyOf:
+                - required:
+                    - sessionId
+                - required:
+                    - purgeExpired
+      responses:
+        '200':
+          description: Test data purge completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  deletedCount:
+                    type: integer
+                  expiredCount:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                  durationMs:
+                    type: integer
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden or unavailable in production
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/moderation/test/{path}:
     get:
       operationId: adminModerationTestGet
