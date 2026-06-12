@@ -16,6 +16,8 @@ import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
 import type { AdminConfigPayload } from '../types';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import { buildAdminAuditIdentity } from '../auditContext';
+import { recordAdminAudit } from '../auditLogger';
 
 async function adminConfigPutHandler(
   request: HttpRequest,
@@ -184,6 +186,30 @@ async function adminConfigPutHandler(
         origin
       );
     }
+
+    await recordAdminAudit({
+      ...buildAdminAuditIdentity(request, context, {
+        actorId: actor,
+        actorEmail: actor.includes('@') ? actor : null,
+        accessIdentity: actor,
+      }),
+      action: 'ADMIN_CONFIG_UPDATE',
+      subjectId: 'admin_config',
+      targetType: 'config',
+      reasonCode: 'ADMIN_CONFIG_UPDATE',
+      note: `schemaVersion=${newPayload.schemaVersion}`,
+      before: {
+        version: result.version - 1,
+      },
+      after: {
+        version: result.version,
+        schemaVersion: newPayload.schemaVersion,
+      },
+      metadata: {
+        expectedVersion: expectedVersion ?? null,
+        payloadKeys: Object.keys(validation.data.payload),
+      },
+    });
 
     // Log success without exposing payload content
     context.log(`[admin/config PUT] Updated to v${result.version} by ${actor} [${correlationId}]`);

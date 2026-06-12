@@ -9,10 +9,12 @@
  * Requires admin role.
  */
 
-import { app } from '@azure/functions';
+import { app, type HttpRequest } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { purgeExpiredTestData, purgeTestSession } from './test_data_cleanup.function';
 import { requireActiveAdmin } from './adminAuthUtils';
+import { buildAdminAuditIdentity } from './auditContext';
+import { recordAdminAudit } from './auditLogger';
 
 interface PurgeRequest {
   /** Specific session ID to purge (optional) */
@@ -62,6 +64,28 @@ export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(as
       ctx.context.log('[admin_test_data_purge] Purging all expired test data');
       result = await purgeExpiredTestData(ctx.context);
     }
+
+    const auditRequest = ctx.request ?? ({ headers: new Headers() } as HttpRequest);
+
+    await recordAdminAudit({
+      ...buildAdminAuditIdentity(auditRequest, ctx.context),
+      action: 'TEST_DATA_PURGE',
+      subjectId: sessionId ?? 'expired-test-data',
+      targetType: 'config',
+      reasonCode: purgeExpired ? 'TEST_DATA_PURGE_EXPIRED' : 'TEST_DATA_PURGE_SESSION',
+      note: sessionId ?? null,
+      before: {
+        purgeExpired,
+        sessionId: sessionId ?? null,
+      },
+      after: {
+        deletedCount: result.deletedCount,
+        expiredCount: result.expiredCount,
+      },
+      metadata: {
+        durationMs: result.durationMs,
+      },
+    });
 
     return ctx.ok({
       success: result.errors.length === 0,

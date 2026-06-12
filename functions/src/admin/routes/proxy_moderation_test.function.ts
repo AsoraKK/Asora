@@ -26,6 +26,8 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { v4 as uuidv4 } from 'uuid';
 import axios, { AxiosError } from 'axios';
 import { requireActiveAdmin } from '../adminAuthUtils';
+import { buildAdminAuditIdentity } from '../auditContext';
+import { recordAdminAudit } from '../auditLogger';
 
 interface RateLimitBucket {
   tokens: number;
@@ -68,6 +70,42 @@ function checkRateLimit(clientIp: string): boolean {
   }
 
   return false;
+}
+
+async function recordProxyAudit(
+  request: HttpRequest,
+  context: InvocationContext,
+  targetPath: string,
+  method: string,
+  result: 'success' | 'failure',
+  upstreamStatus?: number,
+  errorCode?: string,
+): Promise<void> {
+  try {
+    await recordAdminAudit({
+      ...buildAdminAuditIdentity(request, context),
+      action: 'MODERATION_TEST_PROXY',
+      subjectId: targetPath,
+      targetType: 'config',
+      reasonCode: 'MODERATION_TEST_PROXY',
+      note: `${method} ${targetPath}`,
+      before: null,
+      after: upstreamStatus === undefined ? null : { upstreamStatus },
+      result,
+      metadata: {
+        method,
+        targetPath,
+        upstreamStatus: upstreamStatus ?? null,
+        errorCode: errorCode ?? null,
+      },
+    });
+  } catch (error) {
+    context.warn('[proxy/moderation/test] Audit write failed', {
+      targetPath,
+      method,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 
@@ -238,6 +276,15 @@ async function proxyModerationTest(
       `[proxy/moderation/test ${method}] Response ${response.status} [${correlationId}]`
     );
 
+    await recordProxyAudit(
+      request,
+      context,
+      targetPath,
+      method,
+      response.status >= 400 ? 'failure' : 'success',
+      response.status,
+    );
+
     // Return response to browser
     return {
       status: response.status,
@@ -257,6 +304,15 @@ async function proxyModerationTest(
 
     // Determine if this is a network error vs response error
     if (axios.isAxiosError(err)) {
+      await recordProxyAudit(
+        request,
+        context,
+        targetPath,
+        method,
+        'failure',
+        err.response?.status,
+        err.code ?? 'UPSTREAM_ERROR',
+      );
       // Network error or timeout
       return {
         status: 502,
@@ -276,6 +332,8 @@ async function proxyModerationTest(
         },
       };
     }
+
+    await recordProxyAudit(request, context, targetPath, method, 'failure', undefined, 'PROXY_ERROR');
 
     // Generic error
     return {

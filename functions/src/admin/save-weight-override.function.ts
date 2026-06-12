@@ -24,6 +24,8 @@ import { getAzureLogger } from '../../shared/azure-logger';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireActiveAdmin } from './adminAuthUtils';
+import { buildAdminAuditIdentity } from './auditContext';
+import { recordAdminAudit } from './auditLogger';
 
 const logger = getAzureLogger('saveWeightOverride');
 
@@ -131,6 +133,21 @@ async function saveWeightOverrideHandler(
         adminUserId,
         payload.reason
       );
+
+      await recordAdminAudit({
+        ...buildAdminAuditIdentity(req, context, { actorId: adminUserId }),
+        action: 'MODERATION_WEIGHT_SAVE',
+        subjectId: payload.className,
+        targetType: 'config',
+        reasonCode: 'MODERATION_WEIGHT_SAVE',
+        note: payload.reason?.trim() || null,
+        before: { weight: defaultWeight },
+        after: { weight: payload.newWeight },
+        metadata: {
+          minWeight,
+          maxWeight,
+        },
+      });
 
       const response: SaveWeightResponse = {
         success: true,

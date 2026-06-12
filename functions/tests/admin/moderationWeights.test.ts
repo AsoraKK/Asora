@@ -6,6 +6,7 @@
  */
 import { InvocationContext } from '@azure/functions';
 import { httpReqMock } from '../helpers/http';
+import { recordAdminAudit } from '../../src/admin/auditLogger';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,10 @@ jest.mock('@azure/cosmos', () => ({
 
 jest.mock('../../src/admin/adminAuthUtils', () => ({
   requireActiveAdmin: (handler: Function) => handler,
+}));
+
+jest.mock('../../src/admin/auditLogger', () => ({
+  recordAdminAudit: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@http/withRateLimit', () => ({
@@ -55,6 +60,8 @@ const contextStub = {
   error: jest.fn(),
   triggerMetadata: {},
 } as unknown as InvocationContext;
+
+const recordAdminAuditMock = recordAdminAudit as jest.Mock;
 
 function makeContext(className?: string) {
   return {
@@ -90,6 +97,16 @@ describe('POST /admin/moderation-classes/weights (saveWeightOverride)', () => {
     expect(res.jsonBody.success).toBe(true);
     expect(res.jsonBody.data.className).toBe('hate');
     expect(res.jsonBody.data.newWeight).toBe(0.90);
+    expect(recordAdminAuditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'admin-42',
+        action: 'MODERATION_WEIGHT_SAVE',
+        subjectId: 'hate',
+        targetType: 'config',
+        reasonCode: 'MODERATION_WEIGHT_SAVE',
+        result: 'success',
+      })
+    );
   });
 
   it('rejects invalid JSON body with 400', async () => {
@@ -233,6 +250,16 @@ describe('POST /admin/moderation-classes/{className}/reset (resetWeightOverride)
     expect(res.jsonBody.success).toBe(true);
     expect(res.jsonBody.data.className).toBe('hate');
     expect(res.jsonBody.data.resetToDefault).toBe(0.85);
+    expect(recordAdminAuditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'admin-42',
+        action: 'MODERATION_WEIGHT_RESET',
+        subjectId: 'hate',
+        targetType: 'config',
+        reasonCode: 'MODERATION_WEIGHT_RESET',
+        result: 'success',
+      })
+    );
   });
 
   it('returns 400 when className is missing from route', async () => {

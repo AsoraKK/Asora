@@ -20,6 +20,8 @@ import { getAzureLogger } from '../../shared/azure-logger';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireActiveAdmin } from './adminAuthUtils';
+import { buildAdminAuditIdentity } from './auditContext';
+import { recordAdminAudit } from './auditLogger';
 
 const logger = getAzureLogger('resetWeightOverride');
 
@@ -78,7 +80,33 @@ async function resetWeightHandler(
       const database = cosmosClient.database('asora-db');
       const container = database.container('ModerationWeights');
 
+      const { resources: existingOverrides } = await container.items
+        .query({
+          query: 'SELECT * FROM c WHERE c.className = @className',
+          parameters: [{ name: '@className', value: className }],
+        })
+        .fetchAll();
+
       await resetWeightToDefault(container, className);
+
+      await recordAdminAudit({
+        ...buildAdminAuditIdentity(req, context),
+        action: 'MODERATION_WEIGHT_RESET',
+        subjectId: className,
+        targetType: 'config',
+        reasonCode: 'MODERATION_WEIGHT_RESET',
+        note: `Reset moderation weight for ${className}`,
+        before: {
+          overrideCount: existingOverrides.length,
+        },
+        after: {
+          overrideCount: 0,
+          resetToDefault: classConfig.defaultWeight,
+        },
+        metadata: {
+          className,
+        },
+      });
 
       const response: ResetWeightResponse = {
         success: true,

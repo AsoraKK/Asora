@@ -6,6 +6,7 @@
  */
 import { InvocationContext } from '@azure/functions';
 import { httpReqMock } from '../helpers/http';
+import { recordAdminAudit } from '../../src/admin/auditLogger';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,10 @@ jest.mock('../../src/shared/clients/cosmos', () => ({
 
 jest.mock('../../src/admin/accessAuth', () => ({
   requireCloudflareAccess: jest.fn(),
+}));
+
+jest.mock('../../src/admin/auditLogger', () => ({
+  recordAdminAudit: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../src/admin/cors', () => ({
@@ -60,6 +65,7 @@ const BUDGET_DOC = {
 
 import { requireCloudflareAccess } from '../../src/admin/accessAuth';
 const requireCfMock = requireCloudflareAccess as jest.Mock;
+const recordAdminAuditMock = recordAdminAudit as jest.Mock;
 
 const contextStub = {
   log: jest.fn(),
@@ -147,6 +153,16 @@ describe('Admin Budget endpoint (_admin/budget)', () => {
     expect(res.status).toBe(200);
     expect(res.jsonBody.ok).toBe(true);
     expect(mockUpsert).toHaveBeenCalled();
+    expect(recordAdminAuditMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'owner-1',
+        action: 'BUDGET_UPDATE',
+        subjectId: 'budget_config',
+        targetType: 'config',
+        reasonCode: 'BUDGET_UPDATE',
+        result: 'success',
+      })
+    );
   });
 
   it('PUT rejects amount below $10', async () => {
