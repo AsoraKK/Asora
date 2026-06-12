@@ -36,7 +36,7 @@ Each item is tagged:
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
 | 1.1 | All write endpoints (`POST`/`PUT`/`PATCH`/`DELETE`) carry an auth guard | AUTO | `node scripts/validate-functions-route-guards.js` | |
-| 1.2 | Guest (unauthenticated) read of public feed returns HTTP 200 | AUTO | `bash scripts/check_api_health.sh` + manual smoke of `/api/feed` without token | |
+| 1.2 | Guest (unauthenticated) read of public feed returns HTTP 200 | AUTO | `bash scripts/check_api_health.sh` + `bash scripts/smoke-trust-endpoints.sh` against staging | |
 | 1.3 | Auth-required endpoints return HTTP 401 without token | AUTO | `node scripts/validate-functions-route-guards.js` (also covered by `e2e-integration.yml`) | |
 | 1.4 | JWT clock-skew tolerance set to ≤ 60 s | AUTO | `grep MAX_CLOCK_SKEW functions/src/auth/config.ts` | |
 | 1.5 | PKCE S256 enforced for mobile OAuth flow | AUTO | `grep S256 functions/src/auth/service/tokenService.ts` | |

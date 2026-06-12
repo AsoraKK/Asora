@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/design_system/components/lyth_empty_state.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/ui/components/feed_card.dart';
 import 'package:asora/ui/theme/spacing.dart';
@@ -67,55 +68,66 @@ class DiscoverFeed extends ConsumerWidget {
                 ),
               ),
             ),
-            if (showNewPostsPill)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: Spacing.md,
-                    right: Spacing.md,
-                    bottom: Spacing.xs,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: ActionChip(
-                      avatar: const Icon(Icons.fiber_new_rounded, size: 16),
-                      label: const Text('New posts'),
-                      onPressed: onNewPostsPillTap,
+            if (items.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: LythEmptyState(
+                  icon: Icons.inbox_outlined,
+                  title: 'No posts yet',
+                  subtitle: 'Check back soon for new updates.',
+                ),
+              )
+            else ...[
+              if (showNewPostsPill)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: Spacing.md,
+                      right: Spacing.md,
+                      bottom: Spacing.xs,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ActionChip(
+                        avatar: const Icon(Icons.fiber_new_rounded, size: 16),
+                        label: const Text('New posts'),
+                        onPressed: onNewPostsPillTap,
+                      ),
                     ),
                   ),
                 ),
+              SliverList.separated(
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final canEdit =
+                      currentUserId != null && currentUserId == item.authorId;
+                  return FeedCard(
+                    item: item,
+                    onTap: onOpenItem == null ? null : () => onOpenItem!(item),
+                    canEdit: canEdit,
+                    onEdit: canEdit && onEditItem != null
+                        ? () => onEditItem!(item)
+                        : null,
+                  );
+                },
+                separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
+                itemCount: items.length,
               ),
-            SliverList.separated(
-              itemBuilder: (context, index) {
-                final item = items[index];
-                final canEdit =
-                    currentUserId != null && currentUserId == item.authorId;
-                return FeedCard(
-                  item: item,
-                  onTap: onOpenItem == null ? null : () => onOpenItem!(item),
-                  canEdit: canEdit,
-                  onEdit: canEdit && onEditItem != null
-                      ? () => onEditItem!(item)
-                      : null,
-                );
-              },
-              separatorBuilder: (_, __) => const SizedBox(height: Spacing.xs),
-              itemCount: items.length,
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-                child: Center(
-                  child: isLoadingMore
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const SizedBox.shrink(),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+                  child: Center(
+                    child: isLoadingMore
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ),
               ),
-            ),
+            ],
             const SliverPadding(padding: EdgeInsets.only(bottom: Spacing.xl)),
           ],
         ),

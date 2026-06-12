@@ -55,7 +55,7 @@ curl -sS -D - -o /dev/null "$BASE_URL/api/feed/user/<userId>?limit=5" | rg -n "H
 
 Expected:
 
-- Discover anonymous: `Cache-Control: public, max-age=60, stale-while-revalidate=30`.
+- Discover anonymous: `Cache-Control: public, s-maxage=30, stale-while-revalidate=60`.
 - Any request with `Authorization`: `Cache-Control: private, no-store`.
 - Any request with `Cookie`: `Cache-Control: private, no-store`.
 - User feed endpoint: `Cache-Control: private, no-store`.

@@ -150,6 +150,26 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
+    testWidgets('shows empty state for a healthy empty discover feed', (
+      tester,
+    ) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => const LiveFeedState(items: []),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No posts yet'), findsOneWidget);
+      expect(find.text('Unable to load feed right now.'), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+    });
+
     testWidgets('moderation feed type shows placeholder text', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(

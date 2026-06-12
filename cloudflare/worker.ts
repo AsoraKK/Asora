@@ -146,6 +146,11 @@ export default {
 
     // Miss: fetch origin
     const originResp = await fetch(originRequest);
+    console.log('feed-cache origin fetch success', {
+      path: url.pathname,
+      origin: originRequest.url,
+      status: originResp.status,
+    });
     const resp = new Response(originResp.body, originResp);
 
     if (!shouldCacheFeedResponse(resp)) {
