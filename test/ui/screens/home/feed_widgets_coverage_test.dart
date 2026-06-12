@@ -77,7 +77,7 @@ void main() {
 
     testWidgets('renders empty state when there are no items', (tester) async {
       await tester.pumpWidget(
-        wrap(DiscoverFeed(feed: feed, items: const [])),
+        wrap(const DiscoverFeed(feed: feed, items: [])),
       );
       await tester.pump();
 
@@ -180,7 +180,7 @@ void main() {
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
-      await tester.pumpWidget(wrap(NewsFeed(feed: feed, items: const [])));
+      await tester.pumpWidget(wrap(const NewsFeed(feed: feed, items: [])));
       await tester.pump();
 
       expect(find.text('No news yet'), findsOneWidget);
@@ -242,7 +242,7 @@ void main() {
 
     testWidgets('renders empty state when there are no items', (tester) async {
       await tester.pumpWidget(
-        wrap(CustomFeedView(feed: customFeedModel, items: const [])),
+        wrap(const CustomFeedView(feed: customFeedModel, items: [])),
       );
       await tester.pump();
 
