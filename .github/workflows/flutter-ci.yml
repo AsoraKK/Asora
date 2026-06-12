@@ -91,15 +91,7 @@ jobs:
     - name: Check web release guard rails
       run: |
         set -euo pipefail
-        if rg -n 'localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|\.local' \
-          lib/core/network/dio_client.dart \
-          lib/features/auth/application/auth_service.dart \
-          lib/features/auth/application/web_auth_service.dart \
-          lib/services/auth_service.dart \
-          lib/main.dart; then
-          echo "Forbidden local/private host reference found in web runtime files"
-          exit 1
-        fi
+        bash scripts/check-web-release-hosts.sh
         if rg -n 'package:dio/io.dart|IOHttpClientAdapter|dart:io' \
           lib/core/network/dio_client.dart \
           lib/core/security/cert_pinning.dart; then

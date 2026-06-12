@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:opentelemetry/api.dart';
 import 'package:asora/core/network/dio_client.dart';
+import 'package:asora/core/config/environment_config.dart';
 import 'package:asora/services/auth_service.dart';
 import 'package:asora/services/post_service.dart';
 import 'package:asora/services/moderation_service.dart';
@@ -28,14 +29,27 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 });
 
 /// Legacy B2C config service — fetch → cache → bundled fallback.
-const _kB2CConfigEndpoint =
-    'https://asora-function-dev.azurewebsites.net/api/auth/b2c-config';
+String _resolveB2CConfigEndpoint() {
+  return _appendPath(
+    EnvironmentConfig.fromEnvironment().apiBaseUrl,
+    'auth/b2c-config',
+  );
+}
+
+String _appendPath(String baseUrl, String path) {
+  final baseUri = Uri.parse(baseUrl.trim());
+  final segments = [
+    ...baseUri.pathSegments.where((segment) => segment.isNotEmpty),
+    ...path.split('/').where((segment) => segment.isNotEmpty),
+  ];
+  return baseUri.replace(pathSegments: segments).toString();
+}
 
 final b2cConfigServiceProvider = Provider<B2CConfigService>((ref) {
   return B2CConfigService(
     dio: ref.watch(secureDioProvider),
     storage: ref.watch(secureStorageProvider),
-    endpoint: _kB2CConfigEndpoint,
+    endpoint: _resolveB2CConfigEndpoint(),
   );
 });
 

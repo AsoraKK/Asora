@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:asora/core/config/environment_config.dart';
 
 /// ASORA MODERATION CLIENT
 ///
@@ -282,11 +283,7 @@ class ModerationClient {
 final moderationClientProvider = Provider<ModerationClient>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'AZURE_FUNCTION_URL',
-        defaultValue:
-            'https://your-secure-azure-function-app.azurewebsites.net',
-      ), // SECURITY: Use environment variable for production URL
+      baseUrl: _resolveModerationBaseUrl(),
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),
@@ -294,6 +291,10 @@ final moderationClientProvider = Provider<ModerationClient>((ref) {
 
   return ModerationClient(dio);
 });
+
+String _resolveModerationBaseUrl() {
+  return EnvironmentConfig.fromEnvironment().apiBaseUrl;
+}
 
 // Moderation state models
 class FlagResult {
