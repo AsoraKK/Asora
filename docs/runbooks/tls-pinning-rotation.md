@@ -4,7 +4,7 @@
 
 This runbook covers two scenarios:
 
-1. **Initial pin provisioning** — run once when staging/production environments are first deployed. Required before GA launch (items 9.11 and 9.12 in `launch-readiness.md`).
+1. **Initial pin provisioning** — run once when staging/production environments are first deployed. The repo marks those configs as `PinLifecycleState.planned` until the live hostnames exist, then flips them to `live` after pin extraction.
 2. **Pin rotation** — run when Azure Function App TLS certificates are renewed or rotated (every 6–12 months).
 
 ## When to Use
@@ -60,6 +60,7 @@ const _stagingMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: true,
+    lifecycleState: PinLifecycleState.live,
     spkiPinsBase64: [
       'PASTE_STAGING_LEAF_PIN_HERE',
     ],
@@ -72,6 +73,7 @@ const _prodMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: true,
+    lifecycleState: PinLifecycleState.live,
     spkiPinsBase64: [
       'PASTE_PROD_LEAF_PIN_HERE',       // primary
       'PASTE_PROD_INTERMEDIATE_PIN_HERE', // backup for rotation
@@ -85,9 +87,15 @@ const _prodMobileSecurity = MobileSecurityConfig(
 
 ```json
 {
+  "_states": {
+    "asora-function-staging.northeurope-01.azurewebsites.net": "planned",
+    "asora-function-prod.northeurope-01.azurewebsites.net": "planned"
+  },
+  "_comment_staging": "planned until the staging host is provisioned",
   "asora-function-staging.northeurope-01.azurewebsites.net": [
     "PASTE_STAGING_LEAF_PIN_HERE"
   ],
+  "_comment_prod": "planned until the production host is provisioned",
   "asora-function-prod.northeurope-01.azurewebsites.net": [
     "PASTE_PROD_LEAF_PIN_HERE",
     "PASTE_PROD_INTERMEDIATE_PIN_HERE"
@@ -188,7 +196,7 @@ CI (`mobile-security-check.yml`) will now pass the pin check.
    ```dart
    static final _prodConfig = EnvironmentConfig(
      environment: Environment.production,
-     apiBaseUrl: 'https://asora-function-prod.azurewebsites.net/api',
+     apiBaseUrl: 'https://asora-function-prod.northeurope-01.azurewebsites.net/api',
      security: MobileSecurityConfig(
        tlsPins: TlsPinConfig(
          enabled: true,
@@ -252,8 +260,8 @@ CI (`mobile-security-check.yml`) will now pass the pin check.
 
 3. **Verify certificate deployment:**
    ```bash
-   echo | openssl s_client -servername asora-function-prod.azurewebsites.net \
-     -connect asora-function-prod.azurewebsites.net:443 2>/dev/null | \
+   echo | openssl s_client -servername asora-function-prod.northeurope-01.azurewebsites.net \
+     -connect asora-function-prod.northeurope-01.azurewebsites.net:443 2>/dev/null | \
      openssl x509 -noout -fingerprint -sha256
    ```
 
@@ -301,8 +309,8 @@ CI (`mobile-security-check.yml`) will now pass the pin check.
 1. **Verify pin extraction was correct:**
    ```bash
    # Extract SPKI from LIVE production server
-   echo | openssl s_client -servername asora-function-prod.azurewebsites.net \
-     -connect asora-function-prod.azurewebsites.net:443 2>/dev/null | \
+   echo | openssl s_client -servername asora-function-prod.northeurope-01.azurewebsites.net \
+     -connect asora-function-prod.northeurope-01.azurewebsites.net:443 2>/dev/null | \
      openssl x509 -pubkey -noout | \
      openssl pkey -pubin -outform der | \
      openssl dgst -sha256 -binary | \

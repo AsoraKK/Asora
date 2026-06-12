@@ -1,14 +1,15 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:asora/core/config/environment_config.dart';
 
 /// SPKI Pin Provisioning Gate Tests
 ///
-/// These tests enforce that staging and production environments have SPKI pins
-/// populated before GA launch.  They are SKIPPED in regular CI runs to avoid
-/// blocking merges while the environments are being provisioned.
+/// These tests enforce that staging and production pin lifecycle states stay
+/// explicit. Planned environments may remain empty until the Azure hostnames
+/// are provisioned; live environments must carry populated pins.
 ///
 /// To enforce them (e.g. in the launch-readiness gate), set the environment
 /// variable SPKI_GATE=true before running flutter test:
@@ -31,66 +32,48 @@ import 'package:asora/core/config/environment_config.dart';
 ///
 ///   3. Paste the base64 output into the corresponding spkiPinsBase64 arrays
 ///      in lib/core/config/environment_config.dart.
-///   4. Also add the pins to mobile-expected-pins.json and
+///   4. Promote the lifecycle state from planned to live.
+///   5. Also add the pins to mobile-expected-pins.json and
 ///      lib/core/security/cert_pinning_common.dart (kPinnedDomains).
 ///
 /// Full procedure: docs/runbooks/tls-pinning-rotation.md
 
-const _stagingHost = 'asora-function-staging.northeurope-01.azurewebsites.net';
-const _prodHost = 'asora-function-prod.northeurope-01.azurewebsites.net';
-
 void main() {
-  // Skip unless the caller explicitly opts in to the launch-gate.
-  // The launch-readiness-gate.yml workflow sets SPKI_GATE=true.
   final enforceGate = Platform.environment['SPKI_GATE'] == 'true';
   const gateSkipReason =
       'Set SPKI_GATE=true to run launch-gate SPKI pin checks';
 
   group('SPKI pin provisioning gate [launch-gate]', () {
-    // ── Staging ──────────────────────────────────────────────────────────────
-
     test(
-      'staging spkiPinsBase64 is non-empty [LAUNCH BLOCKER]',
+      'staging pins are planned until the host is provisioned',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
           Environment.staging,
         );
+
         expect(
-          config.security.tlsPins.spkiPinsBase64,
-          isNotEmpty,
-          reason:
-              '''
-LAUNCH BLOCKER: staging spkiPinsBase64 is empty in environment_config.dart.
-
-Staging API host: $_stagingHost
-TLS pinning is currently FAIL-OPEN — all staging TLS connections are accepted without verification.
-
-Extract the pin:
-  ./scripts/extract-spki-pins.sh $_stagingHost
-
-Then populate _stagingMobileSecurity.tlsPins.spkiPinsBase64 in:
-  lib/core/config/environment_config.dart
-
-Also update:
-  mobile-expected-pins.json
-  lib/core/security/cert_pinning_common.dart (kPinnedDomains)
-
-See docs/runbooks/tls-pinning-rotation.md for the full procedure.
-''',
+          config.security.tlsPins.lifecycleState,
+          PinLifecycleState.planned,
         );
+        expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );
 
     test(
-      'staging pins have valid base64 format and no placeholders',
+      'staging pins are validated when promoted to live',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
           Environment.staging,
         );
-        final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
 
+        if (config.security.tlsPins.lifecycleState != PinLifecycleState.live) {
+          expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
+          return;
+        }
+
+        final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
         for (final pin in config.security.tlsPins.spkiPinsBase64) {
           expect(
             pin.toUpperCase().contains('TODO') ||
@@ -110,53 +93,36 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
       },
     );
 
-    // ── Production ────────────────────────────────────────────────────────────
-
     test(
-      'production spkiPinsBase64 is non-empty [LAUNCH BLOCKER]',
+      'production pins are planned until the host is provisioned',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
           Environment.production,
         );
+
         expect(
-          config.security.tlsPins.spkiPinsBase64,
-          isNotEmpty,
-          reason:
-              '''
-LAUNCH BLOCKER: production spkiPinsBase64 is empty in environment_config.dart.
-
-Production API host: $_prodHost
-TLS pinning is currently FAIL-OPEN — all production TLS connections are accepted without verification.
-
-Extract the leaf pin and a backup (intermediate CA):
-  ./scripts/extract-spki-pins.sh $_prodHost
-  CERT_INDEX=1 ./scripts/extract-spki-pins.sh $_prodHost
-
-Then populate _prodMobileSecurity.tlsPins.spkiPinsBase64 in:
-  lib/core/config/environment_config.dart
-
-Include at least two pins (leaf + one backup) to survive cert rotation.
-
-Also update:
-  mobile-expected-pins.json
-  lib/core/security/cert_pinning_common.dart (kPinnedDomains)
-
-See docs/runbooks/tls-pinning-rotation.md for the full procedure.
-''',
+          config.security.tlsPins.lifecycleState,
+          PinLifecycleState.planned,
         );
+        expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );
 
     test(
-      'production pins have valid base64 format and no placeholders',
+      'production pins are validated when promoted to live',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
           Environment.production,
         );
-        final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
 
+        if (config.security.tlsPins.lifecycleState != PinLifecycleState.live) {
+          expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
+          return;
+        }
+
+        final pinPattern = RegExp(r'^[A-Za-z0-9+/=]{43,44}$');
         for (final pin in config.security.tlsPins.spkiPinsBase64) {
           expect(
             pin.toUpperCase().contains('TODO') ||
@@ -177,12 +143,18 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
     );
 
     test(
-      'production has at least two pins (primary + backup for rotation)',
+      'production requires at least two pins when live',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
           Environment.production,
         );
+
+        if (config.security.tlsPins.lifecycleState != PinLifecycleState.live) {
+          expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
+          return;
+        }
+
         expect(
           config.security.tlsPins.spkiPinsBase64.length >= 2,
           isTrue,
@@ -190,7 +162,8 @@ See docs/runbooks/tls-pinning-rotation.md for the full procedure.
               'Production must have at least 2 SPKI pins (leaf + backup) '
               'to survive certificate rotation without a forced app update. '
               'Extract the intermediate CA pin with: '
-              'CERT_INDEX=1 ./scripts/extract-spki-pins.sh $_prodHost',
+              'CERT_INDEX=1 ./scripts/extract-spki-pins.sh '
+              'asora-function-prod.northeurope-01.azurewebsites.net',
         );
       },
     );

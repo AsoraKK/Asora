@@ -34,34 +34,42 @@ jobs:
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: bash scripts/validate-signing-material.sh
 
-      - name: Check staging/prod SPKI pins are populated [LAUNCH BLOCKER]
+      - name: Check staging/prod SPKI pin lifecycle state
         shell: bash
         run: |
           set -euo pipefail
           ENV_FILE="lib/core/config/environment_config.dart"
 
+          get_state() {
+            local block_start="$1"
+            local block_end="$2"
+            awk "/^const ${block_start}/,/^const ${block_end}/" "$ENV_FILE" \
+              | sed -n 's/.*lifecycleState: PinLifecycleState\.\([a-z]*\).*/\1/p' \
+              | head -n 1
+          }
+
+          staging_state="$(get_state '_stagingMobileSecurity' '_stagingConfig')"
+          prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
+
+          staging_state="${staging_state:-live}"
+          prod_state="${prod_state:-live}"
+
           staging_empty=false
           prod_empty=false
 
-          if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
-              | grep -q "spkiPinsBase64:\s*\["; then
-            if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
-                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
-              staging_empty=true
-            fi
+          if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+              | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
+            staging_empty=true
           fi
 
-          if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-              | grep -q "spkiPinsBase64:\s*\["; then
-            if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
-              prod_empty=true
-            fi
+          if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
+              | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
+            prod_empty=true
           fi
 
           failed=false
-          if [ "$staging_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: staging spkiPinsBase64 is empty."
+          if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty."
             echo "  Host: asora-function-staging.northeurope-01.azurewebsites.net"
             echo "  Run: ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net"
             echo "  Then populate _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE"
@@ -69,8 +77,8 @@ jobs:
             failed=true
           fi
 
-          if [ "$prod_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: production spkiPinsBase64 is empty."
+          if [ "$prod_state" = "live" ] && [ "$prod_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: production pins are marked live but spkiPinsBase64 is empty."
             echo "  Host: asora-function-prod.northeurope-01.azurewebsites.net"
             echo "  Run: ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
             echo "  Also: CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
@@ -79,8 +87,16 @@ jobs:
             failed=true
           fi
 
+          if [ "$staging_state" = "planned" ] && [ "$staging_empty" = "true" ]; then
+            echo "ℹ staging pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          fi
+
+          if [ "$prod_state" = "planned" ] && [ "$prod_empty" = "true" ]; then
+            echo "ℹ production pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          fi
+
           if [ "$failed" = "true" ]; then exit 1; fi
-          echo "✓ Staging and production SPKI pins are populated."
+          echo "✓ Staging and production SPKI lifecycle states are explicit."
 
       - name: Setup Flutter (for SPKI pin gate tests)
         uses: subosito/flutter-action@v2

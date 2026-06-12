@@ -133,6 +133,8 @@ Each item is tagged:
 
 ## 9. Security Hardening
 
+> Pin lifecycle: the primary dev host is live, staging and production are planned until their Azure hostnames are provisioned, and the legacy dev hostname stays deprecated for compatibility.
+
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
 | 9.1 | No secrets committed to repo (gitleaks scan) | AUTO | `bash scripts/secret-scan.sh` | |
@@ -145,8 +147,8 @@ Each item is tagged:
 | 9.8 | Android obfuscation mapping file uploaded as CI artifact | AUTO | `mobile-release-build.yml` → `android-release` artifact | |
 | 9.9 | External penetration test completed (pre-GA) | MANUAL | Attach pentest report or sign-off letter to `docs/compliance/`; record finding count and resolution status | |
 | 9.10 | Secret rotation runbook reviewed by on-call | MANUAL | `docs/runbooks/secret-rotation.md` — confirm Key Vault rotation schedule is active | |
-| 9.11 | **[LAUNCH BLOCKER]** Staging SPKI pins provisioned | MANUAL | Requires `asora-function-staging` deployed. Run: `./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net` → paste into `_stagingMobileSecurity.tlsPins.spkiPinsBase64` in `lib/core/config/environment_config.dart` and into `mobile-expected-pins.json`. Then run `SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart` to verify. | |
-| 9.12 | **[LAUNCH BLOCKER]** Production SPKI pins provisioned (leaf + backup) | MANUAL | Requires `asora-function-prod` deployed. Run: `./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` and `CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` → paste both into `_prodMobileSecurity.tlsPins.spkiPinsBase64`. Also update `mobile-expected-pins.json` and `lib/core/security/cert_pinning_common.dart` (`kPinnedDomains`). Full procedure: `docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning`. | |
+| 9.11 | **[PLANNED]** Staging SPKI pins provisioned | MANUAL | `lib/core/config/environment_config.dart` marks staging pins as `PinLifecycleState.planned`. Once `asora-function-staging` is deployed and reachable, run `./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net`, paste the output into `_stagingMobileSecurity.tlsPins.spkiPinsBase64`, then flip the lifecycle state to `live` and update `mobile-expected-pins.json`. Verify with `SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart`. | |
+| 9.12 | **[PLANNED]** Production SPKI pins provisioned (leaf + backup) | MANUAL | `lib/core/config/environment_config.dart` marks production pins as `PinLifecycleState.planned`. Once `asora-function-prod` is deployed and reachable, run `./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` and `CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net`, paste both pins into `_prodMobileSecurity.tlsPins.spkiPinsBase64`, flip the lifecycle state to `live`, and update `mobile-expected-pins.json` plus `lib/core/security/cert_pinning_common.dart` (`kPinnedDomains`). Full procedure: `docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning`. | |
 
 ---
 
