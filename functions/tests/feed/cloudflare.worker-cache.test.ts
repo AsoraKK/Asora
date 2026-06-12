@@ -161,6 +161,16 @@ describe('Cloudflare feed cache worker', () => {
     expect(authed.headers.get('Vary')).toBe('Authorization');
     expect(authed.headers.get('X-Cache')).toBe('BYPASS');
     expect(mockCache.put).toHaveBeenCalledTimes(1);
+
+    const cookieBypass = await worker.fetch(
+      makeRequest('/api/feed/discover?limit=20', { cookie: 'session=abc' }),
+      { FEED_CACHE_ENABLED: 'true' } as any,
+      { waitUntil: jest.fn() } as any
+    );
+    expect(cookieBypass.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(cookieBypass.headers.get('Vary')).toBe('Authorization');
+    expect(cookieBypass.headers.get('X-Cache')).toBe('BYPASS');
+    expect(mockCache.put).toHaveBeenCalledTimes(1);
   });
 
   it('never caches news and refuses non-200 or Set-Cookie responses', async () => {
