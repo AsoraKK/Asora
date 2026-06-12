@@ -124,6 +124,24 @@ The build script sources `cloudflare/pages-release.sh`, which is the tracked
 source of truth for the release-web origins used by both Cloudflare Pages and
 GitHub Actions.
 
+### Security Headers
+
+`web/_headers` is the source of truth for Pages response headers and is copied
+into `build/web/_headers` by `scripts/cf-pages-build.sh`.
+
+Current baseline headers:
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `X-Frame-Options: DENY`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), local-network-access=()`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+
+CSP is currently `Content-Security-Policy-Report-Only` while we confirm Flutter
+web asset requirements against real browser traffic. Once the report stream is
+clean and the app still loads without regressions, the same policy should be
+promoted to enforced `Content-Security-Policy`.
+
 ## Deployment Readiness
 
 ### Environment Variables
@@ -176,6 +194,7 @@ Run these manually against the deployed web app after each release:
 | 7 | Mobile layout | Resize browser < 768px | BottomNavigationBar appears |
 | 8 | Full auth flow | Sign in via PKCE redirect, refresh page | Session restores |
 | 9 | Sign out | Sign out and return to `/login` | sessionStorage is cleared |
+| 10 | Security headers | DevTools Network or `curl -I` on the deployed app | Baseline headers are present |
 
 ### Rollback Path
 

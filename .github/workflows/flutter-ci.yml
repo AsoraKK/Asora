@@ -87,6 +87,7 @@ jobs:
         test -f build/web/_headers
         test -f build/web/_redirects
         test -f build/web/index.html
+        bash scripts/check-web-security-headers.sh build/web/_headers
 
     - name: Check web release guard rails
       run: |

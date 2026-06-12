@@ -89,5 +89,6 @@ echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects
 echo "==> Copying _headers for CSP and cache rules"
 cp web/_headers build/web/_headers
+bash scripts/check-web-security-headers.sh build/web/_headers
 
 echo "==> Build complete — output in build/web"
