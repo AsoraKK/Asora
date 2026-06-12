@@ -2,7 +2,7 @@
 
 > **Purpose**: Centralized reference for GDPR/POPIA compliance verification.  
 > **Audience**: Data Protection Officer, legal, engineering leads.  
-> **Last reviewed**: 2026-02-08
+> **Last reviewed**: 2026-06-12
 
 ---
 
@@ -23,7 +23,7 @@
 | Request Type | Target SLA | Implementation |
 |-------------|-----------|----------------|
 | Data Export | ≤ 72 hours | Automated via API; manual verification step |
-| Account Deletion | ≤ 30 days | Soft-delete immediately, hard-delete within 30 days |
+| Account Deletion | ≤ 30 days | Delete identity data immediately; anonymise content references, then hard-delete them within 30 days unless legally held |
 | Consent Change | Immediate | Real-time toggle, no delayed processing |
 
 ---
@@ -77,12 +77,12 @@
 | Data Type | Retention | Deletion Method |
 |-----------|-----------|----------------|
 | User profiles | Until account deletion | Soft-delete → hard-delete in 30 days |
-| Posts/comments | Until deleted by user or moderation | Soft-delete → hard-delete in 30 days |
+| Posts/comments | Until deleted by user or moderation | Immediate anonymisation where references must remain stable, then hard-delete in 30 days unless legally held |
 | Media uploads | Until parent content deleted | Blob deletion cascaded |
 | Moderation logs | 2 years (regulatory) | Automated purge |
 | Analytics events | 90 days | App Insights retention policy |
 | Device tokens (FCM) | Until logout or token refresh | Cleaned on sign-out |
-| Audit logs | 1 year | Automated purge |
+| Audit logs | 1 year | Separate security retention control; excluded from the 30-day DSR content purge |
 
 ---
 

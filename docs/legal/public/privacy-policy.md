@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last Updated: 2026-02-06  
+Last Updated: 2026-06-12
 Product: Lythaus (formerly Asora)
 
 ## 1. What we collect
@@ -25,7 +25,8 @@ Product: Lythaus (formerly Asora)
 ## 4. Data retention
 
 - Inactive accounts: target deletion after 24 months. First export user data to last known verified email, then delete after 30 days.
-- User-deleted content: target purge within 30 days.
+- User-deleted content: personal identifiers are removed immediately where content structure must be preserved, and the anonymised record is permanently purged within 30 days unless a legal hold applies.
+- Security and DSR audit records follow a separate 12-month retention period.
 - Moderation cases: retained through closure plus 90 days.
 - Operational logs: short retention with minimization controls.
 
