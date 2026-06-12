@@ -2,9 +2,9 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-staging.example.com}"
-PATH_FEED="${PATH_FEED:-/api/feed}"
-QS1="${QS1:-page=1&size=20&type=trending&filter=safe}"
-QS2="${QS2:-page=1&size=21&type=trending&filter=safe}"   # different size → different cache object
+PATH_FEED="${PATH_FEED:-/api/feed/discover}"
+QS1="${QS1:-limit=20&cursor=first&includeTopics=tech}"
+QS2="${QS2:-limit=21&cursor=first&includeTopics=tech}"   # different limit → different cache object
 AUTH_HDR="${AUTH_HDR:-Authorization: Bearer test-token}"
 
 fail() { echo "FAIL: $*"; exit 1; }

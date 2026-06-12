@@ -14,9 +14,9 @@ jobs:
       - name: Run validation
         env:
           DOMAIN: ${{ secrets.STAGING_DOMAIN }}
-          PATH_FEED: /api/feed/get
-          QS1: page=1&size=20&type=trending&filter=safe
-          QS2: page=1&size=21&type=trending&filter=safe
+          PATH_FEED: /api/feed/discover
+          QS1: limit=20&cursor=first&includeTopics=tech
+          QS2: limit=21&cursor=first&includeTopics=tech
           STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
         run: |
           export AUTH_HDR="Authorization: Bearer $STAGING_SMOKE_TOKEN"

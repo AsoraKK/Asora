@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 import { applyEdgeRateLimitHeaders, enforceEdgeRateLimit } from '../edge/worker/src/rateLimit';
 
 export interface Env {
@@ -6,35 +8,97 @@ export interface Env {
   EMAIL_HASH_SALT?: string;
 }
 
-const FEED_PATH_PREFIX = "/api/feed";
-const ANON_CACHEABLE_FEED_PATHS = new Set([
-  "/api/feed/discover",
-  "/api/feed/news",
+const FEED_PATH_PREFIX = '/api/feed';
+export const ANON_CACHEABLE_FEED_PATHS = new Set(['/api/feed/discover']);
+const CACHE_KEY_PARAMS = new Set([
+  'cursor',
+  'limit',
+  'page',
+  'pageSize',
+  'timeWindow',
+  'region',
+  'includeTopics',
+  'excludeTopics',
+  'includeHighReputation',
+  'authorId',
+  'since',
 ]);
-const ALLOWED_PARAMS = new Set(["page", "pageSize", "timeWindow"]);
 const EDGE_LIMIT = { limit: 60, windowSeconds: 60 };
+
+export function isAnonymousCacheRequest(request: Request, url = new URL(request.url)): boolean {
+  if (request.method.toUpperCase() !== 'GET') {
+    return false;
+  }
+
+  if (!url.pathname.startsWith(FEED_PATH_PREFIX)) {
+    return false;
+  }
+
+  if (request.headers.has('authorization') || request.headers.has('cookie')) {
+    return false;
+  }
+
+  return ANON_CACHEABLE_FEED_PATHS.has(url.pathname);
+}
+
+export function buildFeedCacheKeyUrl(requestUrl: URL): URL {
+  const cacheUrl = new URL(requestUrl.toString());
+  const entries: Array<[string, string]> = [];
+
+  cacheUrl.searchParams.forEach((value, key) => {
+    if (CACHE_KEY_PARAMS.has(key)) {
+      entries.push([key, value]);
+    }
+  });
+
+  entries.sort(([aKey, aValue], [bKey, bValue]) => {
+    const keyCompare = aKey.localeCompare(bKey);
+    return keyCompare !== 0 ? keyCompare : aValue.localeCompare(bValue);
+  });
+
+  cacheUrl.search = '';
+  for (const [key, value] of entries) {
+    cacheUrl.searchParams.append(key, value);
+  }
+
+  return cacheUrl;
+}
+
+export function shouldCacheFeedResponse(response: Response): boolean {
+  if (response.status !== 200) {
+    return false;
+  }
+
+  if (response.headers.has('set-cookie')) {
+    return false;
+  }
+
+  const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+  return contentType.includes('application/json');
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const method = request.method.toUpperCase();
     const auth = request.headers.get("authorization");
+    const hasCookie = request.headers.has('cookie');
     const cachingEnabled = (env.FEED_CACHE_ENABLED || "true").toLowerCase() === "true";
 
     const isFeed = method === "GET" && url.pathname.startsWith(FEED_PATH_PREFIX);
     // Only anonymous feed reads are cacheable here; public, authenticated, and
     // admin traffic bypass this worker path entirely.
-    const isAnonCacheableFeedPath = ANON_CACHEABLE_FEED_PATHS.has(url.pathname);
+    const isAnonCacheableFeedPath = isAnonymousCacheRequest(request, url);
 
     // Bypass conditions: non-feed, auth present, or disabled via env.
-    if (!isFeed || auth || !cachingEnabled || !isAnonCacheableFeedPath) {
+    if (!isFeed || auth || hasCookie || !cachingEnabled || !isAnonCacheableFeedPath) {
       const resp = await fetch(request);
       const r = new Response(resp.body, resp);
       r.headers.set("Vary", "Authorization");
-      if (auth || (isFeed && !isAnonCacheableFeedPath)) {
+      if (auth || hasCookie || (isFeed && !isAnonCacheableFeedPath)) {
         r.headers.set("Cache-Control", "private, no-store");
       }
-      r.headers.set("X-Cache", auth ? "BYPASS" : "BYPASS");
+      r.headers.set("X-Cache", "BYPASS");
       return r;
     }
 
@@ -50,17 +114,8 @@ export default {
       return rateLimitResult.response;
     }
 
-    // Build normalized cache key: only page, pageSize, timeWindow. Sort for stability.
-    const cacheUrl = new URL(request.url);
-    const entries: Array<[string, string]> = [];
-    cacheUrl.searchParams.forEach((v, k) => {
-      if (ALLOWED_PARAMS.has(k)) entries.push([k, v]);
-    });
-    entries.sort(([a], [b]) => a.localeCompare(b));
-    cacheUrl.search = "";
-    for (const [k, v] of entries) cacheUrl.searchParams.append(k, v);
-
-    const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
+    const cacheUrl = buildFeedCacheKeyUrl(url);
+    const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
     const cache = caches.default;
 
     // Try edge cache
@@ -78,11 +133,22 @@ export default {
     // Miss: fetch origin
     const originResp = await fetch(request);
     const resp = new Response(originResp.body, originResp);
+
+    if (!shouldCacheFeedResponse(resp)) {
+      resp.headers.set('Cache-Control', 'private, no-store');
+      resp.headers.set('Vary', 'Authorization');
+      resp.headers.set('X-Cache', 'BYPASS');
+      if (rateLimitResult) {
+        applyEdgeRateLimitHeaders(resp, rateLimitResult);
+      }
+      return resp;
+    }
+
     // Set edge caching hints
-    const cacheControl = "public, s-maxage=30, stale-while-revalidate=60";
-    resp.headers.set("Cache-Control", cacheControl);
-    resp.headers.set("Vary", "Authorization");
-    resp.headers.set("X-Cache", "MISS");
+    const cacheControl = 'public, s-maxage=30, stale-while-revalidate=60';
+    resp.headers.set('Cache-Control', cacheControl);
+    resp.headers.set('Vary', 'Authorization');
+    resp.headers.set('X-Cache', 'MISS');
     if (rateLimitResult) {
       applyEdgeRateLimitHeaders(resp, rateLimitResult);
     }

@@ -1,10 +1,10 @@
 # Cloudflare Cache Validation (Feed Endpoints)
 
-Last updated: 2026-02-16
+Last updated: 2026-06-12
 
 ## Goal
 
-Ensure Cloudflare caches only anonymous-safe feed endpoints and never caches personalized responses.
+Ensure Cloudflare caches only the smallest anonymous-safe feed surface and never caches personalized responses.
 
 ## Boundary summary
 
@@ -16,16 +16,18 @@ Ensure Cloudflare caches only anonymous-safe feed endpoints and never caches per
 ## Endpoint policy
 
 - `GET /api/feed/discover`: cacheable only for anonymous traffic.
-- `GET /api/feed/news`: cacheable only for anonymous traffic.
+- `GET /api/feed/news`: not cacheable by the worker; it remains private/no-store unless a future origin change explicitly makes it anonymous-safe.
 - `GET /api/feed/user/{userId}`: never cache (`private, no-store`).
 - Any authenticated feed request: never cache (`private, no-store`).
 
 ## Worker checklist
 
 - `cloudflare/worker.ts`:
-  - Anonymous cache allowlist contains only `/api/feed/discover` and `/api/feed/news`.
+  - Anonymous cache allowlist contains only `/api/feed/discover`.
   - Requests with `Authorization` bypass edge cache and set `Cache-Control: private, no-store`.
+  - Requests with `Cookie` bypass edge cache and set `Cache-Control: private, no-store`.
   - Non-allowlisted feed paths bypass cache and set `Cache-Control: private, no-store`.
+  - Cache entries are created only for `200` JSON responses without `Set-Cookie`.
 - `workers/feed-cache/src/index.js`:
   - Compatibility wrapper only; delegates to `cloudflare/worker.ts`.
 
@@ -44,7 +46,7 @@ curl -sS -D - -o /dev/null \
   -H "Authorization: Bearer <token>" \
   "$BASE_URL/api/feed/discover?limit=5" | rg -n "HTTP/|Cache-Control|Vary|X-Cache"
 
-# Anonymous news: cacheable
+# Anonymous news: not cacheable
 curl -sS -D - -o /dev/null "$BASE_URL/api/feed/news?limit=5" | rg -n "HTTP/|Cache-Control|Vary|X-Cache"
 
 # User feed: always non-cacheable
@@ -53,8 +55,9 @@ curl -sS -D - -o /dev/null "$BASE_URL/api/feed/user/<userId>?limit=5" | rg -n "H
 
 Expected:
 
-- Discover/news anonymous: `Cache-Control: public, max-age=60, stale-while-revalidate=30`.
+- Discover anonymous: `Cache-Control: public, max-age=60, stale-while-revalidate=30`.
 - Any request with `Authorization`: `Cache-Control: private, no-store`.
+- Any request with `Cookie`: `Cache-Control: private, no-store`.
 - User feed endpoint: `Cache-Control: private, no-store`.
 
 ## Evidence to archive for release packet
