@@ -110,18 +110,25 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 
-export function getAllowedOrigin(requestOrigin?: string): string {
+export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
+
   const resolvedOrigin = resolveRequestOrigin(requestOrigin);
-  if (resolvedOrigin && ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))) {
+  if (
+    resolvedOrigin &&
+    ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))
+  ) {
     return resolvedOrigin;
   }
-  return ALLOWED_ORIGINS[0] ?? '*';
+
+  return undefined;
 }
 
 export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
+  const allowedOrigin = getAllowedOrigin(requestOrigin);
+
   return {
-    'Access-Control-Allow-Origin': getAllowedOrigin(requestOrigin),
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
     'Access-Control-Max-Age': '86400',

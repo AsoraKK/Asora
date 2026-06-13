@@ -141,6 +141,7 @@ const report = {
   pageErrors: [],
   consoleErrors: [],
   failedRequests: [],
+  permissionPrompts: 0,
   permissionRequests: 0,
   permissionQueries: 0,
 };
@@ -178,6 +179,7 @@ try {
         Object.defineProperty(Notification, 'requestPermission', {
           configurable: true,
           value: async (...args) => {
+            bump('__betaSmokePermissionPrompts');
             bump('__betaSmokeNotificationRequests');
             return original(...args);
           },
@@ -197,6 +199,46 @@ try {
               bump('__betaSmokeNotificationQueries');
             }
             return originalQuery(descriptor);
+          },
+        });
+      }
+    } catch {
+      // Best-effort prompt tracking.
+    }
+
+    try {
+      if (navigator.geolocation) {
+        const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+        const originalWatchPosition = navigator.geolocation.watchPosition.bind(navigator.geolocation);
+
+        Object.defineProperty(navigator.geolocation, 'getCurrentPosition', {
+          configurable: true,
+          value: (...args) => {
+            bump('__betaSmokePermissionPrompts');
+            return originalGetCurrentPosition(...args);
+          },
+        });
+
+        Object.defineProperty(navigator.geolocation, 'watchPosition', {
+          configurable: true,
+          value: (...args) => {
+            bump('__betaSmokePermissionPrompts');
+            return originalWatchPosition(...args);
+          },
+        });
+      }
+    } catch {
+      // Best-effort prompt tracking.
+    }
+
+    try {
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+        const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+          configurable: true,
+          value: async (...args) => {
+            bump('__betaSmokePermissionPrompts');
+            return originalGetUserMedia(...args);
           },
         });
       }
@@ -314,13 +356,16 @@ try {
 
   await (async () => {
     const counter = await page.evaluate(() => ({
+      permissionPrompts: Number(sessionStorage.getItem('__betaSmokePermissionPrompts') || '0'),
       notificationRequests: Number(sessionStorage.getItem('__betaSmokeNotificationRequests') || '0'),
       notificationQueries: Number(sessionStorage.getItem('__betaSmokeNotificationQueries') || '0'),
     }));
 
+    assert(counter.permissionPrompts === 0, `Browser permission prompt APIs were used ${counter.permissionPrompts} time(s)`);
     assert(counter.notificationRequests === 0, `Notification permission was requested ${counter.notificationRequests} time(s)`);
     assert(counter.notificationQueries === 0, `Notification permission was queried ${counter.notificationQueries} time(s)`);
     recordCheck('no browser permission prompt', 'passed');
+    report.permissionPrompts = counter.permissionPrompts;
     report.permissionRequests = counter.notificationRequests;
     report.permissionQueries = counter.notificationQueries;
   })();

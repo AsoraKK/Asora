@@ -31,7 +31,7 @@ jobs:
 
     env:
       WEB_BASE_URL: ${{ github.event.inputs.web_base_url || 'https://lythaus-web.pages.dev' }}
-      API_BASE_URL: ${{ github.event.inputs.api_base_url || 'https://asora-function-prod.northeurope-01.azurewebsites.net/api' }}
+      API_BASE_URL: ${{ github.event.inputs.api_base_url || 'https://asora-function-dev.azurewebsites.net/api' }}
       ADMIN_API_URL: ${{ github.event.inputs.admin_api_url || 'https://admin-api.asora.co.za' }}
       BETA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
