@@ -5,3 +5,5 @@
 export ENVIRONMENT=production
 export API_BASE_URL=https://asora-function-prod.northeurope-01.azurewebsites.net/api
 export AUTH_URL=https://asora-function-prod.northeurope-01.azurewebsites.net/api
+export WEB_BASE_URL=https://app.lythaus.asora.co.za
+export ADMIN_API_URL=https://admin-api.asora.co.za

@@ -181,7 +181,7 @@ cross-origin SSO is required.
 
 ### Post-Deploy Smoke Checklist
 
-Run these manually against the deployed web app after each release:
+`.github/workflows/beta-smoke.yml` automates this checklist after staging deploys and documents the per-deployment report artifact. Keep the table below as the contract it enforces:
 
 | # | Test | URL / Action | Expected |
 |---|---|---|---|

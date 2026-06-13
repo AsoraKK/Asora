@@ -208,7 +208,7 @@ Each item is tagged:
 | 13.7 | DSR runbook consistent with deploy workflow | AUTO | `bash scripts/check-dsr-runbook-consistency.sh` | |
 | 13.8 | Azure retirement validation passes (no deprecated SKUs) | AUTO | `bash scripts/validate-azure-retirement.sh` | |
 | 13.9 | Flutter toolchain pinned via `.fvmrc` (no hardcoded version in workflows) | AUTO | `bash scripts/validate-flutter-toolchain-pinning.sh` | |
-| 13.10 | Staging smoke test passes (health, feed, auth) | AUTO | `bash scripts/smoke-test.sh` against staging URL | |
+| 13.10 | Beta browser smoke passes (shell, routes, feed, auth, admin) | AUTO | `.github/workflows/beta-smoke.yml` -> `node scripts/beta-smoke.mjs` | |
 | 13.11 | Extension bundle version valid in all `host.json` files | AUTO | `bash scripts/validate-extension-bundle.sh` | |
 
 ---

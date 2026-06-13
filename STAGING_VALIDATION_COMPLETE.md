@@ -57,14 +57,14 @@ STAGING_SMOKE_TOKEN=your-test-bearer-token
 ### Local Testing:
 ```bash
 # Test validation script locally
-DOMAIN="your-staging-domain.com" ./scripts/validate_edge_cache.sh
+DOMAIN="your-staging-domain.com" bash scripts/validate_edge_cache.sh
 
 # Test with custom parameters
 DOMAIN="staging.asora.app" \
 QS1="page=1&size=20" \
 QS2="page=1&size=21" \
 AUTH_HDR="Authorization: Bearer your-token" \
-./scripts/validate_edge_cache.sh
+bash scripts/validate_edge_cache.sh
 ```
 
 ## 📊 **Expected Validation Flow**

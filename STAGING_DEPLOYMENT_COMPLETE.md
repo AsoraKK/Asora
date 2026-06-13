@@ -44,7 +44,7 @@ To get full validation working, you would need to implement `/api/feed/get` in y
 # Test with an existing endpoint
 DOMAIN="asora-feed-edge-development.asora.workers.dev" 
 PATH_FEED="/api/getUserAuth"  # or any working endpoint
-./scripts/validate_edge_cache.sh
+bash scripts/validate_edge_cache.sh
 ```
 
 #### **Step 3: Trigger CI Validation** 📝
