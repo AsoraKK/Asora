@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -62,7 +62,7 @@ jobs:
     name: Validate legal operation registers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate legal register files
         run: bash scripts/check_legal_registers.sh
@@ -71,7 +71,7 @@ jobs:
     name: Lint workflows (actionlint + shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies (jq, shellcheck)
         run: |
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate pinned Flutter version source-of-truth
         run: bash scripts/validate-flutter-toolchain-pinning.sh
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate staging/prod alert recipients
         run: bash scripts/validate-alert-routing-config.sh
@@ -121,9 +121,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -137,7 +137,7 @@ jobs:
           node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json --json > cosmos-container-diff.json
 
       - name: Upload Cosmos contract diff artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cosmos-container-diff
           path: cosmos-container-diff.json
@@ -147,9 +147,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -167,7 +167,7 @@ jobs:
           node scripts/check-route-drift.js route-inventory.json api/openapi/openapi.yaml
 
       - name: Upload route inventory artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: functions-route-inventory
           path: route-inventory.json
@@ -177,7 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install ripgrep
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
@@ -190,7 +190,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install ripgrep
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
@@ -203,9 +203,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -213,7 +213,7 @@ jobs:
         run: node scripts/generate-todo-triage.js
 
       - name: Upload TODO triage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: todo-triage-report
           path: docs/runbooks/todo-triage.md
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate extension bundle version
         run: |
@@ -241,14 +241,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -297,7 +297,7 @@ jobs:
           "
 
       - name: Upload bundled spec
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: openapi-spec
           path: api/openapi/dist/openapi.json
@@ -310,9 +310,9 @@ jobs:
       run:
         working-directory: apps/control-panel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -335,9 +335,9 @@ jobs:
       run:
         working-directory: apps/marketing-site
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -371,7 +371,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run gitleaks
         run: scripts/secret-scan.sh
 
@@ -395,9 +395,9 @@ jobs:
     name: Verify TLS certificate pins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -415,9 +415,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
@@ -463,7 +463,7 @@ jobs:
 
       - name: Comment coverage on PR
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -500,9 +500,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -511,7 +511,7 @@ jobs:
         with:
           flutter-version-file: .fvmrc
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Flutter pub get
         run: flutter pub get
@@ -578,7 +578,7 @@ jobs:
     runs-on: macos-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -605,7 +605,7 @@ jobs:
             archive
 
       - name: Upload iOS archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ios-release-archive
           path: build/ios/archive/Runner.xcarchive
@@ -618,7 +618,7 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install jq for guards
         run: |
@@ -637,7 +637,7 @@ jobs:
               || { echo "Invalid host.json version in $f"; exit 1; }
           done
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -741,12 +741,12 @@ jobs:
           echo "Created $ROOT/dist-v4-final.zip"
 
       - name: Upload feed workbook artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: feed-workbook
           path: observability/workbooks/feed-latency.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: functions-v4-artifact
           path: dist-v4-final.zip
@@ -756,7 +756,7 @@ jobs:
     name: Azure Retirement Hardening Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Run Azure retirement validation
         run: bash scripts/validate-azure-retirement.sh
@@ -770,10 +770,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Dependency Review (block high/critical CVEs)
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         continue-on-error: true  # Requires Dependency graph to be enabled on the repo
         with:
           fail-on-severity: high
@@ -786,7 +786,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check DSR required keys match deploy workflow
         run: bash scripts/check-dsr-runbook-consistency.sh

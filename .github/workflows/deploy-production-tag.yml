@@ -15,7 +15,7 @@ jobs:
     name: Launch Readiness Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v5
 
       - name: Validate store submission evidence
         run: bash scripts/validate-store-submission-evidence.sh
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: launch-readiness-gate
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v8
         with:
           script: |
             const sha = context.sha;
