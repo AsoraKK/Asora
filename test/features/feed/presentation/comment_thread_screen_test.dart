@@ -343,5 +343,54 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.textContaining('Sign in'), findsOneWidget);
     });
+
+    testWidgets('shows daily comment limit message on throttled create', (
+      tester,
+    ) async {
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer((_) async => _commentPageResponse());
+
+      when(
+        () => dio.post<Map<String, dynamic>>(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/comments'),
+          response: Response<Map<String, dynamic>>(
+            data: {
+              'code': 'DAILY_COMMENT_LIMIT_EXCEEDED',
+              'message':
+                  'You have reached your daily comment limit. Please try again tomorrow.',
+            },
+            statusCode: 429,
+            requestOptions: RequestOptions(path: '/comments'),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Hello world');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MaterialBanner), findsOneWidget);
+      expect(
+        find.text(
+          'You have reached your daily comment limit. Please try again tomorrow.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }

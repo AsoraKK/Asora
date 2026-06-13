@@ -311,6 +311,8 @@ describe('createPost route', () => {
     expect(response.headers).toMatchObject({
       'Content-Type': 'application/json',
       'Retry-After': '86400',
+      'X-RateLimit-Limit': '5',
+      'X-RateLimit-Remaining': '0',
     });
     expect(getTargetDatabase).not.toHaveBeenCalled();
     expect(trackAppEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -322,9 +324,14 @@ describe('createPost route', () => {
 
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
+      error: 'rate_limited',
+      scope: 'user',
+      limit: limitPayload.limit,
+      window_seconds: 86400,
+      retry_after_seconds: 86400,
+      trace_id: null,
       code: 'DAILY_POST_LIMIT_EXCEEDED',
       tier: limitPayload.tier,
-      limit: limitPayload.limit,
       current: limitPayload.currentCount,
       resetAt: limitPayload.resetDate,
       message: 'Daily post limit reached. Try again tomorrow.',

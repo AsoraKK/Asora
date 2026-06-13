@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// ASORA POST ACTIONS WIDGET
 ///
@@ -345,7 +346,16 @@ class _FlagButton extends ConsumerWidget {
         ScaffoldMessenger.of(context).clearSnackBars();
 
         String errorMessage = 'Failed to submit report';
-        if (error is DioException) {
+        if (error is ModerationException) {
+          if (error.statusCode == 401) {
+            errorMessage = 'Please log in to report content';
+          } else if (error.statusCode == 429) {
+            errorMessage =
+                'Too many reports. Please wait before reporting again.';
+          } else if (error.message.isNotEmpty) {
+            errorMessage = error.message;
+          }
+        } else if (error is DioException) {
           if (error.response?.statusCode == 401) {
             errorMessage = 'Please log in to report content';
           } else if (error.response?.statusCode == 429) {

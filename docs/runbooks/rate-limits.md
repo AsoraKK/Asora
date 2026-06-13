@@ -14,6 +14,7 @@ All middleware-driven throttles return:
 - HTTP `429`
 - Headers: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 - JSON body fields: `error`, `scope`, `limit`, `window_seconds`, `retry_after_seconds`, `trace_id`
+- Daily post, comment, and appeal quotas also include `code`, `tier`, `current`, `resetAt`, and `message`
 
 ## Route Matrix
 
@@ -24,8 +25,10 @@ All middleware-driven throttles return:
 | `POST /api/auth/refresh` | n/a | `20 / 60s` | 30-minute auth-failure backoff |
 | `POST /api/auth/redeem-invite` | n/a | `20 / 60s` | 30-minute auth-failure backoff |
 | `GET|POST /api/auth/userinfo` | `60 / 60s` | `20 / 60s` | access-token reads |
-| `GET /api/feed`, `GET /api/feed/discover`, and `GET /api/feed/public` | `90 / 60s` | `30 / 60s` | guest and authenticated reads share one bucket |
-| `GET /api/feed/user/{userId}` | `90 / 60s` | `30 / 60s` | authenticated reads get principal tracking; guests stay IP-only |
+| Guest `GET /api/feed`, `GET /api/feed/discover`, and `GET /api/feed/public` | n/a | `20 / 60s` | conservative anonymous feed read bucket |
+| Authenticated `GET /api/feed`, `GET /api/feed/discover`, and `GET /api/feed/public` | `90 / 60s` | `30 / 60s` | authenticated feed reads also inherit the global per-principal cap |
+| Guest `GET /api/feed/user/{userId}` | n/a | `20 / 60s` | public profile feed reads stay IP-only |
+| Authenticated `GET /api/feed/user/{userId}` | `90 / 60s` | `30 / 60s` | authenticated profile feed reads add principal tracking |
 | `GET /api/feed/news` | `90 / 60s` | `30 / 60s` | authenticated feed read |
 | `POST /api/post` and `POST /api/posts` | `15 / 60s`, burst `5` | `20 / 60s` | post creation |
 | `POST /api/posts/{postId}/comments` | `20 / 60s`, burst `6` | `25 / 60s` | comment creation |

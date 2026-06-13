@@ -12,27 +12,25 @@ jobs:
   contract:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - run: npm ci
       - run: npm run openapi:lint
       - name: Spectral lint
         run: npx spectral lint api/openapi/openapi.yaml
       - run: npm run openapi:bundle
       - name: Fail if bundled spec drift
-        run: |
-          git add -N api/openapi/dist/openapi.json
-          if ! git diff --quiet -- api/openapi/dist/openapi.json; then
-            echo "Bundled openapi.json out of date. Run: npm run openapi:bundle and commit."
-            exit 1
-          fi
+        run: npm run openapi:check:bundle
       - name: Check for breaking changes
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
@@ -50,35 +48,16 @@ jobs:
           PREV=$(git show $BASE:api/openapi/dist/openapi.json | node -pe 'JSON.parse(require("node:fs").readFileSync(0,"utf8")).info?.version ?? ""')
           echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
           node -e "const s=process.argv[1].split('.').map(Number);const t=process.argv[2].split('.').map(Number);process.exit(!((t[1]>s[1])||(t[0]>s[0])));" "$PREV" "$CURR"
-      - name: Assert Functions routes are covered by OpenAPI
-        run: npx ts-node tools/openapi/assert-routes-covered.ts
+      - name: Validate route guard inventory
+        run: node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json
+      - name: Check route / OpenAPI drift
+        run: node scripts/check-route-drift.js route-inventory.json api/openapi/openapi.yaml
       - name: Validate OpenAPI examples
-        run: npx ts-node tools/openapi/validate-examples.ts
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+        run: npm run openapi:validate:examples
       - run: npx openapi-generator-cli version-manager set 7.7.0
       - run: npm run openapi:gen:dart
-      - name: Commit Dart client if drifted (auto-fix on PRs), fail on push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_HEAD_REF: ${{ github.head_ref }}
-        run: |
-          if [[ -n "$(git status --porcelain lib/generated/api_client)" ]]; then
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-              git add lib/generated/api_client
-              git commit -m "chore(auto): regenerate Dart API client [skip ci]"
-              git push origin HEAD:${GITHUB_HEAD_REF}
-            else
-              echo "Generated Dart client is out of date. Run: npm run openapi:gen:dart and commit changes."
-              git --no-pager diff -- lib/generated/api_client | head -n 200
-              exit 1
-            fi
-          fi
+      - name: Fail if generated Dart client drifted
+        run: npm run openapi:check:dart
       - name: Generate OpenAPI docs pre-release bundle
         run: npm run openapi:docs
       - name: Write contract env
@@ -91,12 +70,17 @@ jobs:
         env:
           STAGING_DOMAIN: ${{ secrets.STAGING_DOMAIN }}
           STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
-        run: npx jest -c jest.contract.config.cjs --runInBand
+        run: npm run openapi:test:contract
       - name: Upload bundled spec
         uses: actions/upload-artifact@v4
         with:
           name: openapi.json
           path: api/openapi/dist/openapi.json
+      - name: Upload route inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-route-inventory
+          path: route-inventory.json
       - name: Upload OpenAPI docs
         uses: actions/upload-artifact@v4
         with:

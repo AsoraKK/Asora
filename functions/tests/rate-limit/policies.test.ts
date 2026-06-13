@@ -45,7 +45,8 @@ describe('getPolicyForRoute', () => {
       expect(policy.name).toBe('feed/discover-read');
       expect(policy.routeId).toBe('feed/discover');
       expect(findLimit(policy, 'route-user')).toBeDefined();
-      expect(findLimit(policy, 'route-ip')).toBeDefined();
+      expect(findLimit(policy, 'route-auth-ip')?.slidingWindow?.limit).toBe(30);
+      expect(findLimit(policy, 'route-guest-ip')?.slidingWindow?.limit).toBe(20);
       expect(policy.deriveUserId).toBeDefined();
     });
 
@@ -54,8 +55,9 @@ describe('getPolicyForRoute', () => {
 
       expect(policy.name).toBe('feed/discover-read');
       expect(policy.routeId).toBe('feed/discover');
-      expect(findLimit(policy, 'route-user')).toBeDefined();
-      expect(findLimit(policy, 'route-ip')).toBeDefined();
+      expect(findLimit(policy, 'route-user')?.slidingWindow?.limit).toBe(90);
+      expect(findLimit(policy, 'route-auth-ip')?.slidingWindow?.limit).toBe(30);
+      expect(findLimit(policy, 'route-guest-ip')?.slidingWindow?.limit).toBe(20);
       expect(policy.deriveUserId).toBeDefined();
     });
 
@@ -71,14 +73,16 @@ describe('getPolicyForRoute', () => {
 
       expect(policy.name).toBe('feed/user-read');
       expect(policy.routeId).toBe('feed/user');
+      expect(findLimit(policy, 'route-auth-ip')?.slidingWindow?.limit).toBe(30);
+      expect(findLimit(policy, 'route-guest-ip')?.slidingWindow?.limit).toBe(20);
     });
 
     it('returns authenticated feed policy for news feed', () => {
       const policy = getPolicyForRoute(createRequest('GET', 'feed/news'));
 
       expect(policy.name).toBe('feed/news-auth');
-      expect(findLimit(policy, 'route-user')).toBeDefined();
-      expect(findLimit(policy, 'route-ip')).toBeDefined();
+      expect(findLimit(policy, 'route-user')?.slidingWindow?.limit).toBe(90);
+      expect(findLimit(policy, 'route-ip')?.slidingWindow?.limit).toBe(30);
     });
   });
 

@@ -311,13 +311,20 @@ describe('comments route', () => {
     expect(response.headers).toMatchObject({
       'Content-Type': 'application/json',
       'Retry-After': '86400',
+      'X-RateLimit-Limit': '20',
+      'X-RateLimit-Remaining': '0',
     });
 
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
+      error: 'rate_limited',
+      scope: 'user',
+      limit: limitPayload.limit,
+      window_seconds: 86400,
+      retry_after_seconds: 86400,
+      trace_id: null,
       code: 'DAILY_COMMENT_LIMIT_EXCEEDED',
       tier: limitPayload.tier,
-      limit: limitPayload.limit,
       current: limitPayload.currentCount,
       resetAt: limitPayload.resetDate,
       message: 'Daily comment limit reached. Try again tomorrow.',

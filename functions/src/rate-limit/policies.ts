@@ -23,7 +23,13 @@ const WRITE_USER_LIMIT = {
 };
 const ANON_IP_LIMIT = { limit: 60, windowSeconds: 60 };
 const AUTH_BASE_LIMIT = { limit: 20, windowSeconds: 60 };
-const FEED_READ_LIMIT = { userLimit: 90, ipLimit: 30, windowSeconds: 60 };
+const FEED_HYBRID_READ_LIMIT = {
+  userLimit: 90,
+  authenticatedIpLimit: 30,
+  guestIpLimit: 20,
+  windowSeconds: 60,
+};
+const FEED_AUTHENTICATED_READ_LIMIT = { userLimit: 90, ipLimit: 30, windowSeconds: 60 };
 const USERINFO_LIMIT = { userLimit: 60, ipLimit: 20, windowSeconds: 60 };
 const POST_CREATE_LIMIT = { userLimit: 15, ipLimit: 20, windowSeconds: 60, burst: 5 };
 const COMMENT_CREATE_LIMIT = { userLimit: 20, ipLimit: 25, windowSeconds: 60, burst: 6 };
@@ -40,6 +46,13 @@ const AUTH_FAILURE_WINDOW_SECONDS = 30 * 60;
 interface ReadPolicyConfig {
   userLimit: number;
   ipLimit: number;
+  windowSeconds: number;
+}
+
+interface HybridReadPolicyConfig {
+  userLimit: number;
+  authenticatedIpLimit: number;
+  guestIpLimit: number;
   windowSeconds: number;
 }
 
@@ -172,6 +185,37 @@ function createRouteIpRule(routeId: string, limit: number, windowSeconds: number
   };
 }
 
+function createConditionalRouteIpRule(
+  routeId: string,
+  idSuffix: string,
+  limit: number,
+  windowSeconds: number,
+  shouldApply: (ctx: RateLimitRequestContext) => boolean
+): RateLimitRule {
+  return {
+    id: `${routeId}-${idSuffix}`,
+    scope: 'route',
+    keyResolver: (ctx) => {
+      if (!ctx.hashedIp || !shouldApply(ctx)) {
+        return null;
+      }
+      return `route:${routeId}:ip:${ctx.hashedIp}`;
+    },
+    slidingWindow: {
+      limit,
+      windowSeconds,
+    },
+  };
+}
+
+function createAuthenticatedRouteIpRule(routeId: string, limit: number, windowSeconds: number): RateLimitRule {
+  return createConditionalRouteIpRule(routeId, 'route-auth-ip', limit, windowSeconds, (ctx) => Boolean(ctx.userId));
+}
+
+function createGuestRouteIpRule(routeId: string, limit: number, windowSeconds: number): RateLimitRule {
+  return createConditionalRouteIpRule(routeId, 'route-guest-ip', limit, windowSeconds, (ctx) => !ctx.userId);
+}
+
 function createGenericPolicy(routeId: string): RateLimitPolicy {
   return {
     name: `${routeId}-generic`,
@@ -210,13 +254,14 @@ function createAuthenticatedPolicy(
   };
 }
 
-function createHybridReadPolicy(routeId: string, config: ReadPolicyConfig): RateLimitPolicy {
+function createHybridReadPolicy(routeId: string, config: HybridReadPolicyConfig): RateLimitPolicy {
   return {
     name: `${routeId}-read`,
     routeId,
     limits: [
       createRouteUserRule(routeId, config.userLimit, config.windowSeconds),
-      createRouteIpRule(routeId, config.ipLimit, config.windowSeconds),
+      createAuthenticatedRouteIpRule(routeId, config.authenticatedIpLimit, config.windowSeconds),
+      createGuestRouteIpRule(routeId, config.guestIpLimit, config.windowSeconds),
       createGlobalUserRule(routeId),
       createGlobalIpRule(routeId),
     ],
@@ -421,15 +466,15 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
   const method = (req.method || 'GET').toUpperCase();
 
   if (path === 'feed/discover' || path === 'feed/public') {
-    return createHybridReadPolicy('feed/discover', FEED_READ_LIMIT);
+    return createHybridReadPolicy('feed/discover', FEED_HYBRID_READ_LIMIT);
   }
 
   if (path.startsWith('feed/user/')) {
-    return createHybridReadPolicy('feed/user', FEED_READ_LIMIT);
+    return createHybridReadPolicy('feed/user', FEED_HYBRID_READ_LIMIT);
   }
 
   if (path === 'feed/news') {
-    return createAuthenticatedPolicy('feed/news', FEED_READ_LIMIT);
+    return createAuthenticatedPolicy('feed/news', FEED_AUTHENTICATED_READ_LIMIT);
   }
 
   if (path === 'users/me') {
@@ -444,7 +489,7 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
 
   switch (path) {
     case 'feed':
-      return createHybridReadPolicy('feed/discover', FEED_READ_LIMIT);
+      return createHybridReadPolicy('feed/discover', FEED_HYBRID_READ_LIMIT);
     case 'post':
       return createWritePolicy('post', POST_CREATE_LIMIT);
     case 'moderation/flag':
@@ -496,7 +541,7 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
 export function getPolicyForFunction(routeId: string): RateLimitPolicy {
   switch (routeId) {
     case 'getFeed':
-      return createHybridReadPolicy('feed/discover', FEED_READ_LIMIT);
+      return createHybridReadPolicy('feed/discover', FEED_HYBRID_READ_LIMIT);
     case 'createPost':
       return createWritePolicy('post', POST_CREATE_LIMIT);
     case 'updatePost':

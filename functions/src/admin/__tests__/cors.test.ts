@@ -29,6 +29,9 @@ describe('corsHeaders', () => {
     expect(headers['Access-Control-Allow-Methods']).toContain('OPTIONS');
     expect(headers['Access-Control-Allow-Headers']).toContain('Content-Type');
     expect(headers['Access-Control-Allow-Credentials']).toBe('true');
+    expect(headers['X-Content-Type-Options']).toBe('nosniff');
+    expect(headers['Content-Security-Policy']).toBe("default-src 'none'; frame-ancestors 'none'");
+    expect(headers['Cache-Control']).toBe('no-store, no-cache, private');
   });
 });
 
