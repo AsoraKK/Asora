@@ -10,7 +10,7 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
-[**authB2cConfig**](AuthApi.md#authb2cconfig) | **GET** /auth/b2c-config | Return Azure AD B2C OIDC configuration
+[**authB2cConfig**](AuthApi.md#authb2cconfig) | **GET** /auth/b2c-config | Return legacy B2C-shaped auth config
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -79,7 +79,7 @@ No authorization required
 # **authB2cConfig**
 > JsonObject authB2cConfig()
 
-Return Azure AD B2C OIDC configuration
+Return legacy B2C-shaped auth config
 
 ### Example
 ```dart

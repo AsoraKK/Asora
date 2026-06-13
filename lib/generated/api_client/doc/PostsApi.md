@@ -37,7 +37,7 @@ Create a new post.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = ; // CreatePostRequest | 
+final CreatePostRequest createPostRequest = {"id":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","text":"Launch checklist is locked and ready for review.","attachments":["https://cdn.lythaus.app/media/posts/launch-checklist.png"]}; // CreatePostRequest | 
 
 try {
     final response = api.createPost(createPostRequest);

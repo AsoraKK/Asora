@@ -10341,7 +10341,14 @@
         ],
         "responses": {
           "202": {
-            "description": "Appeal accepted for review"
+            "description": "Appeal accepted for review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Entry is not appealable or cannot be appealed",
@@ -12522,6 +12529,22 @@
             "type": "string",
             "description": "Primary moderation class that triggered the block",
             "example": "hate_speech"
+          }
+        }
+      },
+      "AcceptedResponse": {
+        "description": "Generic 202 acceptance body returned by ctx.accepted().",
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": [
+              "Accepted"
+            ],
+            "example": "Accepted"
           }
         }
       },
