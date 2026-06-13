@@ -100,7 +100,7 @@ jobs:
       - name: Validate discover cache behavior
         run: |
           set -euo pipefail
-          DOMAIN="${CACHE_VALIDATION_DOMAIN}" PATH_FEED="${TEST_ENDPOINT}" ./scripts/validate_edge_cache.sh
+          DOMAIN="${CACHE_VALIDATION_DOMAIN}" PATH_FEED="${TEST_ENDPOINT}" bash ./scripts/validate_edge_cache.sh
 
       - name: Test News Path Bypass
         run: |

@@ -23,4 +23,4 @@ jobs:
           STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
         run: |
           export AUTH_HDR="Authorization: Bearer $STAGING_SMOKE_TOKEN"
-          ./scripts/validate_edge_cache.sh
+          bash ./scripts/validate_edge_cache.sh
