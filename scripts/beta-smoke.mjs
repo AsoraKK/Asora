@@ -108,6 +108,9 @@ const report = {
   },
   checks: [],
   forbiddenRequests: [],
+  pageErrors: [],
+  consoleErrors: [],
+  failedRequests: [],
   permissionRequests: 0,
   permissionQueries: 0,
 };
@@ -173,6 +176,20 @@ try {
   page = await context.newPage();
   page.setDefaultTimeout(20_000);
 
+  page.on('pageerror', (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    report.pageErrors.push(message);
+    console.error(`[pageerror] ${message}`);
+  });
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      const text = message.text();
+      report.consoleErrors.push(text);
+      console.error(`[console.error] ${text}`);
+    }
+  });
+
   page.on('request', (request) => {
     const requestUrl = request.url();
     if (!requestUrl.startsWith('http://') && !requestUrl.startsWith('https://')) {
@@ -183,6 +200,13 @@ try {
     if (isPrivateOrLocalHost(hostname)) {
       report.forbiddenRequests.push(requestUrl);
     }
+  });
+
+  page.on('requestfailed', (request) => {
+    const failure = request.failure()?.errorText || 'unknown error';
+    const url = request.url();
+    report.failedRequests.push({ url, failure });
+    console.error(`[requestfailed] ${request.method()} ${url} -> ${failure}`);
   });
 
   console.log(`Web base:   ${webBaseUrl}`);
