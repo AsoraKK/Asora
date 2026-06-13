@@ -106,13 +106,14 @@ function applyStandardResponseHeaders(
     headers.Vary = appendVaryHeader(headers.Vary, 'Origin');
   }
 
+  const varyHeader = headers.Vary;
   if (hasAuthHeader && !headers['Cache-Control']) {
     headers['Cache-Control'] = 'private, no-store';
   }
-  if (hasAuthHeader && !headers.Vary) {
+  if (hasAuthHeader && !varyHeader) {
     headers.Vary = 'Authorization';
-  } else if (hasAuthHeader && !headers.Vary.split(',').map((entry) => entry.trim()).includes('Authorization')) {
-    headers.Vary = appendVaryHeader(headers.Vary, 'Authorization');
+  } else if (hasAuthHeader && !varyHeader.split(',').map((entry) => entry.trim()).includes('Authorization')) {
+    headers.Vary = appendVaryHeader(varyHeader, 'Authorization');
   }
 
   return response;
