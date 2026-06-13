@@ -444,7 +444,7 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
 
   switch (path) {
     case 'feed':
-      return createAnonymousPolicy('feed');
+      return createHybridReadPolicy('feed/discover', FEED_READ_LIMIT);
     case 'post':
       return createWritePolicy('post', POST_CREATE_LIMIT);
     case 'moderation/flag':

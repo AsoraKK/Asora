@@ -131,9 +131,11 @@ afterEach(() => {
 
 describe('route-mapped 429 responses', () => {
   const cases: Array<{ title: string; method: string; url: string }> = [
+    { title: 'GET /auth/authorize', method: 'GET', url: 'https://api.asora.dev/api/auth/authorize' },
     { title: 'POST /auth/token', method: 'POST', url: 'https://api.asora.dev/api/auth/token' },
     { title: 'POST /auth/refresh', method: 'POST', url: 'https://api.asora.dev/api/auth/refresh' },
     { title: 'GET /auth/userinfo', method: 'GET', url: 'https://api.asora.dev/api/auth/userinfo' },
+    { title: 'GET /feed', method: 'GET', url: 'https://api.asora.dev/api/feed' },
     { title: 'GET /feed/discover', method: 'GET', url: 'https://api.asora.dev/api/feed/discover' },
     { title: 'POST /moderation/flag', method: 'POST', url: 'https://api.asora.dev/api/moderation/flag' },
     { title: 'POST /moderation/appeals', method: 'POST', url: 'https://api.asora.dev/api/moderation/appeals' },

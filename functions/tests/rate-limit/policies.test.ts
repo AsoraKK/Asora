@@ -24,14 +24,6 @@ function findLimit(policy: ReturnType<typeof getPolicyForRoute>, idFragment: str
 
 describe('getPolicyForRoute', () => {
   describe('anonymous routes', () => {
-    it('returns anonymous policy for feed endpoint', () => {
-      const policy = getPolicyForRoute(createRequest('GET', 'feed'));
-
-      expect(policy.name).toBe('feed-anonymous');
-      expect(policy.routeId).toBe('feed');
-      expect(policy.deriveUserId).toBeUndefined();
-    });
-
     it('returns anonymous policy for health endpoint', () => {
       const policy = getPolicyForRoute(createRequest('GET', 'health'));
 
@@ -47,6 +39,16 @@ describe('getPolicyForRoute', () => {
   });
 
   describe('feed reads', () => {
+    it('shares discover feed limits with feed root', () => {
+      const policy = getPolicyForRoute(createRequest('GET', 'feed'));
+
+      expect(policy.name).toBe('feed/discover-read');
+      expect(policy.routeId).toBe('feed/discover');
+      expect(findLimit(policy, 'route-user')).toBeDefined();
+      expect(findLimit(policy, 'route-ip')).toBeDefined();
+      expect(policy.deriveUserId).toBeDefined();
+    });
+
     it('returns shared hybrid read policy for discover feed', () => {
       const policy = getPolicyForRoute(createRequest('GET', 'feed/discover'));
 
