@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import { createWorker } from 'tesseract.js';
 
 const DEFAULT_WEB_BASE_URL = 'https://lythaus-web.pages.dev';
-const DEFAULT_API_BASE_URL = 'https://asora-function-prod.northeurope-01.azurewebsites.net/api';
+const DEFAULT_API_BASE_URL = 'https://asora-function-dev.azurewebsites.net/api';
 const DEFAULT_ADMIN_API_URL = 'https://admin-api.asora.co.za';
 
 function isPrivateOrLocalHost(host) {
