@@ -61,4 +61,27 @@ describe('extractAuthContext', () => {
       email: 'alex@example.com',
     });
   });
+
+  it('splits a space-delimited role claim into canonical roles', async () => {
+    verifyTokenMock.mockResolvedValue({
+      sub: 'user-456',
+      role: 'moderator  admin ',
+      iss: 'asora-auth',
+    } as any);
+
+    const ctx = {
+      request: httpReqMock({
+        method: 'POST',
+        headers: { authorization: 'Bearer token' },
+      }),
+    } as any;
+
+    const auth = await extractAuthContext(ctx);
+
+    expect(auth).toMatchObject({
+      userId: 'user-456',
+      roles: ['moderator', 'admin'],
+      tier: 'free',
+    });
+  });
 });
