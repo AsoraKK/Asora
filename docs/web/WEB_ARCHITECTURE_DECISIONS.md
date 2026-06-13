@@ -266,6 +266,6 @@ The `_real` file imports `package:web` for `sessionStorage` access. The `_stub` 
 **Context:** The `/user/:userId` route existed but `ProfileScreen` ignored the path parameter, always showing the current user's profile.
 **Decision:** Add optional `userId` parameter to `ProfileScreen`. When `userId` is provided and differs from the current user, show a read-only profile (no settings, admin, or moderation links). When `null` or matching the current user, show the full owner view.
 **Consequences:**
-- Deep-linkable user profiles: `https://app.lythaus.asora.co.za/user/abc123` shows that user's profile.
+- Deep-linkable user profiles: `https://lythaus-web.pages.dev/user/abc123` shows that user's profile.
 - Follow/unfollow works on other users' profiles.
 - Owner-only actions (settings, control panel, moderation hub) are hidden for non-owners.

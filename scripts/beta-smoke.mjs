@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { chromium } from 'playwright';
 
-const DEFAULT_WEB_BASE_URL = 'https://app.lythaus.asora.co.za';
+const DEFAULT_WEB_BASE_URL = 'https://lythaus-web.pages.dev';
 const DEFAULT_API_BASE_URL = 'https://asora-function-prod.northeurope-01.azurewebsites.net/api';
 const DEFAULT_ADMIN_API_URL = 'https://admin-api.asora.co.za';
 

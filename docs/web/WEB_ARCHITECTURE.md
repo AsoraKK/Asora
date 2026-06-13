@@ -28,7 +28,7 @@ Public, authenticated, and admin traffic must bypass that edge cache path.
 
 | Surface | URL |
 |---|---|
-| Flutter web app | `https://app.lythaus.asora.co.za` |
+| Flutter web app | `https://lythaus-web.pages.dev` |
 | Marketing site | `https://lythaus.asora.co.za` |
 
 ## Architecture Diagram
@@ -148,7 +148,7 @@ promoted to enforced `Content-Security-Policy`.
 
 | Variable | Where | Purpose | Example |
 |---|---|---|---|
-| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Allow web origin for API CORS | `https://app.lythaus.asora.co.za` |
+| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Allow web origin for API CORS | `https://lythaus-web.pages.dev` |
 | `OAUTH2_AUTHORIZATION_ENDPOINT` | Build-time config | OAuth2 authorization endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/authorize` |
 | `OAUTH2_TOKEN_ENDPOINT` | Build-time config | OAuth2 token endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/token` |
 | `OAUTH2_USERINFO_ENDPOINT` | Build-time config | OAuth2 userinfo endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/userinfo` |
@@ -162,7 +162,7 @@ Build-time values are baked into the JS bundle. They are not secrets.
 
 | Record | Value | Purpose |
 |---|---|---|
-| `app.lythaus.asora.co.za` | CNAME to static host | Flutter web app |
+| `lythaus-web.pages.dev` | Cloudflare Pages subdomain | Flutter web app |
 | `lythaus.asora.co.za` / `www.lythaus.asora.co.za` | CNAME to marketing host | Astro marketing site |
 | Both domains must have HTTPS | Managed by hosting provider | PKCE redirect and secure cookies |
 
@@ -172,7 +172,7 @@ cross-origin SSO is required.
 ### Pre-Deploy Checklist
 
 1. Confirm `WebAuthService.redirectUri` resolves to the deployed web origin.
-2. Set `CORS_ALLOWED_ORIGINS=https://app.lythaus.asora.co.za` in Azure Functions.
+2. Set `CORS_ALLOWED_ORIGINS=https://lythaus-web.pages.dev` in Azure Functions.
 3. Run `bash scripts/cf-pages-build.sh` from the repo root.
 4. Deploy `build/web/` to the static hosting target.
 5. Deploy the marketing site separately from `apps/marketing-site`.
@@ -185,7 +185,7 @@ cross-origin SSO is required.
 
 | # | Test | URL / Action | Expected |
 |---|---|---|---|
-| 1 | Landing loads | `https://app.lythaus.asora.co.za/` | Redirects to `/login` when unauthenticated |
+| 1 | Landing loads | `https://lythaus-web.pages.dev/` | Redirects to `/login` when unauthenticated |
 | 2 | Login screen | `/login` | AuthChoiceScreen renders |
 | 3 | Guest mode | Click "Continue as guest" | Redirects to `/`, Discover tab loads |
 | 4 | Auth callback | `/auth/callback` with no params | Shows an error and a back button |
