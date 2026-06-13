@@ -11,7 +11,7 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ErrorResponse } from '@shared/types/openapi';
-import { getCorsHeaders } from '@shared/utils/http';
+import { getCorsHeaders, runWithRequestOrigin } from '@shared/utils/http';
 
 /**
  * HTTP Handler Context
@@ -304,21 +304,23 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
     context.log(`[HTTP Handler] Request: ${request.method} ${request.url} [${correlationId}]`);
 
     try {
-      const ctx = createHandlerContext<TRequest>(request, context, correlationId);
-      const response = await handler(ctx);
+      return await runWithRequestOrigin(requestOrigin, async () => {
+        const ctx = createHandlerContext<TRequest>(request, context, correlationId);
+        const response = await handler(ctx);
 
-      applyStandardResponseHeaders(
-        response,
-        requestOrigin,
-        Boolean(request.headers.get('authorization')),
-        correlationId
-      );
+        applyStandardResponseHeaders(
+          response,
+          requestOrigin,
+          Boolean(request.headers.get('authorization')),
+          correlationId
+        );
 
-      context.log(
-        `[HTTP Handler] Response: ${response.status ?? 200} [${correlationId}]`
-      );
+        context.log(
+          `[HTTP Handler] Response: ${response.status ?? 200} [${correlationId}]`
+        );
 
-      return response;
+        return response;
+      });
     } catch (error) {
       context.error(
         `[HTTP Handler] Unhandled error [${correlationId}]:`,

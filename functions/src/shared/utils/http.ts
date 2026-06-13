@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 export type JsonResponse = {
   status: number;
   headers: Record<string, string>;
@@ -35,6 +37,25 @@ interface SuccessResponse<T> {
   data: T;
   timestamp: string;
   requestId?: string;
+}
+
+interface RequestOriginContext {
+  origin?: string;
+}
+
+const requestOriginStorage = new AsyncLocalStorage<RequestOriginContext>();
+
+export function runWithRequestOrigin<T>(requestOrigin: string | undefined, fn: () => T): T {
+  const origin = requestOrigin?.trim() || undefined;
+  return requestOriginStorage.run({ origin }, fn);
+}
+
+function getRequestOriginFromContext(): string | undefined {
+  return requestOriginStorage.getStore()?.origin;
+}
+
+function resolveRequestOrigin(requestOrigin?: string): string | undefined {
+  return requestOrigin?.trim() || getRequestOriginFromContext();
 }
 
 /**
@@ -78,7 +99,8 @@ const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 
 export function getAllowedOrigin(requestOrigin?: string): string {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
-  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
+  const resolvedOrigin = resolveRequestOrigin(requestOrigin);
+  if (resolvedOrigin && ALLOWED_ORIGINS.includes(resolvedOrigin)) return resolvedOrigin;
   return ALLOWED_ORIGINS[0] ?? '*';
 }
 
