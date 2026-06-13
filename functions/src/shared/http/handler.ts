@@ -106,7 +106,7 @@ function applyStandardResponseHeaders(
     headers.Vary = appendVaryHeader(headers.Vary, 'Origin');
   }
 
-  const varyHeader = headers.Vary;
+  const varyHeader = headers.Vary || '';
   if (hasAuthHeader && !headers['Cache-Control']) {
     headers['Cache-Control'] = 'private, no-store';
   }
