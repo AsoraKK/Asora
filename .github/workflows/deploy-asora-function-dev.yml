@@ -80,7 +80,7 @@ jobs:
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
-            --settings CORS_ALLOWED_ORIGINS='["https://control.asora.co.za","https://lythaus-web.pages.dev"]'
+            --settings CORS_ALLOWED_ORIGINS='["https://control.asora.co.za","https://lythaus-web.pages.dev","https://*.lythaus-web.pages.dev"]'
 
       - name: Build Functions (Flex)
         working-directory: functions

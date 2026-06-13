@@ -58,6 +58,19 @@ function resolveRequestOrigin(requestOrigin?: string): string | undefined {
   return requestOrigin?.trim() || getRequestOriginFromContext();
 }
 
+function originMatchesAllowedOrigin(requestOrigin: string, allowedOrigin: string): boolean {
+  if (allowedOrigin === '*') {
+    return true;
+  }
+
+  if (!allowedOrigin.includes('*')) {
+    return requestOrigin === allowedOrigin;
+  }
+
+  const escaped = allowedOrigin.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`).test(requestOrigin);
+}
+
 /**
  * Allowed CORS origins. In production, restrict to known front-end origins.
  */
@@ -100,7 +113,9 @@ const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 export function getAllowedOrigin(requestOrigin?: string): string {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
   const resolvedOrigin = resolveRequestOrigin(requestOrigin);
-  if (resolvedOrigin && ALLOWED_ORIGINS.includes(resolvedOrigin)) return resolvedOrigin;
+  if (resolvedOrigin && ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))) {
+    return resolvedOrigin;
+  }
   return ALLOWED_ORIGINS[0] ?? '*';
 }
 

@@ -43,7 +43,8 @@ describe('http utility responses', () => {
 
   it('reflects the active request origin inside async-local response helpers', async () => {
     const originalOrigins = process.env.CORS_ALLOWED_ORIGINS;
-    process.env.CORS_ALLOWED_ORIGINS = '["https://control.asora.co.za","https://lythaus-web.pages.dev"]';
+    process.env.CORS_ALLOWED_ORIGINS =
+      '["https://control.asora.co.za","https://lythaus-web.pages.dev","https://*.lythaus-web.pages.dev"]';
     jest.resetModules();
 
     try {
@@ -53,7 +54,7 @@ describe('http utility responses', () => {
         runWithRequestOrigin,
       } = require('@shared/utils/http') as typeof import('@shared/utils/http');
 
-      const requestOrigin = 'https://lythaus-web.pages.dev';
+      const requestOrigin = 'https://be18fa23.lythaus-web.pages.dev';
 
       const success = await runWithRequestOrigin(requestOrigin, async () => {
         await Promise.resolve();
