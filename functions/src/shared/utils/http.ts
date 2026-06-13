@@ -147,7 +147,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 export function createSuccessResponse<T>(
   data: T,
   additionalHeaders: Record<string, string> = {},
-  statusCode = 200
+  statusCode = 200,
+  requestOrigin?: string
 ) {
   const response: SuccessResponse<T> = {
     success: true,
@@ -159,7 +160,7 @@ export function createSuccessResponse<T>(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      ...getCorsHeaders(),
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -171,7 +172,8 @@ export function createErrorResponse(
   statusCode: number,
   message: string,
   error?: string,
-  additionalHeaders: Record<string, string> = {}
+  additionalHeaders: Record<string, string> = {},
+  requestOrigin?: string
 ) {
   const response: ErrorResponse = {
     success: false,
@@ -184,7 +186,7 @@ export function createErrorResponse(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      ...getCorsHeaders(),
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -196,7 +198,8 @@ export function createErrorResponseWithCode(
   statusCode: number,
   code: string,
   message: string,
-  additionalHeaders: Record<string, string> = {}
+  additionalHeaders: Record<string, string> = {},
+  requestOrigin?: string
 ) {
   const response: ErrorResponse = {
     success: false,
@@ -209,7 +212,7 @@ export function createErrorResponseWithCode(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      ...getCorsHeaders(),
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -217,11 +220,11 @@ export function createErrorResponseWithCode(
   };
 }
 
-export function createCorsResponse() {
+export function createCorsResponse(requestOrigin?: string) {
   return {
     status: 200,
     headers: {
-      ...getCorsHeaders(),
+      ...getCorsHeaders(requestOrigin),
       'Content-Length': '0',
     },
     body: '',

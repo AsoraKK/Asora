@@ -58,7 +58,7 @@ describe('http utility responses', () => {
 
       const success = await runWithRequestOrigin(requestOrigin, async () => {
         await Promise.resolve();
-        return createSuccessResponseWithContext({ id: '123' });
+        return createSuccessResponseWithContext({ id: '123' }, {}, 200, requestOrigin);
       });
       expect(success.headers).toMatchObject({
         'Access-Control-Allow-Origin': requestOrigin,
@@ -66,7 +66,7 @@ describe('http utility responses', () => {
 
       const error = await runWithRequestOrigin(requestOrigin, async () => {
         await Promise.resolve();
-        return createErrorResponseWithContext(500, 'fail');
+        return createErrorResponseWithContext(500, 'fail', undefined, {}, requestOrigin);
       });
       expect(error.headers).toMatchObject({
         'Access-Control-Allow-Origin': requestOrigin,
