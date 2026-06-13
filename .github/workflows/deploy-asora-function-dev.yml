@@ -72,6 +72,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Configure CORS allowed origins
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings CORS_ALLOWED_ORIGINS='["https://control.asora.co.za","https://lythaus-web.pages.dev"]'
+
       - name: Build Functions (Flex)
         working-directory: functions
         env:

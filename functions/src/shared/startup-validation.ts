@@ -27,7 +27,7 @@ const REQUIRED_ENV_VARS: EnvVar[] = [
 const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', required: false, description: 'App Insights telemetry' },
   { name: 'COSMOS_DATABASE_NAME', required: false, description: 'Cosmos database name (default: asora)' },
-  { name: 'CORS_ALLOWED_ORIGINS', required: false, description: 'Comma-separated allowed CORS origins' },
+  { name: 'CORS_ALLOWED_ORIGINS', required: false, description: 'Comma-separated or JSON-array allowed CORS origins' },
   { name: 'RATE_LIMITS_ENABLED', required: false, description: 'Enable/disable global rate limiting guard' },
   { name: 'RATE_LIMIT_CONTAINER', required: false, description: 'Cosmos container for rate limit state' },
   { name: 'AUDIT_HMAC_KEY', required: false, description: 'HMAC secret for audit PII pseudonymisation (Key Vault)' },
