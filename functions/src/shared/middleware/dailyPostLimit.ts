@@ -63,14 +63,16 @@ function buildLimitResponse(
   context: InvocationContext
 ): HttpResponseInit {
   const payload = error.toResponse(extractTraceId(context));
+  const limit = typeof payload.limit === 'number' ? payload.limit : 0;
+  const resetAt = typeof payload.resetAt === 'string' ? payload.resetAt : error.resetDate;
   return {
     status: error.statusCode,
     headers: {
       'Content-Type': 'application/json',
       'Retry-After': DAILY_RETRY_AFTER_SECONDS.toString(),
-      'X-RateLimit-Limit': error.limit.toString(),
+      'X-RateLimit-Limit': limit.toString(),
       'X-RateLimit-Remaining': '0',
-      'X-RateLimit-Reset': toResetUnixSeconds(error.resetDate),
+      'X-RateLimit-Reset': toResetUnixSeconds(resetAt),
     },
     body: JSON.stringify(payload),
   };
