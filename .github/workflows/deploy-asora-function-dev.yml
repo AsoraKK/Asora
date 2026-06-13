@@ -82,6 +82,18 @@ jobs:
             -n "$FUNC_APP_CLEAN" \
             --settings CORS_ALLOWED_ORIGINS='https://control.asora.co.za,https://lythaus-web.pages.dev,https://*.lythaus-web.pages.dev'
 
+      - name: Inspect CORS allowed origins
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          CORS_ALLOWED_ORIGINS=$(az functionapp config appsettings list \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='CORS_ALLOWED_ORIGINS'] | [0].value" \
+            -o tsv | tr -d '\r')
+          echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-<empty>}"
+
       - name: Build Functions (Flex)
         working-directory: functions
         env:
