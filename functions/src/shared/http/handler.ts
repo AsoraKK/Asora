@@ -11,6 +11,7 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ErrorResponse } from '@shared/types/openapi';
+import { getCorsHeaders } from '@shared/utils/http';
 
 /**
  * HTTP Handler Context
@@ -63,6 +64,58 @@ function createErrorResponse(
       ...(details ? { details } : {}),
     },
   };
+}
+
+function appendVaryHeader(current: string | undefined, value: string): string {
+  const values = (current || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (!values.includes(value)) {
+    values.push(value);
+  }
+
+  return values.join(', ');
+}
+
+function applyStandardResponseHeaders(
+  response: HttpResponseInit,
+  requestOrigin: string | undefined,
+  hasAuthHeader: boolean,
+  correlationId: string
+): HttpResponseInit {
+  if (!response.headers) {
+    response.headers = {};
+  }
+
+  const headers = response.headers as Record<string, string>;
+
+  if (!headers['X-Correlation-ID']) {
+    headers['X-Correlation-ID'] = correlationId;
+  }
+
+  const corsHeaders = getCorsHeaders(requestOrigin);
+  for (const [key, value] of Object.entries(corsHeaders)) {
+    if (!headers[key]) {
+      headers[key] = value;
+    }
+  }
+
+  if (corsHeaders['Access-Control-Allow-Origin'] !== '*') {
+    headers.Vary = appendVaryHeader(headers.Vary, 'Origin');
+  }
+
+  if (hasAuthHeader && !headers['Cache-Control']) {
+    headers['Cache-Control'] = 'private, no-store';
+  }
+  if (hasAuthHeader && !headers.Vary) {
+    headers.Vary = 'Authorization';
+  } else if (hasAuthHeader && !headers.Vary.split(',').map((entry) => entry.trim()).includes('Authorization')) {
+    headers.Vary = appendVaryHeader(headers.Vary, 'Authorization');
+  }
+
+  return response;
 }
 
 /**
@@ -245,6 +298,7 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
   return async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     // Generate correlation ID
     const correlationId = request.headers.get('X-Correlation-ID') || uuidv4();
+    const requestOrigin = request.headers.get('Origin') || request.headers.get('origin') || undefined;
 
     context.log(`[HTTP Handler] Request: ${request.method} ${request.url} [${correlationId}]`);
 
@@ -252,22 +306,12 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
       const ctx = createHandlerContext<TRequest>(request, context, correlationId);
       const response = await handler(ctx);
 
-      // Ensure correlation ID is in response
-      if (!response.headers) {
-        response.headers = {};
-      }
-      const headers = response.headers as Record<string, string>;
-      if (!headers['X-Correlation-ID']) {
-        headers['X-Correlation-ID'] = correlationId;
-      }
-
-      const hasAuthHeader = Boolean(request.headers.get('authorization'));
-      if (hasAuthHeader && !headers['Cache-Control']) {
-        headers['Cache-Control'] = 'private, no-store';
-      }
-      if (hasAuthHeader && !headers.Vary) {
-        headers.Vary = 'Authorization';
-      }
+      applyStandardResponseHeaders(
+        response,
+        requestOrigin,
+        Boolean(request.headers.get('authorization')),
+        correlationId
+      );
 
       context.log(
         `[HTTP Handler] Response: ${response.status ?? 200} [${correlationId}]`
@@ -287,10 +331,16 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
           'An unexpected error occurred',
           correlationId
         ),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Correlation-ID': correlationId,
-        },
+        headers: applyStandardResponseHeaders(
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+          requestOrigin,
+          Boolean(request.headers.get('authorization')),
+          correlationId
+        ).headers,
       };
     }
   };

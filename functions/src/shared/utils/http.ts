@@ -44,10 +44,19 @@ const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
   : ['*'];
 
-function getAllowedOrigin(requestOrigin?: string): string {
+export function getAllowedOrigin(requestOrigin?: string): string {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
   if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
   return ALLOWED_ORIGINS[0] ?? '*';
+}
+
+export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': getAllowedOrigin(requestOrigin),
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+    'Access-Control-Max-Age': '86400',
+  };
 }
 
 /**
@@ -81,10 +90,7 @@ export function createSuccessResponse<T>(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -109,10 +115,7 @@ export function createErrorResponse(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -137,10 +140,7 @@ export function createErrorResponseWithCode(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -152,10 +152,7 @@ export function createCorsResponse() {
   return {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(),
       'Content-Length': '0',
     },
     body: '',

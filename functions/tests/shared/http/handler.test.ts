@@ -181,6 +181,22 @@ describe('httpHandler', () => {
       expect(response.headers?.['Content-Type']).toBe('application/json');
     });
 
+    it('should attach CORS headers to JSON responses', async () => {
+      const handler = httpHandler(async (ctx) => {
+        return ctx.ok({ message: 'success' });
+      });
+
+      const request = createMockRequest({
+        headers: { Origin: 'https://lythaus-web.pages.dev' },
+      });
+      const context = createMockContext();
+
+      const response = await handler(request, context);
+      expect(response.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(response.headers?.['Access-Control-Allow-Methods']).toContain('GET');
+      expect(response.headers?.['Access-Control-Allow-Headers']).toContain('Authorization');
+    });
+
     it('should create 201 Created response', async () => {
       const data = { id: '123', name: 'resource' };
       const handler = httpHandler(async (ctx) => {
