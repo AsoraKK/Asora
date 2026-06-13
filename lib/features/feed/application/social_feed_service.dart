@@ -153,7 +153,7 @@ class SocialFeedService implements SocialFeedRepository {
       'SocialFeedService.getFeed',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
-          '$_baseUrl/feed/get',
+          '$_baseUrl/feed',
           queryParameters: params.toJson(),
           options: Options(
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
@@ -186,7 +186,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed/get')
+          AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
             ..addAll({
               'request.page': params.page,
               'request.page_size': params.pageSize,
