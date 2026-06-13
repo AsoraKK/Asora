@@ -36,11 +36,13 @@ jobs:
       BETA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
-      BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/beta-smoke-report.json
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set smoke report path
+        run: echo "BETA_SMOKE_REPORT_PATH=$RUNNER_TEMP/beta-smoke-report.json" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
