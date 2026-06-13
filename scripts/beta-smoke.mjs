@@ -60,14 +60,44 @@ function assert(condition, message) {
 }
 
 async function waitForAnyText(page, texts, timeout = 20_000) {
-  await page.waitForFunction(
-    (expectedTexts) => {
-      const bodyText = document.body?.innerText ?? '';
-      return expectedTexts.some((text) => bodyText.includes(text));
-    },
-    texts,
-    { timeout },
-  );
+  const deadline = Date.now() + timeout;
+  let lastSnapshot = null;
+
+  const containsText = (value) =>
+    typeof value === 'string' && texts.some((text) => value.includes(text));
+
+  const snapshotHasText = (node) => {
+    if (!node) {
+      return false;
+    }
+
+    if (containsText(node.name) || containsText(node.value) || containsText(node.description)) {
+      return true;
+    }
+
+    return Array.isArray(node.children) && node.children.some(snapshotHasText);
+  };
+
+  while (Date.now() < deadline) {
+    const bodyText = await page.evaluate(() => document.body?.innerText ?? '');
+    if (containsText(bodyText)) {
+      return;
+    }
+
+    try {
+      lastSnapshot = await page.accessibility.snapshot({ interestingOnly: false });
+      if (snapshotHasText(lastSnapshot)) {
+        return;
+      }
+    } catch {
+      // Ignore accessibility snapshot errors and keep polling.
+    }
+
+    await page.waitForTimeout(500);
+  }
+
+  const snapshotPreview = lastSnapshot ? JSON.stringify(lastSnapshot, null, 2).slice(0, 1200) : '<no accessibility snapshot>';
+  throw new Error(`Timed out waiting for text: ${texts.join(', ')}. Snapshot: ${snapshotPreview}`);
 }
 
 async function fetchWithBody(url, init = {}) {
