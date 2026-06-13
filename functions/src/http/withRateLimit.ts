@@ -26,6 +26,7 @@ import {
   trackRateLimitBlocked,
   type RateLimitMetricDimensions,
 } from '@rate-limit/telemetry';
+import { getCorsHeaders, runWithRequestOrigin } from '@shared/utils/http';
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -185,6 +186,7 @@ function build429Response(
     status: 429,
     headers: {
       'Content-Type': 'application/json',
+      ...getCorsHeaders(),
       'Retry-After': Math.max(block.retryAfterSeconds, 0).toString(),
       'X-RateLimit-Limit': Math.max(0, Math.floor(block.limit)).toString(),
       'X-RateLimit-Remaining': '0',
@@ -433,140 +435,142 @@ export function withRateLimit(
   policyOrResolver: RateLimitPolicy | RateLimitPolicyResolver
 ) {
   return async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    if (!RATE_LIMITS_ENABLED) {
-      return handler(req, context);
-    }
-
     const method = (req.method ?? 'GET').toUpperCase();
-    if (method === 'OPTIONS') {
-      return handler(req, context);
-    }
+    const requestOrigin = req.headers.get('Origin') || req.headers.get('origin') || undefined;
 
-    let policy: RateLimitPolicy | null;
-    try {
-      policy = await resolvePolicy(policyOrResolver, req, context);
-    } catch (policyError) {
-      context.warn?.('[rate-limit] policy resolution failed, falling through to handler', policyError);
-      return handler(req, context);
-    }
-    if (!policy || policy.limits.length === 0) {
-      return handler(req, context);
-    }
-
-    const nowMs = Date.now();
-    const hashedIp = getHashedIpFromRequest(req);
-    const requestContext: RateLimitRequestContext = {
-      req,
-      context,
-      routeId: policy.routeId,
-      policyName: policy.name,
-      hashedIp,
-      userId: null,
-      nowMs,
-    };
-
-    if (policy.deriveUserId) {
-      const derived = await policy.deriveUserId({ ...requestContext });
-      requestContext.userId = derived;
-    }
-
-    const traceId = extractTraceId(context);
-
-    // Fail-open: if rate-limit evaluation throws (e.g. Cosmos unavailable),
-    // log the error and fall through to the handler instead of returning 500.
-    try {
-
-    if (policy.authBackoff) {
-      const activeLock = await evaluateAuthBackoff(policy.authBackoff, requestContext, hashedIp);
-      if (activeLock) {
-        const block: RateLimitBlockContext = {
-          scope: 'auth_backoff',
-          limit: policy.authBackoff.limit,
-          windowSeconds: policy.authBackoff.windowSeconds,
-          retryAfterSeconds: activeLock.state.remainingLockoutSeconds,
-          resetUnixSeconds: activeLock.state.lockedUntilMs
-            ? Math.ceil(activeLock.state.lockedUntilMs / 1000)
-            : Math.ceil(nowMs / 1000),
-          keyKind: activeLock.scope,
-        };
-
-        recordBlockedMetric(policy, block, hashedIp, requestContext.userId);
-        return build429Response(block, traceId);
-      }
-    }
-
-    const headers: RateLimitHeaderInfo[] = [];
-    let blockContext: RateLimitBlockContext | null = null;
-
-    for (const rule of policy.limits) {
-      const key = await resolveKey(rule, requestContext);
-      if (!key) {
-        continue;
+    return runWithRequestOrigin(requestOrigin, async () => {
+      if (!RATE_LIMITS_ENABLED) {
+        return handler(req, context);
       }
 
-      if (rule.slidingWindow) {
-        const slidingResult = await evaluateSlidingRule(rule, key, nowMs);
-        headers.push(buildHeaderFromSliding(rule, slidingResult));
+      if (method === 'OPTIONS') {
+        return handler(req, context);
+      }
 
-        if (slidingResult.blocked) {
-          blockContext = {
-            scope: rule.scope,
-            limit: slidingResult.limit,
-            windowSeconds: slidingResult.windowSeconds,
-            retryAfterSeconds: slidingResult.retryAfterSeconds,
-            resetUnixSeconds: Math.ceil(slidingResult.resetAt / 1000),
-            keyKind: rule.scope,
-          };
-          break;
+      let policy: RateLimitPolicy | null;
+      try {
+        policy = await resolvePolicy(policyOrResolver, req, context);
+      } catch (policyError) {
+        context.warn?.('[rate-limit] policy resolution failed, falling through to handler', policyError);
+        return handler(req, context);
+      }
+      if (!policy || policy.limits.length === 0) {
+        return handler(req, context);
+      }
+
+      const nowMs = Date.now();
+      const hashedIp = getHashedIpFromRequest(req);
+      const requestContext: RateLimitRequestContext = {
+        req,
+        context,
+        routeId: policy.routeId,
+        policyName: policy.name,
+        hashedIp,
+        userId: null,
+        nowMs,
+      };
+
+      if (policy.deriveUserId) {
+        const derived = await policy.deriveUserId({ ...requestContext });
+        requestContext.userId = derived;
+      }
+
+      const traceId = extractTraceId(context);
+
+      // Fail-open: if rate-limit evaluation throws (e.g. Cosmos unavailable),
+      // log the error and fall through to the handler instead of returning 500.
+      try {
+        if (policy.authBackoff) {
+          const activeLock = await evaluateAuthBackoff(policy.authBackoff, requestContext, hashedIp);
+          if (activeLock) {
+            const block: RateLimitBlockContext = {
+              scope: 'auth_backoff',
+              limit: policy.authBackoff.limit,
+              windowSeconds: policy.authBackoff.windowSeconds,
+              retryAfterSeconds: activeLock.state.remainingLockoutSeconds,
+              resetUnixSeconds: activeLock.state.lockedUntilMs
+                ? Math.ceil(activeLock.state.lockedUntilMs / 1000)
+                : Math.ceil(nowMs / 1000),
+              keyKind: activeLock.scope,
+            };
+
+            recordBlockedMetric(policy, block, hashedIp, requestContext.userId);
+            return build429Response(block, traceId);
+          }
         }
-      }
 
-      if (blockContext) {
-        break;
-      }
+        const headers: RateLimitHeaderInfo[] = [];
+        let blockContext: RateLimitBlockContext | null = null;
 
-      if (rule.tokenBucket) {
-        const tokenResult = await evaluateTokenRule(rule, key, nowMs);
-        headers.push(buildHeaderFromToken(rule, tokenResult, rule.tokenBucket));
+        for (const rule of policy.limits) {
+          const key = await resolveKey(rule, requestContext);
+          if (!key) {
+            continue;
+          }
 
-        if (!tokenResult.allowed) {
-          blockContext = {
-            scope: rule.scope,
-            limit: rule.tokenBucket.limitOverride ?? rule.tokenBucket.capacity,
-            windowSeconds: resolveTokenBucketWindow(rule.tokenBucket),
-            retryAfterSeconds: tokenResult.retryAfterSeconds,
-            resetUnixSeconds: Math.ceil(tokenResult.resetAt / 1000),
-            keyKind: rule.scope,
-          };
-          break;
+          if (rule.slidingWindow) {
+            const slidingResult = await evaluateSlidingRule(rule, key, nowMs);
+            headers.push(buildHeaderFromSliding(rule, slidingResult));
+
+            if (slidingResult.blocked) {
+              blockContext = {
+                scope: rule.scope,
+                limit: slidingResult.limit,
+                windowSeconds: slidingResult.windowSeconds,
+                retryAfterSeconds: slidingResult.retryAfterSeconds,
+                resetUnixSeconds: Math.ceil(slidingResult.resetAt / 1000),
+                keyKind: rule.scope,
+              };
+              break;
+            }
+          }
+
+          if (blockContext) {
+            break;
+          }
+
+          if (rule.tokenBucket) {
+            const tokenResult = await evaluateTokenRule(rule, key, nowMs);
+            headers.push(buildHeaderFromToken(rule, tokenResult, rule.tokenBucket));
+
+            if (!tokenResult.allowed) {
+              blockContext = {
+                scope: rule.scope,
+                limit: rule.tokenBucket.limitOverride ?? rule.tokenBucket.capacity,
+                windowSeconds: resolveTokenBucketWindow(rule.tokenBucket),
+                retryAfterSeconds: tokenResult.retryAfterSeconds,
+                resetUnixSeconds: Math.ceil(tokenResult.resetAt / 1000),
+                keyKind: rule.scope,
+              };
+              break;
+            }
+          }
         }
+
+        if (blockContext) {
+          recordBlockedMetric(policy, blockContext, hashedIp, requestContext.userId);
+          return build429Response(blockContext, traceId);
+        }
+
+        const response = await handler(req, context);
+
+        const selectedHeader = selectHeaderCandidate(headers);
+        if (selectedHeader) {
+          applyHeaderInfo(response, selectedHeader);
+          recordAllowedMetric(policy, selectedHeader);
+        }
+
+        if (policy.authBackoff) {
+          await handleAuthBackoffPostResponse(policy.authBackoff, requestContext, hashedIp, response);
+        }
+
+        return response;
+      } catch (rateLimitError) {
+        // Fail-open: rate-limit infrastructure failure must not block requests
+        context.warn?.('[rate-limit] evaluation failed, falling through to handler', rateLimitError);
+        return handler(req, context);
       }
-    }
-
-    if (blockContext) {
-      recordBlockedMetric(policy, blockContext, hashedIp, requestContext.userId);
-      return build429Response(blockContext, traceId);
-    }
-
-    const response = await handler(req, context);
-
-    const selectedHeader = selectHeaderCandidate(headers);
-    if (selectedHeader) {
-      applyHeaderInfo(response, selectedHeader);
-      recordAllowedMetric(policy, selectedHeader);
-    }
-
-    if (policy.authBackoff) {
-      await handleAuthBackoffPostResponse(policy.authBackoff, requestContext, hashedIp, response);
-    }
-
-    return response;
-
-    } catch (rateLimitError) {
-      // Fail-open: rate-limit infrastructure failure must not block requests
-      context.warn?.('[rate-limit] evaluation failed, falling through to handler', rateLimitError);
-      return handler(req, context);
-    }
+    });
   };
 }
 

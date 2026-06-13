@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 export type JsonResponse = {
   status: number;
   headers: Record<string, string>;
@@ -37,17 +39,100 @@ interface SuccessResponse<T> {
   requestId?: string;
 }
 
+interface RequestOriginContext {
+  origin?: string;
+}
+
+const requestOriginStorage = new AsyncLocalStorage<RequestOriginContext>();
+
+export function runWithRequestOrigin<T>(requestOrigin: string | undefined, fn: () => T): T {
+  const origin = requestOrigin?.trim() || undefined;
+  return requestOriginStorage.run({ origin }, fn);
+}
+
+function getRequestOriginFromContext(): string | undefined {
+  return requestOriginStorage.getStore()?.origin;
+}
+
+function resolveRequestOrigin(requestOrigin?: string): string | undefined {
+  return requestOrigin?.trim() || getRequestOriginFromContext();
+}
+
+function originMatchesAllowedOrigin(requestOrigin: string, allowedOrigin: string): boolean {
+  if (allowedOrigin === '*') {
+    return true;
+  }
+
+  if (!allowedOrigin.includes('*')) {
+    return requestOrigin === allowedOrigin;
+  }
+
+  const escaped = allowedOrigin.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`).test(requestOrigin);
+}
+
 /**
  * Allowed CORS origins. In production, restrict to known front-end origins.
  */
-const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : ['*'];
+function parseAllowedOrigins(raw: string | undefined): string[] {
+  if (!raw) {
+    return ['*'];
+  }
 
-function getAllowedOrigin(requestOrigin?: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return ['*'];
+  }
+
+  if (trimmed === '*') {
+    return ['*'];
+  }
+
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        const values = parsed.map((entry) => String(entry).trim()).filter(Boolean);
+        return values.length > 0 ? values : ['*'];
+      }
+    } catch {
+      // Fall through to comma-separated parsing.
+    }
+  }
+
+  const values = trimmed
+    .split(',')
+    .map((entry) => entry.replace(/^[\s"'[\]]+|[\s"'[\]]+$/g, '').trim())
+    .filter(Boolean);
+
+  return values.length > 0 ? values : ['*'];
+}
+
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
+
+export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
-  if (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  return ALLOWED_ORIGINS[0] ?? '*';
+
+  const resolvedOrigin = resolveRequestOrigin(requestOrigin);
+  if (
+    resolvedOrigin &&
+    ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))
+  ) {
+    return resolvedOrigin;
+  }
+
+  return undefined;
+}
+
+export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
+  const allowedOrigin = getAllowedOrigin(requestOrigin);
+
+  return {
+    ...(allowedOrigin ? { 'Access-Control-Allow-Origin': allowedOrigin } : {}),
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+    'Access-Control-Max-Age': '86400',
+  };
 }
 
 /**
@@ -69,7 +154,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 export function createSuccessResponse<T>(
   data: T,
   additionalHeaders: Record<string, string> = {},
-  statusCode = 200
+  statusCode = 200,
+  requestOrigin?: string
 ) {
   const response: SuccessResponse<T> = {
     success: true,
@@ -81,10 +167,7 @@ export function createSuccessResponse<T>(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -96,7 +179,8 @@ export function createErrorResponse(
   statusCode: number,
   message: string,
   error?: string,
-  additionalHeaders: Record<string, string> = {}
+  additionalHeaders: Record<string, string> = {},
+  requestOrigin?: string
 ) {
   const response: ErrorResponse = {
     success: false,
@@ -109,10 +193,7 @@ export function createErrorResponse(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -124,7 +205,8 @@ export function createErrorResponseWithCode(
   statusCode: number,
   code: string,
   message: string,
-  additionalHeaders: Record<string, string> = {}
+  additionalHeaders: Record<string, string> = {},
+  requestOrigin?: string
 ) {
   const response: ErrorResponse = {
     success: false,
@@ -137,10 +219,7 @@ export function createErrorResponseWithCode(
     status: statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(requestOrigin),
       ...SECURITY_HEADERS,
       ...additionalHeaders,
     },
@@ -148,14 +227,11 @@ export function createErrorResponseWithCode(
   };
 }
 
-export function createCorsResponse() {
+export function createCorsResponse(requestOrigin?: string) {
   return {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': getAllowedOrigin(),
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-      'Access-Control-Max-Age': '86400',
+      ...getCorsHeaders(requestOrigin),
       'Content-Length': '0',
     },
     body: '',

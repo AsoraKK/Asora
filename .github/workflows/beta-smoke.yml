@@ -1,0 +1,68 @@
+name: Beta Browser Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_base_url:
+        description: 'Optional beta web origin override'
+        required: false
+        type: string
+      api_base_url:
+        description: 'Optional API base URL override'
+        required: false
+        type: string
+      admin_api_url:
+        description: 'Optional admin API origin override'
+        required: false
+        type: string
+  workflow_run:
+    workflows: ['deploy-asora-function-staging']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      WEB_BASE_URL: ${{ github.event.inputs.web_base_url || 'https://lythaus-web.pages.dev' }}
+      API_BASE_URL: ${{ github.event.inputs.api_base_url || 'https://asora-function-dev.azurewebsites.net/api' }}
+      ADMIN_API_URL: ${{ github.event.inputs.admin_api_url || 'https://admin-api.asora.co.za' }}
+      BETA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set smoke report path
+        run: echo "BETA_SMOKE_REPORT_PATH=$RUNNER_TEMP/beta-smoke-report.json" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run beta browser smoke
+        run: node scripts/beta-smoke.mjs
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-smoke-report
+          path: ${{ env.BETA_SMOKE_REPORT_PATH }}
+          if-no-files-found: warn

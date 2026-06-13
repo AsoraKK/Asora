@@ -181,6 +181,22 @@ describe('httpHandler', () => {
       expect(response.headers?.['Content-Type']).toBe('application/json');
     });
 
+    it('should attach CORS headers to JSON responses', async () => {
+      const handler = httpHandler(async (ctx) => {
+        return ctx.ok({ message: 'success' });
+      });
+
+      const request = createMockRequest({
+        headers: { Origin: 'https://lythaus-web.pages.dev' },
+      });
+      const context = createMockContext();
+
+      const response = await handler(request, context);
+      expect(response.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(response.headers?.['Access-Control-Allow-Methods']).toContain('GET');
+      expect(response.headers?.['Access-Control-Allow-Headers']).toContain('Authorization');
+    });
+
     it('should create 201 Created response', async () => {
       const data = { id: '123', name: 'resource' };
       const handler = httpHandler(async (ctx) => {
@@ -368,6 +384,29 @@ describe('httpHandler', () => {
 
       const response = await handler(request, context);
       expect(response.status).toBe(206);
+    });
+  });
+
+  describe('cors origin parsing', () => {
+    it('accepts JSON array allowed origins from env', () => {
+      const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
+      process.env.CORS_ALLOWED_ORIGINS = '["https://lythaus-web.pages.dev","https://control.asora.co.za"]';
+
+      try {
+        jest.resetModules();
+        const { getAllowedOrigin, getCorsHeaders } = require('@shared/utils/http') as typeof import('@shared/utils/http');
+
+        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
+        expect(getAllowedOrigin('https://example.com')).toBeUndefined();
+        expect(getCorsHeaders('https://example.com')).not.toHaveProperty('Access-Control-Allow-Origin');
+      } finally {
+        if (previousOrigins === undefined) {
+          delete process.env.CORS_ALLOWED_ORIGINS;
+        } else {
+          process.env.CORS_ALLOWED_ORIGINS = previousOrigins;
+        }
+        jest.resetModules();
+      }
     });
   });
 
