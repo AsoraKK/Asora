@@ -31,10 +31,10 @@ jobs:
       - run: npm run openapi:bundle
       - name: Fail if bundled spec drift
         run: npm run openapi:check:bundle
-      - name: Check for breaking changes
+      - name: Report OpenAPI diff
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          npx oasdiff --fail-on-diff \
+          npx oasdiff \
             api/openapi/dist/openapi.json \
             <(git show origin/${{ github.base_ref }}:api/openapi/dist/openapi.json)
       - name: Enforce semver when breaking
