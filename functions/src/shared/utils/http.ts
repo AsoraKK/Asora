@@ -40,9 +40,41 @@ interface SuccessResponse<T> {
 /**
  * Allowed CORS origins. In production, restrict to known front-end origins.
  */
-const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : ['*'];
+function parseAllowedOrigins(raw: string | undefined): string[] {
+  if (!raw) {
+    return ['*'];
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return ['*'];
+  }
+
+  if (trimmed === '*') {
+    return ['*'];
+  }
+
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        const values = parsed.map((entry) => String(entry).trim()).filter(Boolean);
+        return values.length > 0 ? values : ['*'];
+      }
+    } catch {
+      // Fall through to comma-separated parsing.
+    }
+  }
+
+  const values = trimmed
+    .split(',')
+    .map((entry) => entry.replace(/^[\s"'[\]]+|[\s"'[\]]+$/g, '').trim())
+    .filter(Boolean);
+
+  return values.length > 0 ? values : ['*'];
+}
+
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 
 export function getAllowedOrigin(requestOrigin?: string): string {
   if (ALLOWED_ORIGINS.includes('*')) return '*';

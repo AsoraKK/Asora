@@ -387,6 +387,28 @@ describe('httpHandler', () => {
     });
   });
 
+  describe('cors origin parsing', () => {
+    it('accepts JSON array allowed origins from env', () => {
+      const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
+      process.env.CORS_ALLOWED_ORIGINS = '["https://lythaus-web.pages.dev","https://control.asora.co.za"]';
+
+      try {
+        jest.resetModules();
+        const { getAllowedOrigin } = require('@shared/utils/http') as typeof import('@shared/utils/http');
+
+        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
+        expect(getAllowedOrigin('https://example.com')).toBe('https://lythaus-web.pages.dev');
+      } finally {
+        if (previousOrigins === undefined) {
+          delete process.env.CORS_ALLOWED_ORIGINS;
+        } else {
+          process.env.CORS_ALLOWED_ORIGINS = previousOrigins;
+        }
+        jest.resetModules();
+      }
+    });
+  });
+
   describe('cache control defaults', () => {
     it('sets private no-store for authenticated responses when not explicitly set', async () => {
       const handler = httpHandler(async (ctx) => ctx.ok({ message: 'authed' }));
