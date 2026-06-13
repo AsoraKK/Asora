@@ -66,6 +66,7 @@ k6 run scripts/load-tests/feed-load.k6.js
 
 **Implementation Reference:**
 - [functions/src/rate-limit/policies.ts](functions/src/rate-limit/policies.ts) — Policy definitions
+- [docs/runbooks/rate-limits.md](../runbooks/rate-limits.md) — Route-specific rate-limit matrix and 429 format
 - Uses Redis sliding window + token bucket algorithms
 
 **Action Items:**

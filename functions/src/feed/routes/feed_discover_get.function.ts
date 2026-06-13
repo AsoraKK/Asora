@@ -10,6 +10,8 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
@@ -104,17 +106,19 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
   }
 });
 
+const rateLimitedFeedDiscover = withRateLimit(feed_discover_get, (req) => getPolicyForRoute(req));
+
 // Register HTTP trigger
 app.http('feed_discover_get', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'feed/discover',
-  handler: feed_discover_get,
+  handler: rateLimitedFeedDiscover,
 });
 
 app.http('feed_public_get', {
   methods: ['GET'],
   authLevel: 'anonymous',
   route: 'feed/public',
-  handler: feed_discover_get,
+  handler: rateLimitedFeedDiscover,
 });

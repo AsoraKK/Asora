@@ -155,4 +155,55 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('shows rate limit error when redemption is throttled', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+    addTearDown(
+      () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+    );
+
+    final service = MockInviteRedeemService();
+    final request = RequestOptions(path: '/api/auth/redeem-invite');
+    when(
+      () => service.redeemInvite(accessToken: 'token', inviteCode: 'CODE-1234'),
+    ).thenThrow(
+      DioException(
+        requestOptions: request,
+        response: Response<Map<String, dynamic>>(
+          data: const {'error': 'rate_limited', 'retry_after_seconds': 30},
+          statusCode: 429,
+          requestOptions: request,
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWith(
+            (ref) => const NullAnalyticsClient(),
+          ),
+          inviteRedeemServiceProvider.overrideWith((ref) => service),
+          jwtProvider.overrideWith((ref) async => 'token'),
+        ],
+        child: const MaterialApp(home: InviteRedeemScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'CODE-1234');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(LythButton));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Too many invite redemption attempts. Please wait before trying again.',
+      ),
+      findsOneWidget,
+    );
+  });
 }

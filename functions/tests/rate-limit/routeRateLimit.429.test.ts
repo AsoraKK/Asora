@@ -1,18 +1,9 @@
 /**
- * Rate-limit hardening: 429 + Retry-After for key write endpoints
- *
- * Each describe block covers one route that must enforce rate limiting.
- * The test injects the real `withRateLimit` middleware with a production-like
- * policy and a mocked store so no Redis connection is needed.
- *
- * We verify:
- * 1. The response code is 429
- * 2. `Retry-After` header is present and is a positive integer string
- * 3. `X-RateLimit-Limit`, `X-RateLimit-Remaining` headers are present
- * 4. The JSON body contains `error: "rate_limited"` and `retry_after_seconds`
+ * Rate-limit hardening: standard 429 behaviour for route-mapped and
+ * function-mapped endpoint policies.
  */
 import type { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { withRateLimit, type RateLimitPolicy } from '@http/withRateLimit';
+import { withRateLimit } from '@http/withRateLimit';
 import {
   applySlidingWindowLimit,
   applyTokenBucketLimit,
@@ -21,11 +12,7 @@ import {
   resetAuthFailures,
   type SlidingWindowLimitResult,
 } from '@rate-limit/store';
-import { getPolicyForRoute } from '@rate-limit/policies';
-
-// ─────────────────────────────────────────────────────────────
-// Module mocks
-// ─────────────────────────────────────────────────────────────
+import { getPolicyForFunction, getPolicyForRoute } from '@rate-limit/policies';
 
 jest.mock('@rate-limit/store', () => ({
   applySlidingWindowLimit: jest.fn(),
@@ -55,10 +42,6 @@ jest.mock('applicationinsights', () => {
 const applySlidingWindowLimitMock = applySlidingWindowLimit as jest.MockedFunction<typeof applySlidingWindowLimit>;
 const getAuthFailureStateMock = getAuthFailureState as jest.MockedFunction<typeof getAuthFailureState>;
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
-
 const FIXED_NOW = 1_700_000_000_000;
 
 function makeRequest(method: string, url: string): HttpRequest {
@@ -80,7 +63,6 @@ function makeContext(): InvocationContext {
 
 const successHandler = jest.fn(async (): Promise<HttpResponseInit> => ({ status: 200, body: 'ok', headers: {} }));
 
-/** Build a "blocked" sliding window result */
 function blockedResult(retryAfterSeconds = 30): SlidingWindowLimitResult {
   return {
     total: 100,
@@ -94,33 +76,12 @@ function blockedResult(retryAfterSeconds = 30): SlidingWindowLimitResult {
   };
 }
 
-/** Build an "allowed" sliding window result */
-function allowedResult(): SlidingWindowLimitResult {
-  return {
-    total: 1,
-    limit: 30,
-    windowSeconds: 60,
-    remaining: 29,
-    blocked: false,
-    retryAfterSeconds: 0,
-    resetAt: FIXED_NOW + 60_000,
-    buckets: [],
-  };
-}
-
-// ─────────────────────────────────────────────────────────────
-// Per-route helper
-// ─────────────────────────────────────────────────────────────
-
-async function assertRateLimited(
-  method: string,
-  url: string,
+async function assertPolicyRateLimited(
+  req: HttpRequest,
+  policyFactory: (req: HttpRequest) => ReturnType<typeof getPolicyForRoute>,
   retryAfterSeconds = 30
 ): Promise<HttpResponseInit> {
-  // All limit checks return blocked — this correctly handles routes where
-  // user-scoped limits are skipped (no auth token) so only the IP limit fires.
   applySlidingWindowLimitMock.mockResolvedValue(blockedResult(retryAfterSeconds));
-
   getAuthFailureStateMock.mockResolvedValue({
     blocked: false,
     failures: 0,
@@ -128,17 +89,31 @@ async function assertRateLimited(
     windowSeconds: 1800,
   });
 
-  const req = makeRequest(method, url);
-  const policy = getPolicyForRoute(req);
-  const wrapped = withRateLimit(successHandler, policy);
-
-  const response = await wrapped(req, makeContext());
-  return response;
+  const wrapped = withRateLimit(successHandler, policyFactory(req));
+  return wrapped(req, makeContext());
 }
 
-// ─────────────────────────────────────────────────────────────
-// Test setup
-// ─────────────────────────────────────────────────────────────
+async function assertRouteRateLimited(
+  method: string,
+  url: string,
+  retryAfterSeconds = 30
+): Promise<HttpResponseInit> {
+  return assertPolicyRateLimited(makeRequest(method, url), getPolicyForRoute, retryAfterSeconds);
+}
+
+async function assertFunctionRateLimited(
+  functionId: Parameters<typeof getPolicyForFunction>[0],
+  method: string,
+  url: string,
+  retryAfterSeconds = 30
+): Promise<HttpResponseInit> {
+  const req = makeRequest(method, url);
+  return assertPolicyRateLimited(req, () => getPolicyForFunction(functionId), retryAfterSeconds);
+}
+
+function parseJsonBody(response: HttpResponseInit): Record<string, unknown> {
+  return JSON.parse(response.body as string) as Record<string, unknown>;
+}
 
 beforeAll(() => {
   process.env.RATE_LIMITS_ENABLED = 'true';
@@ -154,94 +129,65 @@ afterEach(() => {
   (Date.now as jest.Mock | undefined)?.mockRestore?.();
 });
 
-// ─────────────────────────────────────────────────────────────
-// Route-specific 429 tests
-// ─────────────────────────────────────────────────────────────
+describe('route-mapped 429 responses', () => {
+  const cases: Array<{ title: string; method: string; url: string }> = [
+    { title: 'POST /auth/token', method: 'POST', url: 'https://api.asora.dev/api/auth/token' },
+    { title: 'POST /auth/refresh', method: 'POST', url: 'https://api.asora.dev/api/auth/refresh' },
+    { title: 'GET /auth/userinfo', method: 'GET', url: 'https://api.asora.dev/api/auth/userinfo' },
+    { title: 'GET /feed/discover', method: 'GET', url: 'https://api.asora.dev/api/feed/discover' },
+    { title: 'POST /moderation/flag', method: 'POST', url: 'https://api.asora.dev/api/moderation/flag' },
+    { title: 'POST /moderation/appeals', method: 'POST', url: 'https://api.asora.dev/api/moderation/appeals' },
+    { title: 'PATCH /users/me', method: 'PATCH', url: 'https://api.asora.dev/api/users/me' },
+    { title: 'POST /_admin/content/{id}/block', method: 'POST', url: 'https://api.asora.dev/api/_admin/content/content-1/block' },
+  ];
 
-describe('rate limit – POST /auth/token', () => {
-  it('returns 429 when the limit is exceeded', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/auth/token');
-    expect(response.status).toBe(429);
-  });
+  for (const { title, method, url } of cases) {
+    describe(title, () => {
+      it('returns 429 with standard headers and body', async () => {
+        const response = await assertRouteRateLimited(method, url, 45);
 
-  it('includes a Retry-After header with a positive integer value', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/auth/token', 45);
-    const retryAfter = (response.headers as Record<string, string>)?.['Retry-After'];
-    expect(retryAfter).toBeDefined();
-    expect(Number(retryAfter)).toBeGreaterThan(0);
-    expect(Number.isInteger(Number(retryAfter))).toBe(true);
-  });
+        expect(response.status).toBe(429);
+        expect((response.headers as Record<string, string>)['Retry-After']).toBe('45');
+        expect((response.headers as Record<string, string>)['X-RateLimit-Remaining']).toBe('0');
+        expect((response.headers as Record<string, string>)['X-RateLimit-Limit']).toBeDefined();
+        expect((response.headers as Record<string, string>)['X-RateLimit-Reset']).toBeDefined();
 
-  it('includes X-RateLimit-Remaining: 0', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/auth/token');
-    expect((response.headers as Record<string, string>)?.['X-RateLimit-Remaining']).toBe('0');
-  });
+        const body = parseJsonBody(response);
+        expect(body.error).toBe('rate_limited');
+        expect(typeof body.limit).toBe('number');
+        expect(typeof body.window_seconds).toBe('number');
+        expect(body.retry_after_seconds).toBe(45);
+      });
 
-  it('returns JSON body with error="rate_limited"', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/auth/token');
-    const body = JSON.parse(response.body as string);
-    expect(body.error).toBe('rate_limited');
-    expect(typeof body.retry_after_seconds).toBe('number');
-    expect(body.retry_after_seconds).toBeGreaterThan(0);
-  });
-
-  it('does not call the downstream handler when blocked', async () => {
-    await assertRateLimited('POST', 'https://api.asora.dev/auth/token');
-    expect(successHandler).not.toHaveBeenCalled();
-  });
+      it('does not call the downstream handler when blocked', async () => {
+        await assertRouteRateLimited(method, url);
+        expect(successHandler).not.toHaveBeenCalled();
+      });
+    });
+  }
 });
 
-describe('rate limit – POST /post (create post)', () => {
-  it('returns 429 when the limit is exceeded', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/post');
-    expect(response.status).toBe(429);
-  });
+describe('function-mapped 429 responses', () => {
+  const cases: Array<{ functionId: Parameters<typeof getPolicyForFunction>[0]; method: string; url: string }> = [
+    { functionId: 'createPost', method: 'POST', url: 'https://api.asora.dev/api/posts' },
+    { functionId: 'createComment', method: 'POST', url: 'https://api.asora.dev/api/posts/post-1/comments' },
+    { functionId: 'appeals-create', method: 'POST', url: 'https://api.asora.dev/api/appeals' },
+    { functionId: 'appeals-vote', method: 'POST', url: 'https://api.asora.dev/api/appeals/appeal-1/vote' },
+    { functionId: 'media-upload-url', method: 'POST', url: 'https://api.asora.dev/api/media/upload-url' },
+    { functionId: 'auth-redeem-invite', method: 'POST', url: 'https://api.asora.dev/api/auth/redeem-invite' },
+  ];
 
-  it('includes Retry-After and X-RateLimit-* headers', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/post', 60);
-    const headers = response.headers as Record<string, string>;
-    expect(headers['Retry-After']).toBeDefined();
-    expect(headers['X-RateLimit-Limit']).toBeDefined();
-    expect(headers['X-RateLimit-Reset']).toBeDefined();
-  });
-});
+  for (const { functionId, method, url } of cases) {
+    it(`${functionId} returns structured 429 when the limit is exceeded`, async () => {
+      const response = await assertFunctionRateLimited(functionId, method, url, 20);
 
-describe('rate limit – POST /moderation/flag', () => {
-  it('returns 429 when the limit is exceeded', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/moderation/flag');
-    expect(response.status).toBe(429);
-  });
+      expect(response.status).toBe(429);
+      expect((response.headers as Record<string, string>)['Retry-After']).toBe('20');
 
-  it('returns structured rate_limited body', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/moderation/flag');
-    const body = JSON.parse(response.body as string);
-    expect(body.error).toBe('rate_limited');
-    expect(typeof body.limit).toBe('number');
-    expect(typeof body.window_seconds).toBe('number');
-  });
-});
-
-describe('rate limit – POST /moderation/appeals', () => {
-  it('returns 429 when the limit is exceeded', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/moderation/appeals');
-    expect(response.status).toBe(429);
-  });
-
-  it('includes Retry-After header', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/moderation/appeals', 20);
-    const headers = response.headers as Record<string, string>;
-    expect(Number(headers['Retry-After'])).toBeGreaterThan(0);
-  });
-});
-
-describe('rate limit – POST /user/export', () => {
-  it('returns 429 when the limit is exceeded', async () => {
-    const response = await assertRateLimited('POST', 'https://api.asora.dev/user/export');
-    expect(response.status).toBe(429);
-  });
-
-  it('does not call the downstream handler', async () => {
-    await assertRateLimited('POST', 'https://api.asora.dev/user/export');
-    expect(successHandler).not.toHaveBeenCalled();
-  });
+      const body = parseJsonBody(response);
+      expect(body.error).toBe('rate_limited');
+      expect(body.retry_after_seconds).toBe(20);
+      expect(successHandler).not.toHaveBeenCalled();
+    });
+  }
 });
