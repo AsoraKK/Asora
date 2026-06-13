@@ -37,6 +37,10 @@ jobs:
             if [[ "$file" =~ ^docs/ ]]; then
               continue
             fi
+            # Allow generated OpenAPI client docs
+            if [[ "$file" =~ ^lib/generated/api_client/ ]]; then
+              continue
+            fi
             # Allow README.md anywhere (module docs)
             if [[ "$(basename "$file")" == "README.md" ]]; then
               continue
