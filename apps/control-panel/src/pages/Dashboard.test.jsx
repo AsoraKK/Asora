@@ -3,13 +3,26 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Dashboard from './Dashboard.jsx';
-import { adminRequest, getAbsoluteAdminApiUrl, getAdminApiUrl, getAdminToken } from '../api/adminApi.js';
+import {
+  ADMIN_SESSION_CHANGE_EVENT,
+  adminRequest,
+  getAbsoluteAdminApiUrl,
+  getAdminApiUrl,
+  getAdminToken,
+  getAdminTokenExpiry,
+  setAdminApiUrl,
+  setAdminToken
+} from '../api/adminApi.js';
 
 vi.mock('../api/adminApi.js', () => ({
+  ADMIN_SESSION_CHANGE_EVENT: 'lythaus-admin-session-changed',
   adminRequest: vi.fn(),
   getAbsoluteAdminApiUrl: vi.fn(),
   getAdminApiUrl: vi.fn(),
   getAdminToken: vi.fn(),
+  getAdminTokenExpiry: vi.fn(),
+  setAdminApiUrl: vi.fn(),
+  setAdminToken: vi.fn(),
 }));
 
 function healthFetchPayload(status, responseStatus = 200) {
@@ -81,6 +94,9 @@ describe('Dashboard', () => {
     getAbsoluteAdminApiUrl.mockReturnValue('https://control.asora.co.za/api/admin');
     getAdminApiUrl.mockReturnValue('/api/admin');
     getAdminToken.mockReturnValue('token');
+    getAdminTokenExpiry.mockReturnValue(null);
+    setAdminApiUrl.mockReset();
+    setAdminToken.mockReset();
 
     global.fetch = vi.fn((url) => {
       if (String(url).includes('/api/health')) {
@@ -96,6 +112,8 @@ describe('Dashboard', () => {
         json: async () => ({}),
       });
     });
+
+    expect(ADMIN_SESSION_CHANGE_EVENT).toBe('lythaus-admin-session-changed');
   });
 
   it('renders backend-derived incident banner and sparklines', async () => {

@@ -117,6 +117,13 @@ class MediaUploadService {
 
       return MediaUploadSuccess(urlResponse.blobUrl);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 429) {
+        return const MediaUploadError(
+          message: 'Too many upload attempts. Please wait before trying again.',
+          code: 'rate_limited',
+        );
+      }
+
       final data = e.response?.data;
       String message = 'Upload failed';
       String? code;

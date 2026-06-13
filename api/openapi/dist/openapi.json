@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus (formerly Asora) API",
-    "version": "v1",
+    "version": "v2",
     "description": "HTTP contract for Lythaus (formerly Asora) Functions v1.",
     "license": {
       "name": "MIT",
@@ -57,6 +57,18 @@
     {
       "name": "Privacy Admin",
       "description": "Data Subject Request and legal hold administration."
+    },
+    {
+      "name": "Reputation",
+      "description": "Reputation summaries and user-visible ledger entries."
+    },
+    {
+      "name": "Reactions",
+      "description": "Structured content reactions."
+    },
+    {
+      "name": "Rewards",
+      "description": "Tier-gated rewards and redemptions."
     }
   ],
   "paths": {
@@ -430,6 +442,18 @@
                     }
                   }
                 }
+              },
+              "examples": {
+                "basicPost": {
+                  "summary": "Basic text post",
+                  "value": {
+                    "id": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
+                    "text": "Launch checklist is locked and ready for review.",
+                    "attachments": [
+                      "https://cdn.lythaus.app/media/posts/launch-checklist.png"
+                    ]
+                  }
+                }
               }
             }
           }
@@ -458,6 +482,15 @@
                         "published",
                         "blocked"
                       ]
+                    }
+                  }
+                },
+                "examples": {
+                  "published": {
+                    "summary": "Published post",
+                    "value": {
+                      "id": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
+                      "status": "published"
                     }
                   }
                 }
@@ -590,6 +623,16 @@
                     "maxLength": 1000
                   }
                 }
+              },
+              "examples": {
+                "spamFlag": {
+                  "summary": "Spam flag submission",
+                  "value": {
+                    "targetId": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2",
+                    "reason": "spam",
+                    "notes": "Repeated duplicate promotion across multiple threads."
+                  }
+                }
               }
             }
           }
@@ -618,6 +661,15 @@
                         "queued",
                         "received"
                       ]
+                    }
+                  }
+                },
+                "examples": {
+                  "queued": {
+                    "summary": "Flag queued for moderation review",
+                    "value": {
+                      "flagId": "018b27d4-83fd-7fff-b5e1-8e779ebf8eab",
+                      "status": "queued"
                     }
                   }
                 }
@@ -2112,6 +2164,17 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AdminInviteCreateRequest"
+              },
+              "examples": {
+                "singleUse": {
+                  "summary": "Single-use beta invite",
+                  "value": {
+                    "email": "beta.user@example.com",
+                    "expiresInDays": 30,
+                    "maxUses": 1,
+                    "label": "beta-tester"
+                  }
+                }
               }
             }
           }
@@ -2123,6 +2186,22 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminInviteResponse"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "Invite created",
+                    "value": {
+                      "inviteCode": "ABCD-1234",
+                      "email": "beta.user@example.com",
+                      "createdBy": "admin-uid-123",
+                      "createdAt": "2026-04-30T12:00:00Z",
+                      "expiresAt": "2026-05-30T12:00:00Z",
+                      "maxUses": 1,
+                      "usageCount": 0,
+                      "status": "ACTIVE",
+                      "label": "beta-tester"
+                    }
+                  }
                 }
               }
             }
@@ -2507,6 +2586,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DsrRequestInput"
+              },
+              "examples": {
+                "enqueueExport": {
+                  "summary": "Queue an export request",
+                  "value": {
+                    "userId": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
+                    "note": "User requested a copy of their account data."
+                  }
+                }
               }
             }
           }
@@ -2518,6 +2606,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DsrRequestSummary"
+                },
+                "examples": {
+                  "queuedExport": {
+                    "summary": "Export request queued",
+                    "value": {
+                      "id": "dsr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                      "status": "queued",
+                      "type": "export"
+                    }
+                  }
                 }
               }
             }
@@ -3642,6 +3740,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AppealCreatedResponse"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "Appeal created and queued",
+                    "value": {
+                      "appeal": {
+                        "id": "apl_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "caseId": "case_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "status": "pending",
+                        "createdAt": "2026-04-30T12:00:00Z"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -3758,6 +3869,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AppealVoteResponse"
+                },
+                "examples": {
+                  "recorded": {
+                    "summary": "Community vote recorded",
+                    "value": {
+                      "vote": {
+                        "id": "vtx_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "appealId": "apl_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "vote": "uphold",
+                        "recordedAt": "2026-04-30T12:05:00Z"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -3884,6 +4008,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AppealCreatedResponse"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "Appeal created and queued",
+                    "value": {
+                      "appeal": {
+                        "id": "apl_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "caseId": "case_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "status": "pending",
+                        "createdAt": "2026-04-30T12:00:00Z"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -4193,6 +4330,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AppealVoteResponse"
+                },
+                "examples": {
+                  "recorded": {
+                    "summary": "Community vote recorded",
+                    "value": {
+                      "vote": {
+                        "id": "vtx_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "appealId": "apl_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "vote": "uphold",
+                        "recordedAt": "2026-04-30T12:05:00Z"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -4303,6 +4453,25 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DSRExportResponse"
+                },
+                "examples": {
+                  "exportReady": {
+                    "summary": "Structured export payload",
+                    "value": {
+                      "exportId": "exp_1714478400000_abc123",
+                      "exportedAt": "2026-04-30T12:00:00Z",
+                      "exportedBy": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                      "userId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                      "profile": {
+                        "displayName": "Alice Example"
+                      },
+                      "posts": [],
+                      "comments": [],
+                      "bookmarks": [],
+                      "notifications": [],
+                      "previousExports": []
+                    }
+                  }
                 }
               }
             }
@@ -5976,6 +6145,113 @@
         }
       }
     },
+    "/admin/test-data/purge": {
+      "post": {
+        "operationId": "adminTestDataPurge",
+        "summary": "Purge test data outside production",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "type": "string"
+                  },
+                  "purgeExpired": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "sessionId"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "purgeExpired"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test data purge completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "deletedCount": {
+                      "type": "integer"
+                    },
+                    "expiredCount": {
+                      "type": "integer"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "durationMs": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden or unavailable in production",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/moderation/test/{path}": {
       "get": {
         "operationId": "adminModerationTestGet",
@@ -6605,7 +6881,7 @@
     "/auth/b2c-config": {
       "get": {
         "operationId": "authB2cConfig",
-        "summary": "Return Azure AD B2C OIDC configuration",
+        "summary": "Return legacy B2C-shaped auth config",
         "tags": [
           "Auth"
         ],
@@ -9855,6 +10131,523 @@
           }
         }
       }
+    },
+    "/reputation/me": {
+      "get": {
+        "operationId": "reputationMeGet",
+        "summary": "Get my reputation summary",
+        "description": "Returns the authenticated user's reputation level, band, pillar scores, and eligibility statuses. Raw formulas and internal risk scores are not returned.",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reputation summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReputationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reputation/me/ledger": {
+      "get": {
+        "operationId": "reputationLedgerGet",
+        "summary": "Get my reputation ledger",
+        "description": "Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "positive",
+                "neutral",
+                "negative",
+                "appeal",
+                "expired"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/cursorParam"
+          },
+          {
+            "$ref": "#/components/parameters/limitParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reputation ledger page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reputation/users/{id}": {
+      "get": {
+        "operationId": "reputationUserGet",
+        "summary": "Get public reputation view",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public reputation view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicReputationView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reputation/user/{id}": {
+      "get": {
+        "operationId": "reputationUserGetSingular",
+        "summary": "Get public reputation view",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public reputation view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicReputationView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/moderation/ledger/{entryId}/appeal": {
+      "post": {
+        "operationId": "moderationLedgerAppealPost",
+        "summary": "Appeal a reputation ledger entry",
+        "description": "Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.",
+        "tags": [
+          "Reputation",
+          "Moderation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Appeal accepted for review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Entry is not appealable or cannot be appealed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ledger entry not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reactions": {
+      "post": {
+        "operationId": "reactionsPost",
+        "summary": "Submit a structured reaction",
+        "description": "Records a structured reaction and applies anti-gaming controls before deciding whether it contributes to reputation.",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitReactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reaction recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitReactionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid reaction request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reactions/{id}": {
+      "delete": {
+        "operationId": "reactionsDelete",
+        "summary": "Delete my reaction",
+        "tags": [
+          "Reactions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reaction deleted"
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reaction not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rewards/me": {
+      "get": {
+        "operationId": "rewardsMeGet",
+        "summary": "Get my rewards snapshot",
+        "description": "Returns rewards available under the caller's subscription tier, reputation level, redemption limits, and fraud/maturity checks.",
+        "tags": [
+          "Rewards"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rewards snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardsMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rewards/{id}/redeem": {
+      "post": {
+        "operationId": "rewardsRedeemPost",
+        "summary": "Redeem a reward",
+        "tags": [
+          "Rewards"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Reward redeemed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewardRedemption"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reward locked or redemption restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reward not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feed/public": {
+      "get": {
+        "operationId": "feedPublicGet",
+        "summary": "Retrieve public discovery feed",
+        "description": "Public feed surface using ranking safety filters and reputation-derived trust weighting without paid-tier boosting.",
+        "tags": [
+          "Feed"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/cursorParam"
+          },
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "name": "includeTopics",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeTopics",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public feed page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedPageResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit enforced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9936,6 +10729,434 @@
             "enum": [
               "auth_backoff"
             ]
+          }
+        }
+      },
+      "ReputationSummary": {
+        "type": "object",
+        "required": [
+          "userId",
+          "reputationLevel",
+          "reputationStatus",
+          "reputationBand",
+          "publicFeedEligibilityStatus",
+          "rewardEligibilityStatus",
+          "lastCalculatedAt",
+          "version"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "reputationLevel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "reputationStatus": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "editorial"
+            ]
+          },
+          "reputationBand": {
+            "type": "string",
+            "enum": [
+              "new",
+              "verified",
+              "trusted",
+              "established",
+              "credible",
+              "highly_credible"
+            ]
+          },
+          "humanContributionScore": {
+            "type": "number"
+          },
+          "contentQualityScore": {
+            "type": "number"
+          },
+          "behaviourTrustScore": {
+            "type": "number"
+          },
+          "interactionQualityScore": {
+            "type": "number"
+          },
+          "verificationStrengthScore": {
+            "type": "number"
+          },
+          "communityTrustScore": {
+            "type": "number"
+          },
+          "publicFeedEligibilityStatus": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "restricted",
+              "ineligible"
+            ]
+          },
+          "rewardEligibilityStatus": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "ineligible",
+              "pending_verification"
+            ]
+          },
+          "lastCalculatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        }
+      },
+      "PublicReputationView": {
+        "type": "object",
+        "required": [
+          "userId",
+          "reputationLevel",
+          "reputationStatus",
+          "reputationBand",
+          "levelName"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "reputationLevel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "reputationStatus": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "editorial"
+            ]
+          },
+          "reputationBand": {
+            "type": "string"
+          },
+          "levelName": {
+            "type": "string"
+          }
+        }
+      },
+      "LedgerEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "eventType",
+          "eventCategory",
+          "publicLabel",
+          "impactBand",
+          "visibility",
+          "appealable",
+          "createdAt",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "eventCategory": {
+            "type": "string",
+            "enum": [
+              "positive",
+              "neutral",
+              "negative"
+            ]
+          },
+          "pillar": {
+            "type": "string"
+          },
+          "publicLabel": {
+            "type": "string"
+          },
+          "impactBand": {
+            "type": "string"
+          },
+          "relatedContentId": {
+            "type": "string"
+          },
+          "relatedModerationDecisionId": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "user",
+              "public"
+            ]
+          },
+          "appealable": {
+            "type": "boolean"
+          },
+          "appealStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decaysAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "expired",
+              "reversed"
+            ]
+          }
+        }
+      },
+      "LedgerPage": {
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "SubmitReactionRequest": {
+        "type": "object",
+        "required": [
+          "targetContentId",
+          "targetUserId",
+          "reactionType"
+        ],
+        "properties": {
+          "targetContentId": {
+            "type": "string"
+          },
+          "targetUserId": {
+            "type": "string"
+          },
+          "reactionType": {
+            "type": "string",
+            "enum": [
+              "helpful",
+              "well_sourced",
+              "thoughtful",
+              "agree",
+              "disagree",
+              "misleading",
+              "low_effort",
+              "report"
+            ]
+          }
+        }
+      },
+      "SubmitReactionResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "reactionType",
+          "includedInReputation",
+          "antiGamingStatus",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reactionType": {
+            "type": "string"
+          },
+          "includedInReputation": {
+            "type": "boolean"
+          },
+          "antiGamingStatus": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "capped",
+              "suspicious",
+              "excluded"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RewardOffer": {
+        "type": "object",
+        "required": [
+          "id",
+          "rewardLevel",
+          "title",
+          "description",
+          "partnerName",
+          "locked",
+          "redeemed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rewardLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "partnerName": {
+            "type": "string"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "lockReason": {
+            "type": "string"
+          },
+          "redeemed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RewardRedemption": {
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "rewardId",
+          "rewardLevel",
+          "rewardTitle",
+          "redeemedAt",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "rewardId": {
+            "type": "string"
+          },
+          "rewardLevel": {
+            "type": "integer"
+          },
+          "rewardTitle": {
+            "type": "string"
+          },
+          "redeemedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "redeemed"
+            ]
+          }
+        }
+      },
+      "RewardsMeResponse": {
+        "type": "object",
+        "required": [
+          "subscriptionTier",
+          "reputationLevel",
+          "reputationBand",
+          "availableRewardLevels",
+          "maxOptionsPerLevel",
+          "redemptionStatus",
+          "fraudRiskStatus",
+          "offers",
+          "redemptionHistory",
+          "affiliateDisclosure"
+        ],
+        "properties": {
+          "subscriptionTier": {
+            "type": "string",
+            "enum": [
+              "guest",
+              "free",
+              "premium",
+              "black",
+              "editorial"
+            ]
+          },
+          "reputationLevel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "reputationBand": {
+            "type": "string"
+          },
+          "availableRewardLevels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          "maxOptionsPerLevel": {
+            "type": "integer"
+          },
+          "redemptionStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "restricted"
+            ]
+          },
+          "fraudRiskStatus": {
+            "type": "string"
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardOffer"
+            }
+          },
+          "redemptionHistory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardRedemption"
+            }
+          },
+          "affiliateDisclosure": {
+            "type": "string"
           }
         }
       },
@@ -11308,6 +12529,22 @@
             "type": "string",
             "description": "Primary moderation class that triggered the block",
             "example": "hate_speech"
+          }
+        }
+      },
+      "AcceptedResponse": {
+        "description": "Generic 202 acceptance body returned by ctx.accepted().",
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "enum": [
+              "Accepted"
+            ],
+            "example": "Accepted"
           }
         }
       },

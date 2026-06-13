@@ -128,8 +128,14 @@ class AdminApiClient {
 
     if (response?.data is Map<String, dynamic>) {
       final data = response!.data as Map<String, dynamic>;
-      final error = data['error'] as Map<String, dynamic>?;
-      if (error != null) {
+      if (statusCode == 429 ||
+          data['error'] == 'rate_limited' ||
+          data['code'] == 'rate_limited') {
+        message = 'Too many admin requests. Please wait before trying again.';
+        code = 'RATE_LIMITED';
+      }
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
         message = error['message'] as String? ?? message;
         code = error['code'] as String? ?? code;
         correlationId = error['correlationId'] as String?;

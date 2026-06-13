@@ -264,6 +264,13 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     if (code == 'CONTENT_BLOCKED' || code == 'content_blocked') {
       return 'This comment appears to conflict with policy and was not posted.';
     }
+    if (code == 'DAILY_COMMENT_LIMIT_EXCEEDED' ||
+        code == 'daily_comment_limit_exceeded') {
+      return 'You have reached your daily comment limit. Please try again tomorrow.';
+    }
+    if (error.response?.statusCode == 429) {
+      return 'Too many comments. Please wait before trying again.';
+    }
     if (error.response?.statusCode == 401 ||
         error.response?.statusCode == 403) {
       return 'Sign in to comment.';

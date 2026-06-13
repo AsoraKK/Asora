@@ -603,6 +603,19 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
           if (handled) {
             return;
           }
+
+          if (error.statusCode == 429) {
+            LythSnackbar.error(
+              context: context,
+              message: 'Too many votes. Please wait before trying again.',
+            );
+            return;
+          }
+
+          if (error.message.isNotEmpty) {
+            LythSnackbar.error(context: context, message: error.message);
+            return;
+          }
         }
         LythSnackbar.error(
           context: context,

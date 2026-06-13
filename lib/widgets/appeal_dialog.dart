@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:asora/features/moderation/domain/moderation_repository.dart';
 
 /// ASORA APPEAL DIALOG
 ///
@@ -449,7 +450,33 @@ class _AppealDialogState extends ConsumerState<AppealDialog> {
     } catch (error) {
       if (mounted) {
         String errorMessage = 'Failed to submit appeal';
-        if (error is DioException) {
+        if (error is ModerationException) {
+          final code = (error.code ?? '').toUpperCase();
+          if (error.statusCode == 401) {
+            errorMessage = 'Please log in to submit an appeal';
+          } else if (error.statusCode == 409) {
+            errorMessage =
+                'You have already submitted an appeal for this content';
+          } else if (error.statusCode == 429) {
+            final payload = error.payload;
+            final limit = payload?['limit'];
+            final tier = payload?['tier'];
+            if (code == 'DAILY_APPEAL_LIMIT_EXCEEDED') {
+              if (limit is num && tier is String && tier.isNotEmpty) {
+                errorMessage =
+                    'You have reached your daily appeals limit (${limit.toInt()} for $tier tier). Please try again later.';
+              } else {
+                errorMessage =
+                    'You have reached your daily appeals limit. Please try again tomorrow.';
+              }
+            } else {
+              errorMessage =
+                  'Too many appeal requests. Please wait before trying again.';
+            }
+          } else if (error.message.isNotEmpty) {
+            errorMessage = error.message;
+          }
+        } else if (error is DioException) {
           if (error.response?.statusCode == 401) {
             errorMessage = 'Please log in to submit an appeal';
           } else if (error.response?.statusCode == 409) {

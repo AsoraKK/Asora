@@ -66,6 +66,7 @@ k6 run scripts/load-tests/feed-load.k6.js
 
 **Implementation Reference:**
 - [functions/src/rate-limit/policies.ts](functions/src/rate-limit/policies.ts) — Policy definitions
+- [docs/runbooks/rate-limits.md](../runbooks/rate-limits.md) — Route-specific rate-limit matrix and 429 format
 - Uses Redis sliding window + token bucket algorithms
 
 **Action Items:**
@@ -81,7 +82,7 @@ k6 run scripts/load-tests/feed-load.k6.js
 ### Status: ✅ IMPLEMENTED
 
 **Current State:**
-- [x] OpenAPI 3.0.3 spec exists: [docs/openapi.yaml](docs/openapi.yaml)
+- [x] OpenAPI 3.0.3 spec exists: [api/openapi/openapi.yaml](../../api/openapi/openapi.yaml)
 - [x] All Phase 1 domains covered (auth, users, posts, feeds, moderation, appeals)
 - [x] Cursor-based pagination documented
 - [x] Dart SDK auto-generated from spec
@@ -95,13 +96,13 @@ k6 run scripts/load-tests/feed-load.k6.js
 ```yaml
 # .github/workflows/openapi-publish.yml
 - name: Validate OpenAPI spec
-  run: npx @redocly/cli lint docs/openapi.yaml
+  run: npx @redocly/cli lint api/openapi/openapi.yaml
 
 - name: Upload OpenAPI artifact
   uses: actions/upload-artifact@v4
   with:
     name: openapi-spec-v${{ github.ref_name }}
-    path: docs/openapi.yaml
+    path: api/openapi/openapi.yaml
 ```
 
 ---
@@ -286,5 +287,5 @@ az deployment group create \
 - DSR Runbook: [docs/runbooks/dsr.md](docs/runbooks/dsr.md)
 - TLS Pinning Rotation: [docs/runbooks/tls-pinning-rotation.md](docs/runbooks/tls-pinning-rotation.md)
 - Rooted Device Complaints: [docs/runbooks/handle-rooted-device-complaints.md](docs/runbooks/handle-rooted-device-complaints.md)
-- OpenAPI Spec: [docs/openapi.yaml](docs/openapi.yaml)
+- OpenAPI Spec: [api/openapi/openapi.yaml](../../api/openapi/openapi.yaml)
 - Vote Rate Limit Fix: [functions/VOTE_RATE_LIMIT_FIX.md](functions/VOTE_RATE_LIMIT_FIX.md)

@@ -168,9 +168,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
         AnalyticsEvents.inviteRedeemFail,
         properties: {AnalyticsEvents.propInviteRedeemReason: reason.value},
       );
-      setState(
-        () => _error = 'Invite could not be redeemed. Please check the code.',
-      );
+      setState(() => _error = _messageForInviteFailure(reason));
     } catch (_) {
       await analytics.logEvent(
         AnalyticsEvents.inviteRedeemFail,
@@ -189,6 +187,13 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     }
   }
 
+  String _messageForInviteFailure(InviteRedeemFailureReason reason) {
+    if (reason == InviteRedeemFailureReason.rateLimited) {
+      return 'Too many invite redemption attempts. Please wait before trying again.';
+    }
+    return 'Invite could not be redeemed. Please check the code.';
+  }
+
   InviteRedeemFailureReason _mapInviteFailure(DioException error) {
     if (error.response == null) {
       return InviteRedeemFailureReason.network;
@@ -197,10 +202,14 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     if (status == 401) {
       return InviteRedeemFailureReason.unauthorized;
     }
+    if (status == 429) {
+      return InviteRedeemFailureReason.rateLimited;
+    }
 
     final data = error.response?.data;
     final message = data is Map<String, dynamic>
-        ? data['message'] as String?
+        ? (data['message'] as String? ??
+            (data['error'] is String ? data['error'] as String : null))
         : null;
 
     switch (message) {

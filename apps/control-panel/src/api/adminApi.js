@@ -2,11 +2,107 @@
 // Falls back to direct API URL if explicitly configured
 const DEFAULT_ADMIN_API_URL =
   import.meta.env.VITE_ADMIN_API_URL || '/api/admin';
+const MAX_ADMIN_TOKEN_TTL_MS = 15 * 60 * 1000;
+export const ADMIN_SESSION_CHANGE_EVENT = 'lythaus-admin-session-changed';
 
 const STORAGE_KEYS = {
   apiUrl: 'controlPanelAdminApiUrl',
-  token: 'controlPanelAdminToken'
+  token: 'controlPanelAdminToken',
+  tokenExpiry: 'controlPanelAdminTokenExpiresAt'
 };
+
+function getLocalStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage || null;
+}
+
+function getSessionStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.sessionStorage || null;
+}
+
+function notifyAdminSessionChanged() {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') {
+    return;
+  }
+  window.dispatchEvent(new Event(ADMIN_SESSION_CHANGE_EVENT));
+}
+
+function clearLegacyAdminToken() {
+  const localStorage = getLocalStorage();
+  localStorage?.removeItem(STORAGE_KEYS.token);
+}
+
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=');
+
+  if (typeof atob === 'function') {
+    return atob(padded);
+  }
+
+  return Buffer.from(padded, 'base64').toString('utf-8');
+}
+
+function parseJwtPayload(token) {
+  const [, payloadSegment] = token.split('.');
+  if (!payloadSegment) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(decodeBase64Url(payloadSegment));
+  } catch {
+    return null;
+  }
+}
+
+function calculateAdminTokenExpiry(token) {
+  const cappedExpiryMs = Date.now() + MAX_ADMIN_TOKEN_TTL_MS;
+  const payload = parseJwtPayload(token);
+  const tokenExpirySeconds = Number(payload?.exp);
+
+  if (!Number.isFinite(tokenExpirySeconds) || tokenExpirySeconds <= 0) {
+    return cappedExpiryMs;
+  }
+
+  return Math.min(cappedExpiryMs, tokenExpirySeconds * 1000);
+}
+
+function clearAdminTokenStorage() {
+  const sessionStorage = getSessionStorage();
+  sessionStorage?.removeItem(STORAGE_KEYS.token);
+  sessionStorage?.removeItem(STORAGE_KEYS.tokenExpiry);
+  clearLegacyAdminToken();
+}
+
+function readAdminTokenRecord() {
+  const sessionStorage = getSessionStorage();
+  clearLegacyAdminToken();
+
+  if (!sessionStorage) {
+    return null;
+  }
+
+  const token = sessionStorage.getItem(STORAGE_KEYS.token);
+  if (!token) {
+    sessionStorage.removeItem(STORAGE_KEYS.tokenExpiry);
+    return null;
+  }
+
+  const expiresAtMs = Number(sessionStorage.getItem(STORAGE_KEYS.tokenExpiry));
+  if (!Number.isFinite(expiresAtMs) || Date.now() >= expiresAtMs) {
+    clearAdminTokenStorage();
+    notifyAdminSessionChanged();
+    return null;
+  }
+
+  return { token, expiresAtMs };
+}
 
 /**
  * Resolve a potentially relative URL to an absolute URL.
@@ -35,8 +131,9 @@ function resolveToAbsoluteUrl(urlOrPath) {
  * Use getAbsoluteAdminApiUrl() for URL construction.
  */
 export function getAdminApiUrl() {
-  if (typeof window !== 'undefined') {
-    const stored = window.localStorage.getItem(STORAGE_KEYS.apiUrl);
+  const localStorage = getLocalStorage();
+  if (localStorage) {
+    const stored = localStorage.getItem(STORAGE_KEYS.apiUrl);
     if (stored) {
       return stored;
     }
@@ -53,34 +150,50 @@ export function getAbsoluteAdminApiUrl() {
 }
 
 export function setAdminApiUrl(value) {
-  if (typeof window === 'undefined') {
+  const localStorage = getLocalStorage();
+  if (!localStorage) {
     return;
   }
   const trimmed = value.trim();
   if (!trimmed) {
-    window.localStorage.removeItem(STORAGE_KEYS.apiUrl);
+    localStorage.removeItem(STORAGE_KEYS.apiUrl);
     return;
   }
-  window.localStorage.setItem(STORAGE_KEYS.apiUrl, trimmed);
+  localStorage.setItem(STORAGE_KEYS.apiUrl, trimmed);
 }
 
 export function getAdminToken() {
-  if (typeof window === 'undefined') {
-    return '';
+  return readAdminTokenRecord()?.token || '';
+}
+
+export function getAdminTokenExpiry() {
+  const record = readAdminTokenRecord();
+  if (!record) {
+    return null;
   }
-  return window.localStorage.getItem(STORAGE_KEYS.token) || '';
+  return new Date(record.expiresAtMs);
 }
 
 export function setAdminToken(value) {
-  if (typeof window === 'undefined') {
+  const sessionStorage = getSessionStorage();
+  if (!sessionStorage) {
     return;
   }
+
   const trimmed = value.trim();
   if (!trimmed) {
-    window.localStorage.removeItem(STORAGE_KEYS.token);
+    clearAdminTokenStorage();
+    notifyAdminSessionChanged();
     return;
   }
-  window.localStorage.setItem(STORAGE_KEYS.token, trimmed);
+
+  clearLegacyAdminToken();
+  sessionStorage.setItem(STORAGE_KEYS.token, trimmed);
+  sessionStorage.setItem(
+    STORAGE_KEYS.tokenExpiry,
+    String(calculateAdminTokenExpiry(trimmed))
+  );
+  notifyAdminSessionChanged();
 }
 
 /**
@@ -189,6 +302,9 @@ export async function adminRequest(path, { method = 'GET', body, query, headers:
   const payload = await parseJsonResponse(response);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setAdminToken('');
+    }
     const message =
       payload?.error?.message ||
       payload?.message ||

@@ -143,6 +143,50 @@ describe('submitAppeal route', () => {
     expect(response.jsonBody).toEqual({ id: 'appeal-1' });
   });
 
+  it('returns a standardized 429 when the daily appeal limit is exceeded', async () => {
+    const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
+    const limitPayload = {
+      allowed: false,
+      currentCount: 1,
+      limit: 1,
+      remaining: 0,
+      tier: 'free',
+      resetDate: '2025-12-01T00:00:00.000Z',
+    };
+
+    mockCheckAndIncrementDailyActionCount.mockRejectedValueOnce(
+      new DailyAppealLimitExceededError(limitPayload)
+    );
+
+    const response = await submitAppealRoute(
+      authorizedRequest({ reason: 'please review' }),
+      contextStub
+    );
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(response.status).toBe(429);
+    expect(response.headers).toMatchObject({
+      'Content-Type': 'application/json',
+      'Retry-After': '86400',
+      'X-RateLimit-Limit': '1',
+      'X-RateLimit-Remaining': '0',
+    });
+
+    expect(JSON.parse(response.body as string)).toEqual({
+      error: 'rate_limited',
+      scope: 'user',
+      limit: 1,
+      window_seconds: 86400,
+      retry_after_seconds: 86400,
+      trace_id: null,
+      code: 'DAILY_APPEAL_LIMIT_EXCEEDED',
+      tier: 'free',
+      current: 1,
+      resetAt: '2025-12-01T00:00:00.000Z',
+      message: 'Daily appeal limit reached. Try again tomorrow.',
+    });
+  });
+
   it('returns 500 when handler throws', async () => {
     const handler = submitAppealHandler as jest.MockedFunction<typeof submitAppealHandler>;
     handler.mockRejectedValueOnce(new Error('database down'));

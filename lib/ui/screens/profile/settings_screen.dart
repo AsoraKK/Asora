@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -130,6 +131,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .setTrustPassportVisibility(visibility);
       ref.invalidate(publicUserProvider(user.id));
       ref.invalidate(trustPassportProvider(user.id));
+    } on DioException catch (error) {
+      final message = error.response?.statusCode == 429
+          ? 'Too many profile updates. Please wait before trying again.'
+          : 'Unable to update trust visibility.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

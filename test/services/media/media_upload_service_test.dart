@@ -243,6 +243,41 @@ void main() {
       expect((result as MediaUploadError).message, 'Upload failed');
     });
 
+    test('returns rate-limited message for upload throttling', () async {
+      final fakeFile = FakeXFile();
+
+      when(
+        () => mockApiDio.post<Map<String, dynamic>>(
+          '/api/media/upload-url',
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/media/upload-url'),
+          response: Response<Map<String, dynamic>>(
+            statusCode: 429,
+            data: const {'error': 'rate_limited', 'retry_after_seconds': 30},
+            requestOptions: RequestOptions(path: '/api/media/upload-url'),
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+
+      final result = await service.uploadFile(
+        file: fakeFile,
+        token: 'test-token',
+      );
+
+      expect(result, isA<MediaUploadError>());
+      final error = result as MediaUploadError;
+      expect(error.code, 'rate_limited');
+      expect(
+        error.message,
+        'Too many upload attempts. Please wait before trying again.',
+      );
+    });
+
     test('returns MediaUploadError on unexpected exception', () async {
       final fakeFile = FakeXFile();
 

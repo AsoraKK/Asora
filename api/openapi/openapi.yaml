@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus (formerly Asora) API
-  version: v1
+  version: v2
   description: HTTP contract for Lythaus (formerly Asora) Functions v1.
   license:
     name: MIT
@@ -276,6 +276,14 @@ paths:
                   items:
                     type: string
                     format: uri
+            examples:
+              basicPost:
+                summary: Basic text post
+                value:
+                  id: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
+                  text: Launch checklist is locked and ready for review.
+                  attachments:
+                    - 'https://cdn.lythaus.app/media/posts/launch-checklist.png'
       responses:
         '201':
           description: Post created successfully
@@ -296,6 +304,12 @@ paths:
                     enum:
                       - published
                       - blocked
+              examples:
+                published:
+                  summary: Published post
+                  value:
+                    id: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    status: published
         '400':
           description: Invalid payload
           headers:
@@ -381,6 +395,13 @@ paths:
                   type: string
                   description: Additional details supporting the flag
                   maxLength: 1000
+            examples:
+              spamFlag:
+                summary: Spam flag submission
+                value:
+                  targetId: 018b27d4-6e1e-7bd3-bb5a-98f24bb968c2
+                  reason: spam
+                  notes: Repeated duplicate promotion across multiple threads.
       responses:
         '202':
           description: Flag accepted for review
@@ -401,6 +422,12 @@ paths:
                     enum:
                       - queued
                       - received
+              examples:
+                queued:
+                  summary: Flag queued for moderation review
+                  value:
+                    flagId: 018b27d4-83fd-7fff-b5e1-8e779ebf8eab
+                    status: queued
         '400':
           description: Invalid payload
           headers:
@@ -1320,6 +1347,14 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AdminInviteCreateRequest'
+            examples:
+              singleUse:
+                summary: Single-use beta invite
+                value:
+                  email: beta.user@example.com
+                  expiresInDays: 30
+                  maxUses: 1
+                  label: beta-tester
       responses:
         '201':
           description: Invite created
@@ -1327,6 +1362,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminInviteResponse'
+              examples:
+                created:
+                  summary: Invite created
+                  value:
+                    inviteCode: ABCD-1234
+                    email: beta.user@example.com
+                    createdBy: admin-uid-123
+                    createdAt: '2026-04-30T12:00:00Z'
+                    expiresAt: '2026-05-30T12:00:00Z'
+                    maxUses: 1
+                    usageCount: 0
+                    status: ACTIVE
+                    label: beta-tester
         '400':
           description: Invalid request
           content:
@@ -1561,6 +1609,12 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/DsrRequestInput'
+            examples:
+              enqueueExport:
+                summary: Queue an export request
+                value:
+                  userId: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
+                  note: User requested a copy of their account data.
       responses:
         '202':
           description: Export queued
@@ -1568,6 +1622,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DsrRequestSummary'
+              examples:
+                queuedExport:
+                  summary: Export request queued
+                  value:
+                    id: dsr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                    status: queued
+                    type: export
         '400':
           description: Invalid request
           content:
@@ -2273,6 +2334,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealCreatedResponse'
+              examples:
+                created:
+                  summary: Appeal created and queued
+                  value:
+                    appeal:
+                      id: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      caseId: case_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      status: pending
+                      createdAt: '2026-04-30T12:00:00Z'
         '400':
           description: Invalid appeal payload or daily limit exceeded
           headers:
@@ -2345,6 +2415,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealVoteResponse'
+              examples:
+                recorded:
+                  summary: Community vote recorded
+                  value:
+                    vote:
+                      id: vtx_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      appealId: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      vote: uphold
+                      recordedAt: '2026-04-30T12:05:00Z'
         '400':
           description: Invalid vote value or duplicate vote
           headers:
@@ -2424,6 +2503,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealCreatedResponse'
+              examples:
+                created:
+                  summary: Appeal created and queued
+                  value:
+                    appeal:
+                      id: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      caseId: case_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      status: pending
+                      createdAt: '2026-04-30T12:00:00Z'
         '400':
           description: Invalid appeal payload or daily limit exceeded
           headers:
@@ -2614,6 +2702,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealVoteResponse'
+              examples:
+                recorded:
+                  summary: Community vote recorded
+                  value:
+                    vote:
+                      id: vtx_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      appealId: apl_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      vote: uphold
+                      recordedAt: '2026-04-30T12:05:00Z'
         '400':
           description: Invalid vote value or duplicate vote
           headers:
@@ -2684,6 +2781,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DSRExportResponse'
+              examples:
+                exportReady:
+                  summary: Structured export payload
+                  value:
+                    exportId: exp_1714478400000_abc123
+                    exportedAt: '2026-04-30T12:00:00Z'
+                    exportedBy: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                    userId: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                    profile:
+                      displayName: Alice Example
+                    posts: []
+                    comments: []
+                    bookmarks: []
+                    notifications: []
+                    previousExports: []
         '401':
           description: Missing or invalid authentication
           headers:
@@ -6237,6 +6349,10 @@ paths:
       responses:
         '202':
           description: Appeal accepted for review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
         '400':
           description: Entry is not appealable or cannot be appealed
           content:
@@ -7409,6 +7525,17 @@ components:
           type: string
           description: Primary moderation class that triggered the block
           example: hate_speech
+    AcceptedResponse:
+      description: Generic 202 acceptance body returned by ctx.accepted().
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          enum:
+            - Accepted
+          example: Accepted
     AppealCreatedResponse:
       description: 201 response after successfully filing a moderation appeal.
       type: object

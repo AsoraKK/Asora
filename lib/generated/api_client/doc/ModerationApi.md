@@ -14,6 +14,7 @@ Method | HTTP request | Description
 [**getMyAppeals**](ModerationApi.md#getmyappeals) | **GET** /moderation/my-appeals | List the authenticated user&#39;s moderation appeals
 [**moderationCasesDecision**](ModerationApi.md#moderationcasesdecision) | **POST** /moderation/cases/{id}/decision | Record a decision on a moderation case
 [**moderationCasesGet**](ModerationApi.md#moderationcasesget) | **GET** /moderation/cases/{id} | Get moderation case detail
+[**moderationLedgerAppealPost**](ModerationApi.md#moderationledgerappealpost) | **POST** /moderation/ledger/{entryId}/appeal | Appeal a reputation ledger entry
 [**moderationQueueList**](ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
 [**moderationReviewQueueList**](ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
 [**moderationTest**](ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
@@ -36,7 +37,7 @@ Flag content for review.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final FlagContentRequest flagContentRequest = ; // FlagContentRequest | 
+final FlagContentRequest flagContentRequest = {"targetId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","reason":"spam","notes":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest | 
 
 try {
     final response = api.flagContent(flagContentRequest);
@@ -227,6 +228,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**JsonObject**](JsonObject.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **moderationLedgerAppealPost**
+> AcceptedResponse moderationLedgerAppealPost(entryId)
+
+Appeal a reputation ledger entry
+
+Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getModerationApi();
+final String entryId = entryId_example; // String | 
+
+try {
+    final response = api.moderationLedgerAppealPost(entryId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->moderationLedgerAppealPost: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **entryId** | **String**|  | 
+
+### Return type
+
+[**AcceptedResponse**](AcceptedResponse.md)
 
 ### Authorization
 

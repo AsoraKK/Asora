@@ -640,6 +640,40 @@ void main() {
       // Loading state should be cleared
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
+
+    testWidgets('shows user-safe rate limit snackbar on throttled vote', (
+      tester,
+    ) async {
+      when(
+        () => mockRepo.submitVote(
+          appealId: any(named: 'appealId'),
+          vote: any(named: 'vote'),
+          comment: any(named: 'comment'),
+          token: any(named: 'token'),
+        ),
+      ).thenThrow(
+        const ModerationException(
+          'Too many moderation requests. Please wait before trying again.',
+          code: 'RATE_LIMITED',
+          statusCode: 429,
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(appeal: testAppeal, repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Approve'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Too many votes. Please wait before trying again.'),
+        findsOneWidget,
+      );
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
   });
 
   group('Helper Methods', () {

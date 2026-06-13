@@ -123,7 +123,7 @@ class AuthApi {
     );
   }
 
-  /// Return Azure AD B2C OIDC configuration
+  /// Return legacy B2C-shaped auth config
   /// 
   ///
   /// Parameters:

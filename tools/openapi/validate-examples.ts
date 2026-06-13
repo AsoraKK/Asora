@@ -39,34 +39,34 @@ function deref<T = any>(schema: T, root: any): T {
 
 for (const [specPathKey, operations] of Object.entries<Record<string, any>>(spec.paths || {})) {
   for (const [method, operation] of Object.entries<Record<string, any>>(operations || {})) {
+    const requestContent = operation?.requestBody?.content || {};
+    for (const [contentType, content] of Object.entries<Record<string, any>>(requestContent)) {
+      if (!content?.schema) {
+        continue;
+      }
+      validateExamples({
+        specPathKey,
+        method,
+        label: 'requestBody',
+        contentType,
+        content,
+      });
+    }
+
     const responses = operation?.responses || {};
     for (const [code, response] of Object.entries<Record<string, any>>(responses)) {
-      const jsonContent = response?.content?.['application/json'];
-      if (!jsonContent) {
-        continue;
-      }
-      const schema = deref(jsonContent.schema, spec);
-      if (!schema) {
-        continue;
-      }
-
-      const validate = ajv.compile(schema);
-
-      if (jsonContent.example !== undefined) {
-        if (!validate(jsonContent.example)) {
-          report(specPathKey, method, code, validate.errors);
-        }
-      }
-
-      const examples = jsonContent.examples || {};
-      for (const [exampleKey, exampleObject] of Object.entries<Record<string, any>>(examples)) {
-        const exampleValue = exampleObject?.value;
-        if (exampleValue === undefined) {
+      const responseContent = response?.content || {};
+      for (const [contentType, content] of Object.entries<Record<string, any>>(responseContent)) {
+        if (!content?.schema) {
           continue;
         }
-        if (!validate(exampleValue)) {
-          report(`${specPathKey}#${exampleKey}`, method, code, validate.errors);
-        }
+        validateExamples({
+          specPathKey,
+          method,
+          label: `response ${code}`,
+          contentType,
+          content,
+        });
       }
     }
   }
@@ -74,8 +74,46 @@ for (const [specPathKey, operations] of Object.entries<Record<string, any>>(spec
 
 process.exit(errors ? 1 : 0);
 
-function report(specPathKey: string, method: string, code: string, ajvErrors: any) {
+function validateExamples({
+  specPathKey,
+  method,
+  label,
+  contentType,
+  content,
+}: {
+  specPathKey: string;
+  method: string;
+  label: string;
+  contentType: string;
+  content: Record<string, any>;
+}) {
+  const schema = deref(content.schema, spec);
+  if (!schema) {
+    return;
+  }
+
+  const validate = ajv.compile(schema);
+
+  if (content.example !== undefined && !validate(content.example)) {
+    report(specPathKey, method, label, contentType, validate.errors);
+  }
+
+  const examples = content.examples || {};
+  for (const [exampleKey, exampleObject] of Object.entries<Record<string, any>>(examples)) {
+    const exampleValue = exampleObject?.value;
+    if (exampleValue === undefined) {
+      continue;
+    }
+    if (!validate(exampleValue)) {
+      report(`${specPathKey}#${exampleKey}`, method, label, contentType, validate.errors);
+    }
+  }
+}
+
+function report(specPathKey: string, method: string, label: string, contentType: string, ajvErrors: any) {
   errors += 1;
-  console.error(`Example validation failed for ${method.toUpperCase()} ${specPathKey} ${code}`);
+  console.error(
+    `Example validation failed for ${method.toUpperCase()} ${specPathKey} ${label} (${contentType})`
+  );
   console.error(JSON.stringify(ajvErrors, null, 2));
 }

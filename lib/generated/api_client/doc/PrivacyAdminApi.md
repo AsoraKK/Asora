@@ -112,7 +112,7 @@ Queues an export job for a user's data as part of GDPR/CCPA compliance. Returns 
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPrivacyAdminApi();
-final DsrRequestInput dsrRequestInput = ; // DsrRequestInput | 
+final DsrRequestInput dsrRequestInput = {"userId":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","note":"User requested a copy of their account data."}; // DsrRequestInput | 
 
 try {
     final response = api.enqueueDsrExport(dsrRequestInput);

@@ -81,11 +81,16 @@ export abstract class DailyActionLimitExceededError extends Error {
     this.resetDate = result.resetDate;
   }
 
-  toResponse() {
+  toResponse(traceId: string | null = null) {
     return {
+      error: 'rate_limited',
+      scope: 'user',
+      limit: this.limit,
+      window_seconds: 86400,
+      retry_after_seconds: 86400,
+      trace_id: traceId,
       code: this.payloadCode,
       tier: this.tier,
-      limit: this.limit,
       current: this.currentCount,
       resetAt: this.resetDate,
       message: this.message,
