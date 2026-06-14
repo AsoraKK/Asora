@@ -12,7 +12,8 @@ import 'package:opentelemetry/api.dart';
 @immutable
 class AuthConfig {
   final String tenant;
-  final String? tenantId; // Optional: prefer tenantId for identity-provider URLs
+  final String?
+  tenantId; // Optional: prefer tenantId for identity-provider URLs
   final String clientId;
   final String policy;
   final String authorityHost;
@@ -186,7 +187,6 @@ class AuthException implements Exception {
 
 /// OAuth2 service using MSAL with PKCE.
 class OAuth2Service {
-  final Dio _dio;
   final FlutterSecureStorage _secureStorage;
   final Tracer _tracer;
 
@@ -209,8 +209,7 @@ class OAuth2Service {
     required Dio dio,
     required FlutterSecureStorage secureStorage,
     Tracer? tracer,
-  }) : _dio = dio,
-       _secureStorage = secureStorage,
+  }) : _secureStorage = secureStorage,
        _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
 
   /// Get current auth state stream

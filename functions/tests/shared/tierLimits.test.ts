@@ -156,4 +156,45 @@ describe('Tier Limits', () => {
       expect(premiumLimits.dailyLikes).toBeGreaterThan(freeLimits.dailyLikes);
     });
   });
+
+  describe('additional limit helpers', () => {
+    let tierLimits: typeof import('@shared/services/tierLimits');
+
+    beforeEach(async () => {
+      tierLimits = await import('@shared/services/tierLimits');
+    });
+
+    it('should return the configured comment limit', () => {
+      expect(tierLimits.getDailyCommentLimit('premium')).toBe(
+        tierLimits.TIER_LIMITS.premium.dailyComments,
+      );
+    });
+
+    it('should return the configured like limit', () => {
+      expect(tierLimits.getDailyLikeLimit('black')).toBe(
+        tierLimits.TIER_LIMITS.black.dailyLikes,
+      );
+    });
+
+    it('should return the configured appeal limit', () => {
+      expect(tierLimits.getDailyAppealLimit('admin')).toBe(
+        tierLimits.TIER_LIMITS.admin.dailyAppeals,
+      );
+    });
+
+    it('should return the configured export cooldown', () => {
+      expect(tierLimits.getExportCooldownDays('free')).toBe(
+        tierLimits.TIER_LIMITS.free.exportCooldownDays,
+      );
+    });
+
+    it('should return the configured media size and attachment limits', () => {
+      expect(tierLimits.getMaxMediaSizeMB('premium')).toBe(
+        tierLimits.TIER_LIMITS.premium.maxMediaSizeMB,
+      );
+      expect(tierLimits.getMaxMediaPerPost('admin')).toBe(
+        tierLimits.TIER_LIMITS.admin.maxMediaPerPost,
+      );
+    });
+  });
 });
