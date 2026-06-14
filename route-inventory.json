@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-13T13:57:54.822Z",
+  "generatedAt": "2026-06-14T06:09:51.697Z",
   "functionsRoot": "functions/src",
-  "totalRoutes": 130,
+  "totalRoutes": 129,
   "writeRoutes": 76,
   "missingRateLimit": [],
   "missingAuthGuard": [],
@@ -965,23 +965,6 @@
         "OPTIONS"
       ],
       "route": "auth/authorize",
-      "authLevel": "anonymous",
-      "isWrite": false,
-      "hasRateLimit": true,
-      "hasAuthGuard": true,
-      "rateLimitExempt": false,
-      "authGuardExempt": false,
-      "hasAnonymousTodo": false,
-      "isAnonymousReadUnguarded": false,
-      "missingTestEnvGuard": false
-    },
-    {
-      "file": "functions\\src\\auth\\routes\\getConfig.ts",
-      "functionName": "auth-config",
-      "methods": [
-        "GET"
-      ],
-      "route": "auth/b2c-config",
       "authLevel": "anonymous",
       "isWrite": false,
       "hasRateLimit": true,

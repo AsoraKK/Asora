@@ -1,6 +1,7 @@
-# Auth Architecture
+﻿# Auth Architecture
 
-> Custom OAuth2 server with Authorization Code + PKCE. No Azure B2C/Entra dependency.
+> Status: active
+> Lythaus uses upstream trusted identity proof plus internal OAuth2/PKCE and internal JWT issuance.
 
 ## Overview
 
@@ -9,19 +10,47 @@ client authenticates via the standard Authorization Code flow with PKCE (S256). 
 HS256 JWTs signed with a shared `JWT_SECRET` stored in Azure Key Vault.
 
 ```
-┌─────────────┐       ┌──────────────────────────────────────┐
-│ Flutter App  │◄─────►│ asora-function-flex (Azure Functions) │
-│ (AppAuth)    │       │                                      │
-│              │       │  /api/auth/authorize  → auth code    │
-│              │       │  /api/auth/token      → JWT tokens   │
-│              │       │  /api/auth/userinfo   → user profile │
-│              │       │  /api/*               → protected    │
-└─────────────┘       └──────────────────────────────────────┘
-                              │                    │
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ Flutter App  â”‚â—„â”€â”€â”€â”€â”€â–ºâ”‚ asora-function-flex (Azure Functions) â”‚
+â”‚ (AppAuth)    â”‚       â”‚                                      â”‚
+â”‚              â”‚       â”‚  /api/auth/authorize  â†’ auth code    â”‚
+â”‚              â”‚       â”‚  /api/auth/token      â†’ JWT tokens   â”‚
+â”‚              â”‚       â”‚  /api/auth/userinfo   â†’ user profile â”‚
+â”‚              â”‚       â”‚  /api/*               â†’ protected    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                              â”‚                    â”‚
                          Cosmos DB            PostgreSQL
                         (auth_sessions,      (refresh_tokens)
                          users)
 ```
+
+> Source of truth: the diagram and file-status map below supersede earlier sketches.
+
+## Source of Truth
+
+```mermaid
+flowchart LR
+  proof["Upstream trusted identity proof\n(Easy Auth / Cloudflare Access / trusted gateway)"]
+  auth["Internal OAuth2 + PKCE auth server\nAzure Functions"]
+  jwt["Internal HS256 JWT issuance"]
+  api["Protected API boundary\nrequireAuth / requireRoles / canonical middleware"]
+  archived["Archived B2C discovery/JWKS files\nnot compiled"]
+
+  proof --> auth --> jwt --> api
+  archived -. reference only .-> auth
+```
+
+| Artifact | Status | Notes |
+|---|---|---|
+| `docs/AUTH_ARCHITECTURE.md` | active | Canonical auth source of truth |
+| `docs/web/WEB_ARCHITECTURE.md` | active | Web-specific view that points back here |
+| `functions/README.md` | active | Runtime guide with a legacy compatibility section |
+| `docs/rebrand/REFERENCE_MAP.md` | compatibility | Brand map includes auth compatibility notes |
+| `docs/branding/lythaus-transition.md` | active | Branding guide; auth references defer here |
+| `docs/web/WEB_ARCHITECTURE_DECISIONS.md` | deprecated | Historical ADRs only |
+| `functions/src/auth/routes/{authorize,token,userinfo,ping,invite_validate}.ts` | active | Current auth route handlers |
+| `functions/src/auth/b2cOpenIdConfig.ts.archived` | archived | Not compiled |
+| `functions/src/auth/jwks.ts.archived` | archived | Not compiled |
 
 ## Token Flow
 
@@ -30,8 +59,8 @@ HS256 JWTs signed with a shared `JWT_SECRET` stored in Azure Key Vault.
 - **File**: `functions/src/auth/service/authorizeService.ts`
 - Client sends an OAuth2 authorization request with PKCE parameters
 - Server validates: `response_type=code`, `code_challenge_method=S256`, PKCE challenge
-  (43–128 chars, base64url)
-- User identity resolved from upstream proxy headers:
+  (43â€“128 chars, base64url)
+- User identity is established from upstream trusted identity proof:
   - `x-ms-client-principal-id` (Azure Easy Auth / Cloudflare Access)
   - `x-authenticated-user-id` (custom proxy)
 - Generates a random authorization code (32 bytes, base64url)
@@ -51,6 +80,9 @@ HS256 JWTs signed with a shared `JWT_SECRET` stored in Azure Key Vault.
   - Validates refresh token signature and expiry
   - Rotates refresh token atomically via PostgreSQL transaction
   - Returns new access + refresh token pair
+
+Access-token endpoints only accept `type=access`; refresh-token handling only accepts
+`type=refresh`.
 - **Token payload**:
   ```json
   {
@@ -72,7 +104,8 @@ into the `roles` array used by route guards.
 - **File**: `functions/src/auth/verifyJwt.ts`
 - Verifies `Authorization: Bearer <token>` headers
 - Algorithm: **HS256** (symmetric, using `JWT_SECRET`)
-- Checks: issuer (`asora-auth`), expiry, not-before, optional audience
+- Checks: allowed algorithm (HS256), issuer (`asora-auth`), optional audience, expiry, not-before, token type, and internal `sub`
+- `sub` must resolve to a valid internal user ID; active-user and role checks are enforced in canonical middleware/guards
 - Extracts `Principal` with `sub`, `email`, `name`, `tier`, `scp`, `roles`
 - Used by `requireAuth()`, `requireRoles()`, `requireAdmin()`, etc.
 
@@ -85,7 +118,7 @@ into the `roles` array used by route guards.
 
 - **Storage**: PostgreSQL `refresh_tokens` table (NOT Cosmos)
 - **Rotation**: Each refresh creates a new token and deletes the old one atomically
-  (`BEGIN → DELETE → INSERT → COMMIT`)
+  (`BEGIN â†’ DELETE â†’ INSERT â†’ COMMIT`)
 - **Cleanup**: Expired tokens cleaned on store operations
 - **File**: `functions/src/auth/service/refreshTokenStore.ts`
 
@@ -106,20 +139,25 @@ into the `roles` array used by route guards.
 
 ## Identity Providers
 
-The auth choice screen offers three social providers and guest access:
+The auth choice screen offers three social providers and guest access. The provider hints
+are compatibility metadata only:
 
 | Provider | IdP Hint | Status |
 |----------|----------|--------|
-| Google   | `Google` | Listed — requires upstream proxy (CF Access) to authenticate |
-| Apple    | `Apple`  | Listed — requires upstream proxy (CF Access) to authenticate |
-| World ID | `World`  | Listed — requires upstream proxy (CF Access) to authenticate |
-| Guest    | —        | Works (no authentication) |
+| Google   | `Google` | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
+| Apple    | `Apple`  | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
+| World ID | `World`  | Listed â€” compatibility hint consumed by the upstream trusted identity layer |
+| Guest    | â€”        | Works (no authentication) |
 
 **How IdP hints work**: The Flutter client passes `idp=Google` (etc.) as an additional
 query parameter to `/api/auth/authorize`. Currently the authorize endpoint does not
-process this parameter — it relies on an upstream authentication proxy (Cloudflare Access)
+process this parameter â€” it relies on an upstream authentication proxy (Cloudflare Access)
 to handle social login and inject user identity headers. IdPs will be functional once
-Cloudflare Access is enabled on the function app.
+Cloudflare Access is enabled on the admin surface, and the auth server consumes trusted
+identity proof from upstream when it is present.
+
+Compatibility note: the `idp=` hints are not the auth boundary. The active boundary is
+upstream trusted identity proof plus internal OAuth2/PKCE and internal JWT issuance.
 
 ## Admin Auth (Cloudflare Access)
 
@@ -127,7 +165,7 @@ Cloudflare Access is enabled on the function app.
 - Separate auth path for the admin control panel
 - Verifies Cloudflare Access JWTs (RS256 via CF JWKS endpoint)
 - Requires `CF_ACCESS_TEAM_NAME` env var to be set
-- **Status**: Not yet enabled (deferred)
+- **Status**: Live (Cloudflare Access is enabled on the admin surface)
 
 ## Trust Boundaries
 
@@ -135,9 +173,9 @@ Cloudflare Access is enabled on the function app.
 |---|---|---|---|
 | Public | Auth start, guest entry, public marketing/legal pages | No user JWT required | Live |
 | Authenticated | User profile, posts, feeds, notifications | `requireAuth` / bearer JWT | Live |
-| Admin | Control panel and `/_admin/*` endpoints | Cloudflare Access + admin role | Planned until the Access gate is enabled |
-| Web session auth | Browser tab session storage and callback flow | `WebAuthService` + PKCE | Partial |
-| Legacy B2C | Archived B2C discovery and JWKS files | Reference only | Deprecated |
+| Admin | Control panel and `/_admin/*` endpoints | Cloudflare Access + admin role | Live |
+| Web session auth | Browser tab session storage and callback flow | `WebAuthService` + PKCE | Live |
+| Legacy compatibility auth config | none | Removed; client config now comes from the supported auth paths | Removed |
 
 Public and authenticated user traffic never traverse the admin auth path.
 The admin path is intentionally isolated so admin access can be enabled
@@ -156,18 +194,14 @@ independently of the user auth flow.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `JWT_ISSUER` | `asora-auth` | Token issuer claim |
-| `JWT_AUDIENCE` | _(none — skip check)_ | Expected audience (comma-separated for multiple) |
+| `JWT_AUDIENCE` | _(none â€” skip check)_ | Expected audience (comma-separated for multiple) |
 | `AUTH_MAX_SKEW_SECONDS` | `120` | Clock skew tolerance |
 | `AUTH_ALLOW_TEST_USER_ID` | `false` | Allow `user_id` query param in authorize (testing only) |
 
-### Not Required (Removed)
+### Removed Compatibility Config
 
-| Variable | Reason |
-|----------|--------|
-| `B2C_TENANT` | B2C not used — custom OAuth2 server |
-| `B2C_POLICY` | B2C not used |
-| `B2C_EXPECTED_ISSUER` | B2C not used |
-| `B2C_EXPECTED_AUDIENCE` | B2C not used |
+Legacy compatibility auth config has been removed. The active auth flow uses the
+supported OAuth2 endpoints and build-time client configuration described above.
 
 ## Cosmos Containers
 
@@ -175,13 +209,13 @@ independently of the user auth flow.
 
 - **Partition key**: `/partitionKey` (= `clientId`)
 - **Composite indexes**:
-  - `(authorizationCode ASC, clientId ASC)` — token exchange lookup
-  - `(clientId ASC, createdAt DESC)` — session listing
+  - `(authorizationCode ASC, clientId ASC)` â€” token exchange lookup
+  - `(clientId ASC, createdAt DESC)` â€” session listing
 
 ### `users`
 
 - **Partition key**: `/id`
-- Queried as `users.item(userId, userId)` — point read by partition key
+- Queried as `users.item(userId, userId)` â€” point read by partition key
 
 ## Security Checklist
 
@@ -196,7 +230,7 @@ independently of the user auth flow.
 - [x] State parameter required and validated
 - [x] Redirect URI validated (URL parsing)
 - [ ] Rate limiting on token endpoint (not yet implemented)
-- [ ] Upstream auth proxy (Cloudflare Access) for IdP authentication (deferred)
+- [x] Upstream trusted identity proof (Azure Easy Auth / Cloudflare Access headers) is accepted by the auth server
 
 ## File Map
 
@@ -215,10 +249,11 @@ independently of the user auth flow.
 | `lib/features/auth/presentation/auth_choice_screen.dart` | Login UI |
 | `lib/features/auth/presentation/auth_gate.dart` | Navigation auth gate |
 
-## Archived (B2C)
+## Archived
 
 These files are archived (`.ts.archived`) for reference. They implemented Azure B2C
-OIDC discovery and JWKS verification which has been replaced by direct HS256 verification:
+OIDC discovery and JWKS verification. They are excluded from compilation because
+`functions/tsconfig.json` only includes `src/**/*.ts`:
 
 - `functions/src/auth/b2cOpenIdConfig.ts.archived`
 - `functions/src/auth/jwks.ts.archived`

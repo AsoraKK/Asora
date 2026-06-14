@@ -10,7 +10,6 @@ All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurop
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
-[**authB2cConfig**](AuthApi.md#authb2cconfig) | **GET** /auth/b2c-config | Return legacy B2C-shaped auth config
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -73,43 +72,6 @@ No authorization required
 
  - **Content-Type**: Not defined
  - **Accept**: text/html, application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **authB2cConfig**
-> JsonObject authB2cConfig()
-
-Return legacy B2C-shaped auth config
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAuthApi();
-
-try {
-    final response = api.authB2cConfig();
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authB2cConfig: $e\n');
-}
-```
-
-### Parameters
-This endpoint does not need any parameter.
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

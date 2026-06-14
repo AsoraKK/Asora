@@ -1,6 +1,8 @@
 # Lythaus Web Architecture
 
 > Authoritative reference for the Flutter web target of the Lythaus app.
+> Status: active
+> Auth source of truth: `docs/AUTH_ARCHITECTURE.md`
 
 ## Overview
 
@@ -18,11 +20,15 @@ Cloudflare Pages. The web target adds:
 |---|---|---|---|---|
 | Public | Marketing site, public legal pages, app login screens | No user JWT | Not cacheable as personalized content | Live |
 | Authenticated | Flutter app routes and user APIs | `Authorization: Bearer <token>` + `requireAuth` | `private, no-store` | Live |
-| Admin | Control panel and `/_admin/*` APIs | Admin JWT / Cloudflare Access | `private, no-store` | Planned |
+| Admin | Control panel and `/_admin/*` APIs | Admin JWT / Cloudflare Access | `private, no-store` | Live |
 | Anonymous-cacheable | `GET /api/feed/discover` | No `Authorization` header | `public, s-maxage=30, stale-while-revalidate=60` | Live |
 
 Only the anonymous-cacheable boundary is allowed through the feed-cache Worker.
 Public, authenticated, and admin traffic must bypass that edge cache path.
+The active auth boundary is upstream trusted identity proof plus internal OAuth2/PKCE
+and internal JWT issuance, as described in `docs/AUTH_ARCHITECTURE.md`.
+Admin access is live; `functions/src/admin/accessAuth.ts` protects the admin surface with
+Cloudflare Access JWT verification.
 
 ## Production URLs
 
@@ -103,8 +109,10 @@ On page reload, `AuthStateNotifier._loadCurrentUser()` checks
 | Flutter web app | Live | Authenticated browser experience |
 | Marketing site | Live | Public, crawlable surface |
 | `cloudflare/worker.ts` | Partial (anonymous-cacheable only) | Only anonymous discover traffic is cached |
-| `functions/src/admin/accessAuth.ts` | Planned (Cloudflare Access gate) | Separate admin gate, not enabled yet |
+| `functions/src/admin/accessAuth.ts` | Live (Cloudflare Access gate) | Separate admin gate for the admin surface |
 | `workers/feed-cache/src/index.js` | Deprecated (legacy route wrapper) | Compatibility wrapper for the legacy route binding |
+
+Current state: the admin Access gate is live and enforced at the origin.
 
 ## Build And Deploy
 

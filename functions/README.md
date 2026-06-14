@@ -1,5 +1,7 @@
 # Asora Backend Functions
 
+> Status: active
+
 TypeScript Azure Functions that power Asora's feed, moderation, privacy, and authentication workflows. The runtime now follows a module-first layout with explicit middleware, making it easy to share logic between HTTP routes, timers, and future background jobs.
 
 ## Project Layout
@@ -54,7 +56,7 @@ Create `local.settings.json` with at least `JWT_SECRET`, `COSMOS_CONNECTION_STRI
 ## Middleware & Responses
 
 - `parseAuth(req)` asynchronously inspects the `Authorization` header and returns a `Principal` when the bearer token is valid. Missing or invalid headers yield `null` so public endpoints can stay cache friendly.
-- `requireAuth(handler)` wraps Azure Functions HTTP handlers. It verifies the B2C access token, attaches `principal` to `context.bindingData` and the request object, and returns a 401 with a `WWW-Authenticate` header when validation fails.
+- `requireAuth(handler)` wraps Azure Functions HTTP handlers. It verifies the internal HS256 access token, attaches `principal` to `context.bindingData` and the request object, and returns a 401 with a `WWW-Authenticate` header when validation fails.
 - `authRequired(principal)` remains available for legacy code paths that already pulled a principal via `parseAuth`.
 - `@shared/utils/http` exposes typed helpers (`ok`, `created`, `badRequest`, `serverError`, …) so routes always return a serialised JSON body with consistent headers.
 
@@ -203,10 +205,8 @@ Minimum coverage expectations include:
 - Keep heavy business logic in `service/` files; routes should stay focused on HTTP parsing and response shaping. This keeps services reusable from timers or future queue triggers.
 - Shared infrastructure (Cosmos clients, Redis connectors, schema validation helpers) belongs under `src/shared/` to avoid duplication.
 
-## Azure AD B2C configuration
+## Removed legacy compatibility auth config
 
-1. Open the discovery document for your user flow or custom policy at:
-   `https://{tenant}.b2clogin.com/{tenant}.onmicrosoft.com/{policy}/v2.0/.well-known/openid-configuration`.
-2. Copy the exact `issuer` field into `B2C_EXPECTED_ISSUER`.
-3. Use the Application (client) ID or App ID URI of this API registration for `B2C_EXPECTED_AUDIENCE`.
-4. Set `B2C_TENANT`, `B2C_POLICY`, `B2C_ALLOWED_ALGS`, `AUTH_CACHE_TTL_SECONDS`, `AUTH_MAX_SKEW_SECONDS`, and `B2C_STRICT_ISSUER_MATCH` in your environment configuration. The cache TTL controls discovery/JWKS refreshes; max skew tolerates small clock drift during expiry validation.
+Legacy compatibility auth config has been removed. Configure clients through the
+supported OAuth2 auth endpoints and build-time client settings documented in
+`docs/AUTH_ARCHITECTURE.md`.

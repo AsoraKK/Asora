@@ -513,7 +513,6 @@ export function getPolicyForRoute(req: HttpRequest): RateLimitPolicy {
       return createAuthenticatedPolicy('auth/userinfo', USERINFO_LIMIT);
     case 'auth/sessions/revoke':
       return createWritePolicy('auth/sessions/revoke');
-    case 'auth/b2c-config':
     case 'auth/ping':
     case 'auth/invite/validate':
       return createAnonymousPolicy(path, 30);
@@ -594,7 +593,6 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
       return createAuthenticatedPolicy('auth/userinfo', USERINFO_LIMIT);
     case 'auth-sessions-revoke':
       return createWritePolicy('auth/sessions/revoke');
-    case 'auth-config':
     case 'auth-ping':
       return createAnonymousPolicy(routeId);
     case 'auth-invite-validate':
