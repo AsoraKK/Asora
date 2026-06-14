@@ -1,6 +1,8 @@
 # Lythaus / Asora Reference Map
 
 > Quick reference for agents and developers on when to use **Lythaus** (user-facing) vs **Asora** (infrastructure).
+> Status: compatibility
+> Auth source of truth: `docs/AUTH_ARCHITECTURE.md`
 
 ## Summary
 
@@ -47,7 +49,7 @@
 |------|-------|-------|
 | API base URL | `https://api.asora.co.za/v1/` | Not changing for beta |
 | Functions host | `asora-function-{env}.azurewebsites.net` | Internal |
-| JWT issuer | Azure B2C tenant | Unchanged |
+| JWT issuer | Internal issuer (`asora-auth`) | Unchanged |
 | OAuth redirect URIs | `com.asora.app://...` | Matches package ID |
 
 ### User Interface Strings
@@ -128,7 +130,7 @@ Future migration from `com.asora.app` to `com.lythaus.app` will require:
 
 - [ ] New Apple App ID + provisioning profiles
 - [ ] New Android signing key
-- [ ] OAuth redirect URI updates (Azure B2C, Google)
+- [ ] OAuth redirect URI updates (upstream identity provider, Google Sign-In)
 - [ ] Firebase project reconfiguration
 - [ ] Deep link domain verification updates
 - [ ] User data migration (keychain, secure storage)

@@ -446,25 +446,9 @@ void main() {
     });
   });
 
-  group('_loadConfig', () {
-    test('uses config endpoint when provided and returns 200', () async {
+  group('initialization config loading', () {
+    test('does not fetch remote config during initialization', () async {
       final mockDio2 = MockDio();
-      final resp = Response<Map<String, dynamic>>(
-        data: {
-          'tenant': 'remote',
-          'clientId': 'c',
-          'policy': 'p',
-          'authorityHost': 'h',
-          'scopes': <dynamic>[],
-          'redirectUris': <String, dynamic>{},
-          'knownAuthorities': <dynamic>[],
-        },
-        statusCode: 200,
-        requestOptions: RequestOptions(),
-      );
-      when(
-        () => mockDio2.get<Map<String, dynamic>>('/config'),
-      ).thenAnswer((_) async => resp);
       when(
         () => mockStorage.read(key: any(named: 'key')),
       ).thenAnswer((_) async => null);
@@ -472,30 +456,11 @@ void main() {
       final svc = OAuth2Service(
         dio: mockDio2,
         secureStorage: mockStorage,
-        configEndpoint: '/config',
       );
+
       await svc.initialize();
-      svc.dispose();
 
-      verify(() => mockDio2.get<Map<String, dynamic>>('/config')).called(1);
-    });
-
-    test('falls back to fromEnvironment when endpoint fails', () async {
-      final mockDio2 = MockDio();
-      when(
-        () => mockDio2.get<Map<String, dynamic>>('/config'),
-      ).thenThrow(DioException(requestOptions: RequestOptions()));
-      when(
-        () => mockStorage.read(key: any(named: 'key')),
-      ).thenAnswer((_) async => null);
-
-      final svc = OAuth2Service(
-        dio: mockDio2,
-        secureStorage: mockStorage,
-        configEndpoint: '/config',
-      );
-      // Should not throw — falls back
-      await svc.initialize();
+      verifyNever(() => mockDio2.get<Map<String, dynamic>>(any()));
       svc.dispose();
     });
   });

@@ -23,6 +23,10 @@ const server = process.env.STAGING_DOMAIN
   : spec.servers?.[0]?.url;
 const jwt = process.env.STAGING_SMOKE_TOKEN;
 
+test('OpenAPI spec omits legacy auth config path', () => {
+  expect(spec.paths?.['/auth/b2c-config']).toBeUndefined();
+});
+
 const ajv = new Ajv({ strict: false, allErrors: true });
 addFormats(ajv);
 

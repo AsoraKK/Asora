@@ -61,3 +61,12 @@ test('buildInventory returns deterministic guard failures (golden summary)', () 
     expected.missingAuthFunctions
   );
 });
+
+test('actual functions inventory omits legacy auth config route', () => {
+  const allowlist = require(path.resolve(__dirname, '..', 'route-guard-allowlist.json'));
+  const functionsRoot = path.resolve(__dirname, '..', '..', 'functions', 'src');
+  const { inventory } = buildInventory(functionsRoot, allowlist);
+
+  assert.equal(inventory.some((item) => item.functionName === 'auth-config'), false);
+  assert.equal(inventory.some((item) => item.route === 'auth/b2c-config'), false);
+});

@@ -384,98 +384,105 @@ class _FlowSelectorPanel extends ConsumerWidget {
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
         border: Border(
           right: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
       ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-              border: Border(
-                bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLow,
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.3,
+                ),
+                border: Border(
+                  bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.phone_android, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Flow Selector',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone_android,
+                        color: theme.colorScheme.primary,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Choose a screen flow to preview in the device emulator',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(width: 8),
+                      Text(
+                        'Flow Selector',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Flow list grouped by category
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                _buildCategoryHeader(context, 'Authentication'),
-                ..._buildFlowItems(ref, [PreviewFlow.authChoice]),
-
-                _buildCategoryHeader(context, 'Onboarding'),
-                ..._buildFlowItems(ref, [
-                  PreviewFlow.onboardingIntro,
-                  PreviewFlow.onboardingModeration,
-                  PreviewFlow.onboardingFeed,
-                ]),
-
-                _buildCategoryHeader(context, 'Main App'),
-                ..._buildFlowItems(ref, [
-                  PreviewFlow.homeFeed,
-                  PreviewFlow.createPost,
-                  PreviewFlow.profile,
-                  PreviewFlow.settings,
-                  PreviewFlow.rewards,
-                ]),
-              ],
-            ),
-          ),
-
-          // Bottom quick actions
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose a screen flow to preview in the device emulator',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                LythButton.secondary(
-                  label: 'Full User Journey',
-                  icon: Icons.play_arrow,
-                  onPressed: () {
-                    ref.read(previewFlowProvider.notifier).state =
-                        PreviewFlow.authChoice;
-                    ref.read(previewResetKeyProvider.notifier).state++;
-                  },
-                ),
-              ],
+
+            // Flow list grouped by category
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _buildCategoryHeader(context, 'Authentication'),
+                  ..._buildFlowItems(ref, [PreviewFlow.authChoice]),
+
+                  _buildCategoryHeader(context, 'Onboarding'),
+                  ..._buildFlowItems(ref, [
+                    PreviewFlow.onboardingIntro,
+                    PreviewFlow.onboardingModeration,
+                    PreviewFlow.onboardingFeed,
+                  ]),
+
+                  _buildCategoryHeader(context, 'Main App'),
+                  ..._buildFlowItems(ref, [
+                    PreviewFlow.homeFeed,
+                    PreviewFlow.createPost,
+                    PreviewFlow.profile,
+                    PreviewFlow.settings,
+                    PreviewFlow.rewards,
+                  ]),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Bottom quick actions
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: theme.colorScheme.outlineVariant),
+                ),
+              ),
+              child: Column(
+                children: [
+                  LythButton.secondary(
+                    label: 'Full User Journey',
+                    icon: Icons.play_arrow,
+                    onPressed: () {
+                      ref.read(previewFlowProvider.notifier).state =
+                          PreviewFlow.authChoice;
+                      ref.read(previewResetKeyProvider.notifier).state++;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

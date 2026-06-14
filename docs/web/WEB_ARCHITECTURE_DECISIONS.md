@@ -1,6 +1,8 @@
 # Web Architecture Decision Records
 
 > ADRs for the Lythaus Flutter-web enablement project.
+> Status: deprecated
+> Auth source of truth: `docs/AUTH_ARCHITECTURE.md`
 
 ---
 
@@ -17,7 +19,7 @@
 - Tab-scoped — tokens are not shared across tabs or windows.
 - Automatically cleared when the tab closes — no stale tokens.
 - Not sent with HTTP requests (unlike cookies) — no CSRF via token leakage.
-- Sufficient for a session-based auth model with B2C.
+- Sufficient for a session-based auth model with upstream trusted identity proof.
 
 **Consequences:** Users must re-authenticate when opening a new tab. Acceptable
 for an invite-only beta where security > convenience.
@@ -92,7 +94,7 @@ different OAuth2 flow.
 using browser redirects:
 1. Build auth URL with `code_challenge` (S256).
 2. Store `code_verifier` + `state` in `sessionStorage`.
-3. Redirect browser to B2C.
+3. Redirect browser to the upstream trusted identity provider.
 4. On `/auth/callback`, exchange code for tokens via HTTP POST.
 
 **Rationale:**

@@ -24,7 +24,6 @@ void main() {
     service = OAuth2Service(
       dio: mockDio,
       secureStorage: mockStorage,
-      configEndpoint: 'https://example.com/api/auth/b2c-config',
     );
   });
 
@@ -113,65 +112,14 @@ void main() {
   });
 
   group('OAuth2Service initialization', () {
-    test('loads config from server when available', () async {
-      final configJson = {
-        'tenant': 'server.onmicrosoft.com',
-        'clientId': 'server-client-id',
-        'policy': 'B2C_1_signupsignin',
-        'authorityHost': 'server.ciamlogin.com',
-        'scopes': ['openid'],
-        'redirectUris': {'android': 'test://callback'},
-        'knownAuthorities': ['server.ciamlogin.com'],
-      };
-
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
-        (_) async => Response(
-          data: configJson,
-          statusCode: 200,
-          requestOptions: RequestOptions(path: ''),
-        ),
-      );
-
+    test('loads config from compile-time values without remote fetch', () async {
       await service.initialize();
 
-      verify(
-        () => mockDio.get<Map<String, dynamic>>(
-          'https://example.com/api/auth/b2c-config',
-        ),
-      ).called(1);
-    });
-
-    test('falls back to environment config when server fails', () async {
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: ''),
-          type: DioExceptionType.connectionTimeout,
-        ),
-      );
-
-      await service.initialize();
-
-      // Should not throw, falls back to environment
-      expect(service.currentState, isNotNull);
+      verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
+      expect(service.currentState, AuthState.unauthenticated);
     });
 
     test('checks for cached token on init', () async {
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
-        (_) async => Response(
-          data: {
-            'tenant': 'test.onmicrosoft.com',
-            'clientId': 'test-id',
-            'policy': 'B2C_1_signupsignin',
-            'authorityHost': 'test.ciamlogin.com',
-            'scopes': ['openid'],
-            'redirectUris': {'android': 'test://callback'},
-            'knownAuthorities': ['test.ciamlogin.com'],
-          },
-          statusCode: 200,
-          requestOptions: RequestOptions(path: ''),
-        ),
-      );
-
       when(
         () => mockStorage.read(key: 'access_token'),
       ).thenAnswer((_) async => 'cached_token');
@@ -182,6 +130,7 @@ void main() {
 
       await service.initialize();
 
+      verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
       expect(service.currentState, AuthState.authenticated);
     });
   });
@@ -279,10 +228,10 @@ void main() {
     });
   });
 
-  group('B2C Policy Parameter', () {
+  group('OAuth2 policy parameter', () {
     test('policy parameter must be included in authorize requests', () {
-      // This test documents the requirement that B2C/CIAM flows must include
-      // the policy (user flow) parameter in authorization requests.
+      // This test documents the requirement that policy-driven flows must
+      // include the policy (user flow) parameter in authorization requests.
       // Without this, the authorize endpoint won't know which user flow to execute.
 
       const config = AuthConfig(
@@ -300,13 +249,12 @@ void main() {
       expect(config.discoveryUrl, contains('?p=B2C_1_signupsignin'));
 
       // And signInEmail/signInGoogle must pass additionalParameters: {'p': policy}
-      // This is verified by code inspection since AuthorizationTokenRequest is opaque
-      // See: lib/services/oauth2_service.dart lines ~275 (signInEmail) and ~312 (signInGoogle)
+      // This is verified by code inspection since AuthorizationTokenRequest is opaque.
     });
 
     test('policy parameter must be included in token refresh requests', () {
       // Token refresh via TokenRequest must also include the policy parameter
-      // to ensure the token endpoint knows which user flow's keys to use for validation
+      // to ensure the token endpoint knows which user flow's keys to use for validation.
 
       const config = AuthConfig(
         tenant: 'test.onmicrosoft.com',
@@ -318,8 +266,6 @@ void main() {
         knownAuthorities: ['test.ciamlogin.com'],
       );
 
-      // Verified by code inspection in getAccessToken() refresh flow
-      // See: lib/services/oauth2_service.dart line ~383
       expect(config.policy, 'B2C_1_signupsignin');
     });
   });

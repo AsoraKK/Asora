@@ -84,25 +84,25 @@ class LythCard extends StatelessWidget {
     final borderColor =
         this.borderColor ?? context.colorScheme.outline.withValues(alpha: 0.1);
 
-    final Widget card = Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(context.radius.card.toDouble()),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: child,
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(context.radius.card.toDouble()),
+      side: BorderSide(color: borderColor, width: 1),
     );
 
-    if (!clickable && onTap == null && onLongPress == null) {
-      return card;
-    }
+    final Widget content = Padding(padding: padding, child: child);
 
-    return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      borderRadius: BorderRadius.circular(context.radius.card.toDouble()),
-      child: card,
+    return Material(
+      color: backgroundColor,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: (clickable || onTap != null || onLongPress != null)
+          ? InkWell(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              customBorder: shape,
+              child: content,
+            )
+          : content,
     );
   }
 }

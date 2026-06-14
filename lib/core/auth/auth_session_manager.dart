@@ -66,7 +66,8 @@ class AuthSessionState {
   /// Check if the session has expired based on TTL
   bool get isExpired {
     final expiryTime = createdAt.add(ttl);
-    return DateTime.now().isAfter(expiryTime);
+    final now = DateTime.now();
+    return !now.isBefore(expiryTime);
   }
 
   /// Convert session state to JSON for serialization
@@ -234,7 +235,8 @@ class AuthSessionManager {
       if (expiryStr == null) return AuthSessionStatus.failed;
 
       final expiry = DateTime.parse(expiryStr);
-      if (DateTime.now().isAfter(expiry)) {
+      final now = DateTime.now();
+      if (!now.isBefore(expiry)) {
         return AuthSessionStatus.expired;
       }
 
@@ -297,7 +299,7 @@ class AuthSessionManager {
       final expiry = newExpiry ?? DateTime.now().add(const Duration(hours: 24));
 
       // If the new expiry is in the past, clear the session instead
-      if (expiry.isBefore(DateTime.now())) {
+      if (!DateTime.now().isBefore(expiry)) {
         await clearSession();
         return false;
       }
