@@ -109,6 +109,10 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
 }
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
+const FALLBACK_ALLOWED_ORIGINS = new Set([
+  'https://lythaus-web.pages.dev',
+  'https://control.asora.co.za',
+]);
 
 export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
@@ -118,6 +122,10 @@ export function getAllowedOrigin(requestOrigin?: string): string | undefined {
     resolvedOrigin &&
     ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))
   ) {
+    return resolvedOrigin;
+  }
+
+  if (resolvedOrigin && FALLBACK_ALLOWED_ORIGINS.has(resolvedOrigin)) {
     return resolvedOrigin;
   }
 
