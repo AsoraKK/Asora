@@ -50,11 +50,11 @@ jest.mock('../../shared/appInsights', () => ({
 
 import {
   NotificationEventType,
-  NotificationCategory,
   EVENT_TYPE_CATEGORY,
   DEFAULT_QUIET_HOURS,
   DEFAULT_CATEGORY_PREFERENCES,
 } from '../types';
+import { getNotificationRateLimitPolicy } from '../services/notificationDispatcher';
 
 describe('NotificationDispatcher', () => {
   beforeEach(() => {
@@ -106,16 +106,41 @@ describe('NotificationDispatcher', () => {
   });
 
   describe('Rate Limits', () => {
-    it('should have sensible rate limits defined', () => {
-      // Test that rate limit constants exist in the module
-      // SOCIAL: 3/hour, 20/day
-      // NEWS: 1/hour, 1/day  
-      // MARKETING: 1/hour, 1/day
-      // SAFETY/SECURITY: 10/hour, 50/day (higher for critical alerts)
-      
-      // This tests the type exports
-      const categories: NotificationCategory[] = ['SOCIAL', 'SAFETY', 'SECURITY', 'NEWS', 'MARKETING'];
-      expect(categories).toHaveLength(5);
+    it('should expose category-specific notification throttles', () => {
+      expect(getNotificationRateLimitPolicy('SOCIAL')).toMatchObject({
+        typeLimit: 24,
+        typeWindowMinutes: 60,
+        targetLimit: 4,
+        targetWindowMinutes: 15,
+      });
+
+      expect(getNotificationRateLimitPolicy('SAFETY')).toMatchObject({
+        typeLimit: 12,
+        typeWindowMinutes: 60,
+        targetLimit: 3,
+        targetWindowMinutes: 30,
+      });
+
+      expect(getNotificationRateLimitPolicy('SECURITY')).toMatchObject({
+        typeLimit: 8,
+        typeWindowMinutes: 60,
+        targetLimit: 2,
+        targetWindowMinutes: 60,
+      });
+
+      expect(getNotificationRateLimitPolicy('NEWS')).toMatchObject({
+        typeLimit: 6,
+        typeWindowMinutes: 24 * 60,
+        targetLimit: 2,
+        targetWindowMinutes: 24 * 60,
+      });
+
+      expect(getNotificationRateLimitPolicy('MARKETING')).toMatchObject({
+        typeLimit: 2,
+        typeWindowMinutes: 24 * 60,
+        targetLimit: 1,
+        targetWindowMinutes: 24 * 60,
+      });
     });
   });
 

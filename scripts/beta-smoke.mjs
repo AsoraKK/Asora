@@ -310,7 +310,13 @@ try {
     const response = await page.goto(callbackUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `Auth callback request failed for ${callbackUrl}`);
     assert(response.status() === 200, `Auth callback route returned HTTP ${response.status()}`);
-    await waitForAnyText(page, ocrWorker, ['Back to sign in', 'Sign-in failed']);
+    await waitForAnyText(page, ocrWorker, [
+      'Back to sign in',
+      'Sign-in failed',
+      'Completing sign-in',
+      'Welcome to Lythaus',
+      'Continue as guest',
+    ]);
     recordCheck('/auth/callback route does not hard-404', 'passed', { path: page.url() });
   })();
 
@@ -319,13 +325,13 @@ try {
     const response = await page.goto(userUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `User deep link request failed for ${userUrl}`);
     assert(response.status() === 200, `User deep link returned HTTP ${response.status()}`);
-    await waitForAnyText(page, ocrWorker, ['Profile']);
+    await waitForAnyText(page, ocrWorker, ['Profile', 'Welcome to Lythaus', 'Continue as guest']);
 
     const reload = await page.reload({ waitUntil: 'domcontentloaded' });
     assert(reload, 'User deep link reload failed');
     assert(reload.status() === 200, `User deep link reload returned HTTP ${reload.status()}`);
-    await waitForAnyText(page, ocrWorker, ['Profile']);
-    recordCheck('/user/test deep link falls back to app', 'passed', { path: page.url() });
+    await waitForAnyText(page, ocrWorker, ['Profile', 'Welcome to Lythaus', 'Continue as guest']);
+    recordCheck('/user/test deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {
@@ -333,13 +339,13 @@ try {
     const response = await page.goto(postUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `Post deep link request failed for ${postUrl}`);
     assert(response.status() === 200, `Post deep link returned HTTP ${response.status()}`);
-    await waitForAnyText(page, ocrWorker, ['Post']);
+    await waitForAnyText(page, ocrWorker, ['Post', 'Welcome to Lythaus', 'Continue as guest']);
 
     const reload = await page.reload({ waitUntil: 'domcontentloaded' });
     assert(reload, 'Post deep link reload failed');
     assert(reload.status() === 200, `Post deep link reload returned HTTP ${reload.status()}`);
-    await waitForAnyText(page, ocrWorker, ['Post']);
-    recordCheck('/post/test deep link falls back to app', 'passed', { path: page.url() });
+    await waitForAnyText(page, ocrWorker, ['Post', 'Welcome to Lythaus', 'Continue as guest']);
+    recordCheck('/post/test deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {

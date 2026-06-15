@@ -28,16 +28,62 @@ import {
 import { trackAppEvent, trackAppMetric } from '../../shared/appInsights';
 
 // ============================================================================
-// RATE LIMITS (per user, per category)
+// RATE LIMITS (per user, per event type, per target)
 // ============================================================================
 
-const RATE_LIMITS: Record<NotificationCategory, { perHour: number; perDay: number }> = {
-  SOCIAL: { perHour: 3, perDay: 20 },
-  NEWS: { perHour: 1, perDay: 1 },
-  MARKETING: { perHour: 1, perDay: 1 },
-  SAFETY: { perHour: 10, perDay: 50 }, // Higher limits for safety
-  SECURITY: { perHour: 10, perDay: 50 },
+export interface NotificationRateLimitPolicy {
+  typeWindowMinutes: number;
+  typeLimit: number;
+  targetWindowMinutes: number;
+  targetLimit: number;
+}
+
+interface NotificationRateLimitDecision {
+  allowed: boolean;
+  scope?: 'type' | 'target';
+  observed: number;
+  limit: number;
+  windowMinutes: number;
+}
+
+const NOTIFICATION_RATE_LIMITS: Record<NotificationCategory, NotificationRateLimitPolicy> = {
+  SOCIAL: {
+    typeWindowMinutes: 60,
+    typeLimit: 24,
+    targetWindowMinutes: 15,
+    targetLimit: 4,
+  },
+  SAFETY: {
+    typeWindowMinutes: 60,
+    typeLimit: 12,
+    targetWindowMinutes: 30,
+    targetLimit: 3,
+  },
+  SECURITY: {
+    typeWindowMinutes: 60,
+    typeLimit: 8,
+    targetWindowMinutes: 60,
+    targetLimit: 2,
+  },
+  NEWS: {
+    typeWindowMinutes: 24 * 60,
+    typeLimit: 6,
+    targetWindowMinutes: 24 * 60,
+    targetLimit: 2,
+  },
+  MARKETING: {
+    typeWindowMinutes: 24 * 60,
+    typeLimit: 2,
+    targetWindowMinutes: 24 * 60,
+    targetLimit: 1,
+  },
 };
+
+export function getNotificationRateLimitPolicy(
+  category: NotificationCategory
+): NotificationRateLimitPolicy {
+  return NOTIFICATION_RATE_LIMITS[category];
+}
 
 // ============================================================================
 // DISPATCHER CLASS
@@ -92,14 +138,29 @@ export class NotificationDispatcher {
       }
 
       // 4. Check rate limits
-      const rateLimitOk = await this.checkRateLimit(event.userId, event.category);
-      if (!rateLimitOk) {
+      const rateLimitDecision = await this.checkRateLimit(event);
+      if (!rateLimitDecision.allowed) {
         console.log(
-          `[Dispatcher] Rate limit exceeded for user ${event.userId}, category ${event.category}`
+          `[Dispatcher] Rate limit exceeded for user ${event.userId}, category ${event.category}, ` +
+            `scope ${rateLimitDecision.scope}, observed ${rateLimitDecision.observed}/${rateLimitDecision.limit}`
         );
         // Still create in-app notification but skip push
         await this.createInAppNotification(event, prefs.timezone);
         await notificationEventsRepo.updateStatus(event.id, event.userId, 'SENT');
+
+        trackAppEvent({
+          name: 'notification_rate_limited',
+          properties: {
+            userId: event.userId,
+            eventType: event.eventType,
+            category: event.category,
+            scope: rateLimitDecision.scope,
+            observed: rateLimitDecision.observed,
+            limit: rateLimitDecision.limit,
+            windowMinutes: rateLimitDecision.windowMinutes,
+            targetId: event.payload.targetId || '',
+          },
+        });
         return;
       }
 
@@ -283,21 +344,52 @@ export class NotificationDispatcher {
   }
 
   private async checkRateLimit(
-    userId: string,
-    category: NotificationCategory
-  ): Promise<boolean> {
-    const limits = RATE_LIMITS[category];
-    const now = Date.now();
+    event: NotificationEvent
+  ): Promise<NotificationRateLimitDecision> {
+    const policy = getNotificationRateLimitPolicy(event.category);
 
-    // Query recent events for this user/category
-    const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
-    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    const typeCount = await notificationEventsRepo.countRecentByType(
+      event.userId,
+      event.eventType,
+      policy.typeWindowMinutes
+    );
 
-    // Simplified: query from events repo (in production, use Redis for performance)
-    // For now, we'll rely on the honor system and just return true
-    // TODO: Implement proper rate limit tracking with Redis or Cosmos queries
+    if (typeCount > policy.typeLimit) {
+      return {
+        allowed: false,
+        scope: 'type',
+        observed: typeCount,
+        limit: policy.typeLimit,
+        windowMinutes: policy.typeWindowMinutes,
+      };
+    }
 
-    return true; // Simplified for initial implementation
+    const targetId = event.payload.targetId?.trim();
+    if (targetId) {
+      const targetCount = await notificationEventsRepo.countRecentByTypeAndTarget(
+        event.userId,
+        event.eventType,
+        targetId,
+        policy.targetWindowMinutes
+      );
+
+      if (targetCount > policy.targetLimit) {
+        return {
+          allowed: false,
+          scope: 'target',
+          observed: targetCount,
+          limit: policy.targetLimit,
+          windowMinutes: policy.targetWindowMinutes,
+        };
+      }
+    }
+
+    return {
+      allowed: true,
+      observed: typeCount,
+      limit: policy.typeLimit,
+      windowMinutes: policy.typeWindowMinutes,
+    };
   }
 
   private async checkDedupe(event: NotificationEvent): Promise<string | undefined> {

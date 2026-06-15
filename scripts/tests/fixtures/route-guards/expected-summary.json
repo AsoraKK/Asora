@@ -7,5 +7,6 @@
   ],
   "missingAuthFunctions": [
     "missing_auth_guard"
-  ]
+  ],
+  "missingAdminAuditFunctions": []
 }
