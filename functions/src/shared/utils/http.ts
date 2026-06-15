@@ -109,10 +109,26 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
 }
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
-const FALLBACK_ALLOWED_ORIGINS = new Set([
-  'https://lythaus-web.pages.dev',
-  'https://control.asora.co.za',
-]);
+
+function matchesFallbackOrigin(requestOrigin: string): boolean {
+  try {
+    const origin = new URL(requestOrigin);
+    if (origin.protocol !== 'https:') {
+      return false;
+    }
+
+    if (origin.hostname === 'control.asora.co.za') {
+      return true;
+    }
+
+    return (
+      origin.hostname === 'lythaus-web.pages.dev' ||
+      origin.hostname.endsWith('.lythaus-web.pages.dev')
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
@@ -125,7 +141,7 @@ export function getAllowedOrigin(requestOrigin?: string): string | undefined {
     return resolvedOrigin;
   }
 
-  if (resolvedOrigin && FALLBACK_ALLOWED_ORIGINS.has(resolvedOrigin)) {
+  if (resolvedOrigin && matchesFallbackOrigin(resolvedOrigin)) {
     return resolvedOrigin;
   }
 

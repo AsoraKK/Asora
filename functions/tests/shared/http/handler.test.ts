@@ -397,8 +397,34 @@ describe('httpHandler', () => {
         const { getAllowedOrigin, getCorsHeaders } = require('@shared/utils/http') as typeof import('@shared/utils/http');
 
         expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
+        expect(getAllowedOrigin('https://be18fa23.lythaus-web.pages.dev')).toBe(
+          'https://be18fa23.lythaus-web.pages.dev'
+        );
         expect(getAllowedOrigin('https://example.com')).toBeUndefined();
         expect(getCorsHeaders('https://example.com')).not.toHaveProperty('Access-Control-Allow-Origin');
+      } finally {
+        if (previousOrigins === undefined) {
+          delete process.env.CORS_ALLOWED_ORIGINS;
+        } else {
+          process.env.CORS_ALLOWED_ORIGINS = previousOrigins;
+        }
+        jest.resetModules();
+      }
+    });
+
+    it('falls back to the live Pages origin and approved preview subdomains', () => {
+      const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
+      process.env.CORS_ALLOWED_ORIGINS = '["https://control.asora.co.za"]';
+
+      try {
+        jest.resetModules();
+        const { getAllowedOrigin } = require('@shared/utils/http') as typeof import('@shared/utils/http');
+
+        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
+        expect(getAllowedOrigin('https://be18fa23.lythaus-web.pages.dev')).toBe(
+          'https://be18fa23.lythaus-web.pages.dev'
+        );
+        expect(getAllowedOrigin('https://lythaus-web.pages.dev.evil.com')).toBeUndefined();
       } finally {
         if (previousOrigins === undefined) {
           delete process.env.CORS_ALLOWED_ORIGINS;
