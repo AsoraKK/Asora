@@ -252,10 +252,11 @@ export function createErrorResponseWithCode(
 }
 
 export function createCorsResponse(requestOrigin?: string) {
+  const resolvedOrigin = requestOrigin?.trim() || getRequestOriginFromContext();
   return {
     status: 200,
     headers: {
-      ...getCorsHeaders(requestOrigin),
+      ...getCorsHeaders(resolvedOrigin),
       'Content-Length': '0',
     },
     body: '',
@@ -276,7 +277,13 @@ export function handleCorsAndMethod(
   if (!allowedMethods.includes(method)) {
     return {
       shouldReturn: true,
-      response: createErrorResponse(405, `Method ${method} not allowed`),
+      response: createErrorResponse(
+        405,
+        `Method ${method} not allowed`,
+        undefined,
+        {},
+        getRequestOriginFromContext()
+      ),
     };
   }
 
