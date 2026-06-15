@@ -101,22 +101,19 @@ jobs:
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
           SUBS_CLEAN=$(az account show --query id -o tsv | tr -d '\r')
           CORS_URI="https://management.azure.com/subscriptions/${SUBS_CLEAN}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/web?api-version=2026-03-15"
-          CORS_BODY=$(cat <<'JSON'
-          {
-            "properties": {
-              "cors": {
-                "allowedOrigins": [
-                  "https://control.asora.co.za",
-                  "https://lythaus-web.pages.dev",
-                  "http://localhost:8080",
-                  "http://localhost:4200"
-                ],
-                "supportCredentials": false
+          CORS_BODY=$(jq -n \
+            --arg control "https://control.asora.co.za" \
+            --arg pages "https://lythaus-web.pages.dev" \
+            --arg localhost8080 "http://localhost:8080" \
+            --arg localhost4200 "http://localhost:4200" \
+            '{
+              properties: {
+                cors: {
+                  allowedOrigins: [$control, $pages, $localhost8080, $localhost4200],
+                  supportCredentials: false
+                }
               }
-            }
-          }
-JSON
-)
+            }')
 
           echo "Azure platform CORS before configuration:"
           az rest --method get --url "$CORS_URI" -o json | jq -r '.properties.cors.allowedOrigins // [] | .[]' || true
