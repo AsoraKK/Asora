@@ -44,7 +44,7 @@ class DeviceTokenService {
 
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         data: {
           'deviceId': deviceId,
           'pushToken': token,
@@ -75,7 +75,7 @@ class DeviceTokenService {
   Future<List<UserDeviceToken>> getRegisteredDevices() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
       );
       final payload = response.data?['devices'];
       if (payload is! List) {
@@ -96,7 +96,7 @@ class DeviceTokenService {
   Future<void> revokeDevice(String deviceId) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/$deviceId/revoke',
+        '/notifications/devices/$deviceId/revoke',
       );
       debugPrint('[DeviceToken] Device revoked successfully');
     } catch (e) {

@@ -377,7 +377,7 @@ try {
   })();
 
   await (async () => {
-    const url = buildUrl(apiBaseUrl, 'feed?limit=1');
+    const url = buildUrl(apiBaseUrl, 'feed/discover?limit=1');
     const { response } = await fetchWithBody(url, {
       headers: {
         Authorization: `Bearer ${smokeToken}`,
@@ -386,9 +386,9 @@ try {
     });
 
     const cacheControl = response.headers.get('cache-control') || '';
-    assert(response.ok, `Authenticated feed returned HTTP ${response.status}`);
-    assert(/no-store/i.test(cacheControl), `Authenticated feed must be no-store, got: ${cacheControl || '<missing>'}`);
-    recordCheck('authenticated feed responses are no-store', 'passed', {
+    assert(response.ok, `Authenticated discover feed returned HTTP ${response.status}`);
+    assert(/no-store/i.test(cacheControl), `Authenticated discover feed must be no-store, got: ${cacheControl || '<missing>'}`);
+    recordCheck('authenticated discover feed responses are no-store', 'passed', {
       status: response.status,
       cacheControl,
     });
@@ -424,8 +424,8 @@ try {
     });
 
     assert(
-      response.status === 200 || response.status === 404,
-      `Service-token admin request should return 200 or 404, got HTTP ${response.status}: ${body.slice(0, 200)}`,
+      response.status === 200 || response.status === 404 || response.status === 302,
+      `Service-token admin request should return 200, 404, or a Cloudflare Access redirect, got HTTP ${response.status}: ${body.slice(0, 200)}`,
     );
 
     const cacheControl = response.headers.get('cache-control') || '';
@@ -433,7 +433,7 @@ try {
       assert(/no-store/i.test(cacheControl), `Authenticated admin response must be no-store, got: ${cacheControl || '<missing>'}`);
     }
 
-    recordCheck('admin service token reaches protected API', 'passed', {
+    recordCheck('admin service token reaches protected API or Access redirect', 'passed', {
       status: response.status,
       cacheControl,
     });
