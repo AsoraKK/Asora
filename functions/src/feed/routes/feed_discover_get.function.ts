@@ -10,6 +10,7 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { handleCorsAndMethod } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
@@ -18,6 +19,11 @@ import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
 
 export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
+  const cors = handleCorsAndMethod(ctx.request.method ?? 'GET', ['GET']);
+  if (cors.shouldReturn && cors.response) {
+    return cors.response;
+  }
+
   const cursor = ctx.query.cursor;
   const limit = parseInt(ctx.query.limit || '25', 10);
   const includeTopics = ctx.query.includeTopics?.split(',').filter(Boolean);
@@ -110,14 +116,14 @@ const rateLimitedFeedDiscover = withRateLimit(feed_discover_get, (req) => getPol
 
 // Register HTTP trigger
 app.http('feed_discover_get', {
-  methods: ['GET'],
+  methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/discover',
   handler: rateLimitedFeedDiscover,
 });
 
 app.http('feed_public_get', {
-  methods: ['GET'],
+  methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/public',
   handler: rateLimitedFeedDiscover,
