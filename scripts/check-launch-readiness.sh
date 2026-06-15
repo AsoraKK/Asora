@@ -184,8 +184,8 @@ if $RUN_FLUTTER; then
   if [ -f coverage/lcov.info ]; then
     run_check "8.1 Flutter P1 modules ≥ 80 % line coverage" \
       bash check_p1_coverage.sh
-    run_check "8.2 Flutter overall coverage ≥ 80 %" \
-      bash scripts/check_flutter_coverage.sh 80 coverage/lcov.info
+    run_check "8.2 Flutter overall coverage ≥ 95 %" \
+      bash scripts/check_flutter_coverage.sh 95 coverage/lcov.info
   else
     skip "8.1 Flutter P1 coverage (run 'flutter test --coverage' first; coverage/lcov.info missing)"
     skip "8.2 Flutter overall coverage (coverage/lcov.info missing)"

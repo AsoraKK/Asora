@@ -125,7 +125,7 @@ Each item is tagged:
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
 | 8.1 | Flutter P1 modules ≥ 80 % line coverage | AUTO | `bash check_p1_coverage.sh` (requires `flutter test --coverage` first) | |
-| 8.2 | Flutter overall coverage ≥ 80 % | AUTO | `bash scripts/check_flutter_coverage.sh 80 coverage/lcov.info` | |
+| 8.2 | Flutter overall coverage ≥ 95 % | AUTO | `bash scripts/check_flutter_coverage.sh 95 coverage/lcov.info` | |
 | 8.3 | Functions statements/lines/functions ≥ 85 %, branches ≥ 72 % | AUTO | `cd functions && npm run test -- --coverage` (thresholds in `functions/jest.config.ts`) | |
 | 8.4 | Coverage gates enforced in `flutter-ci.yml` | AUTO | `flutter-ci.yml` coverage job; `bash scripts/check_coverage_gates.sh` | |
 
