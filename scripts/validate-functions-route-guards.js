@@ -384,14 +384,42 @@ function walkTsFiles(rootDir) {
 
 function loadAllowlist(filePath) {
   if (!filePath || !fs.existsSync(filePath)) {
-    return { rateLimitExempt: [], authGuardExempt: [], anonymousReadAllowed: [] };
+    return { rateLimitExempt: [], authGuardExempt: [], auditExempt: [], anonymousReadAllowed: [] };
   }
   const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   return {
     rateLimitExempt: Array.isArray(parsed.rateLimitExempt) ? parsed.rateLimitExempt : [],
     authGuardExempt: Array.isArray(parsed.authGuardExempt) ? parsed.authGuardExempt : [],
+    auditExempt: Array.isArray(parsed.auditExempt) ? parsed.auditExempt : [],
     anonymousReadAllowed: Array.isArray(parsed.anonymousReadAllowed) ? parsed.anonymousReadAllowed : [],
   };
+}
+
+function isAdminMutationItem(item) {
+  const normalizedFile = String(item.file || '').replace(/\\/g, '/');
+  const normalizedRoute = String(item.route || '').replace(/^\/+/, '');
+  return (
+    normalizedFile.includes('/admin/') ||
+    normalizedRoute.startsWith('_admin/') ||
+    normalizedRoute.startsWith('admin/')
+  );
+}
+
+function hasAdminAuditWrite(content, route) {
+  if (content.includes('recordAdminAudit(') || content.includes('createAuditEntry(')) {
+    return true;
+  }
+
+  const normalizedRoute = String(route || '').replace(/^\/+/, '');
+  if (normalizedRoute.startsWith('_admin/dsr/legal-holds') && content.includes('audit: [')) {
+    return true;
+  }
+
+  if (normalizedRoute === '_admin/dsr/legal-holds/{id}/clear' && content.includes('clearLegalHold(')) {
+    return true;
+  }
+
+  return false;
 }
 
 function buildInventory(functionsRoot, allowlist) {
@@ -432,8 +460,14 @@ function buildInventory(functionsRoot, allowlist) {
 
       const isRateLimitExempt = allowlist.rateLimitExempt.includes(route.functionName);
       const isAuthGuardExempt = allowlist.authGuardExempt.includes(route.functionName);
+      const isAuditExempt = (allowlist.auditExempt || []).includes(route.functionName);
       const anonymousReadList = allowlist.anonymousReadAllowed || [];
       const isAnonymousReadAllowed = anonymousReadList.includes(route.functionName);
+      const hasAdminAudit = hasAdminAuditWrite(content, route.route);
+      const isAdminMutation = isAdminMutationItem({
+        file: path.relative(process.cwd(), file),
+        route: route.route,
+      });
 
       // Check for "anonymous + TODO auth" anti-pattern in source file
       const hasAnonymousTodo =
@@ -469,8 +503,11 @@ function buildInventory(functionsRoot, allowlist) {
         hasAuthGuard,
         rateLimitExempt: isRateLimitExempt,
         authGuardExempt: isAuthGuardExempt,
+        auditExempt: isAuditExempt,
         hasAnonymousTodo,
         isAnonymousReadUnguarded,
+        hasAdminAudit,
+        isAdminMutation,
         missingTestEnvGuard,
       });
     }
@@ -489,6 +526,9 @@ function buildInventory(functionsRoot, allowlist) {
   const missingAuthGuard = inventory.filter(
     (item) => item.isWrite && !item.hasAuthGuard && !item.authGuardExempt
   );
+  const missingAdminAudit = inventory.filter(
+    (item) => item.isWrite && item.isAdminMutation && !item.hasAdminAudit && !item.auditExempt
+  );
   const anonymousTodoViolations = inventory.filter((item) => item.hasAnonymousTodo);
   const anonymousReadViolations = inventory.filter((item) => item.isAnonymousReadUnguarded);
   const testEnvGuardViolations = inventory.filter((item) => item.missingTestEnvGuard);
@@ -497,6 +537,7 @@ function buildInventory(functionsRoot, allowlist) {
     inventory,
     missingRateLimit,
     missingAuthGuard,
+    missingAdminAudit,
     anonymousTodoViolations,
     anonymousReadViolations,
     testEnvGuardViolations,
@@ -534,6 +575,7 @@ function main() {
     inventory,
     missingRateLimit,
     missingAuthGuard,
+    missingAdminAudit,
     anonymousTodoViolations,
     anonymousReadViolations,
     testEnvGuardViolations,
@@ -554,6 +596,12 @@ function main() {
       file: item.file,
     })),
     missingAuthGuard: missingAuthGuard.map((item) => ({
+      functionName: item.functionName,
+      route: item.route,
+      methods: item.methods,
+      file: item.file,
+    })),
+    missingAdminAudit: missingAdminAudit.map((item) => ({
       functionName: item.functionName,
       route: item.route,
       methods: item.methods,
@@ -590,6 +638,10 @@ function main() {
   for (const item of output.missingAuthGuard) {
     console.log(`  - ${item.functionName} (${item.methods.join('/')}) ${item.route} :: ${item.file}`);
   }
+  console.log(`[route-guards] missing admin audit: ${output.missingAdminAudit.length}`);
+  for (const item of output.missingAdminAudit) {
+    console.log(`  - ${item.functionName} (${item.methods.join('/')}) ${item.route} :: ${item.file}`);
+  }
   console.log(`[route-guards] anonymous+TODO violations: ${output.anonymousTodoViolations.length}`);
   for (const item of output.anonymousTodoViolations) {
     console.log(`  - ${item.functionName} ${item.route} :: ${item.file}`);
@@ -606,6 +658,7 @@ function main() {
   const hasFailures =
     output.missingRateLimit.length > 0 ||
     output.missingAuthGuard.length > 0 ||
+    output.missingAdminAudit.length > 0 ||
     output.anonymousTodoViolations.length > 0 ||
     output.testEnvGuardViolations.length > 0;
   // Note: anonymousReadViolations are reported as warnings, not failures (yet).

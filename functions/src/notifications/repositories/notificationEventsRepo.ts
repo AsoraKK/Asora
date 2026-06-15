@@ -154,6 +154,63 @@ export class NotificationEventsRepository {
     return resources;
   }
 
+  async countRecentByType(
+    userId: string,
+    eventType: NotificationEventType,
+    sinceMinutes = 60
+  ): Promise<number> {
+    const since = new Date(Date.now() - sinceMinutes * 60 * 1000).toISOString();
+    const query = {
+      query: `
+        SELECT VALUE COUNT(1) FROM c
+        WHERE c.userId = @userId
+        AND c.eventType = @eventType
+        AND c.createdAt >= @since
+      `,
+      parameters: [
+        { name: '@userId', value: userId },
+        { name: '@eventType', value: eventType },
+        { name: '@since', value: since },
+      ],
+    };
+
+    const { resources } = await this.container.items
+      .query<number>(query, { partitionKey: userId })
+      .fetchAll();
+
+    return resources[0] || 0;
+  }
+
+  async countRecentByTypeAndTarget(
+    userId: string,
+    eventType: NotificationEventType,
+    targetId: string,
+    sinceMinutes = 60
+  ): Promise<number> {
+    const since = new Date(Date.now() - sinceMinutes * 60 * 1000).toISOString();
+    const query = {
+      query: `
+        SELECT VALUE COUNT(1) FROM c
+        WHERE c.userId = @userId
+        AND c.eventType = @eventType
+        AND c.payload.targetId = @targetId
+        AND c.createdAt >= @since
+      `,
+      parameters: [
+        { name: '@userId', value: userId },
+        { name: '@eventType', value: eventType },
+        { name: '@targetId', value: targetId },
+        { name: '@since', value: since },
+      ],
+    };
+
+    const { resources } = await this.container.items
+      .query<number>(query, { partitionKey: userId })
+      .fetchAll();
+
+    return resources[0] || 0;
+  }
+
   async deleteOldEvents(olderThanDays = 7): Promise<number> {
     const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000).toISOString();
     const query = {

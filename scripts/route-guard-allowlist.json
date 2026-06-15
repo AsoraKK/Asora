@@ -13,6 +13,7 @@
     "moderation-test-proxy",
     "payments_webhook"
   ],
+  "auditExempt": [],
   "anonymousReadAllowed": [
     "health",
     "ready",

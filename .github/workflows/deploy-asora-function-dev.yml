@@ -94,26 +94,19 @@ jobs:
             -o tsv | tr -d '\r')
           echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-<empty>}"
 
-      - name: Disable Azure platform CORS
+      - name: Configure Azure platform CORS
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
 
-          echo "Azure platform CORS before cleanup:"
+          echo "Azure platform CORS before configuration:"
           az functionapp cors show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" || true
 
-          mapfile -t PLATFORM_ORIGINS < <(
-            az functionapp cors show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "allowedOrigins[]" -o tsv | tr -d '\r' || true
-          )
+          az functionapp cors add -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --allowed-origins https://lythaus-web.pages.dev --output none || true
+          az functionapp cors add -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --allowed-origins https://control.asora.co.za --output none || true
 
-          for origin in "${PLATFORM_ORIGINS[@]}"; do
-            if [ -n "$origin" ]; then
-              az functionapp cors remove -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --allowed-origins "$origin" --output none || true
-            fi
-          done
-
-          echo "Azure platform CORS after cleanup:"
+          echo "Azure platform CORS after configuration:"
           az functionapp cors show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" || true
 
       - name: Build Functions (Flex)

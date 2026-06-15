@@ -179,6 +179,28 @@ Returns audit log entries (newest first).
    CF_ACCESS_JWKS_URL=https://asorateam.cloudflareaccess.com/cdn-cgi/access/certs
    ```
 
+## Live Access Policy Snapshot
+
+Current Cloudflare Zero Trust configuration for the admin surface:
+
+| Application | Hostname / Path | Policy | Session |
+|-------------|-----------------|--------|---------|
+| `Asora Admin API` | `admin-api.asora.co.za` | Allow `kyle.kern@asora.co.za` | `30m` |
+| `Asora Admin API` | `admin-api.asora.co.za` | Allow service token `asora-dev-admin-api-st` | `6h` |
+| `Asora Control Panel` | `control.asora.co.za` | Allow `kyle.kern@asora.co.za`, then deny all others | `30m` |
+| `Asora Control Panel API` | `control.asora.co.za/api/*` | Allow service token `control-panel-to-admin-api` | `24h` |
+
+These are deny-by-default Access apps. There is no public bypass route for the
+admin control surfaces.
+
+### Emergency Lockout
+
+If admin access must be cut immediately, disable the allow policy or revoke the
+service token in Cloudflare Zero Trust for the affected app. Do not weaken the
+origin auth check or temporarily expose the backend directly. Restore access by
+re-enabling the policy or issuing a replacement service token and updating the
+Functions App environment variables.
+
 ## Security Features
 
 The Cloudflare Access JWT verification provides defense-in-depth:

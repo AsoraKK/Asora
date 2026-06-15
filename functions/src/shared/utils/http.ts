@@ -110,6 +110,26 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
 
+function matchesFallbackOrigin(requestOrigin: string): boolean {
+  try {
+    const origin = new URL(requestOrigin);
+    if (origin.protocol !== 'https:') {
+      return false;
+    }
+
+    if (origin.hostname === 'control.asora.co.za') {
+      return true;
+    }
+
+    return (
+      origin.hostname === 'lythaus-web.pages.dev' ||
+      origin.hostname.endsWith('.lythaus-web.pages.dev')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
 
@@ -118,6 +138,10 @@ export function getAllowedOrigin(requestOrigin?: string): string | undefined {
     resolvedOrigin &&
     ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))
   ) {
+    return resolvedOrigin;
+  }
+
+  if (resolvedOrigin && matchesFallbackOrigin(resolvedOrigin)) {
     return resolvedOrigin;
   }
 
@@ -228,10 +252,11 @@ export function createErrorResponseWithCode(
 }
 
 export function createCorsResponse(requestOrigin?: string) {
+  const resolvedOrigin = requestOrigin?.trim() || getRequestOriginFromContext();
   return {
     status: 200,
     headers: {
-      ...getCorsHeaders(requestOrigin),
+      ...getCorsHeaders(resolvedOrigin),
       'Content-Length': '0',
     },
     body: '',
@@ -252,7 +277,13 @@ export function handleCorsAndMethod(
   if (!allowedMethods.includes(method)) {
     return {
       shouldReturn: true,
-      response: createErrorResponse(405, `Method ${method} not allowed`),
+      response: createErrorResponse(
+        405,
+        `Method ${method} not allowed`,
+        undefined,
+        {},
+        getRequestOriginFromContext()
+      ),
     };
   }
 
