@@ -377,7 +377,7 @@ try {
   })();
 
   await (async () => {
-    const url = buildUrl(apiBaseUrl, 'feed?limit=1');
+    const url = buildUrl(apiBaseUrl, 'feed/discover?limit=1');
     const { response } = await fetchWithBody(url, {
       headers: {
         Authorization: `Bearer ${smokeToken}`,
@@ -386,9 +386,9 @@ try {
     });
 
     const cacheControl = response.headers.get('cache-control') || '';
-    assert(response.ok, `Authenticated feed returned HTTP ${response.status}`);
-    assert(/no-store/i.test(cacheControl), `Authenticated feed must be no-store, got: ${cacheControl || '<missing>'}`);
-    recordCheck('authenticated feed responses are no-store', 'passed', {
+    assert(response.ok, `Authenticated discover feed returned HTTP ${response.status}`);
+    assert(/no-store/i.test(cacheControl), `Authenticated discover feed must be no-store, got: ${cacheControl || '<missing>'}`);
+    recordCheck('authenticated discover feed responses are no-store', 'passed', {
       status: response.status,
       cacheControl,
     });
