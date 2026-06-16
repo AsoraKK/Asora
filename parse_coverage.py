@@ -70,11 +70,14 @@ def main():
         sys.exit(2)
 
     overall = (total_lh / total_lf) * 100
-    print(f"\nTotal files: {total_files}")
-    print(f"Overall coverage: {overall:.2f}% ({total_lh}/{total_lf})")
+    overall_rounded = round(overall, 2)
+    threshold = round(args.threshold, 2)
 
-    if overall < args.threshold:
-        print(f"Coverage below {args.threshold:.0f}% threshold", file=sys.stderr)
+    print(f"\nTotal files: {total_files}")
+    print(f"Overall coverage: {overall_rounded:.2f}% ({total_lh}/{total_lf})")
+
+    if overall_rounded < threshold:
+        print(f"Coverage below {threshold:.2f}% threshold", file=sys.stderr)
         sys.exit(1)
 
 

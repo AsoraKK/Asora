@@ -100,9 +100,8 @@ read_baseline_value() {
   fi
 
   local value
-  value=$(grep -o "\"$key\"[[:space:]]*:[[:space:]]*[0-9]*" "$BASELINE_FILE" | grep -o '[0-9]*$' || true)
+  value=$(grep -Eo "\"$key\"[[:space:]]*:[[:space:]]*[0-9]+([.][0-9]+)?" "$BASELINE_FILE" | head -n1 | sed -E 's/.*:[[:space:]]*//' || true)
   if [[ -z "$value" ]]; then
-    local p3_min=$4
     fail "Could not parse $key from $BASELINE_FILE"
   fi
   echo "$value"
@@ -112,8 +111,9 @@ write_baseline() {
   local total_min=$1
   local p1_min=$2
   local p2_min=$3
-  printf '{\"total_min_percent\": %d, \"p1_min_percent\": %d, \"p2_min_percent\": %d}\n' \
-    "$total_min" "$p1_min" "$p2_min" > "$BASELINE_FILE"
+  local p3_min=$4
+  printf '{\"total_min_percent\": %s, \"p1_min_percent\": %s, \"p2_min_percent\": %s, \"p3_min_percent\": %s}\n' \
+    "$total_min" "$p1_min" "$p2_min" "$p3_min" > "$BASELINE_FILE"
 }
 
 update_baseline() {
@@ -121,7 +121,7 @@ update_baseline() {
   local new_value="${2:-}"
 
   if [[ -z "$scope" || -z "$new_value" ]]; then
-    fail "Usage: $0 update-baseline <total|p1|p2> <new_percent>"
+    fail "Usage: $0 update-baseline <total|p1|p2|p3> <new_percent>"
   fi
 
   local total_min p1_min p2_min current
@@ -148,11 +148,11 @@ update_baseline() {
       p3_min=$new_value
       ;;
     *)
-      fail "Unknown scope: $scope (use total|p1|p2)"
+      fail "Unknown scope: $scope (use total|p1|p2|p3)"
       ;;
   esac
 
-  if [[ "$new_value" -le "$current" ]]; then
+  if ! awk -v new="$new_value" -v current="$current" 'BEGIN { exit (new + 0 > current + 0) ? 0 : 1 }'; then
     fail "New baseline ($new_value%) must be greater than current ($current%)."
   fi
 
@@ -277,7 +277,7 @@ parse_coverage() {
   done < "$LCOV_FILE"
 }
 
-calc_percent() {
+calc_percent_int() {
   local hit=$1
   local total=$2
   if [[ $total -eq 0 ]]; then
@@ -285,6 +285,24 @@ calc_percent() {
   else
     echo $(( hit * 100 / total ))
   fi
+}
+
+calc_percent_float() {
+  local hit=$1
+  local total=$2
+  if [[ $total -eq 0 ]]; then
+    echo "0.00"
+  else
+    awk -v hit="$hit" -v total="$total" 'BEGIN { printf "%.2f", (hit * 100 / total) }'
+  fi
+}
+
+num_ge() {
+  awk -v lhs="$1" -v rhs="$2" 'BEGIN { exit ((lhs + 0) >= (rhs + 0)) ? 0 : 1 }'
+}
+
+num_gt() {
+  awk -v lhs="$1" -v rhs="$2" 'BEGIN { exit ((lhs + 0) > (rhs + 0)) ? 0 : 1 }'
 }
 
 main() {
@@ -305,31 +323,31 @@ main() {
   p2_min=$(read_baseline_value "p2_min_percent")
   p3_min=$(read_baseline_value "p3_min_percent")
 
-  total_percent=$(calc_percent "$total_hit" "$total_lines")
-  p1_percent=$(calc_percent "$p1_hit" "$p1_lines")
-  p2_percent=$(calc_percent "$p2_hit" "$p2_lines")
-  p3_percent=$(calc_percent "$p3_hit" "$p3_lines")
-  shared_percent=$(calc_percent "$shared_hit" "$shared_lines")
-  unknown_percent=$(calc_percent "$unknown_hit" "$unknown_lines")
+  total_percent=$(calc_percent_float "$total_hit" "$total_lines")
+  p1_percent=$(calc_percent_int "$p1_hit" "$p1_lines")
+  p2_percent=$(calc_percent_int "$p2_hit" "$p2_lines")
+  p3_percent=$(calc_percent_int "$p3_hit" "$p3_lines")
+  shared_percent=$(calc_percent_int "$shared_hit" "$shared_lines")
+  unknown_percent=$(calc_percent_int "$unknown_hit" "$unknown_lines")
 
   printf "\n%-12s | %8s | %8s | %9s | %10s | %s\n" "Scope" "Lines" "Hit" "Coverage" "Threshold" "Result"
   printf "%-12s-+-%8s-+-%8s-+-%9s-+-%10s-+-%s\n" "------------" "--------" "--------" "---------" "----------" "--------"
 
   failures=()
 
-  if [[ $total_percent -ge $total_min ]]; then
+  if num_ge "$total_percent" "$total_min"; then
     result="${GREEN}PASS${NC}"
   else
     result="${RED}FAIL${NC}"
     failures+=("Total coverage ($total_percent%) is below baseline ($total_min%)")
   fi
-  printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "Total" "$total_lines" "$total_hit" "$total_percent" "$total_min"
+  printf "%-12s | %8d | %8d | %8.2f%% | %9s%% | $result\n" "Total" "$total_lines" "$total_hit" "$total_percent" "$total_min"
 
   if [[ $p1_lines -eq 0 ]]; then
     result="${RED}FAIL${NC}"
     failures+=("P1 patterns matched 0 instrumented lines. Check P1_PATTERNS.")
     printf "%-12s | %8d | %8d | %8s | %9d%% | $result\n" "P1" "$p1_lines" "$p1_hit" "N/A" "$p1_min"
-  elif [[ $p1_percent -ge $p1_min ]]; then
+  elif num_ge "$p1_percent" "$p1_min"; then
     result="${GREEN}PASS${NC}"
     printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P1" "$p1_lines" "$p1_hit" "$p1_percent" "$p1_min"
   else
@@ -347,7 +365,7 @@ main() {
       warn "P2 patterns matched 0 lines; P2 baseline is 0 so gate is skipped."
     fi
     printf "%-12s | %8d | %8d | %8s | %9d%% | $result\n" "P2" "$p2_lines" "$p2_hit" "N/A" "$p2_min"
-  elif [[ $p2_percent -ge $p2_min ]]; then
+  elif num_ge "$p2_percent" "$p2_min"; then
     result="${GREEN}PASS${NC}"
     printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P2" "$p2_lines" "$p2_hit" "$p2_percent" "$p2_min"
   else
@@ -365,7 +383,7 @@ main() {
       warn "P3 patterns matched 0 lines; P3 baseline is 0 so gate is skipped."
     fi
     printf "%-12s | %8d | %8d | %8s | %9d%% | $result\n" "P3" "$p3_lines" "$p3_hit" "N/A" "$p3_min"
-  elif [[ $p3_percent -ge $p3_min ]]; then
+  elif num_ge "$p3_percent" "$p3_min"; then
     result="${GREEN}PASS${NC}"
     printf "%-12s | %8d | %8d | %8d%% | %9d%% | $result\n" "P3" "$p3_lines" "$p3_hit" "$p3_percent" "$p3_min"
     if [[ $p3_percent -lt 85 ]]; then
@@ -401,6 +419,7 @@ main() {
     echo "  bash scripts/check_coverage_gates.sh update-baseline total <new_percent>"
     echo "  bash scripts/check_coverage_gates.sh update-baseline p1 <new_percent>"
     echo "  bash scripts/check_coverage_gates.sh update-baseline p2 <new_percent>"
+    echo "  bash scripts/check_coverage_gates.sh update-baseline p3 <new_percent>"
     echo ""
     exit 1
   fi
@@ -410,22 +429,22 @@ main() {
   echo -e "${GREEN}════════════════════════════════════════════════════════════════════════${NC}"
   echo ""
 
-  if [[ $total_percent -gt $total_min ]]; then
+  if num_gt "$total_percent" "$total_min"; then
     echo "Tip: Total coverage ($total_percent%) exceeds baseline ($total_min%)."
     echo "  bash scripts/check_coverage_gates.sh update-baseline total $total_percent"
     echo ""
   fi
-  if [[ $p1_percent -gt $p1_min ]]; then
+  if num_gt "$p1_percent" "$p1_min"; then
     echo "Tip: P1 coverage ($p1_percent%) exceeds baseline ($p1_min%)."
     echo "  bash scripts/check_coverage_gates.sh update-baseline p1 $p1_percent"
     echo ""
   fi
-  if [[ $p2_lines -gt 0 && $p2_percent -gt $p2_min ]]; then
+  if [[ $p2_lines -gt 0 ]] && num_gt "$p2_percent" "$p2_min"; then
     echo "Tip: P2 coverage ($p2_percent%) exceeds baseline ($p2_min%)."
     echo "  bash scripts/check_coverage_gates.sh update-baseline p2 $p2_percent"
     echo ""
   fi
-  if [[ $p3_lines -gt 0 && $p3_percent -gt $p3_min ]]; then
+  if [[ $p3_lines -gt 0 ]] && num_gt "$p3_percent" "$p3_min"; then
     echo "Tip: P3 coverage ($p3_percent%) exceeds baseline ($p3_min%)."
     echo "  bash scripts/check_coverage_gates.sh update-baseline p3 $p3_percent"
     echo ""
