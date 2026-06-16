@@ -11,6 +11,7 @@ import type { FeedResultBody } from '@feed/types';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestOrigin = req.headers.get('Origin') || req.headers.get('origin') || undefined;
+  const hasAuthHeader = Boolean(req.headers.get('authorization') || req.headers.get('Authorization'));
   let principal = null;
 
   try {
@@ -33,11 +34,18 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
       chaosContext,
     });
 
-    return createSuccessResponse(result.body, {
-      ...result.headers,
-      Vary: 'Authorization',
-      'Cache-Control': principal ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30',
-    }, 200, requestOrigin);
+    return createSuccessResponse(
+      result.body,
+      {
+        ...result.headers,
+        Vary: 'Authorization',
+        'Cache-Control': hasAuthHeader
+          ? 'private, no-store'
+          : 'public, max-age=60, stale-while-revalidate=30',
+      },
+      200,
+      requestOrigin,
+    );
   } catch (error) {
     if (error instanceof HttpError) {
       return {
@@ -69,7 +77,7 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
 
     context.log('feed.get.error', { message: (error as Error).message });
     const fallback = createEmptyFeedResponse(principal);
-    const cacheControl = principal ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30';
+    const cacheControl = hasAuthHeader ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30';
     return createSuccessResponse(
       fallback,
       {
