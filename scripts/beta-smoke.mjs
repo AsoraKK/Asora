@@ -395,6 +395,84 @@ try {
   })();
 
   await (async () => {
+    const url = buildUrl(apiBaseUrl, 'feed?page=1&pageSize=20');
+    const { response, body } = await fetchWithBody(url, {
+      headers: {
+        Authorization: `Bearer ${smokeToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const cacheControl = response.headers.get('cache-control') || '';
+    assert(response.ok, `Authenticated home feed returned HTTP ${response.status}: ${body.slice(0, 200)}`);
+    assert(
+      /private/i.test(cacheControl) && /no-store/i.test(cacheControl),
+      `Authenticated home feed must be private/no-store, got: ${cacheControl || '<missing>'}`,
+    );
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error(`Authenticated home feed returned invalid JSON: ${body.slice(0, 200)}`);
+    }
+
+    assert(parsed.success === true, `Authenticated home feed must report success, got: ${body.slice(0, 200)}`);
+    assert(parsed.data && typeof parsed.data === 'object', 'Authenticated home feed returned missing data payload');
+    assert(Array.isArray(parsed.data.posts), 'Authenticated home feed returned missing posts array');
+    assert(typeof parsed.data.totalCount === 'number', 'Authenticated home feed returned missing totalCount');
+    assert(typeof parsed.data.hasMore === 'boolean', 'Authenticated home feed returned missing hasMore flag');
+    assert(typeof parsed.data.page === 'number', 'Authenticated home feed returned missing page');
+    assert(typeof parsed.data.pageSize === 'number', 'Authenticated home feed returned missing pageSize');
+
+    recordCheck('authenticated home feed returns private no-store JSON', 'passed', {
+      status: response.status,
+      cacheControl,
+      posts: parsed.data.posts.length,
+      totalCount: parsed.data.totalCount,
+      emptyState: parsed.data.posts.length === 0,
+    });
+  })();
+
+  await (async () => {
+    const url = buildUrl(apiBaseUrl, 'feed?page=1&pageSize=20&type=following');
+    const { response, body } = await fetchWithBody(url, {
+      headers: {
+        Authorization: `Bearer ${smokeToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const cacheControl = response.headers.get('cache-control') || '';
+    assert(response.ok, `Authenticated following feed returned HTTP ${response.status}: ${body.slice(0, 200)}`);
+    assert(
+      /private/i.test(cacheControl) && /no-store/i.test(cacheControl),
+      `Authenticated following feed must be private/no-store, got: ${cacheControl || '<missing>'}`,
+    );
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error(`Authenticated following feed returned invalid JSON: ${body.slice(0, 200)}`);
+    }
+
+    assert(parsed.success === true, `Authenticated following feed must report success, got: ${body.slice(0, 200)}`);
+    assert(parsed.data && typeof parsed.data === 'object', 'Authenticated following feed returned missing data payload');
+    assert(Array.isArray(parsed.data.posts), 'Authenticated following feed returned missing posts array');
+    assert(typeof parsed.data.totalCount === 'number', 'Authenticated following feed returned missing totalCount');
+    assert(typeof parsed.data.hasMore === 'boolean', 'Authenticated following feed returned missing hasMore flag');
+
+    recordCheck('authenticated following feed handles empty-state cleanly', 'passed', {
+      status: response.status,
+      cacheControl,
+      posts: parsed.data.posts.length,
+      totalCount: parsed.data.totalCount,
+      emptyState: parsed.data.posts.length === 0,
+    });
+  })();
+
+  await (async () => {
     const url = buildUrl(adminApiUrl, 'api/admin/config');
     const { response, body } = await fetchWithBody(url, {
       method: 'GET',
