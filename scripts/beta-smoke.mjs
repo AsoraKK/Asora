@@ -395,6 +395,82 @@ try {
   })();
 
   await (async () => {
+    const url = buildUrl(apiBaseUrl, 'feed?page=1&pageSize=20');
+    const { response, body } = await fetchWithBody(url, {
+      headers: {
+        Authorization: `Bearer ${smokeToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const cacheControl = response.headers.get('cache-control') || '';
+    assert(response.ok, `Authenticated home feed returned HTTP ${response.status}: ${body.slice(0, 200)}`);
+    assert(
+      /private/i.test(cacheControl) && /no-store/i.test(cacheControl),
+      `Authenticated home feed must be private/no-store, got: ${cacheControl || '<missing>'}`,
+    );
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error(`Authenticated home feed returned invalid JSON: ${body.slice(0, 200)}`);
+    }
+
+    assert(parsed.success === true, `Authenticated home feed must report success, got: ${body.slice(0, 200)}`);
+    assert(parsed.data && typeof parsed.data === 'object', 'Authenticated home feed returned missing data payload');
+    assert(Array.isArray(parsed.data.items), 'Authenticated home feed returned missing items array');
+    assert(parsed.data.meta && typeof parsed.data.meta === 'object', 'Authenticated home feed returned missing meta object');
+    assert(typeof parsed.data.meta.count === 'number', 'Authenticated home feed returned missing meta.count');
+
+    recordCheck('authenticated home feed returns private no-store JSON', 'passed', {
+      status: response.status,
+      cacheControl,
+      items: parsed.data.items.length,
+      count: parsed.data.meta.count,
+      emptyState: parsed.data.items.length === 0,
+    });
+  })();
+
+  await (async () => {
+    const url = buildUrl(apiBaseUrl, 'feed?page=1&pageSize=20&type=following');
+    const { response, body } = await fetchWithBody(url, {
+      headers: {
+        Authorization: `Bearer ${smokeToken}`,
+        Accept: 'application/json',
+      },
+    });
+
+    const cacheControl = response.headers.get('cache-control') || '';
+    assert(response.ok, `Authenticated following feed returned HTTP ${response.status}: ${body.slice(0, 200)}`);
+    assert(
+      /private/i.test(cacheControl) && /no-store/i.test(cacheControl),
+      `Authenticated following feed must be private/no-store, got: ${cacheControl || '<missing>'}`,
+    );
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error(`Authenticated following feed returned invalid JSON: ${body.slice(0, 200)}`);
+    }
+
+    assert(parsed.success === true, `Authenticated following feed must report success, got: ${body.slice(0, 200)}`);
+    assert(parsed.data && typeof parsed.data === 'object', 'Authenticated following feed returned missing data payload');
+    assert(Array.isArray(parsed.data.items), 'Authenticated following feed returned missing items array');
+    assert(parsed.data.meta && typeof parsed.data.meta === 'object', 'Authenticated following feed returned missing meta object');
+    assert(typeof parsed.data.meta.count === 'number', 'Authenticated following feed returned missing meta.count');
+
+    recordCheck('authenticated following feed handles empty-state cleanly', 'passed', {
+      status: response.status,
+      cacheControl,
+      items: parsed.data.items.length,
+      count: parsed.data.meta.count,
+      emptyState: parsed.data.items.length === 0,
+    });
+  })();
+
+  await (async () => {
     const url = buildUrl(adminApiUrl, 'api/admin/config');
     const { response, body } = await fetchWithBody(url, {
       method: 'GET',
