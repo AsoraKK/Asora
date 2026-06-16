@@ -7,12 +7,14 @@ import { ChaosError } from '@shared/chaos/chaosInjectors';
 import { getChaosContext } from '@shared/chaos/chaosConfig';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
+import type { FeedResultBody } from '@feed/types';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestOrigin = req.headers.get('Origin') || req.headers.get('origin') || undefined;
+  let principal = null;
 
   try {
-    const principal = await parseAuth(req);
+    principal = await parseAuth(req);
     const cursor = typeof req.query?.get === 'function' ? req.query.get('cursor') ?? null : null;
     const since = typeof req.query?.get === 'function' ? req.query.get('since') ?? null : null;
     const limit = typeof req.query?.get === 'function' ? req.query.get('limit') ?? null : null;
@@ -66,14 +68,17 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
     }
 
     context.log('feed.get.error', { message: (error as Error).message });
-    return {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getCorsHeaders(requestOrigin),
+    const fallback = createEmptyFeedResponse(principal);
+    const cacheControl = principal ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30';
+    return createSuccessResponse(
+      fallback,
+      {
+        Vary: 'Authorization',
+        'Cache-Control': cacheControl,
       },
-      body: JSON.stringify({ error: 'internal' }),
-    };
+      200,
+      requestOrigin,
+    );
   }
 }
 
@@ -86,3 +91,25 @@ app.http('getFeed', {
   route: 'feed',
   handler: rateLimitedGetFeed,
 });
+
+function createEmptyFeedResponse(principal: unknown): FeedResultBody {
+  const isAuthenticated = Boolean(principal);
+  return {
+    items: [],
+    meta: {
+      count: 0,
+      nextCursor: null,
+      sinceCursor: null,
+      timingsMs: {
+        query: 0,
+        total: 0,
+      },
+      applied: {
+        feedType: isAuthenticated ? 'home' : 'public',
+        visibilityFilters: isAuthenticated ? ['public', 'followers'] : ['public'],
+        authorCount: 0,
+        continuationToken: null,
+      },
+    },
+  };
+}

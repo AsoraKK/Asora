@@ -419,18 +419,16 @@ try {
 
     assert(parsed.success === true, `Authenticated home feed must report success, got: ${body.slice(0, 200)}`);
     assert(parsed.data && typeof parsed.data === 'object', 'Authenticated home feed returned missing data payload');
-    assert(Array.isArray(parsed.data.posts), 'Authenticated home feed returned missing posts array');
-    assert(typeof parsed.data.totalCount === 'number', 'Authenticated home feed returned missing totalCount');
-    assert(typeof parsed.data.hasMore === 'boolean', 'Authenticated home feed returned missing hasMore flag');
-    assert(typeof parsed.data.page === 'number', 'Authenticated home feed returned missing page');
-    assert(typeof parsed.data.pageSize === 'number', 'Authenticated home feed returned missing pageSize');
+    assert(Array.isArray(parsed.data.items), 'Authenticated home feed returned missing items array');
+    assert(parsed.data.meta && typeof parsed.data.meta === 'object', 'Authenticated home feed returned missing meta object');
+    assert(typeof parsed.data.meta.count === 'number', 'Authenticated home feed returned missing meta.count');
 
     recordCheck('authenticated home feed returns private no-store JSON', 'passed', {
       status: response.status,
       cacheControl,
-      posts: parsed.data.posts.length,
-      totalCount: parsed.data.totalCount,
-      emptyState: parsed.data.posts.length === 0,
+      items: parsed.data.items.length,
+      count: parsed.data.meta.count,
+      emptyState: parsed.data.items.length === 0,
     });
   })();
 
@@ -459,16 +457,16 @@ try {
 
     assert(parsed.success === true, `Authenticated following feed must report success, got: ${body.slice(0, 200)}`);
     assert(parsed.data && typeof parsed.data === 'object', 'Authenticated following feed returned missing data payload');
-    assert(Array.isArray(parsed.data.posts), 'Authenticated following feed returned missing posts array');
-    assert(typeof parsed.data.totalCount === 'number', 'Authenticated following feed returned missing totalCount');
-    assert(typeof parsed.data.hasMore === 'boolean', 'Authenticated following feed returned missing hasMore flag');
+    assert(Array.isArray(parsed.data.items), 'Authenticated following feed returned missing items array');
+    assert(parsed.data.meta && typeof parsed.data.meta === 'object', 'Authenticated following feed returned missing meta object');
+    assert(typeof parsed.data.meta.count === 'number', 'Authenticated following feed returned missing meta.count');
 
     recordCheck('authenticated following feed handles empty-state cleanly', 'passed', {
       status: response.status,
       cacheControl,
-      posts: parsed.data.posts.length,
-      totalCount: parsed.data.totalCount,
-      emptyState: parsed.data.posts.length === 0,
+      items: parsed.data.items.length,
+      count: parsed.data.meta.count,
+      emptyState: parsed.data.items.length === 0,
     });
   })();
 

@@ -254,12 +254,22 @@ describe('service error handling', () => {
     expect(res.headers!['Content-Type']).toContain('application/json');
   });
 
-  it('unexpected error → 500 response', async () => {
+  it('unexpected error returns empty success response', async () => {
     mockedFeedService.getFeed.mockRejectedValueOnce(new Error('DB exploded'));
 
     const res = await getFeed(createRequest(), mockContext);
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
+    expect(res.headers!['Cache-Control']).toContain('public');
+    expect(res.headers!['Cache-Control']).toContain('max-age=60');
+    const parsed = JSON.parse(res.body as string);
+    expect(parsed).toMatchObject({
+      success: true,
+      data: {
+        items: [],
+        meta: expect.objectContaining({ count: 0 }),
+      },
+    });
   });
 });
 
