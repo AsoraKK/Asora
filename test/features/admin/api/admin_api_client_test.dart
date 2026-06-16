@@ -237,4 +237,69 @@ void main() {
       ),
     );
   });
+
+  test('getBudget parses budget payload', () async {
+    final dio = MockDio();
+    final client = AdminApiClient(dio);
+
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/_admin/budget',
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response({
+        'budget': {
+          'amount': 275,
+          'azureBudgetName': 'lythaus-budget',
+          'resourceGroup': 'rg-lythaus',
+          'notificationEmail': 'alerts@lythaus.example',
+          'thresholds': {
+            'actual': [50, 100],
+            'forecasted': [75, 90],
+          },
+          'updatedAt': '2024-01-01T00:00:00Z',
+          'updatedBy': 'admin@lythaus.example',
+        },
+      }, '/api/_admin/budget'),
+    );
+
+    final result = await client.getBudget();
+    expect(result.amount, 275);
+    expect(result.thresholds['actual'], [50, 100]);
+    expect(result.updatedBy, 'admin@lythaus.example');
+  });
+
+  test('updateBudget parses azure sync response', () async {
+    final dio = MockDio();
+    final client = AdminApiClient(dio);
+
+    when(
+      () => dio.put<Map<String, dynamic>>(
+        '/api/_admin/budget',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response({
+        'budget': {
+          'amount': 300,
+          'azureBudgetName': 'lythaus-budget',
+          'resourceGroup': 'rg-lythaus',
+          'notificationEmail': 'alerts@lythaus.example',
+          'thresholds': {
+            'actual': [50, 100],
+            'forecasted': [75, 90],
+          },
+          'updatedAt': '2024-01-01T00:00:00Z',
+          'updatedBy': 'admin@lythaus.example',
+        },
+        'azureSynced': true,
+      }, '/api/_admin/budget'),
+    );
+
+    final result = await client.updateBudget(300);
+    expect(result.budget.amount, 300);
+    expect(result.azureSynced, isTrue);
+  });
 }

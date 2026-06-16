@@ -31,19 +31,6 @@ class InMemoryTokenStorage extends WebTokenStorage {
   Map<String, String> get snapshot => Map.unmodifiable(_store);
 }
 
-// ---------------------------------------------------------------------------
-// Testable subclass that takes an injectable storage
-// ---------------------------------------------------------------------------
-
-class TestableWebAuthService extends WebAuthService {
-  TestableWebAuthService({
-    required this.storage,
-    required http.Client httpClient,
-  }) : super(httpClient: httpClient);
-
-  final InMemoryTokenStorage storage;
-}
-
 Map<String, dynamic> _userJson({String id = 'u1'}) => {
   'id': id,
   'email': '$id@test.com',
@@ -73,6 +60,7 @@ Map<String, dynamic> _tokenResponseJson({
 void main() {
   group('WebAuthService.handleCallback', () {
     WebAuthService buildService({
+      InMemoryTokenStorage? storage,
       int tokenStatus = 200,
       Map<String, dynamic>? tokenBody,
       int userStatus = 200,
@@ -89,7 +77,10 @@ void main() {
         return http.Response(jsonEncode(userBody ?? _userJson()), userStatus);
       });
 
-      return WebAuthService(httpClient: client);
+      return WebAuthService(
+        httpClient: client,
+        storage: storage,
+      );
     }
 
     test('rejects callback with error param', () async {
@@ -128,13 +119,38 @@ void main() {
         throwsA(isA<AuthFailure>()),
       );
     });
+
+    test('stores tokens and user data on successful callback', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected_state')
+        ..write('pkce_code_verifier', 'verifier-123');
+      final svc = buildService(storage: storage);
+
+      final user = await svc.handleCallback(
+        Uri.parse(
+          'https://app.lythaus.com/auth/callback?code=abc&state=expected_state',
+        ),
+      );
+
+      expect(user.id, 'u1');
+      expect(storage.read('access_token'), 'at_123');
+      expect(storage.read('refresh_token'), 'rt_456');
+      expect(storage.read('id_token'), 'id_789');
+      expect(storage.read('token_expiry'), isNotNull);
+      expect(storage.read('user_data'), contains('"id":"u1"'));
+      expect(storage.read('pkce_state'), isNull);
+      expect(storage.read('pkce_code_verifier'), isNull);
+      expect(storage.read('auth_provider'), isNull);
+    });
   });
 
   group('WebAuthService session management (stub platform)', () {
+    late InMemoryTokenStorage storage;
     late WebAuthService service;
 
     setUp(() {
-      service = WebAuthService();
+      storage = InMemoryTokenStorage();
+      service = WebAuthService(storage: storage);
     });
 
     test('isSignedIn returns false when no token stored', () {
@@ -145,12 +161,58 @@ void main() {
       expect(service.getStoredUser(), isNull);
     });
 
+    test('getStoredUser returns null for invalid JSON', () {
+      storage.write('user_data', '{not-json');
+      expect(service.getStoredUser(), isNull);
+    });
+
+    test('getStoredUser returns parsed user when data is valid', () {
+      storage.write('user_data', jsonEncode(_userJson(id: 'u-storage')));
+
+      final user = service.getStoredUser();
+
+      expect(user, isNotNull);
+      expect(user!.id, 'u-storage');
+    });
+
     test('getAccessToken returns null when no token stored', () {
       expect(service.getAccessToken(), isNull);
     });
 
+    test('isSignedIn returns true when token has no expiry', () {
+      storage.write('access_token', 'token');
+      expect(service.isSignedIn(), isTrue);
+    });
+
+    test('isSignedIn returns true for valid expiry window', () {
+      storage.write('access_token', 'token');
+      storage.write(
+        'token_expiry',
+        DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+      );
+      expect(service.isSignedIn(), isTrue);
+    });
+
+    test('isSignedIn returns false for expired token', () {
+      storage.write('access_token', 'token');
+      storage.write(
+        'token_expiry',
+        DateTime.now().subtract(const Duration(minutes: 1)).toIso8601String(),
+      );
+      expect(service.isSignedIn(), isFalse);
+    });
+
+    test('isSignedIn returns false for invalid expiry format', () {
+      storage.write('access_token', 'token');
+      storage.write('token_expiry', 'not-a-date');
+      expect(service.isSignedIn(), isFalse);
+    });
+
     test('signOut does not throw', () {
+      storage.write('access_token', 'token');
+      storage.write('user_data', jsonEncode(_userJson()));
       expect(() => service.signOut(), returnsNormally);
+      expect(storage.snapshot, isEmpty);
     });
   });
 

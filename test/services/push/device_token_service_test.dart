@@ -86,7 +86,7 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
@@ -102,7 +102,7 @@ void main() {
           'createdAt': '2024-01-01T00:00:00Z',
           'lastSeenAt': '2024-01-01T01:00:00Z',
         },
-      }, '/api/notifications/devices'),
+      }, '/notifications/devices'),
     );
 
     final result = await service.registerDeviceToken();
@@ -121,7 +121,7 @@ void main() {
     );
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notifications/devices'),
+      () => dio.get<Map<String, dynamic>>('/notifications/devices'),
     ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
         data: {
@@ -138,7 +138,7 @@ void main() {
           ],
         },
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/notifications/devices'),
+        requestOptions: RequestOptions(path: '/notifications/devices'),
       ),
     );
 
@@ -158,17 +158,17 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/device-1/revoke',
+        '/notifications/devices/device-1/revoke',
       ),
     ).thenAnswer(
-      (_) async => _response({}, '/api/notifications/devices/device-1/revoke'),
+      (_) async => _response({}, '/notifications/devices/device-1/revoke'),
     );
 
     await service.revokeDevice('device-1');
 
     verify(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/device-1/revoke',
+        '/notifications/devices/device-1/revoke',
       ),
     ).called(1);
   });

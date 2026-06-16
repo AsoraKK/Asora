@@ -5,6 +5,11 @@ import 'package:asora/features/auth/application/invite_redeem_service.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:asora/features/auth/presentation/auth_callback_screen.dart';
+import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
+import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
+import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:asora/core/analytics/analytics_client.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:dio/dio.dart';
@@ -12,6 +17,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:asora/features/feed/presentation/post_detail_screen.dart';
+import 'package:asora/ui/screens/adaptive_shell.dart';
+import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {
@@ -51,13 +60,20 @@ void main() {
   group('AppRouter redirect logic', () {
     late ProviderContainer container;
 
-    GoRouter buildRouter({User? user, bool guest = false}) {
+    GoRouter buildRouter({
+      User? user,
+      bool guest = false,
+      String? pendingCode,
+      String? jwtToken,
+    }) {
       container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith(
             (ref) => _MockAuthStateNotifier(AsyncValue.data(user)),
           ),
           guestModeProvider.overrideWith((ref) => guest),
+          pendingInviteCodeProvider.overrideWith((ref) => pendingCode),
+          jwtProvider.overrideWith((ref) async => jwtToken),
         ],
       );
       addTearDown(container.dispose);
@@ -102,6 +118,47 @@ void main() {
       expect(router, isNotNull);
     });
 
+    testWidgets('real router redirects unauthenticated users to login', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final router = buildRouter();
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AuthChoiceScreen), findsOneWidget);
+      expect(router.routerDelegate.currentConfiguration.uri.path, '/login');
+    });
+
+    testWidgets('real router preserves pending invite redirect', (tester) async {
+      final router = buildRouter(
+        user: _fakeUser(),
+        pendingCode: 'ABCD-1234',
+        jwtToken: 'token',
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(InviteRedeemScreen), findsOneWidget);
+      expect(router.routerDelegate.currentConfiguration.uri.path, '/invite/ABCD-1234');
+    });
+
     test('shell route has expected nested routes', () {
       final router = buildRouter(user: _fakeUser());
       final shellRoute = router.configuration.routes
@@ -123,6 +180,125 @@ void main() {
         topLevelPaths,
         containsAll(['/login', '/auth/callback', '/user/test', '/post/test']),
       );
+    });
+
+    testWidgets('route builders can construct every registered screen', (
+      tester,
+    ) async {
+      final router = buildRouter(user: _fakeUser());
+      late BuildContext context;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final routes = router.configuration.routes.whereType<GoRoute>().toList();
+      final shellRoute = routes.firstWhere((r) => r.path == '/');
+
+      GoRouterState buildState(
+        String location, {
+        required String fullPath,
+        Map<String, String> pathParameters = const {},
+      }) {
+        return GoRouterState(
+          router.configuration,
+          uri: Uri.parse(location),
+          matchedLocation: location,
+          fullPath: fullPath,
+          pathParameters: pathParameters,
+          pageKey: ValueKey(location),
+        );
+      }
+
+      final loginWidget = routes.firstWhere((r) => r.path == '/login').builder!(
+        context,
+        buildState('/login', fullPath: '/login'),
+      );
+      final callbackWidget =
+          routes.firstWhere((r) => r.path == '/auth/callback').builder!(
+            context,
+            buildState('/auth/callback', fullPath: '/auth/callback'),
+          );
+      final inviteWidget = routes.firstWhere((r) => r.path == '/invite/:code')
+          .builder!(
+            context,
+            buildState(
+              '/invite/ABCD-1234',
+              fullPath: '/invite/:code',
+              pathParameters: const {'code': 'ABCD-1234'},
+            ),
+          );
+      final userTestWidget = routes.firstWhere((r) => r.path == '/user/test')
+          .builder!(context, buildState('/user/test', fullPath: '/user/test'));
+      final postTestWidget = routes.firstWhere((r) => r.path == '/post/test')
+          .builder!(context, buildState('/post/test', fullPath: '/post/test'));
+      final shellWidget =
+          shellRoute.builder!(context, buildState('/', fullPath: '/'));
+      final shellChildren = shellRoute.routes.whereType<GoRoute>().toList();
+      final postWidget = shellChildren.firstWhere((r) => r.path == 'post/:postId')
+          .builder!(
+            context,
+            buildState(
+              '/post/abc',
+              fullPath: '/post/:postId',
+              pathParameters: const {'postId': 'abc'},
+            ),
+          );
+      final profileWidget = shellChildren.firstWhere((r) => r.path == 'user/:userId')
+          .builder!(
+            context,
+            buildState(
+              '/user/abc',
+              fullPath: '/user/:userId',
+              pathParameters: const {'userId': 'abc'},
+            ),
+          );
+      final moderationWidget = shellChildren.firstWhere((r) => r.path == 'moderation')
+          .builder!(context, buildState('/moderation', fullPath: '/moderation'));
+      final moderationChildren = shellChildren
+          .firstWhere((r) => r.path == 'moderation')
+          .routes
+          .whereType<GoRoute>()
+          .toList();
+      final appealWidget = moderationChildren
+          .firstWhere((r) => r.path == 'appeal')
+          .builder!(context, buildState('/moderation/appeal', fullPath: '/moderation/appeal'));
+      final notificationsWidget = shellChildren
+          .firstWhere((r) => r.path == 'settings/notifications')
+          .builder!(
+            context,
+            buildState(
+              '/settings/notifications',
+              fullPath: '/settings/notifications',
+            ),
+          );
+      final reputationWidget = shellChildren
+          .firstWhere((r) => r.path == 'reputation/ledger')
+          .builder!(
+            context,
+            buildState('/reputation/ledger', fullPath: '/reputation/ledger'),
+          );
+
+      expect(loginWidget, isA<AuthChoiceScreen>());
+      expect(callbackWidget, isA<AuthCallbackScreen>());
+      expect(inviteWidget, isA<InviteRedeemScreen>());
+      expect(userTestWidget, isA<ProfileScreen>());
+      expect(postTestWidget, isA<PostDetailScreen>());
+      expect(shellWidget, isA<AdaptiveShell>());
+      expect(postWidget, isA<PostDetailScreen>());
+      expect(profileWidget, isA<ProfileScreen>());
+      expect(moderationWidget, isA<ModerationConsoleScreen>());
+      expect(appealWidget, isA<AppealHistoryScreen>());
+      expect(notificationsWidget, isA<NotificationsSettingsScreen>());
+      expect(reputationWidget, isA<ReputationLedgerScreen>());
     });
   });
 
@@ -247,6 +423,42 @@ void main() {
         );
       },
     );
+
+    testWidgets('authenticated user opening /login is redirected home', (
+      tester,
+    ) async {
+      final router = buildRedirectRouter(
+        isLoggedIn: true,
+        pendingCode: null,
+        initialLocation: '/login',
+      );
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(find.text('home'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.path,
+        '/',
+      );
+    });
+
+    testWidgets('authenticated user can open /auth/callback without redirect', (
+      tester,
+    ) async {
+      final router = buildRedirectRouter(
+        isLoggedIn: true,
+        pendingCode: null,
+        initialLocation: '/auth/callback',
+      );
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(find.text('callback'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.uri.path,
+        '/auth/callback',
+      );
+    });
 
     // -------------------------------------------------------------------------
     // Test 2: authenticated user can view invite state.

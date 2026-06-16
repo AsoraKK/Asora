@@ -403,5 +403,74 @@ void main() {
       );
       expect(find.text('Curated discover'), findsNothing);
     });
+
+    testWidgets('top bar search button opens search screen', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.textContaining('Search across feeds'), findsOneWidget);
+    });
+
+    testWidgets('feed control panel opens custom feed flow', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Feed tools'), findsOneWidget);
+      expect(find.text('Build custom feed'), findsOneWidget);
+
+      await tester.tap(find.text('Build custom feed'));
+      await tester.pumpAndSettle();
+      expect(find.text('Create Custom Feed'), findsOneWidget);
+      expect(find.text('What type of content?'), findsOneWidget);
+    });
+
   });
 }

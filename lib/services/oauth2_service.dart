@@ -189,6 +189,7 @@ class AuthException implements Exception {
 class OAuth2Service {
   final FlutterSecureStorage _secureStorage;
   final Tracer _tracer;
+  final FlutterAppAuth? _providedAppAuth;
 
   // Lazy-init: FlutterAppAuth is a native plugin that crashes on web if
   // instantiated eagerly.  On web the new OAuth2Service in
@@ -196,7 +197,7 @@ class OAuth2Service {
   FlutterAppAuth? _appAuthInstance;
   FlutterAppAuth get _appAuth {
     assert(!kIsWeb, 'Legacy OAuth2Service._appAuth must not be used on web');
-    return _appAuthInstance ??= const FlutterAppAuth();
+    return _providedAppAuth ?? (_appAuthInstance ??= const FlutterAppAuth());
   }
 
   AuthConfig? _config;
@@ -208,8 +209,10 @@ class OAuth2Service {
   OAuth2Service({
     required Dio dio,
     required FlutterSecureStorage secureStorage,
+    FlutterAppAuth? appAuth,
     Tracer? tracer,
   }) : _secureStorage = secureStorage,
+       _providedAppAuth = appAuth,
        _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
 
   /// Get current auth state stream

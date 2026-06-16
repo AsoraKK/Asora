@@ -382,6 +382,7 @@ void main() {
         // Finish the async work
         await tester.pumpAndSettle();
       });
+
     });
 
     group('Error Handling', () {
@@ -530,6 +531,7 @@ void main() {
         expect(find.text('Discard post?'), findsNothing);
       });
     });
+
   });
 
   group('PostCreationNotifier Unit Tests', () {
