@@ -48,9 +48,6 @@ class _FakeCertificate implements X509Certificate {
   Uint8List get sha1 => Uint8List(0);
 
   @override
-  String get sha256 => '';
-
-  @override
   String get subject => 'CN=test';
 
   @override

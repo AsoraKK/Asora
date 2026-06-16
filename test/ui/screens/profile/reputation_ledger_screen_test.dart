@@ -3,7 +3,6 @@ library;
 
 import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/state/models/reputation.dart';
 import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
