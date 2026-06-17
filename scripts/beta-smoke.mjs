@@ -471,7 +471,7 @@ try {
   })();
 
   await (async () => {
-    const url = buildUrl(adminApiUrl, 'api/admin/config');
+    const url = buildUrl(adminApiUrl, 'api/_admin/config');
     const { response, body } = await fetchWithBody(url, {
       method: 'GET',
       redirect: 'manual',
@@ -488,7 +488,7 @@ try {
   })();
 
   await (async () => {
-    const url = buildUrl(adminApiUrl, 'api/admin/config');
+    const url = buildUrl(adminApiUrl, 'api/_admin/config');
     const { response, body } = await fetchWithBody(url, {
       method: 'GET',
       redirect: 'manual',
@@ -500,8 +500,8 @@ try {
     });
 
     assert(
-      response.status === 200 || response.status === 404 || response.status === 302,
-      `Service-token admin request should return 200, 404, or a Cloudflare Access redirect, got HTTP ${response.status}: ${body.slice(0, 200)}`,
+      response.status === 200 || response.status === 401 || response.status === 403 || response.status === 404,
+      `Service-token admin request should reach origin without a Cloudflare Access redirect, got HTTP ${response.status}: ${body.slice(0, 200)}`,
     );
 
     const cacheControl = response.headers.get('cache-control') || '';
@@ -509,7 +509,7 @@ try {
       assert(/no-store/i.test(cacheControl), `Authenticated admin response must be no-store, got: ${cacheControl || '<missing>'}`);
     }
 
-    recordCheck('admin service token reaches protected API or Access redirect', 'passed', {
+    recordCheck('admin service token reaches admin origin', 'passed', {
       status: response.status,
       cacheControl,
     });
