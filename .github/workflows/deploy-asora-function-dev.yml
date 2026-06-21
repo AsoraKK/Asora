@@ -716,7 +716,8 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_STORAGE_ACCOUNT="$DSR_SA" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_CONTAINER="dsr-exports" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_NAME="dsr-requests" --output none
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="AzureWebJobsStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="DsrQueueStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting "DsrQueueStorage__queueServiceUri=https://${DSR_SA}.queue.core.windows.net" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_MAX_CONCURRENCY="5" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_SIGNED_URL_TTL_HOURS="12" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_RETENTION_DAYS="30" --output none

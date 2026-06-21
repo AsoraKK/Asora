@@ -11,7 +11,7 @@ import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functio
 import { z } from 'zod';
 import { CosmosClient } from '@azure/cosmos';
 import { createHiveClient, HiveAIClient } from '../shared/hive-client';
-import { verifyJWT, extractUserIdFromJWT } from '../shared/auth-utils';
+import { verifyJWT } from '../shared/auth-utils';
 import { createRateLimiter } from '../shared/rate-limiter';
 
 // Request validation schema
@@ -37,7 +37,8 @@ const FlagContentSchema = z.object({
 const flagRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 5,
-  keyGenerator: (req: HttpRequest) => `flag:${extractUserIdFromJWT(req.headers.get('authorization') || '')}`
+  keyGenerator: (req: HttpRequest) =>
+    `flag:${(req as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId || 'unknown'}`
 });
 
 export async function flagContent(
@@ -59,6 +60,8 @@ export async function flagContent(
     const token = authHeader.replace('Bearer ', '');
     const jwtPayload = await verifyJWT(token);
     const userId = jwtPayload.sub;
+
+    (request as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId = userId;
 
     // 2. Rate limiting
     const rateLimitResult = await flagRateLimiter.checkRateLimit(request);

@@ -6,6 +6,8 @@ This checklist helps verify the environment configuration for DSR processing acr
 - DSR_EXPORT_STORAGE_ACCOUNT
 - DSR_EXPORT_CONTAINER (default: dsr-exports)
 - DSR_QUEUE_NAME (default: dsr-requests)
+- DSR_QUEUE_CONNECTION (recommended: `DsrQueueStorage`)
+- `DsrQueueStorage__queueServiceUri` pointing at the same storage account used for `DSR_EXPORT_STORAGE_ACCOUNT`
 - DSR_MAX_CONCURRENCY (exports)
 - DSR_EXPORT_SIGNED_URL_TTL_HOURS (e.g., 12)
 - DSR_EXPORT_RETENTION_DAYS (default: 30)
@@ -18,11 +20,15 @@ Ensure Cosmos DB connection is configured via Key Vault ref for `COSMOS_CONNECTI
 Assign to the Functions app’s managed identity:
 - Storage Blob Data Contributor (scope: the DSR export storage account)
 - Storage Queue Data Contributor (scope: the same account)
+- Storage Queue Data Reader (scope: the same account)
+- Storage Queue Data Message Processor (scope: the same account)
+- Storage Account Contributor (scope: the same account, for user delegation key generation)
 
 Verify:
 - Can create user delegation key (for SAS)
 - Can write/read blob in the export container
 - Can send messages to the DSR queue
+- Can receive queue-trigger deliveries from the same DSR storage account
 
 ## Storage Account Configuration
 - TLS 1.2 minimum
@@ -37,4 +43,5 @@ Verify:
 ## Troubleshooting
 - SAS URL generation fails: verify MI has permissions and clock skew is reasonable; re-issue delegation key.
 - Queue dispatch throttled: increase `DSR_MAX_CONCURRENCY`; scale out plan if needed.
+- Queue request stays `queued`: confirm the producer and queue trigger point at the same storage account. `DSR_EXPORT_STORAGE_ACCOUNT` and `DsrQueueStorage__queueServiceUri` must reference the same DSR account.
 - Missing app settings: check ARM template or pipeline vars; prefer Key Vault references for secrets.

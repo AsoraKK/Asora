@@ -79,17 +79,17 @@ export function defaultKeyGenerator(req: HttpRequest): string {
  * User-based key generator (requires authentication)
  */
 export function userKeyGenerator(req: HttpRequest): string {
-  const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.replace('Bearer ', '');
-
-  try {
-    const payloadPart = token.split('.')[1] || '';
-    const json = Buffer.from(payloadPart, 'base64').toString('utf8');
-    const decoded = JSON.parse(json);
-    return `user:${decoded.sub}`;
-  } catch {
-    return defaultKeyGenerator(req);
+  const principalSub = (req as HttpRequest & { principal?: { sub?: string } }).principal?.sub;
+  if (typeof principalSub === 'string' && principalSub.trim()) {
+    return `user:${principalSub.trim()}`;
   }
+
+  const verifiedUserId = (req as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId;
+  if (typeof verifiedUserId === 'string' && verifiedUserId.trim()) {
+    return `user:${verifiedUserId.trim()}`;
+  }
+
+  return defaultKeyGenerator(req);
 }
 
 /**
