@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -62,7 +62,7 @@ jobs:
     name: Validate legal operation registers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate legal register files
         run: bash scripts/check_legal_registers.sh
@@ -71,7 +71,7 @@ jobs:
     name: Lint workflows (actionlint + shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install dependencies (jq, shellcheck)
         run: |
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate pinned Flutter version source-of-truth
         run: bash scripts/validate-flutter-toolchain-pinning.sh
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate staging/prod alert recipients
         run: bash scripts/validate-alert-routing-config.sh
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -177,7 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install ripgrep
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
@@ -190,7 +190,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install ripgrep
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
@@ -203,7 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate extension bundle version
         run: |
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -310,7 +310,7 @@ jobs:
       run:
         working-directory: apps/control-panel
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -335,7 +335,7 @@ jobs:
       run:
         working-directory: apps/marketing-site
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -371,7 +371,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run gitleaks
         run: scripts/secret-scan.sh
 
@@ -395,7 +395,7 @@ jobs:
     name: Verify TLS certificate pins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -415,7 +415,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/cache@v5
         with:
@@ -500,7 +500,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
@@ -578,7 +578,7 @@ jobs:
     runs-on: macos-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -618,7 +618,7 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install jq for guards
         run: |
@@ -756,7 +756,7 @@ jobs:
     name: Azure Retirement Hardening Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Run Azure retirement validation
         run: bash scripts/validate-azure-retirement.sh
@@ -770,7 +770,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Dependency Review (block high/critical CVEs)
         uses: actions/dependency-review-action@v5
@@ -786,7 +786,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [workflow_lint]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Check DSR required keys match deploy workflow
         run: bash scripts/check-dsr-runbook-consistency.sh

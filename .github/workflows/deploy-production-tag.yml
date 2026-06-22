@@ -15,7 +15,7 @@ jobs:
     name: Launch Readiness Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate store submission evidence
         run: bash scripts/validate-store-submission-evidence.sh
