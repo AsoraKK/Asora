@@ -52,6 +52,8 @@ final _fakeAuthUser = User(
   lastLoginAt: DateTime.utc(2024),
 );
 
+final _fakeAdminUser = _fakeAuthUser.copyWith(role: UserRole.admin);
+
 Widget _buildApp({List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
@@ -170,16 +172,16 @@ void main() {
       expect(find.textContaining('@janedoe'), findsOneWidget);
     });
 
-    testWidgets('owner sees management actions and trust passport details', (
+    testWidgets('owner sees profile actions but not staff tools by default', (
       tester,
     ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider('user-1').overrideWith(
-              (ref) async => _ownerVisibleUser,
-            ),
+            publicUserProvider(
+              'user-1',
+            ).overrideWith((ref) async => _ownerVisibleUser),
             trustPassportProvider('user-1').overrideWith((ref) async {
               return const TrustPassport(
                 userId: 'user-1',
@@ -206,13 +208,51 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Journalist verified'), findsOneWidget);
+      expect(find.text('Editorial Contributor'), findsOneWidget);
       expect(find.text('Trusted'), findsOneWidget);
       expect(find.text('Editor'), findsOneWidget);
-      expect(find.text('Moderation hub'), findsOneWidget);
-      expect(find.text('Control Panel'), findsOneWidget);
+      expect(find.text('Moderation hub'), findsNothing);
+      expect(find.text('Control Panel'), findsNothing);
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Reputation'), findsOneWidget);
+    });
+
+    testWidgets('admin owner sees staff tools', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAdminUser),
+            publicUserProvider(
+              'user-1',
+            ).overrideWith((ref) async => _ownerVisibleUser),
+            trustPassportProvider('user-1').overrideWith((ref) async {
+              return const TrustPassport(
+                userId: 'user-1',
+                visibility: 'public_expanded',
+                transparencyStreakCategory: 'Consistent',
+                appealsResolvedFairlyLabel: '12/12 fair',
+                jurorReliabilityTier: 'Gold',
+                counts: TrustPassportCounts(
+                  totalPosts: 12,
+                  postsWithSignals: 8,
+                  appealsResolved: 4,
+                  appealsApproved: 3,
+                  appealsRejected: 1,
+                  votesCast: 20,
+                  alignedVotes: 18,
+                ),
+              );
+            }),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Moderation hub'), findsOneWidget);
+      expect(find.text('Control Panel'), findsOneWidget);
     });
 
     testWidgets('non-owner with private passport sees safe message', (
@@ -222,11 +262,13 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider('user-2').overrideWith(
-              (ref) async => _privatePassportUser,
-            ),
+            publicUserProvider(
+              'user-2',
+            ).overrideWith((ref) async => _privatePassportUser),
             trustPassportProvider('user-2').overrideWith((ref) async {
-              throw StateError('should not load private passport for non-owner');
+              throw StateError(
+                'should not load private passport for non-owner',
+              );
             }),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],

@@ -1,10 +1,10 @@
 /**
  * News Feed Function
- * 
+ *
  * GET /api/feed/news
- * 
+ *
  * Hybrid News feed combining journalists and high-reputation users.
- * 
+ *
  * OpenAPI: feed_news_get
  */
 
@@ -17,8 +17,9 @@ import type { CursorPaginatedPostView } from '@shared/types/openapi';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
+import { hasNewsBoardAccess } from '@shared/services/tierLimits';
 
-export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
+export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ctx => {
   const cors = handleCorsAndMethod(ctx.request.method ?? 'GET', ['GET']);
   if (cors.shouldReturn && cors.response) {
     return cors.response;
@@ -36,7 +37,7 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
 
   try {
     // ─────────────────────────────────────────────────────────────
-    // Tier Gate: News Board is a Black-tier feature
+    // News Board is available to authenticated Free, Premium, Black, and Admin users.
     // ─────────────────────────────────────────────────────────────
     let auth;
     try {
@@ -45,8 +46,11 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
       return ctx.unauthorized('Authentication required for News Board access', 'UNAUTHORIZED');
     }
 
-    if (auth.tier !== 'black' && auth.tier !== 'admin') {
-      return ctx.forbidden('News Board requires a Black tier subscription', 'TIER_REQUIRED');
+    if (!hasNewsBoardAccess(auth.tier)) {
+      return ctx.forbidden(
+        'News Board is not available for this account',
+        'NEWS_BOARD_UNAVAILABLE'
+      );
     }
 
     const viewerId = auth.userId;
@@ -96,12 +100,14 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async (c
     };
     return response;
   } catch (error) {
-    ctx.context.error(`[feed_news_get] Error fetching news feed: ${error}`, { correlationId: ctx.correlationId });
+    ctx.context.error(`[feed_news_get] Error fetching news feed: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
     return ctx.internalError(error as Error);
   }
 });
 
-const rateLimitedFeedNews = withRateLimit(feed_news_get, (req) => getPolicyForRoute(req));
+const rateLimitedFeedNews = withRateLimit(feed_news_get, req => getPolicyForRoute(req));
 
 // Register HTTP trigger
 app.http('feed_news_get', {

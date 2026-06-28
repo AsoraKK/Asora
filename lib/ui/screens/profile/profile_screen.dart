@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/features/admin/ui/control_panel_shell.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
@@ -69,6 +70,11 @@ class ProfileScreen extends ConsumerWidget {
   ) {
     final currentUser = ref.read(currentUserProvider);
     final isOwner = currentUser != null && currentUser.id == profile.id;
+    final canModerate =
+        isOwner &&
+        (currentUser.role == UserRole.moderator ||
+            currentUser.role == UserRole.admin);
+    final canUseControlPanel = isOwner && currentUser.role == UserRole.admin;
     if (isOwner) {
       _logProfileComplete(ref, profile, currentUser.id);
     }
@@ -132,7 +138,7 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 Icon(Icons.verified, size: 18),
                 SizedBox(width: Spacing.xs),
-                Text('Journalist verified'),
+                Text('Editorial Contributor'),
               ],
             ),
           ],
@@ -171,29 +177,31 @@ class ProfileScreen extends ConsumerWidget {
           ),
           if (isOwner) ...[
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.shield_outlined),
-              title: const Text('Moderation hub'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ModerationConsoleScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.admin_panel_settings_outlined),
-              title: const Text('Control Panel'),
-              subtitle: const Text('Admin tools & app preview'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ControlPanelShell(),
-                  ),
-                );
-              },
-            ),
+            if (canModerate)
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: const Text('Moderation hub'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ModerationConsoleScreen(),
+                    ),
+                  );
+                },
+              ),
+            if (canUseControlPanel)
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: const Text('Control Panel'),
+                subtitle: const Text('Admin tools & app preview'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ControlPanelShell(),
+                    ),
+                  );
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Settings'),

@@ -3455,6 +3455,22 @@ components:
               type: integer
             maxMediaPerPost:
               type: integer
+            maxCustomFeeds:
+              type: integer
+              description: Maximum custom feeds available to the tier.
+            newsBoardAccess:
+              type: boolean
+              description: Whether the tier can read the News Board.
+            postingRestricted:
+              type: boolean
+              description: Whether normal posting is product-limited beyond abuse controls.
+            rewardLevelCap:
+              type: integer
+              description: Highest reputation reward level available to the tier.
+            rewardOptionsPerLevel:
+              type: integer
+              nullable: true
+              description: Reward options per reputation level; null means all eligible rewards.
     CreatePostRequest:
       type: object
       required:

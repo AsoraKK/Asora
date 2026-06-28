@@ -1,10 +1,17 @@
 /**
- * News Board Tier Gate Tests — Workstream 10
+ * Current News Board policy:
+ * authenticated Free, Premium, Black, and Admin users can read News Board.
+ * Anonymous requests remain blocked.
+ */
+
+/**
+ * News Board Access Tests - Workstream 10
  *
- * Verifies that GET /api/feed/news enforces Black-tier access:
+ * Historical policy note: this originally enforced Black-tier access.
+ * Current assertions below verify authenticated Free, Premium, Black, and Admin access.
  *   - Anonymous requests → 401
- *   - Free-tier users → 403 (TIER_REQUIRED)
- *   - Premium-tier users → 403 (TIER_REQUIRED)
+ *   - Free-tier users → 200
+ *   - Premium-tier users → 200
  *   - Black-tier users → 200
  *   - Admin-tier users → 200
  */
@@ -104,41 +111,28 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
     const result = await feed_news_get(req, contextStub);
 
     expect(result.status).toBe(401);
-    const body = (result.jsonBody as any);
+    const body = result.jsonBody as any;
     expect(body.error.code).toBe('UNAUTHORIZED');
   });
 
-  it('returns 403 TIER_REQUIRED for free-tier users', async () => {
+  it('returns 200 for free-tier users', async () => {
     mockedExtractAuth.mockResolvedValue(makeAuthContext('free') as any);
 
     const req = httpReqMock({ method: 'GET' });
     const result = await feed_news_get(req, contextStub);
 
-    expect(result.status).toBe(403);
-    const body = (result.jsonBody as any);
-    expect(body.error.code).toBe('TIER_REQUIRED');
+    expect(result.status).toBe(200);
+    expect(mockedGetFeed).toHaveBeenCalledTimes(1);
   });
 
-  it('returns 403 TIER_REQUIRED for premium-tier users', async () => {
+  it('returns 200 for premium-tier users', async () => {
     mockedExtractAuth.mockResolvedValue(makeAuthContext('premium') as any);
 
     const req = httpReqMock({ method: 'GET' });
     const result = await feed_news_get(req, contextStub);
 
-    expect(result.status).toBe(403);
-    const body = (result.jsonBody as any);
-    expect(body.error.code).toBe('TIER_REQUIRED');
-  });
-
-  it('403 response includes human-readable message about Black tier', async () => {
-    mockedExtractAuth.mockResolvedValue(makeAuthContext('free') as any);
-
-    const req = httpReqMock({ method: 'GET' });
-    const result = await feed_news_get(req, contextStub);
-
-    expect(result.status).toBe(403);
-    const body = (result.jsonBody as any);
-    expect(body.error.message).toMatch(/black/i);
+    expect(result.status).toBe(200);
+    expect(mockedGetFeed).toHaveBeenCalledTimes(1);
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -164,20 +158,11 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
     expect(result.status).toBe(200);
   });
 
-  it('never calls getFeed for rejected tiers (gate fires before service)', async () => {
-    mockedExtractAuth.mockResolvedValue(makeAuthContext('premium') as any);
-
-    const req = httpReqMock({ method: 'GET' });
-    await feed_news_get(req, contextStub);
-
-    expect(mockedGetFeed).not.toHaveBeenCalled();
-  });
-
   // ─────────────────────────────────────────────────────────────
   // Cache-control enforcement
   // ─────────────────────────────────────────────────────────────
 
-  it('sets Cache-Control: private, no-store for authenticated Black-tier responses', async () => {
+  it('sets Cache-Control: private, no-store for authenticated responses', async () => {
     mockedExtractAuth.mockResolvedValue(makeAuthContext('black') as any);
 
     const req = httpReqMock({ method: 'GET' });

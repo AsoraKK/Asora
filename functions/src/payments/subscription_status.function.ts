@@ -16,10 +16,7 @@ import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getTargetDatabase } from '@shared/clients/cosmos';
-import {
-  normalizeTier,
-  getLimitsForTier,
-} from '@shared/services/tierLimits';
+import { normalizeTier, getLimitsForTier } from '@shared/services/tierLimits';
 
 import type { SubscriptionStatusResponse } from './types';
 
@@ -27,7 +24,7 @@ app.http('subscription_status', {
   methods: ['GET'],
   route: 'subscription/status',
   authLevel: 'anonymous', // JWT auth handled by extractAuthContext
-  handler: httpHandler(async (ctx) => {
+  handler: httpHandler(async ctx => {
     const auth = await extractAuthContext(ctx);
     if (!auth.userId) {
       return ctx.unauthorized('Authentication required');
@@ -68,6 +65,11 @@ app.http('subscription_status', {
         dailyPosts: limits.dailyPosts,
         maxMediaSizeMB: limits.maxMediaSizeMB,
         maxMediaPerPost: limits.maxMediaPerPost,
+        maxCustomFeeds: limits.maxCustomFeeds,
+        newsBoardAccess: limits.newsBoardAccess,
+        postingRestricted: limits.postingRestricted,
+        rewardLevelCap: limits.rewardLevelCap,
+        rewardOptionsPerLevel: limits.rewardOptionsPerLevel,
       },
     };
 

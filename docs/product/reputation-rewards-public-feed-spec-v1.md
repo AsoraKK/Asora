@@ -9,6 +9,26 @@
 
 ---
 
+## 0. Approved decision update - 28 June 2026
+
+These decisions supersede any older draft language in this document:
+
+- AI-generated text, images, video, audio, and deceptive synthetic/deepfake media are blocked at submit.
+- AI-assisted text is allowed only when it remains meaningfully human-led and is disclosed.
+- The public content label set is `Human-authored`, `AI-assisted`, and `Under review`.
+- `Blocked after review` may appear in appeal or moderation history, but not as a normal public feed label.
+- Public numeric AI confidence scores are never shown.
+- News Board is included for authenticated Free, Premium, and Black users; it is not a Black-only paid differentiator.
+- Free users receive Discovery, one custom feed, News Board access, restricted posting, and rewards capped through reputation level 3.
+- Premium users receive Discovery, two custom feeds, News Board access, unrestricted normal posting, and one reward per reputation level.
+- Black users receive Discovery, three or more custom feeds, News Board access, unrestricted normal posting, and all eligible rewards.
+- News Board publishing is limited to approved Editorial Contributors, regardless of paid tier.
+- Editorial Contributor is the umbrella status; subtypes may include Journalist, Analyst, Researcher, Independent Writer, Local/Community Reporter, Subject-Matter Expert, Academic, or Commentator.
+- Community-led review may decide eligible AI classification, borderline moderation, and Editorial cases, with narrow staff override for safety, fraud, legal, platform integrity, or clear manipulation.
+- Editorial/contributor payouts must use quality-weighted signals, not raw views, likes, or comment volume.
+
+---
+
 ## 1. Purpose
 
 This document defines the Lythaus reputation system, rewards programme, public feed eligibility rules, and user-facing Reputation Ledger.
@@ -80,7 +100,7 @@ Reputation should not primarily reward:
 | Verification Strength | Account authenticity signals such as email verification, Google/Apple auth, and future World ID / WorldAuth verification. |
 | Human-authored | Text substantially written by the user without generative AI producing the core content. |
 | AI-assisted | User-authored content where AI helped with editing, phrasing, summarisation, spelling, translation, structuring, or brainstorming. |
-| AI-generated | Content where generative AI produced the core substance of the post, reply, media, or argument. |
+| AI-generated | Content where generative AI produced the core substance of the post, reply, media, or argument. This is blocked at submit and is not a normal public feed label. |
 | Moderation signal | A flag, Hive classification, user report, appeal, moderator decision, or behavioural abuse indicator. |
 | Public feed eligibility | Whether content is eligible to appear in wider discovery/public surfaces. |
 
@@ -93,10 +113,18 @@ Lythaus reward access is based on subscription tier. Reputation can unlock eligi
 | Tier | Rewards access | Notes |
 |---|---|---|
 | Guest | Nothing | Read-only or limited discovery access. No rewards. |
-| Free | Level 1 max; 1 option from Level 1 | A small teaser reward only. Not high-value. |
+| Free | Rewards capped through reputation Level 3 | Discovery, 1 custom feed, News Board access, restricted posting. |
 | Premium | Reward Levels 1–5; 1 option from each level | Strong mid-tier value. Does not grant reputation acceleration. |
 | Black | Reward Levels 1–5; all options available | Best value. Full rewards marketplace access. |
 | Editorial | Exclusive privileges | Merit-based layer, not a normal paid subscription. May combine with paid tier rewards. |
+
+Current entitlement summary, superseding older draft tier language above:
+
+| Tier | Discovery | Custom feeds | News Board | Posting | Reputation rewards |
+|---|---|---:|---|---|---|
+| Free | Yes | 1 | Yes | Restricted daily posting and commenting | Capped through reputation Level 3 |
+| Premium | Yes | 2 | Yes | Unrestricted normal posting; abuse limits still apply | 1 reward per reputation level, Levels 1-5 |
+| Black | Yes | 3+ | Yes | Unrestricted normal posting; abuse limits still apply | All eligible rewards unlocked |
 
 ### 4.1 Reward levels
 
@@ -198,15 +226,15 @@ Rationale:
 
 ### 7.1 Core rule
 
-AI-text reputation enforcement starts at **250 characters and above**.
+AI-generated content is blocked at submit. AI-assisted text is allowed only when it is meaningfully human-led, disclosed by the user, and not strongly classified as generated.
 
-This avoids over-policing short replies while applying stricter checks to longer posts where reputation gain is more meaningful.
+The 250+ character threshold increases scrutiny; it is not an automatic blocking rule. Hive classification, media type, account history, and behavioural patterns decide whether content is allowed, blocked, or sent to review.
 
 ### 7.2 Text rules
 
 | Text length | AI enforcement | Reputation rule |
 |---|---|---|
-| 0–249 characters | Light enforcement | AI-assisted or AI-generated text is generally not reputation-policed unless spammy, abusive, manipulative, or coordinated. |
+| 0-249 characters | Light enforcement | Disclosed AI-assisted phrasing may be allowed. AI-generated content remains blocked if detected. |
 | 250+ characters | Strict enforcement | AI classification affects reputation eligibility and moderation outcomes. |
 
 ### 7.3 Long-form text reputation rules
@@ -214,17 +242,17 @@ This avoids over-policing short replies while applying stricter checks to longer
 | Content type | Allowed? | Reputation effect |
 |---|---|---|
 | Human-authored text, 250+ characters | Yes | Full reputation eligible. |
-| Disclosed AI-assisted text, 250+ characters | Yes | Reduced reputation or neutral reputation, depending on calibration. |
-| Disclosed AI-generated text, 250+ characters | Product-policy dependent | Zero reputation. |
-| Undisclosed AI-generated text, 250+ characters | No / blocked / flagged | Reputation penalty. |
+| Disclosed AI-assisted text, 250+ characters | Yes, if meaningfully human-led | Reduced or neutral reputation, depending on calibration. |
+| Strong AI-generated text signal, 250+ characters | No | Block at submit with appeal option. |
+| User claims human-authored but Hive strongly classifies generated | No | Block at submit with appeal option and possible trust penalty if repeated. |
 | Repeated undisclosed AI text | No | Escalating penalties and possible account restrictions. |
 
 Recommended v1 policy:
 
 - Human-authored long text earns full reputation eligibility.
-- Disclosed AI-assisted long text may be allowed but earns reduced reputation.
-- Disclosed AI-generated long text earns zero reputation.
-- Undisclosed AI-generated long text is blocked, flagged, or penalised.
+- Disclosed AI-assisted long text may be allowed if it remains meaningfully human-led.
+- Long text with strong AI-generation signal is blocked at submit with appeal.
+- Repeated borderline AI-assisted posting should trigger rate limits and lower reputation eligibility.
 
 ### 7.4 AI media rules
 
@@ -232,9 +260,9 @@ AI-generated images, video, and audio are treated more strictly than text becaus
 
 | Media type | Policy | Reputation effect |
 |---|---|---|
-| AI-generated image | Block, flag, or allow only under strict labelled exceptions if later approved | No reputation. |
-| AI-generated video | Block or flag | No reputation. |
-| AI-generated audio | Block or flag | No reputation. |
+| AI-generated image | Block at submit | No reputation. |
+| AI-generated video | Block at submit | No reputation. |
+| AI-generated audio | Block at submit | No reputation. |
 | Deepfake / synthetic identity media | Block and escalate | Strong negative signal. |
 | Undisclosed synthetic media | Block and penalise | Strong negative signal. |
 
@@ -244,8 +272,9 @@ Public content labels should remain simple:
 
 - Human-authored
 - AI-assisted
-- AI-generated
 - Under review
+
+`Blocked after review` may appear in appeal or moderation history. It must not be shown as a normal public feed label.
 
 Numeric AI confidence scores must not be shown publicly in v1. Internal AI scores may be used for moderation, appeals, audit, and abuse prevention.
 
@@ -285,8 +314,8 @@ Hive and moderation systems should feed into Behaviour Trust and the Reputation 
 |---|---|
 | Content allowed | No penalty; eligible for ordinary reputation rules. |
 | Content labelled AI-assisted | Reduced or neutral reputation for 250+ character text. |
-| Content labelled AI-generated | Zero reputation for 250+ character text. |
-| Content blocked for undisclosed AI generation | Penalty, especially on repeated attempts. |
+| AI-generated content blocked at submit | No reputation; neutral notice with appeal option. |
+| Repeated AI-generated or undisclosed AI attempts | Penalty or posting restriction, especially on repeated attempts. |
 | Content flagged by users but not validated | No direct penalty. |
 | Content report validated | Penalty proportional to severity. |
 | Appeal accepted | Penalty removed or restored. |
@@ -459,7 +488,7 @@ or
 | Verified email | + Verification signal: Email verified. |
 | World ID / WorldAuth | + Verification signal: Unique human verified. |
 | AI-assisted disclosure | Neutral: AI-assisted text disclosed. |
-| AI-generated text | No reputation earned: AI-generated text over 250 characters. |
+| Blocked AI-generated text attempt | No reputation earned: AI-generated text was blocked at submit. |
 | Undisclosed AI-generated text | − Reputation: Undisclosed AI-generated text detected. |
 | AI media attempt | No reputation earned: AI-generated media is not eligible. |
 | Moderation violation | − Reputation: Policy violation confirmed. |
@@ -549,7 +578,7 @@ Avoid exposing exact decay formulas if they would enable gaming.
 |---|---|
 | Undisclosed AI-generated long text | Medium penalty. |
 | Repeated AI deception | Large penalty. |
-| AI-generated image/video/audio attempt | No reputation; possible penalty depending on context. |
+| AI-generated image/video/audio attempt | Blocked at submit; possible penalty depending on context. |
 | Spam posting | Medium penalty. |
 | Harassment or abuse | Large penalty. |
 | False mass-reporting | Medium-large penalty. |
@@ -655,8 +684,8 @@ Partner offers should be evaluated against:
 
 ### 15.3 Commercial rules
 
-- Free users receive only one low-value Level 1 reward option.
-- Premium users receive one option from each reward level.
+- Free users receive reward access capped through reputation Level 3.
+- Premium users receive one option from each reward level, Levels 1-5.
 - Black users receive all available reward options across Levels 1–5.
 - Editorial users receive exclusive professional privileges and may receive specialist partner offers.
 - Rewards should not be redeemable by suspicious new accounts until minimum account maturity rules are met.
@@ -826,7 +855,8 @@ Rewards tab should include:
 
 Public feed should avoid over-explaining ranking. It may show:
 
-- Human-authored / AI-assisted / AI-generated / Under review labels
+- Human-authored / AI-assisted / Under review labels
+- Blocked after review in appeal or moderation history only
 - Editorial badge where applicable
 - Source indicators
 - Reputation badge/level if product chooses to make it public
@@ -864,7 +894,8 @@ Do not show:
 - Reputation Level 0–5
 - Reputation Ledger visible to account owner
 - AI-text enforcement threshold at 250+ characters
-- Human-authored / AI-assisted / AI-generated / Under review labels
+- Human-authored / AI-assisted / Under review labels
+- Blocked after review in appeal or moderation history only
 - Structured reactions: Helpful, Well sourced, Thoughtful, Agree, Disagree, Misleading, Low effort, Report
 - Basic reaction weighting and caps
 - Hive moderation integration into reputation events
@@ -953,9 +984,9 @@ Do not show:
 - AI-text reputation enforcement begins at 250+ characters.
 - Human-authored 250+ character text is full reputation eligible.
 - Disclosed AI-assisted 250+ character text is reduced or neutral reputation.
-- Disclosed AI-generated 250+ character text earns zero reputation.
-- Undisclosed AI-generated 250+ character text is blocked, flagged, or penalised.
-- AI-generated image/video/audio receives no reputation and is blocked or flagged according to policy.
+- Strong AI-generated text signals are blocked at submit with appeal.
+- Undisclosed or repeated AI-generated attempts can trigger penalties or posting restrictions.
+- AI-generated image/video/audio is blocked at submit.
 - Raw AI scores are not shown publicly.
 
 ### 22.3 Moderation acceptance
@@ -992,7 +1023,7 @@ These should be decided during implementation/testing:
 1. Exact threshold for each Reputation Level.
 2. Exact numeric weights per reputation pillar.
 3. Whether disclosed AI-assisted 250+ character text earns reduced reputation or neutral reputation.
-4. Whether any AI-generated text is allowed publicly when disclosed, or allowed only in limited contexts.
+4. Exact risk calibration for long AI-assisted text with mild model signals.
 5. Which reaction types are available at MVP launch.
 6. Whether reputation level is public by default or user-controlled.
 7. Which ledger entries are public, private, or account-owner-only.
@@ -1007,14 +1038,14 @@ These should be decided during implementation/testing:
 1. Reputation measures contribution trust, not payment status.
 2. Rewards are unlocked by subscription tier and reputation eligibility.
 3. Guest users receive no rewards.
-4. Free users receive one low-value Level 1 reward option.
+4. Free users receive reward access capped through reputation Level 3.
 5. Premium users receive one reward option from each level, Levels 1–5.
 6. Black users receive all reward options across Levels 1–5.
 7. Editorial users receive exclusive merit-based privileges.
 8. AI-text reputation enforcement begins at 250+ characters.
-9. AI-generated long text earns zero reputation.
-10. Undisclosed AI-generated long text is blocked, flagged, or penalised.
-11. AI-generated images, video, and audio are blocked, flagged, or receive no reputation.
+9. AI-generated long text is blocked at submit with appeal.
+10. Undisclosed or repeated AI-generated attempts can trigger penalties or posting restrictions.
+11. AI-generated images, video, and audio are blocked at submit.
 12. Likes, dislikes, emojis, structured reactions, reports, Hive moderation, and user behaviour all contribute to reputation, with anti-gaming controls.
 13. Higher reputation improves public feed featuring chances but does not guarantee reach.
 14. Reputation-related events must be stored in a read-only Reputation Ledger on the user profile.

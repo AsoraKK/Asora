@@ -22,8 +22,12 @@ jest.mock('@posts/service/postsService', () => ({
 }));
 
 const mockedGetFeed = getFeed as jest.MockedFunction<typeof getFeed>;
-const mockedExtractAuthContext = extractAuthContext as jest.MockedFunction<typeof extractAuthContext>;
-const mockedEnrichPost = postsService.enrichPost as jest.MockedFunction<typeof postsService.enrichPost>;
+const mockedExtractAuthContext = extractAuthContext as jest.MockedFunction<
+  typeof extractAuthContext
+>;
+const mockedEnrichPost = postsService.enrichPost as jest.MockedFunction<
+  typeof postsService.enrichPost
+>;
 
 const createContextStub = (): InvocationContext =>
   ({
@@ -69,7 +73,9 @@ describe('feed endpoint cache headers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers?.['Cache-Control']).toBe('public, max-age=60, stale-while-revalidate=30');
+    expect(response.headers?.['Cache-Control']).toBe(
+      'public, max-age=60, stale-while-revalidate=30'
+    );
     expect(response.headers?.['Vary']).toBe('Authorization');
   });
 
@@ -98,7 +104,7 @@ describe('feed endpoint cache headers', () => {
     expect(response.status).toBe(401);
   });
 
-  it('sets no-store for authenticated Black-tier news feed', async () => {
+  it('sets no-store for authenticated news feed', async () => {
     mockedExtractAuthContext.mockResolvedValueOnce({
       userId: 'user-black',
       roles: ['user'],

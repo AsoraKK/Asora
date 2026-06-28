@@ -175,18 +175,17 @@ describe('feed_discover_get cache headers', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('feed_news_get cache headers', () => {
-  // News Board is Black-tier only. mockAuthenticated must supply tier: 'black'.
-  function mockBlackTier(userId = 'user-feed-test') {
+  function mockNewsBoardUser(userId = 'user-feed-test', tier = 'free') {
     extractAuthContextMock.mockImplementation(async (ctx: any) => ({
       userId,
       roles: ['user'],
-      tier: 'black',
+      tier,
       correlationId: ctx.correlationId,
     }));
   }
 
-  it('sets Cache-Control: private, no-store for Black-tier authenticated requests', async () => {
-    mockBlackTier();
+  it('sets Cache-Control: private, no-store for authenticated requests', async () => {
+    mockNewsBoardUser();
     const token = await signedToken();
     const req = httpReqMock({ headers: { authorization: `Bearer ${token}` } });
 
@@ -203,8 +202,8 @@ describe('feed_news_get cache headers', () => {
     expect(response.status).toBe(401);
   });
 
-  it('includes Vary: Authorization for authenticated Black-tier response', async () => {
-    mockBlackTier();
+  it('includes Vary: Authorization for authenticated response', async () => {
+    mockNewsBoardUser();
     const token = await signedToken();
     const authReq = httpReqMock({ headers: { authorization: `Bearer ${token}` } });
     const authRes = await feed_news_get(authReq, makeContext('news-vary-auth'));

@@ -9,7 +9,8 @@ Scope: Current dev-to-release track
 Approved wording:
 
 - "AI-generated content is blocked at publish time."
-- "AI-signaled content must be labeled and cannot be published."
+- "AI-assisted text must be labeled and remain meaningfully human-led."
+- "Strong AI-generation signals are blocked at publish time."
 - "If content is blocked, you'll see a neutral notice."
 - "You can appeal this decision."
 - "Appeals are reviewed by the community and moderators."
@@ -26,15 +27,18 @@ Approved wording:
 - Free:
   - "Discovery + News feeds"
   - "1 custom feed with personalized filters"
-  - "1 reputation reward available"
+  - "Rewards capped through reputation level 3"
+  - "Limited daily posting"
 - Premium:
   - "Discovery + News feeds"
   - "2 custom feeds with personalized filters"
-  - "5 reputation rewards available"
+  - "1 reward per reputation level"
+  - "Unrestricted normal posting"
 - Black:
   - "Discovery + News feeds"
-  - "5 custom feeds with personalized filters"
-  - "All reputation rewards"
+  - "3 custom feeds with personalized filters"
+  - "All eligible rewards unlocked"
+  - "Unrestricted normal posting"
 
 Code reference:
 

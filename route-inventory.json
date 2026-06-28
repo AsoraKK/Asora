@@ -1,10 +1,11 @@
 {
-  "generatedAt": "2026-06-14T06:09:51.697Z",
+  "generatedAt": "2026-06-28T19:03:18.713Z",
   "functionsRoot": "functions/src",
   "totalRoutes": 129,
   "writeRoutes": 76,
   "missingRateLimit": [],
   "missingAuthGuard": [],
+  "missingAdminAudit": [],
   "anonymousTodoViolations": [],
   "anonymousReadViolations": [],
   "testEnvGuardViolations": [],
@@ -22,8 +23,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -39,8 +43,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -56,8 +63,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -73,8 +83,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -90,8 +103,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -108,8 +124,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -126,8 +145,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -144,8 +166,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -162,8 +187,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -180,8 +208,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -198,8 +229,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -217,8 +251,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -236,8 +273,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -254,8 +294,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -272,8 +315,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -290,8 +336,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -308,8 +357,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -326,8 +378,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -344,8 +399,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -362,8 +420,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -380,8 +441,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -398,8 +462,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -416,8 +483,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -434,8 +504,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -452,8 +525,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -470,8 +546,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -488,8 +567,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -506,8 +588,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -524,8 +609,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -542,8 +630,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -561,8 +652,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -579,8 +673,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -597,8 +694,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -615,8 +715,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -633,8 +736,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -651,8 +757,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -669,8 +778,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -688,8 +800,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -706,8 +821,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -724,8 +842,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -742,8 +863,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -760,8 +884,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -778,8 +905,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -795,8 +925,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -812,8 +945,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -829,8 +965,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -851,8 +990,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": true,
       "authGuardExempt": true,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -868,8 +1010,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": true,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -885,8 +1030,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
@@ -902,8 +1050,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -919,8 +1070,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -936,8 +1090,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -953,8 +1110,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -971,8 +1131,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -989,8 +1152,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1006,8 +1172,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1024,8 +1193,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1041,8 +1213,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1058,8 +1233,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1076,8 +1254,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1095,8 +1276,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1112,8 +1296,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1129,8 +1316,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1146,8 +1336,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1163,8 +1356,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1180,8 +1376,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1197,8 +1396,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1214,15 +1416,19 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
       "file": "functions\\src\\feed\\routes\\feed_discover_get.function.ts",
       "functionName": "feed_discover_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/discover",
       "authLevel": "anonymous",
@@ -1231,15 +1437,19 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
       "file": "functions\\src\\feed\\routes\\feed_news_get.function.ts",
       "functionName": "feed_news_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/news",
       "authLevel": "anonymous",
@@ -1248,15 +1458,19 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
       "file": "functions\\src\\feed\\routes\\feed_discover_get.function.ts",
       "functionName": "feed_public_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/public",
       "authLevel": "anonymous",
@@ -1265,15 +1479,19 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
       "file": "functions\\src\\feed\\routes\\feed_user_get.function.ts",
       "functionName": "feed_user_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/user/{userId}",
       "authLevel": "anonymous",
@@ -1282,8 +1500,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1299,8 +1520,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1317,8 +1541,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1335,8 +1562,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1353,8 +1583,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1370,8 +1603,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1387,8 +1623,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1405,8 +1644,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1422,8 +1664,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1439,8 +1684,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1457,8 +1705,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1474,8 +1725,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": true,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1491,8 +1745,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1508,8 +1765,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1525,8 +1785,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1542,8 +1805,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1559,8 +1825,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1576,8 +1845,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1593,8 +1865,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1610,8 +1885,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1627,8 +1905,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1644,8 +1925,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1661,8 +1945,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": true,
       "authGuardExempt": true,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1678,8 +1965,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1695,8 +1985,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1712,8 +2005,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1729,8 +2025,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1746,8 +2045,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1763,8 +2065,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1780,8 +2085,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1797,8 +2105,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1814,8 +2125,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1831,8 +2145,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1848,8 +2165,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1865,8 +2185,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1882,8 +2205,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1899,8 +2225,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1916,8 +2245,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1933,8 +2265,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1950,8 +2285,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1967,8 +2305,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -1984,8 +2325,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2001,8 +2345,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2018,8 +2365,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2035,8 +2385,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2052,8 +2405,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2069,8 +2425,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2086,8 +2445,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2103,8 +2465,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2120,8 +2485,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2138,8 +2506,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2156,8 +2527,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2173,8 +2547,11 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2190,8 +2567,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2207,8 +2587,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2224,8 +2607,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2241,8 +2627,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
@@ -2258,8 +2647,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     }
   ]

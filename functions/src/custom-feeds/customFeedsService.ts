@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { v7 as uuidv7 } from 'uuid';
 import { HttpError, notFoundError } from '@shared/utils/errors';
-import { normalizeTier } from '@shared/services/tierLimits';
+import { getMaxCustomFeeds } from '@shared/services/tierLimits';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { postsService } from '@posts/service/postsService';
 import type {
@@ -12,13 +12,6 @@ import type {
 
 const DEFAULT_FEED_LIMIT = 20;
 const MAX_FEED_LIMIT = 50;
-
-const TIER_CUSTOM_FEED_LIMITS: Record<'free' | 'premium' | 'black' | 'admin', number> = {
-  free: 1,
-  premium: 2,
-  black: 3,
-  admin: 20,
-};
 
 const DEFAULT_CURSOR = {
   ts: Number.MAX_SAFE_INTEGER,
@@ -49,7 +42,7 @@ function clampLimit(value?: number): number {
 function normalizeKeywords(keywords?: string[]): string[] {
   return (
     keywords
-      ?.map((keyword) => keyword?.trim()?.toLowerCase())
+      ?.map(keyword => keyword?.trim()?.toLowerCase())
       .filter(Boolean)
       ?.filter((keyword, index, arr) => arr.indexOf(keyword) === index) ?? []
   );
@@ -93,8 +86,7 @@ function mapToDefinition(doc: CustomFeedDocument): CustomFeedDefinition {
 }
 
 function getFeedLimitForTier(tier?: string): number {
-  const normalized = normalizeTier(tier);
-  return TIER_CUSTOM_FEED_LIMITS[normalized] ?? TIER_CUSTOM_FEED_LIMITS.free;
+  return getMaxCustomFeeds(tier);
 }
 
 async function getCustomFeedsContainer() {
@@ -152,7 +144,10 @@ export async function createCustomFeed(
   return mapToDefinition(doc);
 }
 
-async function readCustomFeedDocument(ownerId: string, feedId: string): Promise<CustomFeedDocument | null> {
+async function readCustomFeedDocument(
+  ownerId: string,
+  feedId: string
+): Promise<CustomFeedDocument | null> {
   const container = await getCustomFeedsContainer();
 
   try {
@@ -167,7 +162,10 @@ async function readCustomFeedDocument(ownerId: string, feedId: string): Promise<
   }
 }
 
-export async function getCustomFeed(ownerId: string, feedId: string): Promise<CustomFeedDefinition | null> {
+export async function getCustomFeed(
+  ownerId: string,
+  feedId: string
+): Promise<CustomFeedDefinition | null> {
   const doc = await readCustomFeedDocument(ownerId, feedId);
   return doc ? mapToDefinition(doc) : null;
 }
@@ -275,7 +273,10 @@ export async function listCustomFeeds(
   };
 }
 
-function buildPostFilters(feed: CustomFeedDocument): { clauses: string[]; parameters: Array<{ name: string; value: any }> } {
+function buildPostFilters(feed: CustomFeedDocument): {
+  clauses: string[];
+  parameters: Array<{ name: string; value: any }>;
+} {
   const clauses: string[] = [`c.status = 'published'`];
   const parameters: Array<{ name: string; value: any }> = [];
 
@@ -301,7 +302,9 @@ function buildPostFilters(feed: CustomFeedDocument): { clauses: string[]; parame
   }
 
   if (feed.includeKeywords.length) {
-    const keywordClauses = feed.includeKeywords.map((_, index) => `CONTAINS(LOWER(c.content), @includeKeyword${index})`);
+    const keywordClauses = feed.includeKeywords.map(
+      (_, index) => `CONTAINS(LOWER(c.content), @includeKeyword${index})`
+    );
     clauses.push(`(${keywordClauses.join(' OR ')})`);
     feed.includeKeywords.forEach((value, index) => {
       parameters.push({ name: `@includeKeyword${index}`, value });
@@ -309,7 +312,9 @@ function buildPostFilters(feed: CustomFeedDocument): { clauses: string[]; parame
   }
 
   if (feed.excludeKeywords.length) {
-    const keywordClauses = feed.excludeKeywords.map((_, index) => `CONTAINS(LOWER(c.content), @excludeKeyword${index})`);
+    const keywordClauses = feed.excludeKeywords.map(
+      (_, index) => `CONTAINS(LOWER(c.content), @excludeKeyword${index})`
+    );
     clauses.push(`NOT (${keywordClauses.join(' OR ')})`);
     feed.excludeKeywords.forEach((value, index) => {
       parameters.push({ name: `@excludeKeyword${index}`, value });

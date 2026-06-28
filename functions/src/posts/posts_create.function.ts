@@ -1,11 +1,11 @@
 /**
  * Create Post Function
- * 
+ *
  * POST /api/posts
- * 
+ *
  * Create a new post with Hive AI content moderation.
  * Supports Live Test Mode with automatic data isolation.
- * 
+ *
  * OpenAPI: posts_create
  */
 
@@ -43,7 +43,12 @@ function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | 
   }
 
   const normalized = label.trim().toLowerCase();
-  if (normalized === 'human' || normalized === 'assisted' || normalized === 'ai_assisted' || normalized === 'generated') {
+  if (
+    normalized === 'human' ||
+    normalized === 'assisted' ||
+    normalized === 'ai_assisted' ||
+    normalized === 'generated'
+  ) {
     if (normalized === 'ai_assisted') {
       return 'assisted';
     }
@@ -69,20 +74,22 @@ function mediaValidationMessage(reason?: string): string {
   }
 }
 
-export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => {
+export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
   // Extract test mode context FIRST (before any other processing)
   const testContext = extractTestModeContext(ctx.request, ctx.context);
-  
+
   if (testContext.isTestMode) {
-    ctx.context.log(`[posts_create] TEST MODE - Creating test post [session=${testContext.sessionId}] [${ctx.correlationId}]`);
-    
+    ctx.context.log(
+      `[posts_create] TEST MODE - Creating test post [session=${testContext.sessionId}] [${ctx.correlationId}]`
+    );
+
     // Check rate limits for test mode
     const rateLimit = await checkTestModeRateLimit(
       testContext.sessionId || 'unknown',
       'postsPerHour',
       ctx.context
     );
-    
+
     if (!rateLimit.allowed) {
       return ctx.tooManyRequests('Test mode rate limit exceeded', 'TEST_RATE_LIMIT', {
         remaining: rateLimit.remaining,
@@ -122,21 +129,17 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
             userId: auth.userId.slice(0, 8),
             tier: auth.tier,
           });
-            const response = ctx.tooManyRequests(
-              err.message,
-              'daily_post_limit_reached',
-              {
-                tier: err.toResponse().tier,
-                limit: err.toResponse().limit,
-                current: err.toResponse().current,
-                resetAt: err.toResponse().resetAt,
-              }
-            );
-            response.headers = {
-              ...response.headers,
-              'Retry-After': '86400',
-            };
-            return response;
+          const response = ctx.tooManyRequests(err.message, 'daily_post_limit_reached', {
+            tier: err.toResponse().tier,
+            limit: err.toResponse().limit,
+            current: err.toResponse().current,
+            resetAt: err.toResponse().resetAt,
+          });
+          response.headers = {
+            ...response.headers,
+            'Retry-After': '86400',
+          };
+          return response;
         }
         throw limitError;
       }
@@ -160,21 +163,20 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     const rawAiLabel = (ctx.body as unknown as Record<string, unknown>).aiLabel;
     if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
-      return ctx.badRequest('aiLabel must be "human", "assisted", or "generated"', 'INVALID_AI_LABEL');
+      return ctx.badRequest(
+        'aiLabel must be "human", "assisted", or "generated"',
+        'INVALID_AI_LABEL'
+      );
     }
 
     const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? 'human');
 
     const mediaValidation = await validateOwnedMediaUrls(auth.userId, ctx.body.mediaUrls);
     if (!mediaValidation.valid) {
-      return ctx.badRequest(
-        mediaValidationMessage(mediaValidation.reason),
-        'INVALID_MEDIA_URLS',
-        {
-          reason: mediaValidation.reason ?? 'invalid_url',
-          invalidCount: mediaValidation.invalidUrls.length,
-        }
-      );
+      return ctx.badRequest(mediaValidationMessage(mediaValidation.reason), 'INVALID_MEDIA_URLS', {
+        reason: mediaValidation.reason ?? 'invalid_url',
+        invalidCount: mediaValidation.invalidUrls.length,
+      });
     }
 
     // Generate post ID for moderation tracking
@@ -222,8 +224,19 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       });
     }
 
-    const aiDetected =
-      hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
+    if (mediaModeration.aiDetected) {
+      return ctx.badRequest(
+        'AI-generated media cannot be published. You can appeal this decision.',
+        'AI_CONTENT_BLOCKED',
+        {
+          appealEligible: true,
+          caseId: postId,
+          categories: mediaModeration.categories,
+        }
+      );
+    }
+
+    const aiDetected = hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
 
     if (effectiveAiLabel === 'generated') {
       return ctx.badRequest(
@@ -241,7 +254,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
           ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
           sourceId: postId,
           sourceType: 'post',
-        }).catch((error) => {
+        }).catch(error => {
           ctx.context.warn?.('[posts_create] Failed to record undisclosed AI reputation event', {
             postId,
             userId: auth.userId.slice(0, 8),
@@ -267,9 +280,9 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     // Create post using service with moderation metadata and test context
     const post = await postsService.createPost(
-      auth.userId, 
-      ctx.body, 
-      postId, 
+      auth.userId,
+      ctx.body,
+      postId,
       {
         ...moderationMeta,
         status: mergedStatus,
@@ -277,13 +290,14 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         confidence: mergedConfidence > 0 ? mergedConfidence : undefined,
         error: moderationMeta.error ?? mediaModeration.error,
       },
-      testContext,  // Pass test context for data isolation
+      testContext, // Pass test context for data isolation
       {
-        aiLabel: effectiveAiLabel === 'generated'
-          ? 'generated'
-          : effectiveAiLabel === 'assisted'
-          ? 'assisted'
-          : 'human',
+        aiLabel:
+          effectiveAiLabel === 'generated'
+            ? 'generated'
+            : effectiveAiLabel === 'assisted'
+              ? 'assisted'
+              : 'human',
         aiDetected,
       }
     );
@@ -307,7 +321,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
       policyLinks,
       actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
       metadata: { proofSignals },
-    }).catch((error) => {
+    }).catch(error => {
       ctx.context.warn?.('[posts_create] Failed to append RECEIPT_CREATED event', {
         postId: post.id,
         message: (error as Error).message,
@@ -323,7 +337,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         reason: 'Attached media passed safety checks before publish.',
         policyLinks,
         actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
-      }).catch((error) => {
+      }).catch(error => {
         ctx.context.warn?.('[posts_create] Failed to append MEDIA_CHECKED event', {
           postId: post.id,
           message: (error as Error).message,
@@ -338,12 +352,15 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
           ledgerEventType: LedgerEventType.AI_ASSISTED_DISCLOSURE,
           sourceId: post.id,
           sourceType: 'post',
-        }).catch((error) => {
-          ctx.context.warn?.('[posts_create] Failed to record AI_ASSISTED_DISCLOSURE reputation event', {
-            postId: post.id,
-            userId: auth.userId.slice(0, 8),
-            message: (error as Error).message,
-          });
+        }).catch(error => {
+          ctx.context.warn?.(
+            '[posts_create] Failed to record AI_ASSISTED_DISCLOSURE reputation event',
+            {
+              postId: post.id,
+              userId: auth.userId.slice(0, 8),
+              message: (error as Error).message,
+            }
+          );
         });
       } else if (content && content.length >= 250) {
         // Phase 1: 250+ char human post earns reputation via ledger
@@ -352,15 +369,18 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
           ledgerEventType: LedgerEventType.HUMAN_TEXT_250_PLUS,
           sourceId: post.id,
           sourceType: 'post',
-        }).catch((error) => {
-          ctx.context.warn?.('[posts_create] Failed to record HUMAN_TEXT_250_PLUS reputation event', {
-            postId: post.id,
-            userId: auth.userId.slice(0, 8),
-            message: (error as Error).message,
-          });
+        }).catch(error => {
+          ctx.context.warn?.(
+            '[posts_create] Failed to record HUMAN_TEXT_250_PLUS reputation event',
+            {
+              postId: post.id,
+              userId: auth.userId.slice(0, 8),
+              message: (error as Error).message,
+            }
+          );
         });
       } else {
-        void awardPostCreated(auth.userId, post.id).catch((error) => {
+        void awardPostCreated(auth.userId, post.id).catch(error => {
           ctx.context.warn?.('[posts_create] Failed to award post-created reputation', {
             postId: post.id,
             userId: auth.userId.slice(0, 8),
@@ -385,13 +405,13 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
         moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
         proofSignals,
       },
-    }).catch((error) => {
+    }).catch(error => {
       ctx.context.warn?.('[posts_create] Failed to append MODERATION_DECIDED event', {
         postId: post.id,
         message: (error as Error).message,
       });
     });
-    
+
     // Log test post creation for audit trail
     if (testContext.isTestMode) {
       ctx.context.log('[posts_create] TEST POST created', {
@@ -403,10 +423,15 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async (ctx) => 
 
     return ctx.created(post);
   } catch (error) {
-    ctx.context.error(`[posts_create] Error creating post: ${error}`, { correlationId: ctx.correlationId });
+    ctx.context.error(`[posts_create] Error creating post: ${error}`, {
+      correlationId: ctx.correlationId,
+    });
 
     if (error instanceof Error) {
-      if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
+      if (
+        error.message.includes('JWT verification failed') ||
+        error.message.includes('Missing Authorization')
+      ) {
         return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
       }
     }

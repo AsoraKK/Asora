@@ -354,6 +354,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RateLimitError'
+  /posts:
+    post:
+      operationId: posts_create
+      summary: Create a post with moderation and AI authenticity checks
+      description: >
+        Create a post for the authenticated user. AI-generated text or media is
+        blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be
+        published only when disclosed with `aiLabel=assisted`.
+      tags:
+        - Posts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Created post.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid input or content blocked by moderation/AI policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Authenticated caller lacks permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '429':
+          description: Rate limit enforced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
   /moderation/flag:
     post:
       operationId: flagContent
@@ -4374,17 +4423,21 @@ paths:
     get:
       operationId: customFeedsList
       summary: List custom feeds for the current user
+      description: List custom feed definitions owned by the authenticated user.
       tags:
         - CustomFeeds
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursorParam'
+        - $ref: '#/components/parameters/limitParam'
       responses:
         '200':
-          description: Success
+          description: Custom feed definitions.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CustomFeedListResponse'
         '400':
           description: Bad request
           content:
@@ -4407,6 +4460,10 @@ paths:
     post:
       operationId: customFeedsCreate
       summary: Create a new custom feed
+      description: >
+        Create a custom feed definition. The service enforces tier limits:
+        Free users may create 1 custom feed, Premium users 2, Black users 3,
+        and Admin users 20.
       tags:
         - CustomFeeds
       security:
@@ -4416,14 +4473,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/CreateCustomFeedRequest'
       responses:
-        '200':
-          description: Success
+        '201':
+          description: Created custom feed.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CustomFeedDefinition'
         '400':
           description: Bad request
           content:
@@ -4437,16 +4494,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden
+          description: Forbidden, including tier limit breach.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
 
   /custom-feeds/{id}:
     get:
       operationId: customFeedsGet
       summary: Get a custom feed
+      description: Fetch a custom feed definition owned by the authenticated user.
       tags:
         - CustomFeeds
       security:
@@ -4459,11 +4517,11 @@ paths:
             type: string
       responses:
         '200':
-          description: Success
+          description: Custom feed definition.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CustomFeedDefinition'
         '400':
           description: Bad request
           content:
@@ -4486,6 +4544,7 @@ paths:
     patch:
       operationId: customFeedsUpdate
       summary: Update a custom feed
+      description: Update an owned custom feed's name, filters, sorting, or home flag.
       tags:
         - CustomFeeds
       security:
@@ -4501,14 +4560,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/UpdateCustomFeedRequest'
       responses:
         '200':
-          description: Success
+          description: Updated custom feed definition.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CustomFeedDefinition'
         '400':
           description: Bad request
           content:
@@ -4531,6 +4590,7 @@ paths:
     delete:
       operationId: customFeedsDelete
       summary: Delete a custom feed
+      description: Delete an owned custom feed definition.
       tags:
         - CustomFeeds
       security:
@@ -4542,12 +4602,8 @@ paths:
           schema:
             type: string
       responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
+        '204':
+          description: Custom feed deleted.
         '400':
           description: Bad request
           content:
@@ -4571,6 +4627,7 @@ paths:
     get:
       operationId: customFeedsItemsList
       summary: List items in a custom feed
+      description: Return posts matching a custom feed's filters.
       tags:
         - CustomFeeds
       security:
@@ -4581,13 +4638,15 @@ paths:
           required: true
           schema:
             type: string
+        - $ref: '#/components/parameters/cursorParam'
+        - $ref: '#/components/parameters/limitParam'
       responses:
         '200':
-          description: Success
+          description: Posts matching the custom feed definition.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CursorPaginatedPostView'
         '400':
           description: Bad request
           content:
@@ -4644,18 +4703,30 @@ paths:
   /feed/news:
     get:
       operationId: feedNews
-      summary: Return news board feed
+      summary: Return News Board feed
+      description: >
+        Return authenticated News Board posts. Free, Premium, Black, and Admin
+        tiers can read the News Board; publishing news posts remains restricted
+        to editorial contributors and approved ingestion paths.
       tags:
         - Feed
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursorParam'
+        - $ref: '#/components/parameters/limitParam'
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
-          description: Success
+          description: News Board feed page.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/CursorPaginatedPostView'
         '400':
           description: Bad request
           content:
@@ -5357,11 +5428,11 @@ paths:
             type: string
       responses:
         '200':
-          description: Success
+          description: Post view.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/PostView'
         '400':
           description: Bad request
           content:
@@ -5383,7 +5454,11 @@ paths:
 
     patch:
       operationId: postsUpdate
-      summary: Update a post
+      summary: Update a post with moderation and AI authenticity checks
+      description: >
+        Update a post owned by the caller. AI-generated text or media is blocked
+        at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published
+        only when disclosed with `aiLabel=assisted`.
       tags:
         - Posts
       security:
@@ -5399,14 +5474,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/UpdatePostRequest'
       responses:
         '200':
-          description: Success
+          description: Updated post.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/Post'
         '400':
           description: Bad request
           content:
@@ -5923,17 +5998,21 @@ paths:
     get:
       operationId: subscriptionStatus
       summary: Get current user subscription status
+      description: >
+        Return the authenticated user's subscription tier and alpha entitlements,
+        including custom feed count, News Board access, posting restriction, and
+        reputation reward limits.
       tags:
         - Subscription
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Success
+          description: Current subscription details.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/SubscriptionStatus'
         '400':
           description: Bad request
           content:
@@ -6553,6 +6632,532 @@ components:
           description: Additional context for specialized scopes (e.g. auth backoff)
           enum:
             - auth_backoff
+    SubscriptionStatus:
+      type: object
+      required:
+        - userId
+        - tier
+        - status
+        - provider
+        - currentPeriodEnd
+        - cancelAtPeriodEnd
+        - entitlements
+      properties:
+        userId:
+          type: string
+        tier:
+          type: string
+          enum:
+            - free
+            - premium
+            - black
+            - admin
+        status:
+          type: string
+          enum:
+            - active
+            - cancelled
+            - past_due
+            - expired
+            - trialing
+        provider:
+          type: string
+          nullable: true
+          enum:
+            - apple
+            - google
+            - stripe
+            - manual
+        currentPeriodEnd:
+          type: string
+          nullable: true
+          format: date-time
+        cancelAtPeriodEnd:
+          type: boolean
+        entitlements:
+          type: object
+          required:
+            - dailyPosts
+            - maxMediaSizeMB
+            - maxMediaPerPost
+            - maxCustomFeeds
+            - newsBoardAccess
+            - postingRestricted
+            - rewardLevelCap
+            - rewardOptionsPerLevel
+          properties:
+            dailyPosts:
+              type: integer
+            maxMediaSizeMB:
+              type: integer
+            maxMediaPerPost:
+              type: integer
+            maxCustomFeeds:
+              type: integer
+              description: Maximum custom feeds available to this tier.
+            newsBoardAccess:
+              type: boolean
+              description: Whether this tier can read the News Board.
+            postingRestricted:
+              type: boolean
+              description: Whether normal posting is product-limited beyond abuse controls.
+            rewardLevelCap:
+              type: integer
+              description: Highest reputation reward level available to this tier.
+            rewardOptionsPerLevel:
+              type: integer
+              nullable: true
+              description: Reward options per reputation level; null means all eligible rewards.
+    NewsSourceMetadata:
+      type: object
+      required:
+        - type
+        - name
+        - publishedAt
+        - ingestedAt
+        - ingestedBy
+        - ingestMethod
+      properties:
+        type:
+          type: string
+          enum:
+            - journalist
+            - curated
+            - partner
+            - wire
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        feedUrl:
+          type: string
+          format: uri
+        externalId:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        ingestedAt:
+          type: string
+          format: date-time
+        ingestedBy:
+          type: string
+        ingestMethod:
+          type: string
+          enum:
+            - admin_api
+            - timer
+    PostProofSignals:
+      type: object
+      properties:
+        captureMetadataHash:
+          type: string
+        editHistoryHash:
+          type: string
+        sourceAttestationUrl:
+          type: string
+          format: uri
+    CreatePostRequest:
+      type: object
+      required:
+        - content
+        - contentType
+      properties:
+        content:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        mediaUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+        topics:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum:
+            - public
+            - followers
+            - private
+        isNews:
+          type: boolean
+        aiLabel:
+          type: string
+          description: Public authorship disclosure. `generated` is blocked at submit.
+          enum:
+            - human
+            - assisted
+            - generated
+        proofSignals:
+          $ref: '#/components/schemas/PostProofSignals'
+    UpdatePostRequest:
+      type: object
+      properties:
+        content:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        mediaUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+        topics:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum:
+            - public
+            - followers
+            - private
+        isNews:
+          type: boolean
+        aiLabel:
+          type: string
+          description: Public authorship disclosure. `generated` is blocked at submit.
+          enum:
+            - human
+            - assisted
+            - generated
+        proofSignals:
+          $ref: '#/components/schemas/PostProofSignals'
+    PostTrustTimeline:
+      type: object
+      required:
+        - created
+        - mediaChecked
+        - moderation
+      properties:
+        created:
+          type: string
+          enum:
+            - complete
+        mediaChecked:
+          type: string
+          enum:
+            - complete
+            - none
+        moderation:
+          type: string
+          enum:
+            - complete
+            - warn
+            - actioned
+            - none
+        appeal:
+          type: string
+          enum:
+            - open
+            - resolved
+    Post:
+      type: object
+      required:
+        - id
+        - authorId
+        - content
+        - contentType
+        - visibility
+        - isNews
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        content:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        mediaUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+        topics:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum:
+            - public
+            - followers
+            - private
+        isNews:
+          type: boolean
+        source:
+          $ref: '#/components/schemas/NewsSourceMetadata'
+        clusterId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PostView:
+      allOf:
+        - $ref: '#/components/schemas/Post'
+        - type: object
+          required:
+            - author
+            - authorRole
+            - likeCount
+            - commentCount
+            - trustStatus
+            - timeline
+            - hasAppeal
+            - proofSignalsProvided
+            - verifiedContextBadgeEligible
+            - featuredEligible
+          properties:
+            author:
+              type: object
+              additionalProperties: true
+            authorRole:
+              type: string
+              enum:
+                - journalist
+                - contributor
+                - user
+            likeCount:
+              type: integer
+            commentCount:
+              type: integer
+            bookmarkCount:
+              type: integer
+            viewCount:
+              type: integer
+            viewerHasLiked:
+              type: boolean
+            viewerHasBookmarked:
+              type: boolean
+            viewerFollowsAuthor:
+              type: boolean
+            authorFollowerCount:
+              type: integer
+            recentComments:
+              type: array
+              items:
+                type: object
+                properties:
+                  commentId:
+                    type: string
+                  authorId:
+                    type: string
+                  text:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+            badges:
+              type: array
+              items:
+                type: string
+            trustStatus:
+              type: string
+              enum:
+                - verified_signals_attached
+                - no_extra_signals
+                - under_appeal
+                - actioned
+            timeline:
+              $ref: '#/components/schemas/PostTrustTimeline'
+            hasAppeal:
+              type: boolean
+            proofSignalsProvided:
+              type: boolean
+            verifiedContextBadgeEligible:
+              type: boolean
+            featuredEligible:
+              type: boolean
+    CursorPaginatedPostView:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostView'
+        nextCursor:
+          type: string
+          nullable: true
+    CustomFeedDefinition:
+      type: object
+      required:
+        - id
+        - ownerId
+        - name
+        - contentType
+        - sorting
+        - includeKeywords
+        - excludeKeywords
+        - includeAccounts
+        - excludeAccounts
+        - isHome
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        ownerId:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        sorting:
+          type: string
+          enum:
+            - hot
+            - new
+            - relevant
+            - following
+            - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateCustomFeedRequest:
+      type: object
+      required:
+        - name
+        - contentType
+        - sorting
+      properties:
+        name:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        sorting:
+          type: string
+          enum:
+            - hot
+            - new
+            - relevant
+            - following
+            - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+    UpdateCustomFeedRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - text
+            - image
+            - video
+            - mixed
+        sorting:
+          type: string
+          enum:
+            - hot
+            - new
+            - relevant
+            - following
+            - local
+        includeKeywords:
+          type: array
+          items:
+            type: string
+        excludeKeywords:
+          type: array
+          items:
+            type: string
+        includeAccounts:
+          type: array
+          items:
+            type: string
+        excludeAccounts:
+          type: array
+          items:
+            type: string
+        isHome:
+          type: boolean
+    CustomFeedListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomFeedDefinition'
+        nextCursor:
+          type: string
+          nullable: true
     ReputationSummary:
       type: object
       required:

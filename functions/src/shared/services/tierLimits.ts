@@ -26,6 +26,16 @@ export interface TierLimits {
   maxMediaSizeMB: number;
   /** Maximum media attachments per post */
   maxMediaPerPost: number;
+  /** Maximum custom feeds the user can create */
+  maxCustomFeeds: number;
+  /** Whether the user can read the News Board */
+  newsBoardAccess: boolean;
+  /** Whether normal posting is product-limited beyond abuse controls */
+  postingRestricted: boolean;
+  /** Highest reputation reward level available to this tier */
+  rewardLevelCap: number;
+  /** Reward options per level; null means all eligible rewards */
+  rewardOptionsPerLevel: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,7 +44,7 @@ export interface TierLimits {
 
 /**
  * Per-tier limits serve as the single source of truth for entitlements.
- * Increasing any of these values (posts, comments, appeals, export cooldown) weakens tier separation and should be approved via a product + security review.
+ * Increasing any of these values weakens tier separation and should be approved via a product + security review.
  */
 export const TIER_LIMITS: Record<UserTier, TierLimits> = {
   free: {
@@ -45,6 +55,11 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     exportCooldownDays: parseInt(process.env.TIER_FREE_EXPORT_COOLDOWN_DAYS ?? '30', 10),
     maxMediaSizeMB: 10,
     maxMediaPerPost: 1,
+    maxCustomFeeds: 1,
+    newsBoardAccess: true,
+    postingRestricted: true,
+    rewardLevelCap: 3,
+    rewardOptionsPerLevel: 1,
   },
   premium: {
     dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '20', 10),
@@ -54,6 +69,11 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     exportCooldownDays: parseInt(process.env.TIER_PREMIUM_EXPORT_COOLDOWN_DAYS ?? '7', 10),
     maxMediaSizeMB: 25,
     maxMediaPerPost: 4,
+    maxCustomFeeds: 2,
+    newsBoardAccess: true,
+    postingRestricted: false,
+    rewardLevelCap: 5,
+    rewardOptionsPerLevel: 1,
   },
   black: {
     dailyPosts: parseInt(process.env.TIER_BLACK_DAILY_POSTS ?? '50', 10),
@@ -63,6 +83,11 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     exportCooldownDays: parseInt(process.env.TIER_BLACK_EXPORT_COOLDOWN_DAYS ?? '1', 10),
     maxMediaSizeMB: 25,
     maxMediaPerPost: 5,
+    maxCustomFeeds: 3,
+    newsBoardAccess: true,
+    postingRestricted: false,
+    rewardLevelCap: 5,
+    rewardOptionsPerLevel: null,
   },
   admin: {
     // Admins have effectively unlimited (very high) limits
@@ -73,12 +98,16 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     exportCooldownDays: 0,
     maxMediaSizeMB: 50,
     maxMediaPerPost: 10,
+    maxCustomFeeds: 20,
+    newsBoardAccess: true,
+    postingRestricted: false,
+    rewardLevelCap: 5,
+    rewardOptionsPerLevel: null,
   },
 };
 
 /**
- * The tier defaults above define entitlements for
- * posts, comments, appeals, and export cooldown intervals.
+ * The tier defaults above define entitlements for posting, custom feeds, News Board access, rewards, and export cooldown intervals.
  */
 
 /**
@@ -183,4 +212,20 @@ export function getMaxMediaSizeMB(tier: string | undefined | null): number {
 export function getMaxMediaPerPost(tier: string | undefined | null): number {
   const normalizedTier = normalizeTier(tier);
   return TIER_LIMITS[normalizedTier].maxMediaPerPost;
+}
+
+/**
+ * Get the maximum number of custom feeds for a tier
+ */
+export function getMaxCustomFeeds(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].maxCustomFeeds;
+}
+
+/**
+ * Whether the tier can access the News Board
+ */
+export function hasNewsBoardAccess(tier: string | undefined | null): boolean {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].newsBoardAccess;
 }

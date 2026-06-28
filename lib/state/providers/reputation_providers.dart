@@ -17,7 +17,8 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     privileges: [
       'Discovery + News feeds',
       '1 custom feed with personalized filters',
-      '1 reputation reward available',
+      'Rewards capped through reputation level 3',
+      'Limited daily posting',
     ],
   ),
   SubscriptionEntitlementTier(
@@ -27,7 +28,8 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     privileges: [
       'Discovery + News feeds',
       '2 custom feeds with personalized filters',
-      '5 reputation rewards available',
+      '1 reward per reputation level',
+      'Unrestricted normal posting',
     ],
   ),
   SubscriptionEntitlementTier(
@@ -36,8 +38,9 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     minXP: 3200,
     privileges: [
       'Discovery + News feeds',
-      '5 custom feeds with personalized filters',
-      'All reputation rewards',
+      '3 custom feeds with personalized filters',
+      'All eligible rewards unlocked',
+      'Unrestricted normal posting',
     ],
   ),
 ];
