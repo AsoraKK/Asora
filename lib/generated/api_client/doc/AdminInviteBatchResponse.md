@@ -8,8 +8,8 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**count** | **int** |  |
-**invites** | [**BuiltList&lt;AdminInvite&gt;**](AdminInvite.md) |  |
+**count** | **int** |  | 
+**invites** | [**BuiltList&lt;AdminInvite&gt;**](AdminInvite.md) |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

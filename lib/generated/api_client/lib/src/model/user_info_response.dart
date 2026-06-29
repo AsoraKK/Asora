@@ -12,9 +12,9 @@ part 'user_info_response.g.dart';
 /// OIDC UserInfo claims envelope.
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [success] 
+/// * [data] 
+/// * [timestamp] 
 @BuiltValue()
 abstract class UserInfoResponse implements Built<UserInfoResponse, UserInfoResponseBuilder> {
   @BuiltValueField(wireName: r'success')

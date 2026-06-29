@@ -22,7 +22,7 @@ Ingest client-side analytics events
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAnalyticsApi();
-final JsonObject body = Object; // JsonObject |
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.analyticsEventsCreate(body);
@@ -36,7 +36,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **body** | **JsonObject**|  | 
 
 ### Return type
 

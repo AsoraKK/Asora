@@ -12,7 +12,7 @@ part 'appeal_created_response.g.dart';
 /// 201 response after successfully filing a moderation appeal.
 ///
 /// Properties:
-/// * [appeal]
+/// * [appeal] 
 @BuiltValue()
 abstract class AppealCreatedResponse implements Built<AppealCreatedResponse, AppealCreatedResponseBuilder> {
   @BuiltValueField(wireName: r'appeal')

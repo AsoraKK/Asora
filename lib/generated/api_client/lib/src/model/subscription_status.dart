@@ -13,13 +13,13 @@ part 'subscription_status.g.dart';
 /// SubscriptionStatus
 ///
 /// Properties:
-/// * [userId]
-/// * [tier]
-/// * [status]
-/// * [provider]
-/// * [currentPeriodEnd]
-/// * [cancelAtPeriodEnd]
-/// * [entitlements]
+/// * [userId] 
+/// * [tier] 
+/// * [status] 
+/// * [provider] 
+/// * [currentPeriodEnd] 
+/// * [cancelAtPeriodEnd] 
+/// * [entitlements] 
 @BuiltValue()
 abstract class SubscriptionStatus implements Built<SubscriptionStatus, SubscriptionStatusBuilder> {
   @BuiltValueField(wireName: r'userId')

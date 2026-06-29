@@ -38,7 +38,7 @@ Create a new post.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = {"id":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","text":"Launch checklist is locked and ready for review.","attachments":["https://cdn.lythaus.app/media/posts/launch-checklist.png"]}; // CreatePostRequest |
+final CreatePostRequest createPostRequest = {"id":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","text":"Launch checklist is locked and ready for review.","attachments":["https://cdn.lythaus.app/media/posts/launch-checklist.png"]}; // CreatePostRequest | 
 
 try {
     final response = api.createPost(createPostRequest);
@@ -52,7 +52,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  |
+ **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  | 
 
 ### Return type
 
@@ -79,8 +79,8 @@ Bookmark a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.postsBookmarkCreate(id, body);
@@ -94,8 +94,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
 
 ### Return type
 
@@ -122,7 +122,7 @@ Remove a bookmark
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsBookmarkDelete(id);
@@ -136,7 +136,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -163,7 +163,7 @@ Get bookmark status for a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsBookmarkGet(id);
@@ -177,7 +177,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -204,8 +204,8 @@ Create a comment on a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String postId = postId_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String postId = postId_example; // String | 
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.postsCommentsCreate(postId, body);
@@ -219,8 +219,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **postId** | **String**|  |
- **body** | **JsonObject**|  |
+ **postId** | **String**|  | 
+ **body** | **JsonObject**|  | 
 
 ### Return type
 
@@ -247,7 +247,7 @@ List comments on a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String postId = postId_example; // String |
+final String postId = postId_example; // String | 
 
 try {
     final response = api.postsCommentsList(postId);
@@ -261,7 +261,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **postId** | **String**|  |
+ **postId** | **String**|  | 
 
 ### Return type
 
@@ -283,14 +283,14 @@ Name | Type | Description  | Notes
 
 Create a post with moderation and AI authenticity checks
 
-Create a post for the authenticated user. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`.
+Create a post for the authenticated user. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = ; // CreatePostRequest |
+final CreatePostRequest createPostRequest = ; // CreatePostRequest | 
 
 try {
     final response = api.postsCreate(createPostRequest);
@@ -304,7 +304,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  |
+ **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  | 
 
 ### Return type
 
@@ -331,7 +331,7 @@ Get a post by ID
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsGet(id);
@@ -345,7 +345,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -372,7 +372,7 @@ Get engagement insights for a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsInsights(id);
@@ -386,7 +386,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -413,8 +413,8 @@ Like a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.postsLikeCreate(id, body);
@@ -428,8 +428,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
 
 ### Return type
 
@@ -456,7 +456,7 @@ Unlike a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsLikeDelete(id);
@@ -470,7 +470,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -497,7 +497,7 @@ Get like status for a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsLikeGet(id);
@@ -511,7 +511,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -538,7 +538,7 @@ Get read receipt for a post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.postsReceipt(id);
@@ -552,7 +552,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -574,15 +574,15 @@ Name | Type | Description  | Notes
 
 Update a post with moderation and AI authenticity checks
 
-Update a post owned by the caller. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`.
+Update a post owned by the caller. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
-final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest |
+final String id = id_example; // String | 
+final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest | 
 
 try {
     final response = api.postsUpdate(id, updatePostRequest);
@@ -596,8 +596,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **updatePostRequest** | [**UpdatePostRequest**](UpdatePostRequest.md)|  |
+ **id** | **String**|  | 
+ **updatePostRequest** | [**UpdatePostRequest**](UpdatePostRequest.md)|  | 
 
 ### Return type
 
@@ -624,8 +624,8 @@ Record a post view event
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = id_example; // String | 
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.postsView(id, body);
@@ -639,8 +639,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
+ **id** | **String**|  | 
+ **body** | **JsonObject**|  | 
 
 ### Return type
 

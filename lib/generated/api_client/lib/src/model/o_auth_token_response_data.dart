@@ -14,7 +14,7 @@ part 'o_auth_token_response_data.g.dart';
 /// Properties:
 /// * [accessToken] - Short-lived JWT bearer token (15 min)
 /// * [refreshToken] - Long-lived opaque refresh token (7 days)
-/// * [tokenType]
+/// * [tokenType] 
 /// * [expiresIn] - Access token lifetime in seconds
 @BuiltValue()
 abstract class OAuthTokenResponseData implements Built<OAuthTokenResponseData, OAuthTokenResponseDataBuilder> {

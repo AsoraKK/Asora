@@ -13,7 +13,7 @@ part 'vote_on_appeal_v1_request.g.dart';
 ///
 /// Properties:
 /// * [appealId] - Appeal identifier
-/// * [vote]
+/// * [vote] 
 @BuiltValue()
 abstract class VoteOnAppealV1Request implements Built<VoteOnAppealV1Request, VoteOnAppealV1RequestBuilder> {
   /// Appeal identifier

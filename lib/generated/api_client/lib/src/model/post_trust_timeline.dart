@@ -12,10 +12,10 @@ part 'post_trust_timeline.g.dart';
 /// PostTrustTimeline
 ///
 /// Properties:
-/// * [created]
-/// * [mediaChecked]
-/// * [moderation]
-/// * [appeal]
+/// * [created] 
+/// * [mediaChecked] 
+/// * [moderation] 
+/// * [appeal] 
 @BuiltValue()
 abstract class PostTrustTimeline implements Built<PostTrustTimeline, PostTrustTimelineBuilder> {
   @BuiltValueField(wireName: r'created')

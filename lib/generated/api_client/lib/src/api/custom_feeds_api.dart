@@ -25,10 +25,10 @@ class CustomFeedsApi {
   const CustomFeedsApi(this._dio, this._serializers);
 
   /// Create a new custom feed
-  /// Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
+  /// Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20. 
   ///
   /// Parameters:
-  /// * [createCustomFeedRequest]
+  /// * [createCustomFeedRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -38,7 +38,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CustomFeedDefinition>> customFeedsCreate({
+  Future<Response<CustomFeedDefinition>> customFeedsCreate({ 
     required CreateCustomFeedRequest createCustomFeedRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -129,7 +129,7 @@ class CustomFeedsApi {
   /// Delete an owned custom feed definition.
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -139,7 +139,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> customFeedsDelete({
+  Future<Response<void>> customFeedsDelete({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -182,7 +182,7 @@ class CustomFeedsApi {
   /// Fetch a custom feed definition owned by the authenticated user.
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -192,7 +192,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CustomFeedDefinition>> customFeedsGet({
+  Future<Response<CustomFeedDefinition>> customFeedsGet({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -263,7 +263,7 @@ class CustomFeedsApi {
   /// Return posts matching a custom feed&#39;s filters.
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
   /// * [limit] - Maximum number of items to return per page
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -275,7 +275,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CursorPaginatedPostView] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CursorPaginatedPostView>> customFeedsItemsList({
+  Future<Response<CursorPaginatedPostView>> customFeedsItemsList({ 
     required String id,
     String? cursor,
     int? limit = 25,
@@ -365,7 +365,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CustomFeedListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CustomFeedListResponse>> customFeedsList({
+  Future<Response<CustomFeedListResponse>> customFeedsList({ 
     String? cursor,
     int? limit = 25,
     CancelToken? cancelToken,
@@ -443,8 +443,8 @@ class CustomFeedsApi {
   /// Update an owned custom feed&#39;s name, filters, sorting, or home flag.
   ///
   /// Parameters:
-  /// * [id]
-  /// * [updateCustomFeedRequest]
+  /// * [id] 
+  /// * [updateCustomFeedRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -454,7 +454,7 @@ class CustomFeedsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CustomFeedDefinition>> customFeedsUpdate({
+  Future<Response<CustomFeedDefinition>> customFeedsUpdate({ 
     required String id,
     required UpdateCustomFeedRequest updateCustomFeedRequest,
     CancelToken? cancelToken,

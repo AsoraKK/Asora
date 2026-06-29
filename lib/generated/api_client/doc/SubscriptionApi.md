@@ -17,7 +17,7 @@ Method | HTTP request | Description
 
 Get current user subscription status
 
-Return the authenticated user's subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits.
+Return the authenticated user's subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits. 
 
 ### Example
 ```dart

@@ -12,9 +12,9 @@ part 'bad_gateway_error_error.g.dart';
 /// BadGatewayErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 @BuiltValue()
 abstract class BadGatewayErrorError implements Built<BadGatewayErrorError, BadGatewayErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')

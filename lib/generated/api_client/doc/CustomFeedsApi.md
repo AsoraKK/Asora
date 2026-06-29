@@ -22,14 +22,14 @@ Method | HTTP request | Description
 
 Create a new custom feed
 
-Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
+Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final CreateCustomFeedRequest createCustomFeedRequest = ; // CreateCustomFeedRequest |
+final CreateCustomFeedRequest createCustomFeedRequest = ; // CreateCustomFeedRequest | 
 
 try {
     final response = api.customFeedsCreate(createCustomFeedRequest);
@@ -43,7 +43,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createCustomFeedRequest** | [**CreateCustomFeedRequest**](CreateCustomFeedRequest.md)|  |
+ **createCustomFeedRequest** | [**CreateCustomFeedRequest**](CreateCustomFeedRequest.md)|  | 
 
 ### Return type
 
@@ -72,7 +72,7 @@ Delete an owned custom feed definition.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     api.customFeedsDelete(id);
@@ -85,7 +85,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -114,7 +114,7 @@ Fetch a custom feed definition owned by the authenticated user.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.customFeedsGet(id);
@@ -128,7 +128,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 
@@ -157,7 +157,7 @@ Return posts matching a custom feed's filters.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 
@@ -173,8 +173,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
+ **id** | **String**|  | 
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional] 
  **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
@@ -219,7 +219,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional] 
  **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
@@ -249,8 +249,8 @@ Update an owned custom feed's name, filters, sorting, or home flag.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
-final UpdateCustomFeedRequest updateCustomFeedRequest = ; // UpdateCustomFeedRequest |
+final String id = id_example; // String | 
+final UpdateCustomFeedRequest updateCustomFeedRequest = ; // UpdateCustomFeedRequest | 
 
 try {
     final response = api.customFeedsUpdate(id, updateCustomFeedRequest);
@@ -264,8 +264,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **updateCustomFeedRequest** | [**UpdateCustomFeedRequest**](UpdateCustomFeedRequest.md)|  |
+ **id** | **String**|  | 
+ **updateCustomFeedRequest** | [**UpdateCustomFeedRequest**](UpdateCustomFeedRequest.md)|  | 
 
 ### Return type
 

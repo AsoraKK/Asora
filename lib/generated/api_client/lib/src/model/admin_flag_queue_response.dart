@@ -13,9 +13,9 @@ part 'admin_flag_queue_response.g.dart';
 /// AdminFlagQueueResponse
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
-/// * [count]
+/// * [items] 
+/// * [nextCursor] 
+/// * [count] 
 @BuiltValue()
 abstract class AdminFlagQueueResponse implements Built<AdminFlagQueueResponse, AdminFlagQueueResponseBuilder> {
   @BuiltValueField(wireName: r'items')

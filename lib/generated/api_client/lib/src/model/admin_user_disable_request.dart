@@ -11,8 +11,8 @@ part 'admin_user_disable_request.g.dart';
 /// AdminUserDisableRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminUserDisableRequest implements Built<AdminUserDisableRequest, AdminUserDisableRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')

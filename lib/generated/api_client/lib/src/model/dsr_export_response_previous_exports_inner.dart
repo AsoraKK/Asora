@@ -12,9 +12,9 @@ part 'dsr_export_response_previous_exports_inner.g.dart';
 /// DSRExportResponsePreviousExportsInner
 ///
 /// Properties:
-/// * [exportId]
-/// * [exportedAt]
-/// * [type]
+/// * [exportId] 
+/// * [exportedAt] 
+/// * [type] 
 @BuiltValue()
 abstract class DSRExportResponsePreviousExportsInner implements Built<DSRExportResponsePreviousExportsInner, DSRExportResponsePreviousExportsInnerBuilder> {
   @BuiltValueField(wireName: r'exportId')

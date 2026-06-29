@@ -13,9 +13,9 @@ part 'validation_error_response_error.g.dart';
 /// ValidationErrorResponseError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 /// * [fields] - Per-field validation errors
 @BuiltValue()
 abstract class ValidationErrorResponseError implements Built<ValidationErrorResponseError, ValidationErrorResponseErrorBuilder> {

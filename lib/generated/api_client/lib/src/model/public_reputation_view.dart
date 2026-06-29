@@ -12,11 +12,11 @@ part 'public_reputation_view.g.dart';
 /// PublicReputationView
 ///
 /// Properties:
-/// * [userId]
-/// * [reputationLevel]
-/// * [reputationStatus]
-/// * [reputationBand]
-/// * [levelName]
+/// * [userId] 
+/// * [reputationLevel] 
+/// * [reputationStatus] 
+/// * [reputationBand] 
+/// * [levelName] 
 @BuiltValue()
 abstract class PublicReputationView implements Built<PublicReputationView, PublicReputationViewBuilder> {
   @BuiltValueField(wireName: r'userId')

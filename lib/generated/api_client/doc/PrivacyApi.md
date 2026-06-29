@@ -18,7 +18,7 @@ Method | HTTP request | Description
 
 Delete own account (GDPR Article 17)
 
-Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**.
+Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**. 
 
 ### Example
 ```dart
@@ -39,7 +39,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **xConfirmDelete** | **String**| Must be set to \"true\" to confirm deletion |
+ **xConfirmDelete** | **String**| Must be set to \"true\" to confirm deletion | 
 
 ### Return type
 
@@ -61,7 +61,7 @@ Name | Type | Description  | Notes
 
 Export personal data (GDPR Article 20)
 
-Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking.
+Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking. 
 
 ### Example
 ```dart

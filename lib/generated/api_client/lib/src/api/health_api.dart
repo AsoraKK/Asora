@@ -35,7 +35,7 @@ class HealthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [GetHealth200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetHealth200Response>> getHealth({
+  Future<Response<GetHealth200Response>> getHealth({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -96,7 +96,7 @@ class HealthApi {
   }
 
   /// Readiness probe
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -108,7 +108,7 @@ class HealthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> ready({
+  Future<Response<JsonObject>> ready({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

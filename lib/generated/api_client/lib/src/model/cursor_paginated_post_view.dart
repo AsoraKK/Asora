@@ -13,8 +13,8 @@ part 'cursor_paginated_post_view.g.dart';
 /// CursorPaginatedPostView
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
+/// * [items] 
+/// * [nextCursor] 
 @BuiltValue()
 abstract class CursorPaginatedPostView implements Built<CursorPaginatedPostView, CursorPaginatedPostViewBuilder> {
   @BuiltValueField(wireName: r'items')

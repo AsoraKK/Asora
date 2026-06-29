@@ -12,21 +12,21 @@ part 'ledger_entry.g.dart';
 /// LedgerEntry
 ///
 /// Properties:
-/// * [id]
-/// * [userId]
-/// * [eventType]
-/// * [eventCategory]
-/// * [pillar]
-/// * [publicLabel]
-/// * [impactBand]
-/// * [relatedContentId]
-/// * [relatedModerationDecisionId]
-/// * [visibility]
-/// * [appealable]
-/// * [appealStatus]
-/// * [createdAt]
-/// * [decaysAt]
-/// * [status]
+/// * [id] 
+/// * [userId] 
+/// * [eventType] 
+/// * [eventCategory] 
+/// * [pillar] 
+/// * [publicLabel] 
+/// * [impactBand] 
+/// * [relatedContentId] 
+/// * [relatedModerationDecisionId] 
+/// * [visibility] 
+/// * [appealable] 
+/// * [appealStatus] 
+/// * [createdAt] 
+/// * [decaysAt] 
+/// * [status] 
 @BuiltValue()
 abstract class LedgerEntry implements Built<LedgerEntry, LedgerEntryBuilder> {
   @BuiltValueField(wireName: r'id')

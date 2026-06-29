@@ -12,8 +12,8 @@ part 'create_post201_response.g.dart';
 /// CreatePost201Response
 ///
 /// Properties:
-/// * [id]
-/// * [status]
+/// * [id] 
+/// * [status] 
 @BuiltValue()
 abstract class CreatePost201Response implements Built<CreatePost201Response, CreatePost201ResponseBuilder> {
   @BuiltValueField(wireName: r'id')

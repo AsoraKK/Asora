@@ -13,12 +13,12 @@ part 'user_info_response_data.g.dart';
 ///
 /// Properties:
 /// * [sub] - Subject identifier (user ID)
-/// * [email]
-/// * [displayName]
-/// * [handle]
-/// * [tier]
-/// * [roles]
-/// * [avatarUrl]
+/// * [email] 
+/// * [displayName] 
+/// * [handle] 
+/// * [tier] 
+/// * [roles] 
+/// * [avatarUrl] 
 @BuiltValue()
 abstract class UserInfoResponseData implements Built<UserInfoResponseData, UserInfoResponseDataBuilder> {
   /// Subject identifier (user ID)

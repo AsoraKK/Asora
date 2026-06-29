@@ -11,8 +11,8 @@ part 'admin_appeal_decision_request.g.dart';
 /// AdminAppealDecisionRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminAppealDecisionRequest implements Built<AdminAppealDecisionRequest, AdminAppealDecisionRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')

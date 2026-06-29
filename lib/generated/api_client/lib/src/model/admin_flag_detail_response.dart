@@ -16,11 +16,11 @@ part 'admin_flag_detail_response.g.dart';
 /// AdminFlagDetailResponse
 ///
 /// Properties:
-/// * [content]
-/// * [flags]
-/// * [moderation]
-/// * [appeal]
-/// * [history]
+/// * [content] 
+/// * [flags] 
+/// * [moderation] 
+/// * [appeal] 
+/// * [history] 
 @BuiltValue()
 abstract class AdminFlagDetailResponse implements Built<AdminFlagDetailResponse, AdminFlagDetailResponseBuilder> {
   @BuiltValueField(wireName: r'content')

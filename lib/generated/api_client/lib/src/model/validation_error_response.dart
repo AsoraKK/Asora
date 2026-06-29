@@ -12,7 +12,7 @@ part 'validation_error_response.g.dart';
 /// 400 response with structured field-level validation failures.
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
 abstract class ValidationErrorResponse implements Built<ValidationErrorResponse, ValidationErrorResponseBuilder> {
   @BuiltValueField(wireName: r'error')

@@ -12,11 +12,11 @@ part 'dsr_request_summary.g.dart';
 /// DsrRequestSummary
 ///
 /// Properties:
-/// * [id]
-/// * [status]
-/// * [type]
-/// * [exportBlobPath]
-/// * [attemptedAt]
+/// * [id] 
+/// * [status] 
+/// * [type] 
+/// * [exportBlobPath] 
+/// * [attemptedAt] 
 @BuiltValue()
 abstract class DsrRequestSummary implements Built<DsrRequestSummary, DsrRequestSummaryBuilder> {
   @BuiltValueField(wireName: r'id')

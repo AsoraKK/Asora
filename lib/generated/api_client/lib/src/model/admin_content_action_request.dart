@@ -12,9 +12,9 @@ part 'admin_content_action_request.g.dart';
 /// AdminContentActionRequest
 ///
 /// Properties:
-/// * [contentType]
-/// * [reasonCode]
-/// * [note]
+/// * [contentType] 
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminContentActionRequest implements Built<AdminContentActionRequest, AdminContentActionRequestBuilder> {
   @BuiltValueField(wireName: r'contentType')

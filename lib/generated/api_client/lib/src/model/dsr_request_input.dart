@@ -11,8 +11,8 @@ part 'dsr_request_input.g.dart';
 /// DsrRequestInput
 ///
 /// Properties:
-/// * [userId]
-/// * [note]
+/// * [userId] 
+/// * [note] 
 @BuiltValue()
 abstract class DsrRequestInput implements Built<DsrRequestInput, DsrRequestInputBuilder> {
   @BuiltValueField(wireName: r'userId')

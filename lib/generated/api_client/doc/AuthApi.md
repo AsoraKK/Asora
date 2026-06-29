@@ -25,20 +25,20 @@ Method | HTTP request | Description
 
 OAuth2 authorization endpoint
 
-Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the `redirect_uri` with an authorization `code` and the `state` parameter echoed back.
+Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the `redirect_uri` with an authorization `code` and the `state` parameter echoed back. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final String responseType = responseType_example; // String |
-final String clientId = clientId_example; // String |
-final String redirectUri = redirectUri_example; // String |
-final String state = state_example; // String |
+final String responseType = responseType_example; // String | 
+final String clientId = clientId_example; // String | 
+final String redirectUri = redirectUri_example; // String | 
+final String state = state_example; // String | 
 final String codeChallenge = codeChallenge_example; // String | PKCE code challenge (S256 method required)
-final String codeChallengeMethod = codeChallengeMethod_example; // String |
-final String scope = openid profile email; // String |
+final String codeChallengeMethod = codeChallengeMethod_example; // String | 
+final String scope = openid profile email; // String | 
 
 try {
     final response = api.authAuthorize(responseType, clientId, redirectUri, state, codeChallenge, codeChallengeMethod, scope);
@@ -52,13 +52,13 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **responseType** | **String**|  |
- **clientId** | **String**|  |
- **redirectUri** | **String**|  |
- **state** | **String**|  | [optional]
- **codeChallenge** | **String**| PKCE code challenge (S256 method required) | [optional]
- **codeChallengeMethod** | **String**|  | [optional]
- **scope** | **String**|  | [optional]
+ **responseType** | **String**|  | 
+ **clientId** | **String**|  | 
+ **redirectUri** | **String**|  | 
+ **state** | **String**|  | [optional] 
+ **codeChallenge** | **String**| PKCE code challenge (S256 method required) | [optional] 
+ **codeChallengeMethod** | **String**|  | [optional] 
+ **scope** | **String**|  | [optional] 
 
 ### Return type
 
@@ -101,7 +101,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **code** | **String**| Invite code (format XXXX-XXXX) | [optional]
+ **code** | **String**| Invite code (format XXXX-XXXX) | [optional] 
 
 ### Return type
 
@@ -160,14 +160,14 @@ This endpoint does not need any parameter.
 
 Redeem an invite code to activate account
 
-Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned.
+Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final RedeemInviteRequest redeemInviteRequest = {"inviteCode":"ABCD-1234"}; // RedeemInviteRequest |
+final RedeemInviteRequest redeemInviteRequest = {"inviteCode":"ABCD-1234"}; // RedeemInviteRequest | 
 
 try {
     final response = api.authRedeemInvite(redeemInviteRequest);
@@ -181,7 +181,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **redeemInviteRequest** | [**RedeemInviteRequest**](RedeemInviteRequest.md)|  |
+ **redeemInviteRequest** | [**RedeemInviteRequest**](RedeemInviteRequest.md)|  | 
 
 ### Return type
 
@@ -208,7 +208,7 @@ Rotate a refresh token
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final JsonObject body = Object; // JsonObject |
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.authRefresh(body);
@@ -222,7 +222,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **body** | **JsonObject**|  | 
 
 ### Return type
 
@@ -249,7 +249,7 @@ Revoke an active session
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final JsonObject body = Object; // JsonObject |
+final JsonObject body = Object; // JsonObject | 
 
 try {
     final response = api.authSessionsRevoke(body);
@@ -263,7 +263,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **body** | **JsonObject**|  | 
 
 ### Return type
 
@@ -285,14 +285,14 @@ Name | Type | Description  | Notes
 
 Issue OAuth2 tokens
 
-Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants.
+Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants. 
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAuthApi();
-final AuthTokenRequest authTokenRequest = {"grant_type":"authorization_code","client_id":"asora-mobile","code":"SplxlOBeZQQYbYS6WxSbIA","redirect_uri":"com.asora.app://callback","code_verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}; // AuthTokenRequest |
+final AuthTokenRequest authTokenRequest = {"grant_type":"authorization_code","client_id":"asora-mobile","code":"SplxlOBeZQQYbYS6WxSbIA","redirect_uri":"com.asora.app://callback","code_verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}; // AuthTokenRequest | 
 
 try {
     final response = api.authToken(authTokenRequest);
@@ -306,7 +306,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **authTokenRequest** | [**AuthTokenRequest**](AuthTokenRequest.md)|  |
+ **authTokenRequest** | [**AuthTokenRequest**](AuthTokenRequest.md)|  | 
 
 ### Return type
 

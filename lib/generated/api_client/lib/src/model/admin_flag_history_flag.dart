@@ -11,9 +11,9 @@ part 'admin_flag_history_flag.g.dart';
 /// AdminFlagHistoryFlag
 ///
 /// Properties:
-/// * [type]
-/// * [at]
-/// * [reason]
+/// * [type] 
+/// * [at] 
+/// * [reason] 
 @BuiltValue()
 abstract class AdminFlagHistoryFlag implements Built<AdminFlagHistoryFlag, AdminFlagHistoryFlagBuilder> {
   @BuiltValueField(wireName: r'type')

@@ -13,8 +13,8 @@ part 'get_my_appeals200_response.g.dart';
 /// GetMyAppeals200Response
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
+/// * [items] 
+/// * [nextCursor] 
 @BuiltValue()
 abstract class GetMyAppeals200Response implements Built<GetMyAppeals200Response, GetMyAppeals200ResponseBuilder> {
   @BuiltValueField(wireName: r'items')

@@ -11,9 +11,9 @@ part 'admin_appeal_vote_summary.g.dart';
 /// AdminAppealVoteSummary
 ///
 /// Properties:
-/// * [for_]
-/// * [against]
-/// * [total]
+/// * [for_] 
+/// * [against] 
+/// * [total] 
 @BuiltValue()
 abstract class AdminAppealVoteSummary implements Built<AdminAppealVoteSummary, AdminAppealVoteSummaryBuilder> {
   @BuiltValueField(wireName: r'for')

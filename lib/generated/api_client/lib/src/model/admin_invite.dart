@@ -12,17 +12,17 @@ part 'admin_invite.g.dart';
 /// AdminInvite
 ///
 /// Properties:
-/// * [inviteCode]
-/// * [email]
-/// * [createdBy]
-/// * [createdAt]
-/// * [expiresAt]
-/// * [maxUses]
-/// * [usageCount]
-/// * [lastUsedAt]
-/// * [status]
-/// * [label]
-/// * [usedByUserId]
+/// * [inviteCode] 
+/// * [email] 
+/// * [createdBy] 
+/// * [createdAt] 
+/// * [expiresAt] 
+/// * [maxUses] 
+/// * [usageCount] 
+/// * [lastUsedAt] 
+/// * [status] 
+/// * [label] 
+/// * [usedByUserId] 
 @BuiltValue(instantiable: false)
 abstract class AdminInvite  {
   @BuiltValueField(wireName: r'inviteCode')

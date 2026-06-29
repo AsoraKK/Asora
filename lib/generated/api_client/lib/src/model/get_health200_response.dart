@@ -11,11 +11,11 @@ part 'get_health200_response.g.dart';
 /// GetHealth200Response
 ///
 /// Properties:
-/// * [ok]
-/// * [status]
-/// * [timestamp]
-/// * [service]
-/// * [version]
+/// * [ok] 
+/// * [status] 
+/// * [timestamp] 
+/// * [service] 
+/// * [version] 
 @BuiltValue()
 abstract class GetHealth200Response implements Built<GetHealth200Response, GetHealth200ResponseBuilder> {
   @BuiltValueField(wireName: r'ok')

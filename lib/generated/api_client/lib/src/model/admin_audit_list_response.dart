@@ -13,9 +13,9 @@ part 'admin_audit_list_response.g.dart';
 /// AdminAuditListResponse
 ///
 /// Properties:
-/// * [items]
-/// * [count]
-/// * [nextCursor]
+/// * [items] 
+/// * [count] 
+/// * [nextCursor] 
 @BuiltValue()
 abstract class AdminAuditListResponse implements Built<AdminAuditListResponse, AdminAuditListResponseBuilder> {
   @BuiltValueField(wireName: r'items')

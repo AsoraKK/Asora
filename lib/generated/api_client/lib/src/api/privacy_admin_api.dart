@@ -26,7 +26,7 @@ class PrivacyAdminApi {
   /// Removes a previously placed legal hold, allowing normal data lifecycle operations (including deletion) to resume.
   ///
   /// Parameters:
-  /// * [legalHoldClear]
+  /// * [legalHoldClear] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -36,7 +36,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> clearLegalHold({
+  Future<Response<void>> clearLegalHold({ 
     required LegalHoldClear legalHoldClear,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -99,7 +99,7 @@ class PrivacyAdminApi {
   /// Queues a deletion job for a user&#39;s data as part of GDPR/CCPA right-to-erasure compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
-  /// * [dsrRequestInput]
+  /// * [dsrRequestInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -109,7 +109,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DsrRequestSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DsrRequestSummary>> enqueueDsrDelete({
+  Future<Response<DsrRequestSummary>> enqueueDsrDelete({ 
     required DsrRequestInput dsrRequestInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -200,7 +200,7 @@ class PrivacyAdminApi {
   /// Queues an export job for a user&#39;s data as part of GDPR/CCPA compliance. Returns immediately with job tracking info.
   ///
   /// Parameters:
-  /// * [dsrRequestInput]
+  /// * [dsrRequestInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -210,7 +210,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DsrRequestSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DsrRequestSummary>> enqueueDsrExport({
+  Future<Response<DsrRequestSummary>> enqueueDsrExport({ 
     required DsrRequestInput dsrRequestInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -301,7 +301,7 @@ class PrivacyAdminApi {
   /// Places a legal hold on a user&#39;s data, preventing deletion until the hold is cleared. Used for litigation or regulatory preservation.
   ///
   /// Parameters:
-  /// * [legalHoldInput]
+  /// * [legalHoldInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -311,7 +311,7 @@ class PrivacyAdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [LegalHoldRecord] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<LegalHoldRecord>> placeLegalHold({
+  Future<Response<LegalHoldRecord>> placeLegalHold({ 
     required LegalHoldInput legalHoldInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

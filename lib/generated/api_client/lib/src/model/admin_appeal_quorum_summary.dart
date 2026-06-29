@@ -11,8 +11,8 @@ part 'admin_appeal_quorum_summary.g.dart';
 /// AdminAppealQuorumSummary
 ///
 /// Properties:
-/// * [required_]
-/// * [reached]
+/// * [required_] 
+/// * [reached] 
 @BuiltValue()
 abstract class AdminAppealQuorumSummary implements Built<AdminAppealQuorumSummary, AdminAppealQuorumSummaryBuilder> {
   @BuiltValueField(wireName: r'required')

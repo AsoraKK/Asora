@@ -35,7 +35,7 @@ class RewardsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RewardsMeResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RewardsMeResponse>> rewardsMeGet({
+  Future<Response<RewardsMeResponse>> rewardsMeGet({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -102,10 +102,10 @@ class RewardsApi {
   }
 
   /// Redeem a reward
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -115,7 +115,7 @@ class RewardsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RewardRedemption] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RewardRedemption>> rewardsRedeemPost({
+  Future<Response<RewardRedemption>> rewardsRedeemPost({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

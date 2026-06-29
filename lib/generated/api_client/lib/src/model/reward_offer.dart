@@ -11,14 +11,14 @@ part 'reward_offer.g.dart';
 /// RewardOffer
 ///
 /// Properties:
-/// * [id]
-/// * [rewardLevel]
-/// * [title]
-/// * [description]
-/// * [partnerName]
-/// * [locked]
-/// * [lockReason]
-/// * [redeemed]
+/// * [id] 
+/// * [rewardLevel] 
+/// * [title] 
+/// * [description] 
+/// * [partnerName] 
+/// * [locked] 
+/// * [lockReason] 
+/// * [redeemed] 
 @BuiltValue()
 abstract class RewardOffer implements Built<RewardOffer, RewardOfferBuilder> {
   @BuiltValueField(wireName: r'id')

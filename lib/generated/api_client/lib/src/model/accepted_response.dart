@@ -12,7 +12,7 @@ part 'accepted_response.g.dart';
 /// Generic 202 acceptance body returned by ctx.accepted().
 ///
 /// Properties:
-/// * [message]
+/// * [message] 
 @BuiltValue()
 abstract class AcceptedResponse implements Built<AcceptedResponse, AcceptedResponseBuilder> {
   @BuiltValueField(wireName: r'message')

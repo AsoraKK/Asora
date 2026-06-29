@@ -12,9 +12,9 @@ part 'legal_hold_input.g.dart';
 /// LegalHoldInput
 ///
 /// Properties:
-/// * [scope]
-/// * [scopeId]
-/// * [reason]
+/// * [scope] 
+/// * [scopeId] 
+/// * [reason] 
 @BuiltValue()
 abstract class LegalHoldInput implements Built<LegalHoldInput, LegalHoldInputBuilder> {
   @BuiltValueField(wireName: r'scope')

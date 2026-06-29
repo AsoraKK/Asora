@@ -11,9 +11,9 @@ part 'admin_flag_queue_author.g.dart';
 /// AdminFlagQueueAuthor
 ///
 /// Properties:
-/// * [authorId]
-/// * [displayName]
-/// * [handle]
+/// * [authorId] 
+/// * [displayName] 
+/// * [handle] 
 @BuiltValue()
 abstract class AdminFlagQueueAuthor implements Built<AdminFlagQueueAuthor, AdminFlagQueueAuthorBuilder> {
   @BuiltValueField(wireName: r'authorId')

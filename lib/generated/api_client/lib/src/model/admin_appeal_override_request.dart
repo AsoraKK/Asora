@@ -13,9 +13,9 @@ part 'admin_appeal_override_request.g.dart';
 /// AdminAppealOverrideRequest
 ///
 /// Properties:
-/// * [decision]
-/// * [reasonCode]
-/// * [reasonNote]
+/// * [decision] 
+/// * [reasonCode] 
+/// * [reasonNote] 
 @BuiltValue()
 abstract class AdminAppealOverrideRequest implements Built<AdminAppealOverrideRequest, AdminAppealOverrideRequestBuilder> {
   @BuiltValueField(wireName: r'decision')

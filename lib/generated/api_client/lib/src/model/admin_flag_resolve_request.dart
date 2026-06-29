@@ -11,8 +11,8 @@ part 'admin_flag_resolve_request.g.dart';
 /// AdminFlagResolveRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminFlagResolveRequest implements Built<AdminFlagResolveRequest, AdminFlagResolveRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')

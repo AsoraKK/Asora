@@ -12,9 +12,9 @@ part 'o_auth_token_response.g.dart';
 /// OAuth 2.0 token response envelope (success wrapped).
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [success] 
+/// * [data] 
+/// * [timestamp] 
 @BuiltValue()
 abstract class OAuthTokenResponse implements Built<OAuthTokenResponse, OAuthTokenResponseBuilder> {
   @BuiltValueField(wireName: r'success')

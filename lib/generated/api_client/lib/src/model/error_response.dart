@@ -12,7 +12,7 @@ part 'error_response.g.dart';
 /// Canonical error envelope returned by handler-based endpoints.
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
 abstract class ErrorResponse implements Built<ErrorResponse, ErrorResponseBuilder> {
   @BuiltValueField(wireName: r'error')

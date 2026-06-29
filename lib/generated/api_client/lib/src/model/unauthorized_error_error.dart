@@ -12,9 +12,9 @@ part 'unauthorized_error_error.g.dart';
 /// UnauthorizedErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
-/// * [correlationId]
+/// * [code] 
+/// * [message] 
+/// * [correlationId] 
 @BuiltValue()
 abstract class UnauthorizedErrorError implements Built<UnauthorizedErrorError, UnauthorizedErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')

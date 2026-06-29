@@ -13,18 +13,18 @@ part 'post.g.dart';
 /// Post
 ///
 /// Properties:
-/// * [id]
-/// * [authorId]
-/// * [content]
-/// * [contentType]
-/// * [mediaUrls]
-/// * [topics]
-/// * [visibility]
-/// * [isNews]
-/// * [source_]
-/// * [clusterId]
-/// * [createdAt]
-/// * [updatedAt]
+/// * [id] 
+/// * [authorId] 
+/// * [content] 
+/// * [contentType] 
+/// * [mediaUrls] 
+/// * [topics] 
+/// * [visibility] 
+/// * [isNews] 
+/// * [source_] 
+/// * [clusterId] 
+/// * [createdAt] 
+/// * [updatedAt] 
 @BuiltValue(instantiable: false)
 abstract class Post  {
   @BuiltValueField(wireName: r'id')

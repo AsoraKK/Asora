@@ -12,10 +12,10 @@ part 'appeal_vote_response_vote.g.dart';
 /// AppealVoteResponseVote
 ///
 /// Properties:
-/// * [id]
-/// * [appealId]
-/// * [vote]
-/// * [recordedAt]
+/// * [id] 
+/// * [appealId] 
+/// * [vote] 
+/// * [recordedAt] 
 @BuiltValue()
 abstract class AppealVoteResponseVote implements Built<AppealVoteResponseVote, AppealVoteResponseVoteBuilder> {
   @BuiltValueField(wireName: r'id')

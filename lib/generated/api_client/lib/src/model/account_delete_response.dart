@@ -11,9 +11,9 @@ part 'account_delete_response.g.dart';
 /// Confirmation of account deletion.
 ///
 /// Properties:
-/// * [message]
-/// * [userId]
-/// * [deletedAt]
+/// * [message] 
+/// * [userId] 
+/// * [deletedAt] 
 /// * [alreadyDeleted] - True when the account was already in a deleted state
 @BuiltValue()
 abstract class AccountDeleteResponse implements Built<AccountDeleteResponse, AccountDeleteResponseBuilder> {

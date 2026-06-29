@@ -12,13 +12,13 @@ part 'reward_redemption.g.dart';
 /// RewardRedemption
 ///
 /// Properties:
-/// * [id]
-/// * [userId]
-/// * [rewardId]
-/// * [rewardLevel]
-/// * [rewardTitle]
-/// * [redeemedAt]
-/// * [status]
+/// * [id] 
+/// * [userId] 
+/// * [rewardId] 
+/// * [rewardLevel] 
+/// * [rewardTitle] 
+/// * [redeemedAt] 
+/// * [status] 
 @BuiltValue()
 abstract class RewardRedemption implements Built<RewardRedemption, RewardRedemptionBuilder> {
   @BuiltValueField(wireName: r'id')

@@ -12,12 +12,12 @@ part 'admin_user_summary.g.dart';
 /// AdminUserSummary
 ///
 /// Properties:
-/// * [userId]
-/// * [displayName]
-/// * [handle]
-/// * [email]
-/// * [createdAt]
-/// * [status]
+/// * [userId] 
+/// * [displayName] 
+/// * [handle] 
+/// * [email] 
+/// * [createdAt] 
+/// * [status] 
 @BuiltValue()
 abstract class AdminUserSummary implements Built<AdminUserSummary, AdminUserSummaryBuilder> {
   @BuiltValueField(wireName: r'userId')

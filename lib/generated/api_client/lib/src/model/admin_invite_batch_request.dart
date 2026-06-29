@@ -11,10 +11,10 @@ part 'admin_invite_batch_request.g.dart';
 /// AdminInviteBatchRequest
 ///
 /// Properties:
-/// * [count]
-/// * [expiresInDays]
-/// * [maxUses]
-/// * [label]
+/// * [count] 
+/// * [expiresInDays] 
+/// * [maxUses] 
+/// * [label] 
 @BuiltValue()
 abstract class AdminInviteBatchRequest implements Built<AdminInviteBatchRequest, AdminInviteBatchRequestBuilder> {
   @BuiltValueField(wireName: r'count')

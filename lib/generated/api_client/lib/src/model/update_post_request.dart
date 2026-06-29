@@ -13,14 +13,14 @@ part 'update_post_request.g.dart';
 /// UpdatePostRequest
 ///
 /// Properties:
-/// * [content]
-/// * [contentType]
-/// * [mediaUrls]
-/// * [topics]
-/// * [visibility]
-/// * [isNews]
+/// * [content] 
+/// * [contentType] 
+/// * [mediaUrls] 
+/// * [topics] 
+/// * [visibility] 
+/// * [isNews] 
 /// * [aiLabel] - Public authorship disclosure. `generated` is blocked at submit.
-/// * [proofSignals]
+/// * [proofSignals] 
 @BuiltValue()
 abstract class UpdatePostRequest implements Built<UpdatePostRequest, UpdatePostRequestBuilder> {
   @BuiltValueField(wireName: r'content')

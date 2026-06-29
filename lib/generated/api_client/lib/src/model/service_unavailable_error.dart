@@ -12,7 +12,7 @@ part 'service_unavailable_error.g.dart';
 /// 503 – service temporarily unavailable (dependency outage, maintenance window, or upstream timeout).
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
 abstract class ServiceUnavailableError implements Built<ServiceUnavailableError, ServiceUnavailableErrorBuilder> {
   @BuiltValueField(wireName: r'error')

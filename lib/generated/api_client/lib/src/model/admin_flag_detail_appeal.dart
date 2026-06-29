@@ -12,10 +12,10 @@ part 'admin_flag_detail_appeal.g.dart';
 /// AdminFlagDetailAppeal
 ///
 /// Properties:
-/// * [appealId]
-/// * [status]
-/// * [submittedAt]
-/// * [updatedAt]
+/// * [appealId] 
+/// * [status] 
+/// * [submittedAt] 
+/// * [updatedAt] 
 @BuiltValue()
 abstract class AdminFlagDetailAppeal implements Built<AdminFlagDetailAppeal, AdminFlagDetailAppealBuilder> {
   @BuiltValueField(wireName: r'appealId')

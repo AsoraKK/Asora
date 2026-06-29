@@ -12,10 +12,10 @@ part 'service_unavailable_error_error.g.dart';
 /// ServiceUnavailableErrorError
 ///
 /// Properties:
-/// * [code]
-/// * [message]
+/// * [code] 
+/// * [message] 
 /// * [retryAfterSeconds] - Suggested number of seconds to wait before retrying
-/// * [correlationId]
+/// * [correlationId] 
 @BuiltValue()
 abstract class ServiceUnavailableErrorError implements Built<ServiceUnavailableErrorError, ServiceUnavailableErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')

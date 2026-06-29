@@ -22,10 +22,10 @@ class ReactionsApi {
   const ReactionsApi(this._dio, this._serializers);
 
   /// Delete my reaction
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [id]
+  /// * [id] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,7 +35,7 @@ class ReactionsApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> reactionsDelete({
+  Future<Response<void>> reactionsDelete({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -78,7 +78,7 @@ class ReactionsApi {
   /// Records a structured reaction and applies anti-gaming controls before deciding whether it contributes to reputation.
   ///
   /// Parameters:
-  /// * [submitReactionRequest]
+  /// * [submitReactionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -88,7 +88,7 @@ class ReactionsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SubmitReactionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SubmitReactionResponse>> reactionsPost({
+  Future<Response<SubmitReactionResponse>> reactionsPost({ 
     required SubmitReactionRequest submitReactionRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

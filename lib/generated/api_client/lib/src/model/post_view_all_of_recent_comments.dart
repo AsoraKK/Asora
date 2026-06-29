@@ -11,10 +11,10 @@ part 'post_view_all_of_recent_comments.g.dart';
 /// PostViewAllOfRecentComments
 ///
 /// Properties:
-/// * [commentId]
-/// * [authorId]
-/// * [text]
-/// * [createdAt]
+/// * [commentId] 
+/// * [authorId] 
+/// * [text] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class PostViewAllOfRecentComments implements Built<PostViewAllOfRecentComments, PostViewAllOfRecentCommentsBuilder> {
   @BuiltValueField(wireName: r'commentId')

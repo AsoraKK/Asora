@@ -22,7 +22,7 @@ class PrivacyApi {
   const PrivacyApi(this._dio, this._serializers);
 
   /// Delete own account (GDPR Article 17)
-  /// Permanently deletes the authenticated user&#39;s account and anonymises all authored content. Requires the &#x60;X-Confirm-Delete: true&#x60; header to guard against accidental invocations. This action is **irreversible**.
+  /// Permanently deletes the authenticated user&#39;s account and anonymises all authored content. Requires the &#x60;X-Confirm-Delete: true&#x60; header to guard against accidental invocations. This action is **irreversible**. 
   ///
   /// Parameters:
   /// * [xConfirmDelete] - Must be set to \"true\" to confirm deletion
@@ -35,7 +35,7 @@ class PrivacyApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AccountDeleteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AccountDeleteResponse>> deleteUserAccount({
+  Future<Response<AccountDeleteResponse>> deleteUserAccount({ 
     required String xConfirmDelete,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -104,7 +104,7 @@ class PrivacyApi {
   }
 
   /// Export personal data (GDPR Article 20)
-  /// Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The &#x60;X-Export-ID&#x60; response header contains the export identifier for tracking.
+  /// Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The &#x60;X-Export-ID&#x60; response header contains the export identifier for tracking. 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -116,7 +116,7 @@ class PrivacyApi {
   ///
   /// Returns a [Future] containing a [Response] with a [DSRExportResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<DSRExportResponse>> exportUserData({
+  Future<Response<DSRExportResponse>> exportUserData({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

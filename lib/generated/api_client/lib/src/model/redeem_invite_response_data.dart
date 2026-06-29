@@ -12,10 +12,10 @@ part 'redeem_invite_response_data.g.dart';
 /// RedeemInviteResponseData
 ///
 /// Properties:
-/// * [accessToken]
-/// * [refreshToken]
-/// * [tokenType]
-/// * [expiresIn]
+/// * [accessToken] 
+/// * [refreshToken] 
+/// * [tokenType] 
+/// * [expiresIn] 
 /// * [activated] - True when account was newly activated by this redemption
 @BuiltValue()
 abstract class RedeemInviteResponseData implements Built<RedeemInviteResponseData, RedeemInviteResponseDataBuilder> {

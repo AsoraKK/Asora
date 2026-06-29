@@ -62,7 +62,7 @@ Redeem a reward
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getRewardsApi();
-final String id = id_example; // String |
+final String id = id_example; // String | 
 
 try {
     final response = api.rewardsRedeemPost(id);
@@ -76,7 +76,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **id** | **String**|  | 
 
 ### Return type
 

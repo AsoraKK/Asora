@@ -13,8 +13,8 @@ part 'custom_feed_list_response.g.dart';
 /// CustomFeedListResponse
 ///
 /// Properties:
-/// * [items]
-/// * [nextCursor]
+/// * [items] 
+/// * [nextCursor] 
 @BuiltValue()
 abstract class CustomFeedListResponse implements Built<CustomFeedListResponse, CustomFeedListResponseBuilder> {
   @BuiltValueField(wireName: r'items')

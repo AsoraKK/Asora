@@ -12,9 +12,9 @@ part 'admin_appeal_audit_summary.g.dart';
 /// AdminAppealAuditSummary
 ///
 /// Properties:
-/// * [lastActorRole]
-/// * [lastAction]
-/// * [lastActionAt]
+/// * [lastActorRole] 
+/// * [lastAction] 
+/// * [lastActionAt] 
 @BuiltValue()
 abstract class AdminAppealAuditSummary implements Built<AdminAppealAuditSummary, AdminAppealAuditSummaryBuilder> {
   @BuiltValueField(wireName: r'lastActorRole')

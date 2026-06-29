@@ -11,11 +11,11 @@ part 'admin_flag_history_admin_action.g.dart';
 /// AdminFlagHistoryAdminAction
 ///
 /// Properties:
-/// * [type]
-/// * [at]
-/// * [action]
-/// * [reasonCode]
-/// * [note]
+/// * [type] 
+/// * [at] 
+/// * [action] 
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminFlagHistoryAdminAction implements Built<AdminFlagHistoryAdminAction, AdminFlagHistoryAdminActionBuilder> {
   @BuiltValueField(wireName: r'type')

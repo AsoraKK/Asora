@@ -13,11 +13,11 @@ part 'admin_flag_detail_flags.g.dart';
 /// AdminFlagDetailFlags
 ///
 /// Properties:
-/// * [flagId]
-/// * [status]
-/// * [flagCount]
-/// * [reporterCount]
-/// * [reasons]
+/// * [flagId] 
+/// * [status] 
+/// * [flagCount] 
+/// * [reporterCount] 
+/// * [reasons] 
 @BuiltValue()
 abstract class AdminFlagDetailFlags implements Built<AdminFlagDetailFlags, AdminFlagDetailFlagsBuilder> {
   @BuiltValueField(wireName: r'flagId')

@@ -11,10 +11,10 @@ part 'legal_hold_record.g.dart';
 /// LegalHoldRecord
 ///
 /// Properties:
-/// * [id]
-/// * [scope]
-/// * [scopeId]
-/// * [reason]
+/// * [id] 
+/// * [scope] 
+/// * [scopeId] 
+/// * [reason] 
 @BuiltValue()
 abstract class LegalHoldRecord implements Built<LegalHoldRecord, LegalHoldRecordBuilder> {
   @BuiltValueField(wireName: r'id')

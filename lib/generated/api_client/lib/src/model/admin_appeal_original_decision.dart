@@ -12,8 +12,8 @@ part 'admin_appeal_original_decision.g.dart';
 /// AdminAppealOriginalDecision
 ///
 /// Properties:
-/// * [decision]
-/// * [decidedAt]
+/// * [decision] 
+/// * [decidedAt] 
 @BuiltValue()
 abstract class AdminAppealOriginalDecision implements Built<AdminAppealOriginalDecision, AdminAppealOriginalDecisionBuilder> {
   @BuiltValueField(wireName: r'decision')

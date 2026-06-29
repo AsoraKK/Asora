@@ -14,8 +14,8 @@ part 'appeal_created_response_appeal.g.dart';
 /// Properties:
 /// * [id] - Generated appeal identifier
 /// * [caseId] - Linked moderation case
-/// * [status]
-/// * [createdAt]
+/// * [status] 
+/// * [createdAt] 
 @BuiltValue()
 abstract class AppealCreatedResponseAppeal implements Built<AppealCreatedResponseAppeal, AppealCreatedResponseAppealBuilder> {
   /// Generated appeal identifier

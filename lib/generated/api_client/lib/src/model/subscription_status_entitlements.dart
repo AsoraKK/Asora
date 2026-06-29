@@ -11,9 +11,9 @@ part 'subscription_status_entitlements.g.dart';
 /// SubscriptionStatusEntitlements
 ///
 /// Properties:
-/// * [dailyPosts]
-/// * [maxMediaSizeMB]
-/// * [maxMediaPerPost]
+/// * [dailyPosts] 
+/// * [maxMediaSizeMB] 
+/// * [maxMediaPerPost] 
 /// * [maxCustomFeeds] - Maximum custom feeds available to this tier.
 /// * [newsBoardAccess] - Whether this tier can read the News Board.
 /// * [postingRestricted] - Whether normal posting is product-limited beyond abuse controls.

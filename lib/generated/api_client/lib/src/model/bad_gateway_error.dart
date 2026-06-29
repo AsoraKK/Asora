@@ -12,7 +12,7 @@ part 'bad_gateway_error.g.dart';
 /// 502 – bad gateway (upstream service returned an invalid or unexpected response).
 ///
 /// Properties:
-/// * [error]
+/// * [error] 
 @BuiltValue()
 abstract class BadGatewayError implements Built<BadGatewayError, BadGatewayErrorBuilder> {
   @BuiltValueField(wireName: r'error')

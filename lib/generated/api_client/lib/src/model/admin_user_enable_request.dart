@@ -11,8 +11,8 @@ part 'admin_user_enable_request.g.dart';
 /// AdminUserEnableRequest
 ///
 /// Properties:
-/// * [reasonCode]
-/// * [note]
+/// * [reasonCode] 
+/// * [note] 
 @BuiltValue()
 abstract class AdminUserEnableRequest implements Built<AdminUserEnableRequest, AdminUserEnableRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')

@@ -12,10 +12,10 @@ part 'admin_flag_queue_flags.g.dart';
 /// AdminFlagQueueFlags
 ///
 /// Properties:
-/// * [flagId]
-/// * [flagCount]
-/// * [reasonCategories]
-/// * [lastFlaggedAt]
+/// * [flagId] 
+/// * [flagCount] 
+/// * [reasonCategories] 
+/// * [lastFlaggedAt] 
 @BuiltValue()
 abstract class AdminFlagQueueFlags implements Built<AdminFlagQueueFlags, AdminFlagQueueFlagsBuilder> {
   @BuiltValueField(wireName: r'flagId')

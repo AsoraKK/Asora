@@ -49,7 +49,7 @@ import 'package:asora_api_client/asora_api_client.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
 
 try {
     final response = await api.adminAppealsApprove(appealId, adminAppealDecisionRequest);

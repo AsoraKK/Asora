@@ -13,8 +13,8 @@ part 'admin_user_search_response.g.dart';
 /// AdminUserSearchResponse
 ///
 /// Properties:
-/// * [items]
-/// * [count]
+/// * [items] 
+/// * [count] 
 @BuiltValue()
 abstract class AdminUserSearchResponse implements Built<AdminUserSearchResponse, AdminUserSearchResponseBuilder> {
   @BuiltValueField(wireName: r'items')

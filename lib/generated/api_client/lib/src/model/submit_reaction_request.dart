@@ -12,9 +12,9 @@ part 'submit_reaction_request.g.dart';
 /// SubmitReactionRequest
 ///
 /// Properties:
-/// * [targetContentId]
-/// * [targetUserId]
-/// * [reactionType]
+/// * [targetContentId] 
+/// * [targetUserId] 
+/// * [reactionType] 
 @BuiltValue()
 abstract class SubmitReactionRequest implements Built<SubmitReactionRequest, SubmitReactionRequestBuilder> {
   @BuiltValueField(wireName: r'targetContentId')

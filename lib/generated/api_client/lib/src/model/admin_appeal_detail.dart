@@ -13,22 +13,22 @@ part 'admin_appeal_detail.g.dart';
 /// AdminAppealDetail
 ///
 /// Properties:
-/// * [appealId]
-/// * [contentId]
-/// * [authorId]
-/// * [submittedAt]
-/// * [status]
-/// * [appealType]
-/// * [appealReason]
-/// * [userStatement]
-/// * [evidenceUrls]
-/// * [internalNote]
-/// * [votesFor]
-/// * [votesAgainst]
-/// * [totalVotes]
-/// * [votingStatus]
-/// * [expiresAt]
-/// * [timeRemainingSeconds]
+/// * [appealId] 
+/// * [contentId] 
+/// * [authorId] 
+/// * [submittedAt] 
+/// * [status] 
+/// * [appealType] 
+/// * [appealReason] 
+/// * [userStatement] 
+/// * [evidenceUrls] 
+/// * [internalNote] 
+/// * [votesFor] 
+/// * [votesAgainst] 
+/// * [totalVotes] 
+/// * [votingStatus] 
+/// * [expiresAt] 
+/// * [timeRemainingSeconds] 
 @BuiltValue()
 abstract class AdminAppealDetail implements Built<AdminAppealDetail, AdminAppealDetailBuilder> {
   @BuiltValueField(wireName: r'appealId')

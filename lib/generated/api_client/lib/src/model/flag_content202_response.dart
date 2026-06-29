@@ -12,8 +12,8 @@ part 'flag_content202_response.g.dart';
 /// FlagContent202Response
 ///
 /// Properties:
-/// * [flagId]
-/// * [status]
+/// * [flagId] 
+/// * [status] 
 @BuiltValue()
 abstract class FlagContent202Response implements Built<FlagContent202Response, FlagContent202ResponseBuilder> {
   @BuiltValueField(wireName: r'flagId')

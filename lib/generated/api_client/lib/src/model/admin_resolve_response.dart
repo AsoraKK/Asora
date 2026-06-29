@@ -11,7 +11,7 @@ part 'admin_resolve_response.g.dart';
 /// AdminResolveResponse
 ///
 /// Properties:
-/// * [resolved]
+/// * [resolved] 
 @BuiltValue()
 abstract class AdminResolveResponse implements Built<AdminResolveResponse, AdminResolveResponseBuilder> {
   @BuiltValueField(wireName: r'resolved')

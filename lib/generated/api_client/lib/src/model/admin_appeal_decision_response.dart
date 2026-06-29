@@ -13,10 +13,10 @@ part 'admin_appeal_decision_response.g.dart';
 /// AdminAppealDecisionResponse
 ///
 /// Properties:
-/// * [appealId]
-/// * [status]
-/// * [contentId]
-/// * [contentStatus]
+/// * [appealId] 
+/// * [status] 
+/// * [contentId] 
+/// * [contentStatus] 
 @BuiltValue()
 abstract class AdminAppealDecisionResponse implements Built<AdminAppealDecisionResponse, AdminAppealDecisionResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
