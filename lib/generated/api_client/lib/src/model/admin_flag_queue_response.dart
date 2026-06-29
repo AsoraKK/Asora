@@ -139,3 +139,4 @@ class _$AdminFlagQueueResponseSerializer implements PrimitiveSerializer<AdminFla
     return result.build();
   }
 }
+

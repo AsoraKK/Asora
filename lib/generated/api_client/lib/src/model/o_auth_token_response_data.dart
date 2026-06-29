@@ -169,3 +169,4 @@ class OAuthTokenResponseDataTokenTypeEnum extends EnumClass {
   static BuiltSet<OAuthTokenResponseDataTokenTypeEnum> get values => _$oAuthTokenResponseDataTokenTypeEnumValues;
   static OAuthTokenResponseDataTokenTypeEnum valueOf(String name) => _$oAuthTokenResponseDataTokenTypeEnumValueOf(name);
 }
+

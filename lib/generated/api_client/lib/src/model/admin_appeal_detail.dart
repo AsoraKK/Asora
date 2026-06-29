@@ -381,3 +381,4 @@ class _$AdminAppealDetailSerializer implements PrimitiveSerializer<AdminAppealDe
     return result.build();
   }
 }
+

@@ -157,3 +157,4 @@ class _$AdminInviteBatchRequestSerializer implements PrimitiveSerializer<AdminIn
     return result.build();
   }
 }
+

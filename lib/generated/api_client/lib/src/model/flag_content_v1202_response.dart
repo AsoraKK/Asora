@@ -140,3 +140,4 @@ class FlagContentV1202ResponseStatusEnum extends EnumClass {
   static BuiltSet<FlagContentV1202ResponseStatusEnum> get values => _$flagContentV1202ResponseStatusEnumValues;
   static FlagContentV1202ResponseStatusEnum valueOf(String name) => _$flagContentV1202ResponseStatusEnumValueOf(name);
 }
+

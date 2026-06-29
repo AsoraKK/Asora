@@ -104,3 +104,4 @@ class _$ValidationErrorResponseSerializer implements PrimitiveSerializer<Validat
     return result.build();
   }
 }
+

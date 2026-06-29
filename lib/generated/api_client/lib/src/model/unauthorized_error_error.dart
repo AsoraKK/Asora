@@ -156,3 +156,4 @@ class UnauthorizedErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<UnauthorizedErrorErrorCodeEnum> get values => _$unauthorizedErrorErrorCodeEnumValues;
   static UnauthorizedErrorErrorCodeEnum valueOf(String name) => _$unauthorizedErrorErrorCodeEnumValueOf(name);
 }
+

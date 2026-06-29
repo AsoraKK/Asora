@@ -159,3 +159,4 @@ class _$LegalHoldRecordSerializer implements PrimitiveSerializer<LegalHoldRecord
     return result.build();
   }
 }
+

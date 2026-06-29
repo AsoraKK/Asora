@@ -141,3 +141,4 @@ class _$ModerationAppealRequestSerializer implements PrimitiveSerializer<Moderat
     return result.build();
   }
 }
+

@@ -188,3 +188,4 @@ class SubmitReactionResponseAntiGamingStatusEnum extends EnumClass {
   static BuiltSet<SubmitReactionResponseAntiGamingStatusEnum> get values => _$submitReactionResponseAntiGamingStatusEnumValues;
   static SubmitReactionResponseAntiGamingStatusEnum valueOf(String name) => _$submitReactionResponseAntiGamingStatusEnumValueOf(name);
 }
+

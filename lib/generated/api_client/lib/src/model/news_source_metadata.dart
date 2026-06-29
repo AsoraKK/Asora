@@ -274,3 +274,4 @@ class NewsSourceMetadataIngestMethodEnum extends EnumClass {
   static BuiltSet<NewsSourceMetadataIngestMethodEnum> get values => _$newsSourceMetadataIngestMethodEnumValues;
   static NewsSourceMetadataIngestMethodEnum valueOf(String name) => _$newsSourceMetadataIngestMethodEnumValueOf(name);
 }
+

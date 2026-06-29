@@ -119,3 +119,4 @@ class _$AdminUserDisableRequestSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
+

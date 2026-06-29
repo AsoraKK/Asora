@@ -15,3 +15,5 @@ Name | Type | Description | Notes
 **activated** | **bool** | True when account was newly activated by this redemption |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

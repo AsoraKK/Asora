@@ -159,3 +159,4 @@ class _$GetMyAppeals200ResponseItemsInnerSerializer implements PrimitiveSerializ
     return result.build();
   }
 }
+

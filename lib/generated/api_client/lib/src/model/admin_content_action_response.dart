@@ -145,3 +145,4 @@ class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<Admi
     return result.build();
   }
 }
+

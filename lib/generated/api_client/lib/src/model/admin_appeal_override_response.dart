@@ -158,3 +158,4 @@ class AdminAppealOverrideResponseStatusEnum extends EnumClass {
   static BuiltSet<AdminAppealOverrideResponseStatusEnum> get values => _$adminAppealOverrideResponseStatusEnumValues;
   static AdminAppealOverrideResponseStatusEnum valueOf(String name) => _$adminAppealOverrideResponseStatusEnumValueOf(name);
 }
+

@@ -17,3 +17,5 @@ Name | Type | Description | Notes
 **reason** | **String** | Additional context for specialized scopes (e.g. auth backoff) | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

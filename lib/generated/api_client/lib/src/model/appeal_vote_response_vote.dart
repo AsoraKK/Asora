@@ -168,3 +168,4 @@ class AppealVoteResponseVoteVoteEnum extends EnumClass {
   static BuiltSet<AppealVoteResponseVoteVoteEnum> get values => _$appealVoteResponseVoteVoteEnumValues;
   static AppealVoteResponseVoteVoteEnum valueOf(String name) => _$appealVoteResponseVoteVoteEnumValueOf(name);
 }
+

@@ -233,3 +233,4 @@ class UserInfoResponseDataTierEnum extends EnumClass {
   static BuiltSet<UserInfoResponseDataTierEnum> get values => _$userInfoResponseDataTierEnumValues;
   static UserInfoResponseDataTierEnum valueOf(String name) => _$userInfoResponseDataTierEnumValueOf(name);
 }
+

@@ -104,3 +104,4 @@ class _$InviteValidationPayloadSerializer implements PrimitiveSerializer<InviteV
     return result.build();
   }
 }
+

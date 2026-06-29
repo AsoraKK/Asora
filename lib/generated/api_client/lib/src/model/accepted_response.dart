@@ -118,3 +118,4 @@ class AcceptedResponseMessageEnum extends EnumClass {
   static BuiltSet<AcceptedResponseMessageEnum> get values => _$acceptedResponseMessageEnumValues;
   static AcceptedResponseMessageEnum valueOf(String name) => _$acceptedResponseMessageEnumValueOf(name);
 }
+

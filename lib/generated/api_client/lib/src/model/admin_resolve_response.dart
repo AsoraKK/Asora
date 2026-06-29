@@ -105,3 +105,4 @@ class _$AdminResolveResponseSerializer implements PrimitiveSerializer<AdminResol
     return result.build();
   }
 }
+

@@ -141,3 +141,4 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
     return result.build();
   }
 }
+

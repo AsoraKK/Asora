@@ -161,3 +161,4 @@ class _$ErrorResponseErrorSerializer implements PrimitiveSerializer<ErrorRespons
     return result.build();
   }
 }
+

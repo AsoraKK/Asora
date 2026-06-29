@@ -181,3 +181,4 @@ class _$AdminFlagDetailContentSerializer implements PrimitiveSerializer<AdminFla
     return result.build();
   }
 }
+

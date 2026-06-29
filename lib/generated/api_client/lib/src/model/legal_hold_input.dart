@@ -154,3 +154,4 @@ class LegalHoldInputScopeEnum extends EnumClass {
   static BuiltSet<LegalHoldInputScopeEnum> get values => _$legalHoldInputScopeEnumValues;
   static LegalHoldInputScopeEnum valueOf(String name) => _$legalHoldInputScopeEnumValueOf(name);
 }
+

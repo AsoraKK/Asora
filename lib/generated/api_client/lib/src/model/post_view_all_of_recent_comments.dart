@@ -159,3 +159,4 @@ class _$PostViewAllOfRecentCommentsSerializer implements PrimitiveSerializer<Pos
     return result.build();
   }
 }
+

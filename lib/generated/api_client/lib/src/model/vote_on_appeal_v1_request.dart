@@ -137,3 +137,4 @@ class VoteOnAppealV1RequestVoteEnum extends EnumClass {
   static BuiltSet<VoteOnAppealV1RequestVoteEnum> get values => _$voteOnAppealV1RequestVoteEnumValues;
   static VoteOnAppealV1RequestVoteEnum valueOf(String name) => _$voteOnAppealV1RequestVoteEnumValueOf(name);
 }
+

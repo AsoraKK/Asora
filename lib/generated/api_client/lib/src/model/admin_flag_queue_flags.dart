@@ -160,3 +160,4 @@ class _$AdminFlagQueueFlagsSerializer implements PrimitiveSerializer<AdminFlagQu
     return result.build();
   }
 }
+

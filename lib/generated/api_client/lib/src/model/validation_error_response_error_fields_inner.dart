@@ -137,3 +137,4 @@ class _$ValidationErrorResponseErrorFieldsInnerSerializer implements PrimitiveSe
     return result.build();
   }
 }
+

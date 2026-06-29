@@ -154,3 +154,4 @@ class _$InviteValidationResponseSerializer implements PrimitiveSerializer<Invite
     return result.build();
   }
 }
+

@@ -177,3 +177,4 @@ class _$GetHealth200ResponseSerializer implements PrimitiveSerializer<GetHealth2
     return result.build();
   }
 }
+

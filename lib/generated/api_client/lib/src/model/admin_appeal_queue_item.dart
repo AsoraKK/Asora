@@ -308,3 +308,4 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
     return result.build();
   }
 }
+

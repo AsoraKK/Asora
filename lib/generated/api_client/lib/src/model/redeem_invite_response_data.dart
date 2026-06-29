@@ -183,3 +183,4 @@ class RedeemInviteResponseDataTokenTypeEnum extends EnumClass {
   static BuiltSet<RedeemInviteResponseDataTokenTypeEnum> get values => _$redeemInviteResponseDataTokenTypeEnumValues;
   static RedeemInviteResponseDataTokenTypeEnum valueOf(String name) => _$redeemInviteResponseDataTokenTypeEnumValueOf(name);
 }
+

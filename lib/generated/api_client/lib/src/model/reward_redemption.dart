@@ -214,3 +214,4 @@ class RewardRedemptionStatusEnum extends EnumClass {
   static BuiltSet<RewardRedemptionStatusEnum> get values => _$rewardRedemptionStatusEnumValues;
   static RewardRedemptionStatusEnum valueOf(String name) => _$rewardRedemptionStatusEnumValueOf(name);
 }
+

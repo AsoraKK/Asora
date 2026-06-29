@@ -160,3 +160,4 @@ class AdminAppealOverrideRequestReasonCodeEnum extends EnumClass {
   static BuiltSet<AdminAppealOverrideRequestReasonCodeEnum> get values => _$adminAppealOverrideRequestReasonCodeEnumValues;
   static AdminAppealOverrideRequestReasonCodeEnum valueOf(String name) => _$adminAppealOverrideRequestReasonCodeEnumValueOf(name);
 }
+

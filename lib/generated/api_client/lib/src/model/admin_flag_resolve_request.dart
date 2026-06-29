@@ -121,3 +121,4 @@ class _$AdminFlagResolveRequestSerializer implements PrimitiveSerializer<AdminFl
     return result.build();
   }
 }
+

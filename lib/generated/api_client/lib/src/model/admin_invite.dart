@@ -320,3 +320,4 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
     return result.build();
   }
 }
+

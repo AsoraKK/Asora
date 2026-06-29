@@ -293,3 +293,4 @@ class UpdatePostRequestAiLabelEnum extends EnumClass {
   static BuiltSet<UpdatePostRequestAiLabelEnum> get values => _$updatePostRequestAiLabelEnumValues;
   static UpdatePostRequestAiLabelEnum valueOf(String name) => _$updatePostRequestAiLabelEnumValueOf(name);
 }
+

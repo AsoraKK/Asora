@@ -141,3 +141,4 @@ class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlag
     return result.build();
   }
 }
+

@@ -121,3 +121,4 @@ class _$AdminUserSearchResponseSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
+

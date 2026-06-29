@@ -124,3 +124,4 @@ class _$AdminTestDataPurgeRequestSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
+

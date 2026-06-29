@@ -138,3 +138,4 @@ class AdminAppealOriginalDecisionDecisionEnum extends EnumClass {
   static BuiltSet<AdminAppealOriginalDecisionDecisionEnum> get values => _$adminAppealOriginalDecisionDecisionEnumValues;
   static AdminAppealOriginalDecisionDecisionEnum valueOf(String name) => _$adminAppealOriginalDecisionDecisionEnumValueOf(name);
 }
+

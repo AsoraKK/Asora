@@ -222,3 +222,4 @@ class DsrRequestSummaryTypeEnum extends EnumClass {
   static BuiltSet<DsrRequestSummaryTypeEnum> get values => _$dsrRequestSummaryTypeEnumValues;
   static DsrRequestSummaryTypeEnum valueOf(String name) => _$dsrRequestSummaryTypeEnumValueOf(name);
 }
+

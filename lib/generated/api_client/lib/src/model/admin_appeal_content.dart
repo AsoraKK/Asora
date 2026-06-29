@@ -161,3 +161,4 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
     return result.build();
   }
 }
+

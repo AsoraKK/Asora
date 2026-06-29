@@ -124,3 +124,4 @@ class AdminSetUserTierRequestTierEnum extends EnumClass {
   static BuiltSet<AdminSetUserTierRequestTierEnum> get values => _$adminSetUserTierRequestTierEnumValues;
   static AdminSetUserTierRequestTierEnum valueOf(String name) => _$adminSetUserTierRequestTierEnumValueOf(name);
 }
+

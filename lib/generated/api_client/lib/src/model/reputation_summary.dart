@@ -400,3 +400,4 @@ class ReputationSummaryRewardEligibilityStatusEnum extends EnumClass {
   static BuiltSet<ReputationSummaryRewardEligibilityStatusEnum> get values => _$reputationSummaryRewardEligibilityStatusEnumValues;
   static ReputationSummaryRewardEligibilityStatusEnum valueOf(String name) => _$reputationSummaryRewardEligibilityStatusEnumValueOf(name);
 }
+

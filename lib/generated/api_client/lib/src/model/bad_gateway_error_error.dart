@@ -154,3 +154,4 @@ class BadGatewayErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<BadGatewayErrorErrorCodeEnum> get values => _$badGatewayErrorErrorCodeEnumValues;
   static BadGatewayErrorErrorCodeEnum valueOf(String name) => _$badGatewayErrorErrorCodeEnumValueOf(name);
 }
+

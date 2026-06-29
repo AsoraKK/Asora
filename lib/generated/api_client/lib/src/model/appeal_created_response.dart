@@ -104,3 +104,4 @@ class _$AppealCreatedResponseSerializer implements PrimitiveSerializer<AppealCre
     return result.build();
   }
 }
+

@@ -163,3 +163,4 @@ class _$AdminAppealDecisionResponseSerializer implements PrimitiveSerializer<Adm
     return result.build();
   }
 }
+

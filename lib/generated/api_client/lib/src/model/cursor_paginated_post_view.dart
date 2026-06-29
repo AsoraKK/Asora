@@ -124,3 +124,4 @@ class _$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<CursorP
     return result.build();
   }
 }
+

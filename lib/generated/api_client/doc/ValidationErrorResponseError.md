@@ -14,3 +14,5 @@ Name | Type | Description | Notes
 **fields** | [**BuiltList&lt;ValidationErrorResponseErrorFieldsInner&gt;**](ValidationErrorResponseErrorFieldsInner.md) | Per-field validation errors | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

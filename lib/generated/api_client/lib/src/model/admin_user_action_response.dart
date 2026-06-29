@@ -125,3 +125,4 @@ class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
+

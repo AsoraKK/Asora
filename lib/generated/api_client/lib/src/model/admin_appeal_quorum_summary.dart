@@ -119,3 +119,4 @@ class _$AdminAppealQuorumSummarySerializer implements PrimitiveSerializer<AdminA
     return result.build();
   }
 }
+

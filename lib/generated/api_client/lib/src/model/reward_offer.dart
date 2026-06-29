@@ -217,3 +217,4 @@ class _$RewardOfferSerializer implements PrimitiveSerializer<RewardOffer> {
     return result.build();
   }
 }
+

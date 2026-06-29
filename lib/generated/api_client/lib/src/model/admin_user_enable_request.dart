@@ -123,3 +123,4 @@ class _$AdminUserEnableRequestSerializer implements PrimitiveSerializer<AdminUse
     return result.build();
   }
 }
+

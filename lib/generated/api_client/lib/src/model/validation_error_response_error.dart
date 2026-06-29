@@ -158,3 +158,4 @@ class _$ValidationErrorResponseErrorSerializer implements PrimitiveSerializer<Va
     return result.build();
   }
 }
+

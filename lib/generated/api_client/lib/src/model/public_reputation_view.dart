@@ -184,3 +184,4 @@ class PublicReputationViewReputationStatusEnum extends EnumClass {
   static BuiltSet<PublicReputationViewReputationStatusEnum> get values => _$publicReputationViewReputationStatusEnumValues;
   static PublicReputationViewReputationStatusEnum valueOf(String name) => _$publicReputationViewReputationStatusEnumValueOf(name);
 }
+

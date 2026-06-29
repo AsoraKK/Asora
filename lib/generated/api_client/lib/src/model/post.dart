@@ -360,3 +360,4 @@ class PostVisibilityEnum extends EnumClass {
   static BuiltSet<PostVisibilityEnum> get values => _$postVisibilityEnumValues;
   static PostVisibilityEnum valueOf(String name) => _$postVisibilityEnumValueOf(name);
 }
+

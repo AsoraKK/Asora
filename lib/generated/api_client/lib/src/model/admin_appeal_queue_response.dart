@@ -139,3 +139,4 @@ class _$AdminAppealQueueResponseSerializer implements PrimitiveSerializer<AdminA
     return result.build();
   }
 }
+

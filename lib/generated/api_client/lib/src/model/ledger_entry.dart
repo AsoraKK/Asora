@@ -408,3 +408,4 @@ class LedgerEntryStatusEnum extends EnumClass {
   static BuiltSet<LedgerEntryStatusEnum> get values => _$ledgerEntryStatusEnumValues;
   static LedgerEntryStatusEnum valueOf(String name) => _$ledgerEntryStatusEnumValueOf(name);
 }
+

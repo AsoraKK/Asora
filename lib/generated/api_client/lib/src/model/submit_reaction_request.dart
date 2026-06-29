@@ -164,3 +164,4 @@ class SubmitReactionRequestReactionTypeEnum extends EnumClass {
   static BuiltSet<SubmitReactionRequestReactionTypeEnum> get values => _$submitReactionRequestReactionTypeEnumValues;
   static SubmitReactionRequestReactionTypeEnum valueOf(String name) => _$submitReactionRequestReactionTypeEnumValueOf(name);
 }
+

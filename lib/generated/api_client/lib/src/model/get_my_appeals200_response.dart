@@ -126,3 +126,4 @@ class _$GetMyAppeals200ResponseSerializer implements PrimitiveSerializer<GetMyAp
     return result.build();
   }
 }
+

@@ -139,3 +139,4 @@ class _$AdminAuditListResponseSerializer implements PrimitiveSerializer<AdminAud
     return result.build();
   }
 }
+

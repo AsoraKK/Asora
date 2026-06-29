@@ -221,3 +221,4 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
     return result.build();
   }
 }
+

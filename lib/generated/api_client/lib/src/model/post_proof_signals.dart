@@ -141,3 +141,4 @@ class _$PostProofSignalsSerializer implements PrimitiveSerializer<PostProofSigna
     return result.build();
   }
 }
+

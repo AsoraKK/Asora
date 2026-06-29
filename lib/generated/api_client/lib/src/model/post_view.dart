@@ -635,3 +635,4 @@ class PostViewTrustStatusEnum extends EnumClass {
   static BuiltSet<PostViewTrustStatusEnum> get values => _$postViewTrustStatusEnumValues;
   static PostViewTrustStatusEnum valueOf(String name) => _$postViewTrustStatusEnumValueOf(name);
 }
+

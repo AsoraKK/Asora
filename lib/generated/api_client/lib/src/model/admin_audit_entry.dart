@@ -305,3 +305,4 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
     return result.build();
   }
 }
+

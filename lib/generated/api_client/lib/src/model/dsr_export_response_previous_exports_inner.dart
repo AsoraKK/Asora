@@ -158,3 +158,4 @@ class DSRExportResponsePreviousExportsInnerTypeEnum extends EnumClass {
   static BuiltSet<DSRExportResponsePreviousExportsInnerTypeEnum> get values => _$dSRExportResponsePreviousExportsInnerTypeEnumValues;
   static DSRExportResponsePreviousExportsInnerTypeEnum valueOf(String name) => _$dSRExportResponsePreviousExportsInnerTypeEnumValueOf(name);
 }
+

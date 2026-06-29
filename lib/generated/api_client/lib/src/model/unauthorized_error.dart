@@ -104,3 +104,4 @@ class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedE
     return result.build();
   }
 }
+

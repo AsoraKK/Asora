@@ -124,3 +124,4 @@ class _$CustomFeedListResponseSerializer implements PrimitiveSerializer<CustomFe
     return result.build();
   }
 }
+

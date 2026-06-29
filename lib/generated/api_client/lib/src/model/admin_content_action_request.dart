@@ -139,3 +139,4 @@ class _$AdminContentActionRequestSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
+

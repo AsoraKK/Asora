@@ -140,3 +140,4 @@ class CreatePost201ResponseStatusEnum extends EnumClass {
   static BuiltSet<CreatePost201ResponseStatusEnum> get values => _$createPost201ResponseStatusEnumValues;
   static CreatePost201ResponseStatusEnum valueOf(String name) => _$createPost201ResponseStatusEnumValueOf(name);
 }
+

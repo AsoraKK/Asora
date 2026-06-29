@@ -156,3 +156,4 @@ class ForbiddenErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<ForbiddenErrorErrorCodeEnum> get values => _$forbiddenErrorErrorCodeEnumValues;
   static ForbiddenErrorErrorCodeEnum valueOf(String name) => _$forbiddenErrorErrorCodeEnumValueOf(name);
 }
+

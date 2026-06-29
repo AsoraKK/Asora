@@ -103,3 +103,4 @@ class _$LegalHoldClearSerializer implements PrimitiveSerializer<LegalHoldClear> 
     return result.build();
   }
 }
+

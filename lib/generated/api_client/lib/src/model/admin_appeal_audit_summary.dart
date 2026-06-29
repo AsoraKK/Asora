@@ -154,3 +154,4 @@ class AdminAppealAuditSummaryLastActorRoleEnum extends EnumClass {
   static BuiltSet<AdminAppealAuditSummaryLastActorRoleEnum> get values => _$adminAppealAuditSummaryLastActorRoleEnumValues;
   static AdminAppealAuditSummaryLastActorRoleEnum valueOf(String name) => _$adminAppealAuditSummaryLastActorRoleEnumValueOf(name);
 }
+

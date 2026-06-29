@@ -136,3 +136,4 @@ class _$OAuthTokenResponseSerializer implements PrimitiveSerializer<OAuthTokenRe
     return result.build();
   }
 }
+

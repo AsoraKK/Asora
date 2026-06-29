@@ -136,3 +136,4 @@ class _$UserInfoResponseSerializer implements PrimitiveSerializer<UserInfoRespon
     return result.build();
   }
 }
+

@@ -168,3 +168,4 @@ class AppealCreatedResponseAppealStatusEnum extends EnumClass {
   static BuiltSet<AppealCreatedResponseAppealStatusEnum> get values => _$appealCreatedResponseAppealStatusEnumValues;
   static AppealCreatedResponseAppealStatusEnum valueOf(String name) => _$appealCreatedResponseAppealStatusEnumValueOf(name);
 }
+

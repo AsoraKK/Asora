@@ -175,3 +175,4 @@ class ServiceUnavailableErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<ServiceUnavailableErrorErrorCodeEnum> get values => _$serviceUnavailableErrorErrorCodeEnumValues;
   static ServiceUnavailableErrorErrorCodeEnum valueOf(String name) => _$serviceUnavailableErrorErrorCodeEnumValueOf(name);
 }
+

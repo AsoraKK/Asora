@@ -138,3 +138,4 @@ class ReviewAppealedContentRequestDecisionEnum extends EnumClass {
   static BuiltSet<ReviewAppealedContentRequestDecisionEnum> get values => _$reviewAppealedContentRequestDecisionEnumValues;
   static ReviewAppealedContentRequestDecisionEnum valueOf(String name) => _$reviewAppealedContentRequestDecisionEnumValueOf(name);
 }
+

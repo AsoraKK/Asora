@@ -104,3 +104,4 @@ class _$BadGatewayErrorSerializer implements PrimitiveSerializer<BadGatewayError
     return result.build();
   }
 }
+

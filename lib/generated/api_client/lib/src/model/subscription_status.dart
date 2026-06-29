@@ -265,3 +265,4 @@ class SubscriptionStatusProviderEnum extends EnumClass {
   static BuiltSet<SubscriptionStatusProviderEnum> get values => _$subscriptionStatusProviderEnumValues;
   static SubscriptionStatusProviderEnum valueOf(String name) => _$subscriptionStatusProviderEnumValueOf(name);
 }
+

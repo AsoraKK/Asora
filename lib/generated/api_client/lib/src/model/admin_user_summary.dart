@@ -197,3 +197,4 @@ class _$AdminUserSummarySerializer implements PrimitiveSerializer<AdminUserSumma
     return result.build();
   }
 }
+

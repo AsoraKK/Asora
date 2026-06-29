@@ -104,3 +104,4 @@ class _$ForbiddenErrorSerializer implements PrimitiveSerializer<ForbiddenError> 
     return result.build();
   }
 }
+

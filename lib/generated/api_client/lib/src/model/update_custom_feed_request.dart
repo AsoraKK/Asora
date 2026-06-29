@@ -274,3 +274,4 @@ class UpdateCustomFeedRequestSortingEnum extends EnumClass {
   static BuiltSet<UpdateCustomFeedRequestSortingEnum> get values => _$updateCustomFeedRequestSortingEnumValues;
   static UpdateCustomFeedRequestSortingEnum valueOf(String name) => _$updateCustomFeedRequestSortingEnumValueOf(name);
 }
+

@@ -104,3 +104,4 @@ class _$AppealVoteResponseSerializer implements PrimitiveSerializer<AppealVoteRe
     return result.build();
   }
 }
+

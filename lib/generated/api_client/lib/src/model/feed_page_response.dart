@@ -123,3 +123,4 @@ class _$FeedPageResponseSerializer implements PrimitiveSerializer<FeedPageRespon
     return result.build();
   }
 }
+

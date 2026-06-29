@@ -322,3 +322,4 @@ class CustomFeedDefinitionSortingEnum extends EnumClass {
   static BuiltSet<CustomFeedDefinitionSortingEnum> get values => _$customFeedDefinitionSortingEnumValues;
   static CustomFeedDefinitionSortingEnum valueOf(String name) => _$customFeedDefinitionSortingEnumValueOf(name);
 }
+

@@ -123,3 +123,4 @@ class _$LedgerPageSerializer implements PrimitiveSerializer<LedgerPage> {
     return result.build();
   }
 }
+

@@ -135,3 +135,4 @@ class _$AdminAppealVoteSummarySerializer implements PrimitiveSerializer<AdminApp
     return result.build();
   }
 }
+

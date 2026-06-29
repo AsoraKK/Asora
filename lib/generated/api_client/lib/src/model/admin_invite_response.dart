@@ -254,3 +254,4 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     return result.build();
   }
 }
+

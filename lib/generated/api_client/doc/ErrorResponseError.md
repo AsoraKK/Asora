@@ -14,3 +14,5 @@ Name | Type | Description | Notes
 **details** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Optional structured details (e.g. field-level validation errors) | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+
