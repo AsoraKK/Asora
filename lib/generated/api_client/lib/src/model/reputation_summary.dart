@@ -12,20 +12,20 @@ part 'reputation_summary.g.dart';
 /// ReputationSummary
 ///
 /// Properties:
-/// * [userId] 
-/// * [reputationLevel] 
-/// * [reputationStatus] 
-/// * [reputationBand] 
-/// * [humanContributionScore] 
-/// * [contentQualityScore] 
-/// * [behaviourTrustScore] 
-/// * [interactionQualityScore] 
-/// * [verificationStrengthScore] 
-/// * [communityTrustScore] 
-/// * [publicFeedEligibilityStatus] 
-/// * [rewardEligibilityStatus] 
-/// * [lastCalculatedAt] 
-/// * [version] 
+/// * [userId]
+/// * [reputationLevel]
+/// * [reputationStatus]
+/// * [reputationBand]
+/// * [humanContributionScore]
+/// * [contentQualityScore]
+/// * [behaviourTrustScore]
+/// * [interactionQualityScore]
+/// * [verificationStrengthScore]
+/// * [communityTrustScore]
+/// * [publicFeedEligibilityStatus]
+/// * [rewardEligibilityStatus]
+/// * [lastCalculatedAt]
+/// * [version]
 @BuiltValue()
 abstract class ReputationSummary implements Built<ReputationSummary, ReputationSummaryBuilder> {
   @BuiltValueField(wireName: r'userId')
@@ -400,4 +400,3 @@ class ReputationSummaryRewardEligibilityStatusEnum extends EnumClass {
   static BuiltSet<ReputationSummaryRewardEligibilityStatusEnum> get values => _$reputationSummaryRewardEligibilityStatusEnumValues;
   static ReputationSummaryRewardEligibilityStatusEnum valueOf(String name) => _$reputationSummaryRewardEligibilityStatusEnumValueOf(name);
 }
-

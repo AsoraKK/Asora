@@ -18,8 +18,7 @@ class _$AdminFlagDetailAppeal extends AdminFlagDetailAppeal {
 
   factory _$AdminFlagDetailAppeal([
     void Function(AdminFlagDetailAppealBuilder)? updates,
-  ]) =>
-      (AdminFlagDetailAppealBuilder()..update(updates))._build();
+  ]) => (AdminFlagDetailAppealBuilder()..update(updates))._build();
 
   _$AdminFlagDetailAppeal._({
     this.appealId,
@@ -30,8 +29,7 @@ class _$AdminFlagDetailAppeal extends AdminFlagDetailAppeal {
   @override
   AdminFlagDetailAppeal rebuild(
     void Function(AdminFlagDetailAppealBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagDetailAppealBuilder toBuilder() =>
@@ -119,7 +117,8 @@ class AdminFlagDetailAppealBuilder
   AdminFlagDetailAppeal build() => _build();
 
   _$AdminFlagDetailAppeal _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminFlagDetailAppeal._(
           appealId: appealId,
           status: status,

@@ -29,16 +29,16 @@ class AuthApi {
   const AuthApi(this._dio, this._serializers);
 
   /// OAuth2 authorization endpoint
-  /// Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the &#x60;redirect_uri&#x60; with an authorization &#x60;code&#x60; and the &#x60;state&#x60; parameter echoed back. 
+  /// Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the &#x60;redirect_uri&#x60; with an authorization &#x60;code&#x60; and the &#x60;state&#x60; parameter echoed back.
   ///
   /// Parameters:
-  /// * [responseType] 
-  /// * [clientId] 
-  /// * [redirectUri] 
-  /// * [state] 
+  /// * [responseType]
+  /// * [clientId]
+  /// * [redirectUri]
+  /// * [state]
   /// * [codeChallenge] - PKCE code challenge (S256 method required)
-  /// * [codeChallengeMethod] 
-  /// * [scope] 
+  /// * [codeChallengeMethod]
+  /// * [scope]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -48,7 +48,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [String] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<String>> authAuthorize({ 
+  Future<Response<String>> authAuthorize({
     required String responseType,
     required String clientId,
     required String redirectUri,
@@ -137,7 +137,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [InviteValidationResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<InviteValidationResponse>> authInviteValidate({ 
+  Future<Response<InviteValidationResponse>> authInviteValidate({
     String? code,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -204,7 +204,7 @@ class AuthApi {
   }
 
   /// Verify authentication token is valid
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -216,7 +216,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authPing({ 
+  Future<Response<JsonObject>> authPing({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -283,10 +283,10 @@ class AuthApi {
   }
 
   /// Redeem an invite code to activate account
-  /// Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned. 
+  /// Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned.
   ///
   /// Parameters:
-  /// * [redeemInviteRequest] 
+  /// * [redeemInviteRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -296,7 +296,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RedeemInviteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RedeemInviteResponse>> authRedeemInvite({ 
+  Future<Response<RedeemInviteResponse>> authRedeemInvite({
     required RedeemInviteRequest redeemInviteRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -384,10 +384,10 @@ class AuthApi {
   }
 
   /// Rotate a refresh token
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -397,7 +397,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authRefresh({ 
+  Future<Response<JsonObject>> authRefresh({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -484,10 +484,10 @@ class AuthApi {
   }
 
   /// Revoke an active session
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -497,7 +497,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authSessionsRevoke({ 
+  Future<Response<JsonObject>> authSessionsRevoke({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -584,10 +584,10 @@ class AuthApi {
   }
 
   /// Issue OAuth2 tokens
-  /// Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants. 
+  /// Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants.
   ///
   /// Parameters:
-  /// * [authTokenRequest] 
+  /// * [authTokenRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -597,7 +597,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [OAuthTokenResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<OAuthTokenResponse>> authToken({ 
+  Future<Response<OAuthTokenResponse>> authToken({
     required AuthTokenRequest authTokenRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -691,7 +691,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [UserInfoResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserInfoResponse>> authUserInfo({ 
+  Future<Response<UserInfoResponse>> authUserInfo({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -770,7 +770,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [UserInfoResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserInfoResponse>> authUserInfoPost({ 
+  Future<Response<UserInfoResponse>> authUserInfoPost({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

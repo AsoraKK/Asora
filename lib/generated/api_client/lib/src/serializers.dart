@@ -83,8 +83,12 @@ import 'package:asora_api_client/src/model/appeal_vote_response_vote.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error_error.dart';
+import 'package:asora_api_client/src/model/create_custom_feed_request.dart';
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
+import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
+import 'package:asora_api_client/src/model/custom_feed_definition.dart';
+import 'package:asora_api_client/src/model/custom_feed_list_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response_previous_exports_inner.dart';
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
@@ -112,8 +116,14 @@ import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
 import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response_data.dart';
+import 'package:asora_api_client/src/model/post.dart';
+import 'package:asora_api_client/src/model/post_proof_signals.dart';
+import 'package:asora_api_client/src/model/post_trust_timeline.dart';
+import 'package:asora_api_client/src/model/post_view.dart';
+import 'package:asora_api_client/src/model/post_view_all_of_recent_comments.dart';
 import 'package:asora_api_client/src/model/public_reputation_view.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
@@ -128,8 +138,12 @@ import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error_error.dart';
 import 'package:asora_api_client/src/model/submit_reaction_request.dart';
 import 'package:asora_api_client/src/model/submit_reaction_response.dart';
+import 'package:asora_api_client/src/model/subscription_status.dart';
+import 'package:asora_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error_error.dart';
+import 'package:asora_api_client/src/model/update_custom_feed_request.dart';
+import 'package:asora_api_client/src/model/update_post_request.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
 import 'package:asora_api_client/src/model/user_info_response_data.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
@@ -209,8 +223,12 @@ part 'serializers.g.dart';
   AuthTokenRequest,
   BadGatewayError,
   BadGatewayErrorError,
+  CreateCustomFeedRequest,
   CreatePost201Response,
   CreatePostRequest,
+  CursorPaginatedPostView,
+  CustomFeedDefinition,
+  CustomFeedListResponse,
   DSRExportResponse,
   DSRExportResponsePreviousExportsInner,
   DsrRequestInput,
@@ -238,8 +256,14 @@ part 'serializers.g.dart';
   LegalHoldRecord,
   ModerationAppealRequest,
   ModerationBlockedResponse,
+  NewsSourceMetadata,
   OAuthTokenResponse,
   OAuthTokenResponseData,
+  Post,$Post,
+  PostProofSignals,
+  PostTrustTimeline,
+  PostView,
+  PostViewAllOfRecentComments,
   PublicReputationView,
   RateLimitError,
   RedeemInviteRequest,
@@ -254,8 +278,12 @@ part 'serializers.g.dart';
   ServiceUnavailableErrorError,
   SubmitReactionRequest,
   SubmitReactionResponse,
+  SubscriptionStatus,
+  SubscriptionStatusEntitlements,
   UnauthorizedError,
   UnauthorizedErrorError,
+  UpdateCustomFeedRequest,
+  UpdatePostRequest,
   UserInfoResponse,
   UserInfoResponseData,
   ValidationErrorResponse,
@@ -269,6 +297,7 @@ Serializers serializers = (_$serializers.toBuilder()
         () => MapBuilder<String, JsonObject>(),
       )
       ..add(AdminInvite.serializer)
+      ..add(Post.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(const DateSerializer())

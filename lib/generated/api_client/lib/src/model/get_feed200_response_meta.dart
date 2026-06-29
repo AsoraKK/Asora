@@ -34,9 +34,9 @@ abstract class GetFeed200ResponseMeta
 
   GetFeed200ResponseMeta._();
 
-  factory GetFeed200ResponseMeta(
-          [void updates(GetFeed200ResponseMetaBuilder b)]) =
-      _$GetFeed200ResponseMeta;
+  factory GetFeed200ResponseMeta([
+    void updates(GetFeed200ResponseMetaBuilder b),
+  ]) = _$GetFeed200ResponseMeta;
 
   @BuiltValueHook(initializeBuilder: true)
   static void _defaults(GetFeed200ResponseMetaBuilder b) => b;
@@ -51,7 +51,7 @@ class _$GetFeed200ResponseMetaSerializer
   @override
   final Iterable<Type> types = const [
     GetFeed200ResponseMeta,
-    _$GetFeed200ResponseMeta
+    _$GetFeed200ResponseMeta,
   ];
 
   @override
@@ -78,16 +78,20 @@ class _$GetFeed200ResponseMetaSerializer
       yield r'timingsMs';
       yield serializers.serialize(
         object.timingsMs,
-        specifiedType:
-            const FullType(BuiltMap, [FullType(String), FullType(num)]),
+        specifiedType: const FullType(BuiltMap, [
+          FullType(String),
+          FullType(num),
+        ]),
       );
     }
     if (object.applied != null) {
       yield r'applied';
       yield serializers.serialize(
         object.applied,
-        specifiedType: const FullType(
-            BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(BuiltMap, [
+          FullType(String),
+          FullType.nullable(JsonObject),
+        ]),
       );
     }
   }
@@ -98,9 +102,11 @@ class _$GetFeed200ResponseMetaSerializer
     GetFeed200ResponseMeta object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -116,34 +122,43 @@ class _$GetFeed200ResponseMetaSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'count':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(int))
+                  as int;
           result.count = valueDes;
           break;
         case r'nextCursor':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(String),
+                  )
+                  as String?;
           if (valueDes == null) continue;
           result.nextCursor = valueDes;
           break;
         case r'timingsMs':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType:
-                const FullType(BuiltMap, [FullType(String), FullType(num)]),
-          ) as BuiltMap<String, num>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltMap, [
+                      FullType(String),
+                      FullType(num),
+                    ]),
+                  )
+                  as BuiltMap<String, num>;
           result.timingsMs.replace(valueDes);
           break;
         case r'applied':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(
-                BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltMap, [
+                      FullType(String),
+                      FullType.nullable(JsonObject),
+                    ]),
+                  )
+                  as BuiltMap<String, JsonObject?>;
           result.applied.replace(valueDes);
           break;
         default:

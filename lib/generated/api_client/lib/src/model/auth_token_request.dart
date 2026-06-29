@@ -216,4 +216,3 @@ class AuthTokenRequestGrantTypeEnum extends EnumClass {
   static BuiltSet<AuthTokenRequestGrantTypeEnum> get values => _$authTokenRequestGrantTypeEnumValues;
   static AuthTokenRequestGrantTypeEnum valueOf(String name) => _$authTokenRequestGrantTypeEnumValueOf(name);
 }
-

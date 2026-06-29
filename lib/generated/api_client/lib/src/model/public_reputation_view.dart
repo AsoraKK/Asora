@@ -12,11 +12,11 @@ part 'public_reputation_view.g.dart';
 /// PublicReputationView
 ///
 /// Properties:
-/// * [userId] 
-/// * [reputationLevel] 
-/// * [reputationStatus] 
-/// * [reputationBand] 
-/// * [levelName] 
+/// * [userId]
+/// * [reputationLevel]
+/// * [reputationStatus]
+/// * [reputationBand]
+/// * [levelName]
 @BuiltValue()
 abstract class PublicReputationView implements Built<PublicReputationView, PublicReputationViewBuilder> {
   @BuiltValueField(wireName: r'userId')
@@ -184,4 +184,3 @@ class PublicReputationViewReputationStatusEnum extends EnumClass {
   static BuiltSet<PublicReputationViewReputationStatusEnum> get values => _$publicReputationViewReputationStatusEnumValues;
   static PublicReputationViewReputationStatusEnum valueOf(String name) => _$publicReputationViewReputationStatusEnumValueOf(name);
 }
-

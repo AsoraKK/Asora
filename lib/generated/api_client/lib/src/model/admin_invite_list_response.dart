@@ -13,9 +13,9 @@ part 'admin_invite_list_response.g.dart';
 /// AdminInviteListResponse
 ///
 /// Properties:
-/// * [invites] 
-/// * [count] 
-/// * [nextCursor] 
+/// * [invites]
+/// * [count]
+/// * [nextCursor]
 @BuiltValue()
 abstract class AdminInviteListResponse implements Built<AdminInviteListResponse, AdminInviteListResponseBuilder> {
   @BuiltValueField(wireName: r'invites')
@@ -139,4 +139,3 @@ class _$AdminInviteListResponseSerializer implements PrimitiveSerializer<AdminIn
     return result.build();
   }
 }
-

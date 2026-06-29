@@ -49,7 +49,7 @@ import 'package:asora_api_client/asora_api_client.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
 try {
     final response = await api.adminAppealsApprove(appealId, adminAppealDecisionRequest);
@@ -136,7 +136,7 @@ Class | Method | HTTP request | Description
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsList**](doc/CustomFeedsApi.md#customfeedslist) | **GET** /custom-feeds | List custom feeds for the current user
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsUpdate**](doc/CustomFeedsApi.md#customfeedsupdate) | **PATCH** /custom-feeds/{id} | Update a custom feed
 [*FeedApi*](doc/FeedApi.md) | [**feedDiscover**](doc/FeedApi.md#feeddiscover) | **GET** /feed/discover | Return discovery/explore feed
-[*FeedApi*](doc/FeedApi.md) | [**feedNews**](doc/FeedApi.md#feednews) | **GET** /feed/news | Return news board feed
+[*FeedApi*](doc/FeedApi.md) | [**feedNews**](doc/FeedApi.md#feednews) | **GET** /feed/news | Return News Board feed
 [*FeedApi*](doc/FeedApi.md) | [**feedPublicGet**](doc/FeedApi.md#feedpublicget) | **GET** /feed/public | Retrieve public discovery feed
 [*FeedApi*](doc/FeedApi.md) | [**feedUser**](doc/FeedApi.md#feeduser) | **GET** /feed/user/{userId} | Return a public user&#39;s post feed
 [*FeedApi*](doc/FeedApi.md) | [**getFeed**](doc/FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
@@ -173,13 +173,14 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**postsBookmarkGet**](doc/PostsApi.md#postsbookmarkget) | **GET** /posts/{id}/bookmark | Get bookmark status for a post
 [*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Create a comment on a post
 [*PostsApi*](doc/PostsApi.md) | [**postsCommentsList**](doc/PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List comments on a post
+[*PostsApi*](doc/PostsApi.md) | [**postsCreate**](doc/PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsGet**](doc/PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
 [*PostsApi*](doc/PostsApi.md) | [**postsInsights**](doc/PostsApi.md#postsinsights) | **GET** /posts/{id}/insights | Get engagement insights for a post
 [*PostsApi*](doc/PostsApi.md) | [**postsLikeCreate**](doc/PostsApi.md#postslikecreate) | **POST** /posts/{id}/like | Like a post
 [*PostsApi*](doc/PostsApi.md) | [**postsLikeDelete**](doc/PostsApi.md#postslikedelete) | **DELETE** /posts/{id}/like | Unlike a post
 [*PostsApi*](doc/PostsApi.md) | [**postsLikeGet**](doc/PostsApi.md#postslikeget) | **GET** /posts/{id}/like | Get like status for a post
 [*PostsApi*](doc/PostsApi.md) | [**postsReceipt**](doc/PostsApi.md#postsreceipt) | **GET** /posts/{id}/receipt | Get read receipt for a post
-[*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post
+[*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsView**](doc/PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
 [*PrivacyApi*](doc/PrivacyApi.md) | [**deleteUserAccount**](doc/PrivacyApi.md#deleteuseraccount) | **DELETE** /user/delete | Delete own account (GDPR Article 17)
 [*PrivacyApi*](doc/PrivacyApi.md) | [**exportUserData**](doc/PrivacyApi.md#exportuserdata) | **GET** /user/export | Export personal data (GDPR Article 20)
@@ -276,8 +277,12 @@ Class | Method | HTTP request | Description
  - [AuthTokenRequest](doc/AuthTokenRequest.md)
  - [BadGatewayError](doc/BadGatewayError.md)
  - [BadGatewayErrorError](doc/BadGatewayErrorError.md)
+ - [CreateCustomFeedRequest](doc/CreateCustomFeedRequest.md)
  - [CreatePost201Response](doc/CreatePost201Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
+ - [CursorPaginatedPostView](doc/CursorPaginatedPostView.md)
+ - [CustomFeedDefinition](doc/CustomFeedDefinition.md)
+ - [CustomFeedListResponse](doc/CustomFeedListResponse.md)
  - [DSRExportResponse](doc/DSRExportResponse.md)
  - [DSRExportResponsePreviousExportsInner](doc/DSRExportResponsePreviousExportsInner.md)
  - [DsrRequestInput](doc/DsrRequestInput.md)
@@ -305,8 +310,14 @@ Class | Method | HTTP request | Description
  - [LegalHoldRecord](doc/LegalHoldRecord.md)
  - [ModerationAppealRequest](doc/ModerationAppealRequest.md)
  - [ModerationBlockedResponse](doc/ModerationBlockedResponse.md)
+ - [NewsSourceMetadata](doc/NewsSourceMetadata.md)
  - [OAuthTokenResponse](doc/OAuthTokenResponse.md)
  - [OAuthTokenResponseData](doc/OAuthTokenResponseData.md)
+ - [Post](doc/Post.md)
+ - [PostProofSignals](doc/PostProofSignals.md)
+ - [PostTrustTimeline](doc/PostTrustTimeline.md)
+ - [PostView](doc/PostView.md)
+ - [PostViewAllOfRecentComments](doc/PostViewAllOfRecentComments.md)
  - [PublicReputationView](doc/PublicReputationView.md)
  - [RateLimitError](doc/RateLimitError.md)
  - [RedeemInviteRequest](doc/RedeemInviteRequest.md)
@@ -321,8 +332,12 @@ Class | Method | HTTP request | Description
  - [ServiceUnavailableErrorError](doc/ServiceUnavailableErrorError.md)
  - [SubmitReactionRequest](doc/SubmitReactionRequest.md)
  - [SubmitReactionResponse](doc/SubmitReactionResponse.md)
+ - [SubscriptionStatus](doc/SubscriptionStatus.md)
+ - [SubscriptionStatusEntitlements](doc/SubscriptionStatusEntitlements.md)
  - [UnauthorizedError](doc/UnauthorizedError.md)
  - [UnauthorizedErrorError](doc/UnauthorizedErrorError.md)
+ - [UpdateCustomFeedRequest](doc/UpdateCustomFeedRequest.md)
+ - [UpdatePostRequest](doc/UpdatePostRequest.md)
  - [UserInfoResponse](doc/UserInfoResponse.md)
  - [UserInfoResponseData](doc/UserInfoResponseData.md)
  - [ValidationErrorResponse](doc/ValidationErrorResponse.md)
@@ -341,6 +356,3 @@ Authentication schemes defined for the API:
 
 
 ## Author
-
-
-

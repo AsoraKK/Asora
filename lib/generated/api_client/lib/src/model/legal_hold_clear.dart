@@ -11,7 +11,7 @@ part 'legal_hold_clear.g.dart';
 /// LegalHoldClear
 ///
 /// Properties:
-/// * [id] 
+/// * [id]
 @BuiltValue()
 abstract class LegalHoldClear implements Built<LegalHoldClear, LegalHoldClearBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -103,4 +103,3 @@ class _$LegalHoldClearSerializer implements PrimitiveSerializer<LegalHoldClear> 
     return result.build();
   }
 }
-

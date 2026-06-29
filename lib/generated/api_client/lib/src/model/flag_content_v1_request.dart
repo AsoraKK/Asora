@@ -180,4 +180,3 @@ class FlagContentV1RequestReasonEnum extends EnumClass {
   static BuiltSet<FlagContentV1RequestReasonEnum> get values => _$flagContentV1RequestReasonEnumValues;
   static FlagContentV1RequestReasonEnum valueOf(String name) => _$flagContentV1RequestReasonEnumValueOf(name);
 }
-

@@ -12,10 +12,10 @@ part 'admin_appeal_content.g.dart';
 /// AdminAppealContent
 ///
 /// Properties:
-/// * [contentId] 
-/// * [type] 
-/// * [createdAt] 
-/// * [preview] 
+/// * [contentId]
+/// * [type]
+/// * [createdAt]
+/// * [preview]
 @BuiltValue()
 abstract class AdminAppealContent implements Built<AdminAppealContent, AdminAppealContentBuilder> {
   @BuiltValueField(wireName: r'contentId')
@@ -161,4 +161,3 @@ class _$AdminAppealContentSerializer implements PrimitiveSerializer<AdminAppealC
     return result.build();
   }
 }
-

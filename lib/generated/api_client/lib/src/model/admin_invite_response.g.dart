@@ -32,8 +32,7 @@ class _$AdminInviteResponse extends AdminInviteResponse {
 
   factory _$AdminInviteResponse([
     void Function(AdminInviteResponseBuilder)? updates,
-  ]) =>
-      (AdminInviteResponseBuilder()..update(updates))._build();
+  ]) => (AdminInviteResponseBuilder()..update(updates))._build();
 
   _$AdminInviteResponse._({
     this.inviteCode,
@@ -51,8 +50,7 @@ class _$AdminInviteResponse extends AdminInviteResponse {
   @override
   AdminInviteResponse rebuild(
     void Function(AdminInviteResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteResponseBuilder toBuilder() =>
@@ -201,7 +199,8 @@ class AdminInviteResponseBuilder
   AdminInviteResponse build() => _build();
 
   _$AdminInviteResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminInviteResponse._(
           inviteCode: inviteCode,
           email: email,

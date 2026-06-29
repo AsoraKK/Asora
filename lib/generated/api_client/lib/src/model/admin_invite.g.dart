@@ -231,7 +231,8 @@ class $AdminInviteBuilder
   $AdminInvite build() => _build();
 
   _$$AdminInvite _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$$AdminInvite._(
           inviteCode: inviteCode,
           email: email,

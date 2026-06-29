@@ -12,7 +12,7 @@ part 'admin_set_user_tier_request.g.dart';
 /// AdminSetUserTierRequest
 ///
 /// Properties:
-/// * [tier] 
+/// * [tier]
 @BuiltValue()
 abstract class AdminSetUserTierRequest implements Built<AdminSetUserTierRequest, AdminSetUserTierRequestBuilder> {
   @BuiltValueField(wireName: r'tier')
@@ -124,4 +124,3 @@ class AdminSetUserTierRequestTierEnum extends EnumClass {
   static BuiltSet<AdminSetUserTierRequestTierEnum> get values => _$adminSetUserTierRequestTierEnumValues;
   static AdminSetUserTierRequestTierEnum valueOf(String name) => _$adminSetUserTierRequestTierEnumValueOf(name);
 }
-

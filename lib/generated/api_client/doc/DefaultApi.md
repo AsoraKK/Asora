@@ -24,7 +24,7 @@ Create a new post
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getDefaultApi();
-final CreatePostRequest createPostRequest = ; // CreatePostRequest | 
+final CreatePostRequest createPostRequest = ; // CreatePostRequest |
 
 try {
     final response = api.createPost(createPostRequest);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  | 
+ **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  |
 
 ### Return type
 
@@ -65,7 +65,7 @@ Flag content for moderation review
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getDefaultApi();
-final FlagContentRequest flagContentRequest = ; // FlagContentRequest | 
+final FlagContentRequest flagContentRequest = ; // FlagContentRequest |
 
 try {
     final response = api.flagContent(flagContentRequest);
@@ -79,7 +79,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **flagContentRequest** | [**FlagContentRequest**](FlagContentRequest.md)|  | 
+ **flagContentRequest** | [**FlagContentRequest**](FlagContentRequest.md)|  |
 
 ### Return type
 
@@ -121,8 +121,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Cursor for pagination | [optional] 
- **limit** | **int**| Number of items to return (1-50) | [optional] 
+ **cursor** | **String**| Cursor for pagination | [optional]
+ **limit** | **int**| Number of items to return (1-50) | [optional]
 
 ### Return type
 

@@ -164,4 +164,3 @@ class _$FeedPageResponseMetaSerializer implements PrimitiveSerializer<FeedPageRe
     return result.build();
   }
 }
-

@@ -27,7 +27,7 @@ Removes a previously placed legal hold, allowing normal data lifecycle operation
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPrivacyAdminApi();
-final LegalHoldClear legalHoldClear = ; // LegalHoldClear | 
+final LegalHoldClear legalHoldClear = ; // LegalHoldClear |
 
 try {
     api.clearLegalHold(legalHoldClear);
@@ -40,7 +40,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **legalHoldClear** | [**LegalHoldClear**](LegalHoldClear.md)|  | 
+ **legalHoldClear** | [**LegalHoldClear**](LegalHoldClear.md)|  |
 
 ### Return type
 
@@ -69,7 +69,7 @@ Queues a deletion job for a user's data as part of GDPR/CCPA right-to-erasure co
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPrivacyAdminApi();
-final DsrRequestInput dsrRequestInput = ; // DsrRequestInput | 
+final DsrRequestInput dsrRequestInput = ; // DsrRequestInput |
 
 try {
     final response = api.enqueueDsrDelete(dsrRequestInput);
@@ -83,7 +83,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **dsrRequestInput** | [**DsrRequestInput**](DsrRequestInput.md)|  | 
+ **dsrRequestInput** | [**DsrRequestInput**](DsrRequestInput.md)|  |
 
 ### Return type
 
@@ -112,7 +112,7 @@ Queues an export job for a user's data as part of GDPR/CCPA compliance. Returns 
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPrivacyAdminApi();
-final DsrRequestInput dsrRequestInput = {"userId":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","note":"User requested a copy of their account data."}; // DsrRequestInput | 
+final DsrRequestInput dsrRequestInput = {"userId":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","note":"User requested a copy of their account data."}; // DsrRequestInput |
 
 try {
     final response = api.enqueueDsrExport(dsrRequestInput);
@@ -126,7 +126,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **dsrRequestInput** | [**DsrRequestInput**](DsrRequestInput.md)|  | 
+ **dsrRequestInput** | [**DsrRequestInput**](DsrRequestInput.md)|  |
 
 ### Return type
 
@@ -155,7 +155,7 @@ Places a legal hold on a user's data, preventing deletion until the hold is clea
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPrivacyAdminApi();
-final LegalHoldInput legalHoldInput = ; // LegalHoldInput | 
+final LegalHoldInput legalHoldInput = ; // LegalHoldInput |
 
 try {
     final response = api.placeLegalHold(legalHoldInput);
@@ -169,7 +169,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **legalHoldInput** | [**LegalHoldInput**](LegalHoldInput.md)|  | 
+ **legalHoldInput** | [**LegalHoldInput**](LegalHoldInput.md)|  |
 
 ### Return type
 
@@ -185,4 +185,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

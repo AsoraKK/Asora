@@ -23,7 +23,7 @@ Delete my reaction
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReactionsApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     api.reactionsDelete(id);
@@ -36,7 +36,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -65,7 +65,7 @@ Records a structured reaction and applies anti-gaming controls before deciding w
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReactionsApi();
-final SubmitReactionRequest submitReactionRequest = ; // SubmitReactionRequest | 
+final SubmitReactionRequest submitReactionRequest = ; // SubmitReactionRequest |
 
 try {
     final response = api.reactionsPost(submitReactionRequest);
@@ -79,7 +79,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **submitReactionRequest** | [**SubmitReactionRequest**](SubmitReactionRequest.md)|  | 
+ **submitReactionRequest** | [**SubmitReactionRequest**](SubmitReactionRequest.md)|  |
 
 ### Return type
 
@@ -95,4 +95,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

@@ -12,8 +12,8 @@ part 'review_appealed_content_request.g.dart';
 /// ReviewAppealedContentRequest
 ///
 /// Properties:
-/// * [decision] 
-/// * [rationale] 
+/// * [decision]
+/// * [rationale]
 @BuiltValue()
 abstract class ReviewAppealedContentRequest implements Built<ReviewAppealedContentRequest, ReviewAppealedContentRequestBuilder> {
   @BuiltValueField(wireName: r'decision')
@@ -138,4 +138,3 @@ class ReviewAppealedContentRequestDecisionEnum extends EnumClass {
   static BuiltSet<ReviewAppealedContentRequestDecisionEnum> get values => _$reviewAppealedContentRequestDecisionEnumValues;
   static ReviewAppealedContentRequestDecisionEnum valueOf(String name) => _$reviewAppealedContentRequestDecisionEnumValueOf(name);
 }
-

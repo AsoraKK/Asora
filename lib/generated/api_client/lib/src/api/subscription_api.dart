@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/model/error.dart';
-import 'package:built_value/json_object.dart';
+import 'package:asora_api_client/src/model/subscription_status.dart';
 
 class SubscriptionApi {
 
@@ -19,7 +19,7 @@ class SubscriptionApi {
   const SubscriptionApi(this._dio, this._serializers);
 
   /// Get current user subscription status
-  /// 
+  /// Return the authenticated user&#39;s subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -29,9 +29,9 @@ class SubscriptionApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [SubscriptionStatus] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> subscriptionStatus({ 
+  Future<Response<SubscriptionStatus>> subscriptionStatus({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -66,14 +66,14 @@ class SubscriptionApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    SubscriptionStatus? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(SubscriptionStatus),
+      ) as SubscriptionStatus;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -85,7 +85,7 @@ class SubscriptionApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<SubscriptionStatus>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

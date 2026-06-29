@@ -11,9 +11,14 @@ import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
 import 'package:asora_api_client/src/model/error.dart';
+import 'package:asora_api_client/src/model/error_response.dart';
+import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/post.dart';
+import 'package:asora_api_client/src/model/post_view.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
+import 'package:asora_api_client/src/model/update_post_request.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
 import 'package:built_value/json_object.dart';
 
@@ -29,7 +34,7 @@ class PostsApi {
   /// Create a new post.
   ///
   /// Parameters:
-  /// * [createPostRequest] 
+  /// * [createPostRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,7 +44,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CreatePost201Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CreatePost201Response>> createPost({ 
+  Future<Response<CreatePost201Response>> createPost({
     required CreatePostRequest createPostRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -127,11 +132,11 @@ class PostsApi {
   }
 
   /// Bookmark a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -141,7 +146,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsBookmarkCreate({ 
+  Future<Response<JsonObject>> postsBookmarkCreate({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -229,10 +234,10 @@ class PostsApi {
   }
 
   /// Remove a bookmark
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -242,7 +247,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsBookmarkDelete({ 
+  Future<Response<JsonObject>> postsBookmarkDelete({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -310,10 +315,10 @@ class PostsApi {
   }
 
   /// Get bookmark status for a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -323,7 +328,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsBookmarkGet({ 
+  Future<Response<JsonObject>> postsBookmarkGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -391,11 +396,11 @@ class PostsApi {
   }
 
   /// Create a comment on a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [postId] 
-  /// * [body] 
+  /// * [postId]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -405,7 +410,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsCommentsCreate({ 
+  Future<Response<JsonObject>> postsCommentsCreate({
     required String postId,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -493,10 +498,10 @@ class PostsApi {
   }
 
   /// List comments on a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [postId] 
+  /// * [postId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -506,7 +511,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsCommentsList({ 
+  Future<Response<JsonObject>> postsCommentsList({
     required String postId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -573,11 +578,11 @@ class PostsApi {
     );
   }
 
-  /// Get a post by ID
-  /// 
+  /// Create a post with moderation and AI authenticity checks
+  /// Create a post for the authenticated user. AI-generated text or media is blocked at submit with &#x60;AI_CONTENT_BLOCKED&#x60;; AI-assisted content may be published only when disclosed with &#x60;aiLabel&#x3D;assisted&#x60;.
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [createPostRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -585,9 +590,110 @@ class PostsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [Post] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsGet({ 
+  Future<Response<Post>> postsCreate({
+    required CreatePostRequest createPostRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/posts';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(CreatePostRequest);
+      _bodyData = _serializers.serialize(createPostRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    Post? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(Post),
+      ) as Post;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<Post>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Get a post by ID
+  ///
+  ///
+  /// Parameters:
+  /// * [id]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [PostView] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<PostView>> postsGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -623,14 +729,14 @@ class PostsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    PostView? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(PostView),
+      ) as PostView;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -642,7 +748,7 @@ class PostsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<PostView>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -655,10 +761,10 @@ class PostsApi {
   }
 
   /// Get engagement insights for a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -668,7 +774,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsInsights({ 
+  Future<Response<JsonObject>> postsInsights({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -736,11 +842,11 @@ class PostsApi {
   }
 
   /// Like a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -750,7 +856,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsLikeCreate({ 
+  Future<Response<JsonObject>> postsLikeCreate({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -838,10 +944,10 @@ class PostsApi {
   }
 
   /// Unlike a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -851,7 +957,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsLikeDelete({ 
+  Future<Response<JsonObject>> postsLikeDelete({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -919,10 +1025,10 @@ class PostsApi {
   }
 
   /// Get like status for a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -932,7 +1038,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsLikeGet({ 
+  Future<Response<JsonObject>> postsLikeGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1000,10 +1106,10 @@ class PostsApi {
   }
 
   /// Get read receipt for a post
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1013,7 +1119,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsReceipt({ 
+  Future<Response<JsonObject>> postsReceipt({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1080,12 +1186,12 @@ class PostsApi {
     );
   }
 
-  /// Update a post
-  /// 
+  /// Update a post with moderation and AI authenticity checks
+  /// Update a post owned by the caller. AI-generated text or media is blocked at submit with &#x60;AI_CONTENT_BLOCKED&#x60;; AI-assisted content may be published only when disclosed with &#x60;aiLabel&#x3D;assisted&#x60;.
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [updatePostRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1093,11 +1199,11 @@ class PostsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [Post] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsUpdate({ 
+  Future<Response<Post>> postsUpdate({
     required String id,
-    required JsonObject body,
+    required UpdatePostRequest updatePostRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1128,7 +1234,8 @@ class PostsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(UpdatePostRequest);
+      _bodyData = _serializers.serialize(updatePostRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -1151,14 +1258,14 @@ class PostsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    Post? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(Post),
+      ) as Post;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -1170,7 +1277,7 @@ class PostsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<Post>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1183,11 +1290,11 @@ class PostsApi {
   }
 
   /// Record a post view event
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1197,7 +1304,7 @@ class PostsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> postsView({ 
+  Future<Response<JsonObject>> postsView({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,

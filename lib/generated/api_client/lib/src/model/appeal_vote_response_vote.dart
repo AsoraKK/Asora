@@ -12,10 +12,10 @@ part 'appeal_vote_response_vote.g.dart';
 /// AppealVoteResponseVote
 ///
 /// Properties:
-/// * [id] 
-/// * [appealId] 
-/// * [vote] 
-/// * [recordedAt] 
+/// * [id]
+/// * [appealId]
+/// * [vote]
+/// * [recordedAt]
 @BuiltValue()
 abstract class AppealVoteResponseVote implements Built<AppealVoteResponseVote, AppealVoteResponseVoteBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -168,4 +168,3 @@ class AppealVoteResponseVoteVoteEnum extends EnumClass {
   static BuiltSet<AppealVoteResponseVoteVoteEnum> get values => _$appealVoteResponseVoteVoteEnumValues;
   static AppealVoteResponseVoteVoteEnum valueOf(String name) => _$appealVoteResponseVoteVoteEnumValueOf(name);
 }
-

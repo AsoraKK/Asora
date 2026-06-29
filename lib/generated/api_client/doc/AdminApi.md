@@ -74,7 +74,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
 try {
     final response = api.adminAppealsApprove(appealId, adminAppealDecisionRequest);
@@ -88,8 +88,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
- **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  | 
+ **appealId** | **String**| Appeal identifier |
+ **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  |
 
 ### Return type
 
@@ -132,7 +132,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
+ **appealId** | **String**| Appeal identifier |
 
 ### Return type
 
@@ -177,9 +177,9 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **status** | **String**| Filter by appeal status | [optional] 
- **cursor** | **String**| Cursor for pagination | [optional] 
- **limit** | **int**| Number of items to return (1-100) | [optional] 
+ **status** | **String**| Filter by appeal status | [optional]
+ **cursor** | **String**| Cursor for pagination | [optional]
+ **limit** | **int**| Number of items to return (1-100) | [optional]
 
 ### Return type
 
@@ -209,7 +209,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealOverrideRequest adminAppealOverrideRequest = ; // AdminAppealOverrideRequest | 
+final AdminAppealOverrideRequest adminAppealOverrideRequest = ; // AdminAppealOverrideRequest |
 final String idempotencyKey = idempotencyKey_example; // String | Idempotency key for safe retries
 
 try {
@@ -224,9 +224,9 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
- **adminAppealOverrideRequest** | [**AdminAppealOverrideRequest**](AdminAppealOverrideRequest.md)|  | 
- **idempotencyKey** | **String**| Idempotency key for safe retries | [optional] 
+ **appealId** | **String**| Appeal identifier |
+ **adminAppealOverrideRequest** | [**AdminAppealOverrideRequest**](AdminAppealOverrideRequest.md)|  |
+ **idempotencyKey** | **String**| Idempotency key for safe retries | [optional]
 
 ### Return type
 
@@ -256,7 +256,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
 try {
     final response = api.adminAppealsReject(appealId, adminAppealDecisionRequest);
@@ -270,8 +270,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
- **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  | 
+ **appealId** | **String**| Appeal identifier |
+ **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  |
 
 ### Return type
 
@@ -314,7 +314,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **limit** | **int**| Number of entries to return (1-200) | [optional] 
+ **limit** | **int**| Number of entries to return (1-200) | [optional]
 
 ### Return type
 
@@ -378,7 +378,7 @@ Update budget configuration
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminBudgetUpdate(body);
@@ -392,7 +392,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -493,7 +493,7 @@ Update public admin configuration
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminConfigPublicUpdate(body);
@@ -507,7 +507,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -534,7 +534,7 @@ Update admin runtime configuration
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminConfigUpdate(body);
@@ -548,7 +548,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -578,7 +578,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String contentId = contentId_example; // String | Content identifier
-final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest | 
+final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest |
 
 try {
     final response = api.adminContentBlock(contentId, adminContentActionRequest);
@@ -592,8 +592,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **contentId** | **String**| Content identifier | 
- **adminContentActionRequest** | [**AdminContentActionRequest**](AdminContentActionRequest.md)|  | 
+ **contentId** | **String**| Content identifier |
+ **adminContentActionRequest** | [**AdminContentActionRequest**](AdminContentActionRequest.md)|  |
 
 ### Return type
 
@@ -623,7 +623,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String contentId = contentId_example; // String | Content identifier
-final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest | 
+final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest |
 
 try {
     final response = api.adminContentPublish(contentId, adminContentActionRequest);
@@ -637,8 +637,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **contentId** | **String**| Content identifier | 
- **adminContentActionRequest** | [**AdminContentActionRequest**](AdminContentActionRequest.md)|  | 
+ **contentId** | **String**| Content identifier |
+ **adminContentActionRequest** | [**AdminContentActionRequest**](AdminContentActionRequest.md)|  |
 
 ### Return type
 
@@ -665,8 +665,8 @@ Cancel a data subject request
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrCancel(id, body);
@@ -680,8 +680,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -708,7 +708,7 @@ Download data subject request export
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.adminDsrDownload(id);
@@ -722,7 +722,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -749,7 +749,7 @@ Get data subject request detail
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.adminDsrGet(id);
@@ -763,7 +763,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -790,8 +790,8 @@ Clear a legal hold
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrLegalHoldClear(id, body);
@@ -805,8 +805,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -833,7 +833,7 @@ Place a legal hold
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrLegalHoldPlace(body);
@@ -847,7 +847,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -911,8 +911,8 @@ Release a data subject request
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrRelease(id, body);
@@ -926,8 +926,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -954,8 +954,8 @@ Retry a failed data subject request
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrRetry(id, body);
@@ -969,8 +969,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -997,8 +997,8 @@ First-reviewer decision on DSR
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrReviewA(id, body);
@@ -1012,8 +1012,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1040,8 +1040,8 @@ Second-reviewer decision on DSR
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminDsrReviewB(id, body);
@@ -1055,8 +1055,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1099,7 +1099,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **flagId** | **String**| Flag identifier | 
+ **flagId** | **String**| Flag identifier |
 
 ### Return type
 
@@ -1144,9 +1144,9 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **status** | **String**| Filter by queue status | [optional] 
- **cursor** | **String**| Cursor for pagination | [optional] 
- **limit** | **int**| Number of items to return (1-100) | [optional] 
+ **status** | **String**| Filter by queue status | [optional]
+ **cursor** | **String**| Cursor for pagination | [optional]
+ **limit** | **int**| Number of items to return (1-100) | [optional]
 
 ### Return type
 
@@ -1176,7 +1176,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String flagId = flagId_example; // String | Flag identifier
-final AdminFlagResolveRequest adminFlagResolveRequest = ; // AdminFlagResolveRequest | 
+final AdminFlagResolveRequest adminFlagResolveRequest = ; // AdminFlagResolveRequest |
 
 try {
     final response = api.adminFlagsResolve(flagId, adminFlagResolveRequest);
@@ -1190,8 +1190,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **flagId** | **String**| Flag identifier | 
- **adminFlagResolveRequest** | [**AdminFlagResolveRequest**](AdminFlagResolveRequest.md)|  | 
+ **flagId** | **String**| Flag identifier |
+ **adminFlagResolveRequest** | [**AdminFlagResolveRequest**](AdminFlagResolveRequest.md)|  |
 
 ### Return type
 
@@ -1220,7 +1220,7 @@ Creates multiple invite codes in a single request.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final AdminInviteBatchRequest adminInviteBatchRequest = ; // AdminInviteBatchRequest | 
+final AdminInviteBatchRequest adminInviteBatchRequest = ; // AdminInviteBatchRequest |
 
 try {
     final response = api.adminInvitesBatch(adminInviteBatchRequest);
@@ -1234,7 +1234,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **adminInviteBatchRequest** | [**AdminInviteBatchRequest**](AdminInviteBatchRequest.md)|  | 
+ **adminInviteBatchRequest** | [**AdminInviteBatchRequest**](AdminInviteBatchRequest.md)|  |
 
 ### Return type
 
@@ -1263,7 +1263,7 @@ Creates a single admin invite code.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final AdminInviteCreateRequest adminInviteCreateRequest = {"email":"beta.user@example.com","expiresInDays":30,"maxUses":1,"label":"beta-tester"}; // AdminInviteCreateRequest | 
+final AdminInviteCreateRequest adminInviteCreateRequest = {"email":"beta.user@example.com","expiresInDays":30,"maxUses":1,"label":"beta-tester"}; // AdminInviteCreateRequest |
 
 try {
     final response = api.adminInvitesCreate(adminInviteCreateRequest);
@@ -1277,7 +1277,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **adminInviteCreateRequest** | [**AdminInviteCreateRequest**](AdminInviteCreateRequest.md)|  | 
+ **adminInviteCreateRequest** | [**AdminInviteCreateRequest**](AdminInviteCreateRequest.md)|  |
 
 ### Return type
 
@@ -1319,7 +1319,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **code** | **String**| Invite code to delete | 
+ **code** | **String**| Invite code to delete |
 
 ### Return type
 
@@ -1362,7 +1362,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **code** | **String**| Invite code | 
+ **code** | **String**| Invite code |
 
 ### Return type
 
@@ -1408,10 +1408,10 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createdBy** | **String**| Filter by creator id | [optional] 
- **unused** | **bool**| Filter for unused invites only | [optional] 
- **cursor** | **String**| Cursor for pagination | [optional] 
- **limit** | **int**| Number of items to return (1-200) | [optional] 
+ **createdBy** | **String**| Filter by creator id | [optional]
+ **unused** | **bool**| Filter for unused invites only | [optional]
+ **cursor** | **String**| Cursor for pagination | [optional]
+ **limit** | **int**| Number of items to return (1-200) | [optional]
 
 ### Return type
 
@@ -1441,7 +1441,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String code = code_example; // String | Invite code
-final AdminInviteRevokeRequest adminInviteRevokeRequest = ; // AdminInviteRevokeRequest | 
+final AdminInviteRevokeRequest adminInviteRevokeRequest = ; // AdminInviteRevokeRequest |
 
 try {
     final response = api.adminInvitesRevoke(code, adminInviteRevokeRequest);
@@ -1455,8 +1455,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **code** | **String**| Invite code | 
- **adminInviteRevokeRequest** | [**AdminInviteRevokeRequest**](AdminInviteRevokeRequest.md)|  | [optional] 
+ **code** | **String**| Invite code |
+ **adminInviteRevokeRequest** | [**AdminInviteRevokeRequest**](AdminInviteRevokeRequest.md)|  | [optional]
 
 ### Return type
 
@@ -1483,8 +1483,8 @@ Reset a moderation class to defaults
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String className = className_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String className = className_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminModerationClassReset(className, body);
@@ -1498,8 +1498,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **className** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **className** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1563,7 +1563,7 @@ Proxy DELETE to Hive AI test endpoint
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String | 
+final String path = path_example; // String |
 
 try {
     final response = api.adminModerationTestDelete(path);
@@ -1577,7 +1577,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **path** | **String**|  | 
+ **path** | **String**|  |
 
 ### Return type
 
@@ -1604,7 +1604,7 @@ Proxy GET to Hive AI test endpoint
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String | 
+final String path = path_example; // String |
 
 try {
     final response = api.adminModerationTestGet(path);
@@ -1618,7 +1618,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **path** | **String**|  | 
+ **path** | **String**|  |
 
 ### Return type
 
@@ -1645,8 +1645,8 @@ Proxy PATCH to Hive AI test endpoint
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String path = path_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminModerationTestPatch(path, body);
@@ -1660,8 +1660,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **path** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **path** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1688,8 +1688,8 @@ Proxy POST to Hive AI test endpoint
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String path = path_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminModerationTestPost(path, body);
@@ -1703,8 +1703,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **path** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **path** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1731,8 +1731,8 @@ Proxy PUT to Hive AI test endpoint
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String path = path_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminModerationTestPut(path, body);
@@ -1746,8 +1746,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **path** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **path** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1774,7 +1774,7 @@ Bulk-update moderation class weights
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminModerationWeightsUpdate(body);
@@ -1788,7 +1788,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1815,7 +1815,7 @@ Ingest news items into the news board
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminNewsIngest(body);
@@ -1829,7 +1829,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1930,7 +1930,7 @@ Update operational state flags
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.adminOpsStateUpdate(body);
@@ -1944,7 +1944,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -1974,7 +1974,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
-final AdminSetUserTierRequest adminSetUserTierRequest = ; // AdminSetUserTierRequest | 
+final AdminSetUserTierRequest adminSetUserTierRequest = ; // AdminSetUserTierRequest |
 
 try {
     final response = api.adminSetUserTier(userId, adminSetUserTierRequest);
@@ -1988,8 +1988,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**| User identifier | 
- **adminSetUserTierRequest** | [**AdminSetUserTierRequest**](AdminSetUserTierRequest.md)|  | 
+ **userId** | **String**| User identifier |
+ **adminSetUserTierRequest** | [**AdminSetUserTierRequest**](AdminSetUserTierRequest.md)|  |
 
 ### Return type
 
@@ -2016,7 +2016,7 @@ Purge test data outside production
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final AdminTestDataPurgeRequest adminTestDataPurgeRequest = ; // AdminTestDataPurgeRequest | 
+final AdminTestDataPurgeRequest adminTestDataPurgeRequest = ; // AdminTestDataPurgeRequest |
 
 try {
     final response = api.adminTestDataPurge(adminTestDataPurgeRequest);
@@ -2030,7 +2030,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **adminTestDataPurgeRequest** | [**AdminTestDataPurgeRequest**](AdminTestDataPurgeRequest.md)|  | 
+ **adminTestDataPurgeRequest** | [**AdminTestDataPurgeRequest**](AdminTestDataPurgeRequest.md)|  |
 
 ### Return type
 
@@ -2060,7 +2060,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
-final AdminUserDisableRequest adminUserDisableRequest = ; // AdminUserDisableRequest | 
+final AdminUserDisableRequest adminUserDisableRequest = ; // AdminUserDisableRequest |
 
 try {
     final response = api.adminUsersDisable(userId, adminUserDisableRequest);
@@ -2074,8 +2074,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**| User identifier | 
- **adminUserDisableRequest** | [**AdminUserDisableRequest**](AdminUserDisableRequest.md)|  | 
+ **userId** | **String**| User identifier |
+ **adminUserDisableRequest** | [**AdminUserDisableRequest**](AdminUserDisableRequest.md)|  |
 
 ### Return type
 
@@ -2105,7 +2105,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
-final AdminUserEnableRequest adminUserEnableRequest = ; // AdminUserEnableRequest | 
+final AdminUserEnableRequest adminUserEnableRequest = ; // AdminUserEnableRequest |
 
 try {
     final response = api.adminUsersEnable(userId, adminUserEnableRequest);
@@ -2119,8 +2119,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**| User identifier | 
- **adminUserEnableRequest** | [**AdminUserEnableRequest**](AdminUserEnableRequest.md)|  | [optional] 
+ **userId** | **String**| User identifier |
+ **adminUserEnableRequest** | [**AdminUserEnableRequest**](AdminUserEnableRequest.md)|  | [optional]
 
 ### Return type
 
@@ -2164,8 +2164,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **q** | **String**| Search query | 
- **limit** | **int**| Number of items to return (1-100) | [optional] 
+ **q** | **String**| Search query |
+ **limit** | **int**| Number of items to return (1-100) | [optional]
 
 ### Return type
 
@@ -2181,4 +2181,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

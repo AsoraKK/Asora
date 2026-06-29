@@ -11,8 +11,8 @@ part 'admin_invite_revoke_request.g.dart';
 /// AdminInviteRevokeRequest
 ///
 /// Properties:
-/// * [reasonCode] 
-/// * [note] 
+/// * [reasonCode]
+/// * [note]
 @BuiltValue()
 abstract class AdminInviteRevokeRequest implements Built<AdminInviteRevokeRequest, AdminInviteRevokeRequestBuilder> {
   @BuiltValueField(wireName: r'reasonCode')
@@ -123,4 +123,3 @@ class _$AdminInviteRevokeRequestSerializer implements PrimitiveSerializer<AdminI
     return result.build();
   }
 }
-

@@ -18,19 +18,21 @@ Method | HTTP request | Description
 
 
 # **customFeedsCreate**
-> JsonObject customFeedsCreate(body)
+> CustomFeedDefinition customFeedsCreate(createCustomFeedRequest)
 
 Create a new custom feed
+
+Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final JsonObject body = Object; // JsonObject | 
+final CreateCustomFeedRequest createCustomFeedRequest = ; // CreateCustomFeedRequest |
 
 try {
-    final response = api.customFeedsCreate(body);
+    final response = api.customFeedsCreate(createCustomFeedRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsCreate: $e\n');
@@ -41,11 +43,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **createCustomFeedRequest** | [**CreateCustomFeedRequest**](CreateCustomFeedRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CustomFeedDefinition**](CustomFeedDefinition.md)
 
 ### Authorization
 
@@ -59,20 +61,21 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsDelete**
-> JsonObject customFeedsDelete(id)
+> customFeedsDelete(id)
 
 Delete a custom feed
+
+Delete an owned custom feed definition.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
-    final response = api.customFeedsDelete(id);
-    print(response);
+    api.customFeedsDelete(id);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsDelete: $e\n');
 }
@@ -82,11 +85,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+void (empty response body)
 
 ### Authorization
 
@@ -100,16 +103,18 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsGet**
-> JsonObject customFeedsGet(id)
+> CustomFeedDefinition customFeedsGet(id)
 
 Get a custom feed
+
+Fetch a custom feed definition owned by the authenticated user.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.customFeedsGet(id);
@@ -123,11 +128,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CustomFeedDefinition**](CustomFeedDefinition.md)
 
 ### Authorization
 
@@ -141,19 +146,23 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsItemsList**
-> JsonObject customFeedsItemsList(id)
+> CursorPaginatedPostView customFeedsItemsList(id, cursor, limit)
 
 List items in a custom feed
+
+Return posts matching a custom feed's filters.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
+final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+final int limit = 25; // int | Maximum number of items to return per page
 
 try {
-    final response = api.customFeedsItemsList(id);
+    final response = api.customFeedsItemsList(id, cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsItemsList: $e\n');
@@ -164,11 +173,13 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
+ **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CursorPaginatedPostView**](CursorPaginatedPostView.md)
 
 ### Authorization
 
@@ -182,18 +193,22 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsList**
-> JsonObject customFeedsList()
+> CustomFeedListResponse customFeedsList(cursor, limit)
 
 List custom feeds for the current user
+
+List custom feed definitions owned by the authenticated user.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
+final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+final int limit = 25; // int | Maximum number of items to return per page
 
 try {
-    final response = api.customFeedsList();
+    final response = api.customFeedsList(cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsList: $e\n');
@@ -201,11 +216,15 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
+ **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CustomFeedListResponse**](CustomFeedListResponse.md)
 
 ### Authorization
 
@@ -219,20 +238,22 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsUpdate**
-> JsonObject customFeedsUpdate(id, body)
+> CustomFeedDefinition customFeedsUpdate(id, updateCustomFeedRequest)
 
 Update a custom feed
+
+Update an owned custom feed's name, filters, sorting, or home flag.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getCustomFeedsApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final UpdateCustomFeedRequest updateCustomFeedRequest = ; // UpdateCustomFeedRequest |
 
 try {
-    final response = api.customFeedsUpdate(id, body);
+    final response = api.customFeedsUpdate(id, updateCustomFeedRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsUpdate: $e\n');
@@ -243,12 +264,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **updateCustomFeedRequest** | [**UpdateCustomFeedRequest**](UpdateCustomFeedRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CustomFeedDefinition**](CustomFeedDefinition.md)
 
 ### Authorization
 
@@ -260,4 +281,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

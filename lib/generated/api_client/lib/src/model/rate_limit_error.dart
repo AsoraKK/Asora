@@ -263,4 +263,3 @@ class RateLimitErrorReasonEnum extends EnumClass {
   static BuiltSet<RateLimitErrorReasonEnum> get values => _$rateLimitErrorReasonEnumValues;
   static RateLimitErrorReasonEnum valueOf(String name) => _$rateLimitErrorReasonEnumValueOf(name);
 }
-

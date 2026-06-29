@@ -55,7 +55,7 @@ class _$GetFeed200ResponseSerializer
     yield serializers.serialize(
       object.items,
       specifiedType: const FullType(BuiltList, [
-        FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])
+        FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       ]),
     );
     yield r'meta';
@@ -71,9 +71,11 @@ class _$GetFeed200ResponseSerializer
     GetFeed200Response object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object,
-            specifiedType: specifiedType)
-        .toList();
+    return _serializeProperties(
+      serializers,
+      object,
+      specifiedType: specifiedType,
+    ).toList();
   }
 
   void _deserializeProperties(
@@ -89,20 +91,26 @@ class _$GetFeed200ResponseSerializer
       final value = serializedList[i + 1];
       switch (key) {
         case r'items':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [
-              FullType(
-                  BuiltMap, [FullType(String), FullType.nullable(JsonObject)])
-            ]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(BuiltList, [
+                      FullType(BuiltMap, [
+                        FullType(String),
+                        FullType.nullable(JsonObject),
+                      ]),
+                    ]),
+                  )
+                  as BuiltList<BuiltMap<String, JsonObject?>>;
           result.items.replace(valueDes);
           break;
         case r'meta':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(GetFeed200ResponseMeta),
-          ) as GetFeed200ResponseMeta;
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(GetFeed200ResponseMeta),
+                  )
+                  as GetFeed200ResponseMeta;
           result.meta.replace(valueDes);
           break;
         default:

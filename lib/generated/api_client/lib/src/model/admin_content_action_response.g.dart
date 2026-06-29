@@ -16,8 +16,7 @@ class _$AdminContentActionResponse extends AdminContentActionResponse {
 
   factory _$AdminContentActionResponse([
     void Function(AdminContentActionResponseBuilder)? updates,
-  ]) =>
-      (AdminContentActionResponseBuilder()..update(updates))._build();
+  ]) => (AdminContentActionResponseBuilder()..update(updates))._build();
 
   _$AdminContentActionResponse._({
     this.contentId,
@@ -27,8 +26,7 @@ class _$AdminContentActionResponse extends AdminContentActionResponse {
   @override
   AdminContentActionResponse rebuild(
     void Function(AdminContentActionResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminContentActionResponseBuilder toBuilder() =>
@@ -110,7 +108,8 @@ class AdminContentActionResponseBuilder
   AdminContentActionResponse build() => _build();
 
   _$AdminContentActionResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminContentActionResponse._(
           contentId: contentId,
           contentType: contentType,

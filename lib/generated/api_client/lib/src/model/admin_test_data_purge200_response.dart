@@ -12,11 +12,11 @@ part 'admin_test_data_purge200_response.g.dart';
 /// AdminTestDataPurge200Response
 ///
 /// Properties:
-/// * [success] 
-/// * [deletedCount] 
-/// * [expiredCount] 
-/// * [errors] 
-/// * [durationMs] 
+/// * [success]
+/// * [deletedCount]
+/// * [expiredCount]
+/// * [errors]
+/// * [durationMs]
 @BuiltValue()
 abstract class AdminTestDataPurge200Response implements Built<AdminTestDataPurge200Response, AdminTestDataPurge200ResponseBuilder> {
   @BuiltValueField(wireName: r'success')
@@ -178,4 +178,3 @@ class _$AdminTestDataPurge200ResponseSerializer implements PrimitiveSerializer<A
     return result.build();
   }
 }
-

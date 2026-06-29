@@ -16,8 +16,7 @@ class _$CreatePostRequest extends CreatePostRequest {
 
   factory _$CreatePostRequest([
     void Function(CreatePostRequestBuilder)? updates,
-  ]) =>
-      (CreatePostRequestBuilder()..update(updates))._build();
+  ]) => (CreatePostRequestBuilder()..update(updates))._build();
 
   _$CreatePostRequest._({
     required this.id,
@@ -110,7 +109,8 @@ class CreatePostRequestBuilder
   _$CreatePostRequest _build() {
     _$CreatePostRequest _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$CreatePostRequest._(
             id: BuiltValueNullFieldError.checkNotNull(
               id,

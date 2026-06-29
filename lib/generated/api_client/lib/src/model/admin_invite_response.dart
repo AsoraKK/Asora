@@ -13,17 +13,17 @@ part 'admin_invite_response.g.dart';
 /// AdminInviteResponse
 ///
 /// Properties:
-/// * [inviteCode] 
-/// * [email] 
-/// * [createdBy] 
-/// * [createdAt] 
-/// * [expiresAt] 
-/// * [maxUses] 
-/// * [usageCount] 
-/// * [lastUsedAt] 
-/// * [status] 
-/// * [label] 
-/// * [usedByUserId] 
+/// * [inviteCode]
+/// * [email]
+/// * [createdBy]
+/// * [createdAt]
+/// * [expiresAt]
+/// * [maxUses]
+/// * [usageCount]
+/// * [lastUsedAt]
+/// * [status]
+/// * [label]
+/// * [usedByUserId]
 @BuiltValue()
 abstract class AdminInviteResponse implements AdminInvite, Built<AdminInviteResponse, AdminInviteResponseBuilder> {
   AdminInviteResponse._();
@@ -254,4 +254,3 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     return result.build();
   }
 }
-

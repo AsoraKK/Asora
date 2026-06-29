@@ -22,8 +22,7 @@ class _$AdminFlagQueueItem extends AdminFlagQueueItem {
 
   factory _$AdminFlagQueueItem([
     void Function(AdminFlagQueueItemBuilder)? updates,
-  ]) =>
-      (AdminFlagQueueItemBuilder()..update(updates))._build();
+  ]) => (AdminFlagQueueItemBuilder()..update(updates))._build();
 
   _$AdminFlagQueueItem._({
     required this.content,
@@ -36,8 +35,7 @@ class _$AdminFlagQueueItem extends AdminFlagQueueItem {
   @override
   AdminFlagQueueItem rebuild(
     void Function(AdminFlagQueueItemBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueItemBuilder toBuilder() =>
@@ -149,7 +147,8 @@ class AdminFlagQueueItemBuilder
   _$AdminFlagQueueItem _build() {
     _$AdminFlagQueueItem _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagQueueItem._(
             content: content.build(),
             author: author.build(),

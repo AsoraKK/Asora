@@ -12,9 +12,9 @@ part 'forbidden_error_error.g.dart';
 /// ForbiddenErrorError
 ///
 /// Properties:
-/// * [code] 
-/// * [message] 
-/// * [correlationId] 
+/// * [code]
+/// * [message]
+/// * [correlationId]
 @BuiltValue()
 abstract class ForbiddenErrorError implements Built<ForbiddenErrorError, ForbiddenErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
@@ -156,4 +156,3 @@ class ForbiddenErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<ForbiddenErrorErrorCodeEnum> get values => _$forbiddenErrorErrorCodeEnumValues;
   static ForbiddenErrorErrorCodeEnum valueOf(String name) => _$forbiddenErrorErrorCodeEnumValueOf(name);
 }
-

@@ -12,10 +12,10 @@ part 'invite_validation_response.g.dart';
 /// InviteValidationResponse
 ///
 /// Properties:
-/// * [success] 
-/// * [data] 
-/// * [timestamp] 
-/// * [requestId] 
+/// * [success]
+/// * [data]
+/// * [timestamp]
+/// * [requestId]
 @BuiltValue()
 abstract class InviteValidationResponse implements Built<InviteValidationResponse, InviteValidationResponseBuilder> {
   @BuiltValueField(wireName: r'success')
@@ -154,4 +154,3 @@ class _$InviteValidationResponseSerializer implements PrimitiveSerializer<Invite
     return result.build();
   }
 }
-

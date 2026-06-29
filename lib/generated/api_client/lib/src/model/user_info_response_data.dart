@@ -13,12 +13,12 @@ part 'user_info_response_data.g.dart';
 ///
 /// Properties:
 /// * [sub] - Subject identifier (user ID)
-/// * [email] 
-/// * [displayName] 
-/// * [handle] 
-/// * [tier] 
-/// * [roles] 
-/// * [avatarUrl] 
+/// * [email]
+/// * [displayName]
+/// * [handle]
+/// * [tier]
+/// * [roles]
+/// * [avatarUrl]
 @BuiltValue()
 abstract class UserInfoResponseData implements Built<UserInfoResponseData, UserInfoResponseDataBuilder> {
   /// Subject identifier (user ID)
@@ -233,4 +233,3 @@ class UserInfoResponseDataTierEnum extends EnumClass {
   static BuiltSet<UserInfoResponseDataTierEnum> get values => _$userInfoResponseDataTierEnumValues;
   static UserInfoResponseDataTierEnum valueOf(String name) => _$userInfoResponseDataTierEnumValueOf(name);
 }
-

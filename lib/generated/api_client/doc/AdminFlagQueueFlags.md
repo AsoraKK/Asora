@@ -8,11 +8,9 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**flagId** | **String** |  | [optional] 
-**flagCount** | **int** |  | [optional] 
-**reasonCategories** | **BuiltList&lt;String&gt;** |  | [optional] 
-**lastFlaggedAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**flagId** | **String** |  | [optional]
+**flagCount** | **int** |  | [optional]
+**reasonCategories** | **BuiltList&lt;String&gt;** |  | [optional]
+**lastFlaggedAt** | [**DateTime**](DateTime.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
-

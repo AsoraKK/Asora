@@ -12,9 +12,9 @@ part 'admin_moderation_summary.g.dart';
 /// AdminModerationSummary
 ///
 /// Properties:
-/// * [lastDecisionAt] 
-/// * [configVersionUsed] 
-/// * [reasonCodes] 
+/// * [lastDecisionAt]
+/// * [configVersionUsed]
+/// * [reasonCodes]
 @BuiltValue()
 abstract class AdminModerationSummary implements Built<AdminModerationSummary, AdminModerationSummaryBuilder> {
   @BuiltValueField(wireName: r'lastDecisionAt')
@@ -142,4 +142,3 @@ class _$AdminModerationSummarySerializer implements PrimitiveSerializer<AdminMod
     return result.build();
   }
 }
-

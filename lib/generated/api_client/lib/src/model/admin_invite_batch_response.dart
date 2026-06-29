@@ -13,8 +13,8 @@ part 'admin_invite_batch_response.g.dart';
 /// AdminInviteBatchResponse
 ///
 /// Properties:
-/// * [count] 
-/// * [invites] 
+/// * [count]
+/// * [invites]
 @BuiltValue()
 abstract class AdminInviteBatchResponse implements Built<AdminInviteBatchResponse, AdminInviteBatchResponseBuilder> {
   @BuiltValueField(wireName: r'count')
@@ -121,4 +121,3 @@ class _$AdminInviteBatchResponseSerializer implements PrimitiveSerializer<AdminI
     return result.build();
   }
 }
-

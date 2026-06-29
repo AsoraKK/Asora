@@ -18,8 +18,7 @@ class _$AdminAppealDecisionResponse extends AdminAppealDecisionResponse {
 
   factory _$AdminAppealDecisionResponse([
     void Function(AdminAppealDecisionResponseBuilder)? updates,
-  ]) =>
-      (AdminAppealDecisionResponseBuilder()..update(updates))._build();
+  ]) => (AdminAppealDecisionResponseBuilder()..update(updates))._build();
 
   _$AdminAppealDecisionResponse._({
     this.appealId,
@@ -30,8 +29,7 @@ class _$AdminAppealDecisionResponse extends AdminAppealDecisionResponse {
   @override
   AdminAppealDecisionResponse rebuild(
     void Function(AdminAppealDecisionResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealDecisionResponseBuilder toBuilder() =>
@@ -71,8 +69,10 @@ class _$AdminAppealDecisionResponse extends AdminAppealDecisionResponse {
 
 class AdminAppealDecisionResponseBuilder
     implements
-        Builder<AdminAppealDecisionResponse,
-            AdminAppealDecisionResponseBuilder> {
+        Builder<
+          AdminAppealDecisionResponse,
+          AdminAppealDecisionResponseBuilder
+        > {
   _$AdminAppealDecisionResponse? _$v;
 
   String? _appealId;
@@ -122,7 +122,8 @@ class AdminAppealDecisionResponseBuilder
   AdminAppealDecisionResponse build() => _build();
 
   _$AdminAppealDecisionResponse _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$AdminAppealDecisionResponse._(
           appealId: appealId,
           status: status,

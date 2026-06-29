@@ -12,10 +12,10 @@ part 'redeem_invite_response_data.g.dart';
 /// RedeemInviteResponseData
 ///
 /// Properties:
-/// * [accessToken] 
-/// * [refreshToken] 
-/// * [tokenType] 
-/// * [expiresIn] 
+/// * [accessToken]
+/// * [refreshToken]
+/// * [tokenType]
+/// * [expiresIn]
 /// * [activated] - True when account was newly activated by this redemption
 @BuiltValue()
 abstract class RedeemInviteResponseData implements Built<RedeemInviteResponseData, RedeemInviteResponseDataBuilder> {
@@ -183,4 +183,3 @@ class RedeemInviteResponseDataTokenTypeEnum extends EnumClass {
   static BuiltSet<RedeemInviteResponseDataTokenTypeEnum> get values => _$redeemInviteResponseDataTokenTypeEnumValues;
   static RedeemInviteResponseDataTokenTypeEnum valueOf(String name) => _$redeemInviteResponseDataTokenTypeEnumValueOf(name);
 }
-

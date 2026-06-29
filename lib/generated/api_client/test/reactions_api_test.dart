@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-
 /// tests for ReactionsApi
 void main() {
   final instance = AsoraApiClient().getReactionsApi();
@@ -22,6 +21,5 @@ void main() {
     test('test reactionsPost', () async {
       // TODO
     });
-
   });
 }

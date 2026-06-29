@@ -1,7 +1,6 @@
 import 'package:test/test.dart';
 import 'package:asora_api_client/asora_api_client.dart';
 
-
 /// tests for ReputationApi
 void main() {
   final instance = AsoraApiClient().getReputationApi();
@@ -47,6 +46,5 @@ void main() {
     test('test reputationUserGetSingular', () async {
       // TODO
     });
-
   });
 }

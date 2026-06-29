@@ -11,10 +11,10 @@ part 'admin_invite_create_request.g.dart';
 /// AdminInviteCreateRequest
 ///
 /// Properties:
-/// * [email] 
-/// * [expiresInDays] 
-/// * [maxUses] 
-/// * [label] 
+/// * [email]
+/// * [expiresInDays]
+/// * [maxUses]
+/// * [label]
 @BuiltValue()
 abstract class AdminInviteCreateRequest implements Built<AdminInviteCreateRequest, AdminInviteCreateRequestBuilder> {
   @BuiltValueField(wireName: r'email')
@@ -159,4 +159,3 @@ class _$AdminInviteCreateRequestSerializer implements PrimitiveSerializer<AdminI
     return result.build();
   }
 }
-

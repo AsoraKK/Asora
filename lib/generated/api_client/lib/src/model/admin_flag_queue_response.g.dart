@@ -16,8 +16,7 @@ class _$AdminFlagQueueResponse extends AdminFlagQueueResponse {
 
   factory _$AdminFlagQueueResponse([
     void Function(AdminFlagQueueResponseBuilder)? updates,
-  ]) =>
-      (AdminFlagQueueResponseBuilder()..update(updates))._build();
+  ]) => (AdminFlagQueueResponseBuilder()..update(updates))._build();
 
   _$AdminFlagQueueResponse._({
     required this.items,
@@ -27,8 +26,7 @@ class _$AdminFlagQueueResponse extends AdminFlagQueueResponse {
   @override
   AdminFlagQueueResponse rebuild(
     void Function(AdminFlagQueueResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminFlagQueueResponseBuilder toBuilder() =>
@@ -111,7 +109,8 @@ class AdminFlagQueueResponseBuilder
   _$AdminFlagQueueResponse _build() {
     _$AdminFlagQueueResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminFlagQueueResponse._(
             items: items.build(),
             nextCursor: nextCursor,

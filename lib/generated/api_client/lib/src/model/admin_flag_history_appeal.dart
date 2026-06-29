@@ -12,9 +12,9 @@ part 'admin_flag_history_appeal.g.dart';
 /// AdminFlagHistoryAppeal
 ///
 /// Properties:
-/// * [type] 
-/// * [at] 
-/// * [status] 
+/// * [type]
+/// * [at]
+/// * [status]
 @BuiltValue()
 abstract class AdminFlagHistoryAppeal implements Built<AdminFlagHistoryAppeal, AdminFlagHistoryAppealBuilder> {
   @BuiltValueField(wireName: r'type')
@@ -143,4 +143,3 @@ class _$AdminFlagHistoryAppealSerializer implements PrimitiveSerializer<AdminFla
     return result.build();
   }
 }
-

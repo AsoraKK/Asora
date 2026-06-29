@@ -11,8 +11,8 @@ part 'admin_test_data_purge_request.g.dart';
 /// AdminTestDataPurgeRequest
 ///
 /// Properties:
-/// * [sessionId] 
-/// * [purgeExpired] 
+/// * [sessionId]
+/// * [purgeExpired]
 @BuiltValue()
 abstract class AdminTestDataPurgeRequest implements Built<AdminTestDataPurgeRequest, AdminTestDataPurgeRequestBuilder> {
   @BuiltValueField(wireName: r'sessionId')
@@ -124,4 +124,3 @@ class _$AdminTestDataPurgeRequestSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
-
