@@ -5,23 +5,50 @@ import {
   BlobSASPermissions,
   BlockBlobClient,
   generateBlobSASQueryParameters,
+  StorageSharedKeyCredential,
 } from '@azure/storage-blob';
 import { QueueServiceClient, QueueClient } from '@azure/storage-queue';
 import { Readable } from 'node:stream';
 
 import type { DsrQueueMessage } from './models';
 
+const STORAGE_CONNECTION_STRING = process.env.DSR_EXPORT_STORAGE_CONNECTION_STRING;
 const STORAGE_ACCOUNT = process.env.DSR_EXPORT_STORAGE_ACCOUNT;
 const QUEUE_NAME = process.env.DSR_QUEUE_NAME ?? 'dsr-requests';
 const QUEUE_CONNECTION_SETTING = process.env.DSR_QUEUE_CONNECTION ?? 'DsrQueueStorage';
 const CONTAINER_NAME = process.env.DSR_EXPORT_CONTAINER ?? 'dsr-exports';
 
-if (!STORAGE_ACCOUNT) {
-  throw new Error('DSR_EXPORT_STORAGE_ACCOUNT must be configured.');
+function parseConnectionStringValue(name: string): string | undefined {
+  if (!STORAGE_CONNECTION_STRING) {
+    return undefined;
+  }
+
+  const prefix = `${name}=`;
+  for (const segment of STORAGE_CONNECTION_STRING.split(';')) {
+    if (segment.startsWith(prefix)) {
+      return segment.slice(prefix.length);
+    }
+  }
+
+  return undefined;
 }
 
-// TypeScript knows STORAGE_ACCOUNT is defined after the check above
-const validatedStorageAccount = STORAGE_ACCOUNT!;
+const accountFromConnectionString = parseConnectionStringValue('AccountName');
+const accountKeyFromConnectionString = parseConnectionStringValue('AccountKey');
+const resolvedStorageAccount = STORAGE_ACCOUNT ?? accountFromConnectionString;
+
+if (!resolvedStorageAccount) {
+  throw new Error(
+    'DSR_EXPORT_STORAGE_ACCOUNT or DSR_EXPORT_STORAGE_CONNECTION_STRING must be configured.',
+  );
+}
+
+const validatedStorageAccount: string = resolvedStorageAccount;
+
+const sharedKeyCredential =
+  accountKeyFromConnectionString
+    ? new StorageSharedKeyCredential(validatedStorageAccount, accountKeyFromConnectionString)
+    : null;
 
 const credential = new DefaultAzureCredential();
 const blobServiceClient = new BlobServiceClient(
@@ -77,18 +104,22 @@ export async function createUserDelegationUrl(
   const blobClient = getBlobClient(blobPath);
   const now = new Date();
   const expiresOn = new Date(now.getTime() + ttlHours * 60 * 60 * 1000);
-  const key = await blobServiceClient.getUserDelegationKey(now, expiresOn);
-  const sasToken = generateBlobSASQueryParameters(
-    {
-      containerName: blobClient.containerName,
-      blobName: blobClient.name,
-      permissions: BlobSASPermissions.parse('r'),
-      startsOn: now,
-      expiresOn,
-    },
-    key,
-    validatedStorageAccount,
-  ).toString();
+
+  const sasOptions = {
+    containerName: blobClient.containerName,
+    blobName: blobClient.name,
+    permissions: BlobSASPermissions.parse('r'),
+    startsOn: now,
+    expiresOn,
+  };
+
+  const sasToken = sharedKeyCredential
+    ? generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString()
+    : generateBlobSASQueryParameters(
+        sasOptions,
+        await blobServiceClient.getUserDelegationKey(now, expiresOn),
+        validatedStorageAccount,
+      ).toString();
 
   return {
     url: `${blobClient.url}?${sasToken}`,

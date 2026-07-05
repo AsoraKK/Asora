@@ -98,35 +98,123 @@ async function fetchModerationDecisionsOnUserContent(userId: string) {
 
 async function fetchIdentity(userId: string) {
   return withClient(async client => {
-    const { rows } = await client.query(
-      `
-        SELECT
-          u.*,
-          p.display_name,
-          p.avatar_url,
-          p.extras AS profileExtras
-        FROM users u
-        LEFT JOIN profiles p ON p.user_uuid = u.user_uuid
-        WHERE u.user_uuid = $1
-      `,
-      [userId],
-    );
+    const rows = await fetchPrimaryIdentityRows(client, userId);
 
     if (!rows.length) {
       throw new Error(`Postgres identity ${userId} not found`);
     }
 
     const identity = rows[0];
-    const { rows: providers } = await client.query(
+    const profile = await fetchOptionalProfile(client, userId);
+    const providers = await fetchOptionalProviders(client, userId);
+
+    return {
+      identity: {
+        ...identity,
+        ...(profile ?? {}),
+      },
+      providers,
+    };
+  });
+}
+
+function isUndefinedTableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  return record.code === '42P01';
+}
+
+function isUndefinedColumnError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  return record.code === '42703';
+}
+
+async function fetchPrimaryIdentityRows(
+  client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }> },
+  userId: string,
+): Promise<Array<Record<string, unknown>>> {
+  try {
+    const { rows } = await client.query(
+      `
+        SELECT
+          u.*
+        FROM users u
+        WHERE u.user_uuid = $1
+      `,
+      [userId],
+    );
+
+    return rows;
+  } catch (error: unknown) {
+    if (!isUndefinedColumnError(error)) {
+      throw error;
+    }
+
+    const { rows } = await client.query(
+      `
+        SELECT
+          u.*
+        FROM users u
+        WHERE u.id = $1
+      `,
+      [userId],
+    );
+
+    return rows;
+  }
+}
+
+async function fetchOptionalProfile(
+  client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }> },
+  userId: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const { rows } = await client.query(
+      `
+        SELECT
+          display_name,
+          avatar_url,
+          extras AS "profileExtras"
+        FROM profiles
+        WHERE user_uuid = $1
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    return rows[0] ?? null;
+  } catch (error: unknown) {
+    if (isUndefinedTableError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function fetchOptionalProviders(
+  client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }> },
+  userId: string,
+): Promise<Array<Record<string, unknown>>> {
+  try {
+    const { rows } = await client.query(
       'SELECT provider, subject, created_at FROM auth_identities WHERE user_uuid = $1',
       [userId],
     );
 
-    return {
-      identity,
-      providers,
-    };
-  });
+    return rows;
+  } catch (error: unknown) {
+    if (isUndefinedTableError(error)) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 function buildScoreCards(records: Array<Record<string, unknown>>): ScoreCard[] {

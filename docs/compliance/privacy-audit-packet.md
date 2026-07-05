@@ -10,8 +10,8 @@
 
 | Right | Endpoint / Feature | Status | Evidence |
 |-------|-------------------|--------|----------|
-| **Right of Access** (Art. 15) | `GET /api/privacy/export` | ✅ Implemented | `privacy_api.dart:74`, `privacy.ts` |
-| **Right to Erasure** (Art. 17) | `DELETE /api/privacy/delete` | ✅ Implemented | `privacy_api.dart:121` |
+| **Right of Access** (Art. 15) | `GET /api/user/export` | ✅ Implemented | `privacy_api.dart:74`, `privacy.ts` |
+| **Right to Erasure** (Art. 17) | `DELETE /api/user/delete` | ✅ Implemented | `privacy_api.dart:121` |
 | **Right to Data Portability** (Art. 20) | JSON export format | ✅ Implemented | Export returns machine-readable JSON |
 | **Right to Rectification** (Art. 16) | Profile edit + post edit | ✅ Implemented | `posts_update.function.ts`, profile endpoints |
 | **Right to Restrict Processing** | Account disable | ✅ Implemented | `admin-ops.md` user disable |

@@ -74,11 +74,12 @@ Each item is tagged:
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
 | 4.1 | DSR runbook keys match deploy workflow | AUTO | `bash scripts/check-dsr-runbook-consistency.sh` (also in `ci.yml`) | |
-| 4.2 | `GET /api/privacy/export` returns valid JSON export within 72 h SLA | AUTO | `functions/src/` privacy tests; manual: trigger export, verify receipt | |
-| 4.3 | `DELETE /api/privacy/delete` soft-deletes immediately, hard-deletes ≤ 30 days | MANUAL | Trigger delete on staging account, verify soft-delete flag; schedule hard-delete check | |
+| 4.2 | `GET /api/user/export` returns valid JSON export within 72 h SLA | AUTO | `functions/src/` privacy tests; manual: trigger export, verify receipt | |
+| 4.3 | `DELETE /api/user/delete` soft-deletes immediately, hard-deletes ≤ 30 days | MANUAL | Trigger delete on staging account, verify soft-delete flag; schedule hard-delete check | |
 | 4.4 | PII redaction active in telemetry (no raw user IDs in App Insights) | AUTO | `tests/privacy/redaction.test.ts` | |
 | 4.5 | Privacy policy and terms of service live at public URL | MANUAL | Navigate to `https://lythaus.app/privacy` and `https://lythaus.app/terms`; confirm content is current | |
 | 4.6 | GDPR/POPIA article mapping complete | MANUAL | Review `docs/compliance/privacy-audit-packet.md` §1; all rights must show ✅ | |
+| 4.7 | **[LAUNCH BLOCKER]** Admin/operational DSR queue worker healthy, or an internal-only exception is explicitly signed off | MANUAL | If external/public launch: attach [2026-06-29-dsr-queue-listener-investigation.md](../evidence/observability/2026-06-29-dsr-queue-listener-investigation.md) proving the queue listener is fixed. If internal-only alpha exception: attach [2026-06-29-dsr-alpha-decision.md](../evidence/observability/2026-06-29-dsr-alpha-decision.md) and [dsr-internal-alpha-fallback.md](./dsr-internal-alpha-fallback.md). | |
 
 ---
 

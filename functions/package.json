@@ -11,7 +11,8 @@
     "build": "rimraf dist && tsc && tsc-alias && node scripts/write-dist-entry.cjs",
     "test": "jest --config jest.config.ts --runInBand",
     "test:coverage": "jest --config jest.config.ts --runInBand --coverage",
-    "verify:dist": "node scripts/verify-dist-structure.cjs ../functions-dist.zip"
+    "verify:dist": "node scripts/verify-dist-structure.cjs ../functions-dist.zip",
+    "dsr:manual": "tsx scripts/manual-dsr-process.ts"
   },
   "dependencies": {
     "@azure/app-configuration": "^1.6.0",
