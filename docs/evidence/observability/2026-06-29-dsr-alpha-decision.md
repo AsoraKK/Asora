@@ -11,7 +11,7 @@ There are two different DSR paths in the current codebase:
 1. Admin/operational DSR queue flow
    - Admin endpoints create `privacy_requests` records and enqueue `dsr-requests`
    - Azure queue worker `privacyDsrProcessor` is required to advance queued admin export/delete jobs
-   - This is the path currently broken on `asora-function-dev`
+   - This path is proven healthy on `asora-function-dev` as of `2026-07-05` after the queue binding and host queue encoding fixes
 
 2. Self-service privacy flow
    - Mobile privacy screen lives in `lib/features/privacy/privacy_settings_screen.dart`
@@ -29,42 +29,41 @@ There are two different DSR paths in the current codebase:
 
 ## Decision
 
-- External alpha: blocked
-- Public alpha: blocked
-- Internal-only alpha: conditionally possible
+- External/public alpha: allowed only for environments with the same fixed DSR queue configuration and fresh DSR proof attached
+- Internal-only alpha: no longer needs the manual fallback in dev while the `2026-07-05` queue proof remains representative
+- Manual fallback: retained as an emergency operational procedure
 
 ## Why External Alpha Stays Blocked
 
 - Launch readiness already treated DSR operations as a blocker
-- The admin/operational DSR queue worker is proven unhealthy
-- A separately registered minimal diagnostic queue trigger also failed to dequeue
-- That means the queue incident is no longer explainable as a normal app bug in the DSR handler
-- Even though the self-service privacy screen uses direct routes, current evidence does not prove full operational DSR readiness for external users
+- Dev admin/operational DSR is now proven healthy, but external/public alpha must attach equivalent proof for the actual target environment
+- The target environment must show `DSR_QUEUE_CONNECTION=DsrQueueStorage`, matching `DsrQueueStorage__queueServiceUri`, and `host.json` queue `messageEncoding=none`
+- The target environment must show a fresh queued export moving to `awaiting_review` without the manual fallback
+- The self-service privacy screen still needs its own smoke test if it is exposed
 
 ## Internal-Only Exception Conditions
 
-Internal-only alpha can be considered only if all of the following are true:
+Internal-only alpha can proceed in dev only if all of the following remain true:
 
 - No external users are invited
-- A risk owner signs off on the temporary exception
-- The queue-listener evidence packet remains attached to the incident record
-- Admin/operational queued DSR requests are handled only through the manual fallback runbook
+- The `2026-07-05` queue proof remains attached to the incident record
+- Admin/operational queued DSR requests use the normal queue path, not the manual fallback
 - Any user-facing DSR surface is either:
   - separately smoke-tested in the target environment, or
   - clearly marked unavailable for the duration of the exception
 
 ## Current Gap
 
-- This incident proved the admin queued DSR fallback and the queue listener failure
+- This incident proved the admin queued DSR fallback, identified the queue binding/encoding root causes, and proved the normal dev queue path after remediation
 - This incident did not perform a fresh live smoke of the self-service routes behind the privacy screen
 - Because of that, the safest current internal-alpha position is:
-  - keep external/public alpha blocked
+  - keep external/public alpha gated on target-environment DSR proof
   - allow internal-only alpha only if the privacy screen DSR actions are hidden/unavailable, or if a separate self-service smoke is completed
 
 ## Exact Next Action
 
-1. Route the Azure support ticket body through a support-enabled Azure account or contract
-2. Keep external/public alpha blocked
+1. Attach request `019f3291-a57e-7ff1-b352-f3c9f15405fb` as the dev admin DSR queue proof
+2. Keep external/public alpha gated until the selected target environment has equivalent proof
 3. For any internal-only alpha exception, either hide self-service DSR actions or separately smoke-test `GET /api/user/export` and `DELETE /api/user/delete`
 
 ## Safety
