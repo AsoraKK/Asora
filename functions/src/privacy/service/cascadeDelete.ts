@@ -255,40 +255,52 @@ async function processPostgres(
 ): Promise<void> {
   try {
     await withClient(async client => {
-      // Delete follows (both directions)
-      const followsResult = await client.query(
-        'DELETE FROM follows WHERE follower_uuid = $1 OR followee_uuid = $1',
-        [options.userId],
-      );
-      result.postgres.deleted['follows'] = followsResult.rowCount ?? 0;
+      const followsColumns = await getTableColumns(client, 'follows');
+      if (followsColumns) {
+        const followClauses = ['follower_uuid', 'followee_uuid'].filter(column =>
+          followsColumns.has(column),
+        );
 
-      // Delete profiles
-      const profilesResult = await client.query(
-        'DELETE FROM profiles WHERE user_uuid = $1',
-        [options.userId],
-      );
-      result.postgres.deleted['profiles'] = profilesResult.rowCount ?? 0;
+        if (followClauses.length > 0) {
+          const { rowCount } = await client.query(
+            `DELETE FROM follows WHERE ${followClauses.map(column => `${column} = $1`).join(' OR ')}`,
+            [options.userId],
+          );
+          result.postgres.deleted['follows'] = rowCount ?? 0;
+        } else {
+          result.postgres.deleted['follows'] = 0;
+        }
+      } else {
+        result.postgres.deleted['follows'] = 0;
+      }
 
-      // Delete auth_identities
-      const authResult = await client.query(
-        'DELETE FROM auth_identities WHERE user_uuid = $1',
-        [options.userId],
+      result.postgres.deleted['profiles'] = await deleteIfColumnExists(
+        client,
+        'profiles',
+        ['user_uuid'],
+        options.userId,
       );
-      result.postgres.deleted['auth_identities'] = authResult.rowCount ?? 0;
 
-      // Revoke all refresh tokens
-      const tokensResult = await client.query(
-        'DELETE FROM refresh_tokens WHERE user_uuid = $1',
-        [options.userId],
+      result.postgres.deleted['auth_identities'] = await deleteIfColumnExists(
+        client,
+        'auth_identities',
+        ['user_uuid'],
+        options.userId,
       );
-      result.postgres.deleted['refresh_tokens'] = tokensResult.rowCount ?? 0;
 
-      // Delete user record
-      const userResult = await client.query(
-        'DELETE FROM users WHERE user_uuid = $1',
-        [options.userId],
+      result.postgres.deleted['refresh_tokens'] = await deleteIfColumnExists(
+        client,
+        'refresh_tokens',
+        ['user_uuid'],
+        options.userId,
       );
-      result.postgres.deleted['users'] = userResult.rowCount ?? 0;
+
+      result.postgres.deleted['users'] = await deleteIfColumnExists(
+        client,
+        'users',
+        ['user_uuid', 'id'],
+        options.userId,
+      );
     });
   } catch (error: unknown) {
     result.errors.push({
@@ -296,6 +308,46 @@ async function processPostgres(
       error: `Postgres deletion failed: ${getErrorMessage(error)}`,
     });
   }
+}
+
+async function getTableColumns(
+  client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }> },
+  tableName: string,
+): Promise<Set<string> | null> {
+  const { rows } = await client.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = $1
+    `,
+    [tableName],
+  );
+
+  if (!rows.length) {
+    return null;
+  }
+
+  return new Set(rows.map(row => String(row.column_name)));
+}
+
+async function deleteIfColumnExists(
+  client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>>; rowCount?: number | null }> },
+  tableName: string,
+  candidateColumns: string[],
+  userId: string,
+): Promise<number> {
+  const columns = await getTableColumns(client, tableName);
+  if (!columns) {
+    return 0;
+  }
+
+  const column = candidateColumns.find(candidate => columns.has(candidate));
+  if (!column) {
+    return 0;
+  }
+
+  const { rowCount } = await client.query(`DELETE FROM ${tableName} WHERE ${column} = $1`, [userId]);
+  return rowCount ?? 0;
 }
 
 /**

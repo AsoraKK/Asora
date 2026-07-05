@@ -14,15 +14,33 @@ This checklist helps verify the environment configuration for DSR processing acr
 
 Ensure Cosmos DB connection is configured via Key Vault ref for `COSMOS_CONNECTION_STRING`.
 
+## Temporary Diagnostic App Settings
+- `DSR_DIAGNOSTIC_QUEUE_ENABLED=true` only during a dev diagnostic window
+- `DSR_DIAGNOSTIC_QUEUE_NAME=dsr-diagnostic-ping` unless a different empty queue is required
+- `DSR_DIAGNOSTIC_QUEUE_CONNECTION=DsrQueueStorage` to keep the diagnostic trigger on the same binding path as the real DSR worker
+
+Remove or disable these settings after the diagnostic window closes.
+
 ## Managed Identity RBAC
 Assign to the Functions app’s managed identity:
 - Storage Blob Data Contributor (scope: the DSR export storage account)
-- Storage Queue Data Contributor (scope: the same account)
+- Storage Queue Data Message Sender (scope: the same account)
+- Storage Queue Data Message Processor (scope: the same account)
+- Storage Queue Data Reader (scope: the same account, at least during diagnostics)
 
 Verify:
 - Can create user delegation key (for SAS)
 - Can write/read blob in the export container
 - Can send messages to the DSR queue
+- Can peek, retrieve, and delete messages from the DSR queue
+
+## Queue Binding Shape
+- `DSR_QUEUE_CONNECTION` should resolve to the binding setting name used by the trigger.
+- For the current identity-based queue trigger, the live binding shape is:
+  - `DSR_QUEUE_CONNECTION=DsrQueueStorage`
+  - `DsrQueueStorage__queueServiceUri=https://<storage-account>.queue.core.windows.net`
+- Keep the enqueue SDK path and the queue trigger pointed at the same storage account and queue name.
+- For a dev-only isolation test, an exact `DsrQueueStorage` connection string setting can temporarily override the identity-based collection. Remove it immediately after the test.
 
 ## Storage Account Configuration
 - TLS 1.2 minimum
@@ -36,5 +54,7 @@ Verify:
 
 ## Troubleshooting
 - SAS URL generation fails: verify MI has permissions and clock skew is reasonable; re-issue delegation key.
+- Queue messages stay visible with `dequeueCount=0`: verify `Storage Queue Data Message Processor`, confirm `DSR_QUEUE_CONNECTION` and `DsrQueueStorage__queueServiceUri`, then run a dev-only exact-setting connection-string isolation test.
+- If `privacyDsrDiagnosticPing` is registered in Azure but `dsr-diagnostic-ping` still keeps messages visible with `dequeueCount=0`, treat the issue as host/listener or Flex runtime failure rather than DSR job-code failure.
 - Queue dispatch throttled: increase `DSR_MAX_CONCURRENCY`; scale out plan if needed.
 - Missing app settings: check ARM template or pipeline vars; prefer Key Vault references for secrets.
