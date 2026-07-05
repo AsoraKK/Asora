@@ -4,11 +4,13 @@ Use this fallback only while the Azure Queue listener incident in
 [2026-06-29-dsr-queue-listener-investigation.md](../evidence/observability/2026-06-29-dsr-queue-listener-investigation.md)
 is unresolved.
 
+Update 2026-07-05: the dev admin/operational DSR export queue path is resolved after fixing the queue binding and host queue message encoding. Keep this runbook as an emergency fallback, not the normal dev path.
+
 ## Decision
 
-- External alpha: blocked
-- Public alpha: blocked
-- Internal-only alpha: conditionally allowed
+- External/public alpha remains blocked unless the target environment has the same fixed DSR queue configuration and fresh proof attached.
+- Internal-only alpha no longer needs this fallback for dev if the proof request in the incident packet remains representative of the deployed environment.
+- This fallback remains conditionally allowed as an emergency operating procedure.
 
 This fallback is acceptable only if all of the following are true:
 - No external users are invited
@@ -119,3 +121,5 @@ Retire this fallback when the Azure Queue trigger is proven healthy again:
 - `dequeueCount` changes as expected
 - DSR requests move beyond `queued` without the manual script
 - the incident evidence is updated to show the listener fix
+
+Dev exit criteria were met on `2026-07-05` by request `019f3291-a57e-7ff1-b352-f3c9f15405fb`, which moved to `awaiting_review` in 10 seconds using the normal plain JSON queue path.

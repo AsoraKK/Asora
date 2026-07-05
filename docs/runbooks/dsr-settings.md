@@ -6,7 +6,7 @@ This checklist helps verify the environment configuration for DSR processing acr
 - DSR_EXPORT_STORAGE_ACCOUNT
 - DSR_EXPORT_CONTAINER (default: dsr-exports)
 - DSR_QUEUE_NAME (default: dsr-requests)
-- DSR_QUEUE_CONNECTION (recommended: `DsrQueueStorage`)
+- DSR_QUEUE_CONNECTION (must be `DsrQueueStorage` for the current DSR storage account binding)
 - `DsrQueueStorage__queueServiceUri` pointing at the same storage account used for `DSR_EXPORT_STORAGE_ACCOUNT`
 - DSR_MAX_CONCURRENCY (exports)
 - DSR_EXPORT_SIGNED_URL_TTL_HOURS (e.g., 12)
@@ -36,6 +36,17 @@ Verify:
 - Can write/read blob in the export container
 - Can send messages to the DSR queue
 - Can receive queue-trigger deliveries from the same DSR storage account
+- Can peek, retrieve, and delete messages from the DSR queue
+
+## Queue Binding Shape
+- `DSR_QUEUE_CONNECTION` should resolve to the binding setting name used by the trigger.
+- For the current identity-based queue trigger, the live binding shape is:
+  - `DSR_QUEUE_CONNECTION=DsrQueueStorage`
+  - `DsrQueueStorage__queueServiceUri=https://<storage-account>.queue.core.windows.net`
+- Keep the enqueue SDK path and the queue trigger pointed at the same storage account and queue name.
+- `host.json` must include `extensions.queues.messageEncoding=none` because `enqueueDsrMessage` sends plain JSON through the Azure Storage Queue SDK.
+- For Flex Consumption P0 reliability, keep `function:privacyDsrProcessor=1` always-ready unless a deliberate scale-from-zero validation proves it is safe to remove.
+- For a dev-only isolation test, an exact `DsrQueueStorage` connection string setting can temporarily override the identity-based collection. Remove it immediately after the test.
 
 ## Storage Account Configuration
 - TLS 1.2 minimum
@@ -49,7 +60,8 @@ Verify:
 
 ## Troubleshooting
 - SAS URL generation fails: verify MI has permissions and clock skew is reasonable; re-issue delegation key.
-- Queue messages stay visible with `dequeueCount=0`: verify `Storage Queue Data Message Processor`, confirm `DSR_QUEUE_CONNECTION` and `DsrQueueStorage__queueServiceUri`, then run a dev-only exact-setting connection-string isolation test.
+- Queue messages stay visible with `dequeueCount=0`: verify `Storage Queue Data Message Processor`, confirm `DSR_QUEUE_CONNECTION`, `DsrQueueStorage__queueServiceUri`, and always-ready state, then run a dev-only exact-setting connection-string isolation test.
+- Queue message disappears but request stays `queued` with `attempt=0`: check `host.json` queue `messageEncoding`; plain SDK messages require `none`.
 - If `privacyDsrDiagnosticPing` is registered in Azure but `dsr-diagnostic-ping` still keeps messages visible with `dequeueCount=0`, treat the issue as host/listener or Flex runtime failure rather than DSR job-code failure.
 - Queue dispatch throttled: increase `DSR_MAX_CONCURRENCY`; scale out plan if needed.
 - Queue request stays `queued`: confirm the producer and queue trigger point at the same storage account. `DSR_EXPORT_STORAGE_ACCOUNT` and `DsrQueueStorage__queueServiceUri` must reference the same DSR account.

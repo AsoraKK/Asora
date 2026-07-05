@@ -749,4 +749,3 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_CONTAINER="user-media" --output none
 
           echo "✅ Media storage environment variables configured"
-

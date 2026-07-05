@@ -6,6 +6,33 @@ Function App: `asora-function-dev`
 Resource Group: `asora-psql-flex`
 Storage Account: `stasoradsrdev`
 
+## Resolution Update: 2026-07-05
+
+Status: resolved in dev for the admin/operational DSR export queue path.
+
+Root causes found after the initial listener investigation:
+- The deploy workflow reset `DSR_QUEUE_CONNECTION=AzureWebJobsStorage`, while `enqueueDsrMessage` writes `dsr-requests` to `DSR_EXPORT_STORAGE_ACCOUNT=stasoradsrdev`.
+- `host.json` did not set `extensions.queues.messageEncoding=none`, while the Azure Storage Queue SDK sender writes plain JSON messages.
+
+Fixes applied:
+- Live app setting corrected to `DSR_QUEUE_CONNECTION=DsrQueueStorage`.
+- Live app setting confirmed: `DsrQueueStorage__queueServiceUri=https://stasoradsrdev.queue.core.windows.net`.
+- `functions/host.json` and root `host.json` now set queue `messageEncoding` to `none`.
+- Deploy workflow now persists `DSR_QUEUE_CONNECTION=DsrQueueStorage` and `DsrQueueStorage__queueServiceUri`.
+- Flex always-ready is retained for `function:privacyDsrProcessor=1` as a P0 reliability guard.
+- Temporary diagnostic app settings were removed after validation; live function list returned to `privacyDsrProcessor` and `privacyDsrPurge`.
+
+Sanitized proof:
+- A valid live dev user was selected from `public.users`; only hash `a3a9e1ed9732cab2` was recorded.
+- Base64 control request `019f3286-f4d3-755c-bf0b-0789d0bc7a21` reached `awaiting_review`, proving the export job, Postgres lookup, packaging, and storage upload path were healthy.
+- Post-fix plain JSON request `019f328d-6de2-7444-af2d-0f60cbbab393` reached `awaiting_review`, with `attempt=1`, `exportBytes=1028`, and queue count `0`.
+- Final post-cleanup plain JSON request `019f3291-a57e-7ff1-b352-f3c9f15405fb` reached `awaiting_review` in 10 seconds, with `attempt=1`, `exportBytes=1028`, and queue count `0`.
+
+Classification:
+- Remaining issue was not schema drift, missing user data, export packaging, storage upload, or job-code failure.
+- The P0 failure was a combined queue binding/storage-account drift plus queue message encoding mismatch.
+- Azure support escalation is no longer required for this incident unless the queue stops consuming again with the fixed binding and host encoding in place.
+
 ## Scope
 
 Investigate why DSR export and delete requests stay in `queued` even though:
@@ -218,10 +245,10 @@ Current best classification: host/listener startup or Flex platform/runtime issu
 
 ## Exact Next Action
 
-1. Route this evidence packet through an Azure account or contract that has a qualifying support plan
-2. Open the Function App ticket using classification `Availability / Messaging function failed to trigger`
-3. Attach the package metadata, queue evidence, connection override result, and missing-log evidence from this file
-4. Keep external alpha blocked until Microsoft or later diagnostics prove the queue listener is healthy
+1. Keep `DSR_QUEUE_CONNECTION=DsrQueueStorage`, `DsrQueueStorage__queueServiceUri`, and `extensions.queues.messageEncoding=none` in every deploy path.
+2. Keep `function:privacyDsrProcessor=1` always-ready in dev until a separate scale-from-zero regression test proves it is unnecessary.
+3. For release readiness, attach the 2026-07-05 post-cleanup proof request `019f3291-a57e-7ff1-b352-f3c9f15405fb`.
+4. Open Azure support only if messages again remain visible or requests remain `queued` after these fixes are confirmed live.
 
 ## Safety Notes
 

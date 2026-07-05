@@ -1,5 +1,22 @@
 # Azure Support Ticket Body: DSR Queue Listener Failure
 
+## 2026-07-05 Update
+
+Do not file this support ticket for the current dev incident unless the failure recurs after the fixed configuration is confirmed live.
+
+Resolved causes:
+- Deployment drift bound `privacyDsrProcessor` through `AzureWebJobsStorage`, while DSR enqueue wrote to `stasoradsrdev`.
+- Queue trigger decoding expected base64 by default, while `enqueueDsrMessage` sends plain JSON.
+
+Resolved proof:
+- `DSR_QUEUE_CONNECTION=DsrQueueStorage`
+- `DsrQueueStorage__queueServiceUri=https://stasoradsrdev.queue.core.windows.net`
+- `extensions.queues.messageEncoding=none`
+- `function:privacyDsrProcessor=1` always-ready retained
+- Plain JSON request `019f3291-a57e-7ff1-b352-f3c9f15405fb` moved to `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, and queue count `0`.
+
+Use the historical packet below only if Azure support is needed for a recurrence that cannot be explained by app settings, deployment drift, queue encoding, or job-code failure.
+
 ## Summary
 
 Azure Functions Flex Consumption queue triggers on `asora-function-dev` are registered and synced, but they do not dequeue visible Azure Storage Queue messages. This affects both the real DSR worker trigger and a separate minimal diagnostic trigger. Messages remain visible with `dequeueCount=0`, no poison queue is created, and host/listener telemetry is absent from the usual log and App Insights paths.
