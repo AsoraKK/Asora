@@ -1,6 +1,7 @@
 import { PoolClient } from 'pg';
 import { v7 as uuidv7 } from 'uuid';
 import { withClient } from '@shared/clients/postgres';
+import { isInternalUserId } from '@auth/verifyJwt';
 
 export interface PGUser {
   id: string;
@@ -32,6 +33,12 @@ function normalizeProvider(provider: string): string {
   }
 
   return normalized;
+}
+
+function assertInternalUserId(userId: string, context: string): void {
+  if (!isInternalUserId(userId)) {
+    throw new Error(`${context} must be an internal UUIDv7 user ID`);
+  }
 }
 
 class UsersService {
@@ -71,6 +78,7 @@ class UsersService {
     tier: string = 'free'
   ): Promise<PGUser> {
     const userId = uuidv7();
+    assertInternalUserId(userId, 'Generated user ID');
     const now = new Date().toISOString();
 
     return withClient(async (client) => {
@@ -134,6 +142,7 @@ class UsersService {
     userId: string
   ): Promise<ProviderLink> {
     const normalizedProvider = normalizeProvider(provider);
+    assertInternalUserId(userId, 'Provider link user_id');
     const now = new Date().toISOString();
 
     return withClient(async (client) => {
@@ -163,8 +172,10 @@ class UsersService {
     if (existingLink) {
       const user = await this.getUserById(existingLink.user_id);
       if (user) {
+        assertInternalUserId(user.id, 'Linked user ID');
         return [user, false];
       }
+      throw new Error('Provider link points to a missing internal user');
     }
 
     // Check if user exists by email

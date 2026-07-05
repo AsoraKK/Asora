@@ -1,4 +1,3 @@
-import 'package:asora/core/network/dio_client.dart';
 import 'package:asora/services/auth_service.dart';
 import 'package:asora/services/moderation_service.dart';
 import 'package:asora/services/oauth2_service.dart';
@@ -6,6 +5,7 @@ import 'package:asora/services/post_service.dart';
 import 'package:asora/services/push/device_token_service.dart';
 import 'package:asora/services/push/push_notification_service.dart';
 import 'package:asora/services/service_providers.dart';
+import 'package:asora/core/network/dio_client.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

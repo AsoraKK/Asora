@@ -46,8 +46,11 @@ test('parseAppHttpCalls extracts route registrations', () => {
 });
 
 test('buildInventory returns deterministic guard failures (golden summary)', () => {
-  const allowlist = { rateLimitExempt: [], authGuardExempt: [] };
-  const { inventory, missingRateLimit, missingAuthGuard } = buildInventory(fixturesDir, allowlist);
+  const allowlist = { rateLimitExempt: [], authGuardExempt: [], auditExempt: [] };
+  const { inventory, missingRateLimit, missingAuthGuard, missingAdminAudit } = buildInventory(
+    fixturesDir,
+    allowlist
+  );
   const expected = require(path.resolve(fixturesDir, 'expected-summary.json'));
 
   assert.equal(inventory.length, expected.totalRoutes);
@@ -60,4 +63,25 @@ test('buildInventory returns deterministic guard failures (golden summary)', () 
     missingAuthGuard.map((item) => item.functionName),
     expected.missingAuthFunctions
   );
+  assert.deepEqual(
+    missingAdminAudit.map((item) => item.functionName),
+    expected.missingAdminAuditFunctions
+  );
+});
+
+test('actual functions inventory omits legacy auth config route', () => {
+  const allowlist = require(path.resolve(__dirname, '..', 'route-guard-allowlist.json'));
+  const functionsRoot = path.resolve(__dirname, '..', '..', 'functions', 'src');
+  const { inventory } = buildInventory(functionsRoot, allowlist);
+
+  assert.equal(inventory.some((item) => item.functionName === 'auth-config'), false);
+  assert.equal(inventory.some((item) => item.route === 'auth/b2c-config'), false);
+});
+
+test('actual functions inventory keeps admin mutations audited', () => {
+  const allowlist = require(path.resolve(__dirname, '..', 'route-guard-allowlist.json'));
+  const functionsRoot = path.resolve(__dirname, '..', '..', 'functions', 'src');
+  const { missingAdminAudit } = buildInventory(functionsRoot, allowlist);
+
+  assert.equal(missingAdminAudit.length, 0);
 });

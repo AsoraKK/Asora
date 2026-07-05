@@ -2,8 +2,8 @@
 
 > **Branding note:** User-facing product = **Lythaus**; internal/infra = **Asora**. See [branding guide](../branding/lythaus-transition.md).
 
-Version: 1.2
-Last Updated: 2026-04-30
+Version: 1.3
+Last Updated: 2026-06-12
 Owners: Privacy Engineering + Platform
 
 ## 1. Preconditions & Roles
@@ -31,7 +31,7 @@ Owners: Privacy Engineering + Platform
   | Store | Action |
   |-------|--------|
   | Cosmos `likes`, `appeal_votes` | Hard DELETE |
-  | Cosmos `posts`, `comments`, `content_flags`, `appeals`, `moderation_decisions` | ANONYMIZE (author fields → `[deleted]`, email → `deleted@anonymized.local`) |
+  | Cosmos `posts`, `comments`, `content_flags`, `appeals`, `moderation_decisions` | ANONYMIZE immediately (author fields → `[deleted]`, email → `deleted@anonymized.local`), then hard-delete after `DSR_PURGE_WINDOW_DAYS` |
   | Cosmos `users` | Hard DELETE |
   | Postgres `follows` | Hard DELETE (both directions) |
   | Postgres `profiles` | Hard DELETE |
@@ -77,9 +77,10 @@ Owners: Privacy Engineering + Platform
 - **Clear (`/admin/dsr/legal-holds/{id}/clear`):** Clears the hold identified by `{id}`. Sets `active: false`, records `audit` entry `{ event: 'cleared' }`, and releases blocked delete jobs so queued work can resume.
 
 ## 9. Purge Window & Exceptions
-- Soft-deleted data stays flagged for `DSR_PURGE_WINDOW_DAYS` (default 30). A TTL job (`purgeJob`) runs nightly to permanently remove items where `deletedAt <= now - purgeWindow` and no matching active legal hold.
-- If a legal hold covers the record, the purge job skips it and emits `dsr.delete.purge` span noting `holdId`.
-- Ops logs are trimmed at 30 days, security logs at 12 months; the `audit_logs` container is retained per `COSMOS_TERRAFORM_VALIDATION` guidelines.
+- **Policy: anonymise, then purge.** Content-bearing records are anonymised immediately so feeds and moderation references remain stable during the retention window. The nightly `purgeJob` permanently removes both soft-deleted records where `deletedAt <= now - purgeWindow` and anonymised records where `anonymizedAt <= now - purgeWindow`. `DSR_PURGE_WINDOW_DAYS` defaults to 30.
+- The purge set includes user/content containers and `moderation_decisions`. It explicitly excludes `audit_logs` and `privacy_audit`.
+- If an active `user`, `post`, or `case` legal hold covers a purge candidate, the job skips that record. After the hold is cleared, the next nightly run may purge it if its retention timestamp is already past the cutoff.
+- Ops logs are trimmed at 30 days. Security and DSR audit records remain under their separate 12-month retention policy and are not removed by the content purge job.
 
 ## 10. Troubleshooting & Failure Drills
 | Scenario | Detection | Remediation |
@@ -147,9 +148,9 @@ Owners: Privacy Engineering + Platform
 - **Clear (`/admin/dsr/legal-holds/{id}/clear`):** Clears the hold identified by `{id}`. Sets `active: false`, records `audit` entry `{ event: 'cleared' }`, and releases blocked delete jobs so queued work can resume.
 
 ## 8. Purge Window & Exceptions
-- Soft-deleted data stays flagged for `DSR_PURGE_WINDOW_DAYS` (default 30). A TTL job (`purgeJob`) runs nightly to permanently remove items where `deletedAt <= now - purgeWindow` and no matching active legal hold.
-- If a legal hold covers the record, the purge job skips it and emits `dsr.delete.purge` span noting `holdId`.
-- Ops logs are trimmed at 30 days, security logs at 12 months; the `audit_logs` container is retained per `COSMOS_TERRAFORM_VALIDATION` guidelines.
+- **Policy: anonymise, then purge.** Content-bearing records are anonymised immediately and permanently removed by the nightly `purgeJob` when `anonymizedAt <= now - purgeWindow`. Soft-deleted records are removed when `deletedAt <= now - purgeWindow`. `DSR_PURGE_WINDOW_DAYS` defaults to 30.
+- Active `user`, `post`, and `case` legal holds prevent matching records from being purged until the hold is cleared.
+- `audit_logs` and `privacy_audit` are outside the content purge set and remain under the separate 12-month security retention policy.
 
 ## 9. Troubleshooting & Failure Drills
 | Scenario | Detection | Remediation |

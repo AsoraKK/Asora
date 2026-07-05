@@ -1,108 +1,125 @@
 # Lythaus Web Architecture
 
-> Authoritative reference for the Flutter-web target of the Lythaus app.
-> Updated as part of the web-enablement project (Phases 0–11).
+> Authoritative reference for the Flutter web target of the Lythaus app.
+> Status: active
+> Auth source of truth: `docs/AUTH_ARCHITECTURE.md`
 
 ## Overview
 
-Lythaus ships as a **single Flutter codebase** targeting Android, iOS, and
-**Web** (Cloudflare Pages). The web target adds:
+Lythaus ships as a single Flutter codebase targeting Android, iOS, and web on
+Cloudflare Pages. The web target adds:
 
-- **GoRouter** for URL-addressable, shareable routes.
-- **PKCE auth** via browser redirects (no `flutter_appauth` on web).
-- **Responsive shell** — NavigationRail on desktop, BottomNav on mobile.
-- **Platform guards** — FCM, biometrics, TLS pinning gracefully skipped on web.
+- GoRouter for URL-addressable routes.
+- PKCE auth via browser redirects against the custom OAuth2 server.
+- A responsive shell with NavigationRail on desktop and BottomNav on mobile.
+- Platform guards so FCM, biometrics, and TLS pinning degrade safely on web.
+
+## Trust Boundaries
+
+| Traffic class | Entry points | Guard | Cache policy | State |
+|---|---|---|---|---|
+| Public | Marketing site, public legal pages, app login screens | No user JWT | Not cacheable as personalized content | Live |
+| Authenticated | Flutter app routes and user APIs | `Authorization: Bearer <token>` + `requireAuth` | `private, no-store` | Live |
+| Admin | Control panel and `/_admin/*` APIs | Admin JWT / Cloudflare Access | `private, no-store` | Live |
+| Anonymous-cacheable | `GET /api/feed/discover` | No `Authorization` header | `public, s-maxage=30, stale-while-revalidate=60` | Live |
+
+Only the anonymous-cacheable boundary is allowed through the feed-cache Worker.
+Public, authenticated, and admin traffic must bypass that edge cache path.
+The active auth boundary is upstream trusted identity proof plus internal OAuth2/PKCE
+and internal JWT issuance, as described in `docs/AUTH_ARCHITECTURE.md`.
+Admin access is live; `functions/src/admin/accessAuth.ts` protects the admin surface with
+Cloudflare Access JWT verification.
 
 ## Production URLs
 
 | Surface | URL |
 |---|---|
-| Flutter web app | `https://app.lythaus.asora.co.za` |
+| Flutter web app | `https://lythaus-web.pages.dev` |
 | Marketing site | `https://lythaus.asora.co.za` |
 
 ## Architecture Diagram
 
 ```
 Browser
-  │
-  ├─ / (AdaptiveShell)       – Discover · Create · Alerts · Profile
-  ├─ /login                   – AuthChoiceScreen (provider picker)
-  ├─ /auth/callback           – AuthCallbackScreen (PKCE code exchange)
-  ├─ /user/test               – ProfileScreen(test) public deep-link
-  ├─ /post/test               – PostDetailScreen(test) public deep-link
-  ├─ /post/:postId            – PostDetailScreen
-  ├─ /user/:userId            – ProfileScreen
-  ├─ /invite/:code            – InviteRedeemScreen
-  ├─ /moderation              – ModerationConsoleScreen
-  ├─ /moderation/appeal       – AppealHistoryScreen
-  └─ /settings/notifications  – NotificationsSettingsScreen
+  |
+  |-- / (AdaptiveShell)        - Discover, Create, Alerts, Profile
+  |-- /login                   - AuthChoiceScreen
+  |-- /auth/callback           - AuthCallbackScreen
+  |-- /user/test               - ProfileScreen(test)
+  |-- /post/test               - PostDetailScreen(test)
+  |-- /post/:postId            - PostDetailScreen
+  |-- /user/:userId            - ProfileScreen
+  |-- /invite/:code            - InviteRedeemScreen
+  |-- /moderation              - ModerationConsoleScreen
+  |-- /moderation/appeal       - AppealHistoryScreen
+  `-- /settings/notifications  - NotificationsSettingsScreen
 ```
 
-## Authentication (Web)
+## Authentication
 
-### Azure AD B2C Configuration
+### OAuth2 Configuration
 
 | Field | Value |
 |---|---|
-| Tenant | `asoraauthlife.onmicrosoft.com` |
-| Authority host | `asoraauthlife.ciamlogin.com` |
-| Client ID | `c07bb257-aaf0-4179-be95-fce516f92e8c` |
-| Policy | `B2C_1_signupsignin` |
+| Authorization endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/authorize` |
+| Token endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/token` |
+| UserInfo endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/userinfo` |
+| Client ID | `asora-mobile-app` |
+| Redirect URI | `${Uri.base.origin}/auth/callback` |
+| Scopes | `openid email profile offline_access` |
 
-### B2C Redirect URI Setup
-
-Register these redirect URIs in Azure Portal → App registrations →
-`c07bb257-…` → Authentication → Platform: SPA:
-
-```
-https://app.lythaus.asora.co.za/auth/callback
-```
-
-Release web builds no longer depend on localhost, private IPs, `.local`, or
-dev fallback origins.
+The browser callback URI must match the deployed web origin. Release builds
+fail fast if the callback or API origins resolve to localhost, private IPs, or
+other non-public hosts.
 
 ### PKCE Flow
 
 1. `WebAuthService.startSignIn(provider)` builds an authorization URL with
    `response_type=code`, PKCE `code_challenge` (S256), and `state`.
-2. `WebTokenStorage` persists `code_verifier` and `state` in
-   `sessionStorage` (tab-scoped, cleared on close).
-3. Browser navigates to B2C.
-4. B2C redirects back to `/auth/callback?code=XXX&state=YYY`.
-5. `AuthCallbackScreen` calls `WebAuthService.handleCallback(Uri.base)`:
-   - Validates `state` (CSRF protection).
-   - Exchanges `code` + `code_verifier` for tokens at the token endpoint.
-   - Fetches user profile with the access token.
-   - Stores tokens + user JSON in `sessionStorage`.
+2. `WebTokenStorage` persists `code_verifier` and `state` in `sessionStorage`.
+3. Browser navigates to the authorization endpoint.
+4. The authorization server redirects back to `/auth/callback?code=XXX&state=YYY`.
+5. `AuthCallbackScreen` calls `WebAuthService.handleCallback(Uri.base)`.
 6. `AuthStateNotifier.setUser(user)` updates Riverpod state.
-7. GoRouter redirect moves the user to `/`.
+7. GoRouter redirects the user to `/`.
 
 ### Session Restore
 
 On page reload, `AuthStateNotifier._loadCurrentUser()` checks
-`WebAuthService().getStoredUser()` and `getAccessToken()` from
-`sessionStorage`, avoiding an unnecessary network call.
+`WebAuthService().getStoredUser()` and `getAccessToken()` from sessionStorage.
 
 ## Key Files
 
 | File | Purpose |
 |---|---|
-| `lib/core/routing/app_router.dart` | GoRouter configuration with auth redirect |
 | `lib/features/auth/application/web_auth_service.dart` | PKCE browser redirect flow |
 | `lib/features/auth/application/web_token_storage.dart` | Conditional export (real vs stub) |
-| `lib/features/auth/application/web_token_storage_real.dart` | sessionStorage impl via `package:web` |
+| `lib/features/auth/application/web_token_storage_real.dart` | sessionStorage implementation |
 | `lib/features/auth/application/web_token_storage_stub.dart` | No-op stubs for native platforms |
 | `lib/features/auth/presentation/auth_callback_screen.dart` | OAuth2 callback UI |
-| `lib/ui/screens/adaptive_shell.dart` | Responsive shell (NavigationRail / BottomNav) |
+| `lib/features/auth/application/auth_providers.dart` | Auth state and token refresh wiring |
+| `lib/core/routing/app_router.dart` | GoRouter configuration with auth redirect |
 | `lib/main.dart` | `MaterialApp.router` with `appRouterProvider` |
 | `web/_redirects` | Cloudflare Pages SPA catch-all |
 
-## Build & Deploy
+## Component States
+
+| Component | State | Note |
+|---|---|---|
+| Flutter web app | Live | Authenticated browser experience |
+| Marketing site | Live | Public, crawlable surface |
+| `cloudflare/worker.ts` | Partial (anonymous-cacheable only) | Only anonymous discover traffic is cached |
+| `functions/src/admin/accessAuth.ts` | Live (Cloudflare Access gate) | Separate admin gate for the admin surface |
+| `workers/feed-cache/src/index.js` | Deprecated (legacy route wrapper) | Compatibility wrapper for the legacy route binding |
+
+Current state: the admin Access gate is live and enforced at the origin.
+
+## Build And Deploy
 
 ### Local Development
 
 ```bash
-flutter run -d chrome --dart-define=OAUTH2_REDIRECT_URI=http://localhost:8080/auth/callback
+flutter run -d chrome
 ```
 
 ### Production Build
@@ -115,372 +132,88 @@ The build script sources `cloudflare/pages-release.sh`, which is the tracked
 source of truth for the release-web origins used by both Cloudflare Pages and
 GitHub Actions.
 
-The build script sources `cloudflare/pages-release.sh`, which is the tracked
-source of truth for the release-web origins used by both Cloudflare Pages and
-GitHub Actions.
+### Security Headers
 
-### Cloudflare Pages
+`web/_headers` is the source of truth for Pages response headers and is copied
+into `build/web/_headers` by `scripts/cf-pages-build.sh`.
 
-1. Build output directory: `build/web`
-2. The `_redirects` file handles SPA routing: `/* /index.html 200`
-3. The `_headers` file adds security headers and `no-store` rules for auth and
-   user-specific routes.
-4. Configure custom domain `app.lythaus.asora.co.za` in Cloudflare dashboard.
+Current baseline headers:
 
-### CI (flutter-ci.yml)
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `X-Frame-Options: DENY`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), local-network-access=()`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
 
-The `web-build` job:
-1. Runs `bash scripts/cf-pages-build.sh`
-2. Produces `build/web`
-3. Copies `web/_redirects` and `web/_headers` into the final output
-4. Uploads the `build/web` artifact
-
-The `format-and-analyze` job uses `rg --files` and excludes
-`lib/generated/api_client.dart`, `lib/generated/api_client/**`, and
-`.dart_tool/**` so openapi-generator output never enters the formatter gate.
-
-## Platform Guards
-
-These features are gracefully disabled on web:
-
-- **FCM push notifications** — `kIsWeb` guard in `AdaptiveShell` and `AppShell`
-- **Biometric auth** — guard in `AuthService`
-- **Crash reporting** — Firebase Crashlytics initializes only on Android
-- **TLS certificate pinning** — shared Dio factories fall back to the browser adapter on web
-- **Device security checks** — guard in `DeviceSecurityService`
-
-## Pre-deploy Checklist
-
-- [ ] `flutter analyze` reports no issues
-- [ ] `flutter test` passes
-- [ ] `bash scripts/cf-pages-build.sh` succeeds with production env vars
-- [ ] `cloudflare/pages-release.sh` exists and supplies the release-web origins
-- [ ] `build/web/_redirects` and `build/web/_headers` exist
-- [ ] B2C redirect URIs registered for target domain
-- [ ] `OAUTH2_*` dart-define values set for production
-- [ ] `/`, `/login`, `/auth/callback`, `/user/test`, and `/post/test` load directly
-- [ ] No release-web code path reaches localhost or private origins
-# Lythaus Web App — Architecture & Deployment Guide
-
-## Overview
-
-The Lythaus web app is a secondary surface built from the same Flutter codebase as the mobile app. It shares core business logic, UI components, and state management while adding web-specific routing, authentication, and responsive layout.
-
-## Architecture
-
-### Routing — GoRouter (`lib/core/routing/app_router.dart`)
-
-Declarative routing via `go_router` replaces manual `Navigator.push` calls. Routes:
-
-| Path | Screen | Auth required |
-|------|--------|---------------|
-| `/login` | AuthChoiceScreen | No |
-| `/auth/callback` | AuthCallbackScreen | No |
-| `/user/test` | ProfileScreen(test) | No |
-| `/post/test` | PostDetailScreen(test) | No |
-| `/` | AdaptiveShell (Discover) | Yes or Guest |
-| `/post/:postId` | PostDetailScreen | Yes or Guest |
-| `/user/:userId` | ProfileScreen | Yes or Guest |
-| `/invite/:code` | InviteRedeemScreen | Yes or Guest |
-| `/moderation` | ModerationConsoleScreen | Yes |
-| `/moderation/appeal` | AppealHistoryScreen | Yes |
-| `/settings/notifications` | NotificationsSettingsScreen | Yes |
-
-The `redirect` callback in `appRouterProvider` enforces auth:
-- Unauthenticated + non-guest → redirect to `/login`
-- Authenticated or guest on `/login` → redirect to `/`
-- `/auth/callback` is always reachable (handles OAuth2 redirect)
-
-### Authentication — PKCE Redirect Flow
-
-Mobile uses `flutter_appauth` for OAuth2 PKCE. On web, the browser-native redirect flow is used instead:
-
-1. **`WebAuthService.startSignIn()`** — Generates PKCE code_verifier/challenge, stores verifier + state in `sessionStorage`, redirects browser to the authorization endpoint.
-2. **Browser navigates to B2C** — User authenticates.
-3. **B2C redirects to `/auth/callback`** — `AuthCallbackScreen` reads the code from the URL.
-4. **`WebAuthService.handleCallback()`** — Exchanges code for tokens via HTTP POST, stores tokens in `sessionStorage`, fetches user profile.
-5. **Auth state updated** — `AuthStateNotifier.setUser()` is called, GoRouter redirects to `/`.
-
-Key files:
-- `lib/features/auth/application/web_auth_service.dart`
-- `lib/features/auth/application/web_token_storage.dart` (conditional export)
-- `lib/features/auth/application/web_token_storage_real.dart` (sessionStorage impl)
-- `lib/features/auth/application/web_token_storage_stub.dart` (no-op stubs for native)
-- `lib/features/auth/presentation/auth_callback_screen.dart`
-
-**Product decision:** Tokens are stored in `sessionStorage` — closing the tab logs out the user. This is intentional for security (no persistent auth cookies on shared machines).
-
-### Responsive Layout — AdaptiveShell (`lib/ui/screens/adaptive_shell.dart`)
-
-`LayoutBuilder` switches between:
-- **< 768px width**: `BottomNavigationBar` (existing `AsoraBottomNav`)
-- **≥ 768px width**: `NavigationRail` with vertical divider
-
-Four tabs: Discover, Create, Alerts, Profile. Guest mode blocks the Create tab with a snackbar.
-
-### Platform Guards
-
-Web-incompatible features are guarded with `kIsWeb`:
-
-| Feature | File | Web behavior |
-|---------|------|-------------|
-| TLS cert pinning | `dio_client.dart` | Skipped (browser handles TLS) |
-| Device security | `device_security_service.dart` | Always reports secure |
-| Biometric auth | `auth_service.dart` | Returns false |
-| Push notifications | `adaptive_shell.dart`, `notification_permission_service.dart` | Skipped/returns not-determined |
-
-### CORS
-
-The Azure Functions API handles CORS in application code:
-- **General API** (`functions/src/shared/utils/http.ts`): Uses `CORS_ALLOWED_ORIGINS` env var, defaults to `*`. All necessary headers (`Authorization`, `Content-Type`) are in the allowlist.
-- **Admin API** (`functions/src/admin/cors.ts`): Separate strict allowlist for the control panel. Not used by the consumer web app.
-
-### API Base URL
-
-Configured in `lib/core/config/environment_config.dart`:
-- **Debug (web)**: `http://localhost:7072/api`
-- **Debug (Android emulator)**: `http://10.0.2.2:7072/api`
-- **Release**: must be a public `https://` origin and cannot be localhost,
-  private IP, or `.local`
-
-## Build & Deploy
-
-### Local development
-
-```bash
-# Run web in Chrome
-flutter run -d chrome
-
-# Build web release for Cloudflare Pages
-bash scripts/cf-pages-build.sh
-```
-
-### CI
-
-The `flutter-ci.yml` workflow includes a `web-build` job that sources
-`cloudflare/pages-release.sh` and then runs `bash scripts/cf-pages-build.sh`
-on every push/PR to `main`.
-
-### Production deployment
-
-The built output in `build/web/` can be deployed to any static hosting (Cloudflare Pages, Azure Static Web Apps, etc.).
-
-**Required configuration before deploying:**
-1. Register `{origin}/auth/callback` as a redirect URI in Azure AD B2C.
-2. Set `CORS_ALLOWED_ORIGINS` in Azure Functions to include the web app's origin (if not using wildcard).
-3. Keep the release-web origins in `cloudflare/pages-release.sh` in sync with
-   the deployed API and auth endpoints.
-4. Ensure the feed route responds with `private, no-store` for authenticated requests.
-
-## External Blockers
-
-| Blocker | Status | Owner |
-|---------|--------|-------|
-| B2C redirect URI registration | Pending | Azure AD admin |
-| Web domain DNS / hosting | Pending | Infrastructure |
-| Production env var rollout | Pending | App/infra |
-
-## Files Created/Modified
-
-### New files
-- `lib/core/routing/app_router.dart` — GoRouter configuration
-- `lib/features/auth/application/web_auth_service.dart` — PKCE redirect flow
-- `lib/features/auth/application/web_token_storage.dart` — conditional export
-- `lib/features/auth/application/web_token_storage_real.dart` — sessionStorage
-- `lib/features/auth/application/web_token_storage_stub.dart` — no-op stubs
-- `lib/features/auth/presentation/auth_callback_screen.dart` — OAuth2 callback
-- `lib/ui/screens/adaptive_shell.dart` — responsive shell
-- `web/_redirects` — Cloudflare Pages SPA fallback (`/* → /index.html 200`)
-- `docs/evidence/web/web-audit-baseline.md` — Phase 0 proof gate
-- `test/core/routing/app_router_test.dart`
-- `test/ui/screens/adaptive_shell_test.dart`
-- `test/features/auth/application/web_token_storage_test.dart`
-
-### Modified files
-- `lib/main.dart` — MaterialApp.router integration
-- `lib/core/network/dio_client.dart` — kIsWeb guard for TLS pinning
-- `lib/core/config/environment_config.dart` — release-web fail-fast config
-- `lib/features/auth/application/oauth2_service.dart` — web auth delegation
-- `lib/features/auth/application/auth_providers.dart` — setUser() method
-- `lib/features/auth/application/auth_service.dart` — biometrics guard
-- `lib/core/security/device_security_service.dart` — device security guard
-- `lib/features/notifications/application/notification_permission_service.dart` — permissions guard
-- `lib/ui/screens/app_shell.dart` — notification init guard
-- `web/index.html` — Lythaus branding, OG tags, noscript
-- `web/manifest.json` — Lythaus branding
-- `.github/workflows/flutter-ci.yml` — web-build job
-- `pubspec.yaml` — go_router, web dependencies
+CSP is currently `Content-Security-Policy-Report-Only` while we confirm Flutter
+web asset requirements against real browser traffic. Once the report stream is
+clean and the app still loads without regressions, the same policy should be
+promoted to enforced `Content-Security-Policy`.
 
 ## Deployment Readiness
 
 ### Environment Variables
 
 | Variable | Where | Purpose | Example |
-|----------|-------|---------|---------|
-| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Allow web origin for API CORS | `https://app.lythaus.asora.co.za` |
-| `B2C_TENANT_NAME` | Build-time config (`environment_config.dart`) | Azure AD B2C tenant | `lythausauth` |
-| `B2C_CLIENT_ID` | Build-time config | OAuth2 client ID | `xxxxxxxx-xxxx-...` |
-| `B2C_POLICY_NAME` | Build-time config | B2C sign-in/sign-up policy | `B2C_1_signupsignin` |
-| `API_BASE_URL` | Build-time config | Functions API endpoint. Release web sources this from `cloudflare/pages-release.sh`. | `https://asora-function-dev.azurewebsites.net/api` |
-| `AUTH_URL` | Build-time config | Auth service endpoint. Release web sources this from `cloudflare/pages-release.sh`. | `https://asora-auth-dev.azurewebsites.net` |
+|---|---|---|---|
+| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Allow web origin for API CORS | `https://lythaus-web.pages.dev` |
+| `OAUTH2_AUTHORIZATION_ENDPOINT` | Build-time config | OAuth2 authorization endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/authorize` |
+| `OAUTH2_TOKEN_ENDPOINT` | Build-time config | OAuth2 token endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/token` |
+| `OAUTH2_USERINFO_ENDPOINT` | Build-time config | OAuth2 userinfo endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/userinfo` |
+| `OAUTH2_CLIENT_ID` | Build-time config | OAuth2 client ID | `asora-mobile-app` |
+| `OAUTH2_SCOPE` | Build-time config | OAuth2 scopes | `openid email profile offline_access` |
+| `API_BASE_URL` | Build-time config | Functions API endpoint | `https://asora-function-dev.azurewebsites.net/api` |
 
-Build-time values are baked into the JS bundle. They are not secrets (the client ID and tenant are public OAuth2 metadata). Actual secrets (client secrets) are never in the web bundle.
+Build-time values are baked into the JS bundle. They are not secrets.
 
 ### DNS Assumptions
 
 | Record | Value | Purpose |
-|--------|-------|---------|
-| `app.lythaus.asora.co.za` | CNAME → static host | Flutter web app |
-| `lythaus.asora.co.za` / `www.lythaus.asora.co.za` | CNAME → marketing host | Astro marketing site |
-| Both domains must have HTTPS (TLS) | Managed by hosting provider | PKCE redirect and secure cookies |
+|---|---|---|
+| `lythaus-web.pages.dev` | Cloudflare Pages subdomain | Flutter web app |
+| `lythaus.asora.co.za` / `www.lythaus.asora.co.za` | CNAME to marketing host | Astro marketing site |
+| Both domains must have HTTPS | Managed by hosting provider | PKCE redirect and secure cookies |
 
-The web app and marketing site are separate origins. No cookie sharing or cross-origin SSO is required.
+The web app and marketing site are separate origins. No cookie sharing or
+cross-origin SSO is required.
 
 ### Pre-Deploy Checklist
 
-1. **Azure AD B2C:** Register `https://app.lythaus.asora.co.za/auth/callback` as a redirect URI under *Single-page application (SPA)* in the **client** app registration (not the backend/API registration). See [B2C Setup Steps](#b2c-redirect-uri-setup) below.
-2. **CORS:** Set `CORS_ALLOWED_ORIGINS=https://app.lythaus.asora.co.za` in Azure Functions app settings (or keep `*` for dev).
-3. **Build:** `bash scripts/cf-pages-build.sh` from the repo root; it sources
-   `cloudflare/pages-release.sh`.
-4. **Upload:** Deploy `build/web/` to the static hosting target. Ensure the hosting provider returns `index.html` for all 404s (SPA fallback routing).
-5. **Marketing site:** `cd apps/marketing-site && npm ci && npx astro build` → deploy `dist/` to marketing host.
-6. **Canonical URL:** The marketing site domain is set in `astro.config.mjs` (`site` field). Currently `https://lythaus.asora.co.za`. Also update the URLs in `public/sitemap.xml` if the domain changes.
-7. **Localhost callback:** If developing locally, also register
-   `http://localhost:<port>/auth/callback` in B2C (matching the actual
-   `flutter run -d chrome` port). Release builds do not use localhost.
+1. Confirm `WebAuthService.redirectUri` resolves to the deployed web origin.
+2. Set `CORS_ALLOWED_ORIGINS=https://lythaus-web.pages.dev` in Azure Functions.
+3. Run `bash scripts/cf-pages-build.sh` from the repo root.
+4. Deploy `build/web/` to the static hosting target.
+5. Deploy the marketing site separately from `apps/marketing-site`.
+6. Keep the release-web origins in `cloudflare/pages-release.sh` in sync with
+   the deployed API and auth endpoints.
 
 ### Post-Deploy Smoke Checklist
 
-Run these manually against the deployed web app after each release:
+`.github/workflows/beta-smoke.yml` automates this checklist after staging deploys and documents the per-deployment report artifact. Keep the table below as the contract it enforces:
 
 | # | Test | URL / Action | Expected |
-|---|------|-------------|----------|
-| 1 | Landing loads | `https://app.lythaus.asora.co.za/` | Redirects to `/login` (unauthenticated) |
-| 2 | Login screen | `/login` | AuthChoiceScreen renders, sign-in buttons visible |
-| 3 | Guest mode | Click "Continue as guest" | Redirects to `/`, Discover tab loads, Create tab shows snackbar |
-| 4 | Auth callback (no code) | `/auth/callback` (no params) | Shows error with "Back to sign in" button |
+|---|---|---|---|
+| 1 | Landing loads | `https://lythaus-web.pages.dev/` | Redirects to `/login` when unauthenticated |
+| 2 | Login screen | `/login` | AuthChoiceScreen renders |
+| 3 | Guest mode | Click "Continue as guest" | Redirects to `/`, Discover tab loads |
+| 4 | Auth callback | `/auth/callback` with no params | Shows an error and a back button |
 | 5 | Public test routes | `/user/test` and `/post/test` | Both load directly and survive refresh |
-| 6 | Post direct link | `/post/nonexistent-id` | PostDetailScreen loads (shows error for invalid ID) |
-| 7 | Profile direct link | `/user/some-user-id` | ProfileScreen loads (may show error for unknown user) |
-| 8 | Desktop layout | Resize browser ≥ 768px | NavigationRail appears instead of bottom nav |
-| 9 | Mobile layout | Resize browser < 768px | BottomNavigationBar appears |
-| 10 | Browser back | Navigate to a post, click back | Returns to previous route |
-| 11 | Full auth flow | Sign in via B2C → verify feed loads → refresh page → verify session restores | User remains signed in after reload |
-| 12 | Sign out | Sign out → verify redirect to `/login` | sessionStorage cleared, back button does not restore session |
+| 6 | Desktop layout | Resize browser >= 768px | NavigationRail appears |
+| 7 | Mobile layout | Resize browser < 768px | BottomNavigationBar appears |
+| 8 | Full auth flow | Sign in via PKCE redirect, refresh page | Session restores |
+| 9 | Sign out | Sign out and return to `/login` | sessionStorage is cleared |
+| 10 | Security headers | DevTools Network or `curl -I` on the deployed app | Baseline headers are present |
 
 ### Rollback Path
 
-1. **Static assets:** Revert to the previous `build/web/` deployment. If using blob storage or CDN, swap the blob container or purge the CDN cache to point to the prior build.
-2. **DNS cutover:** If the web app was deployed with a DNS change, revert the CNAME to the previous target.
-3. **Azure Functions:** Functions are independently deployed and versioned. Rolling back the web app does not require rolling back the API.
-4. **B2C redirect URI:** The redirect URI can be left registered — it does not affect mobile apps. Only remove it if the web deployment is being permanently retired.
+1. Revert the previous `build/web/` deployment.
+2. Restore the prior DNS target if the web app was moved.
+3. Roll back the Azure Functions deployment independently if needed.
 
-### Known Post-Launch Items
+## Known Post-Launch Items
 
 | Item | Severity | Action |
-|------|----------|--------|
-| Token refresh | HIGH | Implement silent renew (iframe or service worker) to avoid session expiry during long sessions |
-| FCM web push | MEDIUM | Add Firebase web config + `firebase-messaging-sw.js` service worker |
-| WASM target | LOW | Blocked by `flutter_secure_storage_web` deprecated APIs; JS target is fine |
-
----
-
-## B2C Redirect URI Setup
-
-Step-by-step instructions for registering the web app callback in Azure AD B2C.
-
-### Prerequisites — Confirm Before Starting
-
-| # | Item | Confirmed Value |
-|---|------|----------------|
-| 1 | **B2C Tenant** | `asoraauthlife.onmicrosoft.com` (authority host: `asoraauthlife.ciamlogin.com`) |
-| 2 | **Client App Registration** | The **client** registration used by the Flutter login flow — **not** the backend/API registration. Client ID: `c07bb257-aaf0-4179-be95-fce516f92e8c` |
-| 3 | **Sign-in Policy** | `B2C_1_signupsignin` |
-| 4 | **Platform Type** | Single-page application (SPA) — browser-based Flutter web app using PKCE redirect flow |
-| 5 | **Callback Path** | `/auth/callback` — hardcoded in `OAuth2Config.redirectUri` (returns `${Uri.base.origin}/auth/callback` on web) |
-| 6 | **Production Host** | `app.lythaus.asora.co.za` (HTTPS) |
-
-### Step 1 — Switch to the B2C Tenant
-
-1. Open [Azure Portal](https://portal.azure.com)
-2. Click **Directories + subscriptions** (top-right filter icon)
-3. Switch into the B2C tenant that owns `asoraauthlife.onmicrosoft.com`
-
-> This matters — changes made in the wrong tenant appear to succeed but have no effect on auth.
-
-### Step 2 — Open the Client App Registration
-
-1. Search for and open **Azure AD B2C**
-2. Click **App registrations**
-3. Select the client application with ID `c07bb257-aaf0-4179-be95-fce516f92e8c`
-
-> Verify you are editing the **client** registration (the one the browser login uses), not the Functions API registration.
-
-### Step 3 — Open Authentication Settings
-
-1. Click **Authentication** in the left menu
-2. Under **Platform configurations**, check what already exists
-
-### Step 4 — Add SPA Redirect URIs
-
-If a **Single-page application** platform exists, click **Add URI** in that section.
-If not, click **Add a platform** → **Single-page application**.
-
-Add these redirect URIs:
-
-```
-https://app.lythaus.asora.co.za/auth/callback
-```
-
-For local development, also add (matching the actual port you use):
-
-```
-http://localhost:3000/auth/callback
-http://localhost:8080/auth/callback
-```
-
-If you have a staging host, add it too:
-
-```
-https://staging.lythaus.asora.co.za/auth/callback
-```
-
-**Do NOT register** any of these (they look close but will fail on exact match):
-- `https://app.lythaus.asora.co.za` (missing `/auth/callback`)
-- `https://lythaus.asora.co.za/auth/callback` (wrong subdomain)
-- `https://app.asora.co.za/auth/callback` (wrong host)
-- Any `http://` production URI (must be HTTPS)
-
-### Step 5 — Save
-
-Click **Save**. Do not navigate away without saving.
-
-### Step 6 — Record the Change
-
-After saving, record:
-
-- App registration name: __________
-- Client ID: `c07bb257-aaf0-4179-be95-fce516f92e8c`
-- Exact redirect URIs added: __________
-- Date/time of change: __________
-- Changed by: __________
-
-### Verification
-
-1. Open `https://app.lythaus.asora.co.za` in a browser
-2. Click **Sign in**
-3. Complete the B2C login flow
-4. Confirm the browser returns to `https://app.lythaus.asora.co.za/auth/callback`
-5. Confirm the app enters the signed-in experience (Discover tab)
-6. **Refresh the page** — confirm session restore works (user stays signed in)
-7. **Sign out** — confirm redirect to `/login` and `sessionStorage` is cleared
-
-### Troubleshooting
-
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| B2C shows "redirect URI not registered" | Wrong URI or wrong app registration | Compare the exact URI in browser dev tools Network tab with what is registered |
-| Login completes but app shows error | URI registered on API app, not client app | Move the URI to the client app registration |
-| Works on localhost but not production | HTTP registered instead of HTTPS, or production URI not added | Add the exact HTTPS production URI |
-| Works on one browser tab but not another | Expected — `sessionStorage` is tab-scoped | Each tab requires its own sign-in (by design, see ADR-W01) |
-| DNS not resolving | CNAME not configured yet | Create `app.lythaus.asora.co.za` CNAME to your static host |
+|---|---|---|
+| Token refresh | High | Implement silent renew to reduce session expiry during long sessions |
+| FCM web push | Medium | Add Firebase web config and a service worker |
+| WASM target | Low | Blocked by `flutter_secure_storage_web` deprecated APIs |

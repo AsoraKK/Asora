@@ -7,11 +7,11 @@ part of 'admin_appeal_original_decision.dart';
 // **************************************************************************
 
 const AdminAppealOriginalDecisionDecisionEnum
-    _$adminAppealOriginalDecisionDecisionEnum_BLOCKED =
+_$adminAppealOriginalDecisionDecisionEnum_BLOCKED =
     const AdminAppealOriginalDecisionDecisionEnum._('BLOCKED');
 
 AdminAppealOriginalDecisionDecisionEnum
-    _$adminAppealOriginalDecisionDecisionEnumValueOf(String name) {
+_$adminAppealOriginalDecisionDecisionEnumValueOf(String name) {
   switch (name) {
     case 'BLOCKED':
       return _$adminAppealOriginalDecisionDecisionEnum_BLOCKED;
@@ -21,15 +21,15 @@ AdminAppealOriginalDecisionDecisionEnum
 }
 
 final BuiltSet<AdminAppealOriginalDecisionDecisionEnum>
-    _$adminAppealOriginalDecisionDecisionEnumValues =
+_$adminAppealOriginalDecisionDecisionEnumValues =
     BuiltSet<AdminAppealOriginalDecisionDecisionEnum>(
-  const <AdminAppealOriginalDecisionDecisionEnum>[
-    _$adminAppealOriginalDecisionDecisionEnum_BLOCKED,
-  ],
-);
+      const <AdminAppealOriginalDecisionDecisionEnum>[
+        _$adminAppealOriginalDecisionDecisionEnum_BLOCKED,
+      ],
+    );
 
 Serializer<AdminAppealOriginalDecisionDecisionEnum>
-    _$adminAppealOriginalDecisionDecisionEnumSerializer =
+_$adminAppealOriginalDecisionDecisionEnumSerializer =
     _$AdminAppealOriginalDecisionDecisionEnumSerializer();
 
 class _$AdminAppealOriginalDecisionDecisionEnumSerializer
@@ -53,18 +53,16 @@ class _$AdminAppealOriginalDecisionDecisionEnumSerializer
     Serializers serializers,
     AdminAppealOriginalDecisionDecisionEnum object, {
     FullType specifiedType = FullType.unspecified,
-  }) =>
-      _toWire[object.name] ?? object.name;
+  }) => _toWire[object.name] ?? object.name;
 
   @override
   AdminAppealOriginalDecisionDecisionEnum deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
-  }) =>
-      AdminAppealOriginalDecisionDecisionEnum.valueOf(
-        _fromWire[serialized] ?? (serialized is String ? serialized : ''),
-      );
+  }) => AdminAppealOriginalDecisionDecisionEnum.valueOf(
+    _fromWire[serialized] ?? (serialized is String ? serialized : ''),
+  );
 }
 
 class _$AdminAppealOriginalDecision extends AdminAppealOriginalDecision {
@@ -79,8 +77,7 @@ class _$AdminAppealOriginalDecision extends AdminAppealOriginalDecision {
 
   factory _$AdminAppealOriginalDecision([
     void Function(AdminAppealOriginalDecisionBuilder)? updates,
-  ]) =>
-      (AdminAppealOriginalDecisionBuilder()..update(updates))._build();
+  ]) => (AdminAppealOriginalDecisionBuilder()..update(updates))._build();
 
   _$AdminAppealOriginalDecision._({
     this.decision,
@@ -91,8 +88,7 @@ class _$AdminAppealOriginalDecision extends AdminAppealOriginalDecision {
   @override
   AdminAppealOriginalDecision rebuild(
     void Function(AdminAppealOriginalDecisionBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealOriginalDecisionBuilder toBuilder() =>
@@ -132,8 +128,10 @@ class _$AdminAppealOriginalDecision extends AdminAppealOriginalDecision {
 
 class AdminAppealOriginalDecisionBuilder
     implements
-        Builder<AdminAppealOriginalDecision,
-            AdminAppealOriginalDecisionBuilder> {
+        Builder<
+          AdminAppealOriginalDecision,
+          AdminAppealOriginalDecisionBuilder
+        > {
   _$AdminAppealOriginalDecision? _$v;
 
   AdminAppealOriginalDecisionDecisionEnum? _decision;
@@ -188,7 +186,8 @@ class AdminAppealOriginalDecisionBuilder
   _$AdminAppealOriginalDecision _build() {
     _$AdminAppealOriginalDecision _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminAppealOriginalDecision._(
             decision: decision,
             reasonCodes: _reasonCodes?.build(),

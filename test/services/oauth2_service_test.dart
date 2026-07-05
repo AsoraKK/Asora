@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,15 +17,34 @@ void main() {
   late OAuth2Service service;
   late MockDio mockDio;
   late MockFlutterSecureStorage mockStorage;
+  late MockFlutterAppAuth mockAppAuth;
+
+  setUpAll(() {
+    registerFallbackValue(
+      AuthorizationTokenRequest(
+        'fallback-client',
+        'fallback://redirect',
+        discoveryUrl: 'https://example.com',
+      ),
+    );
+    registerFallbackValue(
+      TokenRequest(
+        'fallback-client',
+        'fallback://redirect',
+        discoveryUrl: 'https://example.com',
+      ),
+    );
+  });
 
   setUp(() {
     mockDio = MockDio();
     mockStorage = MockFlutterSecureStorage();
+    mockAppAuth = MockFlutterAppAuth();
 
     service = OAuth2Service(
       dio: mockDio,
       secureStorage: mockStorage,
-      configEndpoint: 'https://example.com/api/auth/b2c-config',
+      appAuth: mockAppAuth,
     );
   });
 
@@ -110,68 +130,58 @@ void main() {
       expect(config.authorityHost, 'asoraauthlife.ciamlogin.com');
       expect(config.scopes, contains('openid'));
     });
+
+    test('toJson includes optional fields', () {
+      const config = AuthConfig(
+        tenant: 'tenant.onmicrosoft.com',
+        tenantId: 'tid',
+        clientId: 'client-id',
+        policy: 'B2C_1_signin',
+        authorityHost: 'auth.example.com',
+        scopes: ['openid'],
+        redirectUris: {'android': 'com.test://cb'},
+        knownAuthorities: ['auth.example.com'],
+        googleIdpHint: 'Google',
+      );
+
+      final json = config.toJson();
+      expect(json['tenantId'], 'tid');
+      expect(json['googleIdpHint'], 'Google');
+    });
+
+    test('redirectUri uses platform-specific mapping when present', () {
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const config = AuthConfig(
+        tenant: 'tenant.onmicrosoft.com',
+        clientId: 'client-id',
+        policy: 'B2C_1_signin',
+        authorityHost: 'auth.example.com',
+        scopes: ['openid'],
+        redirectUris: {
+          'android': 'com.test.android://cb',
+          'ios': 'com.test.ios://cb',
+        },
+        knownAuthorities: ['auth.example.com'],
+      );
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(config.redirectUri, 'com.test.android://cb');
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      expect(config.redirectUri, 'com.test.ios://cb');
+    });
   });
 
   group('OAuth2Service initialization', () {
-    test('loads config from server when available', () async {
-      final configJson = {
-        'tenant': 'server.onmicrosoft.com',
-        'clientId': 'server-client-id',
-        'policy': 'B2C_1_signupsignin',
-        'authorityHost': 'server.ciamlogin.com',
-        'scopes': ['openid'],
-        'redirectUris': {'android': 'test://callback'},
-        'knownAuthorities': ['server.ciamlogin.com'],
-      };
-
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
-        (_) async => Response(
-          data: configJson,
-          statusCode: 200,
-          requestOptions: RequestOptions(path: ''),
-        ),
-      );
-
+    test('loads config from compile-time values without remote fetch', () async {
       await service.initialize();
 
-      verify(
-        () => mockDio.get<Map<String, dynamic>>(
-          'https://example.com/api/auth/b2c-config',
-        ),
-      ).called(1);
-    });
-
-    test('falls back to environment config when server fails', () async {
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: ''),
-          type: DioExceptionType.connectionTimeout,
-        ),
-      );
-
-      await service.initialize();
-
-      // Should not throw, falls back to environment
-      expect(service.currentState, isNotNull);
+      verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
+      expect(service.currentState, AuthState.unauthenticated);
     });
 
     test('checks for cached token on init', () async {
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
-        (_) async => Response(
-          data: {
-            'tenant': 'test.onmicrosoft.com',
-            'clientId': 'test-id',
-            'policy': 'B2C_1_signupsignin',
-            'authorityHost': 'test.ciamlogin.com',
-            'scopes': ['openid'],
-            'redirectUris': {'android': 'test://callback'},
-            'knownAuthorities': ['test.ciamlogin.com'],
-          },
-          statusCode: 200,
-          requestOptions: RequestOptions(path: ''),
-        ),
-      );
-
       when(
         () => mockStorage.read(key: 'access_token'),
       ).thenAnswer((_) async => 'cached_token');
@@ -182,7 +192,193 @@ void main() {
 
       await service.initialize();
 
+      verifyNever(() => mockDio.get<Map<String, dynamic>>(any()));
       expect(service.currentState, AuthState.authenticated);
+    });
+  });
+
+  group('OAuth2Service interactive flows', () {
+    test('signInEmail builds a policy-scoped authorization request', () async {
+      when(
+        () => mockStorage.read(key: any(named: 'key')),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockStorage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final tokenResponse = AuthorizationTokenResponse(
+        'access-token',
+        'refresh-token',
+        DateTime.now().add(const Duration(hours: 1)),
+        'id-token',
+        'Bearer',
+        ['openid'],
+        {'p': 'B2C_1_signupsignin'},
+        {'nonce': 'n'},
+      );
+      when(
+        () => mockAppAuth.authorizeAndExchangeCode(
+          any(),
+        ),
+      ).thenAnswer((_) async => tokenResponse);
+
+      await service.initialize();
+      final result = await service.signInEmail();
+
+      expect(result.accessToken, 'access-token');
+      expect(service.currentState, AuthState.authenticated);
+      final request = verify(
+        () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
+      ).captured.single as AuthorizationTokenRequest;
+      expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
+      expect(request.discoveryUrl, contains('?p=B2C_1_signupsignin'));
+      expect(request.scopes, contains('openid'));
+    });
+
+    test('signInGoogle includes IdP hint and login prompt', () async {
+      when(
+        () => mockStorage.read(key: any(named: 'key')),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockStorage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+        ),
+      ).thenAnswer((_) async {});
+
+      when(
+        () => mockAppAuth.authorizeAndExchangeCode(any()),
+      ).thenAnswer(
+        (_) async => AuthorizationTokenResponse(
+          'google-access',
+          null,
+          DateTime.now().add(const Duration(hours: 1)),
+          null,
+          'Bearer',
+          ['openid'],
+          {'idp': 'Google'},
+          null,
+        ),
+      );
+
+      await service.initialize();
+      await service.signInGoogle();
+
+      final request = verify(
+        () => mockAppAuth.authorizeAndExchangeCode(captureAny()),
+      ).captured.single as AuthorizationTokenRequest;
+      expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
+      expect(request.additionalParameters?['idp'], 'Google');
+      expect(request.additionalParameters?['prompt'], 'login');
+    });
+
+    test('getAccessToken refreshes when the cached token is near expiry', () async {
+      final now = DateTime.now();
+      when(
+        () => mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'cached-token');
+      when(
+        () => mockStorage.read(key: 'expires_on'),
+      ).thenAnswer(
+        (_) async => now.subtract(const Duration(minutes: 1)).toIso8601String(),
+      );
+      when(
+        () => mockStorage.read(key: 'refresh_token'),
+      ).thenAnswer((_) async => 'refresh-token');
+      when(
+        () => mockStorage.write(
+          key: any(named: 'key'),
+          value: any(named: 'value'),
+        ),
+      ).thenAnswer((_) async {});
+      when(() => mockAppAuth.token(any())).thenAnswer(
+        (_) async => TokenResponse(
+          'refreshed-token',
+          'refreshed-refresh-token',
+          now.add(const Duration(hours: 1)),
+          'refreshed-id-token',
+          'Bearer',
+          ['openid'],
+          {'p': 'B2C_1_signupsignin'},
+        ),
+      );
+
+      await service.initialize();
+      final token = await service.getAccessToken();
+
+      expect(token, 'refreshed-token');
+      final request = verify(() => mockAppAuth.token(captureAny())).captured.single
+          as TokenRequest;
+      expect(request.refreshToken, 'refresh-token');
+      expect(request.additionalParameters?['p'], 'B2C_1_signupsignin');
+      expect(service.currentState, AuthState.unauthenticated);
+    });
+
+    test('getAccessToken returns the cached token when it is still valid', () async {
+      when(
+        () => mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'cached-token');
+      when(
+        () => mockStorage.read(key: 'expires_on'),
+      ).thenAnswer(
+        (_) async => DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+      );
+
+      final token = await service.getAccessToken();
+
+      expect(token, 'cached-token');
+      verifyNever(() => mockAppAuth.token(any()));
+    });
+
+    test('getAccessToken returns null when refresh token is missing', () async {
+      when(
+        () => mockStorage.read(key: 'access_token'),
+      ).thenAnswer((_) async => 'cached-token');
+      when(
+        () => mockStorage.read(key: 'expires_on'),
+      ).thenAnswer(
+        (_) async => DateTime.now().subtract(const Duration(minutes: 1)).toIso8601String(),
+      );
+      when(
+        () => mockStorage.read(key: 'refresh_token'),
+      ).thenAnswer((_) async => null);
+
+      await service.initialize();
+      final token = await service.getAccessToken();
+
+      expect(token, isNull);
+      expect(service.currentState, AuthState.unauthenticated);
+      verifyNever(() => mockAppAuth.token(any()));
+    });
+  });
+
+  group('OAuth2Service sign out', () {
+    test('clears cached credentials and resets state', () async {
+      when(
+        () => mockStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
+
+      await service.signOut();
+
+      verify(
+        () => mockStorage.delete(key: 'access_token'),
+      ).called(1);
+      verify(
+        () => mockStorage.delete(key: 'refresh_token'),
+      ).called(1);
+      verify(
+        () => mockStorage.delete(key: 'id_token'),
+      ).called(1);
+      verify(
+        () => mockStorage.delete(key: 'expires_on'),
+      ).called(1);
+      verify(
+        () => mockStorage.delete(key: 'account_id'),
+      ).called(1);
+      expect(service.currentState, AuthState.unauthenticated);
     });
   });
 
@@ -279,10 +475,10 @@ void main() {
     });
   });
 
-  group('B2C Policy Parameter', () {
+  group('OAuth2 policy parameter', () {
     test('policy parameter must be included in authorize requests', () {
-      // This test documents the requirement that B2C/CIAM flows must include
-      // the policy (user flow) parameter in authorization requests.
+      // This test documents the requirement that policy-driven flows must
+      // include the policy (user flow) parameter in authorization requests.
       // Without this, the authorize endpoint won't know which user flow to execute.
 
       const config = AuthConfig(
@@ -300,13 +496,12 @@ void main() {
       expect(config.discoveryUrl, contains('?p=B2C_1_signupsignin'));
 
       // And signInEmail/signInGoogle must pass additionalParameters: {'p': policy}
-      // This is verified by code inspection since AuthorizationTokenRequest is opaque
-      // See: lib/services/oauth2_service.dart lines ~275 (signInEmail) and ~312 (signInGoogle)
+      // This is verified by code inspection since AuthorizationTokenRequest is opaque.
     });
 
     test('policy parameter must be included in token refresh requests', () {
       // Token refresh via TokenRequest must also include the policy parameter
-      // to ensure the token endpoint knows which user flow's keys to use for validation
+      // to ensure the token endpoint knows which user flow's keys to use for validation.
 
       const config = AuthConfig(
         tenant: 'test.onmicrosoft.com',
@@ -318,8 +513,6 @@ void main() {
         knownAuthorities: ['test.ciamlogin.com'],
       );
 
-      // Verified by code inspection in getAccessToken() refresh flow
-      // See: lib/services/oauth2_service.dart line ~383
       expect(config.policy, 'B2C_1_signupsignin');
     });
   });

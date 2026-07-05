@@ -13,10 +13,12 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import type { Container } from '@azure/cosmos';
 import * as crypto from 'crypto';
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT } from 'jose';
 import { handleCorsAndMethod, createErrorResponse, createSuccessResponse } from '@shared/utils/http';
 import { getAzureLogger } from '@shared/utils/logger';
 import { getCosmosClient } from '@shared/clients/cosmos';
+import { requireAuth, type Principal } from '@shared/middleware/auth';
+import { isInternalUserId } from '@auth/verifyJwt';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { redeemInvite, validateInvite } from './inviteStore';
@@ -73,46 +75,19 @@ interface RedeemInviteRequest {
   inviteCode: string;
 }
 
-/**
- * Extract user info from Bearer token without full validation.
- * We allow this for inactive users who need to redeem invites.
- */
-async function decodeAccessToken(authHeader: string | null): Promise<{ sub: string; email?: string } | null> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
-  try {
-    const token = authHeader.slice(7);
-    const { payload: decoded } = await jwtVerify(token, getJwtSecretBytes());
-    if (typeof decoded === 'object' && decoded !== null && 'sub' in decoded) {
-      return {
-        sub: String(decoded.sub),
-        email: 'email' in decoded ? String(decoded.email) : undefined,
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
 export async function redeemInviteHandler(
-  req: HttpRequest,
+  req: AuthenticatedRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
-  const cors = handleCorsAndMethod(req.method ?? 'POST', ['POST']);
-  if (cors.shouldReturn && cors.response) return cors.response;
-
   try {
-    // Require authentication (but user may be inactive)
-    const tokenInfo = await decodeAccessToken(req.headers.get('authorization'));
-    if (!tokenInfo) {
-      return createErrorResponse(401, 'unauthorized', 'Valid access token required');
-    }
-
-    const userId = tokenInfo.sub;
-    const userEmail = tokenInfo.email;
+    const userId = req.principal.sub;
+    const userEmail = req.principal.email;
+    const rawPayload = req.principal.raw ?? {};
+    const audience = Array.isArray(rawPayload.aud)
+      ? rawPayload.aud[0]
+      : rawPayload.aud;
 
     // Parse request body
     const body = await req.json().catch(() => ({})) as RedeemInviteRequest;
@@ -132,6 +107,10 @@ export async function redeemInviteHandler(
     if (!user) {
       logger.warn('User not found during invite redemption', { userId });
       return createErrorResponse(404, 'user_not_found', 'User not found');
+    }
+
+    if (!isInternalUserId(user.id) || user.id !== userId) {
+      return createErrorResponse(500, 'internal_error', 'Invalid internal user identifier');
     }
 
     // Check if user is already active
@@ -190,6 +169,8 @@ export async function redeemInviteHandler(
       tier: user.tier,
       reputation: user.reputationScore,
       iss: JWT_ISSUER,
+      aud: audience,
+      type: 'access',
     };
 
     const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
@@ -198,7 +179,7 @@ export async function redeemInviteHandler(
     const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const refreshToken = await signJwtToken(
-      { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
+      { sub: user.id, iss: JWT_ISSUER, aud: audience, type: 'refresh' },
       REFRESH_TOKEN_EXPIRY,
       refreshJti
     );
@@ -226,8 +207,22 @@ export async function redeemInviteHandler(
 }
 
 // Route registration
+const protectedRedeemInvite = requireAuth(redeemInviteHandler);
+
+export async function redeemInviteRoute(
+  req: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
+  const cors = handleCorsAndMethod(req.method ?? 'POST', ['POST']);
+  if (cors.shouldReturn && cors.response) {
+    return cors.response;
+  }
+
+  return protectedRedeemInvite(req, context);
+}
+
 const rateLimitedRedeemInvite = withRateLimit(
-  redeemInviteHandler,
+  redeemInviteRoute,
   (req, context) => getPolicyForFunction('auth-redeem-invite')
 );
 

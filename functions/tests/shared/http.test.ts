@@ -41,6 +41,46 @@ describe('http utility responses', () => {
     expect(typeof parsed.timestamp).toBe('string');
   });
 
+  it('reflects the active request origin inside async-local response helpers', async () => {
+    const originalOrigins = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.CORS_ALLOWED_ORIGINS =
+      '["https://control.asora.co.za","https://lythaus-web.pages.dev","https://*.lythaus-web.pages.dev"]';
+    jest.resetModules();
+
+    try {
+      const {
+        createErrorResponse: createErrorResponseWithContext,
+        createSuccessResponse: createSuccessResponseWithContext,
+        runWithRequestOrigin,
+      } = require('@shared/utils/http') as typeof import('@shared/utils/http');
+
+      const requestOrigin = 'https://be18fa23.lythaus-web.pages.dev';
+
+      const success = await runWithRequestOrigin(requestOrigin, async () => {
+        await Promise.resolve();
+        return createSuccessResponseWithContext({ id: '123' }, {}, 200, requestOrigin);
+      });
+      expect(success.headers).toMatchObject({
+        'Access-Control-Allow-Origin': requestOrigin,
+      });
+
+      const error = await runWithRequestOrigin(requestOrigin, async () => {
+        await Promise.resolve();
+        return createErrorResponseWithContext(500, 'fail', undefined, {}, requestOrigin);
+      });
+      expect(error.headers).toMatchObject({
+        'Access-Control-Allow-Origin': requestOrigin,
+      });
+    } finally {
+      if (originalOrigins === undefined) {
+        delete process.env.CORS_ALLOWED_ORIGINS;
+      } else {
+        process.env.CORS_ALLOWED_ORIGINS = originalOrigins;
+      }
+      jest.resetModules();
+    }
+  });
+
   it('creates error envelope and hides stack traces outside development', () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';

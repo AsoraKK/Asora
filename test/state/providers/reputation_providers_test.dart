@@ -40,7 +40,11 @@ void main() {
       final free = tiers.firstWhere((t) => t.id == 'free');
 
       expect(free.privileges, isNotEmpty);
-      expect(free.privileges.length, 3);
+      expect(free.privileges, contains('Limited daily posting'));
+      expect(
+        free.privileges,
+        contains('Rewards capped through reputation level 3'),
+      );
     });
 
     test('premium tier has expected privileges', () {
@@ -104,6 +108,11 @@ void main() {
             dailyPosts: 20,
             maxMediaSizeMB: 30,
             maxMediaPerPost: 4,
+            maxCustomFeeds: 2,
+            newsBoardAccess: true,
+            postingRestricted: false,
+            rewardLevelCap: 5,
+            rewardOptionsPerLevel: 1,
           ),
         );
 

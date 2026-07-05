@@ -143,9 +143,19 @@ abstract class ModerationRepository {
 class ModerationException implements Exception {
   final String message;
   final String? code;
+  final int? statusCode;
+  final Duration? retryAfter;
+  final Map<String, dynamic>? payload;
   final dynamic originalError;
 
-  const ModerationException(this.message, {this.code, this.originalError});
+  const ModerationException(
+    this.message, {
+    this.code,
+    this.statusCode,
+    this.retryAfter,
+    this.payload,
+    this.originalError,
+  });
 
   @override
   String toString() => 'ModerationException: $message';

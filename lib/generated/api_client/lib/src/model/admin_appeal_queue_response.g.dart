@@ -16,8 +16,7 @@ class _$AdminAppealQueueResponse extends AdminAppealQueueResponse {
 
   factory _$AdminAppealQueueResponse([
     void Function(AdminAppealQueueResponseBuilder)? updates,
-  ]) =>
-      (AdminAppealQueueResponseBuilder()..update(updates))._build();
+  ]) => (AdminAppealQueueResponseBuilder()..update(updates))._build();
 
   _$AdminAppealQueueResponse._({
     required this.items,
@@ -27,8 +26,7 @@ class _$AdminAppealQueueResponse extends AdminAppealQueueResponse {
   @override
   AdminAppealQueueResponse rebuild(
     void Function(AdminAppealQueueResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealQueueResponseBuilder toBuilder() =>
@@ -112,7 +110,8 @@ class AdminAppealQueueResponseBuilder
   _$AdminAppealQueueResponse _build() {
     _$AdminAppealQueueResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminAppealQueueResponse._(
             items: items.build(),
             nextCursor: nextCursor,

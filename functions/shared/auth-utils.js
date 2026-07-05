@@ -3,7 +3,7 @@
  * ASORA AUTHENTICATION UTILITIES
  *
  * 🎯 Purpose: JWT token verification and user extraction
- * 🔐 Security: Token validation with Azure AD B2C integration
+ * 🔐 Security: Token validation with upstream identity integration
  * 📊 Features: Token parsing, user ID extraction, role verification
  */
 const __awaiter =

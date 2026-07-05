@@ -55,6 +55,7 @@ Method | HTTP request | Description
 [**adminOpsStateGet**](AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
 [**adminOpsStateUpdate**](AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
 [**adminSetUserTier**](AdminApi.md#adminsetusertier) | **PATCH** /admin/users/{userId}/tier | Set user subscription tier
+[**adminTestDataPurge**](AdminApi.md#admintestdatapurge) | **POST** /admin/test-data/purge | Purge test data outside production
 [**adminUsersDisable**](AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [**adminUsersEnable**](AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [**adminUsersSearch**](AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
@@ -1262,7 +1263,7 @@ Creates a single admin invite code.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAdminApi();
-final AdminInviteCreateRequest adminInviteCreateRequest = ; // AdminInviteCreateRequest | 
+final AdminInviteCreateRequest adminInviteCreateRequest = {"email":"beta.user@example.com","expiresInDays":30,"maxUses":1,"label":"beta-tester"}; // AdminInviteCreateRequest | 
 
 try {
     final response = api.adminInvitesCreate(adminInviteCreateRequest);
@@ -1993,6 +1994,47 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AdminUserActionResponse**](AdminUserActionResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminTestDataPurge**
+> AdminTestDataPurge200Response adminTestDataPurge(adminTestDataPurgeRequest)
+
+Purge test data outside production
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getAdminApi();
+final AdminTestDataPurgeRequest adminTestDataPurgeRequest = ; // AdminTestDataPurgeRequest | 
+
+try {
+    final response = api.adminTestDataPurge(adminTestDataPurgeRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminTestDataPurge: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **adminTestDataPurgeRequest** | [**AdminTestDataPurgeRequest**](AdminTestDataPurgeRequest.md)|  | 
+
+### Return type
+
+[**AdminTestDataPurge200Response**](AdminTestDataPurge200Response.md)
 
 ### Authorization
 

@@ -21,6 +21,16 @@ export const ALLOWED_ORIGINS = [
 
 const ALLOWED_ORIGINS_SET = new Set(ALLOWED_ORIGINS);
 
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Cache-Control': 'no-store, no-cache, private',
+};
+
 /**
  * Check if origin is allowed
  */
@@ -41,6 +51,7 @@ export function getAdminCorsHeaders(origin: string | null | undefined): Record<s
     'Access-Control-Allow-Headers': 'Content-Type, Cf-Access-Jwt-Assertion, X-Correlation-ID',
     'Access-Control-Max-Age': '86400',
     'Access-Control-Allow-Credentials': 'true',
+    ...SECURITY_HEADERS,
   };
 }
 

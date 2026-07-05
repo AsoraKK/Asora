@@ -78,7 +78,7 @@ describe('Tier Limits', () => {
 
   describe('getDailyPostLimit', () => {
     let getDailyPostLimit: typeof import('@shared/services/tierLimits').getDailyPostLimit;
-    
+
     beforeEach(async () => {
       const module = await import('@shared/services/tierLimits');
       getDailyPostLimit = module.getDailyPostLimit;
@@ -146,6 +146,10 @@ describe('Tier Limits', () => {
       expect(limits).toHaveProperty('dailyPosts');
       expect(limits).toHaveProperty('dailyComments');
       expect(limits).toHaveProperty('dailyLikes');
+      expect(limits.maxCustomFeeds).toBe(1);
+      expect(limits.newsBoardAccess).toBe(true);
+      expect(limits.postingRestricted).toBe(true);
+      expect(limits.rewardLevelCap).toBe(3);
     });
 
     it('should return higher limits for premium', () => {
@@ -154,6 +158,54 @@ describe('Tier Limits', () => {
       expect(premiumLimits.dailyPosts).toBeGreaterThan(freeLimits.dailyPosts);
       expect(premiumLimits.dailyComments).toBeGreaterThan(freeLimits.dailyComments);
       expect(premiumLimits.dailyLikes).toBeGreaterThan(freeLimits.dailyLikes);
+    });
+  });
+
+  describe('additional limit helpers', () => {
+    let tierLimits: typeof import('@shared/services/tierLimits');
+
+    beforeEach(async () => {
+      tierLimits = await import('@shared/services/tierLimits');
+    });
+
+    it('should return the configured comment limit', () => {
+      expect(tierLimits.getDailyCommentLimit('premium')).toBe(
+        tierLimits.TIER_LIMITS.premium.dailyComments
+      );
+    });
+
+    it('should return the configured like limit', () => {
+      expect(tierLimits.getDailyLikeLimit('black')).toBe(tierLimits.TIER_LIMITS.black.dailyLikes);
+    });
+
+    it('should return the configured appeal limit', () => {
+      expect(tierLimits.getDailyAppealLimit('admin')).toBe(
+        tierLimits.TIER_LIMITS.admin.dailyAppeals
+      );
+    });
+
+    it('should return the configured export cooldown', () => {
+      expect(tierLimits.getExportCooldownDays('free')).toBe(
+        tierLimits.TIER_LIMITS.free.exportCooldownDays
+      );
+    });
+
+    it('should return the configured media size and attachment limits', () => {
+      expect(tierLimits.getMaxMediaSizeMB('premium')).toBe(
+        tierLimits.TIER_LIMITS.premium.maxMediaSizeMB
+      );
+      expect(tierLimits.getMaxMediaPerPost('admin')).toBe(
+        tierLimits.TIER_LIMITS.admin.maxMediaPerPost
+      );
+    });
+
+    it('should return custom feed and News Board entitlements', () => {
+      expect(tierLimits.getMaxCustomFeeds('free')).toBe(1);
+      expect(tierLimits.getMaxCustomFeeds('premium')).toBe(2);
+      expect(tierLimits.getMaxCustomFeeds('black')).toBe(3);
+      expect(tierLimits.hasNewsBoardAccess('free')).toBe(true);
+      expect(tierLimits.hasNewsBoardAccess('premium')).toBe(true);
+      expect(tierLimits.hasNewsBoardAccess('black')).toBe(true);
     });
   });
 });

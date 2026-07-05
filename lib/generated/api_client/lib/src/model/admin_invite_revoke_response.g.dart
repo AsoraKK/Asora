@@ -12,15 +12,13 @@ class _$AdminInviteRevokeResponse extends AdminInviteRevokeResponse {
 
   factory _$AdminInviteRevokeResponse([
     void Function(AdminInviteRevokeResponseBuilder)? updates,
-  ]) =>
-      (AdminInviteRevokeResponseBuilder()..update(updates))._build();
+  ]) => (AdminInviteRevokeResponseBuilder()..update(updates))._build();
 
   _$AdminInviteRevokeResponse._({this.revoked}) : super._();
   @override
   AdminInviteRevokeResponse rebuild(
     void Function(AdminInviteRevokeResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteRevokeResponseBuilder toBuilder() =>
@@ -44,8 +42,7 @@ class _$AdminInviteRevokeResponse extends AdminInviteRevokeResponse {
   String toString() {
     return (newBuiltValueToStringHelper(
       r'AdminInviteRevokeResponse',
-    )..add('revoked', revoked))
-        .toString();
+    )..add('revoked', revoked)).toString();
   }
 }
 

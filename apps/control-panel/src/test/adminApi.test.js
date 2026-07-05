@@ -1,26 +1,52 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock window.location before importing the module
 const mockOrigin = 'https://control.asora.co.za';
 
-// We need to mock window for the tests
-beforeEach(() => {
-  // Set up window.location mock
+function createStorageMock(initial = {}) {
+  const store = new Map(Object.entries(initial));
+
+  return {
+    getItem: vi.fn((key) => (store.has(key) ? store.get(key) : null)),
+    setItem: vi.fn((key, value) => {
+      store.set(key, String(value));
+    }),
+    removeItem: vi.fn((key) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    dump() {
+      return Object.fromEntries(store.entries());
+    }
+  };
+}
+
+function installWindow({ localEntries = {}, sessionEntries = {} } = {}) {
+  const localStorage = createStorageMock(localEntries);
+  const sessionStorage = createStorageMock(sessionEntries);
+
   Object.defineProperty(globalThis, 'window', {
     value: {
       location: {
         origin: mockOrigin,
         href: `${mockOrigin}/`
       },
-      localStorage: {
-        getItem: vi.fn(() => null),
-        setItem: vi.fn(),
-        removeItem: vi.fn()
-      }
+      localStorage,
+      sessionStorage,
+      dispatchEvent: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
     },
     writable: true,
     configurable: true
   });
+
+  return { localStorage, sessionStorage };
+}
+
+beforeEach(() => {
+  installWindow();
 });
 
 afterEach(() => {
@@ -30,45 +56,31 @@ afterEach(() => {
 
 describe('adminApi URL construction', () => {
   describe('resolveToAbsoluteUrl', () => {
-    it('should return absolute URLs unchanged', async () => {
-      // Test that absolute URLs pass through
-      const absUrl = 'https://admin-api.asora.co.za/api';
-      // We can test via getAbsoluteAdminApiUrl when localStorage returns absolute URL
-      window.localStorage.getItem = vi.fn(() => absUrl);
-      
+    it('returns absolute URLs unchanged', async () => {
+      window.localStorage.setItem('controlPanelAdminApiUrl', 'https://admin-api.asora.co.za/api');
+
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      const result = getAbsoluteAdminApiUrl();
-      expect(result).toBe(absUrl);
+      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.asora.co.za/api');
     });
 
-    it('should resolve relative paths against window.location.origin', async () => {
-      window.localStorage.getItem = vi.fn(() => null); // Use default
-      
+    it('resolves relative paths against window.location.origin', async () => {
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      const result = getAbsoluteAdminApiUrl();
-      
-      expect(result).toBe(`${mockOrigin}/api/admin`);
+      expect(getAbsoluteAdminApiUrl()).toBe(`${mockOrigin}/api/admin`);
     });
 
-    it('should handle relative paths from localStorage', async () => {
-      window.localStorage.getItem = vi.fn(() => '/api/v2/admin');
-      
+    it('handles relative paths from localStorage', async () => {
+      window.localStorage.setItem('controlPanelAdminApiUrl', '/api/v2/admin');
+
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      const result = getAbsoluteAdminApiUrl();
-      
-      expect(result).toBe(`${mockOrigin}/api/v2/admin`);
+      expect(getAbsoluteAdminApiUrl()).toBe(`${mockOrigin}/api/v2/admin`);
     });
   });
 
   describe('buildUrl via adminRequest', () => {
-    it('should build correct URL for moderation test', async () => {
-      window.localStorage.getItem = vi.fn((key) => {
-        if (key === 'controlPanelAdminApiUrl') return null;
-        if (key === 'controlPanelAdminToken') return 'test-token';
-        return null;
-      });
+    it('builds the correct URL for moderation test', async () => {
+      const { adminRequest, setAdminToken } = await import('../api/adminApi.js');
+      setAdminToken('test-token');
 
-      // Mock fetch to capture the URL
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
         capturedUrl = url;
@@ -78,15 +90,12 @@ describe('adminApi URL construction', () => {
         };
       });
 
-      const { adminRequest } = await import('../api/adminApi.js');
       await adminRequest('/moderation/test', { method: 'POST' });
 
       expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test`);
     });
 
-    it('should handle paths without leading slash', async () => {
-      window.localStorage.getItem = vi.fn(() => null);
-      
+    it('handles paths without leading slash', async () => {
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
         capturedUrl = url;
@@ -102,11 +111,8 @@ describe('adminApi URL construction', () => {
       expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test`);
     });
 
-    it('should handle base URL with trailing slash', async () => {
-      window.localStorage.getItem = vi.fn((key) => {
-        if (key === 'controlPanelAdminApiUrl') return '/api/admin/';
-        return null;
-      });
+    it('handles a base URL with trailing slash', async () => {
+      window.localStorage.setItem('controlPanelAdminApiUrl', '/api/admin/');
 
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
@@ -120,13 +126,10 @@ describe('adminApi URL construction', () => {
       const { adminRequest } = await import('../api/adminApi.js');
       await adminRequest('/config', { method: 'GET' });
 
-      // Should not have double slashes
       expect(capturedUrl).toBe(`${mockOrigin}/api/admin/config`);
     });
 
-    it('should preserve query parameters', async () => {
-      window.localStorage.getItem = vi.fn(() => null);
-
+    it('preserves query parameters', async () => {
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
         capturedUrl = url;
@@ -137,7 +140,7 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('/users', { 
+      await adminRequest('/users', {
         method: 'GET',
         query: { limit: 10, offset: 20 }
       });
@@ -148,12 +151,9 @@ describe('adminApi URL construction', () => {
       expect(parsedUrl.searchParams.get('offset')).toBe('20');
     });
 
-    it('should work with absolute admin API URL', async () => {
+    it('works with an absolute admin API URL', async () => {
       const directApiUrl = 'https://admin-api.asora.co.za';
-      window.localStorage.getItem = vi.fn((key) => {
-        if (key === 'controlPanelAdminApiUrl') return directApiUrl;
-        return null;
-      });
+      window.localStorage.setItem('controlPanelAdminApiUrl', directApiUrl);
 
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
@@ -172,7 +172,7 @@ describe('adminApi URL construction', () => {
   });
 
   describe('edge cases', () => {
-    it('should not produce double slashes in URL', async () => {
+    it('does not produce double slashes in URL', async () => {
       const testCases = [
         { base: '/api/admin', path: '/test', expected: '/api/admin/test' },
         { base: '/api/admin/', path: '/test', expected: '/api/admin/test' },
@@ -182,10 +182,7 @@ describe('adminApi URL construction', () => {
 
       for (const { base, path, expected } of testCases) {
         vi.resetModules();
-        window.localStorage.getItem = vi.fn((key) => {
-          if (key === 'controlPanelAdminApiUrl') return base;
-          return null;
-        });
+        installWindow({ localEntries: { controlPanelAdminApiUrl: base } });
 
         let capturedUrl = null;
         globalThis.fetch = vi.fn(async (url) => {
@@ -204,9 +201,7 @@ describe('adminApi URL construction', () => {
       }
     });
 
-    it('should filter out empty query parameters', async () => {
-      window.localStorage.getItem = vi.fn(() => null);
-
+    it('filters out empty query parameters', async () => {
       let capturedUrl = null;
       globalThis.fetch = vi.fn(async (url) => {
         capturedUrl = url;
@@ -217,12 +212,12 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('/users', { 
+      await adminRequest('/users', {
         method: 'GET',
-        query: { 
-          limit: 10, 
-          search: '', 
-          filter: null, 
+        query: {
+          limit: 10,
+          search: '',
+          filter: null,
           page: undefined,
           active: 'true'
         }
@@ -235,5 +230,63 @@ describe('adminApi URL construction', () => {
       expect(parsedUrl.searchParams.has('filter')).toBe(false);
       expect(parsedUrl.searchParams.has('page')).toBe(false);
     });
+  });
+});
+
+describe('adminApi token storage hardening', () => {
+  it('stores admin JWT in sessionStorage and clears legacy localStorage copies', async () => {
+    window.localStorage.setItem('controlPanelAdminToken', 'legacy-token');
+
+    const { setAdminToken, getAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
+    setAdminToken('header.payload.signature');
+
+    expect(window.localStorage.getItem('controlPanelAdminToken')).toBeNull();
+    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBe('header.payload.signature');
+    expect(getAdminToken()).toBe('header.payload.signature');
+    expect(getAdminTokenExpiry()).toBeInstanceOf(Date);
+  });
+
+  it('clears expired session tokens on read', async () => {
+    window.sessionStorage.setItem('controlPanelAdminToken', 'expired-token');
+    window.sessionStorage.setItem(
+      'controlPanelAdminTokenExpiresAt',
+      String(Date.now() - 1_000)
+    );
+
+    const { getAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
+
+    expect(getAdminToken()).toBe('');
+    expect(getAdminTokenExpiry()).toBeNull();
+    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBeNull();
+    expect(window.sessionStorage.getItem('controlPanelAdminTokenExpiresAt')).toBeNull();
+  });
+
+  it('caps stored session lifetime to 15 minutes even without a JWT exp claim', async () => {
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const { setAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
+    setAdminToken('not-a-jwt');
+
+    expect(getAdminTokenExpiry()?.getTime()).toBe(now + 15 * 60 * 1000);
+  });
+
+  it('clears the stored token after a 401 response', async () => {
+    const { adminRequest, setAdminToken, getAdminToken } = await import('../api/adminApi.js');
+    setAdminToken('test-token');
+
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      text: async () => '{"message":"expired"}'
+    }));
+
+    await expect(
+      adminRequest('/_admin/flags', { method: 'GET' })
+    ).rejects.toMatchObject({ status: 401 });
+
+    expect(getAdminToken()).toBe('');
+    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBeNull();
   });
 });

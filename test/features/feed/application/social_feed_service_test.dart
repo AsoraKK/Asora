@@ -119,13 +119,12 @@ void main() {
   test('getFeed handles success and failure', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/get',
+        '/feed',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async =>
-          _response({'success': true, 'data': _feedData()}, '/feed/get'),
+      (_) async => _response({'success': true, 'data': _feedData()}, '/feed'),
     );
 
     final response = await service.getFeed(
@@ -136,13 +135,12 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/get',
+        '/feed',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async =>
-          _response({'success': false, 'message': 'nope'}, '/feed/get'),
+      (_) async => _response({'success': false, 'message': 'nope'}, '/feed'),
     );
 
     expect(

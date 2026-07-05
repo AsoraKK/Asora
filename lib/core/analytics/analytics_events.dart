@@ -232,6 +232,7 @@ enum InviteRedeemFailureReason {
   missingEmail,
   invalidRequest,
   unauthorized,
+  rateLimited,
   network,
   unknown,
 }
@@ -259,6 +260,8 @@ extension InviteRedeemFailureReasonX on InviteRedeemFailureReason {
         return 'invalid_request';
       case InviteRedeemFailureReason.unauthorized:
         return 'unauthorized';
+      case InviteRedeemFailureReason.rateLimited:
+        return 'rate_limited';
       case InviteRedeemFailureReason.network:
         return 'network';
       case InviteRedeemFailureReason.unknown:

@@ -4,10 +4,11 @@ import { createSuccessResponse, createErrorResponse } from '@shared/utils/http';
 import { validateText, validateRequestSize } from '@shared/utils/validate';
 import { getAzureLogger, logAuthAttempt } from '@shared/utils/logger';
 import * as crypto from 'crypto';
-import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
+import { SignJWT } from 'jose';
 import { getCosmosClient } from '@shared/clients/cosmos';
 
 import type { AuthSession, TokenPayload, TokenRequest, UserDocument } from '@auth/types';
+import { AuthError, isInternalUserId, verifyJwtToken } from '@auth/verifyJwt';
 import {
   storeRefreshToken,
   validateRefreshToken,
@@ -281,6 +282,10 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     throw new InviteRequiredError('Awaiting invite');
   }
 
+  if (!isInternalUserId(session.userId) || !isInternalUserId(user.id) || user.id !== session.userId) {
+    throw new Error('User account identifier is not a valid internal UUIDv7');
+  }
+
   // Update last login time
   await users
     .item(user.id, user.id)
@@ -295,6 +300,7 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
     reputation: user.reputationScore,
     iss: JWT_ISSUER,
     aud: body.client_id,
+    type: 'access',
     nonce: session.nonce,
   };
 
@@ -304,7 +310,7 @@ async function handleAuthorizationCodeGrant(body: TokenRequest, requestId: strin
   const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   const refreshToken = await signJwtToken(
-    { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
+    { sub: user.id, iss: JWT_ISSUER, aud: body.client_id, type: 'refresh' },
     REFRESH_TOKEN_EXPIRY,
     refreshJti
   );
@@ -342,26 +348,11 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
   });
 
   try {
-    // Verify and decode refresh token
-    const { payload: decoded } = await jwtVerify(body.refresh_token, getJwtSecretBytes());
-
-    // Type guard for decoded token
-    if (
-      typeof decoded !== 'object' ||
-      decoded === null ||
-      !('sub' in decoded) ||
-      !('type' in decoded) ||
-      !('jti' in decoded)
-    ) {
-      throw new Error('Invalid token structure');
-    }
-
-    if (decoded.type !== 'refresh') {
-      throw new Error('Invalid token type');
-    }
+    const principal = await verifyJwtToken(body.refresh_token, { expectedType: 'refresh' });
+    const decoded = principal.raw ?? {};
 
     // Validate token exists in store (rotation check)
-    const oldJti = decoded.jti as string;
+    const oldJti = typeof decoded.jti === 'string' ? decoded.jti : '';
     if (!oldJti) {
       throw new Error('Refresh token missing jti claim');
     }
@@ -372,14 +363,14 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       logger.warn('Refresh token reuse or invalid token detected', {
         requestId,
         jti: oldJti.slice(0, 8),
-        userId: String(decoded.sub).slice(0, 8),
+        userId: principal.sub.slice(0, 8),
       });
-      auditTokenReuse(String(decoded.sub), oldJti.slice(0, 8), requestId).catch(() => {});
+      auditTokenReuse(principal.sub, oldJti.slice(0, 8), requestId).catch(() => {});
       throw new Error('Refresh token has been revoked or is invalid');
     }
 
     // Verify the token belongs to the claimed user
-    const decodedSub = String(decoded.sub);
+    const decodedSub = principal.sub;
     if (storedToken.userId !== decodedSub) {
       throw new Error('Token user mismatch');
     }
@@ -397,6 +388,10 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       throw new Error('User account is inactive');
     }
 
+    if (!isInternalUserId(decodedSub) || !isInternalUserId(user.id) || user.id !== decodedSub) {
+      throw new Error('User account identifier is not a valid internal UUIDv7');
+    }
+
     // Generate new access token
     const tokenPayload: TokenPayload = {
       sub: user.id,
@@ -406,6 +401,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       reputation: user.reputationScore,
       iss: JWT_ISSUER,
       aud: body.client_id,
+      type: 'access',
     };
 
     const accessToken = await signJwtToken(tokenPayload, ACCESS_TOKEN_EXPIRY);
@@ -415,7 +411,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
     const newRefreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     const newRefreshToken = await signJwtToken(
-      { sub: user.id, iss: JWT_ISSUER, type: 'refresh' },
+      { sub: user.id, iss: JWT_ISSUER, aud: body.client_id, type: 'refresh' },
       REFRESH_TOKEN_EXPIRY,
       newRefreshJti
     );
@@ -433,7 +429,7 @@ async function handleRefreshTokenGrant(body: TokenRequest, requestId: string): P
       scope: 'read write',
     };
   } catch (jwtError) {
-    if (jwtError instanceof joseErrors.JWTExpired) {
+    if (jwtError instanceof AuthError && jwtError.code === 'token_expired') {
       throw new Error('Refresh token expired');
     }
     if (jwtError instanceof Error && jwtError.message.includes('revoked')) {

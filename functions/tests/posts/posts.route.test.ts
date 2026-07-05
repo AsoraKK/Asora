@@ -86,8 +86,12 @@ const mockedModeration = {
   moderatePostMediaUrls: moderatePostMediaUrls as jest.MockedFunction<typeof moderatePostMediaUrls>,
   hasAiSignal: hasAiSignal as jest.MockedFunction<typeof hasAiSignal>,
 };
-const mockedCheckAndIncrementPostCount = checkAndIncrementPostCount as jest.MockedFunction<typeof checkAndIncrementPostCount>;
-const mockedValidateOwnedMediaUrls = validateOwnedMediaUrls as jest.MockedFunction<typeof validateOwnedMediaUrls>;
+const mockedCheckAndIncrementPostCount = checkAndIncrementPostCount as jest.MockedFunction<
+  typeof checkAndIncrementPostCount
+>;
+const mockedValidateOwnedMediaUrls = validateOwnedMediaUrls as jest.MockedFunction<
+  typeof validateOwnedMediaUrls
+>;
 
 const createContextStub = (): InvocationContext =>
   ({
@@ -193,6 +197,29 @@ describe('posts route handlers', () => {
     expect(mockedPostsService.createPost).not.toHaveBeenCalled();
   });
 
+  it('blocks AI-detected media at submit', async () => {
+    mockedModeration.moderatePostMediaUrls.mockResolvedValueOnce({
+      status: 'clean',
+      checkedAt: Date.now(),
+      categories: ['ai_generated_image'],
+      aiDetected: true,
+    });
+
+    const response = await posts_create(
+      authRequest({
+        content: 'hello',
+        contentType: 'image',
+        mediaUrls: ['https://example.com/owned.jpg'],
+      }),
+      context
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.jsonBody?.error.code).toBe('AI_CONTENT_BLOCKED');
+    expect(response.jsonBody?.error.details?.appealEligible).toBe(true);
+    expect(mockedPostsService.createPost).not.toHaveBeenCalled();
+  });
+
   it('returns 404 when post is missing', async () => {
     mockedPostsService.getPostById.mockResolvedValue(null);
     const request = httpReqMock({ method: 'GET', params: { id: 'missing-post' } });
@@ -223,8 +250,9 @@ describe('posts route handlers', () => {
   });
 
   it('returns 429 when daily post limit is exceeded', async () => {
-    const { DailyPostLimitExceededError: MockedError } =
-      jest.requireMock('@shared/services/dailyPostLimitService');
+    const { DailyPostLimitExceededError: MockedError } = jest.requireMock(
+      '@shared/services/dailyPostLimitService'
+    );
     mockedCheckAndIncrementPostCount.mockRejectedValue(
       new MockedError({
         allowed: false,
@@ -242,10 +270,10 @@ describe('posts route handlers', () => {
     );
 
     expect(response.status).toBe(429);
-      expect(response.jsonBody?.error.code).toBe('daily_post_limit_reached');
-      expect(response.jsonBody?.error.details?.tier).toBe('free');
-      expect(response.jsonBody?.error.details?.limit).toBe(5);
-      expect(response.jsonBody?.error.details?.current).toBe(5);
+    expect(response.jsonBody?.error.code).toBe('daily_post_limit_reached');
+    expect(response.jsonBody?.error.details?.tier).toBe('free');
+    expect(response.jsonBody?.error.details?.limit).toBe(5);
+    expect(response.jsonBody?.error.details?.current).toBe(5);
     expect(response.headers?.['Retry-After']).toBe('86400');
     expect(mockedPostsService.createPost).not.toHaveBeenCalled();
   });

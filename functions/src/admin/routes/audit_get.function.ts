@@ -45,6 +45,8 @@ export async function adminAuditGetHandler(
       id: entry.id ?? null,
       timestamp: entry.timestamp ?? null,
       actorId: entry.actorId ?? null,
+      actorEmail: entry.actorEmail ?? null,
+      actorRole: entry.actorRole ?? null,
       action: entry.action ?? entry.eventType ?? null,
       targetType: entry.targetType ?? null,
       subjectId: entry.subjectId ?? null,
@@ -52,7 +54,11 @@ export async function adminAuditGetHandler(
       note: entry.note ?? null,
       before: entry.before ?? null,
       after: entry.after ?? null,
+      requestId: entry.requestId ?? null,
       correlationId: entry.correlationId ?? null,
+      clientIp: entry.clientIp ?? null,
+      accessIdentity: entry.accessIdentity ?? null,
+      result: entry.result ?? 'success',
       metadata: entry.metadata ?? null,
     }));
 

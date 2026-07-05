@@ -18,8 +18,7 @@ class _$GetFeed200ResponseMeta extends GetFeed200ResponseMeta {
 
   factory _$GetFeed200ResponseMeta([
     void Function(GetFeed200ResponseMetaBuilder)? updates,
-  ]) =>
-      (GetFeed200ResponseMetaBuilder()..update(updates))._build();
+  ]) => (GetFeed200ResponseMetaBuilder()..update(updates))._build();
 
   _$GetFeed200ResponseMeta._({
     required this.count,
@@ -30,8 +29,7 @@ class _$GetFeed200ResponseMeta extends GetFeed200ResponseMeta {
   @override
   GetFeed200ResponseMeta rebuild(
     void Function(GetFeed200ResponseMetaBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   GetFeed200ResponseMetaBuilder toBuilder() =>
@@ -125,7 +123,8 @@ class GetFeed200ResponseMetaBuilder
   _$GetFeed200ResponseMeta _build() {
     _$GetFeed200ResponseMeta _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$GetFeed200ResponseMeta._(
             count: BuiltValueNullFieldError.checkNotNull(
               count,

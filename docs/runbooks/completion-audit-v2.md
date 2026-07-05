@@ -98,7 +98,7 @@ Scope: repo-verified implementation status plus explicitly marked external verif
 - **Severity**: High
 - **Gap**: Code-level cache controls are in place, but deployed Cloudflare route/rule state must be verified externally.
 - **Evidence**: `cloudflare/worker.ts:10`, `workers/feed-cache/src/index.js:8`, `functions/src/feed/routes/feed_discover_get.function.ts:81`, `functions/src/feed/routes/feed_news_get.function.ts:83`, `functions/src/feed/routes/feed_user_get.function.ts:70`
-- **Acceptance**: Staging/prod header captures + Cloudflare analytics confirm only anonymous discover/news are cached.
+- **Acceptance**: Staging/prod header captures + Cloudflare analytics confirm only anonymous discover traffic is cached.
 
 ### G-012
 - **Area**: Backend API

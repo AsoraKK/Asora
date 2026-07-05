@@ -23,6 +23,7 @@ Beta launch is complete when **all** of the following are true:
 | **Store listing** | Includes test invite code and reviewer access instructions |
 
 > Backend/service names remain **Asora** internally—this does not block beta.
+> Auth source of truth: `docs/AUTH_ARCHITECTURE.md`
 
 ---
 
@@ -42,7 +43,7 @@ These decisions are **locked** to prevent rework. Do not change without explicit
 
 **Rationale:**
 - No public release yet, but changing now would ripple across:
-  - OAuth redirect URIs (Azure B2C, Google Sign-In)
+  - OAuth redirect URIs (upstream identity provider, Google Sign-In)
   - Deep link handling (Universal Links, App Links)
   - Firebase project configuration
   - Apple App ID & provisioning profiles
@@ -59,7 +60,7 @@ These decisions are **locked** to prevent rework. Do not change without explicit
 |-----------|-------|---------|
 | API base URL | `https://api.asora.co.za/v1/...` | ❌ No change |
 | Functions host | `asora-function-dev.azurewebsites.net` | ❌ No change |
-| JWT issuer claim | Azure B2C tenant (unchanged) | ❌ No change |
+| JWT issuer claim | Internal issuer (`asora-auth`) (unchanged) | ❌ No change |
 | User IDs | UUIDv7 strategy (per ADR-002) | ❌ No change |
 | DB schemas | Cosmos containers, Postgres tables | ❌ No change |
 

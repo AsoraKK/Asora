@@ -12,15 +12,13 @@ class _$AdminResolveResponse extends AdminResolveResponse {
 
   factory _$AdminResolveResponse([
     void Function(AdminResolveResponseBuilder)? updates,
-  ]) =>
-      (AdminResolveResponseBuilder()..update(updates))._build();
+  ]) => (AdminResolveResponseBuilder()..update(updates))._build();
 
   _$AdminResolveResponse._({this.resolved}) : super._();
   @override
   AdminResolveResponse rebuild(
     void Function(AdminResolveResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminResolveResponseBuilder toBuilder() =>
@@ -44,8 +42,7 @@ class _$AdminResolveResponse extends AdminResolveResponse {
   String toString() {
     return (newBuiltValueToStringHelper(
       r'AdminResolveResponse',
-    )..add('resolved', resolved))
-        .toString();
+    )..add('resolved', resolved)).toString();
   }
 }
 

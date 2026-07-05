@@ -16,34 +16,11 @@ import 'package:asora/features/auth/domain/user.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 
-class _MockPostCreationNotifier extends StateNotifier<PostCreationState>
-    implements PostCreationNotifier {
-  _MockPostCreationNotifier(super.initial);
-
-  @override
-  void updateText(String text) {}
-  @override
-  void updateMediaUrl(String? url) {}
-  @override
-  void setIsNews(bool value) {}
-  @override
-  void setContentType(String value) {}
-  @override
-  void setAiLabel(String value) {}
-  @override
-  void updateCaptureMetadataHash(String? value) {}
-  @override
-  void updateEditHistoryHash(String? value) {}
-  @override
-  void updateSourceAttestationUrl(String? value) {}
-  @override
-  String? validate() => null;
-  @override
-  Future<bool> submit() async => false;
-  @override
-  void reset() {}
-  @override
-  void clearError() {}
+class _SeededPostCreationNotifier extends PostCreationNotifier {
+  _SeededPostCreationNotifier(super.ref, PostCreationState initial)
+      : super() {
+    state = initial;
+  }
 }
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
@@ -94,7 +71,7 @@ void main() {
       overrides: [
         postRepositoryProvider.overrideWithValue(mockRepo),
         postCreationProvider.overrideWith(
-          (ref) => _MockPostCreationNotifier(state),
+          (ref) => _SeededPostCreationNotifier(ref, state),
         ),
         canCreatePostProvider.overrideWithValue(canCreate),
         authStateProvider.overrideWith((ref) => _MockAuthStateNotifier(user)),
@@ -317,6 +294,76 @@ void main() {
       // Should show "Provided" and "View details" for each
       expect(find.text('Provided'), findsNWidgets(3));
       expect(find.text('View details'), findsNWidgets(3));
+    });
+
+    testWidgets('source attestation details sheet shows domain and copy link', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 3000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildWithState(
+          const PostCreationState(
+            text: 'Hello world',
+            proofSignals: ProofSignals(
+              sourceAttestationUrl: 'https://source.example.com/proof',
+            ),
+          ),
+          user: _testUser(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'View details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Source attestation'), findsAtLeastNWidgets(1));
+      expect(find.text('Status: Provided'), findsOneWidget);
+      expect(find.text('Domain: source.example.com'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Copy link'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('hash proof details sheet shows preview and copy hash', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 3000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildWithState(
+          const PostCreationState(
+            text: 'Hello world',
+            proofSignals: ProofSignals(captureMetadataHash: 'abc123def456ghi789'),
+          ),
+          user: _testUser(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'View details').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Capture metadata hash'), findsAtLeastNWidgets(1));
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Text && (w.data ?? '').contains('abc123de'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Copy hash'));
+      await tester.pumpAndSettle();
     });
   });
 

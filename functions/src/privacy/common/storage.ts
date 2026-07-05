@@ -15,6 +15,7 @@ import type { DsrQueueMessage } from './models';
 const STORAGE_CONNECTION_STRING = process.env.DSR_EXPORT_STORAGE_CONNECTION_STRING;
 const STORAGE_ACCOUNT = process.env.DSR_EXPORT_STORAGE_ACCOUNT;
 const QUEUE_NAME = process.env.DSR_QUEUE_NAME ?? 'dsr-requests';
+const QUEUE_CONNECTION_SETTING = process.env.DSR_QUEUE_CONNECTION ?? 'DsrQueueStorage';
 const CONTAINER_NAME = process.env.DSR_EXPORT_CONTAINER ?? 'dsr-exports';
 
 function parseConnectionStringValue(name: string): string | undefined {
@@ -50,12 +51,21 @@ const sharedKeyCredential =
     : null;
 
 const credential = new DefaultAzureCredential();
-const blobServiceClient = STORAGE_CONNECTION_STRING
-  ? BlobServiceClient.fromConnectionString(STORAGE_CONNECTION_STRING)
-  : new BlobServiceClient(`https://${validatedStorageAccount}.blob.core.windows.net`, credential);
-const queueServiceClient = STORAGE_CONNECTION_STRING
-  ? QueueServiceClient.fromConnectionString(STORAGE_CONNECTION_STRING)
-  : new QueueServiceClient(`https://${validatedStorageAccount}.queue.core.windows.net`, credential);
+const blobServiceClient = new BlobServiceClient(
+  `https://${validatedStorageAccount}.blob.core.windows.net`,
+  credential,
+);
+
+function resolveQueueServiceUri(): string {
+  const queueServiceUriSetting = process.env[`${QUEUE_CONNECTION_SETTING}__queueServiceUri`]?.trim();
+  if (queueServiceUriSetting) {
+    return queueServiceUriSetting.replace(/\/+$/, '');
+  }
+  return `https://${validatedStorageAccount}.queue.core.windows.net`;
+}
+
+const queueServiceUri = resolveQueueServiceUri();
+const queueServiceClient = new QueueServiceClient(queueServiceUri, credential);
 
 let containerClient: ContainerClient | null = null;
 let queueClient: QueueClient | null = null;
@@ -120,4 +130,25 @@ export async function createUserDelegationUrl(
 export async function enqueueDsrMessage(message: DsrQueueMessage): Promise<void> {
   const queue = getQueue();
   await queue.sendMessage(JSON.stringify(message));
+}
+
+export function getDsrQueueDiagnostics(): {
+  queueName: string;
+  queueConnectionSetting: string;
+  queueServiceAccount?: string;
+  exportStorageAccount: string;
+} {
+  let queueServiceAccount: string | undefined;
+  try {
+    queueServiceAccount = new URL(queueServiceUri).hostname.split('.')[0];
+  } catch {
+    queueServiceAccount = undefined;
+  }
+
+  return {
+    queueName: QUEUE_NAME,
+    queueConnectionSetting: QUEUE_CONNECTION_SETTING,
+    queueServiceAccount,
+    exportStorageAccount: validatedStorageAccount,
+  };
 }

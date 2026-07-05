@@ -112,168 +112,170 @@ class _DeviceEmulatorState extends State<DeviceEmulator> {
       width: 220,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
         border: Border(
           right: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Device Preview',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Device selector
-            Text('Device', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
-            DropdownButtonFormField<DevicePreset>(
-              value: _selectedDevice,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+      child: Material(
+        color: theme.colorScheme.surface,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Device Preview',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              items: DevicePreset.values.map((d) {
-                return DropdownMenuItem(
-                  value: d,
-                  child: Text(
-                    d.label,
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 16),
+
+              // Device selector
+              Text('Device', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              DropdownButtonFormField<DevicePreset>(
+                value: _selectedDevice,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                );
-              }).toList(),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() => _selectedDevice = v);
-                  widget.onDeviceChanged?.call(v);
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_deviceWidth.toInt()} × ${_deviceHeight.toInt()} @ ${_selectedDevice.devicePixelRatio}x',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Orientation toggle
-            Text('Orientation', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 8),
-            SegmentedButton<DeviceOrientation>(
-              segments: const [
-                ButtonSegment(
-                  value: DeviceOrientation.portrait,
-                  icon: Icon(Icons.stay_current_portrait, size: 18),
-                  label: Text('Portrait', style: TextStyle(fontSize: 11)),
                 ),
-                ButtonSegment(
-                  value: DeviceOrientation.landscape,
-                  icon: Icon(Icons.stay_current_landscape, size: 18),
-                  label: Text('Landscape', style: TextStyle(fontSize: 11)),
+                items: DevicePreset.values.map((d) {
+                  return DropdownMenuItem(
+                    value: d,
+                    child: Text(
+                      d.label,
+                      style: const TextStyle(fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _selectedDevice = v);
+                    widget.onDeviceChanged?.call(v);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_deviceWidth.toInt()} × ${_deviceHeight.toInt()} @ ${_selectedDevice.devicePixelRatio}x',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
-              selected: {_orientation},
-              onSelectionChanged: (selected) {
-                setState(() => _orientation = selected.first);
-                widget.onOrientationChanged?.call(_orientation);
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // Scale slider
-            Text(
-              'Scale: ${(_scale * 100).toInt()}%',
-              style: theme.textTheme.labelMedium,
-            ),
-            Slider(
-              value: _scale,
-              min: 0.25,
-              max: 1.0,
-              divisions: 15,
-              onChanged: (v) => setState(() => _scale = v),
-            ),
-
-            const Divider(height: 32),
-
-            // Device chrome options
-            Text('Device Chrome', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              title: const Text(
-                'Notch / Dynamic Island',
-                style: TextStyle(fontSize: 13),
               ),
-              value: _showNotch,
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              onChanged: (v) => setState(() => _showNotch = v),
-            ),
-            SwitchListTile(
-              title: const Text(
-                'Home Indicator',
-                style: TextStyle(fontSize: 13),
-              ),
-              value: _showHomeIndicator,
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              onChanged: (v) => setState(() => _showHomeIndicator = v),
-            ),
 
-            const Divider(height: 32),
+              const SizedBox(height: 20),
 
-            // Quick info
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(
-                  alpha: 0.3,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Preview Tips',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+              // Orientation toggle
+              Text('Orientation', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 8),
+              SegmentedButton<DeviceOrientation>(
+                segments: const [
+                  ButtonSegment(
+                    value: DeviceOrientation.portrait,
+                    icon: Icon(Icons.stay_current_portrait, size: 18),
+                    label: Text('Portrait', style: TextStyle(fontSize: 11)),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '• Use flow selector to switch screens\n'
-                    '• Test different device sizes\n'
-                    '• Rotate for landscape testing',
-                    style: theme.textTheme.bodySmall,
+                  ButtonSegment(
+                    value: DeviceOrientation.landscape,
+                    icon: Icon(Icons.stay_current_landscape, size: 18),
+                    label: Text('Landscape', style: TextStyle(fontSize: 11)),
                   ),
                 ],
+                selected: {_orientation},
+                onSelectionChanged: (selected) {
+                  setState(() => _orientation = selected.first);
+                  widget.onOrientationChanged?.call(_orientation);
+                },
               ),
-            ),
-          ],
+
+              const SizedBox(height: 20),
+
+              // Scale slider
+              Text(
+                'Scale: ${(_scale * 100).toInt()}%',
+                style: theme.textTheme.labelMedium,
+              ),
+              Slider(
+                value: _scale,
+                min: 0.25,
+                max: 1.0,
+                divisions: 15,
+                onChanged: (v) => setState(() => _scale = v),
+              ),
+
+              const Divider(height: 32),
+
+              // Device chrome options
+              Text('Device Chrome', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                title: const Text(
+                  'Notch / Dynamic Island',
+                  style: TextStyle(fontSize: 13),
+                ),
+                value: _showNotch,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                onChanged: (v) => setState(() => _showNotch = v),
+              ),
+              SwitchListTile(
+                title: const Text(
+                  'Home Indicator',
+                  style: TextStyle(fontSize: 13),
+                ),
+                value: _showHomeIndicator,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                onChanged: (v) => setState(() => _showHomeIndicator = v),
+              ),
+
+              const Divider(height: 32),
+
+              // Quick info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Preview Tips',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '• Use flow selector to switch screens\n'
+                      '• Test different device sizes\n'
+                      '• Rotate for landscape testing',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

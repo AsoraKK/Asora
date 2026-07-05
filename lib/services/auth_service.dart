@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:asora/core/config/environment_config.dart';
 import 'package:asora/core/config/web_release_guard.dart';
 
 class AuthService {
@@ -15,22 +16,40 @@ class AuthService {
     defaultValue: '',
   );
 
-  static String get _baseUrl => _configuredAuthUrl.isNotEmpty
-      ? _configuredAuthUrl
-      : 'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api';
+  static String get _baseUrl => _resolveAuthUrl();
 
   AuthService({Dio? dio, FlutterSecureStorage? storage})
     : _dio = dio ?? Dio(),
       _storage = storage ?? const FlutterSecureStorage() {
-    if (isReleaseWebBuild) {
-      requirePublicHttpsOrigin('AUTH_URL', _configuredAuthUrl);
-    }
+    _resolveAuthUrl();
 
     // Configure Dio with default options
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);
     _dio.options.receiveTimeout = const Duration(seconds: 3);
     _dio.options.headers['Content-Type'] = 'application/json';
+  }
+
+  static String _resolveAuthUrl() {
+    final configured = _configuredAuthUrl.trim();
+    if (configured.isNotEmpty) {
+      if (isReleaseWebBuild) {
+        return requirePublicHttpsOrigin('AUTH_URL', configured).toString();
+      }
+      return configured;
+    }
+
+    if (isReleaseWebBuild) {
+      throw StateError('AUTH_URL is required for release web builds.');
+    }
+
+    if (kDebugMode) {
+      return kIsWeb
+          ? 'http://localhost:7072/api'
+          : 'https://asora-function-dev.azurewebsites.net/api';
+    }
+
+    return EnvironmentConfig.fromEnvironment().apiBaseUrl;
   }
 
   /// Login with email - calls your authEmail Azure Function

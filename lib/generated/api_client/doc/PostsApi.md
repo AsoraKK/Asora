@@ -15,13 +15,14 @@ Method | HTTP request | Description
 [**postsBookmarkGet**](PostsApi.md#postsbookmarkget) | **GET** /posts/{id}/bookmark | Get bookmark status for a post
 [**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Create a comment on a post
 [**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List comments on a post
+[**postsCreate**](PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [**postsGet**](PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
 [**postsInsights**](PostsApi.md#postsinsights) | **GET** /posts/{id}/insights | Get engagement insights for a post
 [**postsLikeCreate**](PostsApi.md#postslikecreate) | **POST** /posts/{id}/like | Like a post
 [**postsLikeDelete**](PostsApi.md#postslikedelete) | **DELETE** /posts/{id}/like | Unlike a post
 [**postsLikeGet**](PostsApi.md#postslikeget) | **GET** /posts/{id}/like | Get like status for a post
 [**postsReceipt**](PostsApi.md#postsreceipt) | **GET** /posts/{id}/receipt | Get read receipt for a post
-[**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post
+[**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [**postsView**](PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
 
 
@@ -37,7 +38,7 @@ Create a new post.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = ; // CreatePostRequest | 
+final CreatePostRequest createPostRequest = {"id":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","text":"Launch checklist is locked and ready for review.","attachments":["https://cdn.lythaus.app/media/posts/launch-checklist.png"]}; // CreatePostRequest | 
 
 try {
     final response = api.createPost(createPostRequest);
@@ -277,8 +278,51 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **postsCreate**
+> Post postsCreate(createPostRequest)
+
+Create a post with moderation and AI authenticity checks
+
+Create a post for the authenticated user. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`. 
+
+### Example
+```dart
+import 'package:asora_api_client/api.dart';
+
+final api = AsoraApiClient().getPostsApi();
+final CreatePostRequest createPostRequest = ; // CreatePostRequest | 
+
+try {
+    final response = api.postsCreate(createPostRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->postsCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  | 
+
+### Return type
+
+[**Post**](Post.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **postsGet**
-> JsonObject postsGet(id)
+> PostView postsGet(id)
 
 Get a post by ID
 
@@ -305,7 +349,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**PostView**](PostView.md)
 
 ### Authorization
 
@@ -526,9 +570,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsUpdate**
-> JsonObject postsUpdate(id, body)
+> Post postsUpdate(id, updatePostRequest)
 
-Update a post
+Update a post with moderation and AI authenticity checks
+
+Update a post owned by the caller. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`. 
 
 ### Example
 ```dart
@@ -536,10 +582,10 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getPostsApi();
 final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest | 
 
 try {
-    final response = api.postsUpdate(id, body);
+    final response = api.postsUpdate(id, updatePostRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsUpdate: $e\n');
@@ -551,11 +597,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **updatePostRequest** | [**UpdatePostRequest**](UpdatePostRequest.md)|  | 
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**Post**](Post.md)
 
 ### Authorization
 

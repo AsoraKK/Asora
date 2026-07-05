@@ -11,7 +11,7 @@ import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functio
 import { z } from 'zod';
 import { CosmosClient } from '@azure/cosmos';
 import { createHiveClient, HiveAIClient } from '../shared/hive-client';
-import { verifyJWT, extractUserIdFromJWT } from '../shared/auth-utils';
+import { verifyJWT } from '../shared/auth-utils';
 import { createRateLimiter } from '../shared/rate-limiter';
 
 // Request validation schema
@@ -38,7 +38,8 @@ interface PostCreationResult {
 const rateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 10,
-  keyGenerator: (req: HttpRequest) => extractUserIdFromJWT(req.headers.get('authorization') || '')
+  keyGenerator: (req: HttpRequest) =>
+    `post:${(req as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId || 'unknown'}`
 });
 
 export async function createPost(
@@ -67,6 +68,8 @@ export async function createPost(
         jsonBody: { error: 'Invalid token: missing user ID' }
       };
     }
+
+    (request as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId = userId;
 
     // 2. Rate limiting
     const rateLimitResult = await rateLimiter.checkRateLimit(request);

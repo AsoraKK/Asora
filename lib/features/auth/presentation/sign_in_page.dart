@@ -9,7 +9,7 @@ import 'package:asora/design_system/components/lyth_button.dart';
 import 'package:asora/design_system/theme/theme_build_context_x.dart';
 import 'package:asora/features/auth/application/auth_controller.dart';
 
-/// Sign-in page with Email and Google B2C options
+/// Sign-in page with Email and Google sign-in options
 class SignInPage extends ConsumerWidget {
   const SignInPage({super.key});
 

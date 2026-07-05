@@ -31,7 +31,7 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/notifications',
+        '/notifications',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
@@ -51,7 +51,7 @@ void main() {
         ],
         'continuationToken': 'next',
         'totalUnread': 3,
-      }, '/api/notifications'),
+      }, '/notifications'),
     );
 
     final result = await service.getNotifications(limit: 10);
@@ -65,8 +65,8 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
-    ).thenAnswer((_) async => _response({}, '/api/notifications/unread-count'));
+      () => dio.get<Map<String, dynamic>>('/notifications/unread-count'),
+    ).thenAnswer((_) async => _response({}, '/notifications/unread-count'));
 
     final count = await service.getUnreadCount();
     expect(count, 0);
@@ -77,10 +77,10 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
+      () => dio.get<Map<String, dynamic>>('/notifications/unread-count'),
     ).thenAnswer(
       (_) async =>
-          _response({'unreadCount': 4}, '/api/notifications/unread-count'),
+          _response({'unreadCount': 4}, '/notifications/unread-count'),
     );
 
     final count = await service.getUnreadCount();
@@ -92,13 +92,13 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/read'),
-    ).thenAnswer((_) async => _response({}, '/api/notifications/n1/read'));
+      () => dio.post<Map<String, dynamic>>('/notifications/n1/read'),
+    ).thenAnswer((_) async => _response({}, '/notifications/n1/read'));
 
     await service.markAsRead('n1');
 
     verify(
-      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/read'),
+      () => dio.post<Map<String, dynamic>>('/notifications/n1/read'),
     ).called(1);
   });
 
@@ -107,13 +107,13 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/dismiss'),
-    ).thenAnswer((_) async => _response({}, '/api/notifications/n1/dismiss'));
+      () => dio.post<Map<String, dynamic>>('/notifications/n1/dismiss'),
+    ).thenAnswer((_) async => _response({}, '/notifications/n1/dismiss'));
 
     await service.dismissNotification('n1');
 
     verify(
-      () => dio.post<Map<String, dynamic>>('/api/notifications/n1/dismiss'),
+      () => dio.post<Map<String, dynamic>>('/notifications/n1/dismiss'),
     ).called(1);
   });
 
@@ -134,18 +134,18 @@ void main() {
     );
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notifications/preferences'),
+      () => dio.get<Map<String, dynamic>>('/notifications/preferences'),
     ).thenAnswer(
-      (_) async => _response(prefs.toJson(), '/api/notifications/preferences'),
+      (_) async => _response(prefs.toJson(), '/notifications/preferences'),
     );
 
     when(
       () => dio.put<Map<String, dynamic>>(
-        '/api/notifications/preferences',
+        '/notifications/preferences',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
-      (_) async => _response(prefs.toJson(), '/api/notifications/preferences'),
+      (_) async => _response(prefs.toJson(), '/notifications/preferences'),
     );
 
     final fetched = await service.getPreferences();
@@ -161,11 +161,11 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
-      (_) async => _response({'success': true}, '/api/notifications/devices'),
+      (_) async => _response({'success': true}, '/notifications/devices'),
     );
 
     final result = await service.registerDevice(
@@ -184,7 +184,7 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
@@ -203,7 +203,7 @@ void main() {
           ],
         },
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/notifications/devices'),
+        requestOptions: RequestOptions(path: '/notifications/devices'),
       ),
     );
 
@@ -218,17 +218,17 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/d1/revoke',
+        '/notifications/devices/d1/revoke',
       ),
     ).thenAnswer(
-      (_) async => _response({}, '/api/notifications/devices/d1/revoke'),
+      (_) async => _response({}, '/notifications/devices/d1/revoke'),
     );
 
     await service.revokeDevice('d1');
 
     verify(
       () => dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/d1/revoke',
+        '/notifications/devices/d1/revoke',
       ),
     ).called(1);
   });
@@ -239,14 +239,14 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
         data: null,
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/notifications/devices'),
+        requestOptions: RequestOptions(path: '/notifications/devices'),
       ),
     );
 
@@ -258,13 +258,13 @@ void main() {
     final service = NotificationApiService(dioClient: dio);
 
     when(
-      () => dio.get<Map<String, dynamic>>('/api/notifications/unread-count'),
+      () => dio.get<Map<String, dynamic>>('/notifications/unread-count'),
     ).thenThrow(
       DioException(
-        requestOptions: RequestOptions(path: '/api/notifications/unread-count'),
+        requestOptions: RequestOptions(path: '/notifications/unread-count'),
         response: Response(
           requestOptions: RequestOptions(
-            path: '/api/notifications/unread-count',
+            path: '/notifications/unread-count',
           ),
           statusCode: 500,
           data: {'message': 'fail'},
@@ -291,14 +291,14 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/notifications',
+        '/notifications',
         queryParameters: any(named: 'queryParameters'),
       ),
     ).thenThrow(
       DioException(
-        requestOptions: RequestOptions(path: '/api/notifications'),
+        requestOptions: RequestOptions(path: '/notifications'),
         response: Response(
-          requestOptions: RequestOptions(path: '/api/notifications'),
+          requestOptions: RequestOptions(path: '/notifications'),
           statusCode: 400,
           data: {'error': 'Bad request'},
         ),

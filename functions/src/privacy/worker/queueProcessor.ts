@@ -1,6 +1,6 @@
-import { app, InvocationContext, trigger } from '@azure/functions';
+import { app, InvocationContext } from '@azure/functions';
 
-import { emitSpan } from '../common/telemetry';
+import { emitSpan, safeHashIdentifier } from '../common/telemetry';
 import type { DsrQueueMessage } from '../common/models';
 import { getDsrRequest } from '../service/dsrStore';
 import { runExportJob } from './exportJob';
@@ -12,28 +12,46 @@ const MAX_CONCURRENCY = Number(process.env.DSR_MAX_CONCURRENCY ?? '5');
 
 let runningExports = 0;
 
-function parseMessage(message: unknown): DsrQueueMessage | null {
+function isValidMessage(value: unknown): value is DsrQueueMessage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    candidate.id.length > 0 &&
+    (candidate.type === 'export' || candidate.type === 'delete') &&
+    typeof candidate.submittedAt === 'string' &&
+    candidate.submittedAt.length > 0
+  );
+}
+
+export function parseDsrQueueMessage(message: unknown): DsrQueueMessage | null {
+  let parsed: unknown = message;
   if (typeof message === 'string') {
     try {
-      return JSON.parse(message) as DsrQueueMessage;
+      parsed = JSON.parse(message) as unknown;
     } catch {
       return null;
     }
   }
 
-  if (typeof message === 'object' && message !== null) {
-    return message as DsrQueueMessage;
-  }
-
-  return null;
+  return isValidMessage(parsed) ? parsed : null;
 }
 
 export async function handleDsrQueue(payload: unknown, context: InvocationContext): Promise<void> {
-  const parsed = parseMessage(payload);
+  const parsed = parseDsrQueueMessage(payload);
   if (!parsed) {
-    context.log('dsr.queue.invalid', { payload });
+    context.log('dsr.queue.invalid', { reason: 'invalid_shape' });
     return;
   }
+
+  context.log('dsr.queue.received', {
+    invocationId: context.invocationId,
+    requestId: parsed.id,
+    type: parsed.type,
+    submittedAt: parsed.submittedAt,
+  });
 
   const request = await getDsrRequest(parsed.id);
   if (!request) {
@@ -46,23 +64,48 @@ export async function handleDsrQueue(payload: unknown, context: InvocationContex
     return;
   }
 
-  if (parsed.type === 'export') {
-    if (runningExports >= MAX_CONCURRENCY) {
-      context.log('dsr.queue.export_rate_limit', { runningExports, max: MAX_CONCURRENCY });
-      return;
+  context.log('dsr.queue.resolved_request', {
+    invocationId: context.invocationId,
+    requestId: request.id,
+    type: request.type,
+    userIdHash: safeHashIdentifier(request.userId),
+    status: request.status,
+    attempt: request.attempt,
+  });
+
+  try {
+    if (parsed.type === 'export') {
+      if (runningExports >= MAX_CONCURRENCY) {
+        context.log('dsr.queue.export_rate_limit', { runningExports, max: MAX_CONCURRENCY });
+        return;
+      }
+      runningExports += 1;
+      try {
+        emitSpan(context, 'queue.export.dispatch', { requestId: request.id, attempt: request.attempt });
+        await runExportJob(request, context);
+      } finally {
+        runningExports -= 1;
+      }
+    } else {
+      emitSpan(context, 'queue.delete.dispatch', { requestId: request.id, attempt: request.attempt });
+      await runDeleteJob(request, context);
     }
-    runningExports += 1;
-    try {
-      emitSpan(context, 'queue.export.dispatch', { requestId: request.id });
-      await runExportJob(request, context);
-    } finally {
-      runningExports -= 1;
-    }
-  } else if (parsed.type === 'delete') {
-    emitSpan(context, 'queue.delete.dispatch', { requestId: request.id });
-    await runDeleteJob(request, context);
-  } else {
-    context.log('dsr.queue.unknown_type', { type: parsed.type });
+
+    context.log('dsr.queue.completed', {
+      invocationId: context.invocationId,
+      requestId: request.id,
+      type: parsed.type,
+      previousAttempt: request.attempt,
+    });
+  } catch (error) {
+    context.log('dsr.queue.failed', {
+      invocationId: context.invocationId,
+      requestId: request.id,
+      type: parsed.type,
+      previousAttempt: request.attempt,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 }
 

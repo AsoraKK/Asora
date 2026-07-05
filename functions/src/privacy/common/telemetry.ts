@@ -1,4 +1,5 @@
 import type { InvocationContext } from '@azure/functions';
+import { createHash } from 'node:crypto';
 
 export function emitSpan(
   context: InvocationContext,
@@ -18,4 +19,11 @@ export function auditLog(context: InvocationContext, message: string, meta: Reco
     invocationId: context.invocationId,
     ...meta,
   });
+}
+
+export function safeHashIdentifier(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }

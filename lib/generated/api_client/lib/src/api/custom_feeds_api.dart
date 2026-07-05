@@ -8,8 +8,13 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
+import 'package:asora_api_client/src/model/create_custom_feed_request.dart';
+import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
+import 'package:asora_api_client/src/model/custom_feed_definition.dart';
+import 'package:asora_api_client/src/model/custom_feed_list_response.dart';
 import 'package:asora_api_client/src/model/error.dart';
-import 'package:built_value/json_object.dart';
+import 'package:asora_api_client/src/model/error_response.dart';
+import 'package:asora_api_client/src/model/update_custom_feed_request.dart';
 
 class CustomFeedsApi {
 
@@ -20,10 +25,10 @@ class CustomFeedsApi {
   const CustomFeedsApi(this._dio, this._serializers);
 
   /// Create a new custom feed
-  /// 
+  /// Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20. 
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [createCustomFeedRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -31,10 +36,10 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsCreate({ 
-    required JsonObject body,
+  Future<Response<CustomFeedDefinition>> customFeedsCreate({ 
+    required CreateCustomFeedRequest createCustomFeedRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -65,7 +70,8 @@ class CustomFeedsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(CreateCustomFeedRequest);
+      _bodyData = _serializers.serialize(createCustomFeedRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -88,14 +94,14 @@ class CustomFeedsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CustomFeedDefinition? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CustomFeedDefinition),
+      ) as CustomFeedDefinition;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -107,7 +113,7 @@ class CustomFeedsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CustomFeedDefinition>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -120,7 +126,7 @@ class CustomFeedsApi {
   }
 
   /// Delete a custom feed
-  /// 
+  /// Delete an owned custom feed definition.
   ///
   /// Parameters:
   /// * [id] 
@@ -131,9 +137,9 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsDelete({ 
+  Future<Response<void>> customFeedsDelete({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -169,39 +175,11 @@ class CustomFeedsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<JsonObject>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
+    return _response;
   }
 
   /// Get a custom feed
-  /// 
+  /// Fetch a custom feed definition owned by the authenticated user.
   ///
   /// Parameters:
   /// * [id] 
@@ -212,9 +190,9 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsGet({ 
+  Future<Response<CustomFeedDefinition>> customFeedsGet({ 
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -250,14 +228,14 @@ class CustomFeedsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CustomFeedDefinition? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CustomFeedDefinition),
+      ) as CustomFeedDefinition;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -269,7 +247,7 @@ class CustomFeedsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CustomFeedDefinition>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -282,10 +260,12 @@ class CustomFeedsApi {
   }
 
   /// List items in a custom feed
-  /// 
+  /// Return posts matching a custom feed&#39;s filters.
   ///
   /// Parameters:
   /// * [id] 
+  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+  /// * [limit] - Maximum number of items to return per page
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -293,10 +273,12 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CursorPaginatedPostView] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsItemsList({ 
+  Future<Response<CursorPaginatedPostView>> customFeedsItemsList({ 
     required String id,
+    String? cursor,
+    int? limit = 25,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -323,22 +305,28 @@ class CustomFeedsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CursorPaginatedPostView? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CursorPaginatedPostView),
+      ) as CursorPaginatedPostView;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -350,7 +338,7 @@ class CustomFeedsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CursorPaginatedPostView>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -363,9 +351,11 @@ class CustomFeedsApi {
   }
 
   /// List custom feeds for the current user
-  /// 
+  /// List custom feed definitions owned by the authenticated user.
   ///
   /// Parameters:
+  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+  /// * [limit] - Maximum number of items to return per page
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -373,9 +363,11 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CustomFeedListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsList({ 
+  Future<Response<CustomFeedListResponse>> customFeedsList({ 
+    String? cursor,
+    int? limit = 25,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -402,22 +394,28 @@ class CustomFeedsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CustomFeedListResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CustomFeedListResponse),
+      ) as CustomFeedListResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -429,7 +427,7 @@ class CustomFeedsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CustomFeedListResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -442,11 +440,11 @@ class CustomFeedsApi {
   }
 
   /// Update a custom feed
-  /// 
+  /// Update an owned custom feed&#39;s name, filters, sorting, or home flag.
   ///
   /// Parameters:
   /// * [id] 
-  /// * [body] 
+  /// * [updateCustomFeedRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -454,11 +452,11 @@ class CustomFeedsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CustomFeedDefinition] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> customFeedsUpdate({ 
+  Future<Response<CustomFeedDefinition>> customFeedsUpdate({ 
     required String id,
-    required JsonObject body,
+    required UpdateCustomFeedRequest updateCustomFeedRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -489,7 +487,8 @@ class CustomFeedsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(UpdateCustomFeedRequest);
+      _bodyData = _serializers.serialize(updateCustomFeedRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -512,14 +511,14 @@ class CustomFeedsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CustomFeedDefinition? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CustomFeedDefinition),
+      ) as CustomFeedDefinition;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -531,7 +530,7 @@ class CustomFeedsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CustomFeedDefinition>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

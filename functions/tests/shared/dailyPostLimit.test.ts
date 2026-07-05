@@ -340,9 +340,14 @@ describe('Daily Post Limit Service', () => {
       const error = new DailyPostLimitExceededError(result);
       const response = error.toResponse();
       
+      expect(response.error).toBe('rate_limited');
+      expect(response.scope).toBe('user');
       expect(response.message).toContain('Daily post limit reached');
       expect(response.code).toBe('DAILY_POST_LIMIT_EXCEEDED');
       expect(response.limit).toBe(5);
+      expect(response.window_seconds).toBe(86400);
+      expect(response.retry_after_seconds).toBe(86400);
+      expect(response.trace_id).toBeNull();
       expect(response.current).toBe(5);
       expect(response.tier).toBe('free');
       expect(response.resetAt).toBe('2024-03-16T00:00:00.000Z');
@@ -503,7 +508,11 @@ describe('Daily Post Limit Service', () => {
 
       const error = new DailyCommentLimitExceededError(result);
       const response = error.toResponse();
+      expect(response.error).toBe('rate_limited');
+      expect(response.scope).toBe('user');
       expect(response.code).toBe('DAILY_COMMENT_LIMIT_EXCEEDED');
+      expect(response.window_seconds).toBe(86400);
+      expect(response.retry_after_seconds).toBe(86400);
       expect(response.current).toBe(result.currentCount);
       expect(response.limit).toBe(result.limit);
       expect(response.tier).toBe('free');
@@ -540,7 +549,11 @@ describe('Daily Post Limit Service', () => {
 
       const error = new DailyAppealLimitExceededError(result);
       const response = error.toResponse();
+      expect(response.error).toBe('rate_limited');
+      expect(response.scope).toBe('user');
       expect(response.code).toBe('DAILY_APPEAL_LIMIT_EXCEEDED');
+      expect(response.window_seconds).toBe(86400);
+      expect(response.retry_after_seconds).toBe(86400);
       expect(response.current).toBe(result.currentCount);
       expect(response.limit).toBe(result.limit);
       expect(response.tier).toBe('free');

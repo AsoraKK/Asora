@@ -14,12 +14,7 @@ import type { UserTier } from '@shared/services/tierLimits';
 // Subscription Document (Cosmos DB: subscriptions container)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SubscriptionStatus =
-  | 'active'
-  | 'cancelled'
-  | 'past_due'
-  | 'expired'
-  | 'trialing';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'past_due' | 'expired' | 'trialing';
 
 export type PaymentProvider = 'apple' | 'google' | 'stripe' | 'manual';
 
@@ -158,5 +153,10 @@ export interface SubscriptionStatusResponse {
     dailyPosts: number;
     maxMediaSizeMB: number;
     maxMediaPerPost: number;
+    maxCustomFeeds: number;
+    newsBoardAccess: boolean;
+    postingRestricted: boolean;
+    rewardLevelCap: number;
+    rewardOptionsPerLevel: number | null;
   };
 }

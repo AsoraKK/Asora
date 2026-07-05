@@ -16,8 +16,7 @@ class _$AdminAppealDetailResponse extends AdminAppealDetailResponse {
 
   factory _$AdminAppealDetailResponse([
     void Function(AdminAppealDetailResponseBuilder)? updates,
-  ]) =>
-      (AdminAppealDetailResponseBuilder()..update(updates))._build();
+  ]) => (AdminAppealDetailResponseBuilder()..update(updates))._build();
 
   _$AdminAppealDetailResponse._({
     this.appeal,
@@ -27,8 +26,7 @@ class _$AdminAppealDetailResponse extends AdminAppealDetailResponse {
   @override
   AdminAppealDetailResponse rebuild(
     void Function(AdminAppealDetailResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminAppealDetailResponseBuilder toBuilder() =>
@@ -115,7 +113,8 @@ class AdminAppealDetailResponseBuilder
   _$AdminAppealDetailResponse _build() {
     _$AdminAppealDetailResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminAppealDetailResponse._(
             appeal: _appeal?.build(),
             content: _content?.build(),

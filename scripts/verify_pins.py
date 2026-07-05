@@ -14,13 +14,23 @@ from pathlib import Path
 EXPECTED_FILE = Path("mobile-expected-pins.json")
 
 
-def load_expected() -> dict[str, list[str]]:
+def load_expected() -> tuple[dict[str, list[str]], dict[str, str]]:
     if not EXPECTED_FILE.exists():
         raise SystemExit(f"Expected pins file not found: {EXPECTED_FILE}")
     raw = json.loads(EXPECTED_FILE.read_text(encoding="utf-8"))
+    states_raw = raw.get("_states", {})
+    states = {}
+    if isinstance(states_raw, dict):
+        states = {
+            str(host): str(state).lower()
+            for host, state in states_raw.items()
+        }
     # Skip comment keys (keys starting with underscore)
     data = {k: v for k, v in raw.items() if not k.startswith("_")}
-    return {host: list(dict.fromkeys(pins)) for host, pins in data.items()}
+    return (
+        {host: list(dict.fromkeys(pins)) for host, pins in data.items()},
+        states,
+    )
 
 
 def collect_hosts() -> set[str]:
@@ -93,36 +103,75 @@ def compute_spki(host: str) -> str:
 
 
 def main() -> int:
-    expected = load_expected()
+    expected, states = load_expected()
     hosts = collect_hosts()
 
     report: dict[str, dict[str, object]] = {}
     has_hard_failure = False
 
     for host in hosts:
+        state = states.get(host, "live")
         allowed = set(expected.get(host, []))
         try:
             observed = compute_spki(host)
         except Exception as exc:  # pragma: no cover
             error_msg = str(exc)
+            openssl_missing = (
+                isinstance(exc, FileNotFoundError)
+                or "The system cannot find the file specified" in error_msg
+                or "No such file or directory" in error_msg
+            )
+            if openssl_missing and state in {"planned", "deprecated"}:
+                report[host] = {
+                    "ok": True,
+                    "skipped": f"openssl unavailable locally (host state: {state})",
+                    "expected": list(allowed),
+                    "state": state,
+                }
+                continue
             # Don't fail on DNS resolution errors (host not live yet)
             if "Name or service not known" in error_msg or "errno=2" in error_msg:
-                if not allowed:
-                    # Host not provisioned AND no pins configured — expected state pre-launch
+                if state in {"planned", "deprecated"} or not allowed:
+                    # Host not provisioned or intentionally retained for compatibility.
                     report[host] = {
                         "ok": True,
-                        "skipped": "DNS resolution failed (host not provisioned; pins not yet required)",
+                        "skipped": (
+                            f"DNS resolution failed (host state: {state}; pins not yet required)"
+                        ),
                         "expected": list(allowed),
+                        "state": state,
                     }
                 else:
-                    report[host] = {"ok": True, "skipped": "DNS resolution failed", "expected": list(allowed)}
+                    report[host] = {
+                        "ok": True,
+                        "skipped": "DNS resolution failed",
+                        "expected": list(allowed),
+                        "state": state,
+                    }
                 continue
-            report[host] = {"ok": False, "error": error_msg, "expected": list(allowed)}
+            report[host] = {
+                "ok": False,
+                "error": error_msg,
+                "expected": list(allowed),
+                "state": state,
+            }
             has_hard_failure = True
             continue
 
         # Host resolves but has no expected pins — this is a launch blocker
         if not allowed:
+            if state in {"planned", "deprecated"}:
+                print(
+                    f"ℹ {host} is marked {state}; observed pin is informational until the config is promoted."
+                )
+                report[host] = {
+                    "ok": True,
+                    "skipped": f"planned/deprecated host state: {state}",
+                    "observed": observed,
+                    "expected": [],
+                    "state": state,
+                }
+                continue
             print(
                 f"✗ LAUNCH BLOCKER: {host} resolves but has no expected pins in {EXPECTED_FILE}.\n"
                 f"  Extract the SPKI pin with:\n"
@@ -136,6 +185,7 @@ def main() -> int:
                 "error": "no_expected_pins_configured",
                 "observed": observed,
                 "expected": [],
+                "state": state,
             }
             has_hard_failure = True
             continue
@@ -145,6 +195,7 @@ def main() -> int:
             "ok": ok,
             "observed": observed,
             "expected": list(allowed),
+            "state": state,
         }
         if not ok:
             # Azure shared hosting (*.azurewebsites.net) rotates TLS certs

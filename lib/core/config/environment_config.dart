@@ -46,20 +46,29 @@ enum Environment {
 }
 
 /// TLS certificate pinning configuration
+enum PinLifecycleState {
+  live,
+  planned,
+  deprecated,
+}
+
 class TlsPinConfig {
   final bool enabled;
   final bool strictMode; // true = block, false = warn-only
+  final PinLifecycleState lifecycleState;
   final List<String> spkiPinsBase64; // SPKI SHA-256 pins, Base64
 
   const TlsPinConfig({
     required this.enabled,
     required this.strictMode,
+    this.lifecycleState = PinLifecycleState.live,
     required this.spkiPinsBase64,
   });
 
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'strictMode': strictMode,
+    'lifecycleState': lifecycleState.name,
     'pinCount': spkiPinsBase64.length,
   };
 }
@@ -159,6 +168,7 @@ const _devMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: false, // warn-only in dev
+    lifecycleState: PinLifecycleState.live,
     spkiPinsBase64: [
       // Dev Function App SPKI pins (primary + backups)
       'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
@@ -186,9 +196,9 @@ const _stagingMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: true, // block on mismatch
+    lifecycleState: PinLifecycleState.planned,
     spkiPinsBase64: [
-      // TODO: Add staging SPKI pins when staging environment provisioned
-      // Use tools/extract_spki.dart to generate pins
+      // Planned: populate after the staging host is provisioned and reachable.
     ],
   ),
   strictDeviceIntegrity: true,
@@ -208,10 +218,9 @@ const _prodMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: true, // block on mismatch
+    lifecycleState: PinLifecycleState.planned,
     spkiPinsBase64: [
-      // TODO: Add production SPKI pins before GA
-      // Use tools/extract_spki.dart to generate pins
-      // Include current + backup pin for rotation
+      // Planned: populate after the production host is provisioned and reachable.
     ],
   ),
   strictDeviceIntegrity: true,

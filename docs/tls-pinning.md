@@ -1,5 +1,5 @@
 # Deprecated
 
-This document moved to: guides/tls-pinning.md
+This document moved to: docs/runbooks/tls-pinning-rotation.md
 
 Please update bookmarks and links.

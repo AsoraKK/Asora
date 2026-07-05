@@ -43,7 +43,7 @@ jobs:
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
-      - uses: actions/checkout@v4.1.7
+      - uses: actions/checkout@v5
 
       - name: Install jq, zip, unzip
         run: sudo apt-get update && sudo apt-get install -y jq zip unzip
@@ -70,7 +70,7 @@ jobs:
           [ -z "${ARM_CLIENT_SECRET:-}" ] || { echo "ERROR: legacy secret ARM_CLIENT_SECRET present"; exit 1; }
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -126,7 +126,7 @@ jobs:
             echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
 
-      - name: Fail if staging/prod SPKI pins are empty
+      - name: Check staging/prod SPKI pin lifecycle state
         shell: bash
         run: |
           set -euo pipefail
@@ -136,31 +136,45 @@ jobs:
             exit 1
           fi
 
+          get_state() {
+            local block_start="$1"
+            local block_end="$2"
+            awk "/^const ${block_start}/,/^const ${block_end}/" "$ENV_FILE" \
+              | sed -n 's/.*lifecycleState: PinLifecycleState\.\([a-z]*\).*/\1/p' \
+              | head -n 1
+          }
+
           # Check for empty spkiPinsBase64 arrays inside the staging/prod security const blocks
+          # and only fail if a live lifecycle state is marked empty.
+          staging_state="$(get_state '_stagingMobileSecurity' '_stagingConfig')"
+          prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
+          staging_state="${staging_state:-live}"
+          prod_state="${prod_state:-live}"
+
           staging_empty=false
           prod_empty=false
 
           # Extract staging block and check for empty array
-          if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
-              | grep -q "spkiPinsBase64:\s*\["; then
-            if awk '/_stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
-                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
+          if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+              | grep -Eq 'spkiPinsBase64:[[:space:]]*\['; then
+            if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+                | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
               staging_empty=true
             fi
           fi
 
           # Extract prod block and check for empty array
-          if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-              | grep -q "spkiPinsBase64:\s*\["; then
-            if awk '/_prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
-                | grep -q "spkiPinsBase64:\s*\[\s*\]"; then
+          if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
+              | grep -Eq 'spkiPinsBase64:[[:space:]]*\['; then
+            if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
+                | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
               prod_empty=true
             fi
           fi
 
           failed=false
-          if [ "$staging_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: staging spkiPinsBase64 is empty in $ENV_FILE."
+          if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
             echo "  Staging API host: asora-function-staging.northeurope-01.azurewebsites.net"
             echo "  TLS pinning is currently FAIL-OPEN for staging (all connections pass unchecked)."
             echo ""
@@ -171,8 +185,8 @@ jobs:
             failed=true
           fi
 
-          if [ "$prod_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: production spkiPinsBase64 is empty in $ENV_FILE."
+          if [ "$prod_state" = "live" ] && [ "$prod_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: production pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
             echo "  Production API host: asora-function-prod.northeurope-01.azurewebsites.net"
             echo "  TLS pinning is currently FAIL-OPEN for production (all connections pass unchecked)."
             echo ""
@@ -192,7 +206,15 @@ jobs:
             exit 1
           fi
 
-          echo "✓ Staging and production SPKI pin arrays are populated."
+          if [ "$staging_state" = "planned" ] && [ "$staging_empty" = "true" ]; then
+            echo "ℹ staging pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          fi
+
+          if [ "$prod_state" = "planned" ] && [ "$prod_empty" = "true" ]; then
+            echo "ℹ production pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          fi
+
+          echo "✓ Staging and production SPKI lifecycle states are explicit."
 
       - name: Verify live certificate pins
         env:
@@ -204,7 +226,7 @@ jobs:
           cat mobile-pin-report.json
 
       - name: Upload pin verification report
-        uses: actions/upload-artifact@v4.4.0
+        uses: actions/upload-artifact@v6
         with:
           name: mobile-pin-report
           path: mobile-pin-report.json

@@ -49,6 +49,7 @@ void main() {
 
       expect(config.enabled, isTrue);
       expect(config.strictMode, isFalse);
+      expect(config.lifecycleState, PinLifecycleState.live);
       expect(config.spkiPinsBase64, hasLength(2));
     });
 
@@ -63,7 +64,20 @@ void main() {
 
       expect(json['enabled'], isTrue);
       expect(json['strictMode'], isTrue);
+      expect(json['lifecycleState'], PinLifecycleState.live.name);
       expect(json['pinCount'], 3);
+    });
+
+    test('supports explicit non-live lifecycle states', () {
+      const config = TlsPinConfig(
+        enabled: true,
+        strictMode: true,
+        lifecycleState: PinLifecycleState.planned,
+        spkiPinsBase64: [],
+      );
+
+      expect(config.lifecycleState, PinLifecycleState.planned);
+      expect(config.toJson()['lifecycleState'], PinLifecycleState.planned.name);
     });
 
     test('empty pins list has zero pinCount', () {

@@ -102,4 +102,58 @@ void main() {
       }
     });
   });
+
+  group('Subscription models', () {
+    test('SubscriptionStatus.fromJson parses and identifies expiry', () {
+      final status = SubscriptionStatus.fromJson({
+        'userId': 'u1',
+        'tier': 'pro',
+        'status': 'active',
+        'provider': 'stripe',
+        'currentPeriodEnd': DateTime.now()
+            .add(const Duration(days: 1))
+            .toIso8601String(),
+        'cancelAtPeriodEnd': true,
+        'entitlements': {
+          'dailyPosts': 10,
+          'maxMediaSizeMB': 20,
+          'maxMediaPerPost': 3,
+        },
+      });
+
+      expect(status.isPaid, isTrue);
+      expect(status.isExpiring, isTrue);
+      expect(status.entitlements.dailyPosts, 10);
+    });
+
+    test('SubscriptionStatus.isExpiring is false when period ended', () {
+      final status = SubscriptionStatus.fromJson({
+        'userId': 'u1',
+        'tier': 'free',
+        'status': 'inactive',
+        'cancelAtPeriodEnd': true,
+        'currentPeriodEnd': DateTime.now()
+            .subtract(const Duration(days: 1))
+            .toIso8601String(),
+        'entitlements': {
+          'dailyPosts': 1,
+          'maxMediaSizeMB': 5,
+          'maxMediaPerPost': 1,
+        },
+      });
+
+      expect(status.isPaid, isFalse);
+      expect(status.isExpiring, isFalse);
+    });
+
+    test('Purchase result types are constructible', () {
+      const success = PurchaseSuccess(productId: 'p1', tier: 'pro');
+      const cancelled = PurchaseCancelled();
+      const error = PurchaseError(message: 'not configured', code: 'X');
+
+      expect(success.productId, 'p1');
+      expect(cancelled, isA<PurchaseCancelled>());
+      expect(error.code, 'X');
+    });
+  });
 }

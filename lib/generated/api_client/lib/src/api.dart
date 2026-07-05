@@ -22,6 +22,9 @@ import 'package:asora_api_client/src/api/payments_api.dart';
 import 'package:asora_api_client/src/api/posts_api.dart';
 import 'package:asora_api_client/src/api/privacy_api.dart';
 import 'package:asora_api_client/src/api/privacy_admin_api.dart';
+import 'package:asora_api_client/src/api/reactions_api.dart';
+import 'package:asora_api_client/src/api/reputation_api.dart';
+import 'package:asora_api_client/src/api/rewards_api.dart';
 import 'package:asora_api_client/src/api/subscription_api.dart';
 import 'package:asora_api_client/src/api/users_api.dart';
 
@@ -155,6 +158,24 @@ class AsoraApiClient {
   /// by doing that all interceptors will not be executed
   PrivacyAdminApi getPrivacyAdminApi() {
     return PrivacyAdminApi(dio, serializers);
+  }
+
+  /// Get ReactionsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ReactionsApi getReactionsApi() {
+    return ReactionsApi(dio, serializers);
+  }
+
+  /// Get ReputationApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ReputationApi getReputationApi() {
+    return ReputationApi(dio, serializers);
+  }
+
+  /// Get RewardsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  RewardsApi getRewardsApi() {
+    return RewardsApi(dio, serializers);
   }
 
   /// Get SubscriptionApi instance, base route and serializer can be overridden by a given but be careful,

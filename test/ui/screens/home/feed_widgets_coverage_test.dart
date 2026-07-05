@@ -75,6 +75,16 @@ void main() {
       expect(find.text('Title 0'), findsOneWidget);
     });
 
+    testWidgets('renders empty state when there are no items', (tester) async {
+      await tester.pumpWidget(
+        wrap(const DiscoverFeed(feed: feed, items: [])),
+      );
+      await tester.pump();
+
+      expect(find.text('No posts yet'), findsOneWidget);
+      expect(find.text('Check back soon for new updates.'), findsOneWidget);
+    });
+
     testWidgets('triggers onLoadMore near scroll end', (tester) async {
       bool loadMoreCalled = false;
       await tester.pumpWidget(
@@ -169,6 +179,14 @@ void main() {
       expect(find.text('Title 0'), findsOneWidget);
     });
 
+    testWidgets('renders empty state when there are no items', (tester) async {
+      await tester.pumpWidget(wrap(const NewsFeed(feed: feed, items: [])));
+      await tester.pump();
+
+      expect(find.text('No news yet'), findsOneWidget);
+      expect(find.text('Check back soon for fresh coverage.'), findsOneWidget);
+    });
+
     testWidgets('triggers onLoadMore near scroll end', (tester) async {
       bool loadMoreCalled = false;
       await tester.pumpWidget(
@@ -220,6 +238,19 @@ void main() {
       expect(find.text('+dart'), findsOneWidget);
       expect(find.text('-spam'), findsOneWidget);
       expect(find.text('Title 0'), findsOneWidget);
+    });
+
+    testWidgets('renders empty state when there are no items', (tester) async {
+      await tester.pumpWidget(
+        wrap(const CustomFeedView(feed: customFeedModel, items: [])),
+      );
+      await tester.pump();
+
+      expect(find.text('No matching posts'), findsOneWidget);
+      expect(
+        find.text('Broaden your filters to see more results.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('triggers onLoadMore near scroll end', (tester) async {

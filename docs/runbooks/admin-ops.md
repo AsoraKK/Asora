@@ -7,6 +7,8 @@ Operate the Lythaus beta admin surface with strict binary content states and app
 - Admin JWT with `admin` role is required for all admin endpoints.
 - Actions are audited in `audit_logs` (partition key `subjectId`).
 - Content state is binary: `PUBLISHED` or `BLOCKED`.
+- In `apps/control-panel`, the admin JWT is tab-scoped in `sessionStorage`, capped to 15 minutes or the token `exp`, and cleared on explicit session clear or `401`.
+- Residual risk: XSS in an active control-panel tab can still exfiltrate the bearer token until it expires or is cleared.
 
 ## Primary UI
 Use the Lythaus Control Panel as the primary admin UI. The API calls below are

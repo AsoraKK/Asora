@@ -26,6 +26,7 @@ void main() {
     expect(InviteRedeemFailureReason.missingEmail.value, 'missing_email');
     expect(InviteRedeemFailureReason.invalidRequest.value, 'invalid_request');
     expect(InviteRedeemFailureReason.unauthorized.value, 'unauthorized');
+    expect(InviteRedeemFailureReason.rateLimited.value, 'rate_limited');
     expect(InviteRedeemFailureReason.network.value, 'network');
     expect(InviteRedeemFailureReason.unknown.value, 'unknown');
   });

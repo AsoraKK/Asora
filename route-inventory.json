@@ -1,33 +1,17 @@
 {
-  "generatedAt": "2026-06-01T17:56:36.003Z",
+  "generatedAt": "2026-06-28T19:03:18.713Z",
   "functionsRoot": "functions/src",
-  "totalRoutes": 130,
+  "totalRoutes": 129,
   "writeRoutes": 76,
   "missingRateLimit": [],
   "missingAuthGuard": [],
+  "missingAdminAudit": [],
   "anonymousTodoViolations": [],
   "anonymousReadViolations": [],
   "testEnvGuardViolations": [],
   "inventory": [
     {
-      "file": "functions/src/admin/admin_test_data_purge.function.ts",
-      "functionName": "admin_test_data_purge",
-      "methods": [
-        "POST"
-      ],
-      "route": "",
-      "authLevel": "anonymous",
-      "isWrite": true,
-      "hasRateLimit": false,
-      "hasAuthGuard": true,
-      "rateLimitExempt": true,
-      "authGuardExempt": false,
-      "hasAnonymousTodo": false,
-      "isAnonymousReadUnguarded": false,
-      "missingTestEnvGuard": false
-    },
-    {
-      "file": "functions/src/media/media_upload_url.function.ts",
+      "file": "functions\\src\\media\\media_upload_url.function.ts",
       "functionName": "media_upload_url",
       "methods": [
         "POST"
@@ -39,12 +23,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_create.function.ts",
+      "file": "functions\\src\\posts\\posts_create.function.ts",
       "functionName": "posts_create",
       "methods": [
         "POST"
@@ -56,12 +43,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_delete.function.ts",
+      "file": "functions\\src\\posts\\posts_delete.function.ts",
       "functionName": "posts_delete",
       "methods": [
         "DELETE"
@@ -73,12 +63,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/users/users_me_get.function.ts",
+      "file": "functions\\src\\users\\users_me_get.function.ts",
       "functionName": "users_me_get",
       "methods": [
         "GET"
@@ -90,12 +83,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/users/users_me_update.function.ts",
+      "file": "functions\\src\\users\\users_me_update.function.ts",
       "functionName": "users_me_update",
       "methods": [
         "PATCH"
@@ -107,12 +103,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/appeals_list.function.ts",
+      "file": "functions\\src\\admin\\routes\\appeals_list.function.ts",
       "functionName": "admin_appeals_list",
       "methods": [
         "GET",
@@ -125,12 +124,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/appeals_get.function.ts",
+      "file": "functions\\src\\admin\\routes\\appeals_get.function.ts",
       "functionName": "admin_appeals_get",
       "methods": [
         "GET",
@@ -143,12 +145,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/appeals_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\appeals_action.function.ts",
       "functionName": "admin_appeals_approve",
       "methods": [
         "POST",
@@ -161,12 +166,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/appeals_override.function.ts",
+      "file": "functions\\src\\admin\\routes\\appeals_override.function.ts",
       "functionName": "admin_appeals_override",
       "methods": [
         "POST",
@@ -179,12 +187,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/appeals_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\appeals_action.function.ts",
       "functionName": "admin_appeals_reject",
       "methods": [
         "POST",
@@ -197,12 +208,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/audit_get.function.ts",
+      "file": "functions\\src\\admin\\routes\\audit_get.function.ts",
       "functionName": "admin_audit_get",
       "methods": [
         "GET",
@@ -215,12 +229,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/budget.function.ts",
+      "file": "functions\\src\\admin\\routes\\budget.function.ts",
       "functionName": "admin_budget",
       "methods": [
         "GET",
@@ -234,12 +251,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/config.function.ts",
+      "file": "functions\\src\\admin\\routes\\config.function.ts",
       "functionName": "admin_config",
       "methods": [
         "GET",
@@ -253,12 +273,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/content_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\content_action.function.ts",
       "functionName": "admin_content_block",
       "methods": [
         "POST",
@@ -271,12 +294,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/content_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\content_action.function.ts",
       "functionName": "admin_content_publish",
       "methods": [
         "POST",
@@ -289,12 +315,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/listRequests.ts",
+      "file": "functions\\src\\privacy\\admin\\listRequests.ts",
       "functionName": "privacy-admin-dsr-list",
       "methods": [
         "GET",
@@ -307,12 +336,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/getStatus.ts",
+      "file": "functions\\src\\privacy\\admin\\getStatus.ts",
       "functionName": "privacy-admin-dsr-status",
       "methods": [
         "GET",
@@ -325,12 +357,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/cancel.ts",
+      "file": "functions\\src\\privacy\\admin\\cancel.ts",
       "functionName": "privacy-admin-dsr-cancel",
       "methods": [
         "POST",
@@ -343,12 +378,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/download.ts",
+      "file": "functions\\src\\privacy\\admin\\download.ts",
       "functionName": "privacy-admin-dsr-download",
       "methods": [
         "GET",
@@ -361,12 +399,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/release.ts",
+      "file": "functions\\src\\privacy\\admin\\release.ts",
       "functionName": "privacy-admin-dsr-release",
       "methods": [
         "POST",
@@ -379,12 +420,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/retry.ts",
+      "file": "functions\\src\\privacy\\admin\\retry.ts",
       "functionName": "privacy-admin-dsr-retry",
       "methods": [
         "POST",
@@ -397,12 +441,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/reviewA.ts",
+      "file": "functions\\src\\privacy\\admin\\reviewA.ts",
       "functionName": "privacy-admin-dsr-reviewA",
       "methods": [
         "POST",
@@ -415,12 +462,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/reviewB.ts",
+      "file": "functions\\src\\privacy\\admin\\reviewB.ts",
       "functionName": "privacy-admin-dsr-reviewB",
       "methods": [
         "POST",
@@ -433,12 +483,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/enqueueDelete.ts",
+      "file": "functions\\src\\privacy\\admin\\enqueueDelete.ts",
       "functionName": "privacy-admin-dsr-enqueue-delete",
       "methods": [
         "POST",
@@ -451,12 +504,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/enqueueExport.ts",
+      "file": "functions\\src\\privacy\\admin\\enqueueExport.ts",
       "functionName": "privacy-admin-dsr-enqueue-export",
       "methods": [
         "POST",
@@ -469,12 +525,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/placeHold.ts",
+      "file": "functions\\src\\privacy\\admin\\placeHold.ts",
       "functionName": "privacy-admin-dsr-place-hold",
       "methods": [
         "POST",
@@ -487,12 +546,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/admin/clearHold.ts",
+      "file": "functions\\src\\privacy\\admin\\clearHold.ts",
       "functionName": "privacy-admin-dsr-clear-hold",
       "methods": [
         "POST",
@@ -505,12 +567,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/flags_list.function.ts",
+      "file": "functions\\src\\admin\\routes\\flags_list.function.ts",
       "functionName": "admin_flags_list",
       "methods": [
         "GET",
@@ -523,12 +588,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/flags_get.function.ts",
+      "file": "functions\\src\\admin\\routes\\flags_get.function.ts",
       "functionName": "admin_flags_get",
       "methods": [
         "GET",
@@ -541,12 +609,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/flags_resolve.function.ts",
+      "file": "functions\\src\\admin\\routes\\flags_resolve.function.ts",
       "functionName": "admin_flags_resolve",
       "methods": [
         "POST",
@@ -559,12 +630,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/admin/invites.ts",
+      "file": "functions\\src\\auth\\admin\\invites.ts",
       "functionName": "admin-invites",
       "methods": [
         "GET",
@@ -578,12 +652,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/admin/invites.ts",
+      "file": "functions\\src\\auth\\admin\\invites.ts",
       "functionName": "admin-invites-delete",
       "methods": [
         "DELETE",
@@ -596,12 +673,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/admin/invites.ts",
+      "file": "functions\\src\\auth\\admin\\invites.ts",
       "functionName": "admin-invites-get",
       "methods": [
         "GET",
@@ -614,12 +694,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/admin/invites.ts",
+      "file": "functions\\src\\auth\\admin\\invites.ts",
       "functionName": "admin-invites-revoke",
       "methods": [
         "POST",
@@ -632,12 +715,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/admin/invites.ts",
+      "file": "functions\\src\\auth\\admin\\invites.ts",
       "functionName": "admin-invites-batch",
       "methods": [
         "POST",
@@ -650,12 +736,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/news_ingest.function.ts",
+      "file": "functions\\src\\admin\\routes\\news_ingest.function.ts",
       "functionName": "admin_news_ingest",
       "methods": [
         "POST",
@@ -668,12 +757,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/ops_metrics.function.ts",
+      "file": "functions\\src\\admin\\routes\\ops_metrics.function.ts",
       "functionName": "admin_ops_metrics",
       "methods": [
         "GET",
@@ -686,12 +778,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/ops_state.function.ts",
+      "file": "functions\\src\\admin\\routes\\ops_state.function.ts",
       "functionName": "admin_ops_state",
       "methods": [
         "GET",
@@ -705,12 +800,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/users_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\users_action.function.ts",
       "functionName": "admin_users_disable",
       "methods": [
         "POST",
@@ -723,12 +821,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/users_action.function.ts",
+      "file": "functions\\src\\admin\\routes\\users_action.function.ts",
       "functionName": "admin_users_enable",
       "methods": [
         "POST",
@@ -741,12 +842,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/users_search.function.ts",
+      "file": "functions\\src\\admin\\routes\\users_search.function.ts",
       "functionName": "admin_users_search",
       "methods": [
         "GET",
@@ -759,12 +863,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/config_get.function.ts",
+      "file": "functions\\src\\admin\\routes\\config_get.function.ts",
       "functionName": "admin_config_get",
       "methods": [
         "GET",
@@ -777,12 +884,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/config_put.function.ts",
+      "file": "functions\\src\\admin\\routes\\config_put.function.ts",
       "functionName": "admin_config_put",
       "methods": [
         "PUT",
@@ -795,12 +905,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/get-moderation-classes.function.ts",
+      "file": "functions\\src\\admin\\get-moderation-classes.function.ts",
       "functionName": "getModerationClasses",
       "methods": [
         "GET"
@@ -812,12 +925,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/reset-weight-override.function.ts",
+      "file": "functions\\src\\admin\\reset-weight-override.function.ts",
       "functionName": "resetWeightOverride",
       "methods": [
         "POST"
@@ -829,12 +945,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/save-weight-override.function.ts",
+      "file": "functions\\src\\admin\\save-weight-override.function.ts",
       "functionName": "saveWeightOverride",
       "methods": [
         "POST"
@@ -846,12 +965,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/proxy_moderation_test.function.ts",
+      "file": "functions\\src\\admin\\routes\\proxy_moderation_test.function.ts",
       "functionName": "moderation-test-proxy",
       "methods": [
         "GET",
@@ -865,15 +987,38 @@
       "authLevel": "anonymous",
       "isWrite": true,
       "hasRateLimit": false,
-      "hasAuthGuard": false,
+      "hasAuthGuard": true,
       "rateLimitExempt": true,
       "authGuardExempt": true,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/admin/routes/users_set_tier.function.ts",
+      "file": "functions\\src\\admin\\admin_test_data_purge.function.ts",
+      "functionName": "admin_test_data_purge",
+      "methods": [
+        "POST"
+      ],
+      "route": "admin/test-data/purge",
+      "authLevel": "anonymous",
+      "isWrite": true,
+      "hasRateLimit": false,
+      "hasAuthGuard": true,
+      "rateLimitExempt": true,
+      "authGuardExempt": false,
+      "auditExempt": false,
+      "hasAnonymousTodo": false,
+      "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
+      "missingTestEnvGuard": false
+    },
+    {
+      "file": "functions\\src\\admin\\routes\\users_set_tier.function.ts",
       "functionName": "admin_set_user_tier",
       "methods": [
         "PATCH"
@@ -885,12 +1030,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": true,
+      "isAdminMutation": true,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/analytics/ingest/ingest.function.ts",
+      "file": "functions\\src\\analytics\\ingest\\ingest.function.ts",
       "functionName": "ingestAnalytics",
       "methods": [
         "POST"
@@ -902,29 +1050,35 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/appeals/appeals_create.function.ts",
+      "file": "functions\\src\\appeals\\appeals_create.function.ts",
       "functionName": "appeals_create",
       "methods": [
         "POST"
       ],
       "route": "appeals",
-      "authLevel": "anonymous",
+      "authLevel": "",
       "isWrite": true,
       "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/appeals/appeals_getById.function.ts",
+      "file": "functions\\src\\appeals\\appeals_getById.function.ts",
       "functionName": "appeals_getById",
       "methods": [
         "GET"
@@ -936,12 +1090,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/appeals/appeals_vote.function.ts",
+      "file": "functions\\src\\appeals\\appeals_vote.function.ts",
       "functionName": "appeals_vote",
       "methods": [
         "POST"
@@ -953,12 +1110,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/authorize.ts",
+      "file": "functions\\src\\auth\\routes\\authorize.ts",
       "functionName": "auth-authorize",
       "methods": [
         "GET",
@@ -971,29 +1131,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/getConfig.ts",
-      "functionName": "auth-config",
-      "methods": [
-        "GET"
-      ],
-      "route": "auth/b2c-config",
-      "authLevel": "anonymous",
-      "isWrite": false,
-      "hasRateLimit": true,
-      "hasAuthGuard": true,
-      "rateLimitExempt": false,
-      "authGuardExempt": false,
-      "hasAnonymousTodo": false,
-      "isAnonymousReadUnguarded": false,
-      "missingTestEnvGuard": false
-    },
-    {
-      "file": "functions/src/auth/routes/invite_validate.function.ts",
+      "file": "functions\\src\\auth\\routes\\invite_validate.function.ts",
       "functionName": "auth-invite-validate",
       "methods": [
         "GET",
@@ -1006,12 +1152,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/ping.ts",
+      "file": "functions\\src\\auth\\routes\\ping.ts",
       "functionName": "auth-ping",
       "methods": [
         "GET"
@@ -1023,12 +1172,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/service/redeemInvite.ts",
+      "file": "functions\\src\\auth\\service\\redeemInvite.ts",
       "functionName": "auth-redeem-invite",
       "methods": [
         "POST",
@@ -1041,12 +1193,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/auth_token_refresh.function.ts",
+      "file": "functions\\src\\auth\\routes\\auth_token_refresh.function.ts",
       "functionName": "auth_token_refresh",
       "methods": [
         "POST"
@@ -1058,12 +1213,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/auth_sessions_revoke.function.ts",
+      "file": "functions\\src\\auth\\routes\\auth_sessions_revoke.function.ts",
       "functionName": "auth_sessions_revoke",
       "methods": [
         "POST"
@@ -1075,12 +1233,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/token.ts",
+      "file": "functions\\src\\auth\\routes\\token.ts",
       "functionName": "auth-token",
       "methods": [
         "POST",
@@ -1093,12 +1254,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/auth/routes/userinfo.ts",
+      "file": "functions\\src\\auth\\routes\\userinfo.ts",
       "functionName": "auth-userinfo",
       "methods": [
         "GET",
@@ -1112,29 +1276,35 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_create.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_create.function.ts",
       "functionName": "customFeeds_create",
       "methods": [
         "POST"
       ],
       "route": "custom-feeds",
-      "authLevel": "anonymous",
+      "authLevel": "",
       "isWrite": true,
       "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_list.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_list.function.ts",
       "functionName": "customFeeds_list",
       "methods": [
         "GET"
@@ -1146,12 +1316,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_delete.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_delete.function.ts",
       "functionName": "customFeeds_delete",
       "methods": [
         "DELETE"
@@ -1163,12 +1336,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_getById.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_getById.function.ts",
       "functionName": "customFeeds_getById",
       "methods": [
         "GET"
@@ -1180,12 +1356,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_update.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_update.function.ts",
       "functionName": "customFeeds_update",
       "methods": [
         "PATCH"
@@ -1197,12 +1376,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/custom-feeds/customFeeds_getItems.function.ts",
+      "file": "functions\\src\\custom-feeds\\customFeeds_getItems.function.ts",
       "functionName": "customFeeds_getItems",
       "methods": [
         "GET"
@@ -1214,12 +1396,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/getFeed.ts",
+      "file": "functions\\src\\feed\\routes\\getFeed.ts",
       "functionName": "getFeed",
       "methods": [
         "GET"
@@ -1231,80 +1416,99 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/feed_discover_get.function.ts",
+      "file": "functions\\src\\feed\\routes\\feed_discover_get.function.ts",
       "functionName": "feed_discover_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/discover",
       "authLevel": "anonymous",
       "isWrite": false,
-      "hasRateLimit": false,
+      "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/feed_news_get.function.ts",
+      "file": "functions\\src\\feed\\routes\\feed_news_get.function.ts",
       "functionName": "feed_news_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/news",
       "authLevel": "anonymous",
       "isWrite": false,
-      "hasRateLimit": false,
+      "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/feed_discover_get.function.ts",
+      "file": "functions\\src\\feed\\routes\\feed_discover_get.function.ts",
       "functionName": "feed_public_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/public",
       "authLevel": "anonymous",
       "isWrite": false,
-      "hasRateLimit": false,
+      "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/feed_user_get.function.ts",
+      "file": "functions\\src\\feed\\routes\\feed_user_get.function.ts",
       "functionName": "feed_user_get",
       "methods": [
-        "GET"
+        "GET",
+        "OPTIONS"
       ],
       "route": "feed/user/{userId}",
       "authLevel": "anonymous",
       "isWrite": false,
-      "hasRateLimit": false,
+      "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/health/health.function.ts",
+      "file": "functions\\src\\health\\health.function.ts",
       "functionName": "health",
       "methods": [
         "GET"
@@ -1316,12 +1520,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/submitAppeal.ts",
+      "file": "functions\\src\\moderation\\routes\\submitAppeal.ts",
       "functionName": "moderation-submit-appeal",
       "methods": [
         "POST",
@@ -1334,12 +1541,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/reviewAppealedContent.ts",
+      "file": "functions\\src\\moderation\\reviewAppealedContent.ts",
       "functionName": "moderation-review-appeal",
       "methods": [
         "POST",
@@ -1352,12 +1562,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/voteOnAppeal.ts",
+      "file": "functions\\src\\moderation\\routes\\voteOnAppeal.ts",
       "functionName": "moderation-vote-appeal",
       "methods": [
         "POST",
@@ -1370,12 +1583,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/moderation_cases_getById.function.ts",
+      "file": "functions\\src\\moderation\\routes\\moderation_cases_getById.function.ts",
       "functionName": "moderation_cases_getById",
       "methods": [
         "GET"
@@ -1387,29 +1603,35 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/moderation_cases_decide.function.ts",
+      "file": "functions\\src\\moderation\\routes\\moderation_cases_decide.function.ts",
       "functionName": "moderation_cases_decide",
       "methods": [
         "POST"
       ],
       "route": "moderation/cases/{id}/decision",
-      "authLevel": "anonymous",
+      "authLevel": "",
       "isWrite": true,
       "hasRateLimit": true,
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/flagContent.ts",
+      "file": "functions\\src\\moderation\\routes\\flagContent.ts",
       "functionName": "moderation-flag-content",
       "methods": [
         "POST",
@@ -1422,12 +1644,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reputation/moderation_ledger_appeal_post.function.ts",
+      "file": "functions\\src\\reputation\\moderation_ledger_appeal_post.function.ts",
       "functionName": "moderation_ledger_appeal_post",
       "methods": [
         "POST"
@@ -1439,12 +1664,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/moderation_queue_list.function.ts",
+      "file": "functions\\src\\moderation\\routes\\moderation_queue_list.function.ts",
       "functionName": "moderation_queue_list",
       "methods": [
         "GET"
@@ -1456,12 +1684,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/reviewQueue.ts",
+      "file": "functions\\src\\moderation\\routes\\reviewQueue.ts",
       "functionName": "moderation-review-queue",
       "methods": [
         "GET",
@@ -1474,12 +1705,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/moderation/routes/moderation_test.function.ts",
+      "file": "functions\\src\\moderation\\routes\\moderation_test.function.ts",
       "functionName": "moderation_test",
       "methods": [
         "POST"
@@ -1491,12 +1725,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": true,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/notificationsApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\notificationsApi.function.ts",
       "functionName": "getNotifications",
       "methods": [
         "GET"
@@ -1508,12 +1745,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/notificationsApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\notificationsApi.function.ts",
       "functionName": "dismissNotification",
       "methods": [
         "POST"
@@ -1525,12 +1765,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/notificationsApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\notificationsApi.function.ts",
       "functionName": "markNotificationAsRead",
       "methods": [
         "POST"
@@ -1542,12 +1785,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/devicesApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\devicesApi.function.ts",
       "functionName": "notifications-listDevices",
       "methods": [
         "GET"
@@ -1559,12 +1805,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/devicesApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\devicesApi.function.ts",
       "functionName": "notifications-registerDevice",
       "methods": [
         "POST"
@@ -1576,12 +1825,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/devicesApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\devicesApi.function.ts",
       "functionName": "notifications-revokeDevice",
       "methods": [
         "POST"
@@ -1593,12 +1845,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/preferencesApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\preferencesApi.function.ts",
       "functionName": "notifications-getPreferences",
       "methods": [
         "GET"
@@ -1610,12 +1865,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/preferencesApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\preferencesApi.function.ts",
       "functionName": "notifications-updatePreferences",
       "methods": [
         "PUT"
@@ -1627,12 +1885,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/notificationsApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\notificationsApi.function.ts",
       "functionName": "notifications-send",
       "methods": [
         "POST"
@@ -1644,12 +1905,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/notifications/http/notificationsApi.function.ts",
+      "file": "functions\\src\\notifications\\http\\notificationsApi.function.ts",
       "functionName": "getUnreadCount",
       "methods": [
         "GET"
@@ -1661,12 +1925,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/payments/webhook.function.ts",
+      "file": "functions\\src\\payments\\webhook.function.ts",
       "functionName": "payments_webhook",
       "methods": [
         "POST"
@@ -1678,12 +1945,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": true,
       "authGuardExempt": true,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/createPost.ts",
+      "file": "functions\\src\\feed\\routes\\createPost.ts",
       "functionName": "createPost",
       "methods": [
         "POST"
@@ -1695,12 +1965,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_get_by_id.function.ts",
+      "file": "functions\\src\\posts\\posts_get_by_id.function.ts",
       "functionName": "posts_get_by_id",
       "methods": [
         "GET"
@@ -1712,12 +1985,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_update.function.ts",
+      "file": "functions\\src\\posts\\posts_update.function.ts",
       "functionName": "posts_update",
       "methods": [
         "PATCH"
@@ -1729,12 +2005,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_bookmark.function.ts",
+      "file": "functions\\src\\posts\\posts_bookmark.function.ts",
       "functionName": "posts_bookmark_create",
       "methods": [
         "POST"
@@ -1746,12 +2025,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_bookmark.function.ts",
+      "file": "functions\\src\\posts\\posts_bookmark.function.ts",
       "functionName": "posts_bookmark_delete",
       "methods": [
         "DELETE"
@@ -1763,12 +2045,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_bookmark.function.ts",
+      "file": "functions\\src\\posts\\posts_bookmark.function.ts",
       "functionName": "posts_bookmark_get",
       "methods": [
         "GET"
@@ -1780,12 +2065,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_get_insights.function.ts",
+      "file": "functions\\src\\posts\\posts_get_insights.function.ts",
       "functionName": "posts_get_insights",
       "methods": [
         "GET"
@@ -1797,12 +2085,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_like.function.ts",
+      "file": "functions\\src\\posts\\posts_like.function.ts",
       "functionName": "posts_like_create",
       "methods": [
         "POST"
@@ -1814,12 +2105,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_like.function.ts",
+      "file": "functions\\src\\posts\\posts_like.function.ts",
       "functionName": "posts_like_delete",
       "methods": [
         "DELETE"
@@ -1831,12 +2125,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_like.function.ts",
+      "file": "functions\\src\\posts\\posts_like.function.ts",
       "functionName": "posts_like_get",
       "methods": [
         "GET"
@@ -1848,12 +2145,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_receipt.function.ts",
+      "file": "functions\\src\\posts\\posts_receipt.function.ts",
       "functionName": "posts_receipt_get",
       "methods": [
         "GET"
@@ -1865,12 +2165,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_view.function.ts",
+      "file": "functions\\src\\posts\\posts_view.function.ts",
       "functionName": "posts_view",
       "methods": [
         "POST"
@@ -1882,12 +2185,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/comments.ts",
+      "file": "functions\\src\\feed\\routes\\comments.ts",
       "functionName": "createComment",
       "methods": [
         "POST"
@@ -1899,12 +2205,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/comments.ts",
+      "file": "functions\\src\\feed\\routes\\comments.ts",
       "functionName": "listComments",
       "methods": [
         "GET"
@@ -1916,12 +2225,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/likePost.ts",
+      "file": "functions\\src\\feed\\routes\\likePost.ts",
       "functionName": "getLikeStatus",
       "methods": [
         "GET"
@@ -1933,12 +2245,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/likePost.ts",
+      "file": "functions\\src\\feed\\routes\\likePost.ts",
       "functionName": "likePost",
       "methods": [
         "POST"
@@ -1950,12 +2265,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/feed/routes/likePost.ts",
+      "file": "functions\\src\\feed\\routes\\likePost.ts",
       "functionName": "unlikePost",
       "methods": [
         "DELETE"
@@ -1967,12 +2285,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reactions/reactions_post.function.ts",
+      "file": "functions\\src\\reactions\\reactions_post.function.ts",
       "functionName": "reactions_post",
       "methods": [
         "POST"
@@ -1984,12 +2305,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reactions/reactions_delete.function.ts",
+      "file": "functions\\src\\reactions\\reactions_delete.function.ts",
       "functionName": "reactions_delete",
       "methods": [
         "DELETE"
@@ -2001,12 +2325,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/shared/routes/ready.ts",
+      "file": "functions\\src\\shared\\routes\\ready.ts",
       "functionName": "ready",
       "methods": [
         "GET"
@@ -2018,12 +2345,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reputation/reputation_me_get.function.ts",
+      "file": "functions\\src\\reputation\\reputation_me_get.function.ts",
       "functionName": "reputation_me_get",
       "methods": [
         "GET"
@@ -2035,12 +2365,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reputation/reputation_ledger_get.function.ts",
+      "file": "functions\\src\\reputation\\reputation_ledger_get.function.ts",
       "functionName": "reputation_ledger_get",
       "methods": [
         "GET"
@@ -2052,12 +2385,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reputation/reputation_user_get.function.ts",
+      "file": "functions\\src\\reputation\\reputation_user_get.function.ts",
       "functionName": "reputation_user_get_singular",
       "methods": [
         "GET"
@@ -2069,12 +2405,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/reputation/reputation_user_get.function.ts",
+      "file": "functions\\src\\reputation\\reputation_user_get.function.ts",
       "functionName": "reputation_user_get",
       "methods": [
         "GET"
@@ -2086,12 +2425,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/rewards/rewards_redeem_post.function.ts",
+      "file": "functions\\src\\rewards\\rewards_redeem_post.function.ts",
       "functionName": "rewards_redeem_post",
       "methods": [
         "POST"
@@ -2103,12 +2445,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/rewards/rewards_me_get.function.ts",
+      "file": "functions\\src\\rewards\\rewards_me_get.function.ts",
       "functionName": "rewards_me_get",
       "methods": [
         "GET"
@@ -2120,12 +2465,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/payments/subscription_status.function.ts",
+      "file": "functions\\src\\payments\\subscription_status.function.ts",
       "functionName": "subscription_status",
       "methods": [
         "GET"
@@ -2137,12 +2485,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/routes/deleteUser.ts",
+      "file": "functions\\src\\privacy\\routes\\deleteUser.ts",
       "functionName": "privacy-delete-user",
       "methods": [
         "DELETE",
@@ -2155,12 +2506,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/privacy/routes/exportUser.ts",
+      "file": "functions\\src\\privacy\\routes\\exportUser.ts",
       "functionName": "privacy-export-user",
       "methods": [
         "GET",
@@ -2173,12 +2527,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/users/users_get_by_id.function.ts",
+      "file": "functions\\src\\users\\users_get_by_id.function.ts",
       "functionName": "users_get_by_id",
       "methods": [
         "GET"
@@ -2190,12 +2547,15 @@
       "hasAuthGuard": false,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/social/follow.function.ts",
+      "file": "functions\\src\\social\\follow.function.ts",
       "functionName": "follow_create",
       "methods": [
         "POST"
@@ -2207,12 +2567,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/social/follow.function.ts",
+      "file": "functions\\src\\social\\follow.function.ts",
       "functionName": "follow_delete",
       "methods": [
         "DELETE"
@@ -2224,12 +2587,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/social/follow.function.ts",
+      "file": "functions\\src\\social\\follow.function.ts",
       "functionName": "follow_get",
       "methods": [
         "GET"
@@ -2241,12 +2607,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/users/users_trust_passport.function.ts",
+      "file": "functions\\src\\users\\users_trust_passport.function.ts",
       "functionName": "users_trust_passport_get",
       "methods": [
         "GET"
@@ -2258,12 +2627,15 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     },
     {
-      "file": "functions/src/posts/posts_list_by_user.function.ts",
+      "file": "functions\\src\\posts\\posts_list_by_user.function.ts",
       "functionName": "posts_list_by_user",
       "methods": [
         "GET"
@@ -2275,8 +2647,11 @@
       "hasAuthGuard": true,
       "rateLimitExempt": false,
       "authGuardExempt": false,
+      "auditExempt": false,
       "hasAnonymousTodo": false,
       "isAnonymousReadUnguarded": false,
+      "hasAdminAudit": false,
+      "isAdminMutation": false,
       "missingTestEnvGuard": false
     }
   ]

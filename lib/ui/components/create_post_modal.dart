@@ -189,7 +189,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               contentPadding: EdgeInsets.zero,
               title: const Text('This is News'),
               subtitle: const Text(
-                'Only contributors and journalists can mark as news',
+                'Only Editorial Contributors can mark as news',
               ),
               value: isNews,
               onChanged: (value) {

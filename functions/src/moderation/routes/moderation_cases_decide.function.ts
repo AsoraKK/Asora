@@ -18,10 +18,18 @@ import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireModerator } from '@auth/requireRoles';
 
 const VALID_ACTIONS: ModerationDecisionRequest['action'][] = ['approve', 'reject', 'escalate'];
+const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 
 export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, ModerationDecision>(async (ctx) => {
   const caseId = ctx.params.id;
   ctx.context.log(`[moderation_cases_decide] Submitting decision for case ${caseId} [${ctx.correlationId}]`);
+
+  let auth;
+  try {
+    auth = await extractAuthContext(ctx);
+  } catch {
+    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
+  }
 
   if (!caseId) {
     return ctx.badRequest('Case ID is required');
@@ -30,13 +38,6 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
   const request = ctx.body;
   if (!request || !request.action || !VALID_ACTIONS.includes(request.action)) {
     return ctx.badRequest('Invalid decision action', 'INVALID_ACTION');
-  }
-
-  let auth;
-  try {
-    auth = await extractAuthContext(ctx);
-  } catch {
-    return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
   }
 
   if (!hasModeratorRole(auth.roles)) {
@@ -55,7 +56,7 @@ export const moderation_cases_decide = httpHandler<ModerationDecisionRequest, Mo
 // Register HTTP trigger
 app.http('moderation_cases_decide', {
   methods: ['POST'],
-  authLevel: 'anonymous',
+  authLevel: ANONYMOUS_AUTH_LEVEL,
   route: 'moderation/cases/{id}/decision',
   handler: requireModerator(withRateLimit(moderation_cases_decide, (req) => getPolicyForRoute(req)) as any),
 });

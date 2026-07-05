@@ -9,10 +9,12 @@
  * Requires admin role.
  */
 
-import { app } from '@azure/functions';
+import { app, type HttpRequest } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
-import { extractAuthContext } from '@shared/http/authContext';
 import { purgeExpiredTestData, purgeTestSession } from './test_data_cleanup.function';
+import { requireActiveAdmin } from './adminAuthUtils';
+import { buildAdminAuditIdentity } from './auditContext';
+import { recordAdminAudit } from './auditLogger';
 
 interface PurgeRequest {
   /** Specific session ID to purge (optional) */
@@ -42,14 +44,6 @@ export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(as
   }
 
   try {
-    // Extract and verify admin JWT
-    const auth = await extractAuthContext(ctx);
-    
-    // Verify admin role
-    if (!auth.roles?.includes('admin')) {
-      return ctx.forbidden('Admin role required', 'FORBIDDEN');
-    }
-
     const { sessionId, purgeExpired = false } = ctx.body || {};
 
     if (!sessionId && !purgeExpired) {
@@ -71,6 +65,28 @@ export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(as
       result = await purgeExpiredTestData(ctx.context);
     }
 
+    const auditRequest = ctx.request ?? ({ headers: new Headers() } as HttpRequest);
+
+    await recordAdminAudit({
+      ...buildAdminAuditIdentity(auditRequest, ctx.context),
+      action: 'TEST_DATA_PURGE',
+      subjectId: sessionId ?? 'expired-test-data',
+      targetType: 'config',
+      reasonCode: purgeExpired ? 'TEST_DATA_PURGE_EXPIRED' : 'TEST_DATA_PURGE_SESSION',
+      note: sessionId ?? null,
+      before: {
+        purgeExpired,
+        sessionId: sessionId ?? null,
+      },
+      after: {
+        deletedCount: result.deletedCount,
+        expiredCount: result.expiredCount,
+      },
+      metadata: {
+        durationMs: result.durationMs,
+      },
+    });
+
     return ctx.ok({
       success: result.errors.length === 0,
       deletedCount: result.deletedCount,
@@ -81,12 +97,6 @@ export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(as
   } catch (error) {
     ctx.context.error(`[admin_test_data_purge] Error: ${error}`, { correlationId: ctx.correlationId });
 
-    if (error instanceof Error) {
-      if (error.message.includes('JWT verification failed') || error.message.includes('Missing Authorization')) {
-        return ctx.unauthorized('Invalid or missing authorization', 'UNAUTHORIZED');
-      }
-    }
-
     return ctx.internalError(error as Error);
   }
 });
@@ -94,7 +104,7 @@ export const admin_test_data_purge = httpHandler<PurgeRequest, PurgeResponse>(as
 // Register HTTP trigger
 app.http('admin_test_data_purge', {
   methods: ['POST'],
-  authLevel: 'anonymous', // Auth verified in handler via JWT
+  authLevel: 'anonymous',
   route: 'admin/test-data/purge',
-  handler: admin_test_data_purge,
+  handler: requireActiveAdmin(admin_test_data_purge as any),
 });

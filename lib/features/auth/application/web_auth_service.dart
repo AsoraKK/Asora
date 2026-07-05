@@ -19,16 +19,17 @@ import 'package:asora/core/config/web_release_guard.dart';
 /// Flow:
 /// 1. [startSignIn] builds PKCE challenge, persists code_verifier in
 ///    sessionStorage, and redirects the browser to the authorization endpoint.
-/// 2. After B2C authenticates the user, the browser is redirected back to
+/// 2. After the auth server authenticates the user, the browser is redirected back to
 ///    `/auth/callback?code=XXX&state=YYY`.
 /// 3. [handleCallback] exchanges the authorization code for tokens via HTTP
 ///    POST, persists them in sessionStorage, and fetches the user profile.
 class WebAuthService {
-  WebAuthService({http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  WebAuthService({http.Client? httpClient, WebTokenStorage? storage})
+    : _httpClient = httpClient ?? http.Client(),
+      _storage = storage ?? WebTokenStorage();
 
   final http.Client _httpClient;
-  final WebTokenStorage _storage = WebTokenStorage();
+  final WebTokenStorage _storage;
 
   static const _codeVerifierKey = 'pkce_code_verifier';
   static const _stateKey = 'pkce_state';

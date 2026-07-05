@@ -11,11 +11,12 @@ import { httpReqMock } from '../helpers/http';
 
 const JWT_SECRET = 'test-secret-key-for-unit-tests-only-min-32chars!';
 const JWT_ISSUER = 'asora-auth';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
 const secretBytes = new TextEncoder().encode(JWT_SECRET);
 
-async function createExpiredToken(sub = 'user-expired'): Promise<string> {
+async function createExpiredToken(sub = USER_ID): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ sub })
+  return new SignJWT({ sub, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(JWT_ISSUER)
     .setIssuedAt(now - 7200)
@@ -23,8 +24,8 @@ async function createExpiredToken(sub = 'user-expired'): Promise<string> {
     .sign(secretBytes);
 }
 
-async function createValidToken(sub = 'user-valid'): Promise<string> {
-  return new SignJWT({ sub })
+async function createValidToken(sub = USER_ID): Promise<string> {
+  return new SignJWT({ sub, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(JWT_ISSUER)
     .setIssuedAt()

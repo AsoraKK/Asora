@@ -26,7 +26,8 @@ Recommended execution order:
 2. Run `E2E Integration Test` with `target_environment=staging`.
 3. Confirm `health`, admin function index, and feed probes pass.
 4. Confirm trust endpoints smoke passes (`scripts/smoke-trust-endpoints.sh` via `.github/workflows/e2e-integration.yml`).
-5. Confirm auth refresh behavior is consistent between `/api/auth/token` and `/api/auth/refresh` before widening cohort.
+5. Confirm `Beta Browser Smoke` passes (`.github/workflows/beta-smoke.yml`) and upload the per-deployment report artifact.
+6. Confirm auth refresh behavior is consistent between `/api/auth/token` and `/api/auth/refresh` before widening cohort.
 
 ## M1: Core social MVP
 

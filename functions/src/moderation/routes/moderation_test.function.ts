@@ -9,9 +9,11 @@
  * OpenAPI: moderation_test
  */
 
-import { app } from '@azure/functions';
+import { app, HttpRequest } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
 import { extractAuthContext } from '@shared/http/authContext';
+import { requireActiveModerator } from '@admin/adminAuthUtils';
+import type { Principal } from '@shared/middleware/auth';
 import { createHiveClient, ModerationAction, ModerationCategory } from '../../shared/clients/hive';
 
 interface ModerationTestRequest {
@@ -35,18 +37,14 @@ interface ModerationTestResponse {
 export const moderation_test = httpHandler<ModerationTestRequest, ModerationTestResponse>(async (ctx) => {
   ctx.context.log(`[moderation_test] Testing moderation API [${ctx.correlationId}]`);
 
-  // Require authentication
-  let auth;
-  try {
-    auth = await extractAuthContext(ctx);
-  } catch {
-    return ctx.unauthorized('Authentication required', 'UNAUTHORIZED');
-  }
-
-  // Require admin role for testing
-  const isAdmin = auth.roles?.includes('admin') || auth.roles?.includes('moderator');
-  if (!isAdmin) {
-    return ctx.forbidden('Admin or moderator role required', 'FORBIDDEN');
+  const principal = (ctx.request as HttpRequest & { principal?: Principal }).principal;
+  let userId = principal?.sub;
+  if (!userId) {
+    try {
+      userId = (await extractAuthContext(ctx)).userId;
+    } catch {
+      return ctx.unauthorized('Authentication required', 'UNAUTHORIZED');
+    }
   }
 
   const request = ctx.body;
@@ -68,7 +66,7 @@ export const moderation_test = httpHandler<ModerationTestRequest, ModerationTest
     const hiveClient = createHiveClient({
       apiKey,
       isTestMode: true,
-      testSessionId: `control-panel-test-${auth.userId}`,
+      testSessionId: `control-panel-test-${userId}`,
     });
 
     if (request.type === 'text') {
@@ -78,7 +76,7 @@ export const moderation_test = httpHandler<ModerationTestRequest, ModerationTest
 
       const result = await hiveClient.moderateTextContent({
         text: request.content,
-        userId: auth.userId,
+        userId,
         contentId: `test-${ctx.correlationId}`,
       });
 
@@ -100,7 +98,7 @@ export const moderation_test = httpHandler<ModerationTestRequest, ModerationTest
       }
 
       const result = await hiveClient.moderateImage(
-        auth.userId,
+        userId,
         request.url
       );
 
@@ -283,5 +281,5 @@ app.http('moderation_test', {
   methods: ['POST'],
   authLevel: 'anonymous',
   route: 'moderation/test',
-  handler: moderation_test,
+  handler: requireActiveModerator(moderation_test as any),
 });

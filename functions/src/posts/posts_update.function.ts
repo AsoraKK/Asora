@@ -35,7 +35,12 @@ function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | 
   }
 
   const normalized = label.trim().toLowerCase();
-  if (normalized === 'human' || normalized === 'assisted' || normalized === 'ai_assisted' || normalized === 'generated') {
+  if (
+    normalized === 'human' ||
+    normalized === 'assisted' ||
+    normalized === 'ai_assisted' ||
+    normalized === 'generated'
+  ) {
     if (normalized === 'ai_assisted') {
       return 'assisted';
     }
@@ -61,7 +66,7 @@ function mediaValidationMessage(reason?: string): string {
   }
 }
 
-export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => {
+export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
   const postId = ctx.params.id;
   ctx.context.log(`[posts_update] Updating post ${postId} [${ctx.correlationId}]`);
 
@@ -76,15 +81,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       return ctx.badRequest('Request body is required', 'INVALID_REQUEST');
     }
 
-    const {
-      content,
-      contentType,
-      mediaUrls,
-      topics,
-      visibility,
-      isNews,
-      aiLabel,
-    } = ctx.body;
+    const { content, contentType, mediaUrls, topics, visibility, isNews, aiLabel } = ctx.body;
 
     const hasUpdatePayload =
       content !== undefined ||
@@ -115,14 +112,15 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
 
     const rawAiLabel = aiLabel as unknown;
     if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
-      return ctx.badRequest('aiLabel must be "human", "assisted", or "generated"', 'INVALID_AI_LABEL');
+      return ctx.badRequest(
+        'aiLabel must be "human", "assisted", or "generated"',
+        'INVALID_AI_LABEL'
+      );
     }
 
     const effectiveContent = content ?? existing.content;
     const effectiveMediaUrls = mediaUrls ?? existing.mediaUrls;
-    const effectiveAiLabel = String(
-      normalizeAiLabel(rawAiLabel) ?? existing.aiLabel ?? 'human'
-    );
+    const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? existing.aiLabel ?? 'human');
 
     if (mediaUrls !== undefined) {
       const mediaValidation = await validateOwnedMediaUrls(existing.authorId, mediaUrls);
@@ -170,8 +168,19 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       });
     }
 
-    const aiDetected =
-      hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
+    if (mediaModeration.aiDetected) {
+      return ctx.badRequest(
+        'AI-generated media cannot be published. You can appeal this decision.',
+        'AI_CONTENT_BLOCKED',
+        {
+          appealEligible: true,
+          caseId: postId,
+          categories: mediaModeration.categories,
+        }
+      );
+    }
+
+    const aiDetected = hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
 
     if (effectiveAiLabel === 'generated') {
       return ctx.badRequest(
@@ -187,7 +196,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
         sourceId: postId,
         sourceType: 'post',
-      }).catch((error) => {
+      }).catch(error => {
         ctx.context.warn?.('[posts_update] Failed to record undisclosed AI reputation event', {
           postId,
           userId: auth.userId.slice(0, 8),
@@ -219,11 +228,12 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         topics,
         visibility,
         isNews,
-        aiLabel: effectiveAiLabel === 'generated'
-          ? 'generated'
-          : effectiveAiLabel === 'assisted'
-          ? 'assisted'
-          : 'human',
+        aiLabel:
+          effectiveAiLabel === 'generated'
+            ? 'generated'
+            : effectiveAiLabel === 'assisted'
+              ? 'assisted'
+              : 'human',
       },
       {
         ...moderationMeta,
@@ -233,11 +243,12 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         error: moderationMeta.error ?? mediaModeration.error,
       },
       {
-        aiLabel: effectiveAiLabel === 'generated'
-          ? 'generated'
-          : effectiveAiLabel === 'assisted'
-          ? 'assisted'
-          : 'human',
+        aiLabel:
+          effectiveAiLabel === 'generated'
+            ? 'generated'
+            : effectiveAiLabel === 'assisted'
+              ? 'assisted'
+              : 'human',
         aiDetected,
       }
     );
@@ -250,9 +261,15 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
       { title: 'Moderation policy', url: 'https://lythaus.app/policies/moderation' },
     ];
     const proofSignals = {
-      captureHashProvided: Boolean((ctx.body.proofSignals?.captureMetadataHash) || existing.proofSignals?.captureMetadataHash),
-      editHashProvided: Boolean((ctx.body.proofSignals?.editHistoryHash) || existing.proofSignals?.editHistoryHash),
-      sourceAttestationProvided: Boolean((ctx.body.proofSignals?.sourceAttestationUrl) || existing.proofSignals?.sourceAttestationUrl),
+      captureHashProvided: Boolean(
+        ctx.body.proofSignals?.captureMetadataHash || existing.proofSignals?.captureMetadataHash
+      ),
+      editHashProvided: Boolean(
+        ctx.body.proofSignals?.editHistoryHash || existing.proofSignals?.editHistoryHash
+      ),
+      sourceAttestationProvided: Boolean(
+        ctx.body.proofSignals?.sourceAttestationUrl || existing.proofSignals?.sourceAttestationUrl
+      ),
     };
 
     if ((effectiveMediaUrls?.length ?? 0) > 0) {
@@ -264,7 +281,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         reason: 'Attached media passed safety checks after your edit.',
         policyLinks,
         actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
-      }).catch((error) => {
+      }).catch(error => {
         ctx.context.warn?.('[posts_update] Failed to append MEDIA_CHECKED event', {
           postId,
           message: (error as Error).message,
@@ -287,7 +304,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async (ctx) => 
         moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
         proofSignals,
       },
-    }).catch((error) => {
+    }).catch(error => {
       ctx.context.warn?.('[posts_update] Failed to append MODERATION_DECIDED event', {
         postId,
         message: (error as Error).message,

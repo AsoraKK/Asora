@@ -113,16 +113,8 @@ interface UserDataExport {
 const exportRateLimiter = createRateLimiter({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   maxRequests: 1,
-  keyGenerator: (req: HttpRequest) => {
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      return `privacy_export:${decoded.sub}`;
-    } catch {
-      return 'privacy_export:unknown';
-    }
-  }
+  keyGenerator: (req: HttpRequest) =>
+    `privacy_export:${(req as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId || 'unknown'}`
 });
 
 export async function exportUser(
@@ -134,8 +126,9 @@ export async function exportUser(
 
   try {
     // 1. Authentication - throws HttpError(401) if invalid
-    const user = requireUser(context, request);
+    const user = await requireUser(context, request);
     const userId = user.sub;
+    (request as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId = userId;
 
     // 2. Rate limiting check
     const rateLimitResult = await exportRateLimiter.checkRateLimit(request);

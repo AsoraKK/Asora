@@ -191,6 +191,35 @@ void main() {
         expect(e.statusCode, 502);
       }
     });
+
+    test('flat 429 rate-limit body maps to user-safe admin message', () async {
+      dio.httpClientAdapter = _ThrowingAdapter(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/admin/config'),
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: RequestOptions(path: '/api/admin/config'),
+            statusCode: 429,
+            data: <String, dynamic>{
+              'error': 'rate_limited',
+              'retry_after_seconds': 30,
+            },
+          ),
+        ),
+      );
+
+      try {
+        await client.getConfig();
+        fail('Should throw');
+      } on AdminApiException catch (e) {
+        expect(e.code, 'RATE_LIMITED');
+        expect(
+          e.message,
+          'Too many admin requests. Please wait before trying again.',
+        );
+        expect(e.statusCode, 429);
+      }
+    });
   });
 
   // ── AdminApiClient._applyPatch via updateConfigPatch ──────────────────

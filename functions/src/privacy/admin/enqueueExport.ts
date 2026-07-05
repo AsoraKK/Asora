@@ -7,7 +7,9 @@ import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import { createDsrRequest } from '../service/dsrStore';
 import { enqueueDsrMessage } from '../common/storage';
+import { getDsrQueueDiagnostics } from '../common/storage';
 import { createAuditEntry, DsrRequest } from '../common/models';
+import { safeHashIdentifier } from '../common/telemetry';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 
@@ -49,7 +51,11 @@ async function handler(req: Authed, context: InvocationContext): Promise<HttpRes
     };
     await createDsrRequest(request);
     await enqueueDsrMessage({ id, type: 'export', submittedAt: now });
-    context.log('dsr.export.enqueued', { id, userId });
+    context.log('dsr.export.enqueued', {
+      id,
+      userIdHash: safeHashIdentifier(userId),
+      queue: getDsrQueueDiagnostics(),
+    });
     return createSuccessResponse({ id, status: request.status });
   } catch (error: unknown) {
     context.log('dsr.export.enqueue.error', { message: getErrorMessage(error) });

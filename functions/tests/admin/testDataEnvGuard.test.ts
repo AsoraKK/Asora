@@ -56,6 +56,10 @@ jest.mock('@shared/http/handler', () => ({
   httpHandler: jest.fn((fn: any) => fn),
 }));
 
+jest.mock('../../src/admin/auditLogger', () => ({
+  recordAdminAudit: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('@shared/http/authContext', () => ({
   extractAuthContext: jest.fn().mockResolvedValue({
     userId: 'admin-1',
@@ -153,6 +157,9 @@ describe('admin_test_data_purge — env guard', () => {
         roles: ['admin'],
       }),
     }));
+    jest.mock('../../src/admin/auditLogger', () => ({
+      recordAdminAudit: jest.fn().mockResolvedValue(undefined),
+    }));
     jest.mock('@shared/testMode/testModeContext', () => ({
       TEST_DATA_EXPIRY: 24 * 60 * 60 * 1000,
     }));
@@ -223,6 +230,9 @@ describe('test_data_cleanup timer — env guard', () => {
     }));
     jest.mock('@shared/http/authContext', () => ({
       extractAuthContext: jest.fn(),
+    }));
+    jest.mock('../../src/admin/auditLogger', () => ({
+      recordAdminAudit: jest.fn().mockResolvedValue(undefined),
     }));
     jest.mock('@shared/testMode/testModeContext', () => ({
       TEST_DATA_EXPIRY: 24 * 60 * 60 * 1000,

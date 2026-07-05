@@ -28,6 +28,9 @@ const queryCalls: Array<{ sql: string; params: any[] }> = [];
 const usersById = new Map<string, UserRow>();
 const usersByEmail = new Map<string, UserRow>();
 const linksByKey = new Map<string, LinkRow>();
+const UUID_V7_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const LINKED_USER_ID = '01944c1d-5672-7000-8000-0c91f95a72b1';
+const EXISTING_USER_ID = '01944c1d-5672-7000-8000-0c91f95a72b2';
 
 const mockClient = {
   query: jest.fn(async (sql: string, params: any[] = []) => {
@@ -122,11 +125,11 @@ describe('usersService provider linking', () => {
   });
 
   it('returns an existing linked user without creating duplicate provider links', async () => {
-    usersById.set('user-1', makeUser('user-1', 'linked@example.com'));
+    usersById.set(LINKED_USER_ID, makeUser(LINKED_USER_ID, 'linked@example.com'));
     linksByKey.set('google:sub-1', {
       provider: 'google',
       provider_sub: 'sub-1',
-      user_id: 'user-1',
+      user_id: LINKED_USER_ID,
       created_at: new Date('2026-01-01T00:00:00.000Z').toISOString(),
     });
 
@@ -137,14 +140,14 @@ describe('usersService provider linking', () => {
     );
 
     expect(isNewUser).toBe(false);
-    expect(user.id).toBe('user-1');
+    expect(user.id).toBe(LINKED_USER_ID);
     expect(user).not.toHaveProperty('provider_sub');
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(0);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(0);
   });
 
   it('creates a provider link for an existing user on first sign-in', async () => {
-    usersByEmail.set('existing@example.com', makeUser('user-2', 'existing@example.com'));
+    usersByEmail.set('existing@example.com', makeUser(EXISTING_USER_ID, 'existing@example.com'));
 
     const [user, isNewUser] = await usersService.getOrCreateUserByProvider(
       'apple',
@@ -153,7 +156,7 @@ describe('usersService provider linking', () => {
     );
 
     expect(isNewUser).toBe(false);
-    expect(user.id).toBe('user-2');
+    expect(user.id).toBe(EXISTING_USER_ID);
     expect(user.primary_email).toBe('existing@example.com');
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(1);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(0);
@@ -169,6 +172,7 @@ describe('usersService provider linking', () => {
 
     expect(isNewUser).toBe(true);
     expect(user.primary_email).toBe('new@example.com');
+    expect(user.id).toMatch(UUID_V7_REGEX);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO users'))).toHaveLength(1);
     expect(queryCalls.filter((call) => call.sql.includes('INSERT INTO provider_links'))).toHaveLength(1);
   });

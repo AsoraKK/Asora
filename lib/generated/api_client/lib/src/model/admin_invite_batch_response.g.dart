@@ -14,16 +14,14 @@ class _$AdminInviteBatchResponse extends AdminInviteBatchResponse {
 
   factory _$AdminInviteBatchResponse([
     void Function(AdminInviteBatchResponseBuilder)? updates,
-  ]) =>
-      (AdminInviteBatchResponseBuilder()..update(updates))._build();
+  ]) => (AdminInviteBatchResponseBuilder()..update(updates))._build();
 
   _$AdminInviteBatchResponse._({required this.count, required this.invites})
-      : super._();
+    : super._();
   @override
   AdminInviteBatchResponse rebuild(
     void Function(AdminInviteBatchResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteBatchResponseBuilder toBuilder() =>
@@ -99,7 +97,8 @@ class AdminInviteBatchResponseBuilder
   _$AdminInviteBatchResponse _build() {
     _$AdminInviteBatchResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminInviteBatchResponse._(
             count: BuiltValueNullFieldError.checkNotNull(
               count,

@@ -36,16 +36,8 @@ interface DeletionResult {
 const deleteRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   maxRequests: 1,
-  keyGenerator: (req: HttpRequest) => {
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      return `privacy_delete:${decoded.sub}`;
-    } catch {
-      return 'privacy_delete:unknown';
-    }
-  }
+  keyGenerator: (req: HttpRequest) =>
+    `privacy_delete:${(req as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId || 'unknown'}`
 });
 
 export async function deleteUser(
@@ -57,8 +49,9 @@ export async function deleteUser(
 
   try {
     // 1. Authentication - throws HttpError(401) if invalid
-    const user = requireUser(context, request);
+    const user = await requireUser(context, request);
     const userId = user.sub;
+    (request as HttpRequest & { __verifiedUserId?: string }).__verifiedUserId = userId;
 
     // 2. Confirmation header check (safety mechanism)
     const confirmHeader = request.headers.get('X-Confirm-Delete');

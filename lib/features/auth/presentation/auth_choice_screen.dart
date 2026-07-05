@@ -17,6 +17,22 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
 
+class _AuthProviderOption {
+  const _AuthProviderOption({
+    required this.provider,
+    required this.label,
+    required this.icon,
+    required this.enabled,
+  });
+
+  final OAuth2Provider provider;
+  final String label;
+  final IconData icon;
+  final bool enabled;
+
+  String get displayLabel => enabled ? label : '$label (beta)';
+}
+
 class AuthChoiceScreen extends ConsumerStatefulWidget {
   const AuthChoiceScreen({super.key});
 
@@ -25,6 +41,23 @@ class AuthChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
+  static const _googleAuthEnabled = bool.fromEnvironment(
+    'ALPHA_ENABLE_GOOGLE_AUTH',
+    defaultValue: true,
+  );
+  static const _appleAuthEnabled = bool.fromEnvironment(
+    'ALPHA_ENABLE_APPLE_AUTH',
+    defaultValue: false,
+  );
+  static const _worldAuthEnabled = bool.fromEnvironment(
+    'ALPHA_ENABLE_WORLD_AUTH',
+    defaultValue: false,
+  );
+  static const _emailAuthEnabled = bool.fromEnvironment(
+    'ALPHA_ENABLE_EMAIL_AUTH',
+    defaultValue: true,
+  );
+
   late final AnalyticsClient _analyticsClient;
   bool _screenViewLogged = false;
 
@@ -136,6 +169,32 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     required bool isCreateFlow,
   }) {
     final title = isCreateFlow ? 'Create account with' : 'Sign in with';
+    const options = [
+      _AuthProviderOption(
+        provider: OAuth2Provider.google,
+        label: 'Google',
+        icon: Icons.g_mobiledata,
+        enabled: _googleAuthEnabled,
+      ),
+      _AuthProviderOption(
+        provider: OAuth2Provider.apple,
+        label: 'Apple',
+        icon: Icons.apple,
+        enabled: _appleAuthEnabled,
+      ),
+      _AuthProviderOption(
+        provider: OAuth2Provider.world,
+        label: 'World ID',
+        icon: Icons.public,
+        enabled: _worldAuthEnabled,
+      ),
+      _AuthProviderOption(
+        provider: OAuth2Provider.email,
+        label: 'Email',
+        icon: Icons.email_outlined,
+        enabled: _emailAuthEnabled,
+      ),
+    ];
     return showModalBottomSheet<OAuth2Provider>(
       context: context,
       useSafeArea: true,
@@ -148,27 +207,18 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
           children: [
             Text(title, style: Theme.of(sheetContext).textTheme.titleMedium),
             const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.g_mobiledata),
-              title: const Text('Google'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(OAuth2Provider.google),
-            ),
-            ListTile(
-              leading: const Icon(Icons.apple),
-              title: const Text('Apple'),
-              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.apple),
-            ),
-            ListTile(
-              leading: const Icon(Icons.public),
-              title: const Text('World ID'),
-              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.world),
-            ),
-            ListTile(
-              leading: const Icon(Icons.email_outlined),
-              title: const Text('Email'),
-              onTap: () => Navigator.of(sheetContext).pop(OAuth2Provider.email),
-            ),
+            for (final option in options)
+              ListTile(
+                enabled: option.enabled,
+                leading: Icon(option.icon),
+                title: Text(option.displayLabel),
+                subtitle: option.enabled
+                    ? null
+                    : const Text('Available after alpha validation'),
+                onTap: option.enabled
+                    ? () => Navigator.of(sheetContext).pop(option.provider)
+                    : null,
+              ),
           ],
         ),
       ),

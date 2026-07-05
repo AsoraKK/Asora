@@ -210,11 +210,24 @@ describe('Feed GET Handler', () => {
       });
     });
 
-    it('returns 500 for unexpected errors', async () => {
+    it('returns empty success response for unexpected errors', async () => {
       mockedFeedService.getFeed.mockRejectedValueOnce(new Error('Database connection failed'));
-      const response = await getFeed(createRequest(), mockContext);
+      const response = await getFeed(
+        createRequest({ authorization: 'Bearer token123' }),
+        mockContext,
+      );
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(200);
+      expect(response.headers!['Cache-Control']).toContain('private');
+      expect(response.headers!['Cache-Control']).toContain('no-store');
+      const parsed = JSON.parse(response.body ?? '{}');
+      expect(parsed).toMatchObject({
+        success: true,
+        data: {
+          items: [],
+          meta: expect.objectContaining({ count: 0 }),
+        },
+      });
       expect(mockContext.log).toHaveBeenCalledWith('feed.get.error', expect.any(Object));
     });
   });

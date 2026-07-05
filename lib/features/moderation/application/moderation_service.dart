@@ -31,29 +31,122 @@ class ModerationService implements ModerationRepository {
 
   ModerationService(this._dio);
 
-  ModerationException _mapDioException(DioException error) {
+  Map<String, dynamic>? _payloadMap(DioException error) {
     final data = error.response?.data;
-    String? code;
     if (data is Map<String, dynamic>) {
-      if (data['code'] is String) {
-        code = data['code'] as String;
-      } else if (data['error'] is Map<String, dynamic>) {
-        final nested = data['error'] as Map<String, dynamic>;
-        if (nested['code'] is String) {
-          code = nested['code'] as String;
-        }
-      }
-      if (code == ErrorCodes.deviceIntegrityBlocked) {
-        return ModerationException(
-          ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
-          code: ErrorCodes.deviceIntegrityBlocked,
-          originalError: error,
-        );
+      return Map<String, dynamic>.from(data);
+    }
+    return null;
+  }
+
+  String? _payloadCode(Map<String, dynamic>? payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    final topLevelCode = payload['code'];
+    if (topLevelCode is String && topLevelCode.isNotEmpty) {
+      return topLevelCode;
+    }
+
+    final topLevelError = payload['error'];
+    if (topLevelError is String && topLevelError.isNotEmpty) {
+      return topLevelError;
+    }
+
+    if (topLevelError is Map<String, dynamic>) {
+      final nestedCode = topLevelError['code'];
+      if (nestedCode is String && nestedCode.isNotEmpty) {
+        return nestedCode;
       }
     }
+
+    return null;
+  }
+
+  String? _payloadMessage(Map<String, dynamic>? payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    final topLevelMessage = payload['message'];
+    if (topLevelMessage is String && topLevelMessage.isNotEmpty) {
+      return topLevelMessage;
+    }
+
+    final topLevelError = payload['error'];
+    if (topLevelError is String && topLevelError.isNotEmpty) {
+      return topLevelError;
+    }
+
+    if (topLevelError is Map<String, dynamic>) {
+      final nestedMessage = topLevelError['message'];
+      if (nestedMessage is String && nestedMessage.isNotEmpty) {
+        return nestedMessage;
+      }
+    }
+
+    return null;
+  }
+
+  Duration? _retryAfter(Response<dynamic>? response, Map<String, dynamic>? payload) {
+    final header = response?.headers.value('retry-after');
+    if (header != null) {
+      final seconds = int.tryParse(header);
+      if (seconds != null && seconds > 0) {
+        return Duration(seconds: seconds);
+      }
+    }
+
+    final payloadRetryAfter = payload?['retry_after_seconds'];
+    if (payloadRetryAfter is int && payloadRetryAfter > 0) {
+      return Duration(seconds: payloadRetryAfter);
+    }
+
+    return null;
+  }
+
+  ModerationException _mapDioException(DioException error) {
+    final payload = _payloadMap(error);
+    final code = _payloadCode(payload);
+    final message = _payloadMessage(payload);
+    final statusCode = error.response?.statusCode;
+    final retryAfter = _retryAfter(error.response, payload);
+
+    if (code == ErrorCodes.deviceIntegrityBlocked) {
+      return ModerationException(
+        ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
+        code: ErrorCodes.deviceIntegrityBlocked,
+        statusCode: statusCode,
+        retryAfter: retryAfter,
+        payload: payload,
+        originalError: error,
+      );
+    }
+
+    if (statusCode == 429) {
+      final normalizedCode = code ?? 'RATE_LIMITED';
+      final fallbackMessage =
+          normalizedCode == 'DAILY_APPEAL_LIMIT_EXCEEDED' ||
+                  normalizedCode == 'daily_appeal_limit_exceeded'
+              ? 'You have reached your daily appeals limit. Please try again tomorrow.'
+              : 'Too many moderation requests. Please wait before trying again.';
+      return ModerationException(
+        message ?? fallbackMessage,
+        code: normalizedCode,
+        statusCode: statusCode,
+        retryAfter: retryAfter,
+        payload: payload,
+        originalError: error,
+      );
+    }
+
     return ModerationException(
-      'Network error: ${error.message}',
-      code: 'NETWORK_ERROR',
+      message ?? 'Network error: ${error.message}',
+      code: code ?? 'NETWORK_ERROR',
+      statusCode: statusCode,
+      retryAfter: retryAfter,
+      payload: payload,
       originalError: error,
     );
   }

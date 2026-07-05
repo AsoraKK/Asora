@@ -80,7 +80,7 @@ void main() {
           isA<ModerationException>().having(
             (e) => e.code,
             'code',
-            'NETWORK_ERROR',
+            'SOME_CODE',
           ),
         ),
       );
@@ -107,6 +107,53 @@ void main() {
             'code',
             'NETWORK_ERROR',
           ),
+        ),
+      );
+    });
+
+    test('preserves rate-limit status and retry metadata', () async {
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/getMyAppeals',
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: '/api/getMyAppeals'),
+          response: Response<Map<String, dynamic>>(
+            data: {
+              'code': 'RATE_LIMITED',
+              'message':
+                  'Too many moderation requests. Please wait before trying again.',
+              'retry_after_seconds': 42,
+            },
+            statusCode: 429,
+            headers: Headers.fromMap({
+              'retry-after': ['42'],
+            }),
+            requestOptions: RequestOptions(path: '/api/getMyAppeals'),
+          ),
+        ),
+      );
+
+      expect(
+        () => service.getMyAppeals(token: 'tok'),
+        throwsA(
+          isA<ModerationException>()
+              .having((e) => e.code, 'code', 'RATE_LIMITED')
+              .having((e) => e.statusCode, 'statusCode', 429)
+              .having((e) => e.message, 'message',
+                  'Too many moderation requests. Please wait before trying again.')
+              .having(
+                (e) => e.retryAfter,
+                'retryAfter',
+                const Duration(seconds: 42),
+              )
+              .having(
+                (e) => e.payload?['retry_after_seconds'],
+                'payload.retry_after_seconds',
+                42,
+              ),
         ),
       );
     });

@@ -2,7 +2,6 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/widgets/post_actions.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,13 +134,10 @@ void main() {
         token: 'token',
       ),
     ).thenThrow(
-      DioException(
-        requestOptions: RequestOptions(path: '/api/moderation/flag'),
-        response: Response(
-          requestOptions: RequestOptions(path: '/api/moderation/flag'),
-          statusCode: 429,
-        ),
-        type: DioExceptionType.badResponse,
+      const ModerationException(
+        'Too many moderation requests. Please wait before trying again.',
+        code: 'RATE_LIMITED',
+        statusCode: 429,
       ),
     );
 

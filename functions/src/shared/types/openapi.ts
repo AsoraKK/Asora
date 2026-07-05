@@ -1,5 +1,5 @@
 /**
- * OpenAPI Types (Generated from docs/openapi.yaml)
+ * OpenAPI Types (Generated from api/openapi/openapi.yaml)
  * 
  * This file contains TypeScript interfaces for all OpenAPI request/response schemas.
  * Used by Azure Functions handlers for type-safe request handling.

@@ -2,16 +2,19 @@
 ///
 /// Verifies HS256 tokens issued by tokenService.ts using JWT_SECRET.
 /// Replaces the previous B2C RS256 verifier — the custom OAuth2 server
-/// is the sole token issuer.
+/// is the sole token issuer. The verifier accepts both legacy `role`
+/// and canonical `roles` claims and normalizes them for route guards.
 
 import { JWTPayload, jwtVerify } from 'jose';
 
 import { getAuthConfig } from './config';
+export { resetAuthConfigForTesting } from './config';
 import type { Principal as AzurePrincipal } from '../types/azure';
 
 export type AuthErrorCode =
   | 'invalid_request'
   | 'invalid_token'
+  | 'invalid_algorithm'
   | 'invalid_signature'
   | 'invalid_issuer'
   | 'invalid_audience'
@@ -33,6 +36,19 @@ export class AuthError extends Error {
 
 export type Principal = AzurePrincipal;
 
+export type JwtTokenType = 'access' | 'refresh';
+
+export type VerifyJwtOptions = {
+  expectedType: JwtTokenType;
+};
+
+const UUID_V7_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isInternalUserId(value: unknown): value is string {
+  return typeof value === 'string' && UUID_V7_REGEX.test(value);
+}
+
 function extractScpClaim(payload: JWTPayload): string | string[] | undefined {
   if (typeof payload.scp === 'string') {
     return payload.scp;
@@ -46,21 +62,26 @@ function extractScpClaim(payload: JWTPayload): string | string[] | undefined {
   return undefined;
 }
 
-function extractRoles(payload: JWTPayload): string[] | undefined {
-  if (Array.isArray(payload.roles)) {
-    const roles = payload.roles.filter((item): item is string => typeof item === 'string');
-    return roles.length > 0 ? roles : undefined;
+function normalizeRoleList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   }
 
-  if (typeof payload.roles === 'string') {
-    const roles = payload.roles
+  if (typeof value === 'string') {
+    return value
       .split(' ')
-      .map(item => item.trim())
+      .map((item) => item.trim())
       .filter(Boolean);
-    return roles.length > 0 ? roles : undefined;
   }
 
-  return undefined;
+  return [];
+}
+
+function extractRoles(payload: JWTPayload): string[] | undefined {
+  const claims = payload as JWTPayload & { role?: unknown; roles?: unknown };
+  const roles = [...normalizeRoleList(claims.roles), ...normalizeRoleList(claims.role)];
+  const uniqueRoles = [...new Set(roles)];
+  return uniqueRoles.length > 0 ? uniqueRoles : undefined;
 }
 
 function extractEmail(payload: JWTPayload): string | undefined {
@@ -148,6 +169,10 @@ function mapJoseError(error: unknown): AuthError {
     return new AuthError('invalid_signature', 'Token signature invalid');
   }
 
+  if (code === 'ERR_JOSE_ALG_NOT_ALLOWED' || message.includes('"alg"')) {
+    return new AuthError('invalid_algorithm', 'Token algorithm not accepted');
+  }
+
   if (message.includes('issuer mismatch') || message.includes('issuer')) {
     return new AuthError('invalid_issuer', 'Token issuer mismatch');
   }
@@ -158,9 +183,10 @@ function mapJoseError(error: unknown): AuthError {
   return new AuthError('invalid_token', 'Unable to validate token');
 }
 
-export async function verifyAuthorizationHeader(header: string | null | undefined): Promise<Principal> {
-  const token = normalizeAuthorizationHeader(header);
-
+export async function verifyJwtToken(
+  token: string,
+  options: VerifyJwtOptions
+): Promise<Principal> {
   try {
     const { jwtSecret, expectedIssuer, expectedAudiences, maxClockSkewSeconds } = getAuthConfig();
 
@@ -176,8 +202,16 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
 
     const { payload } = await jwtVerify(token, jwtSecret, verifyOptions);
 
-    if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
-      throw new AuthError('invalid_claim', 'Token subject missing');
+    if (typeof payload.exp !== 'number') {
+      throw new AuthError('invalid_claim', 'Token expiry missing');
+    }
+
+    if (payload.type !== options.expectedType) {
+      throw new AuthError('invalid_claim', `Expected ${options.expectedType} token`);
+    }
+
+    if (typeof payload.sub !== 'string' || !UUID_V7_REGEX.test(payload.sub)) {
+      throw new AuthError('invalid_claim', 'Token subject is not a valid internal user ID');
     }
 
     const principal: Principal = {
@@ -194,6 +228,13 @@ export async function verifyAuthorizationHeader(header: string | null | undefine
   } catch (error) {
     throw mapJoseError(error);
   }
+}
+
+export async function verifyAuthorizationHeader(
+  header: string | null | undefined
+): Promise<Principal> {
+  const token = normalizeAuthorizationHeader(header);
+  return verifyJwtToken(token, { expectedType: 'access' });
 }
 
 export async function tryGetPrincipal(header: string | null | undefined): Promise<Principal | null> {

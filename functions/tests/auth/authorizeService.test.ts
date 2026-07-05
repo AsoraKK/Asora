@@ -25,9 +25,12 @@ const mockContainer = {
 
 // Valid base64url code_challenge (43 characters, satisfies RFC 7636)
 const VALID_CODE_CHALLENGE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopq';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const MISSING_USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a2';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRead.mockReset();
 
   // Setup Cosmos mock
   (CosmosClient as jest.MockedClass<typeof CosmosClient>).mockImplementation(
@@ -179,7 +182,7 @@ describe('authorizeService - user verification', () => {
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
-        user_id: 'user-123',
+        user_id: USER_ID,
       },
     });
 
@@ -191,7 +194,7 @@ describe('authorizeService - user verification', () => {
   });
 
   it('accepts authenticated subject from upstream principal header', async () => {
-    mockRead.mockResolvedValueOnce({ resource: { id: 'user-123', isActive: true } });
+    mockRead.mockResolvedValue({ resource: { id: USER_ID, isActive: true } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 
     const req = httpReqMock({
@@ -204,7 +207,7 @@ describe('authorizeService - user verification', () => {
         code_challenge_method: 'S256',
       },
       headers: {
-        'x-ms-client-principal-id': 'user-123',
+        'x-ms-client-principal-id': USER_ID,
       },
     });
 
@@ -224,7 +227,7 @@ describe('authorizeService - user verification', () => {
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
-        user_id: 'missing-user',
+        user_id: MISSING_USER_ID,
       },
     });
 
@@ -234,7 +237,7 @@ describe('authorizeService - user verification', () => {
   });
 
   it('generates authorization code when user exists', async () => {
-    mockRead.mockResolvedValueOnce({ resource: { id: 'user-123', isActive: true } });
+    mockRead.mockResolvedValue({ resource: { id: USER_ID, isActive: true } });
     mockCreate.mockResolvedValueOnce({ resource: { id: 'session-1' } });
 
     const req = httpReqMock({
@@ -245,7 +248,7 @@ describe('authorizeService - user verification', () => {
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
-        user_id: 'user-123',
+        user_id: USER_ID,
       },
     });
 

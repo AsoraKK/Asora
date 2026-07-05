@@ -14,6 +14,7 @@ import 'package:built_value/iso_8601_date_time_serializer.dart';
 import 'package:asora_api_client/src/date_serializer.dart';
 import 'package:asora_api_client/src/model/date.dart';
 
+import 'package:asora_api_client/src/model/accepted_response.dart';
 import 'package:asora_api_client/src/model/account_delete_response.dart';
 import 'package:asora_api_client/src/model/admin_appeal_audit_summary.dart';
 import 'package:asora_api_client/src/model/admin_appeal_content.dart';
@@ -66,6 +67,8 @@ import 'package:asora_api_client/src/model/admin_moderation_summary.dart';
 import 'package:asora_api_client/src/model/admin_queue_status.dart';
 import 'package:asora_api_client/src/model/admin_resolve_response.dart';
 import 'package:asora_api_client/src/model/admin_set_user_tier_request.dart';
+import 'package:asora_api_client/src/model/admin_test_data_purge200_response.dart';
+import 'package:asora_api_client/src/model/admin_test_data_purge_request.dart';
 import 'package:asora_api_client/src/model/admin_user_action_response.dart';
 import 'package:asora_api_client/src/model/admin_user_disable_request.dart';
 import 'package:asora_api_client/src/model/admin_user_enable_request.dart';
@@ -80,8 +83,12 @@ import 'package:asora_api_client/src/model/appeal_vote_response_vote.dart';
 import 'package:asora_api_client/src/model/auth_token_request.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error_error.dart';
+import 'package:asora_api_client/src/model/create_custom_feed_request.dart';
 import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
+import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
+import 'package:asora_api_client/src/model/custom_feed_definition.dart';
+import 'package:asora_api_client/src/model/custom_feed_list_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response_previous_exports_inner.dart';
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
@@ -102,22 +109,41 @@ import 'package:asora_api_client/src/model/get_my_appeals200_response.dart';
 import 'package:asora_api_client/src/model/get_my_appeals200_response_items_inner.dart';
 import 'package:asora_api_client/src/model/invite_validation_payload.dart';
 import 'package:asora_api_client/src/model/invite_validation_response.dart';
+import 'package:asora_api_client/src/model/ledger_entry.dart';
+import 'package:asora_api_client/src/model/ledger_page.dart';
 import 'package:asora_api_client/src/model/legal_hold_clear.dart';
 import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
 import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response_data.dart';
+import 'package:asora_api_client/src/model/post.dart';
+import 'package:asora_api_client/src/model/post_proof_signals.dart';
+import 'package:asora_api_client/src/model/post_trust_timeline.dart';
+import 'package:asora_api_client/src/model/post_view.dart';
+import 'package:asora_api_client/src/model/post_view_all_of_recent_comments.dart';
+import 'package:asora_api_client/src/model/public_reputation_view.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response.dart';
 import 'package:asora_api_client/src/model/redeem_invite_response_data.dart';
+import 'package:asora_api_client/src/model/reputation_summary.dart';
 import 'package:asora_api_client/src/model/review_appealed_content_request.dart';
+import 'package:asora_api_client/src/model/reward_offer.dart';
+import 'package:asora_api_client/src/model/reward_redemption.dart';
+import 'package:asora_api_client/src/model/rewards_me_response.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error_error.dart';
+import 'package:asora_api_client/src/model/submit_reaction_request.dart';
+import 'package:asora_api_client/src/model/submit_reaction_response.dart';
+import 'package:asora_api_client/src/model/subscription_status.dart';
+import 'package:asora_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error_error.dart';
+import 'package:asora_api_client/src/model/update_custom_feed_request.dart';
+import 'package:asora_api_client/src/model/update_post_request.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
 import 'package:asora_api_client/src/model/user_info_response_data.dart';
 import 'package:asora_api_client/src/model/validation_error_response.dart';
@@ -128,6 +154,7 @@ import 'package:asora_api_client/src/model/vote_on_appeal_v1_request.dart';
 part 'serializers.g.dart';
 
 @SerializersFor([
+  AcceptedResponse,
   AccountDeleteResponse,
   AdminAppealAuditSummary,
   AdminAppealContent,
@@ -180,6 +207,8 @@ part 'serializers.g.dart';
   AdminQueueStatus,
   AdminResolveResponse,
   AdminSetUserTierRequest,
+  AdminTestDataPurge200Response,
+  AdminTestDataPurgeRequest,
   AdminUserActionResponse,
   AdminUserDisableRequest,
   AdminUserEnableRequest,
@@ -194,8 +223,12 @@ part 'serializers.g.dart';
   AuthTokenRequest,
   BadGatewayError,
   BadGatewayErrorError,
+  CreateCustomFeedRequest,
   CreatePost201Response,
   CreatePostRequest,
+  CursorPaginatedPostView,
+  CustomFeedDefinition,
+  CustomFeedListResponse,
   DSRExportResponse,
   DSRExportResponsePreviousExportsInner,
   DsrRequestInput,
@@ -216,22 +249,41 @@ part 'serializers.g.dart';
   GetMyAppeals200ResponseItemsInner,
   InviteValidationPayload,
   InviteValidationResponse,
+  LedgerEntry,
+  LedgerPage,
   LegalHoldClear,
   LegalHoldInput,
   LegalHoldRecord,
   ModerationAppealRequest,
   ModerationBlockedResponse,
+  NewsSourceMetadata,
   OAuthTokenResponse,
   OAuthTokenResponseData,
+  Post,$Post,
+  PostProofSignals,
+  PostTrustTimeline,
+  PostView,
+  PostViewAllOfRecentComments,
+  PublicReputationView,
   RateLimitError,
   RedeemInviteRequest,
   RedeemInviteResponse,
   RedeemInviteResponseData,
+  ReputationSummary,
   ReviewAppealedContentRequest,
+  RewardOffer,
+  RewardRedemption,
+  RewardsMeResponse,
   ServiceUnavailableError,
   ServiceUnavailableErrorError,
+  SubmitReactionRequest,
+  SubmitReactionResponse,
+  SubscriptionStatus,
+  SubscriptionStatusEntitlements,
   UnauthorizedError,
   UnauthorizedErrorError,
+  UpdateCustomFeedRequest,
+  UpdatePostRequest,
   UserInfoResponse,
   UserInfoResponseData,
   ValidationErrorResponse,
@@ -245,6 +297,7 @@ Serializers serializers = (_$serializers.toBuilder()
         () => MapBuilder<String, JsonObject>(),
       )
       ..add(AdminInvite.serializer)
+      ..add(Post.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(const DateSerializer())

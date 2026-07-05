@@ -108,12 +108,22 @@ if [[ -z "$roles" ]]; then
   exit 1
 fi
 
-if ! grep -q "Storage Blob Data Contributor" <<< "$roles"; then
-  echo "  ❌ ${PRINCIPAL_ID} missing Storage Blob Data Contributor role"
-  exit 1
-fi
+required_roles=(
+  "Storage Blob Data Contributor"
+  "Storage Queue Data Contributor"
+  "Storage Queue Data Reader"
+  "Storage Queue Data Message Processor"
+  "Storage Account Contributor"
+)
 
-echo "  ✅ ${PRINCIPAL_ID} granted Storage Blob Data Contributor on ${STORAGE_ACCOUNT}"
+for required_role in "${required_roles[@]}"; do
+  if ! grep -q "$required_role" <<< "$roles"; then
+    echo "  ❌ ${PRINCIPAL_ID} missing ${required_role} role"
+    exit 1
+  fi
+done
+
+echo "  ✅ ${PRINCIPAL_ID} granted DSR storage blob/queue roles on ${STORAGE_ACCOUNT}"
 
 # Network hardening checks
 pub_net=$(az storage account show \

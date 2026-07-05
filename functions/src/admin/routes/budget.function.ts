@@ -18,6 +18,8 @@ import { createCorsPreflightResponse, withCorsHeaders } from '../cors';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { getCosmos } from '../../shared/clients/cosmos';
+import { buildAdminAuditIdentity } from '../auditContext';
+import { recordAdminAudit } from '../auditLogger';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -292,6 +294,31 @@ async function handlePut(
 
     // Push to Azure (non-blocking — we still return success even if Azure update fails)
     const azureUpdated = await updateAzureBudget(updated, context);
+
+    await recordAdminAudit({
+      ...buildAdminAuditIdentity(request, context, {
+        actorId: actor,
+        actorEmail: actor.includes('@') ? actor : null,
+        accessIdentity: actor,
+      }),
+      action: 'BUDGET_UPDATE',
+      subjectId: 'budget_config',
+      targetType: 'config',
+      reasonCode: 'BUDGET_UPDATE',
+      note: `amount=${updated.amount}`,
+      before: {
+        amount: current.amount,
+      },
+      after: {
+        amount: updated.amount,
+        azureSynced: azureUpdated,
+      },
+      metadata: {
+        azureBudgetName: updated.azureBudgetName,
+        resourceGroup: updated.resourceGroup,
+        azureSynced: azureUpdated,
+      },
+    });
 
     return withCorsHeaders(
       {

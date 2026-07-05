@@ -192,6 +192,9 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Apple (beta)'), findsOneWidget);
+    expect(find.text('World ID (beta)'), findsOneWidget);
 
     await tester.tapAt(const Offset(12, 12));
     await tester.pumpAndSettle();
@@ -205,5 +208,47 @@ void main() {
       analytics.loggedEvents,
       isNot(contains(AnalyticsEvents.authStarted)),
     );
+  });
+
+  testWidgets('alpha-disabled providers are visible but do not start auth', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final notifier = _MockAuthStateNotifier();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          authStateProvider.overrideWith((ref) => notifier),
+          deviceIntegrityGuardProvider.overrideWith(
+            (ref) => _buildIntegrityGuard(),
+          ),
+          deviceSecurityStateProvider.overrideWith(
+            (ref) => _FakeDeviceSecurityService().evaluateSecurity(),
+          ),
+        ],
+        child: const MaterialApp(home: AuthChoiceScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Apple (beta)'), findsOneWidget);
+    expect(find.text('World ID (beta)'), findsOneWidget);
+
+    await tester.tap(find.text('Apple (beta)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('World ID (beta)'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => notifier.signInWithProvider(OAuth2Provider.apple));
+    verifyNever(() => notifier.signInWithProvider(OAuth2Provider.world));
   });
 }

@@ -10,7 +10,11 @@ const inviteStore = new Map<string, any>();
 const userStore = new Map<string, any>();
 const refreshTokenStore = new Map<string, any>();
 
-const JWT_SECRET = 'test-secret-for-redeem-invite';
+const JWT_SECRET = 'test-secret-for-redeem-invite-minimum-32-bytes';
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const SECOND_USER_ID = '01944c1d-5672-7001-8000-0c91f95a72a1';
+const THIRD_USER_ID = '01944c1d-5672-7002-8000-0c91f95a72a1';
+const MISSING_USER_ID = '01944c1d-5672-7003-8000-0c91f95a72a1';
 
 // Mock Cosmos
 jest.mock('@shared/clients/cosmos', () => ({
@@ -94,7 +98,8 @@ jest.mock('@shared/clients/postgres', () => ({
 }));
 
 import { InvocationContext } from '@azure/functions';
-import { redeemInviteHandler, resetUsersContainerCache } from '@auth/service/redeemInvite';
+import { redeemInviteRoute, resetUsersContainerCache } from '@auth/service/redeemInvite';
+import { resetAuthConfigForTesting } from '@auth/config';
 import { resetInviteContainerCache } from '@auth/service/inviteStore';
 import { httpReqMock } from '../helpers/http';
 
@@ -107,7 +112,7 @@ const ctx: Partial<InvocationContext> = {
 
 async function createValidToken(userId: string, email: string): Promise<string> {
   return signHs256Jwt(
-    { sub: userId, email, iss: 'asora-auth' },
+    { sub: userId, email, iss: 'asora-auth', type: 'access' },
     JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -144,6 +149,7 @@ describe('Redeem Invite Endpoint', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = JWT_SECRET;
     process.env.JWT_ISSUER = 'asora-auth';
+    delete process.env.JWT_AUDIENCE;
   });
 
   beforeEach(() => {
@@ -152,12 +158,13 @@ describe('Redeem Invite Endpoint', () => {
     refreshTokenStore.clear();
     resetInviteContainerCache();
     resetUsersContainerCache();
+    resetAuthConfigForTesting();
     logFn.mockClear();
   });
 
   describe('Successful redemption', () => {
     it('redeems a valid invite and activates user', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -171,7 +178,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(200);
       const body = JSON.parse(res.body as string);
@@ -192,7 +199,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('redeems email-restricted invite with matching email', async () => {
-      const userId = 'user-456';
+      const userId = SECOND_USER_ID;
       const email = 'specific@user.com';
       const inviteCode = 'BBBB-2222';
 
@@ -206,13 +213,13 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(200);
     });
 
     it('handles case-insensitive invite codes', async () => {
-      const userId = 'user-789';
+      const userId = THIRD_USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'CCCC-3333';
 
@@ -226,7 +233,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(200);
     });
@@ -239,11 +246,11 @@ describe('Redeem Invite Endpoint', () => {
         body: { inviteCode: 'AAAA-1111' },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(401);
       const body = JSON.parse(res.body as string);
-      expect(body.message).toBe('unauthorized');
+      expect(body.error).toBe('invalid_request');
     });
 
     it('rejects invalid token', async () => {
@@ -253,7 +260,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: 'Bearer invalid-token' },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(401);
     });
@@ -261,7 +268,7 @@ describe('Redeem Invite Endpoint', () => {
 
   describe('Validation errors', () => {
     it('rejects missing invite code', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
@@ -272,7 +279,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -280,7 +287,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('rejects invalid invite code format', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
@@ -291,7 +298,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -301,7 +308,7 @@ describe('Redeem Invite Endpoint', () => {
 
   describe('Invite validation errors', () => {
     it('rejects non-existent invite code', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       userStore.set(userId, createInactiveUser(userId, email));
 
@@ -312,7 +319,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -320,7 +327,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('rejects expired invite', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -338,7 +345,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -346,7 +353,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('rejects already used invite', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -365,7 +372,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -373,7 +380,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('rejects invite with email mismatch', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -389,7 +396,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -399,7 +406,7 @@ describe('Redeem Invite Endpoint', () => {
 
   describe('User state errors', () => {
     it('rejects already active user', async () => {
-      const userId = 'user-123';
+      const userId = USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -417,7 +424,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body as string);
@@ -425,7 +432,7 @@ describe('Redeem Invite Endpoint', () => {
     });
 
     it('handles user not found', async () => {
-      const userId = 'non-existent-user';
+      const userId = MISSING_USER_ID;
       const email = 'user@example.com';
       const inviteCode = 'AAAA-1111';
 
@@ -439,7 +446,7 @@ describe('Redeem Invite Endpoint', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      const res = await redeemInviteHandler(req as any, ctx as InvocationContext);
+      const res = await redeemInviteRoute(req as any, ctx as InvocationContext);
 
       expect(res.status).toBe(404);
       const body = JSON.parse(res.body as string);

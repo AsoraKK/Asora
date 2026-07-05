@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
+import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/feed_page_response.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
@@ -102,10 +103,13 @@ class FeedApi {
     );
   }
 
-  /// Return news board feed
-  /// 
+  /// Return News Board feed
+  /// Return authenticated News Board posts. Free, Premium, Black, and Admin tiers can read the News Board; publishing news posts remains restricted to editorial contributors and approved ingestion paths. 
   ///
   /// Parameters:
+  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+  /// * [limit] - Maximum number of items to return per page
+  /// * [region] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -113,9 +117,12 @@ class FeedApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [CursorPaginatedPostView] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedNews({ 
+  Future<Response<CursorPaginatedPostView>> feedNews({ 
+    String? cursor,
+    int? limit = 25,
+    String? region,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -142,22 +149,29 @@ class FeedApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (region != null) r'region': encodeQueryParameter(_serializers, region, const FullType(String)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    CursorPaginatedPostView? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(CursorPaginatedPostView),
+      ) as CursorPaginatedPostView;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -169,7 +183,96 @@ class FeedApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<CursorPaginatedPostView>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Retrieve public discovery feed
+  /// Public feed surface using ranking safety filters and reputation-derived trust weighting without paid-tier boosting.
+  ///
+  /// Parameters:
+  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
+  /// * [limit] - Maximum number of items to return per page
+  /// * [includeTopics] 
+  /// * [excludeTopics] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<FeedPageResponse>> feedPublicGet({ 
+    String? cursor,
+    int? limit = 25,
+    String? includeTopics,
+    String? excludeTopics,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/feed/public';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (includeTopics != null) r'includeTopics': encodeQueryParameter(_serializers, includeTopics, const FullType(String)),
+      if (excludeTopics != null) r'excludeTopics': encodeQueryParameter(_serializers, excludeTopics, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    FeedPageResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(FeedPageResponse),
+      ) as FeedPageResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<FeedPageResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

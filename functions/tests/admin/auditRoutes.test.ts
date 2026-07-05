@@ -31,7 +31,15 @@ describe('Admin Audit Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchNext.mockResolvedValue({
-      resources: [{ id: 'entry-1', timestamp: '2025-01-01', action: 'block' }],
+      resources: [{
+        id: 'entry-1',
+        timestamp: '2025-01-01',
+        action: 'block',
+        actorEmail: 'admin@example.com',
+        requestId: 'req-1',
+        clientIp: '1.2.3.4',
+        result: 'success',
+      }],
       continuationToken: null,
     });
   });
@@ -61,6 +69,9 @@ describe('Admin Audit Routes', () => {
     expect(body.success).toBe(true);
     expect(body.data.items).toHaveLength(1);
     expect(body.data.items[0].id).toBe('entry-1');
+    expect(body.data.items[0].actorEmail).toBe('admin@example.com');
+    expect(body.data.items[0].requestId).toBe('req-1');
+    expect(body.data.items[0].result).toBe('success');
   });
 
   it('returns 500 when audit lookup fails', async () => {

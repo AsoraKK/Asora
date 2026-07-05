@@ -27,7 +27,7 @@ Welcome to Lythaus — a platform built on authenticity, respect, and human conn
 ### Deceptive Content
 
 - **Misinformation**: Deliberately false or misleading claims that could cause real-world harm (health, safety, elections).
-- **AI-generated content presented as human**: Content created by AI tools must be clearly labelled. Our automated systems detect and flag undisclosed AI content.
+- **AI-generated content**: Fully AI-generated text or synthetic media is not publishable on Lythaus. AI-assisted text must be clearly labelled and remain meaningfully human-led.
 - **Impersonation**: Pretending to be another person, organization, or public figure.
 - **Spam & manipulation**: Coordinated inauthentic behavior, engagement manipulation, or commercial spam.
 
@@ -60,16 +60,18 @@ Every post goes through automated content analysis at submission:
 When you appeal a moderation decision:
 
 1. Trusted community members review your appeal.
-2. A vote determines the outcome (3-vote quorum, 5-minute window).
-3. Results are based on weighted community consensus.
+2. Eligible cases can be resolved by community majority.
+3. Voting is limited by account age, reputation, conflict checks, and anti-brigading controls.
+4. Sensitive safety, fraud, privacy, legal, child-safety, or manipulation cases may be staff-led instead.
 
 ### Admin Review
 
 Trust & safety staff can:
 
-- Override any automated or community decision.
+- Override community decisions only for safety, fraud, legal, platform integrity, or clear manipulation reasons.
 - Review escalated cases.
 - Adjust moderation thresholds based on false-positive patterns.
+- Record an audit trail and public-safe explanation when an override occurs.
 
 ---
 

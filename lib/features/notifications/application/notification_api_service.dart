@@ -3,13 +3,13 @@
 /// Notification API Service
 ///
 /// HTTP client for notification-related REST endpoints.
-/// Handles GET/POST to /api/notifications and /api/notifications/* endpoints.
+/// Handles GET/POST to /notifications and /notifications/* endpoints.
 library;
 
 import 'package:dio/dio.dart';
 import 'package:asora/features/notifications/domain/notification_models.dart';
 
-/// Response from GET /api/notifications
+/// Response from GET /notifications
 class NotificationsListResponse {
   final List<Notification> notifications;
   final String? continuationToken;
@@ -42,7 +42,7 @@ class NotificationApiService {
   // NOTIFICATIONS API
   // ========================================================================
 
-  /// GET /api/notifications
+  /// GET /notifications
   /// Fetch paginated notifications list
   Future<NotificationsListResponse> getNotifications({
     int limit = 20,
@@ -55,7 +55,7 @@ class NotificationApiService {
       };
 
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notifications',
+        '/notifications',
         queryParameters: queryParams,
       );
 
@@ -69,12 +69,12 @@ class NotificationApiService {
     }
   }
 
-  /// GET /api/notifications/unread-count
+  /// GET /notifications/unread-count
   /// Get unread badge count
   Future<int> getUnreadCount() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notifications/unread-count',
+        '/notifications/unread-count',
       );
       return (response.data?['unreadCount'] as num?)?.toInt() ??
           (response.data?['count'] as num?)?.toInt() ??
@@ -84,24 +84,24 @@ class NotificationApiService {
     }
   }
 
-  /// POST /api/notifications/:id/read
+  /// POST /notifications/:id/read
   /// Mark a single notification as read
   Future<void> markAsRead(String notificationId) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/$notificationId/read',
+        '/notifications/$notificationId/read',
       );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to mark notification as read');
     }
   }
 
-  /// POST /api/notifications/:id/dismiss
+  /// POST /notifications/:id/dismiss
   /// Dismiss a notification (remove from list)
   Future<void> dismissNotification(String notificationId) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/$notificationId/dismiss',
+        '/notifications/$notificationId/dismiss',
       );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to dismiss notification');
@@ -112,12 +112,12 @@ class NotificationApiService {
   // PREFERENCES API
   // ========================================================================
 
-  /// GET /api/notifications/preferences
+  /// GET /notifications/preferences
   /// Fetch user notification preferences
   Future<UserNotificationPreferences> getPreferences() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notifications/preferences',
+        '/notifications/preferences',
       );
       final data = response.data;
       if (data == null) {
@@ -129,14 +129,14 @@ class NotificationApiService {
     }
   }
 
-  /// PUT /api/notifications/preferences
+  /// PUT /notifications/preferences
   /// Update user notification preferences
   Future<UserNotificationPreferences> updatePreferences(
     UserNotificationPreferences preferences,
   ) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
-        '/api/notifications/preferences',
+        '/notifications/preferences',
         data: preferences.toJson(),
       );
       final data = response.data;
@@ -153,7 +153,7 @@ class NotificationApiService {
   // DEVICES API
   // ========================================================================
 
-  /// POST /api/notifications/devices
+  /// POST /notifications/devices
   /// Register a push token (enforces 3-device cap)
   /// Returns {"device": {...}, "evictedDevice": {...}?}
   Future<Map<String, dynamic>> registerDevice({
@@ -164,7 +164,7 @@ class NotificationApiService {
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         data: {
           'deviceId': deviceId,
           'pushToken': pushToken,
@@ -178,12 +178,12 @@ class NotificationApiService {
     }
   }
 
-  /// GET /api/notifications/devices
+  /// GET /notifications/devices
   /// Fetch list of registered devices
   Future<List<UserDeviceToken>> getDevices({bool activeOnly = true}) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/notifications/devices',
+        '/notifications/devices',
         queryParameters: {'activeOnly': activeOnly},
       );
       final data = response.data;
@@ -205,12 +205,12 @@ class NotificationApiService {
     }
   }
 
-  /// POST /api/notifications/devices/:id/revoke
+  /// POST /notifications/devices/:id/revoke
   /// Revoke (soft-delete) a device token
   Future<void> revokeDevice(String deviceId) async {
     try {
       await _dio.post<Map<String, dynamic>>(
-        '/api/notifications/devices/$deviceId/revoke',
+        '/notifications/devices/$deviceId/revoke',
       );
     } on DioException catch (e) {
       throw _handleError(e, 'Failed to revoke device');

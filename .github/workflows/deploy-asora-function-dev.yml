@@ -58,19 +58,71 @@ jobs:
     environment: ${{ github.event.inputs.target_environment || 'dev' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Configure CORS allowed origins
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings CORS_ALLOWED_ORIGINS='https://control.asora.co.za,https://lythaus-web.pages.dev,https://*.lythaus-web.pages.dev,https://app.lythaus.asora.co.za'
+
+      - name: Inspect CORS allowed origins
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          CORS_ALLOWED_ORIGINS=$(az functionapp config appsettings list \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='CORS_ALLOWED_ORIGINS'] | [0].value" \
+            -o tsv | tr -d '\r')
+          echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-<empty>}"
+
+      - name: Configure Azure platform CORS
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          SUBS_CLEAN=$(az account show --query id -o tsv | tr -d '\r')
+          CORS_URI="https://management.azure.com/subscriptions/${SUBS_CLEAN}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/web?api-version=2026-03-15"
+          CORS_BODY=$(jq -n \
+            --arg control "https://control.asora.co.za" \
+            --arg pages "https://lythaus-web.pages.dev" \
+            --arg app "https://app.lythaus.asora.co.za" \
+            --arg localhost8080 "http://localhost:8080" \
+            --arg localhost4200 "http://localhost:4200" \
+            '{
+              properties: {
+                cors: {
+                  allowedOrigins: [$control, $pages, $app, $localhost8080, $localhost4200],
+                  supportCredentials: false
+                }
+              }
+            }')
+
+          echo "Azure platform CORS before configuration:"
+          az rest --method get --url "$CORS_URI" -o json | jq -r '.properties.cors.allowedOrigins // [] | .[]' || true
+
+          az rest --method patch --url "$CORS_URI" --body "$CORS_BODY" --output none
+
+          echo "Azure platform CORS after configuration:"
+          az rest --method get --url "$CORS_URI" -o json | jq -r '.properties.cors.allowedOrigins // [] | .[]' || true
 
       - name: Build Functions (Flex)
         working-directory: functions
@@ -480,10 +532,10 @@ jobs:
     needs: deploy
     environment: ${{ github.event.inputs.target_environment || 'dev' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Azure login (OIDC)
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -664,7 +716,8 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_STORAGE_ACCOUNT="$DSR_SA" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_CONTAINER="dsr-exports" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_NAME="dsr-requests" --output none
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="AzureWebJobsStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_QUEUE_CONNECTION="DsrQueueStorage" --output none
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting "DsrQueueStorage__queueServiceUri=https://${DSR_SA}.queue.core.windows.net" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_MAX_CONCURRENCY="5" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_SIGNED_URL_TTL_HOURS="12" --output none
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting DSR_EXPORT_RETENTION_DAYS="30" --output none

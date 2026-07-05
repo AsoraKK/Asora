@@ -89,7 +89,8 @@ class DsrRequestInputBuilder
   DsrRequestInput build() => _build();
 
   _$DsrRequestInput _build() {
-    final _$result = _$v ??
+    final _$result =
+        _$v ??
         _$DsrRequestInput._(
           userId: BuiltValueNullFieldError.checkNotNull(
             userId,

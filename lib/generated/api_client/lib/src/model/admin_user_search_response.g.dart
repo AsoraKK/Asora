@@ -14,16 +14,14 @@ class _$AdminUserSearchResponse extends AdminUserSearchResponse {
 
   factory _$AdminUserSearchResponse([
     void Function(AdminUserSearchResponseBuilder)? updates,
-  ]) =>
-      (AdminUserSearchResponseBuilder()..update(updates))._build();
+  ]) => (AdminUserSearchResponseBuilder()..update(updates))._build();
 
   _$AdminUserSearchResponse._({required this.items, required this.count})
-      : super._();
+    : super._();
   @override
   AdminUserSearchResponse rebuild(
     void Function(AdminUserSearchResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminUserSearchResponseBuilder toBuilder() =>
@@ -99,7 +97,8 @@ class AdminUserSearchResponseBuilder
   _$AdminUserSearchResponse _build() {
     _$AdminUserSearchResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminUserSearchResponse._(
             items: items.build(),
             count: BuiltValueNullFieldError.checkNotNull(

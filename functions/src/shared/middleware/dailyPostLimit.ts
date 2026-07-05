@@ -11,6 +11,25 @@ import { getAzureLogger } from '@shared/utils/logger';
 const logger = getAzureLogger('shared/dailyPostLimit');
 const DAILY_RETRY_AFTER_SECONDS = 86400;
 
+function extractTraceId(context: InvocationContext): string | null {
+  const traceParent =
+    context.traceContext?.traceParent ?? (context.traceContext as { traceparent?: string } | undefined)?.traceparent;
+  if (!traceParent) {
+    return null;
+  }
+
+  const segments = traceParent.split('-');
+  return segments.length >= 3 ? (segments[1] ?? null) : null;
+}
+
+function toResetUnixSeconds(resetDate: string): string {
+  const resetAt = Date.parse(resetDate);
+  if (Number.isNaN(resetAt)) {
+    return '0';
+  }
+  return Math.max(0, Math.ceil(resetAt / 1000)).toString();
+}
+
 /**
  * Type guard to check if an error is a DailyActionLimitExceededError.
  * Uses property checking instead of instanceof to avoid issues with class inheritance in CommonJS.
@@ -39,13 +58,21 @@ export type AuthenticatedHandler = (
   context: InvocationContext
 ) => Promise<HttpResponseInit>;
 
-function buildLimitResponse(error: DailyActionLimitExceededError): HttpResponseInit {
-  const payload = error.toResponse();
+function buildLimitResponse(
+  error: DailyActionLimitExceededError,
+  context: InvocationContext
+): HttpResponseInit {
+  const payload = error.toResponse(extractTraceId(context));
+  const limit = typeof payload.limit === 'number' ? payload.limit : 0;
+  const resetAt = typeof payload.resetAt === 'string' ? payload.resetAt : error.resetDate;
   return {
     status: error.statusCode,
     headers: {
       'Content-Type': 'application/json',
       'Retry-After': DAILY_RETRY_AFTER_SECONDS.toString(),
+      'X-RateLimit-Limit': limit.toString(),
+      'X-RateLimit-Remaining': '0',
+      'X-RateLimit-Reset': toResetUnixSeconds(resetAt),
     },
     body: JSON.stringify(payload),
   };
@@ -90,7 +117,7 @@ function createDailyLimitMiddleware(
           },
         });
 
-        return buildLimitResponse(error);
+        return buildLimitResponse(error, context);
       }
       throw error;
     }

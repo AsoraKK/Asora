@@ -9,6 +9,8 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:asora/core/config/environment_config.dart';
+import 'package:asora/core/config/web_release_guard.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/features/moderation/application/moderation_service.dart';
 import 'package:asora/features/feed/domain/feed_repository.dart';
@@ -22,11 +24,7 @@ import 'package:asora/core/security/cert_pinning.dart';
 /// Native platforms use certificate pinning; web keeps Dio's browser adapter.
 /// Used by all repository implementations for consistency
 final httpClientProvider = Provider<Dio>((ref) {
-  const baseUrl = String.fromEnvironment(
-    'AZURE_FUNCTION_URL',
-    defaultValue:
-        'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api',
-  );
+  final baseUrl = _resolveFunctionBaseUrl();
 
   // Create Dio with certificate pinning enabled
   final dio = createPinnedDio(baseUrl: baseUrl);
@@ -41,6 +39,22 @@ final httpClientProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+String _resolveFunctionBaseUrl() {
+  if (isReleaseWebBuild) {
+    return EnvironmentConfig.fromEnvironment().apiBaseUrl;
+  }
+
+  const configured = String.fromEnvironment(
+    'AZURE_FUNCTION_URL',
+    defaultValue: '',
+  );
+  if (configured.trim().isNotEmpty) {
+    return configured.trim();
+  }
+
+  return EnvironmentConfig.fromEnvironment().apiBaseUrl;
+}
 
 /// **Moderation Repository Provider**
 ///

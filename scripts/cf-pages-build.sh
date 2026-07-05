@@ -60,6 +60,8 @@ if env and env not in {"production", "prod", "staging", "stg"}:
     raise SystemExit("ENVIRONMENT must be production or staging for release web builds")
 PY
 
+bash scripts/check-web-release-hosts.sh
+
 # Read pinned Flutter version from .fvmrc
 FLUTTER_VERSION=$(python3 -c "import json,sys; print(json.load(open('.fvmrc'))['flutter'])")
 echo "==> Installing Flutter ${FLUTTER_VERSION}"
@@ -87,5 +89,6 @@ echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects
 echo "==> Copying _headers for CSP and cache rules"
 cp web/_headers build/web/_headers
+bash scripts/check-web-security-headers.sh build/web/_headers
 
 echo "==> Build complete — output in build/web"

@@ -16,8 +16,7 @@ class _$AdminInviteListResponse extends AdminInviteListResponse {
 
   factory _$AdminInviteListResponse([
     void Function(AdminInviteListResponseBuilder)? updates,
-  ]) =>
-      (AdminInviteListResponseBuilder()..update(updates))._build();
+  ]) => (AdminInviteListResponseBuilder()..update(updates))._build();
 
   _$AdminInviteListResponse._({
     required this.invites,
@@ -27,8 +26,7 @@ class _$AdminInviteListResponse extends AdminInviteListResponse {
   @override
   AdminInviteListResponse rebuild(
     void Function(AdminInviteListResponseBuilder) updates,
-  ) =>
-      (toBuilder()..update(updates)).build();
+  ) => (toBuilder()..update(updates)).build();
 
   @override
   AdminInviteListResponseBuilder toBuilder() =>
@@ -112,7 +110,8 @@ class AdminInviteListResponseBuilder
   _$AdminInviteListResponse _build() {
     _$AdminInviteListResponse _$result;
     try {
-      _$result = _$v ??
+      _$result =
+          _$v ??
           _$AdminInviteListResponse._(
             invites: invites.build(),
             count: BuiltValueNullFieldError.checkNotNull(

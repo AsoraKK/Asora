@@ -117,6 +117,6 @@ describe('voteOnAppeal rate limiting', () => {
 		const body = JSON.parse(response.body as string);
 		expect(body.error).toBe('rate_limited');
 		expect(body.retry_after_seconds).toBe(30);
-		expect(body.scope).toBe('ip');
+		expect(body.scope).toBe('route');
 	});
 });

@@ -8,6 +8,7 @@ import { adminConfigHandler } from '../../src/admin/routes/config.function';
 import { adminConfigGetHandler } from '../../src/admin/routes/config_get.function';
 import { adminConfigPutHandler } from '../../src/admin/routes/config_put.function';
 import { requireCloudflareAccess } from '../../src/admin/accessAuth';
+import { recordAdminAudit } from '../../src/admin/auditLogger';
 import { getAdminConfig, updateAdminConfig } from '../../src/admin/adminService';
 import { httpReqMock } from '../helpers/http';
 
@@ -17,6 +18,9 @@ jest.mock('../../src/admin/accessAuth', () => ({
 jest.mock('../../src/admin/adminService', () => ({
   getAdminConfig: jest.fn(),
   updateAdminConfig: jest.fn(),
+}));
+jest.mock('../../src/admin/auditLogger', () => ({
+  recordAdminAudit: jest.fn().mockResolvedValue(undefined),
 }));
 
 const contextStub = {
@@ -28,6 +32,7 @@ const contextStub = {
 const requireCloudflareAccessMock = requireCloudflareAccess as jest.Mock;
 const getAdminConfigMock = getAdminConfig as jest.Mock;
 const updateAdminConfigMock = updateAdminConfig as jest.Mock;
+const recordAdminAuditMock = recordAdminAudit as jest.Mock;
 
 describe('Admin Config Routes', () => {
   beforeEach(() => {
@@ -153,6 +158,16 @@ describe('Admin Config Routes', () => {
 
       const response = await adminConfigHandler(req as any, contextStub);
       expect(response.status).toBe(200);
+      expect(recordAdminAuditMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: 'admin-123',
+          action: 'ADMIN_CONFIG_UPDATE',
+          subjectId: 'admin_config',
+          targetType: 'config',
+          reasonCode: 'ADMIN_CONFIG_UPDATE',
+          result: 'success',
+        })
+      );
     });
 
     it('rejects payloads that exceed size limits', async () => {

@@ -117,4 +117,66 @@ void main() {
     );
     expect(container.read(settingsProvider).trustPassportVisibility, 'private');
   });
+
+  testWidgets('shows rate limit message when trust visibility update is throttled', (
+    tester,
+  ) async {
+    final dio = _MockDio();
+    when(
+      () => dio.patch<Map<String, dynamic>>(
+        '/api/users/me',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/api/users/me'),
+        response: Response<Map<String, dynamic>>(
+          data: const {'error': 'rate_limited', 'retry_after_seconds': 30},
+          statusCode: 429,
+          requestOptions: RequestOptions(path: '/api/users/me'),
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+
+    final user = User(
+      id: 'u1',
+      email: 'u1@lythaus.app',
+      role: UserRole.user,
+      tier: UserTier.bronze,
+      reputationScore: 0,
+      createdAt: DateTime(2025, 1, 1),
+      lastLoginAt: DateTime(2025, 1, 2),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          secureDioProvider.overrideWithValue(dio),
+          currentUserProvider.overrideWithValue(user),
+          jwtProvider.overrideWith((ref) async => 'token'),
+          publicUserProvider.overrideWith(
+            (ref, userId) async => const PublicUser(
+              id: 'u1',
+              displayName: 'Lythaus User',
+              tier: 'free',
+              trustPassportVisibility: 'public_minimal',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Private').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.text('Too many profile updates. Please wait before trying again.'),
+      findsOneWidget,
+    );
+  });
 }

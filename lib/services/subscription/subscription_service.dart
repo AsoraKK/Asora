@@ -67,11 +67,21 @@ class SubscriptionEntitlements {
   final int dailyPosts;
   final int maxMediaSizeMB;
   final int maxMediaPerPost;
+  final int maxCustomFeeds;
+  final bool newsBoardAccess;
+  final bool postingRestricted;
+  final int rewardLevelCap;
+  final int? rewardOptionsPerLevel;
 
   const SubscriptionEntitlements({
     required this.dailyPosts,
     required this.maxMediaSizeMB,
     required this.maxMediaPerPost,
+    required this.maxCustomFeeds,
+    required this.newsBoardAccess,
+    required this.postingRestricted,
+    required this.rewardLevelCap,
+    required this.rewardOptionsPerLevel,
   });
 
   factory SubscriptionEntitlements.fromJson(Map<String, dynamic> json) {
@@ -79,6 +89,11 @@ class SubscriptionEntitlements {
       dailyPosts: json['dailyPosts'] as int,
       maxMediaSizeMB: json['maxMediaSizeMB'] as int,
       maxMediaPerPost: json['maxMediaPerPost'] as int,
+      maxCustomFeeds: json['maxCustomFeeds'] as int? ?? 1,
+      newsBoardAccess: json['newsBoardAccess'] as bool? ?? true,
+      postingRestricted: json['postingRestricted'] as bool? ?? false,
+      rewardLevelCap: json['rewardLevelCap'] as int? ?? 3,
+      rewardOptionsPerLevel: json['rewardOptionsPerLevel'] as int?,
     );
   }
 }

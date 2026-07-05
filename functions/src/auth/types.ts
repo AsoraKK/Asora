@@ -69,6 +69,7 @@ export interface TokenPayload {
   sub: string;
   email?: string;
   role?: string;
+  roles?: string[];
   tier?: string;
   reputation?: number;
   iss?: string;
@@ -77,6 +78,7 @@ export interface TokenPayload {
   iat?: number;  // Added by JWT signer
   jti?: string;  // Added by JWT signer
   nonce?: string;
+  type?: 'access' | 'refresh';
   [key: string]: unknown;  // Allow additional claims
 }
 

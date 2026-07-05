@@ -31,7 +31,9 @@ STORAGE_ID=$(az storage account show -n "$SA" -g "$RG" --query id -o tsv)
 # Required roles for DSR operations
 ROLES=(
   "Storage Blob Data Contributor"    # Read/write/delete blobs, generate SAS
-  "Storage Queue Data Contributor"   # Read/write/delete queue messages
+  "Storage Queue Data Contributor"   # Send/manage queue messages
+  "Storage Queue Data Reader"        # Read queue metadata/messages
+  "Storage Queue Data Message Processor" # Receive/process/delete queue messages
   "Storage Account Contributor"      # Generate user delegation keys
 )
 

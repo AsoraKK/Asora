@@ -104,11 +104,14 @@ jest.mock('@shared/clients/postgres', () => ({
 }));
 
 import { InvocationContext } from '@azure/functions';
+import { resetAuthConfigForTesting } from '@auth/config';
 import { tokenHandler } from '@auth/service/tokenService';
 import { httpReqMock } from '../helpers/http';
 
 const logFn = jest.fn();
 const ctx: Partial<InvocationContext> = { invocationId: 'test-rotation', log: logFn, error: logFn, warn: logFn };
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const OTHER_USER_ID = '01944c1d-5672-7001-8000-0c91f95a72a1';
 
 describe('Refresh Token Rotation', () => {
   const JWT_SECRET = 'test-secret-key-for-rotation-tests';
@@ -116,12 +119,14 @@ describe('Refresh Token Rotation', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = JWT_SECRET;
     process.env.JWT_ISSUER = 'asora-auth';
+    delete process.env.JWT_AUDIENCE;
   });
 
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
     refreshTokenStore.clear();
+    resetAuthConfigForTesting();
     logFn.mockClear();
   });
 
@@ -141,11 +146,11 @@ describe('Refresh Token Rotation', () => {
         codeChallenge,
         codeChallengeMethod: 'S256',
         nonce: 'nonce-store',
-        userId: 'u-store',
+        userId: USER_ID,
       }];
 
       dbStub.user = {
-        id: 'u-store',
+        id: USER_ID,
         email: 'store@test.com',
         role: 'user',
         tier: 'free',
@@ -176,7 +181,7 @@ describe('Refresh Token Rotation', () => {
 
       // Verify it was stored
       expect(refreshTokenStore.has(decoded.jti)).toBe(true);
-      expect(refreshTokenStore.get(decoded.jti)?.userId).toBe('u-store');
+      expect(refreshTokenStore.get(decoded.jti)?.userId).toBe(USER_ID);
     });
   });
 
@@ -184,7 +189,7 @@ describe('Refresh Token Rotation', () => {
     it('issues new refresh token and revokes old on use', async () => {
       // Set up user
       dbStub.user = {
-        id: 'u-rotate',
+        id: USER_ID,
         email: 'rotate@test.com',
         role: 'user',
         tier: 'free',
@@ -195,14 +200,14 @@ describe('Refresh Token Rotation', () => {
       // Create initial refresh token
       const oldJti = crypto.randomUUID();
       const oldRefreshToken = await signHs256Jwt(
-        { sub: 'u-rotate', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d', jti: oldJti }
       );
 
       // Store it in our mock
       refreshTokenStore.set(oldJti, {
-        userId: 'u-rotate',
+        userId: USER_ID,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
       });
@@ -235,7 +240,7 @@ describe('Refresh Token Rotation', () => {
 
     it('rejects reuse of old (rotated) refresh token', async () => {
       dbStub.user = {
-        id: 'u-reuse',
+        id: USER_ID,
         email: 'reuse@test.com',
         role: 'user',
         tier: 'free',
@@ -246,7 +251,7 @@ describe('Refresh Token Rotation', () => {
       // Create a token that is NOT in the store (simulating rotation already happened)
       const oldJti = crypto.randomUUID();
       const oldRefreshToken = await signHs256Jwt(
-        { sub: 'u-reuse', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d', jti: oldJti }
       );
@@ -268,7 +273,7 @@ describe('Refresh Token Rotation', () => {
 
     it('returns new refresh_token in response (changed from old behavior)', async () => {
       dbStub.user = {
-        id: 'u-newrt',
+        id: USER_ID,
         email: 'newrt@test.com',
         role: 'user',
         tier: 'free',
@@ -278,13 +283,13 @@ describe('Refresh Token Rotation', () => {
 
       const jti = crypto.randomUUID();
       const refreshToken = await signHs256Jwt(
-        { sub: 'u-newrt', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d', jti }
       );
 
       refreshTokenStore.set(jti, {
-        userId: 'u-newrt',
+        userId: USER_ID,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
       });
@@ -311,7 +316,7 @@ describe('Refresh Token Rotation', () => {
   describe('Edge cases', () => {
     it('rejects refresh token missing jti claim', async () => {
       dbStub.user = {
-        id: 'u-nojti',
+        id: USER_ID,
         email: 'nojti@test.com',
         role: 'user',
         tier: 'free',
@@ -321,7 +326,7 @@ describe('Refresh Token Rotation', () => {
 
       // Create token WITHOUT jti
       const tokenWithoutJti = await signHs256Jwt(
-        { sub: 'u-nojti', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d' } // No jti option
       );
@@ -341,7 +346,7 @@ describe('Refresh Token Rotation', () => {
 
     it('rejects token with mismatched user id', async () => {
       dbStub.user = {
-        id: 'u-different',
+        id: USER_ID,
         email: 'different@test.com',
         role: 'user',
         tier: 'free',
@@ -351,14 +356,14 @@ describe('Refresh Token Rotation', () => {
 
       const jti = crypto.randomUUID();
       const refreshToken = await signHs256Jwt(
-        { sub: 'u-different', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d', jti }
       );
 
       // Store with DIFFERENT user
       refreshTokenStore.set(jti, {
-        userId: 'u-other-user', // Mismatch!
+        userId: OTHER_USER_ID,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         createdAt: new Date(),
       });
@@ -378,7 +383,7 @@ describe('Refresh Token Rotation', () => {
 
     it('rejects expired refresh token in store', async () => {
       dbStub.user = {
-        id: 'u-expired',
+        id: USER_ID,
         email: 'expired@test.com',
         role: 'user',
         tier: 'free',
@@ -388,14 +393,14 @@ describe('Refresh Token Rotation', () => {
 
       const jti = crypto.randomUUID();
       const refreshToken = await signHs256Jwt(
-        { sub: 'u-expired', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         JWT_SECRET,
         { expiresIn: '7d', jti }
       );
 
       // Store with expired date
       refreshTokenStore.set(jti, {
-        userId: 'u-expired',
+        userId: USER_ID,
         expiresAt: new Date(Date.now() - 1000), // Already expired
         createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
       });
@@ -416,7 +421,7 @@ describe('Refresh Token Rotation', () => {
     it('rejects invalid JWT signature', async () => {
       const jti = crypto.randomUUID();
       const refreshToken = await signHs256Jwt(
-        { sub: 'u-badsig', iss: 'asora-auth', type: 'refresh' },
+        { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
         'wrong-secret-key',
         { expiresIn: '7d', jti }
       );

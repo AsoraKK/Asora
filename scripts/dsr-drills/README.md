@@ -52,6 +52,26 @@ Tests MI permissions after storage role rotation.
 - DSR operations work post-rotation
 - Health endpoint remains healthy
 
+## Live Alpha Queue Drill
+
+Records pass/fail evidence for the queue trigger without printing tokens or raw user data.
+
+```bash
+export DSR_DRILL_BASE_URL="https://asora-function-dev.azurewebsites.net"
+export DSR_DRILL_BEARER_TOKEN="<privacy_admin_jwt>"
+export DSR_DRILL_QUEUE_ACCOUNT="stasoradsrdev"
+export DSR_DRILL_QUEUE_NAME="dsr-requests"
+export DSR_DRILL_REPORT_PATH="docs/evidence/alpha-readiness/dsr-live-drill-report.json"
+node scripts/dsr-drills/live-dsr-queue-drill.mjs
+```
+
+**Expected outcome:**
+- Export and delete enqueue return HTTP 2xx
+- Queue visibility is checked by count only when Azure queue RBAC allows it
+- Poll evidence shows each request leaves `queued`
+- Attempt changes from `0`
+- The script exits non-zero if a request stays `queued` with `attempt=0`
+
 ## Results
 
 Drill results are saved to `results/` directory as JSON files for audit trail.
@@ -70,6 +90,8 @@ Drill results are saved to `results/` directory as JSON files for audit trail.
 - Check Function app logs for worker errors
 - Verify storage queue is processing
 - Confirm MI has `Storage Blob Data Contributor` role
+- Confirm producer and trigger resolve the same queue account/name
+- Rerun `live-dsr-queue-drill.mjs` after a controlled Function App restart/redeploy
 
 **Legal hold not blocking:**
 - Verify hold is active in `legal_holds` container

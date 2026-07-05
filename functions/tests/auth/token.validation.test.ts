@@ -91,21 +91,29 @@ jest.mock('@shared/clients/postgres', () => ({
 import { InvocationContext } from '@azure/functions';
 
 import { tokenHandler } from '@auth/service/tokenService';
+import { resetAuthConfigForTesting } from '@auth/config';
 import { httpReqMock } from '../helpers/http';
 
 const logFn = jest.fn();
 const ctx: Partial<InvocationContext> = { invocationId: 'test', log: logFn, error: logFn };
+const USER_ID = '01944c1d-5672-7000-8000-0c91f95a72a1';
+const INACTIVE_USER_ID = '01944c1d-5672-7001-8000-0c91f95a72a1';
+const MISSING_USER_ID = '01944c1d-5672-7002-8000-0c91f95a72a1';
+const SECOND_USER_ID = '01944c1d-5672-7003-8000-0c91f95a72a3';
+const THIRD_USER_ID = '01944c1d-5672-7003-8000-0c91f95a72a4';
 
 describe('auth/token validation and method handling', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'test-secret-key-for-token-validation';
     process.env.JWT_ISSUER = 'asora-auth';
+    delete process.env.JWT_AUDIENCE;
   });
 
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
     refreshTokenStore.clear();
+    resetAuthConfigForTesting();
     jest.restoreAllMocks();
     logFn.mockClear();
   });
@@ -200,7 +208,7 @@ describe('auth/token validation and method handling', () => {
         redirectUri: 'http://cb',
         codeChallenge,
         nonce: 'n4',
-        userId: 'u4',
+        userId: MISSING_USER_ID,
       },
     ];
     dbStub.user = null;
@@ -326,11 +334,11 @@ describe('auth/token validation and method handling', () => {
         codeChallenge,
         codeChallengeMethod: 'S256',
         nonce: 'n',
-        userId: 'u1',
+        userId: USER_ID,
       },
     ];
     dbStub.user = {
-      id: 'u1',
+      id: USER_ID,
       email: 'u@example.com',
       role: 'user',
       tier: 'free',
@@ -372,8 +380,8 @@ describe('auth/token validation and method handling', () => {
     expect(refreshHeader.alg).toBe('HS256');
     const decoded = await verifyHs256Jwt(payload.data.access_token, process.env.JWT_SECRET!);
     const refreshDecoded = await verifyHs256Jwt(payload.data.refresh_token, process.env.JWT_SECRET!);
-    expect(decoded.sub).toBe('u1');
-    expect(refreshDecoded.sub).toBe('u1');
+    expect(decoded.sub).toBe(USER_ID);
+    expect(refreshDecoded.sub).toBe(USER_ID);
     expect(refreshDecoded.type).toBe('refresh');
     expect(refreshDecoded.jti).toBeDefined();
   });
@@ -396,11 +404,11 @@ describe('auth/token validation and method handling', () => {
         codeChallenge,
         codeChallengeMethod: 'S256',
         nonce: 'n2',
-        userId: 'u2',
+        userId: SECOND_USER_ID,
       },
     ];
     dbStub.user = {
-      id: 'u2',
+      id: SECOND_USER_ID,
       email: 'u2@example.com',
       role: 'user',
       tier: 'free',
@@ -420,6 +428,50 @@ describe('auth/token validation and method handling', () => {
     expect(res.status).toBe(200);
   });
 
+  it('authorization_code: rejects provider subjects as token subjects', async () => {
+    const code_verifier = 'provider-subject-verifier';
+    const sha = crypto.createHash('sha256').update(code_verifier).digest();
+    const codeChallenge = sha.toString('base64url').replace(/=+$/g, '');
+    const providerSubject = 'google-oauth2|1234567890';
+
+    dbStub.sessions = [
+      {
+        id: 's-provider',
+        partitionKey: 'pk',
+        authorizationCode: 'abc-provider',
+        clientId: 'app',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        redirectUri: 'http://cb',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        nonce: 'n-provider',
+        userId: providerSubject,
+      },
+    ];
+    dbStub.user = {
+      id: providerSubject,
+      email: 'provider@test.com',
+      role: 'user',
+      tier: 'free',
+      reputationScore: 1,
+      isActive: true,
+    };
+
+    const req = httpReqMock({
+      method: 'POST',
+      body: {
+        client_id: 'app',
+        grant_type: 'authorization_code',
+        code: 'abc-provider',
+        redirect_uri: 'http://cb',
+        code_verifier,
+      },
+    });
+
+    const res = await tokenHandler(req as any, ctx as InvocationContext);
+    expect(res.status).toBe(500);
+  });
+
   it('authorization_code: inactive user returns 403 invite_required', async () => {
     const verifier = 'needs-invite';
     const sha = crypto.createHash('sha256').update(verifier).digest();
@@ -435,11 +487,11 @@ describe('auth/token validation and method handling', () => {
         codeChallenge,
         codeChallengeMethod: 'S256',
         nonce: 'n3',
-        userId: 'u3',
+        userId: THIRD_USER_ID,
       },
     ];
     dbStub.user = {
-      id: 'u3',
+      id: THIRD_USER_ID,
       email: 'u3@example.com',
       role: 'user',
       tier: 'free',
@@ -482,7 +534,7 @@ describe('auth/token validation and method handling', () => {
 
   it('refresh_token: success flow issues new access token', async () => {
     dbStub.user = {
-      id: 'u1',
+      id: USER_ID,
       email: 'u1@example.com',
       role: 'user',
       tier: 'free',
@@ -492,12 +544,12 @@ describe('auth/token validation and method handling', () => {
     // Create refresh token WITH jti and pre-populate store
     const jti = crypto.randomUUID();
     refreshTokenStore.set(jti, {
-      userId: 'u1',
+      userId: USER_ID,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
     });
     const refresh = await signHs256Jwt(
-      { sub: 'u1', iss: 'asora-auth', type: 'refresh' },
+      { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d', jti }
     );
@@ -513,9 +565,41 @@ describe('auth/token validation and method handling', () => {
     expect(body.data).toHaveProperty('refresh_token'); // Now returns new refresh token
   });
 
+  it('refresh_token: rejects provider subjects as token subjects', async () => {
+    const providerSubject = 'google-oauth2|1234567890';
+    dbStub.user = {
+      id: providerSubject,
+      email: 'provider-refresh@test.com',
+      role: 'user',
+      tier: 'free',
+      reputationScore: 1,
+      isActive: true,
+    };
+
+    const jti = crypto.randomUUID();
+    refreshTokenStore.set(jti, {
+      userId: USER_ID,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    });
+    const refresh = await signHs256Jwt(
+      { sub: USER_ID, iss: 'asora-auth', type: 'refresh' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d', jti }
+    );
+
+    const req = httpReqMock({
+      method: 'POST',
+      body: { client_id: 'app', grant_type: 'refresh_token', refresh_token: refresh },
+    });
+
+    const res = await tokenHandler(req as any, ctx as InvocationContext);
+    expect(res.status).toBe(500);
+  });
+
   it('refresh_token: user not found', async () => {
     const refresh = await signHs256Jwt(
-      { sub: 'missing', iss: 'asora-auth', type: 'refresh' },
+      { sub: MISSING_USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -530,7 +614,7 @@ describe('auth/token validation and method handling', () => {
 
   it('refresh_token: inactive user', async () => {
     dbStub.user = {
-      id: 'u9',
+      id: INACTIVE_USER_ID,
       email: 'u9@example.com',
       role: 'user',
       tier: 'free',
@@ -538,7 +622,7 @@ describe('auth/token validation and method handling', () => {
       isActive: false,
     };
     const refresh = await signHs256Jwt(
-      { sub: 'u9', iss: 'asora-auth', type: 'refresh' },
+      { sub: INACTIVE_USER_ID, iss: 'asora-auth', type: 'refresh' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -553,7 +637,7 @@ describe('auth/token validation and method handling', () => {
   it('refresh_token: invalid token type (access)', async () => {
     // create a signed token with type access so verify succeeds but type check fails
     const tok = await signHs256Jwt(
-      { sub: 'u1', iss: 'asora-auth', type: 'access' },
+      { sub: USER_ID, iss: 'asora-auth', type: 'access' },
       process.env.JWT_SECRET!,
       { expiresIn: '5m' }
     );

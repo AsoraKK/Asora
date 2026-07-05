@@ -12,8 +12,10 @@ import { createErrorResponse } from '@shared/utils/http';
 import { validateText } from '@shared/utils/validate';
 import { getAzureLogger } from '@shared/utils/logger';
 import type { AuthorizeRequest } from '@auth/types';
+import { isInternalUserId } from '@auth/verifyJwt';
 import { auditForgedHeader, auditTestUserBlocked } from './authAuditService';
 import { validateAndCrossCheckPrincipal } from './easyAuthValidator';
+import { usersService } from './usersService';
 import * as crypto from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
@@ -84,7 +86,7 @@ export async function authorizeHandler(
       redirectUri: authRequest.redirect_uri,
     });
 
-    const userId = resolveAuthenticatedUserId(req, authRequest);
+    const userId = await resolveAuthenticatedUserId(req, authRequest);
     if (!userId) {
       return createAuthError(
         authRequest.redirect_uri,
@@ -209,16 +211,49 @@ function parseAuthorizeRequest(params: any): AuthorizeRequest {
   };
 }
 
-function resolveAuthenticatedUserId(req: HttpRequest, request: AuthorizeRequest): string | null {
+async function resolveProviderLinkedUserId(
+  provider: string | undefined,
+  providerSub: string | undefined
+): Promise<string | null> {
+  if (!provider || !providerSub) {
+    return null;
+  }
+
+  try {
+    const link = await usersService.getProviderLink(provider, providerSub);
+    if (!link || !isInternalUserId(link.user_id)) {
+      return null;
+    }
+
+    const user = await usersService.getUserById(link.user_id);
+    if (!user || user.id !== link.user_id) {
+      return null;
+    }
+
+    return link.user_id;
+  } catch (error) {
+    logger.warn('auth.resolve.provider_lookup_failed', {
+      provider,
+      subjectPrefix: providerSub.slice(0, 8),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+async function resolveAuthenticatedUserId(
+  req: HttpRequest,
+  request: AuthorizeRequest
+): Promise<string | null> {
   // ── Upstream platform identity (EasyAuth / gateway) ────────────────
   const env = process.env.NODE_ENV || 'production';
   const isProduction = env === 'production' || env === 'staging';
+  const companionHeader = req.headers.get('x-ms-client-principal')?.trim() || null;
 
   const upstreamPrincipalId = req.headers.get('x-ms-client-principal-id')?.trim();
   if (upstreamPrincipalId) {
     // In production, only trust this header when EasyAuth injects it.
     // EasyAuth always sets x-ms-client-principal alongside the ID header.
-    const companionHeader = req.headers.get('x-ms-client-principal');
     if (isProduction && !companionHeader) {
       logger.warn('auth.resolve.forged_header_suspected', {
         header: 'x-ms-client-principal-id',
@@ -236,23 +271,36 @@ function resolveAuthenticatedUserId(req: HttpRequest, request: AuthorizeRequest)
         });
         // Fall through — malformed or inconsistent principal
       } else {
+        const linkedUserId = await resolveProviderLinkedUserId(
+          validation.provider,
+          validation.subjectId
+        );
+        if (linkedUserId) {
+          return linkedUserId;
+        }
+
+        logger.warn('auth.resolve.unlinked_provider_subject', {
+          provider: validation.provider,
+          subjectPrefix: validation.subjectId?.slice(0, 8),
+        });
+      }
+    } else if (!isProduction && isInternalUserId(upstreamPrincipalId)) {
+      if (await verifyUserExists(upstreamPrincipalId)) {
         return upstreamPrincipalId;
       }
-    } else {
-      return upstreamPrincipalId;
     }
   }
 
   const forwardedUserId = req.headers.get('x-authenticated-user-id')?.trim();
   if (forwardedUserId) {
-    if (isProduction && !req.headers.get('x-ms-client-principal')) {
+    if (isProduction && !companionHeader) {
       logger.warn('auth.resolve.forged_header_suspected', {
         header: 'x-authenticated-user-id',
         reason: 'x-ms-client-principal missing in production environment',
       });
       auditForgedHeader('x-authenticated-user-id').catch(() => {});
       // Fall through — do not trust the header without EasyAuth context
-    } else {
+    } else if (isInternalUserId(forwardedUserId) && (await verifyUserExists(forwardedUserId))) {
       return forwardedUserId;
     }
   }
@@ -270,8 +318,10 @@ function resolveAuthenticatedUserId(req: HttpRequest, request: AuthorizeRequest)
   const allowTestUserId =
     process.env.AUTH_ALLOW_TEST_USER_ID === 'true' || process.env.NODE_ENV === 'test';
   const requestedUserId = request.user_id?.trim();
-  if (allowTestUserId && requestedUserId) {
-    return requestedUserId;
+  if (allowTestUserId && requestedUserId && isInternalUserId(requestedUserId)) {
+    if (await verifyUserExists(requestedUserId)) {
+      return requestedUserId;
+    }
   }
 
   return null;
@@ -324,9 +374,13 @@ function validateAuthorizeRequest(request: AuthorizeRequest): string | null {
 }
 
 async function verifyUserExists(userId: string): Promise<boolean> {
+  if (!isInternalUserId(userId)) {
+    return false;
+  }
+
   try {
-  const { users } = ensureContainers();
-  const userDoc = await users.item(userId, userId).read();
+    const { users } = ensureContainers();
+    const userDoc = await users.item(userId, userId).read();
     return !!userDoc.resource && userDoc.resource.isActive !== false;
   } catch (error) {
     logger.warn('Error verifying user existence', { userId, error });

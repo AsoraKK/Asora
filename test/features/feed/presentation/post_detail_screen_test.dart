@@ -182,6 +182,41 @@ void main() {
       expect(find.text('Post body content'), findsOneWidget);
     });
 
+    testWidgets('renders single-image media', (tester) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'post-appeal',
+          authorId: 'author-1',
+          authorUsername: 'testuser',
+          text: 'Post with appeal',
+          createdAt: DateTime(2024),
+          likeCount: 0,
+          dislikeCount: 0,
+          commentCount: 3,
+          mediaUrls: const ['https://example.com/one.png'],
+          trustStatus: 'clean',
+          timeline: const domain.PostTrustTimeline(),
+          isNews: false,
+          userLiked: false,
+          userDisliked: false,
+          hasAppeal: true,
+          proofSignalsProvided: false,
+          verifiedContextBadgeEligible: false,
+          featuredEligible: false,
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Image), findsOneWidget);
+    });
+
     testWidgets('shows RefreshIndicator', (tester) async {
       when(
         () => repo.getPost(
@@ -208,6 +243,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('testuser'), findsOneWidget);
+    });
+
+    testWidgets('renders horizontal media strip for multiple URLs', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => domain.Post(
+          id: 'post-gallery',
+          authorId: 'author-1',
+          authorUsername: 'testuser',
+          text: 'Gallery',
+          createdAt: DateTime(2024),
+          likeCount: 0,
+          dislikeCount: 0,
+          commentCount: 0,
+          mediaUrls: const [
+            'https://example.com/a.png',
+            'https://example.com/b.png',
+          ],
+          trustStatus: 'clean',
+          timeline: const domain.PostTrustTimeline(),
+          isNews: false,
+          userLiked: false,
+          userDisliked: false,
+          hasAppeal: false,
+          proofSignalsProvided: false,
+          verifiedContextBadgeEligible: false,
+          featuredEligible: false,
+        ),
+      );
+
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ListView), findsWidgets);
+      expect(find.byType(Image), findsNWidgets(2));
     });
   });
 }

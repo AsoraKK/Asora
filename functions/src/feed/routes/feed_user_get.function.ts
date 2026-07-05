@@ -10,12 +10,20 @@
 
 import { app } from '@azure/functions';
 import { httpHandler } from '@shared/http/handler';
+import { handleCorsAndMethod } from '@shared/utils/http';
+import { withRateLimit } from '@http/withRateLimit';
+import { getPolicyForRoute } from '@rate-limit/policies';
 import type { CursorPaginatedPostView } from '@shared/types/openapi';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
 
 export const feed_user_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
+  const cors = handleCorsAndMethod(ctx.request.method ?? 'GET', ['GET']);
+  if (cors.shouldReturn && cors.response) {
+    return cors.response;
+  }
+
   const userId = ctx.params.userId;
   const cursor = ctx.query.cursor;
   const limit = parseInt(ctx.query.limit || '25', 10);
@@ -77,10 +85,12 @@ export const feed_user_get = httpHandler<void, CursorPaginatedPostView>(async (c
   }
 });
 
+const rateLimitedFeedUser = withRateLimit(feed_user_get, (req) => getPolicyForRoute(req));
+
 // Register HTTP trigger
 app.http('feed_user_get', {
-  methods: ['GET'],
+  methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'feed/user/{userId}',
-  handler: feed_user_get,
+  handler: rateLimitedFeedUser,
 });

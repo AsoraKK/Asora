@@ -91,7 +91,7 @@ void main() {
     expect(find.text('@ada'), findsOneWidget);
     expect(find.text('120 points'), findsOneWidget);
     expect(find.text('Founding member'), findsOneWidget);
-    expect(find.text('Moderation hub'), findsOneWidget);
+    expect(find.text('Moderation hub'), findsNothing);
     expect(find.text('Settings'), findsOneWidget);
   });
 

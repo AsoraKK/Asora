@@ -522,7 +522,7 @@ enum FeedType { notable, newest, local, following, newCreators }
 
 /// Content authorship labels for AI transparency display.
 /// Labels match the Lythaus public transparency taxonomy:
-/// Human-authored, AI-assisted, AI-generated, Under review.
+/// Human-authored, AI-assisted, Under review, and Blocked after review for appeal/moderation history.
 enum ContentAuthorship {
   humanAuthored,
   aiAssisted,
@@ -532,7 +532,7 @@ enum ContentAuthorship {
   String get label => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
     ContentAuthorship.aiAssisted => 'AI-assisted',
-    ContentAuthorship.aiGenerated => 'AI-generated',
+    ContentAuthorship.aiGenerated => 'Blocked after review',
     ContentAuthorship.underReview => 'Under review',
   };
 
@@ -554,7 +554,7 @@ extension ContentAuthorshipExtension on ContentAuthorship {
   String get displayLabel => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
     ContentAuthorship.aiAssisted => 'AI-assisted',
-    ContentAuthorship.aiGenerated => 'AI-generated',
+    ContentAuthorship.aiGenerated => 'Blocked after review',
     ContentAuthorship.underReview => 'Under review',
   };
 }

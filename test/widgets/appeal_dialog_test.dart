@@ -1,9 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/moderation/application/moderation_providers.dart';
 import 'package:asora/features/moderation/domain/appeal.dart';
 import 'package:asora/features/moderation/domain/moderation_repository.dart';
 import 'package:asora/widgets/appeal_dialog.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,22 +45,16 @@ void main() {
   testWidgets(
     'shows daily appeal limit message when the API rejects the request',
     (tester) async {
-      final now = DateTime.utc(2025, 1, 1, 10, 0, 0);
-      final resetAt = now.add(const Duration(hours: 2));
-      final requestOptions = RequestOptions(path: '/api/appealContent');
-      final response = Response(
-        requestOptions: requestOptions,
+      const error = ModerationException(
+        'You have reached your daily appeals limit. Please try again tomorrow.',
+        code: 'DAILY_APPEAL_LIMIT_EXCEEDED',
         statusCode: 429,
-        data: {
+        payload: {
           'code': 'DAILY_APPEAL_LIMIT_EXCEEDED',
           'tier': 'free',
           'limit': 1,
-          'resetAt': resetAt.toIso8601String(),
+          'resetAt': '2025-01-01T12:00:00.000Z',
         },
-      );
-      final error = DioException(
-        requestOptions: requestOptions,
-        response: response,
       );
 
       when(

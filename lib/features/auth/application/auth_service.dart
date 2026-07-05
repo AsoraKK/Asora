@@ -213,8 +213,8 @@ class AuthService {
     await Future.wait([
       safeRun(() => _secureStorage.delete(key: _jwtKey)),
       safeRun(() => _secureStorage.delete(key: _userKey)),
-      // Social provider sign-out is handled via the identity provider
-      // (B2C hosted sign-out). No direct google_sign_in SDK call is used.
+      // Social provider sign-out is handled via the OAuth2 end-session flow.
+      // No direct google_sign_in SDK call is used.
       safeRun(() => _oauth2Service.signOut()),
     ]);
 
@@ -242,20 +242,20 @@ class AuthService {
     }
   }
 
-  /// Sign in with Google via B2C/Entra External ID
+  /// Sign in with Google through the OAuth2 provider flow.
   ///
-  /// This method initiates OAuth2/OIDC flow through B2C, which federates to Google
-  /// as an identity provider. The user sees "Continue with Google" but the app
-  /// receives a B2C-issued token (not a Google-native token).
+  /// This method initiates an OAuth2/OIDC flow with Google as the identity
+  /// provider. The user sees "Continue with Google" and receives a token from
+  /// the Lythaus auth server.
   ///
-  /// Note: Google is configured as an identity provider in B2C/Entra, not called
-  /// directly via google_sign_in SDK. This maintains a single trust boundary.
+  /// Note: Google is not called directly via the google_sign_in SDK. This keeps
+  /// the trust boundary inside the auth server and token exchange flow.
   Future<User> signInWithGoogle() async {
     try {
       dev.log('Starting B2C sign-in (Google IdP)', name: 'auth');
 
-      // Use OAuth2/OIDC flow that goes through B2C
-      // B2C will handle Google authentication and return a B2C token
+      // Use the OAuth2/OIDC flow that routes through the auth server
+      // and returns a Lythaus-issued token.
       final user = await signInWithOAuth2(provider: OAuth2Provider.google);
 
       dev.log('B2C sign-in succeeded (Google IdP): ${user.id}', name: 'auth');

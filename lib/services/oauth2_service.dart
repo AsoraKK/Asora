@@ -8,14 +8,12 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:dio/dio.dart';
 import 'package:opentelemetry/api.dart';
 
-import 'package:asora/core/config/b2c_config_service.dart'
-    show B2CConfigService;
-
 /// Authentication configuration loaded from backend or environment
 @immutable
 class AuthConfig {
   final String tenant;
-  final String? tenantId; // Optional: prefer tenantId for CIAM URLs
+  final String?
+  tenantId; // Optional: prefer tenantId for identity-provider URLs
   final String clientId;
   final String policy;
   final String authorityHost;
@@ -63,11 +61,11 @@ class AuthConfig {
     if (googleIdpHint != null) 'googleIdpHint': googleIdpHint,
   };
 
-  /// Build endpoints. Prefer CIAM tenantId path when available; fallback to tenant name
+  /// Build endpoints. Prefer tenantId path when available; fallback to tenant name.
   String get _tenantPath =>
       (tenantId != null && tenantId!.isNotEmpty) ? tenantId! : tenant;
 
-  /// Policy-specific discovery URL (recommended for B2C/CIAM)
+  /// Policy-specific discovery URL.
   String get discoveryUrl =>
       'https://$authorityHost/$_tenantPath/v2.0/.well-known/openid-configuration?p=$policy';
 
@@ -96,48 +94,48 @@ class AuthConfig {
   factory AuthConfig.fromEnvironment() {
     return AuthConfig(
       tenant: const String.fromEnvironment(
-        'AD_B2C_TENANT',
+        'OAUTH2_TENANT',
         defaultValue: 'asoraauthlife.onmicrosoft.com',
       ),
       tenantId:
           const String.fromEnvironment(
-            'AD_B2C_TENANT_ID',
+            'OAUTH2_TENANT_ID',
             defaultValue: '',
           ).isEmpty
           ? null
-          : const String.fromEnvironment('AD_B2C_TENANT_ID'),
+          : const String.fromEnvironment('OAUTH2_TENANT_ID'),
       clientId: const String.fromEnvironment(
-        'AD_B2C_CLIENT_ID',
+        'OAUTH2_CLIENT_ID',
         defaultValue: 'c07bb257-aaf0-4179-be95-fce516f92e8c',
       ),
       policy: const String.fromEnvironment(
-        'AD_B2C_SIGNIN_POLICY',
+        'OAUTH2_SIGNIN_POLICY',
         defaultValue: 'B2C_1_signupsignin',
       ),
       authorityHost: const String.fromEnvironment(
-        'AD_B2C_AUTHORITY_HOST',
+        'OAUTH2_AUTHORITY_HOST',
         defaultValue: 'asoraauthlife.ciamlogin.com',
       ),
       scopes: const String.fromEnvironment(
-        'AD_B2C_SCOPES',
+        'OAUTH2_SCOPES',
         defaultValue: 'openid offline_access email profile',
       ).split(' '),
       redirectUris: const {
         'android': String.fromEnvironment(
-          'AD_B2C_REDIRECT_URI_ANDROID',
+          'OAUTH2_REDIRECT_URI_ANDROID',
           defaultValue: 'com.asora.app://oauth/callback',
         ),
         'ios': String.fromEnvironment(
-          'AD_B2C_REDIRECT_URI_IOS',
+          'OAUTH2_REDIRECT_URI_IOS',
           defaultValue: 'msalc07bb257-aaf0-4179-be95-fce516f92e8c://auth',
         ),
       },
       knownAuthorities: const String.fromEnvironment(
-        'AD_B2C_KNOWN_AUTHORITIES',
+        'OAUTH2_KNOWN_AUTHORITIES',
         defaultValue: 'asoraauthlife.ciamlogin.com',
       ).split(','),
       googleIdpHint: const String.fromEnvironment(
-        'AD_B2C_GOOGLE_IDP_HINT',
+        'OAUTH2_GOOGLE_IDP_HINT',
         defaultValue: 'Google',
       ),
     );
@@ -187,13 +185,11 @@ class AuthException implements Exception {
   String toString() => 'AuthException: $message (${error.name})';
 }
 
-/// OAuth2 service using MSAL for Azure AD B2C/CIAM with PKCE
+/// OAuth2 service using MSAL with PKCE.
 class OAuth2Service {
-  final Dio _dio;
   final FlutterSecureStorage _secureStorage;
-  final String? _configEndpoint;
   final Tracer _tracer;
-  final B2CConfigService? _b2cConfigService;
+  final FlutterAppAuth? _providedAppAuth;
 
   // Lazy-init: FlutterAppAuth is a native plugin that crashes on web if
   // instantiated eagerly.  On web the new OAuth2Service in
@@ -201,7 +197,7 @@ class OAuth2Service {
   FlutterAppAuth? _appAuthInstance;
   FlutterAppAuth get _appAuth {
     assert(!kIsWeb, 'Legacy OAuth2Service._appAuth must not be used on web');
-    return _appAuthInstance ??= const FlutterAppAuth();
+    return _providedAppAuth ?? (_appAuthInstance ??= const FlutterAppAuth());
   }
 
   AuthConfig? _config;
@@ -213,14 +209,11 @@ class OAuth2Service {
   OAuth2Service({
     required Dio dio,
     required FlutterSecureStorage secureStorage,
-    String? configEndpoint,
+    FlutterAppAuth? appAuth,
     Tracer? tracer,
-    B2CConfigService? b2cConfigService,
-  }) : _dio = dio,
-       _secureStorage = secureStorage,
-       _configEndpoint = configEndpoint,
-       _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service'),
-       _b2cConfigService = b2cConfigService;
+  }) : _secureStorage = secureStorage,
+       _providedAppAuth = appAuth,
+       _tracer = tracer ?? globalTracerProvider.getTracer('oauth2_service');
 
   /// Get current auth state stream
   Stream<AuthState> get authState => _authStateController.stream;
@@ -260,35 +253,10 @@ class OAuth2Service {
     }
   }
 
-  /// Load config: delegate to [B2CConfigService] when available, otherwise
-  /// fall back to a direct fetch → env-var chain.
-  Future<AuthConfig> _loadConfig() async {
-    // Prefer the injected service (fetch → cache → bundled).
-    if (_b2cConfigService != null) {
-      return _b2cConfigService.load();
-    }
+  /// Load config from compile-time environment values.
+  Future<AuthConfig> _loadConfig() async => AuthConfig.fromEnvironment();
 
-    // Legacy path: simple fetch with no caching.
-    final span = _tracer.startSpan('auth.config.fetch');
-    try {
-      if (_configEndpoint != null) {
-        final response = await _dio.get<Map<String, dynamic>>(_configEndpoint);
-        if (response.statusCode == 200) {
-          return AuthConfig.fromJson(response.data as Map<String, dynamic>);
-        }
-      }
-    } catch (e, stackTrace) {
-      span.recordException(e, stackTrace: stackTrace);
-      debugPrint('Failed to load config from server: $e, using fallback');
-    } finally {
-      span.end();
-    }
-
-    // Fallback to environment variables.
-    return AuthConfig.fromEnvironment();
-  }
-
-  /// Sign in with Email (standard B2C flow)
+  /// Sign in with Email (legacy B2C flow)
   Future<AuthResult> signInEmail() async {
     final span = _tracer.startSpan('auth.login.start');
 
@@ -303,7 +271,7 @@ class OAuth2Service {
         AuthorizationTokenRequest(
           _config!.clientId,
           _config!.redirectUri,
-          // Use policy-specific discovery for CIAM/B2C
+          // Use policy-specific discovery for the provider.
           discoveryUrl: _config!.discoveryUrl,
           scopes: _config!.scopes,
           // Always include policy
@@ -330,7 +298,7 @@ class OAuth2Service {
     }
   }
 
-  /// Sign in with Google (B2C flow with IdP hint)
+  /// Sign in with Google (legacy B2C flow with IdP hint)
   Future<AuthResult> signInGoogle() async {
     final span = _tracer.startSpan('auth.login.start');
 

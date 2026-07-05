@@ -82,10 +82,10 @@ Android/iOS flows are unaffected (guard-not-delete strategy per ADR-W02).
 |---|---|---|
 | `authorization` header present | **Bypass** — forwards to origin | `Cache-Control: private, no-store` |
 | Authenticated feed path (not in `ANON_CACHEABLE_FEED_PATHS`) | **Bypass** | `Cache-Control: private, no-store` |
-| Unauthenticated + `/api/feed/discover` or `/api/feed/news` | **Edge cache** (30s TTL, 60s SWR) | `public, s-maxage=30, stale-while-revalidate=60` |
+| Unauthenticated + `/api/feed/discover` | **Edge cache** (30s TTL, 60s SWR) | `public, s-maxage=30, stale-while-revalidate=60` |
 | Non-feed request | **Bypass** | `Vary: Authorization` |
 
-The worker checks `auth` (authorization header) early in bypass logic: `if (!isFeed || auth || !cachingEnabled || !isAnonCacheableFeedPath)`. Only two anonymous-only feed paths are cached. All other requests flow through to origin with `no-store`.
+The worker checks `auth` (authorization header) early in bypass logic: `if (!isFeed || auth || !cachingEnabled || !isAnonCacheableFeedPath)`. Only anonymous discover traffic is cached. All other requests flow through to origin with `no-store`.
 
 **Risk for web launch:** None. Web browsers sending `Authorization` headers for personalized feeds will always bypass caching, same as mobile. The `Vary: Authorization` header is set on all responses.
 
