@@ -2,6 +2,8 @@
 
 ## 2026-07-05 Update
 
+Status: not filed; root cause found internally.
+
 Do not file this support ticket for the current dev incident unless the failure recurs after the fixed configuration is confirmed live.
 
 Resolved causes:
@@ -14,6 +16,9 @@ Resolved proof:
 - `extensions.queues.messageEncoding=none`
 - `function:privacyDsrProcessor=1` always-ready retained
 - Plain JSON request `019f3291-a57e-7ff1-b352-f3c9f15405fb` moved to `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, and queue count `0`.
+- Cold-period regression request `019f3335-dfde-7772-824e-e8e6f6a05d85` moved to `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue.
+- Dev monitoring repaired: DSR alerts now target workspace-based component `appi-asora-function-dev-dsr`; post-cleanup monitor trace at `2026-07-05T18:10:00Z` showed queue depth `0`, poison absent, stuck queued `0`, failed `0`.
+- Live DSR alert KQLs for stuck queued, queue depth, failures, poison queue, and missing completion returned `0`.
 
 Use the historical packet below only if Azure support is needed for a recurrence that cannot be explained by app settings, deployment drift, queue encoding, or job-code failure.
 

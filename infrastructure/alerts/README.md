@@ -10,6 +10,11 @@ health dashboard for Azure Function Apps.
 | **Action Group** | 1 | Shared group — routes all alerts to email (+ optional webhook) |
 | **5xx Error Rate Alert** | 1 per target | Fires when error rate > 1 % over 5 min |
 | **Health Failure Alert** | 1 per target | Fires when `/api/health` returns non-2xx |
+| **DSR Stuck Queued Alert** | 1 per target | Fires when `privacy_requests` has queued DSR requests older than 5 min |
+| **DSR Queue Depth Alert** | 1 per target | Fires when DSR queue depth stays > 0 across two monitor samples |
+| **DSR Failure Alert** | 1 per target | Fires when DSR queue failures or persisted failed requests are detected |
+| **DSR Poison Queue Alert** | 1 per target | Fires when the DSR poison queue exists or has messages |
+| **DSR Missing Completion Alert** | 1 per target | Fires when an enqueue lacks `dsr.queue.completed` after 5 min |
 | **Portal Dashboard** | 1 | Combined health view for all targets |
 
 ## Default Targets
@@ -50,8 +55,25 @@ terraform apply \
 | Output | Description |
 |--------|-------------|
 | `action_group_id` | ID of the shared action group |
-| `alert_ids` | Map of target → {error_rate, health_fail} alert IDs |
+| `alert_ids` | Map of target → health, auth, and DSR alert IDs |
 | `dashboard_url` | Direct link to combined health dashboard |
+
+## DSR Alert Telemetry
+
+The DSR alerts depend on `privacyDsrQueueMonitor`, which emits a `dsr.queue.monitor`
+trace every 5 minutes with:
+
+- `approximateMessageCount`
+- `poisonQueueExists`
+- `poisonApproximateMessageCount`
+- `stuckQueuedCount`
+- `failedRequestCount`
+
+Queue completion alerts also use `dsr.export.enqueued`, `dsr.delete.enqueued`,
+and `dsr.queue.completed` App Insights traces from the DSR worker path.
+
+Dev DSR alerts target `appi-asora-function-dev-dsr`, a workspace-based component
+created after the legacy `asora-function-dev` component stopped ingesting telemetry.
 
 ## Adding a New Target
 

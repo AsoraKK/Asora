@@ -13,7 +13,7 @@ variable "alert_targets" {
   DESC
 
   type = map(object({
-    severity          = number         # Azure Monitor severity (1-4)
+    severity          = number           # Azure Monitor severity (1-4)
     app_insights_name = optional(string) # Override if AI name differs from FA name
   }))
 
@@ -23,8 +23,8 @@ variable "alert_targets" {
       app_insights_name = null # same as function app name
     }
     "asora-function-dev" = {
-      severity          = 3    # Dev — Informational
-      app_insights_name = null
+      severity          = 3 # Dev — Informational
+      app_insights_name = "appi-asora-function-dev-dsr"
     }
   }
 }

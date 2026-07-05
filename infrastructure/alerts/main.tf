@@ -305,6 +305,269 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "auth_failure_rate" {
     action_groups = [azurerm_monitor_action_group.health_alerts.id]
   }
 }
+
+# ──────────────────────────────────────────────────────────────
+# Alert: DSR requests stuck queued > 5 minutes (per target)
+# Uses privacyDsrQueueMonitor telemetry.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_stuck_queued" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-dsr-stuck-queued"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT10M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = max(each.value.severity - 1, 1)
+
+  criteria {
+    query = <<-QUERY
+      traces
+      | where timestamp > ago(10m)
+      | where operation_Name == "privacyDsrQueueMonitor"
+      | where message startswith "dsr.queue.monitor"
+      | extend stuckQueuedCount = toint(extract(@"stuckQueuedCount:\s*(\d+)", 1, message))
+      | summarize arg_max(timestamp, stuckQueuedCount)
+      | where stuckQueuedCount > 0
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when privacy_requests has queued DSR requests older than 5 minutes on ${each.key}"
+  display_name                     = "${each.key} - DSR Stuck Queued"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: DSR queue depth > 0 for more than 5 minutes (per target)
+# Uses privacyDsrQueueMonitor telemetry.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_queue_depth" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-dsr-queue-depth"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT10M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = max(each.value.severity - 1, 1)
+
+  criteria {
+    query = <<-QUERY
+      traces
+      | where timestamp > ago(10m)
+      | where operation_Name == "privacyDsrQueueMonitor"
+      | where message startswith "dsr.queue.monitor"
+      | extend approximateMessageCount = toint(extract(@"approximateMessageCount:\s*(\d+)", 1, message))
+      | summarize samples=count(), positiveSamples=countif(approximateMessageCount > 0)
+      | where samples >= 2 and positiveSamples >= 2
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when DSR queue depth is greater than 0 across two monitor samples on ${each.key}"
+  display_name                     = "${each.key} - DSR Queue Depth"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: DSR failures > 0 (per target)
+# Covers failed queue handler events and persisted failed DSR requests.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_failures" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-dsr-failures"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT10M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = max(each.value.severity - 1, 1)
+
+  criteria {
+    query = <<-QUERY
+      let failedHandlerEvents =
+        traces
+        | where timestamp > ago(10m)
+        | where message startswith "dsr.queue.failed"
+        | summarize failedHandlerCount = count();
+      let failedRequestSnapshots =
+        traces
+        | where timestamp > ago(10m)
+        | where operation_Name == "privacyDsrQueueMonitor"
+        | where message startswith "dsr.queue.monitor"
+        | extend failedRequestCount = toint(extract(@"failedRequestCount:\s*(\d+)", 1, message))
+        | summarize arg_max(timestamp, failedRequestCount);
+      failedHandlerEvents
+      | extend joinKey = 1
+      | join kind=fullouter (failedRequestSnapshots | extend joinKey = 1) on joinKey
+      | extend totalFailures = coalesce(failedHandlerCount, 0) + coalesce(failedRequestCount, 0)
+      | where totalFailures > 0
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when DSR queue failures or persisted failed DSR requests are detected on ${each.key}"
+  display_name                     = "${each.key} - DSR Failures"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: DSR poison queue exists or has messages (per target)
+# Uses privacyDsrQueueMonitor telemetry.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_poison_queue" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-dsr-poison-queue"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT10M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = 1
+
+  criteria {
+    query = <<-QUERY
+      traces
+      | where timestamp > ago(10m)
+      | where operation_Name == "privacyDsrQueueMonitor"
+      | where message startswith "dsr.queue.monitor"
+      | extend poisonQueueExists = tobool(extract(@"poisonQueueExists:\s*(true|false)", 1, message))
+      | extend poisonApproximateMessageCount = toint(extract(@"poisonApproximateMessageCount:\s*(\d+)", 1, message))
+      | summarize arg_max(timestamp, poisonQueueExists, poisonApproximateMessageCount)
+      | where poisonQueueExists == true or poisonApproximateMessageCount > 0
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "CRITICAL: DSR poison queue exists or contains messages on ${each.key}"
+  display_name                     = "${each.key} - DSR Poison Queue"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
+
+# ──────────────────────────────────────────────────────────────
+# Alert: DSR enqueue without completion telemetry (per target)
+# Detects queue work that was accepted but did not produce dsr.queue.completed.
+# ──────────────────────────────────────────────────────────────
+resource "azurerm_monitor_scheduled_query_rules_alert_v2" "dsr_missing_completion" {
+  for_each            = local.targets
+  name                = "alert-${each.key}-dsr-missing-completion"
+  resource_group_name = var.resource_group_name
+  location            = data.azurerm_application_insights.target[each.key].location
+
+  evaluation_frequency = "PT5M"
+  window_duration      = "PT10M"
+  scopes               = [data.azurerm_application_insights.target[each.key].id]
+  severity             = max(each.value.severity - 1, 1)
+
+  criteria {
+    query = <<-QUERY
+      let enqueued =
+        traces
+        | where timestamp > ago(10m)
+        | where message startswith "dsr.export.enqueued" or message startswith "dsr.delete.enqueued"
+        | extend requestId = tostring(extract(@"id:\s*'([^']+)'", 1, message))
+        | where isnotempty(requestId)
+        | where timestamp < ago(5m)
+        | project requestId, enqueueTimestamp = timestamp;
+      let completed =
+        traces
+        | where timestamp > ago(10m)
+        | where message startswith "dsr.queue.completed"
+        | extend requestId = tostring(extract(@"requestId:\s*'([^']+)'", 1, message))
+        | where isnotempty(requestId)
+        | project requestId;
+      enqueued
+      | join kind=leftanti completed on requestId
+      | summarize missingCompletionCount = count()
+      | where missingCompletionCount > 0
+    QUERY
+
+    time_aggregation_method = "Count"
+    threshold               = 0
+    operator                = "GreaterThan"
+
+    failing_periods {
+      minimum_failing_periods_to_trigger_alert = 1
+      number_of_evaluation_periods             = 1
+    }
+  }
+
+  auto_mitigation_enabled          = true
+  workspace_alerts_storage_enabled = false
+  description                      = "Triggers when a DSR enqueue has no dsr.queue.completed telemetry after 5 minutes on ${each.key}"
+  display_name                     = "${each.key} - DSR Missing Completion"
+  enabled                          = true
+  skip_query_validation            = false
+
+  action {
+    action_groups = [azurerm_monitor_action_group.health_alerts.id]
+  }
+}
 resource "azurerm_portal_dashboard" "health_dashboard" {
   name                = "dash-lythaus-health"
   resource_group_name = var.resource_group_name
@@ -332,7 +595,7 @@ resource "azurerm_portal_dashboard" "health_dashboard" {
                 }
               }
             }
-          }},
+          } },
           { for i, k in keys(local.targets) : tostring(i * 2 + 1) => {
             position = {
               x       = 6
@@ -356,7 +619,7 @@ resource "azurerm_portal_dashboard" "health_dashboard" {
                 title = "${k} Health Requests (5 min)"
               }
             }
-          }}
+          } }
         )
       }
     }
@@ -375,11 +638,16 @@ output "alert_ids" {
   description = "IDs of created alert rules, keyed by target"
   value = {
     for k in keys(local.targets) : k => {
-      error_rate     = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate[k].id
-      health_fail    = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure[k].id
-      auth_401_spike = azurerm_monitor_scheduled_query_rules_alert_v2.auth_401_spike[k].id
-      token_reuse    = azurerm_monitor_scheduled_query_rules_alert_v2.auth_token_reuse[k].id
-      auth_fail_rate = azurerm_monitor_scheduled_query_rules_alert_v2.auth_failure_rate[k].id
+      error_rate             = azurerm_monitor_scheduled_query_rules_alert_v2.error_rate[k].id
+      health_fail            = azurerm_monitor_scheduled_query_rules_alert_v2.health_failure[k].id
+      auth_401_spike         = azurerm_monitor_scheduled_query_rules_alert_v2.auth_401_spike[k].id
+      token_reuse            = azurerm_monitor_scheduled_query_rules_alert_v2.auth_token_reuse[k].id
+      auth_fail_rate         = azurerm_monitor_scheduled_query_rules_alert_v2.auth_failure_rate[k].id
+      dsr_stuck_queued       = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_stuck_queued[k].id
+      dsr_queue_depth        = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_queue_depth[k].id
+      dsr_failures           = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_failures[k].id
+      dsr_poison_queue       = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_poison_queue[k].id
+      dsr_missing_completion = azurerm_monitor_scheduled_query_rules_alert_v2.dsr_missing_completion[k].id
     }
   }
 }

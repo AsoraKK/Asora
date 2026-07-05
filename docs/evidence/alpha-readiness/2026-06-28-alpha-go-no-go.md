@@ -6,7 +6,7 @@ Branch: `main`
 
 ## Current Decision
 
-- Status: repo-local web/API validation is closed for the current prepared diff; live web/feed/cache smoke passed; DSR queue execution remains an alpha blocker.
+- Status: repo-local web/API validation is closed for the current prepared diff; live web/feed/cache smoke passed; DSR live queue path passed and the external alpha DSR blocker is resolved.
 - Alpha target: controlled invite/internal alpha, not public launch.
 - Primary runtime proof target: `lythaus-web` webapp plus Azure Functions API.
 - Secondary runtime proof target: internal Android install/build path.
@@ -23,8 +23,8 @@ Branch: `main`
 | Route protection proven | Repo-local passed | `npm run routes:guard`; `npm run test:route-guards` |
 | Mobile staff tools gated | Repo-local passed | Profile screen shows staff tools only to moderator/admin roles; Control Panel only to admin |
 | Moderation and AI flows proven | Repo-local passed | Full backend suite plus focused Flutter post/moderation tests passed |
-| DSR queue execution proven | Blocker | Authenticated export/delete enqueue succeeded in dev, but both requests remained `queued` with `attempt=0` for 18 polls; queue account/name settings match and obvious managed-identity queue RBAC is present; see `2026-06-28-dsr-live-drill.md` and `2026-06-29-dsr-root-cause-and-operator-actions.md` |
-| Privacy logging audit | Repo-local passed, live diagnostics weak | Full backend suite includes privacy/redaction tests; live App Insights returned no DSR rows because `host.json` excludes request/trace/exception telemetry |
+| DSR queue execution proven | Passed | DSR root cause was fixed internally: queue binding drift plus queue message encoding mismatch. Cold-period regression request `019f3335-dfde-7772-824e-e8e6f6a05d85` moved `queued` -> `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue; see `2026-07-05-dsr-cold-regression.json` and observability evidence |
+| Privacy logging audit | Passed for DSR alpha guard | Full backend suite includes privacy/redaction tests; dev DSR monitoring was moved to workspace-based App Insights component `appi-asora-function-dev-dsr` after the legacy component failed to ingest telemetry; `privacyDsrQueueMonitor` trace at `2026-07-05T18:10:00Z` showed queue depth `0`, poison queue absent, stuck queued `0`, failed `0` |
 | Webapp/feed/cache proof | Live smoke passed, perf target pending | Full beta browser smoke passed; edge anonymous discover returns public cache headers and authenticated discover bypasses with `private, no-store`; 200 ms feed p95 remains unproven |
 | Internal Android path | Partial proof passed | `flutter doctor -v` reports no issues and Android licenses accepted; `:app:processReleaseMainManifest` passed with a local non-secret Firebase placeholder; installable/internal build still needs real Firebase config and signing/distribution proof |
 | Alpha support/rollback plan | Pending | Invite cohort, support channel, rollback owner, known issues, and go/no-go approver recorded |
@@ -47,7 +47,9 @@ Branch: `main`
 - Marketing site build - passed after `npm --prefix apps/marketing-site ci`; npm audit reported 13 dependency findings in that app install.
 - `flutter doctor -v` - passed; Android SDK/toolchain clean and all Android licenses accepted.
 - Android release manifest processing - passed with a local non-secret Firebase placeholder; the placeholder was removed afterward. Real internal Android distribution remains blocked by absent `android/app/google-services.json`/Firebase secret injection and signing/distribution proof.
-- Azure dev DSR live drill - blocker reproduced: authenticated export/delete enqueue returned HTTP 200, but both requests stayed `queued` with `attempt=0` for 18 polls. The queue trigger is registered and the Function managed identity has queue/blob/storage roles on the DSR account, so the remaining blocker is queue-trigger execution, host/runtime diagnostics, or deployment/runtime state.
+- Azure dev DSR cold-period regression - passed: request `019f3335-dfde-7772-824e-e8e6f6a05d85` reached `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue. Historical pre-fix poison messages were canceled/deleted before the passing rerun.
+- DSR monitoring repair - passed: created `law-asora-dsr-dev-neu` + `appi-asora-function-dev-dsr`, repointed dev Function App telemetry, recreated live DSR alerts on the healthy component, and verified stuck/depth/failures/poison/missing-completion alert KQLs all returned `0`.
+- Historical queued cleanup - passed: canceled 6 June 21 pre-fix delete drill artifacts with `attempt=0`; post-cleanup monitor showed stuck queued `0`.
 - DSR diagnostic patch - repo-local only: enqueue now resolves the queue URI from `DSR_QUEUE_CONNECTION` when present, logs queue account/name diagnostics, and the worker logs sanitized receive/resolution/completion/failure markers. `scripts/dsr-drills/live-dsr-queue-drill.mjs` exits non-zero when export/delete remain `queued` with `attempt=0`.
 - Full beta browser smoke - passed with `node scripts/beta-smoke.mjs`; report written to `docs/evidence/alpha-readiness/2026-06-28-beta-smoke-report.json`. Non-blocking console noise observed: CSP report-only `upgrade-insecure-requests`, refused browser `User-Agent` override, and one expected unauthorized resource response.
 - Live edge cache/CORS probe - passed for the alpha boundary: `https://dev.asora.co.za/api/feed/discover?limit=1` returned `Cache-Control: public, s-maxage=30, stale-while-revalidate=60` for anonymous traffic and `Cache-Control: private, no-store` with `X-Cache: BYPASS` for authenticated traffic; CORS preflight from `https://lythaus-web.pages.dev` returned HTTP 204 with the expected origin.
@@ -62,6 +64,15 @@ Branch: `main`
 - Full signing-material checklist for public store release.
 - Representative k6 scale proof and 200 ms feed p95 attainment.
 - Feed performance follow-up: current feed-read p95 is above the 200 ms target. Handle in a separate performance task after DSR, likely involving materialized/precomputed feed candidates, anonymous cache validation, and batched reputation lookups.
+
+## Remaining Alpha Blockers After DSR
+
+- Final alpha go/no-go evidence packet
+- Feed p95/performance evidence
+- Android/Firebase/signing/distribution proof
+- Support/rollback owner and invite cohort
+- Final secret scan and evidence hygiene
+- Product-tier and rewards changes stay deferred until alpha readiness is complete
 
 ## Secret Handling
 

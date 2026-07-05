@@ -141,6 +141,36 @@ export async function hasLegalHold(scope: string, scopeId: string): Promise<bool
   return resources.length > 0;
 }
 
+export async function getDsrOperationalCounts(now: Date = new Date()): Promise<{
+  stuckQueuedCount: number;
+  failedRequestCount: number;
+}> {
+  const queuedBefore = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
+
+  const [stuckQueued, failedRequests] = await Promise.all([
+    requestsContainer.items
+      .query({
+        query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status = @status AND c.requestedAt <= @queuedBefore',
+        parameters: [
+          { name: '@status', value: 'queued' },
+          { name: '@queuedBefore', value: queuedBefore },
+        ],
+      })
+      .fetchAll(),
+    requestsContainer.items
+      .query({
+        query: 'SELECT VALUE COUNT(1) FROM c WHERE c.status = @status',
+        parameters: [{ name: '@status', value: 'failed' }],
+      })
+      .fetchAll(),
+  ]);
+
+  return {
+    stuckQueuedCount: Number(stuckQueued.resources?.[0] ?? 0),
+    failedRequestCount: Number(failedRequests.resources?.[0] ?? 0),
+  };
+}
+
 export async function listLegalHolds(scopeId: string): Promise<LegalHold[]> {
   const { resources } = await legalHoldContainer.items
     .query({
