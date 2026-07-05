@@ -1,80 +1,202 @@
-# Alpha Go/No-Go Evidence - 2026-06-28
+# Final Alpha Go/No-Go Evidence - 2026-07-05
 
-Scope: webapp/API first, internal Android second. Play Console, TestFlight, public store submission, and full store-signing evidence are beta blockers unless separately completed.
+Generated at: `2026-07-05T19:06:43Z`
 
-Branch: `main`
+Scope: controlled invite/internal alpha. Web/API is the primary alpha target. Internal Android is secondary and remains in scope only if Firebase config, signing, and distribution proof are completed. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.
 
-## Current Decision
+## Current Head
 
-- Status: repo-local web/API validation is closed for the current prepared diff; live web/feed/cache smoke passed; DSR live queue path passed and the external alpha DSR blocker is resolved.
-- Alpha target: controlled invite/internal alpha, not public launch.
-- Primary runtime proof target: `lythaus-web` webapp plus Azure Functions API.
-- Secondary runtime proof target: internal Android install/build path.
-- Do not commit, push, deploy, or mutate external consoles without explicit approval.
+- Branch: `infra/azure-retirement-hardening-node22-tls-kv-pg-ha`
+- Commit: `5a4fa42c741590792c345592844648822e132481`
+- Working tree before packet update: clean except regenerated `route-inventory.json` after `npm run routes:guard`
+- Product expansion status: product-tier, rewards, editorial, and feed-optimisation work not started in this packet
 
-## P0 Alpha Checklist
+## Go/No-Go Recommendation
 
-| Area | Status | Evidence / Command |
+Recommendation: **NO-GO for external alpha until the remaining P0 operational blockers are closed.**
+
+DSR is no longer a reason to block external alpha. The remaining hard blockers are launch discipline and operational readiness:
+
+- Support/rollback owner and invite cohort are not authoritatively assigned in current evidence
+- Android/Firebase/signing/distribution proof is missing if Android internal alpha remains in scope
+- Feed p95 remains above the 200 ms target and is a P1 performance blocker, not a DSR blocker
+- Final evidence/docs secret-pattern scan passed with no matches
+
+Safe next state: continue internal web/API validation only. Do not invite external alpha users until P0 ownership/cohort and, if applicable, Android distribution proof are closed.
+
+## CI Status
+
+| Scope | Status | Evidence |
 |---|---|---|
-| Working tree stabilized | Prepared, not committed | Current diff contains generated OpenAPI Dart client updates, alpha auth/profile test fixes, and deterministic generated-client trimming; final commit/push not performed |
-| Canonical OpenAPI aligned | Repo-local passed | `npm run openapi:lint`; `npm run openapi:bundle`; `npm run openapi:validate:examples`; `npm run openapi:test:contract` |
-| Product policy validated | Repo-local passed | Backend post route tests verify AI-generated blocks with `AI_CONTENT_BLOCKED`; Flutter/authorship tests verify public labels; no public numeric AI score surface added |
-| Alpha auth scope locked | Repo-local passed | Guest, Google, and Email enabled by default; Apple and World ID visible as beta-disabled unless build flags enable them |
-| Route protection proven | Repo-local passed | `npm run routes:guard`; `npm run test:route-guards` |
-| Mobile staff tools gated | Repo-local passed | Profile screen shows staff tools only to moderator/admin roles; Control Panel only to admin |
-| Moderation and AI flows proven | Repo-local passed | Full backend suite plus focused Flutter post/moderation tests passed |
-| DSR queue execution proven | Passed | DSR root cause was fixed internally: queue binding drift plus queue message encoding mismatch. Cold-period regression request `019f3335-dfde-7772-824e-e8e6f6a05d85` moved `queued` -> `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue; see `2026-07-05-dsr-cold-regression.json` and observability evidence |
-| Privacy logging audit | Passed for DSR alpha guard | Full backend suite includes privacy/redaction tests; dev DSR monitoring was moved to workspace-based App Insights component `appi-asora-function-dev-dsr` after the legacy component failed to ingest telemetry; `privacyDsrQueueMonitor` trace at `2026-07-05T18:10:00Z` showed queue depth `0`, poison queue absent, stuck queued `0`, failed `0` |
-| Webapp/feed/cache proof | Live smoke passed, perf target pending | Full beta browser smoke passed; edge anonymous discover returns public cache headers and authenticated discover bypasses with `private, no-store`; 200 ms feed p95 remains unproven |
-| Internal Android path | Partial proof passed | `flutter doctor -v` reports no issues and Android licenses accepted; `:app:processReleaseMainManifest` passed with a local non-secret Firebase placeholder; installable/internal build still needs real Firebase config and signing/distribution proof |
-| Alpha support/rollback plan | Pending | Invite cohort, support channel, rollback owner, known issues, and go/no-go approver recorded |
+| Current-head GitHub Actions | Partial green | `deploy-asora-function-dev` succeeded on `5a4fa42c` at `2026-07-05T18:20:27Z` |
+| Broader branch CI | Previously green | `CI`, `Flutter CI`, `OpenAPI`, `API Contract`, and `Mobile Security Check` succeeded on previous commit `3edbca2795f2105fabf7f60b8d38bce4bd215279` |
+| Local validation on current head | Passed | Full command matrix below passed locally on `5a4fa42c` plus this packet update |
 
-## Repo-Local Validation Run
+Current-head risk: only the deploy workflow ran automatically for `5a4fa42c`; broad CI coverage is local until a new full workflow run is available for the packet commit.
 
-- `git diff --check` - passed; Git reported line-ending warnings only.
-- `npm run openapi:lint` - passed.
-- `npm run openapi:bundle` - passed and updated `api/openapi/dist/openapi.json`.
-- `npm run openapi:validate:examples` - passed.
-- `npm run openapi:test:contract` - passed; live requests skipped because the configured staging domain was unreachable locally.
-- `npm run routes:guard` - passed and updated `route-inventory.json`.
-- `npm run test:route-guards` - passed.
-- `cd functions; npm run typecheck` - passed.
-- `cd functions; npm test` - passed: 196 suites, 2215 passed, 12 skipped.
-- `flutter analyze` - passed.
-- `flutter test` - passed: 3619 passed, 5 skipped. Non-fatal hit-test warnings remain in custom feed creation tests.
-- Focused Flutter auth/profile/feed/post/moderation/P1 tests - passed.
-- Flutter web release build with staging API defines - passed; emitted wasm dry-run warnings from `flutter_secure_storage_web`.
-- Marketing site build - passed after `npm --prefix apps/marketing-site ci`; npm audit reported 13 dependency findings in that app install.
-- `flutter doctor -v` - passed; Android SDK/toolchain clean and all Android licenses accepted.
-- Android release manifest processing - passed with a local non-secret Firebase placeholder; the placeholder was removed afterward. Real internal Android distribution remains blocked by absent `android/app/google-services.json`/Firebase secret injection and signing/distribution proof.
-- Azure dev DSR cold-period regression - passed: request `019f3335-dfde-7772-824e-e8e6f6a05d85` reached `awaiting_review` in 10 seconds with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue. Historical pre-fix poison messages were canceled/deleted before the passing rerun.
-- DSR monitoring repair - passed: created `law-asora-dsr-dev-neu` + `appi-asora-function-dev-dsr`, repointed dev Function App telemetry, recreated live DSR alerts on the healthy component, and verified stuck/depth/failures/poison/missing-completion alert KQLs all returned `0`.
-- Historical queued cleanup - passed: canceled 6 June 21 pre-fix delete drill artifacts with `attempt=0`; post-cleanup monitor showed stuck queued `0`.
-- DSR diagnostic patch - repo-local only: enqueue now resolves the queue URI from `DSR_QUEUE_CONNECTION` when present, logs queue account/name diagnostics, and the worker logs sanitized receive/resolution/completion/failure markers. `scripts/dsr-drills/live-dsr-queue-drill.mjs` exits non-zero when export/delete remain `queued` with `attempt=0`.
-- Full beta browser smoke - passed with `node scripts/beta-smoke.mjs`; report written to `docs/evidence/alpha-readiness/2026-06-28-beta-smoke-report.json`. Non-blocking console noise observed: CSP report-only `upgrade-insecure-requests`, refused browser `User-Agent` override, and one expected unauthorized resource response.
-- Live edge cache/CORS probe - passed for the alpha boundary: `https://dev.asora.co.za/api/feed/discover?limit=1` returned `Cache-Control: public, s-maxage=30, stale-while-revalidate=60` for anonymous traffic and `Cache-Control: private, no-store` with `X-Cache: BYPASS` for authenticated traffic; CORS preflight from `https://lythaus-web.pages.dev` returned HTTP 204 with the expected origin.
-- k6 smoke/feed - passed using a temporary local k6 binary. Health p95 was 262.75 ms with 0.00% error rate; feed-read p95 was 796.96 ms with 0.00% error rate. This proves live reachability but not the 200 ms feed p95 target.
-- Current-head GitHub Actions cannot turn green until the prepared diff is committed and pushed; no commit or push was performed.
+## Validation Matrix
 
-## Beta-Deferred Items
+| Command | Result | Notes |
+|---|---|---|
+| `git status --short --branch` | Passed | Branch confirmed; `route-inventory.json` regenerated by route guard |
+| `git diff --check` | Passed | No whitespace errors |
+| `npm --prefix functions run typecheck` | Passed | TypeScript check clean |
+| `npm --prefix functions test` | Passed | 199 suites passed; 2229 passed; 12 skipped |
+| `flutter analyze` | Passed | No issues found |
+| `flutter test` | Passed | 3619 passed; 5 skipped |
+| `npm run openapi:lint` | Passed | OpenAPI valid |
+| `npm run openapi:bundle` | Passed | Rebuilt `api/openapi/dist/openapi.json` |
+| `npm run openapi:validate:examples` | Passed | No example validation failures |
+| `npm run openapi:test:contract` | Passed with live-skip limitation | 2 suites passed; 26 passed; 12 skipped because configured staging domain was unreachable |
+| `npm run routes:guard` | Passed | 129 routes; 76 write routes; 0 missing auth/rate/audit/test guards |
+| `npm run test:route-guards` | Passed | 6 Node test subtests passed |
+| `terraform -chdir=infrastructure/alerts validate` | Passed | Alert configuration valid |
 
-- Play Console app record, Data Safety, content rating, graphics, internal testing release evidence.
-- App Store Connect/TestFlight setup and App Privacy evidence.
-- Public store screenshots and review notes.
-- Full signing-material checklist for public store release.
-- Representative k6 scale proof and 200 ms feed p95 attainment.
-- Feed performance follow-up: current feed-read p95 is above the 200 ms target. Handle in a separate performance task after DSR, likely involving materialized/precomputed feed candidates, anonymous cache validation, and batched reputation lookups.
+Known validation noise:
 
-## Remaining Alpha Blockers After DSR
+- Flutter custom-feed creation tests emitted non-fatal hit-test warnings
+- Flutter SPKI launch-gate checks were skipped unless `SPKI_GATE=true`
+- Functions contract tests skipped live requests because `asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net` was unreachable
 
-- Final alpha go/no-go evidence packet
-- Feed p95/performance evidence
-- Android/Firebase/signing/distribution proof
-- Support/rollback owner and invite cohort
-- Final secret scan and evidence hygiene
-- Product-tier and rewards changes stay deferred until alpha readiness is complete
+## DSR Status
 
-## Secret Handling
+Status: **PASSED - live queue path and cold regression validated.**
 
-- Do not print tokens, keys, full connection strings, private keys, JWT secrets, OAuth client secrets, database passwords, or API keys.
-- If a sensitive value is encountered, record only path, variable/key name, injection/commit status, and concern level.
+Evidence:
+
+- Cold regression request: `019f3335-dfde-7772-824e-e8e6f6a05d85`
+- Transition: `queued` -> `awaiting_review` in 10 seconds
+- Final request state: `attempt=1`, `exportBytes=1028`, export blob path set, no failure reason
+- Queue state: `dsr-requests` count returned to `0`
+- Poison queue: absent
+- Evidence file: [2026-07-05-dsr-cold-regression.json](./2026-07-05-dsr-cold-regression.json)
+
+Root causes resolved:
+
+- Queue binding drift: worker now uses `DSR_QUEUE_CONNECTION=DsrQueueStorage`
+- Queue decoding drift: `host.json` queue `messageEncoding=none` matches plain JSON SDK enqueue payloads
+
+Residual guardrail:
+
+- `function:privacyDsrProcessor=1` always-ready remains active during alpha
+- Do not remove the guard until a separate scale-from-zero DSR regression proves it safe
+
+## Monitoring And Alerts
+
+Status: **Active for DSR alpha guard.**
+
+Live DSR alerts are enabled on workspace-based App Insights component `appi-asora-function-dev-dsr`:
+
+- `alert-asora-function-dev-dsr-stuck-queued`
+- `alert-asora-function-dev-dsr-queue-depth`
+- `alert-asora-function-dev-dsr-failures`
+- `alert-asora-function-dev-dsr-poison-queue`
+- `alert-asora-function-dev-dsr-missing-completion`
+
+Latest monitor evidence:
+
+- `privacyDsrQueueMonitor` trace at `2026-07-05T18:10:00Z`
+- Queue depth: `0`
+- Poison queue exists: `false`
+- Stuck queued count: `0`
+- Failed request count: `0`
+- Live alert KQL checks returned `0` for stuck queued, queue depth, failures, poison, and missing completion
+
+Monitoring repair:
+
+- Legacy `asora-function-dev` App Insights component did not ingest telemetry
+- Created `law-asora-dsr-dev-neu` and `appi-asora-function-dev-dsr`
+- Repointed dev Function App telemetry and recreated live DSR alerts on the healthy component
+
+## Web, Feed, And Cache Status
+
+Status: **Live smoke passed; feed p95 target not met.**
+
+Evidence already attached in the alpha packet:
+
+- Full beta browser smoke passed with `node scripts/beta-smoke.mjs`
+- Report: [2026-06-28-beta-smoke-report.json](./2026-06-28-beta-smoke-report.json)
+- Anonymous discover feed returned public cache headers
+- Authenticated discover feed returned `private, no-store` with cache bypass
+- CORS preflight from `https://lythaus-web.pages.dev` returned expected origin
+
+k6 status:
+
+- Health p95: `262.75 ms`, 0.00% error rate
+- Feed-read p95: `796.96 ms`, 0.00% error rate
+- Interpretation: live reachability is proven; the 200 ms feed p95 target is not proven
+
+## Android Readiness
+
+Status: **Partial proof only.**
+
+Passed:
+
+- `flutter analyze`
+- `flutter test`
+- Prior `flutter doctor -v` proof reported Android SDK/toolchain clean and Android licenses accepted
+- Prior `:app:processReleaseMainManifest` passed using a local non-secret Firebase placeholder, removed afterward
+
+Missing for Android internal alpha:
+
+- Real `android/app/google-services.json` or equivalent secret injection proof
+- Signing material proof
+- Installable internal distribution artifact proof
+- Distribution owner and cohort proof
+
+Recommendation: keep Android internal alpha blocked unless these are completed and attached.
+
+## Operational Ownership
+
+Support owner:
+
+- Current documented support path: Platform On-Call primary, Backend On-Call secondary, Product Incident Lead escalation from [observability-alerting-drill.md](../../runbooks/observability-alerting-drill.md)
+- Alpha-specific support owner: **not authoritatively assigned**
+
+Rollback owner:
+
+- Launch-readiness owner model: Platform lead + product lead joint sign-off
+- Alpha-specific rollback owner: **not authoritatively assigned**
+
+Invite cohort:
+
+- Controlled invite/internal alpha is the stated target
+- Exact invite cohort: **not authoritatively recorded**
+
+Operational blocker: assign named support owner, rollback owner, and invite cohort before external alpha.
+
+## Known Issues
+
+- Current-head broad GitHub CI did not run automatically for `5a4fa42c`; only dev Function deploy is green on that exact head
+- Feed p95 remains above target
+- Android internal alpha lacks Firebase/signing/distribution proof
+- Contract test live requests are skipped due unreachable configured staging domain
+- Flutter custom-feed creation tests have non-fatal hit-test warnings
+- SPKI launch-gate checks are skipped unless `SPKI_GATE=true`
+- Public store/TestFlight/Play Console evidence is beta-deferred unless alpha scope is redefined
+
+## Remaining Alpha Blockers
+
+| Priority | Item | Status | Why |
+|---|---|---|---|
+| P0 | Support/rollback owner + invite cohort | Blocked | Operational accountability is not authoritatively assigned |
+| P0 | Android/Firebase/signing/distribution proof | Blocked if Android is in scope | Needed for internal Android alpha |
+| P1 | Feed p95 performance baseline | Blocked | Current feed-read p95 is above target |
+
+Closed hygiene:
+
+- Final evidence/docs secret-pattern scan: passed, no matches
+
+## Deferred Beta Blockers
+
+- Play Console app record, Data Safety, content rating, graphics, and internal testing release evidence
+- App Store Connect/TestFlight setup and App Privacy evidence
+- Public store screenshots and review notes
+- Full public store signing-material checklist
+- Representative scale proof and 200 ms feed p95 attainment if promoted from P1 alpha blocker
+- Store/TestFlight/Play release workflows unless alpha scope is redefined
+
+## Safety
+
+- Do not add secrets, bearer tokens, connection strings, Firebase config, local credential files, deployment zips, or raw user data
+- Do not start product-tier, rewards, editorial, or feed-optimisation work until alpha readiness is closed
