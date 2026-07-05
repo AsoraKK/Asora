@@ -52,6 +52,14 @@ jest.mock('../../src/privacy/service/dsrStore', () => ({
 const TEST_USER_ID = 'user-12345-to-delete';
 const TEST_USER_EMAIL = 'deleteme@example.com';
 
+const POSTGRES_COLUMNS: Record<string, string[]> = {
+  follows: ['follower_uuid', 'followee_uuid'],
+  profiles: ['user_uuid'],
+  auth_identities: ['user_uuid'],
+  refresh_tokens: ['user_uuid'],
+  users: ['user_uuid', 'id'],
+};
+
 interface SeedData {
   [container: string]: Array<Record<string, unknown>>;
 }
@@ -173,8 +181,21 @@ describe('cascadeDelete service', () => {
     // No legal holds by default
     mockHasLegalHold.mockResolvedValue(false);
 
-    // Setup Postgres mock
-    mockPgQuery.mockResolvedValue({ rowCount: 1 });
+    // Setup Postgres mock with the schema-introspection shape used by cascadeDelete.
+    mockPgQuery.mockImplementation((query: string, params?: unknown[]) => {
+      if (query.includes('information_schema.columns')) {
+        const tableName = String(params?.[0] ?? '');
+        return Promise.resolve({
+          rows: (POSTGRES_COLUMNS[tableName] ?? []).map(column_name => ({ column_name })),
+        });
+      }
+
+      if (query.includes('COUNT(*)')) {
+        return Promise.resolve({ rows: [{ count: '0' }] });
+      }
+
+      return Promise.resolve({ rowCount: 1, rows: [] });
+    });
   });
 
   describe('executeCascadeDelete', () => {
