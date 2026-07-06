@@ -18,7 +18,7 @@
     "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
     "openapi:validate:examples": "ts-node tools/openapi/validate-examples.ts",
     "openapi:check:bundle": "node scripts/check-git-diff-clean.js api/openapi/dist/openapi.json",
-    "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora,hideGenerationTimestamp=true",
+    "openapi:gen:dart": "openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora,hideGenerationTimestamp=true && node scripts/trim-trailing-whitespace.js lib/generated/api_client",
     "openapi:check:dart": "node scripts/check-git-diff-clean.js lib/generated/api_client --ignore lib/generated/api_client/.openapi-generator/FILES",
     "openapi:test:contract": "jest -c jest.contract.config.cjs --runInBand",
     "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
