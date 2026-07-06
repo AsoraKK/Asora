@@ -58,6 +58,17 @@ Verify:
 2. Post-deploy smoke: enqueue an export, observe queue message, confirm request transitions to `awaiting_review`.
 3. Legal hold test: place hold on user, enqueue delete; confirm job fails with hold reason.
 
+## Monitoring Coverage
+- `privacyDsrQueueMonitor` emits a `dsr.queue.monitor` App Insights trace every 5 minutes with DSR queue depth, poison queue state, stuck queued request count, and failed request count.
+- Dev DSR alerts currently target `appi-asora-function-dev-dsr`; the legacy `asora-function-dev` App Insights component did not ingest telemetry during the DSR repair.
+- Terraform alert coverage in `infrastructure/alerts` includes:
+  - `alert-<app>-dsr-stuck-queued`: `privacy_requests` queued for more than 5 minutes
+  - `alert-<app>-dsr-queue-depth`: queue depth greater than `0` across two monitor samples
+  - `alert-<app>-dsr-failures`: DSR queue failures or persisted failed requests greater than `0`
+  - `alert-<app>-dsr-poison-queue`: poison queue exists or has messages
+  - `alert-<app>-dsr-missing-completion`: DSR enqueue lacks `dsr.queue.completed` after 5 minutes
+- `function:privacyDsrProcessor=1` always-ready is intentional for alpha and must remain documented until a separate scale-from-zero regression proves it can be removed.
+
 ## Troubleshooting
 - SAS URL generation fails: verify MI has permissions and clock skew is reasonable; re-issue delegation key.
 - Queue messages stay visible with `dequeueCount=0`: verify `Storage Queue Data Message Processor`, confirm `DSR_QUEUE_CONNECTION`, `DsrQueueStorage__queueServiceUri`, and always-ready state, then run a dev-only exact-setting connection-string isolation test.

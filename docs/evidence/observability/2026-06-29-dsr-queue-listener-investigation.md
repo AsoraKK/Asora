@@ -27,11 +27,18 @@ Sanitized proof:
 - Base64 control request `019f3286-f4d3-755c-bf0b-0789d0bc7a21` reached `awaiting_review`, proving the export job, Postgres lookup, packaging, and storage upload path were healthy.
 - Post-fix plain JSON request `019f328d-6de2-7444-af2d-0f60cbbab393` reached `awaiting_review`, with `attempt=1`, `exportBytes=1028`, and queue count `0`.
 - Final post-cleanup plain JSON request `019f3291-a57e-7ff1-b352-f3c9f15405fb` reached `awaiting_review` in 10 seconds, with `attempt=1`, `exportBytes=1028`, and queue count `0`.
+- Cold-period regression request `019f3335-dfde-7772-824e-e8e6f6a05d85` reached `awaiting_review` in 10 seconds, with `attempt=1`, `exportBytes=1028`, queue count `0`, and no poison queue.
+- Historical pre-fix dev drill poison messages were canceled with audit marker `operator.cleanup.stale-pre-fix-poison`; the empty poison queue was deleted before the passing cold-period rerun.
 
 Classification:
 - Remaining issue was not schema drift, missing user data, export packaging, storage upload, or job-code failure.
 - The P0 failure was a combined queue binding/storage-account drift plus queue message encoding mismatch.
 - Azure support escalation is no longer required for this incident unless the queue stops consuming again with the fixed binding and host encoding in place.
+
+Alpha decision:
+- DSR live queue path: PASSED
+- External alpha DSR blocker: RESOLVED
+- Residual DSR risk: `function:privacyDsrProcessor=1` always-ready guard remains active; monitor stuck queued requests, DSR queue depth, DSR failures, poison queue state, and missing completion telemetry.
 
 ## Scope
 
@@ -167,6 +174,14 @@ Cleanup:
 
 Result: host/listener diagnostics are still missing from the current telemetry path.
 
+Update on `2026-07-05`:
+- The legacy `asora-function-dev` App Insights component still did not ingest sanitized local probe telemetry
+- A workspace-based replacement component `appi-asora-function-dev-dsr` was created with workspace `law-asora-dsr-dev-neu`
+- Dev Function App telemetry was repointed to that component
+- `privacyDsrQueueMonitor` traces and Function request telemetry are now visible there
+- Live DSR alerts were recreated on the healthy component and updated to parse the verified trace stream
+- Post-cleanup monitor evidence at `2026-07-05T18:10:00Z`: queue depth `0`, poison queue absent, stuck queued `0`, failed `0`
+
 ## Classification
 
 Confirmed not to be:
@@ -247,7 +262,7 @@ Current best classification: host/listener startup or Flex platform/runtime issu
 
 1. Keep `DSR_QUEUE_CONNECTION=DsrQueueStorage`, `DsrQueueStorage__queueServiceUri`, and `extensions.queues.messageEncoding=none` in every deploy path.
 2. Keep `function:privacyDsrProcessor=1` always-ready in dev until a separate scale-from-zero regression test proves it is unnecessary.
-3. For release readiness, attach the 2026-07-05 post-cleanup proof request `019f3291-a57e-7ff1-b352-f3c9f15405fb`.
+3. For release readiness, attach the 2026-07-05 cold-period proof request `019f3335-dfde-7772-824e-e8e6f6a05d85`.
 4. Open Azure support only if messages again remain visible or requests remain `queued` after these fixes are confirmed live.
 
 ## Safety Notes

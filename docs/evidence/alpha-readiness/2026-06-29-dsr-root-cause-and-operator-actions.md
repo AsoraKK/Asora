@@ -2,6 +2,18 @@
 
 Date: 2026-06-29
 
+## Resolution Update: 2026-07-05
+
+Status: resolved.
+
+- DSR live queue path: PASSED
+- External alpha DSR blocker: RESOLVED
+- Cold-period regression request `019f3335-dfde-7772-824e-e8e6f6a05d85` moved `queued` -> `awaiting_review` in 10 seconds.
+- Final state: `attempt=1`, `exportBytes=1028`, queue count `0`, poison queue absent.
+- Residual risk: `function:privacyDsrProcessor=1` always-ready guard remains active; monitor queue processing, stuck queued requests, failures, and poison queue state.
+- Monitoring guard: dev DSR alerts target `appi-asora-function-dev-dsr`; post-cleanup monitor trace at `2026-07-05T18:10:00Z` showed queue depth `0`, poison absent, stuck queued `0`, failed `0`.
+- Azure support ticket: not filed; root cause was found internally.
+
 ## Current Root-Cause Assessment
 
 Classification: host/runtime execution issue or undeployed queue-diagnostic patch pending external restart/redeploy proof.
@@ -111,4 +123,4 @@ az functionapp restart -g asora-psql-flex -n asora-function-dev -o none
 
 ## Alpha Decision
 
-Alpha remains blocked until DSR export/delete moves beyond `queued` in staging/dev alpha evidence.
+DSR no longer blocks external alpha after the `2026-07-05` cold-period regression and monitoring repair. External alpha remains gated on the remaining non-DSR alpha proof items: final go/no-go evidence packet, feed p95/performance evidence, and final secret scan/evidence hygiene. Android is excluded from the current alpha scope, and support/rollback ownership plus invite cohort are recorded in the go/no-go evidence packet.

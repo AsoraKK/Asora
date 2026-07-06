@@ -15,7 +15,7 @@
       "samplingSettings": {
         "isEnabled": true,
         "maxTelemetryItemsPerSecond": 20,
-        "excludedTypes": "Request;Dependency;Trace;Exception"
+        "excludedTypes": "Request;Dependency"
       },
       "enableLiveMetrics": true,
       "enableDependencyTracking": true,

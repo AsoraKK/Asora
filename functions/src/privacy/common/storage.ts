@@ -69,6 +69,7 @@ const queueServiceClient = new QueueServiceClient(queueServiceUri, credential);
 
 let containerClient: ContainerClient | null = null;
 let queueClient: QueueClient | null = null;
+let poisonQueueClient: QueueClient | null = null;
 
 function getExportContainer(): ContainerClient {
   if (!containerClient) {
@@ -82,6 +83,13 @@ function getQueue(): QueueClient {
     queueClient = queueServiceClient.getQueueClient(QUEUE_NAME);
   }
   return queueClient;
+}
+
+function getPoisonQueue(): QueueClient {
+  if (!poisonQueueClient) {
+    poisonQueueClient = queueServiceClient.getQueueClient(`${QUEUE_NAME}-poison`);
+  }
+  return poisonQueueClient;
 }
 
 export function getBlobClient(path: string): BlockBlobClient {
@@ -130,6 +138,40 @@ export async function createUserDelegationUrl(
 export async function enqueueDsrMessage(message: DsrQueueMessage): Promise<void> {
   const queue = getQueue();
   await queue.sendMessage(JSON.stringify(message));
+}
+
+export async function getDsrQueueMonitorSnapshot(): Promise<{
+  queueName: string;
+  queueConnectionSetting: string;
+  queueServiceAccount?: string;
+  exportStorageAccount: string;
+  approximateMessageCount: number | null;
+  poisonQueueName: string;
+  poisonApproximateMessageCount: number | null;
+  poisonQueueExists: boolean;
+}> {
+  const [queuePropertiesResult, poisonPropertiesResult] = await Promise.allSettled([
+    getQueue().getProperties(),
+    getPoisonQueue().getProperties(),
+  ]);
+
+  const diagnostics = getDsrQueueDiagnostics();
+  const poisonQueueName = `${QUEUE_NAME}-poison`;
+  const poisonQueueExists = poisonPropertiesResult.status === 'fulfilled';
+
+  return {
+    ...diagnostics,
+    approximateMessageCount:
+      queuePropertiesResult.status === 'fulfilled'
+        ? queuePropertiesResult.value.approximateMessagesCount ?? null
+        : null,
+    poisonQueueName,
+    poisonApproximateMessageCount:
+      poisonPropertiesResult.status === 'fulfilled'
+        ? poisonPropertiesResult.value.approximateMessagesCount ?? null
+        : null,
+    poisonQueueExists,
+  };
 }
 
 export function getDsrQueueDiagnostics(): {
