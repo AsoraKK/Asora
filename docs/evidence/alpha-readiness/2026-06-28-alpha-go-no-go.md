@@ -1,8 +1,8 @@
 # Final Alpha Go/No-Go Evidence - 2026-07-05
 
-Generated at: `2026-07-06T18:22:27Z`
+Generated at: `2026-07-06T19:07:42Z`
 
-Scope: controlled invite alpha for the Lythaus webapp/API. Android is excluded for now. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.
+Scope: staged controlled alpha for the Lythaus webapp/API. Android is excluded for now. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.
 
 ## Current Head
 
@@ -13,16 +13,16 @@ Scope: controlled invite alpha for the Lythaus webapp/API. Android is excluded f
 
 ## Go/No-Go Recommendation
 
-Recommendation: **NO-GO for alpha launch until the remaining web performance blocker is closed.**
+Recommendation: **GO for Wave 0 internal validation only; NO-GO for Wave 1 and public-beta-scale rollout until the feed performance and operational coverage improve.**
 
-DSR is no longer a reason to block alpha. Operational ownership, invite authority, and the alpha cohort are now recorded below. Android is excluded from the current scope.
+DSR is no longer a reason to block alpha. Operational ownership, invite authority, and the staged rollout plan are recorded below. Android is excluded from the current scope.
 
-The remaining hard blocker is web performance:
+The remaining hard blocker is web performance for anything beyond the smallest internal wave:
 
-- Feed p95 remains above the 200 ms target and is a P1 performance blocker, not a DSR blocker
+- Feed p95 remains above the 200 ms target. That is a P1 blocker for Wave 1 (50-200 controlled users) and a P0 blocker for 20,000+ users / public-beta-scale rollout.
 - Final evidence/docs secret-pattern scan passed with no matches
 
-Safe next state: continue Lythaus webapp/API validation only. Keep Android out of scope and do not open alpha until the web performance blocker is closed.
+Safe next state: continue Lythaus webapp/API validation on Wave 0 only. Keep Android out of scope and do not expand to external Wave 1 until metrics review passes.
 
 ## CI Status
 
@@ -124,11 +124,20 @@ k6 status:
 
 - Health p95: `262.75 ms`, 0.00% error rate
 - Feed-read p95: `796.96 ms`, 0.00% error rate
-- Interpretation: live reachability is proven; the 200 ms feed p95 target is not proven
+- Interpretation: live reachability is proven; the 200 ms feed p95 target is not proven for Wave 1, and the gap is too large for 20,000+ rollout
+
+## Feed By Cohort
+
+| Cohort | Feed p95 classification |
+|---|---|
+| Wave 0: 5-20 internal users | Narrow validation only |
+| Wave 1: 50-200 controlled users | P1 blocker |
+| Wave 2: 500-1,000 after metrics pass | Deferred until review |
+| 20,000+ users / soft launch | P0 blocker |
 
 ## Android Readiness
 
-Status: **Out of scope for current alpha.**
+Status: **Out of scope for current staged alpha.**
 
 Archived proof:
 
@@ -148,15 +157,15 @@ Kyle, owner of Lythaus, owns all alpha responsibilities listed below.
 | Alpha owner | Kyle, owner of Lythaus |
 | Support owner | Kyle |
 | Rollback owner | Kyle |
-| Invite authority | Kyle; possibly the first free journalists |
+| Invite authority | Kyle; possibly the first free journalists for Wave 1 |
 | Revoke authority | Kyle only; recommendations accepted |
-| Cohort size | Minimum 20,000 users/clients |
-| Internal vs external | Both |
+| Rollout plan | Wave 0: 5-20 internal users; Wave 1: 50-200 trusted external users; Wave 2: 500-1,000 only after metrics pass; 20,000+ deferred to public beta / soft launch |
+| Internal vs external | Both, staged by wave |
 | Geography | Everywhere |
 | Start date | ASAP |
-| End / review date | Never |
+| End / review date | Review after 7 days; expansion only after metrics review |
 | Support channel | Email: `kyle.kern@asora.co.za` |
-| Known disabled features | Not specified yet |
+| Known disabled features | None known yet |
 | Platform scope | Lythaus webapp/API only; Android excluded for now |
 
 ## Known Issues
@@ -173,7 +182,8 @@ Kyle, owner of Lythaus, owns all alpha responsibilities listed below.
 | Priority | Item | Status | Why |
 |---|---|---|---|
 | P0 | Support/rollback owner + invite cohort | Closed | Kyle owns the alpha responsibilities; cohort and access rules are recorded above |
-| P1 | Feed p95 performance baseline | Blocked | Current feed-read p95 is above target |
+| P1 | Feed p95 for Wave 1 (50-200 controlled users) | Blocked | Current feed-read p95 is above target |
+| P0 | 20,000+ rollout / public beta | Blocked | Feed p95 is not credible at soft-launch scale and operational coverage is still narrow |
 
 Closed hygiene:
 
@@ -186,7 +196,8 @@ Closed hygiene:
 - Public store screenshots and review notes
 - Full public store signing-material checklist
 - Android/Firebase/signing/distribution proof if Android is added back into scope
-- Representative scale proof and 200 ms feed p95 attainment if promoted from P1 alpha blocker
+- Representative scale proof and 200 ms feed p95 attainment for Wave 1 and above
+- 20,000+ rollout / public beta until feed p95 and operational coverage improve
 - Store/TestFlight/Play release workflows unless alpha scope is redefined
 
 ## Safety
