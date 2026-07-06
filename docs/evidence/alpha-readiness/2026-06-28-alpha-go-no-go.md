@@ -1,8 +1,8 @@
 # Final Alpha Go/No-Go Evidence - 2026-07-05
 
-Generated at: `2026-07-05T19:06:43Z`
+Generated at: `2026-07-06T18:22:27Z`
 
-Scope: controlled invite/internal alpha. Web/API is the primary alpha target. Internal Android is secondary and remains in scope only if Firebase config, signing, and distribution proof are completed. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.
+Scope: controlled invite alpha for the Lythaus webapp/API. Android is excluded for now. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.
 
 ## Current Head
 
@@ -13,16 +13,16 @@ Scope: controlled invite/internal alpha. Web/API is the primary alpha target. In
 
 ## Go/No-Go Recommendation
 
-Recommendation: **NO-GO for external alpha until the remaining P0 operational blockers are closed.**
+Recommendation: **NO-GO for alpha launch until the remaining web performance blocker is closed.**
 
-DSR is no longer a reason to block external alpha. The remaining hard blockers are launch discipline and operational readiness:
+DSR is no longer a reason to block alpha. Operational ownership, invite authority, and the alpha cohort are now recorded below. Android is excluded from the current scope.
 
-- Support/rollback owner and invite cohort are not authoritatively assigned in current evidence
-- Android/Firebase/signing/distribution proof is missing if Android internal alpha remains in scope
+The remaining hard blocker is web performance:
+
 - Feed p95 remains above the 200 ms target and is a P1 performance blocker, not a DSR blocker
 - Final evidence/docs secret-pattern scan passed with no matches
 
-Safe next state: continue internal web/API validation only. Do not invite external alpha users until P0 ownership/cohort and, if applicable, Android distribution proof are closed.
+Safe next state: continue Lythaus webapp/API validation only. Keep Android out of scope and do not open alpha until the web performance blocker is closed.
 
 ## CI Status
 
@@ -128,48 +128,41 @@ k6 status:
 
 ## Android Readiness
 
-Status: **Partial proof only.**
+Status: **Out of scope for current alpha.**
 
-Passed:
+Archived proof:
 
 - `flutter analyze`
 - `flutter test`
 - Prior `flutter doctor -v` proof reported Android SDK/toolchain clean and Android licenses accepted
 - Prior `:app:processReleaseMainManifest` passed using a local non-secret Firebase placeholder, removed afterward
 
-Missing for Android internal alpha:
-
-- Real `android/app/google-services.json` or equivalent secret injection proof
-- Signing material proof
-- Installable internal distribution artifact proof
-- Distribution owner and cohort proof
-
-Recommendation: keep Android internal alpha blocked unless these are completed and attached.
+If Android is added back into scope later, Firebase config, signing, and distribution proof will need to be reattached.
 
 ## Operational Ownership
 
-Support owner:
+Kyle, owner of Lythaus, owns all alpha responsibilities listed below.
 
-- Current documented support path: Platform On-Call primary, Backend On-Call secondary, Product Incident Lead escalation from [observability-alerting-drill.md](../../runbooks/observability-alerting-drill.md)
-- Alpha-specific support owner: **not authoritatively assigned**
-
-Rollback owner:
-
-- Launch-readiness owner model: Platform lead + product lead joint sign-off
-- Alpha-specific rollback owner: **not authoritatively assigned**
-
-Invite cohort:
-
-- Controlled invite/internal alpha is the stated target
-- Exact invite cohort: **not authoritatively recorded**
-
-Operational blocker: assign named support owner, rollback owner, and invite cohort before external alpha.
+| Area | Decision |
+|---|---|
+| Alpha owner | Kyle, owner of Lythaus |
+| Support owner | Kyle |
+| Rollback owner | Kyle |
+| Invite authority | Kyle; possibly the first free journalists |
+| Revoke authority | Kyle only; recommendations accepted |
+| Cohort size | Minimum 20,000 users/clients |
+| Internal vs external | Both |
+| Geography | Everywhere |
+| Start date | ASAP |
+| End / review date | Never |
+| Support channel | Email: `kyle.kern@asora.co.za` |
+| Known disabled features | Not specified yet |
+| Platform scope | Lythaus webapp/API only; Android excluded for now |
 
 ## Known Issues
 
 - Current-head broad GitHub CI did not run automatically for `5a4fa42c`; only dev Function deploy is green on that exact head
 - Feed p95 remains above target
-- Android internal alpha lacks Firebase/signing/distribution proof
 - Contract test live requests are skipped due unreachable configured staging domain
 - Flutter custom-feed creation tests have non-fatal hit-test warnings
 - SPKI launch-gate checks are skipped unless `SPKI_GATE=true`
@@ -179,8 +172,7 @@ Operational blocker: assign named support owner, rollback owner, and invite coho
 
 | Priority | Item | Status | Why |
 |---|---|---|---|
-| P0 | Support/rollback owner + invite cohort | Blocked | Operational accountability is not authoritatively assigned |
-| P0 | Android/Firebase/signing/distribution proof | Blocked if Android is in scope | Needed for internal Android alpha |
+| P0 | Support/rollback owner + invite cohort | Closed | Kyle owns the alpha responsibilities; cohort and access rules are recorded above |
 | P1 | Feed p95 performance baseline | Blocked | Current feed-read p95 is above target |
 
 Closed hygiene:
@@ -193,6 +185,7 @@ Closed hygiene:
 - App Store Connect/TestFlight setup and App Privacy evidence
 - Public store screenshots and review notes
 - Full public store signing-material checklist
+- Android/Firebase/signing/distribution proof if Android is added back into scope
 - Representative scale proof and 200 ms feed p95 attainment if promoted from P1 alpha blocker
 - Store/TestFlight/Play release workflows unless alpha scope is redefined
 

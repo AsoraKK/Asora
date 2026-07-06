@@ -123,4 +123,4 @@ az functionapp restart -g asora-psql-flex -n asora-function-dev -o none
 
 ## Alpha Decision
 
-DSR no longer blocks external alpha after the `2026-07-05` cold-period regression and monitoring repair. External alpha remains gated on the non-DSR alpha proof items: final go/no-go evidence packet, feed p95/performance evidence, Android/Firebase/signing/distribution proof, support/rollback owner and invite cohort, and final secret scan/evidence hygiene.
+DSR no longer blocks external alpha after the `2026-07-05` cold-period regression and monitoring repair. External alpha remains gated on the remaining non-DSR alpha proof items: final go/no-go evidence packet, feed p95/performance evidence, and final secret scan/evidence hygiene. Android is excluded from the current alpha scope, and support/rollback ownership plus invite cohort are recorded in the go/no-go evidence packet.

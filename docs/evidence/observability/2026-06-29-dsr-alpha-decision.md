@@ -75,7 +75,7 @@ Internal-only alpha can proceed in dev only if all of the following remain true:
 1. Attach request `019f3335-dfde-7772-824e-e8e6f6a05d85` and [2026-07-05-dsr-cold-regression.json](../alpha-readiness/2026-07-05-dsr-cold-regression.json) as the dev admin DSR cold-period proof
 2. Keep `function:privacyDsrProcessor=1` always-ready documented as an intentional alpha guard
 3. Keep DSR alerts enabled on `appi-asora-function-dev-dsr`
-4. Move to the remaining alpha blockers: final go/no-go evidence packet, feed p95/performance evidence, Android/Firebase/signing/distribution proof, support/rollback owner and invite cohort, final secret scan and evidence hygiene
+4. Move to the remaining alpha blockers: final go/no-go evidence packet, feed p95/performance evidence, and final secret scan and evidence hygiene
 5. Defer product-tier and rewards changes until alpha go/no-go evidence is complete
 
 ## Safety
