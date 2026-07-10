@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const target = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const result = spawnSync(npm, ['audit', '--omit=dev', '--json'], {
+const result = spawnSync(npm, ['audit', '--json'], {
   cwd: target,
   encoding: 'utf8',
   maxBuffer: 20 * 1024 * 1024,
@@ -38,6 +38,6 @@ console.log(
 );
 
 if (counts.high > 0 || counts.critical > 0) {
-  console.error(`Blocking production dependency findings remain in ${target}.`);
+  console.error(`Blocking dependency findings remain in ${target}.`);
   process.exit(1);
 }

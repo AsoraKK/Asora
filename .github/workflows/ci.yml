@@ -406,11 +406,13 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - name: Audit root and Functions production dependencies
+      - name: Audit root and Functions dependencies
         run: node scripts/check-npm-audit.js
-      - name: Audit Control Panel production dependencies
+      - name: Audit Functions probe dependencies
+        run: node scripts/check-npm-audit.js functions/probe
+      - name: Audit Control Panel dependencies
         run: node scripts/check-npm-audit.js apps/control-panel
-      - name: Audit Marketing Site production dependencies
+      - name: Audit Marketing Site dependencies
         run: node scripts/check-npm-audit.js apps/marketing-site
 
   pin_verification:
