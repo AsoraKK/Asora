@@ -16,6 +16,7 @@ import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireAuth } from '@auth/requireAuth';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
 
 export const customFeeds_delete = httpHandler<void, void>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -33,6 +34,7 @@ export const customFeeds_delete = httpHandler<void, void>(async (ctx) => {
   }
 
   try {
+    await assertAlphaFeature('customFeedCreation');
     const deleted = await deleteCustomFeed(auth.userId, feedId);
     if (!deleted) {
       return ctx.notFound('Custom feed not found', 'CUSTOM_FEED_NOT_FOUND');

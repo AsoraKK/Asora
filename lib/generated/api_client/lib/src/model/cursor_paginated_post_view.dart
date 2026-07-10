@@ -13,22 +13,15 @@ part 'cursor_paginated_post_view.g.dart';
 /// CursorPaginatedPostView
 ///
 /// Properties:
-/// * [items] 
-/// * [nextCursor] 
-@BuiltValue()
-abstract class CursorPaginatedPostView implements Built<CursorPaginatedPostView, CursorPaginatedPostViewBuilder> {
+/// * [items]
+/// * [nextCursor]
+@BuiltValue(instantiable: false)
+abstract class CursorPaginatedPostView  {
   @BuiltValueField(wireName: r'items')
   BuiltList<PostView> get items;
 
   @BuiltValueField(wireName: r'nextCursor')
   String? get nextCursor;
-
-  CursorPaginatedPostView._();
-
-  factory CursorPaginatedPostView([void updates(CursorPaginatedPostViewBuilder b)]) = _$CursorPaginatedPostView;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(CursorPaginatedPostViewBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<CursorPaginatedPostView> get serializer => _$CursorPaginatedPostViewSerializer();
@@ -36,7 +29,7 @@ abstract class CursorPaginatedPostView implements Built<CursorPaginatedPostView,
 
 class _$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<CursorPaginatedPostView> {
   @override
-  final Iterable<Type> types = const [CursorPaginatedPostView, _$CursorPaginatedPostView];
+  final Iterable<Type> types = const [CursorPaginatedPostView];
 
   @override
   final String wireName = r'CursorPaginatedPostView';
@@ -67,6 +60,46 @@ class _$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<CursorP
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
+
+  @override
+  CursorPaginatedPostView deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return serializers.deserialize(serialized, specifiedType: FullType($CursorPaginatedPostView)) as $CursorPaginatedPostView;
+  }
+}
+
+/// a concrete implementation of [CursorPaginatedPostView], since [CursorPaginatedPostView] is not instantiable
+@BuiltValue(instantiable: true)
+abstract class $CursorPaginatedPostView implements CursorPaginatedPostView, Built<$CursorPaginatedPostView, $CursorPaginatedPostViewBuilder> {
+  $CursorPaginatedPostView._();
+
+  factory $CursorPaginatedPostView([void Function($CursorPaginatedPostViewBuilder)? updates]) = _$$CursorPaginatedPostView;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults($CursorPaginatedPostViewBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<$CursorPaginatedPostView> get serializer => _$$CursorPaginatedPostViewSerializer();
+}
+
+class _$$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<$CursorPaginatedPostView> {
+  @override
+  final Iterable<Type> types = const [$CursorPaginatedPostView, _$$CursorPaginatedPostView];
+
+  @override
+  final String wireName = r'$CursorPaginatedPostView';
+
+  @override
+  Object serialize(
+    Serializers serializers,
+    $CursorPaginatedPostView object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return serializers.serialize(object, specifiedType: FullType(CursorPaginatedPostView))!;
   }
 
   void _deserializeProperties(
@@ -105,12 +138,12 @@ class _$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<CursorP
   }
 
   @override
-  CursorPaginatedPostView deserialize(
+  $CursorPaginatedPostView deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = CursorPaginatedPostViewBuilder();
+    final result = $CursorPaginatedPostViewBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(
@@ -124,4 +157,3 @@ class _$CursorPaginatedPostViewSerializer implements PrimitiveSerializer<CursorP
     return result.build();
   }
 }
-

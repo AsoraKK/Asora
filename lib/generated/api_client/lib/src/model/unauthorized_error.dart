@@ -12,7 +12,7 @@ part 'unauthorized_error.g.dart';
 /// 401 – missing or invalid bearer token.
 ///
 /// Properties:
-/// * [error] 
+/// * [error]
 @BuiltValue()
 abstract class UnauthorizedError implements Built<UnauthorizedError, UnauthorizedErrorBuilder> {
   @BuiltValueField(wireName: r'error')
@@ -104,4 +104,3 @@ class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedE
     return result.build();
   }
 }
-

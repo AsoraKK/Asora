@@ -32,6 +32,14 @@ export interface UserDocument {
   createdAt: string;
   lastLoginAt: string;
   isActive: boolean;
+  tierGrant?: {
+    tier: 'premium' | 'black';
+    grantedBy: string;
+    reason: string;
+    grantedAt: string;
+    expiresAt: string;
+    reviewAt: string;
+  } | null;
   username?: string;
   displayName?: string;
   firstName?: string;

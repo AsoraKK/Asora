@@ -14,16 +14,16 @@ part 'rewards_me_response.g.dart';
 /// RewardsMeResponse
 ///
 /// Properties:
-/// * [subscriptionTier] 
-/// * [reputationLevel] 
-/// * [reputationBand] 
-/// * [availableRewardLevels] 
-/// * [maxOptionsPerLevel] 
-/// * [redemptionStatus] 
-/// * [fraudRiskStatus] 
-/// * [offers] 
-/// * [redemptionHistory] 
-/// * [affiliateDisclosure] 
+/// * [subscriptionTier]
+/// * [reputationLevel]
+/// * [reputationBand]
+/// * [availableRewardLevels]
+/// * [maxOptionsPerLevel]
+/// * [redemptionStatus]
+/// * [fraudRiskStatus]
+/// * [offers]
+/// * [redemptionHistory]
+/// * [affiliateDisclosure]
 @BuiltValue()
 abstract class RewardsMeResponse implements Built<RewardsMeResponse, RewardsMeResponseBuilder> {
   @BuiltValueField(wireName: r'subscriptionTier')
@@ -288,4 +288,3 @@ class RewardsMeResponseRedemptionStatusEnum extends EnumClass {
   static BuiltSet<RewardsMeResponseRedemptionStatusEnum> get values => _$rewardsMeResponseRedemptionStatusEnumValues;
   static RewardsMeResponseRedemptionStatusEnum valueOf(String name) => _$rewardsMeResponseRedemptionStatusEnumValueOf(name);
 }
-

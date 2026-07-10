@@ -1,5 +1,7 @@
 # Final Alpha Go/No-Go Evidence - 2026-07-05
 
+> **Superseded evidence.** This packet is retained as history and is not a launch authority. The canonical current packet is `docs/evidence/alpha-readiness/2026-07-10-controlled-alpha-packet.md`; its cohort model is 25-250 invited users, not the historical 20,000-user assumption below.
+
 Generated at: `2026-07-06T18:22:27Z`
 
 Scope: controlled invite alpha for the Lythaus webapp/API. Android is excluded for now. Play Console, TestFlight, public store submission, and full public store-signing evidence remain beta blockers unless the alpha scope is redefined.

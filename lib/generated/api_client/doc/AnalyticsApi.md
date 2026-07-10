@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -22,7 +22,7 @@ Ingest client-side analytics events
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAnalyticsApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.analyticsEventsCreate(body);
@@ -36,7 +36,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -52,4 +52,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

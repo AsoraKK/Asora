@@ -17,6 +17,7 @@ import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireAuth } from '@auth/requireAuth';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
 
 export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFeedDefinition>(async (ctx) => {
   const feedId = ctx.params.id;
@@ -38,6 +39,7 @@ export const customFeeds_update = httpHandler<UpdateCustomFeedRequest, CustomFee
   }
 
   try {
+    await assertAlphaFeature('customFeedCreation');
     const updated = await updateCustomFeed(auth.userId, feedId, ctx.body);
     if (!updated) {
       return ctx.notFound('Custom feed not found', 'CUSTOM_FEED_NOT_FOUND');

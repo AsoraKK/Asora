@@ -1,7 +1,7 @@
 # Legal Operations Runbook
 
-Version: 1.0  
-Last Updated: 2026-02-05  
+Version: 1.0
+Last Updated: 2026-02-05
 Owners: Privacy Engineering + Platform
 
 ## 1. Purpose

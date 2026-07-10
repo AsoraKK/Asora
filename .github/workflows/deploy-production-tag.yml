@@ -1,9 +1,26 @@
-name: Deploy Production on Tag
+name: Deploy Production (approved exact SHA)
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Exact 40-character commit SHA already validated by CI"
+        required: true
+        type: string
+      ci_run_id:
+        description: "Successful CI workflow run ID for the exact release SHA"
+        required: true
+        type: string
+      approved_alpha_stage:
+        description: "Kyle-approved Alpha stage"
+        required: true
+        type: choice
+        options: [technical_alpha, controlled_alpha, expanded_alpha, paused]
+      known_disabled_features_json:
+        description: "JSON array of intentionally disabled Alpha features"
+        required: true
+        default: '[]'
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
 
       - name: Validate store submission evidence
         run: bash scripts/validate-store-submission-evidence.sh
@@ -32,9 +52,11 @@ jobs:
     needs: launch-readiness-gate
     steps:
       - uses: actions/github-script@v8
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
         with:
           script: |
-            const sha = context.sha;
+            const sha = process.env.RELEASE_SHA;
             const workflowId = 'beta-smoke.yml';
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
@@ -60,5 +82,10 @@ jobs:
     uses: ./.github/workflows/deploy-asora-function-dev.yml
     with:
       target_environment: production
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      approved_alpha_stage: ${{ inputs.approved_alpha_stage }}
+      known_disabled_features_json: ${{ inputs.known_disabled_features_json }}
       function_app_name: asora-function-production
+      resource_group: asora-production
     secrets: inherit

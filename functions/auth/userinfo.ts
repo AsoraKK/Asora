@@ -20,7 +20,10 @@ const database = cosmosClient.database(process.env.COSMOS_DATABASE_NAME || 'asor
 const usersContainer = database.container('users');
 
 // JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is required');
+}
 
 interface UserDocument {
   id: string;

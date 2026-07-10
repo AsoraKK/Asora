@@ -16,6 +16,7 @@ import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { getAzureLogger } from '@shared/utils/logger';
 import { getErrorMessage } from '@shared/errorUtils';
 import { appendLedgerEntry } from './ledgerService';
+import { getAlphaConfig } from '@alpha/alphaConfig';
 import {
   LedgerEventType,
   ReputationPillar,
@@ -367,6 +368,14 @@ export async function recordReputationEvent(input: ReputationEventInput): Promis
   }
 
   const config: ReputationEventDefaults = { ...defaults, ...input.overrides };
+
+  if (config.rawDelta > 0) {
+    const alpha = await getAlphaConfig();
+    if (alpha.features.readOnlyMode || !alpha.features.reputationAwards) {
+      logger.info('reputation.event.award_skipped', { userId, ledgerEventType });
+      return;
+    }
+  }
 
   // 1. Adjust raw reputation score (backward-compatible with existing reputationService)
   if (config.rawDelta !== 0) {

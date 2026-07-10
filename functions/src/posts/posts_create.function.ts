@@ -33,29 +33,14 @@ import {
 import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
-
-function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | undefined {
-  if (label === undefined || label === null) {
-    return undefined;
-  }
-  if (typeof label !== 'string') {
-    return undefined;
-  }
-
-  const normalized = label.trim().toLowerCase();
-  if (
-    normalized === 'human' ||
-    normalized === 'assisted' ||
-    normalized === 'ai_assisted' ||
-    normalized === 'generated'
-  ) {
-    if (normalized === 'ai_assisted') {
-      return 'assisted';
-    }
-    return normalized;
-  }
-  return undefined;
-}
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
+import { trackAppEvent } from '@shared/appInsights';
+import {
+  normalizeDeclaredAuthorship,
+  resolveAuthorship,
+} from '@shared/authorship';
 
 function mediaValidationMessage(reason?: string): string {
   switch (reason) {
@@ -103,16 +88,21 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
   try {
     // Extract and verify JWT
     const auth = await extractAuthContext(ctx);
+    const alphaConfig = await assertAlphaFeature('postCreation');
+    const effectiveEntitlements = await getEffectiveEntitlements(auth.userId, auth.tier);
 
     // ─────────────────────────────────────────────────────────────
     // Daily Post Limit Enforcement
     // ─────────────────────────────────────────────────────────────
     if (!testContext.isTestMode) {
       try {
-        const limitResult = await checkAndIncrementPostCount(auth.userId, auth.tier);
+        const limitResult = await checkAndIncrementPostCount(
+          auth.userId,
+          effectiveEntitlements.tier
+        );
         ctx.context.log('[posts_create] Daily post limit check passed', {
           userId: auth.userId.slice(0, 8),
-          tier: auth.tier,
+          tier: effectiveEntitlements.tier,
           newCount: limitResult.newCount,
           remaining: limitResult.remaining,
         });
@@ -127,7 +117,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
           const err = limitError as DailyPostLimitExceededError;
           ctx.context.warn?.('[posts_create] Daily post limit exceeded', {
             userId: auth.userId.slice(0, 8),
-            tier: auth.tier,
+            tier: effectiveEntitlements.tier,
           });
           const response = ctx.tooManyRequests(err.message, 'daily_post_limit_reached', {
             tier: err.toResponse().tier,
@@ -161,15 +151,35 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       return ctx.badRequest('Content type is required', 'INVALID_CONTENT_TYPE');
     }
 
-    const rawAiLabel = (ctx.body as unknown as Record<string, unknown>).aiLabel;
-    if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
+    if (
+      ctx.body.isNews === true &&
+      !auth.roles.some(role => role === 'admin' || role === 'journalist' || role === 'editorial')
+    ) {
+      return ctx.forbidden('Editorial publishing permission is required', 'EDITORIAL_ROLE_REQUIRED');
+    }
+
+    if (
+      (ctx.body.mediaUrls?.length ?? 0) >
+      effectiveEntitlements.limits.maxMediaPerPost
+    ) {
       return ctx.badRequest(
-        'aiLabel must be "human", "assisted", or "generated"',
-        'INVALID_AI_LABEL'
+        `This tier allows up to ${effectiveEntitlements.limits.maxMediaPerPost} media attachments per post.`,
+        'MEDIA_LIMIT_EXCEEDED',
+        {
+          tier: effectiveEntitlements.tier,
+          maxMediaPerPost: effectiveEntitlements.limits.maxMediaPerPost,
+        }
       );
     }
 
-    const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? 'human');
+    const rawAiLabel = (ctx.body as unknown as Record<string, unknown>).aiLabel;
+    const declaredAuthorship = normalizeDeclaredAuthorship(rawAiLabel);
+    if (!declaredAuthorship) {
+      return ctx.badRequest(
+        'Authorship disclosure is required: aiLabel must be "human", "assisted", or "generated"',
+        rawAiLabel === undefined ? 'AI_LABEL_REQUIRED' : 'INVALID_AI_LABEL'
+      );
+    }
 
     const mediaValidation = await validateOwnedMediaUrls(auth.userId, ctx.body.mediaUrls);
     if (!mediaValidation.valid) {
@@ -185,7 +195,12 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
     // ─────────────────────────────────────────────────────────────
     // Content Moderation - Check before creating post
     // ─────────────────────────────────────────────────────────────
-    const { result: moderationResult, error: moderationError } = await moderatePostContent(
+    const {
+      result: moderationResult,
+      error: moderationError,
+      thresholdVersion,
+      classifiedAt,
+    } = await moderatePostContent(
       content,
       auth.userId,
       postId,
@@ -224,45 +239,41 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       });
     }
 
-    if (mediaModeration.aiDetected) {
-      return ctx.badRequest(
-        'AI-generated media cannot be published. You can appeal this decision.',
-        'AI_CONTENT_BLOCKED',
-        {
-          appealEligible: true,
-          caseId: postId,
-          categories: mediaModeration.categories,
-        }
-      );
-    }
-
     const aiDetected = hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
 
-    if (effectiveAiLabel === 'generated') {
-      return ctx.badRequest(
-        'AI-generated content cannot be published. You can appeal this decision.',
-        'AI_CONTENT_BLOCKED',
-        { appealEligible: true, caseId: postId }
-      );
+    const classifierAvailable =
+      !alphaConfig.features.aiClassificationEnforcement ||
+      (moderationResult !== null && !moderationError && !mediaModeration.error);
+    if (
+      alphaConfig.features.aiClassificationEnforcement &&
+      !classifierAvailable &&
+      alphaConfig.aiClassificationFailureMode === 'fail_closed'
+    ) {
+      return {
+        status: 503,
+        jsonBody: {
+          error: {
+            code: 'AI_CLASSIFICATION_UNAVAILABLE',
+            message: 'AI classification is temporarily unavailable',
+            correlationId: ctx.correlationId,
+          },
+        },
+      };
     }
 
-    if (aiDetected && effectiveAiLabel !== 'generated') {
-      // Phase 1: apply undisclosed-AI reputation penalty and flag the post for review.
-      if (content && content.length >= 250) {
-        void recordReputationEvent({
-          userId: auth.userId,
-          ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
-          sourceId: postId,
-          sourceType: 'post',
-        }).catch(error => {
-          ctx.context.warn?.('[posts_create] Failed to record undisclosed AI reputation event', {
-            postId,
-            userId: auth.userId.slice(0, 8),
-            message: (error as Error).message,
-          });
-        });
-      }
-    }
+    const authorship = resolveAuthorship({
+      declaration: declaredAuthorship,
+      actorId: auth.userId,
+      aiDetected,
+      classifierAvailable,
+      classifiedAt,
+      score: Math.max(moderationMeta.confidence ?? 0, mediaModeration.confidence ?? 0) || undefined,
+      thresholdVersion,
+      categories: Array.from(
+        new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
+      ),
+      providerError: moderationError ?? mediaModeration.error,
+    });
 
     const mergedCategories = Array.from(
       new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
@@ -272,7 +283,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       mediaModeration.confidence ?? 0
     );
     const mergedStatus =
-      (aiDetected && effectiveAiLabel !== 'generated') ||
+      authorship.public.reviewState === 'pending' ||
       moderationMeta.status === 'warned' ||
       mediaModeration.status === 'warned'
         ? 'warned'
@@ -292,13 +303,12 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       },
       testContext, // Pass test context for data isolation
       {
-        aiLabel:
-          effectiveAiLabel === 'generated'
-            ? 'generated'
-            : effectiveAiLabel === 'assisted'
-              ? 'assisted'
-              : 'human',
+        aiLabel: declaredAuthorship,
         aiDetected,
+        authorship: authorship.public,
+        authorshipInternal: authorship.internal,
+        disclosureEvent: authorship.disclosureEvent,
+        status: authorship.publicationStatus,
       }
     );
 
@@ -345,8 +355,8 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       });
     }
 
-    if (!aiDetected && effectiveAiLabel !== 'generated') {
-      if (effectiveAiLabel === 'assisted' && content && content.length >= 250) {
+    if (alphaConfig.features.reputationAwards && authorship.reputationEligible) {
+      if (declaredAuthorship === 'assisted' && content && content.length >= 250) {
         void recordReputationEvent({
           userId: auth.userId,
           ledgerEventType: LedgerEventType.AI_ASSISTED_DISCLOSURE,
@@ -362,7 +372,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
             }
           );
         });
-      } else if (content && content.length >= 250) {
+      } else if (declaredAuthorship === 'human' && content && content.length >= 250) {
         // Phase 1: 250+ char human post earns reputation via ledger
         void recordReputationEvent({
           userId: auth.userId,
@@ -379,7 +389,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
             }
           );
         });
-      } else {
+      } else if (declaredAuthorship === 'human') {
         void awardPostCreated(auth.userId, post.id).catch(error => {
           ctx.context.warn?.('[posts_create] Failed to award post-created reputation', {
             postId: post.id,
@@ -388,6 +398,23 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
           });
         });
       }
+    } else if (
+      alphaConfig.features.reputationAwards &&
+      declaredAuthorship === 'generated' &&
+      authorship.publicationStatus === 'published'
+    ) {
+      void recordReputationEvent({
+        userId: auth.userId,
+        ledgerEventType: LedgerEventType.AI_GENERATED_TEXT,
+        sourceId: post.id,
+        sourceType: 'post',
+      }).catch(error => {
+        ctx.context.warn?.('[posts_create] Failed to record AI_GENERATED_TEXT event', {
+          postId: post.id,
+          userId: auth.userId.slice(0, 8),
+          message: (error as Error).message,
+        });
+      });
     }
 
     void appendReceiptEvent({
@@ -396,13 +423,14 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       type: 'MODERATION_DECIDED',
       summary: 'Moderation completed',
       reason:
-        mergedStatus === 'warned'
+        authorship.public.reviewState === 'pending'
           ? 'Automated checks completed and marked this post for closer review.'
           : 'Automated checks completed and no moderation action was applied.',
       policyLinks,
       actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
       metadata: {
-        moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
+        moderationAction:
+          authorship.public.reviewState === 'pending' ? 'under_review' : 'none',
         proofSignals,
       },
     }).catch(error => {
@@ -421,8 +449,35 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
       });
     }
 
+    trackAppEvent({
+      name: 'post_created',
+      properties: {
+        declaredAuthorship,
+        authorshipLabel: authorship.public.authorshipLabel,
+        classificationSource: authorship.public.classificationSource,
+        classificationState: authorship.public.classificationState,
+        reviewState: authorship.public.reviewState,
+        publicationStatus: authorship.publicationStatus,
+        hasMedia: (ctx.body.mediaUrls?.length ?? 0) > 0,
+        isNews: ctx.body.isNews === true,
+        isTestMode: testContext.isTestMode,
+      },
+    });
+
     return ctx.created(post);
   } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        jsonBody: {
+          error: {
+            code: 'ALPHA_FEATURE_DISABLED',
+            message: error.message,
+            correlationId: ctx.correlationId,
+          },
+        },
+      };
+    }
     ctx.context.error(`[posts_create] Error creating post: ${error}`, {
       correlationId: ctx.correlationId,
     });

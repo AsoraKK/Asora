@@ -13,11 +13,11 @@ part 'admin_flag_detail_content.g.dart';
 /// AdminFlagDetailContent
 ///
 /// Properties:
-/// * [contentId] 
-/// * [type] 
-/// * [createdAt] 
-/// * [state] 
-/// * [preview] 
+/// * [contentId]
+/// * [type]
+/// * [createdAt]
+/// * [state]
+/// * [preview]
 @BuiltValue()
 abstract class AdminFlagDetailContent implements Built<AdminFlagDetailContent, AdminFlagDetailContentBuilder> {
   @BuiltValueField(wireName: r'contentId')
@@ -181,4 +181,3 @@ class _$AdminFlagDetailContentSerializer implements PrimitiveSerializer<AdminFla
     return result.build();
   }
 }
-

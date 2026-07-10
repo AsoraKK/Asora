@@ -17,7 +17,7 @@ void main() {
       expect(s.validationError, isNull);
       expect(s.isNews, isFalse);
       expect(s.contentType, 'text');
-      expect(s.aiLabel, 'human');
+      expect(s.aiLabel, isNull);
     });
   });
 
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('normal text is valid', () {
-      const s = PostCreationState(text: 'Hello world');
+      const s = PostCreationState(text: 'Hello world', aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
 
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('text exactly 5000 chars is valid', () {
-      final s = PostCreationState(text: 'a' * 5000);
+      final s = PostCreationState(text: 'a' * 5000, aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
   });

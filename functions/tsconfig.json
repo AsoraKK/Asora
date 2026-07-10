@@ -17,6 +17,7 @@
       "@rate-limit/*": ["src/rate-limit/*"],
       "@http/*": ["src/http/*"],
       "@admin/*": ["src/admin/*"],
+      "@alpha/*": ["src/alpha/*"],
       "@media/*": ["src/media/*"],
       "@payments/*": ["src/payments/*"]
     },

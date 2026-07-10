@@ -18,11 +18,23 @@ jest.mock('@shared/clients/cosmos', () => ({
                 inviteStore.set(doc.id, { ...doc });
                 return { resource: doc };
               }),
-              query: jest.fn(() => ({
+              query: jest.fn((spec: any) => ({
                 fetchNext: jest.fn(async () => ({
                   resources: Array.from(inviteStore.values()),
                   continuationToken: null,
                 })),
+                fetchAll: jest.fn(async () => {
+                  const text = typeof spec === 'string' ? spec : spec?.query ?? '';
+                  if (text.includes('COUNT(1)')) {
+                    return { resources: [Array.from(inviteStore.values()).filter((invite) => !invite.revokedAt).length] };
+                  }
+                  const inviteId = spec?.parameters?.find((entry: any) => entry.name === '@inviteId')?.value;
+                  return {
+                    resources: inviteId
+                      ? Array.from(inviteStore.values()).filter((invite) => invite.inviteId === inviteId)
+                      : Array.from(inviteStore.values()),
+                  };
+                }),
               })),
             },
             item: jest.fn((id: string) => ({
@@ -256,11 +268,12 @@ describe('Admin Invite Endpoints', () => {
     });
   });
 
-  describe('GET /admin/invites/{code}', () => {
+  describe('GET /admin/invites/{inviteId}', () => {
     beforeEach(() => {
       const now = new Date();
       inviteStore.set('AAAA-1111', {
         id: 'AAAA-1111',
+        inviteId: 'invite-a',
         inviteCode: 'AAAA-1111',
         email: null,
         createdBy: 'admin-123',
@@ -275,7 +288,7 @@ describe('Admin Invite Endpoints', () => {
     it('retrieves an existing invite', async () => {
       const req = httpReqMock({
         method: 'GET',
-        params: { code: 'AAAA-1111' },
+        params: { inviteId: 'invite-a' },
         principal: mockPrincipal,
       });
 
@@ -283,13 +296,14 @@ describe('Admin Invite Endpoints', () => {
 
       expect(res.status).toBe(200);
       const body = JSON.parse(res.body as string);
-      expect(body.data.inviteCode).toBe('AAAA-1111');
+      expect(body.data.inviteId).toBe('invite-a');
+      expect(body.data.inviteCode).toBeUndefined();
     });
 
     it('returns 404 for non-existent invite', async () => {
       const req = httpReqMock({
         method: 'GET',
-        params: { code: 'XXXX-YYYY' },
+        params: { inviteId: 'invite-missing' },
         principal: mockPrincipal,
       });
 
@@ -311,11 +325,12 @@ describe('Admin Invite Endpoints', () => {
     });
   });
 
-  describe('DELETE /admin/invites/{code}', () => {
+  describe('DELETE /admin/invites/{inviteId}', () => {
     beforeEach(() => {
       const now = new Date();
       inviteStore.set('AAAA-1111', {
         id: 'AAAA-1111',
+        inviteId: 'invite-a',
         inviteCode: 'AAAA-1111',
         email: null,
         createdBy: 'admin-123',
@@ -330,7 +345,7 @@ describe('Admin Invite Endpoints', () => {
     it('revokes an existing invite', async () => {
       const req = httpReqMock({
         method: 'DELETE',
-        params: { code: 'AAAA-1111' },
+        params: { inviteId: 'invite-a' },
         principal: mockPrincipal,
       });
 
@@ -345,7 +360,7 @@ describe('Admin Invite Endpoints', () => {
     it('returns 404 for non-existent invite', async () => {
       const req = httpReqMock({
         method: 'DELETE',
-        params: { code: 'XXXX-YYYY' },
+        params: { inviteId: 'invite-missing' },
         principal: mockPrincipal,
       });
 

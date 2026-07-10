@@ -120,7 +120,7 @@ describe('Feed GET Handler', () => {
     it('returns public cache headers for guest/anonymous requests', async () => {
       const response = await getFeed(createRequest(), mockContext);
 
-      expect(response.headers['Cache-Control']).toBe('public, max-age=60, stale-while-revalidate=30');
+      expect(response.headers['Cache-Control']).toBe('public, no-cache, must-revalidate');
       expect(response.headers['Vary']).toBe('Authorization');
     });
 
@@ -210,22 +210,19 @@ describe('Feed GET Handler', () => {
       });
     });
 
-    it('returns empty success response for unexpected errors', async () => {
+    it('returns a controlled unavailable response for unexpected errors', async () => {
       mockedFeedService.getFeed.mockRejectedValueOnce(new Error('Database connection failed'));
       const response = await getFeed(
         createRequest({ authorization: 'Bearer token123' }),
         mockContext,
       );
 
-      expect(response.status).toBe(200);
-      expect(response.headers!['Cache-Control']).toContain('private');
-      expect(response.headers!['Cache-Control']).toContain('no-store');
+      expect(response.status).toBe(503);
+      expect(response.headers!['Cache-Control']).toBe('no-store');
       const parsed = JSON.parse(response.body ?? '{}');
       expect(parsed).toMatchObject({
-        success: true,
-        data: {
-          items: [],
-          meta: expect.objectContaining({ count: 0 }),
+        error: {
+          code: 'FEED_UNAVAILABLE',
         },
       });
       expect(mockContext.log).toHaveBeenCalledWith('feed.get.error', expect.any(Object));

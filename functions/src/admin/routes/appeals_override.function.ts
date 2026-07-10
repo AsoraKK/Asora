@@ -14,6 +14,10 @@ import { NotificationEventType } from '../../notifications/types';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import {
+  applyAppealOutcomeToAuthorship,
+  type AuthorshipLabel,
+} from '@shared/authorship';
 
 type OverrideDecision = 'allow' | 'block';
 type OverrideReasonCode = 'policy_exception' | 'false_positive' | 'safety_risk' | 'other';
@@ -23,6 +27,11 @@ interface OverrideBody {
   decision?: OverrideDecision;
   reasonCode?: OverrideReasonCode;
   reasonNote?: string;
+  finalLabel?: Exclude<AuthorshipLabel, 'Under review'>;
+}
+
+function isFinalLabel(value: unknown): value is Exclude<AuthorshipLabel, 'Under review'> {
+  return value === 'Human-authored' || value === 'AI-assisted' || value === 'AI-generated';
 }
 
 const VALID_REASON_CODES = new Set<OverrideReasonCode>([
@@ -142,6 +151,9 @@ export async function overrideAppeal(
   if (reasonNote.length > 500) {
     return createErrorResponse(400, 'note_too_long', 'reasonNote must be 500 characters or less');
   }
+  if (body?.finalLabel !== undefined && !isFinalLabel(body.finalLabel)) {
+    return createErrorResponse(400, 'invalid_final_label', 'finalLabel is invalid');
+  }
 
   const idempotencyKey = req.headers.get('idempotency-key')?.trim() || null;
   const actorId = (req as HttpRequest & { principal: { sub: string } }).principal.sub;
@@ -166,6 +178,13 @@ export async function overrideAppeal(
 
     const contentType = String(appeal.contentType);
     const contentId = String(appeal.contentId);
+    if (contentType === 'post' && !isFinalLabel(body?.finalLabel)) {
+      return createErrorResponse(
+        400,
+        'missing_final_label',
+        'finalLabel is required when overriding a post appeal'
+      );
+    }
 
     const voteFor = toSafeCount(appeal.votesFor);
     const voteAgainst = toSafeCount(appeal.votesAgainst);
@@ -233,6 +252,23 @@ export async function overrideAppeal(
         value: Date.now(),
       });
     }
+    if (contentType === 'post' && isFinalLabel(body?.finalLabel)) {
+      contentPatch.push({
+        op: 'set' as const,
+        path: '/authorship',
+        value: applyAppealOutcomeToAuthorship(
+          document.authorship as import('@shared/authorship').PublicAuthorship | undefined,
+          document.aiLabel,
+          body.finalLabel,
+          nowIso
+        ),
+      });
+      contentPatch.push({
+        op: 'set' as const,
+        path: '/authorshipLabelUpdatedAt',
+        value: nowIso,
+      });
+    }
 
     const appealPatch: import('@azure/cosmos').PatchOperation[] = [
       { op: 'set' as const, path: '/status', value: 'overridden' },
@@ -242,6 +278,18 @@ export async function overrideAppeal(
       { op: 'set' as const, path: '/resolvedBy', value: actorId },
       { op: 'set' as const, path: '/decisionReasonCode', value: reasonCode },
       { op: 'set' as const, path: '/decisionNote', value: reasonNote || null },
+      { op: 'set' as const, path: '/reviewState', value: 'resolved' },
+      { op: 'set' as const, path: '/finalLabel', value: body?.finalLabel ?? null },
+      {
+        op: 'set' as const,
+        path: '/finalModerationAction',
+        value: decision === 'allow' ? 'none' : 'blocked',
+      },
+      {
+        op: 'set' as const,
+        path: '/decisionVersion',
+        value: Number(appeal.decisionVersion ?? 0) + 1,
+      },
     ];
 
     if (idempotencyKey) {
@@ -285,6 +333,7 @@ export async function overrideAppeal(
       decision,
       reasonCode,
       reasonNote: reasonNote || null,
+      finalLabel: body?.finalLabel ?? null,
       createdAt: nowIso,
       decidedAt: nowIso,
       _partitionKey: contentId,
@@ -307,12 +356,14 @@ export async function overrideAppeal(
       after: {
         status: 'overridden',
         finalDecision: decision,
+        finalLabel: body?.finalLabel ?? null,
       },
       correlationId: context.invocationId,
       metadata: {
         contentId,
         contentType,
         idempotencyKey: idempotencyKey ?? null,
+        finalLabel: body?.finalLabel ?? null,
       },
     });
 

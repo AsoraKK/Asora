@@ -12,7 +12,7 @@ part 'accepted_response.g.dart';
 /// Generic 202 acceptance body returned by ctx.accepted().
 ///
 /// Properties:
-/// * [message] 
+/// * [message]
 @BuiltValue()
 abstract class AcceptedResponse implements Built<AcceptedResponse, AcceptedResponseBuilder> {
   @BuiltValueField(wireName: r'message')
@@ -118,4 +118,3 @@ class AcceptedResponseMessageEnum extends EnumClass {
   static BuiltSet<AcceptedResponseMessageEnum> get values => _$acceptedResponseMessageEnumValues;
   static AcceptedResponseMessageEnum valueOf(String name) => _$acceptedResponseMessageEnumValueOf(name);
 }
-

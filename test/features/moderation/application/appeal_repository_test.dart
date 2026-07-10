@@ -314,8 +314,8 @@ void main() {
         expect(result, isA<Appeal>());
         expect(result.appealId, 'minimal');
         expect(result.votingProgress, isNull);
-        expect(result.aiScore, isNull);
-        expect(result.aiAnalysis, isNull);
+        expect(result.authorshipLabel, 'Under review');
+        expect(result.classificationSource, 'automated_classification');
       });
 
       test('should handle concurrent repository calls', () async {

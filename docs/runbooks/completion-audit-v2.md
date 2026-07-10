@@ -1,6 +1,6 @@
 # Lythaus (formerly Asora) Completion Audit v2
 
-Last updated: 2026-02-19  
+Last updated: 2026-02-19
 Scope: repo-verified implementation status plus explicitly marked external verification items.
 
 ## Status legend

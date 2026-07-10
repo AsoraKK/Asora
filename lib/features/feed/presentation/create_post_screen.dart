@@ -34,11 +34,11 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   static const String _policyReminderMessage =
-      'AI-generated content is blocked at publish time.\n'
-      'AI-signaled content must be labeled and cannot be published.\n'
-      "If content is blocked, you'll see a neutral notice.\n"
-      'You can appeal decisions. Appeals are reviewed by the community and moderators.\n'
-      'This is an invite-only beta focused on authentic human content.';
+      'Choose Human-authored, AI-assisted, or AI-generated before posting.\n'
+      'AI-generated posts are labeled and do not earn reputation.\n'
+      'Disclosure conflicts may be placed Under review.\n'
+      'Community appeal votes are advisory; a moderator records the final decision.\n'
+      'This is an invite-only Alpha.';
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
@@ -185,7 +185,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tell us whether AI helped create this post. AI-generated posts are blocked at publish time.',
+                        'Required. Disclosed AI-generated posts are labeled and do not earn reputation.',
                         style: GoogleFonts.sora(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -210,7 +210,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           ),
                           ChoiceChip(
                             label: Text(
-                              'Contains AI',
+                              'AI-assisted',
                               style: GoogleFonts.sora(fontSize: 12),
                             ),
                             selected: state.aiLabel == 'assisted',
@@ -238,7 +238,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            'Lythaus blocks AI-generated content at publish time. Switch to Human-authored to continue.',
+                            'This post will display AI-generated and will not earn reputation.',
                             style: GoogleFonts.sora(
                               fontSize: 12,
                               color: theme.colorScheme.error,

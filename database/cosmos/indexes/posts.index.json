@@ -50,6 +50,42 @@
         "path": "/createdAt",
         "order": "descending"
       }
+    ],
+    [
+      {
+        "path": "/status",
+        "order": "ascending"
+      },
+      {
+        "path": "/visibility",
+        "order": "ascending"
+      },
+      {
+        "path": "/createdAt",
+        "order": "descending"
+      },
+      {
+        "path": "/id",
+        "order": "descending"
+      }
+    ],
+    [
+      {
+        "path": "/authorId",
+        "order": "ascending"
+      },
+      {
+        "path": "/status",
+        "order": "ascending"
+      },
+      {
+        "path": "/createdAt",
+        "order": "descending"
+      },
+      {
+        "path": "/id",
+        "order": "descending"
+      }
     ]
   ],
   "spatialIndexes": []

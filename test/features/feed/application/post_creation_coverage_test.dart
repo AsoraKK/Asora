@@ -14,7 +14,7 @@ void main() {
       expect(s.validationError, isNull);
       expect(s.isNews, isFalse);
       expect(s.contentType, 'text');
-      expect(s.aiLabel, 'human');
+      expect(s.aiLabel, isNull);
       expect(s.proofSignals.hasAny, isFalse);
     });
 
@@ -22,7 +22,7 @@ void main() {
       const empty = PostCreationState(text: '');
       expect(empty.isValid, isFalse);
 
-      const ok = PostCreationState(text: 'hello');
+      const ok = PostCreationState(text: 'hello', aiLabel: 'human');
       expect(ok.isValid, isTrue);
 
       final tooLong = PostCreationState(text: 'a' * 5001);
@@ -125,7 +125,7 @@ void main() {
     test('validate returns null for valid text', () {
       // Validate is a method on the notifier, which needs Ref.
       // Instead test PostCreationState.isValid which mirrors validate logic.
-      const s = PostCreationState(text: 'Valid post');
+      const s = PostCreationState(text: 'Valid post', aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
 
@@ -135,7 +135,7 @@ void main() {
     });
 
     test('isValid true at exactly 5000 chars', () {
-      final s = PostCreationState(text: 'a' * 5000);
+      final s = PostCreationState(text: 'a' * 5000, aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
 

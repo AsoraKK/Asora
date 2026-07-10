@@ -3,6 +3,24 @@ name: deploy-asora-function-staging
 on:
   workflow_dispatch:
     inputs:
+      release_sha:
+        description: "Exact 40-character commit SHA already validated by CI"
+        required: true
+        type: string
+      ci_run_id:
+        description: "Successful CI workflow run ID for the exact release SHA"
+        required: true
+        type: string
+      approved_alpha_stage:
+        description: "Kyle-approved Alpha stage"
+        required: true
+        type: choice
+        options: [technical_alpha, controlled_alpha, expanded_alpha, paused]
+      known_disabled_features_json:
+        description: "JSON array of intentionally disabled Alpha features"
+        required: true
+        default: '[]'
+        type: string
       function_app_name:
         description: "Optional Function App override"
         required: false
@@ -13,6 +31,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -21,6 +40,10 @@ jobs:
     uses: ./.github/workflows/deploy-asora-function-dev.yml
     with:
       target_environment: staging
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      approved_alpha_stage: ${{ inputs.approved_alpha_stage }}
+      known_disabled_features_json: ${{ inputs.known_disabled_features_json }}
       function_app_name: ${{ github.event.inputs.function_app_name || 'asora-function-staging' }}
-      resource_group: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
+      resource_group: ${{ github.event.inputs.resource_group || 'asora-staging' }}
     secrets: inherit

@@ -12,6 +12,7 @@
     "lint-check": "npm run lint-functions",
     "install-functions": "cd functions && npm install",
     "build-functions": "cd functions && npm run build",
+    "audit:production": "node scripts/check-npm-audit.js",
     "test-functions": "cd functions && npm run test",
     "verify:routes": "node functions/dev/verify-routes.js",
     "openapi:lint": "redocly lint api/openapi/openapi.yaml",
@@ -46,14 +47,13 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cross-fetch": "^4.1.0",
-    "glob": "^11.0.3",
+    "glob": "^13.0.6",
     "husky": "^8.0.3",
     "jest": "^30.2.0",
     "jsonpointer": "^5.0.1",
     "oasdiff": "file:tools/openapi/oasdiff",
     "openapi-client-axios": "^7.7.0",
     "playwright": "^1.60.0",
-    "redoc-cli": "^0.13.21",
     "tesseract.js": "^7.0.0",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
@@ -61,6 +61,13 @@
     "yaml": "^2.8.1"
   },
   "overrides": {
+    "glob@10.5.0": {
+      "minimatch": "9.0.9"
+    },
+    "fast-xml-parser": "5.9.3",
+    "form-data": "4.0.6",
+    "lodash": "4.18.1",
+    "minimatch@^3.0.0": "3.1.5",
     "typescript": "5.5.4"
   },
   "workspaces": [

@@ -29,6 +29,15 @@ jest.mock('../../src/notifications/shared/errorHandler', () => ({
   getNotificationsDegradationStatus: jest.fn(),
 }));
 
+jest.mock('@alpha/alphaConfig', () => ({
+  getAlphaCohortSnapshot: jest.fn(async () => ({
+    stage: 'technical_alpha',
+    registeredAccounts: 0,
+    capacity: 50,
+    remaining: 50,
+  })),
+}));
+
 const { getTargetDatabase, getCosmosDatabase } = jest.requireMock('@shared/clients/cosmos') as {
   getTargetDatabase: jest.Mock;
   getCosmosDatabase: jest.Mock;

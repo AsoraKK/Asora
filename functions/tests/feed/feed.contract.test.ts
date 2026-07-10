@@ -254,20 +254,17 @@ describe('service error handling', () => {
     expect(res.headers!['Content-Type']).toContain('application/json');
   });
 
-  it('unexpected error returns empty success response', async () => {
+  it('unexpected error returns a controlled unavailable response', async () => {
     mockedFeedService.getFeed.mockRejectedValueOnce(new Error('DB exploded'));
 
     const res = await getFeed(createRequest(), mockContext);
 
-    expect(res.status).toBe(200);
-    expect(res.headers!['Cache-Control']).toContain('public');
-    expect(res.headers!['Cache-Control']).toContain('max-age=60');
+    expect(res.status).toBe(503);
+    expect(res.headers!['Cache-Control']).toBe('no-store');
     const parsed = JSON.parse(res.body as string);
     expect(parsed).toMatchObject({
-      success: true,
-      data: {
-        items: [],
-        meta: expect.objectContaining({ count: 0 }),
+      error: {
+        code: 'FEED_UNAVAILABLE',
       },
     });
   });
@@ -278,13 +275,14 @@ describe('service error handling', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Cache-Control policy', () => {
-  it('guest request gets public cache with max-age', async () => {
+  it('guest request is public but must revalidate', async () => {
     const req = createRequest({}, {}); // no Authorization header
     const res = await getFeed(req, mockContext);
 
     const cc = res.headers!['Cache-Control'];
     expect(cc).toContain('public');
-    expect(cc).toContain('max-age=60');
+    expect(cc).toContain('no-cache');
+    expect(cc).toContain('must-revalidate');
   });
 
   it('authenticated request gets private no-store', async () => {

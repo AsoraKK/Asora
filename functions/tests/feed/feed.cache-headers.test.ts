@@ -3,7 +3,7 @@
  *
  * Verifies that feed endpoints set the correct Cache-Control and Vary headers:
  * - Authenticated request → `Cache-Control: private, no-store` + `Vary: Authorization`
- * - Anonymous request     → `Cache-Control: public, max-age=60, stale-while-revalidate=30` + `Vary: Authorization`
+ * - Anonymous request     → `Cache-Control: public, no-cache, must-revalidate` + `Vary: Authorization`
  *
  * Both `feed/discover` (feed_discover_get) and `feed/news` (feed_news_get) handlers
  * share the same cache-header logic so both are tested here.
@@ -32,8 +32,15 @@ jest.mock('@feed/service/feedService', () => ({
 
 jest.mock('@posts/service/postsService', () => ({
   postsService: {
-    enrichPost: jest.fn().mockImplementation(async (item: unknown) => item),
+    enrichFeedPosts: jest.fn().mockImplementation(async (items: unknown[]) => items),
   },
+}));
+
+jest.mock('@shared/services/entitlementService', () => ({
+  getEffectiveEntitlements: jest.fn(async (_userId: string, tier: string) => ({
+    tier,
+    limits: { newsBoardAccessLevel: tier === 'free' ? 'preview' : 'full' },
+  })),
 }));
 
 // authContext mock – controlled by each test
@@ -132,13 +139,13 @@ describe('feed_discover_get cache headers', () => {
     expect(headers['Vary']).toBe('Authorization');
   });
 
-  it('sets Cache-Control: public, max-age=60, stale-while-revalidate=30 for anonymous requests', async () => {
+  it('requires revalidation for anonymous requests so label changes are not stale', async () => {
     mockAnonymous();
     const req = httpReqMock({});
 
     const response = await feed_discover_get(req, makeContext('disc-anon'));
     const headers = response.headers as Record<string, string>;
-    expect(headers['Cache-Control']).toBe('public, max-age=60, stale-while-revalidate=30');
+    expect(headers['Cache-Control']).toBe('public, no-cache, must-revalidate');
   });
 
   it('sets Vary: Authorization for anonymous requests (prevents serving wrong cached copy)', async () => {

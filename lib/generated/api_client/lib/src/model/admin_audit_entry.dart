@@ -13,18 +13,18 @@ part 'admin_audit_entry.g.dart';
 /// AdminAuditEntry
 ///
 /// Properties:
-/// * [id] 
-/// * [timestamp] 
-/// * [actorId] 
-/// * [action] 
-/// * [targetType] 
-/// * [subjectId] 
-/// * [reasonCode] 
-/// * [note] 
-/// * [before] 
-/// * [after] 
-/// * [correlationId] 
-/// * [metadata] 
+/// * [id]
+/// * [timestamp]
+/// * [actorId]
+/// * [action]
+/// * [targetType]
+/// * [subjectId]
+/// * [reasonCode]
+/// * [note]
+/// * [before]
+/// * [after]
+/// * [correlationId]
+/// * [metadata]
 @BuiltValue()
 abstract class AdminAuditEntry implements Built<AdminAuditEntry, AdminAuditEntryBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -305,4 +305,3 @@ class _$AdminAuditEntrySerializer implements PrimitiveSerializer<AdminAuditEntry
     return result.build();
   }
 }
-

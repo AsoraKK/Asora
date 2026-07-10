@@ -12,18 +12,18 @@ part 'admin_appeal_queue_item.g.dart';
 /// AdminAppealQueueItem
 ///
 /// Properties:
-/// * [appealId] 
-/// * [contentId] 
-/// * [authorId] 
-/// * [submittedAt] 
-/// * [status] 
-/// * [originalReasonCategory] 
-/// * [votesFor] 
-/// * [votesAgainst] 
-/// * [totalVotes] 
-/// * [votingStatus] 
-/// * [expiresAt] 
-/// * [timeRemainingSeconds] 
+/// * [appealId]
+/// * [contentId]
+/// * [authorId]
+/// * [submittedAt]
+/// * [status]
+/// * [originalReasonCategory]
+/// * [votesFor]
+/// * [votesAgainst]
+/// * [totalVotes]
+/// * [votingStatus]
+/// * [expiresAt]
+/// * [timeRemainingSeconds]
 @BuiltValue()
 abstract class AdminAppealQueueItem implements Built<AdminAppealQueueItem, AdminAppealQueueItemBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -308,4 +308,3 @@ class _$AdminAppealQueueItemSerializer implements PrimitiveSerializer<AdminAppea
     return result.build();
   }
 }
-

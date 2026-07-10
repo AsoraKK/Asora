@@ -19,10 +19,10 @@ class PaymentsApi {
   const PaymentsApi(this._dio, this._serializers);
 
   /// Handle payment provider webhook
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +32,7 @@ class PaymentsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> paymentsWebhook({ 
+  Future<Response<JsonObject>> paymentsWebhook({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

@@ -34,10 +34,29 @@ function setupCosmos(appeal: unknown) {
     () =>
       ({
         database: () => ({
-          container: (_name: string) => ({
-            item: jest.fn().mockReturnValue({ read: mockItemRead }),
-            items: { create: mockItemsCreate, upsert: mockItemsUpsert },
-          }),
+          container: (name: string) => {
+            if (name === 'appeals') {
+              return {
+                item: jest.fn().mockReturnValue({ read: mockItemRead }),
+                items: { upsert: mockItemsUpsert },
+              };
+            }
+            if (name === 'moderation_decisions') {
+              return { items: { create: mockItemsCreate } };
+            }
+            return {
+              item: jest.fn().mockReturnValue({
+                read: jest.fn().mockResolvedValue({ resource: null }),
+                replace: jest.fn().mockResolvedValue({ resource: null }),
+              }),
+              items: {
+                create: jest.fn().mockResolvedValue({ resource: {} }),
+                query: jest.fn(() => ({
+                  fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
+                })),
+              },
+            };
+          },
         }),
       }) as any
   );
@@ -49,7 +68,10 @@ function modRequest(params: Record<string, string>, body: unknown) {
     method: 'POST',
     headers: { authorization: 'Bearer valid-mod-token' },
     params,
-    body,
+    body:
+      body && typeof body === 'object'
+        ? { finalLabel: 'Human-authored', ...(body as Record<string, unknown>) }
+        : body,
   });
 }
 

@@ -3,8 +3,8 @@ import { check, sleep } from 'k6';
 import { resolveUrl, resolveDurationThresholds } from './utils.js';
 
 const durationThresholds = resolveDurationThresholds(__ENV, 'FEED_READ', {
-  p95: 3000,  // 3 seconds - realistic for warm endpoints
-  p99: 5000,  // 5 seconds - generous for 99th percentile
+  p95: 200,
+  p99: 400,
 });
 
 export const options = {
@@ -28,7 +28,7 @@ export const options = {
       `p(99)<${durationThresholds.p99}`,
     ],
   },
-  summaryTrendStats: ['min', 'avg', 'med', 'p(95)', 'p(99)'],
+  summaryTrendStats: ['min', 'avg', 'med', 'p(75)', 'p(90)', 'p(95)', 'p(99)'],
   tags: { test: 'feed-read' },
 };
 
@@ -36,13 +36,16 @@ const BASE = __ENV.K6_BASE_URL;
 if (!BASE) throw new Error('K6_BASE_URL is required');
 
 function buildFeedUrl() {
-  const feedBase = resolveUrl(BASE, '/api/feed');
-  const query = 'guest=1&limit=10';
+  const feedBase = resolveUrl(BASE, __ENV.FEED_PATH || '/api/feed');
+  const query = __ENV.FEED_QUERY || 'guest=1&limit=10';
   return `${feedBase}?${query}`;
 }
 
 export default function () {
-  const res = http.get(buildFeedUrl(), { tags: { endpoint: 'feed' } });
+  const headers = __ENV.K6_SMOKE_TOKEN
+    ? { Authorization: `Bearer ${__ENV.K6_SMOKE_TOKEN}` }
+    : undefined;
+  const res = http.get(buildFeedUrl(), { headers, tags: { endpoint: 'feed' } });
   check(res, { 'status 200/204': (r) => r.status === 200 || r.status === 204 });
   sleep(1);
 }
@@ -51,18 +54,24 @@ export function handleSummary(data) {
   const metrics = data.metrics;
   const p95 = metrics['http_req_duration{endpoint:feed}']?.values?.['p(95)'] || 0;
   const p99 = metrics['http_req_duration{endpoint:feed}']?.values?.['p(99)'] || 0;
+  const p50 = metrics['http_req_duration{endpoint:feed}']?.values?.med || 0;
+  const p75 = metrics['http_req_duration{endpoint:feed}']?.values?.['p(75)'] || 0;
+  const p90 = metrics['http_req_duration{endpoint:feed}']?.values?.['p(90)'] || 0;
   const errorRate = metrics['http_req_failed{endpoint:feed}']?.values?.rate || 0;
   
   const textSummary = `Feed Read Test Results
 =======================
 p95: ${p95.toFixed(2)}ms
 p99: ${p99.toFixed(2)}ms
+p50: ${p50.toFixed(2)}ms
+p75: ${p75.toFixed(2)}ms
+p90: ${p90.toFixed(2)}ms
 error_rate: ${(errorRate * 100).toFixed(2)}%
 iterations: ${metrics.iterations?.values?.count || 0}
 `;
 
   return {
-    'load/k6/feed-read-summary.json': JSON.stringify(data, null, 2),
-    'load/k6/feed-read-summary.txt': textSummary,
+    [`load/k6/${__ENV.SUMMARY_PREFIX || 'feed-read'}-summary.json`]: JSON.stringify(data, null, 2),
+    [`load/k6/${__ENV.SUMMARY_PREFIX || 'feed-read'}-summary.txt`]: textSummary,
   };
 }

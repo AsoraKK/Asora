@@ -12,9 +12,9 @@ part 'redeem_invite_response.g.dart';
 /// Successful invite redemption – includes fresh token pair.
 ///
 /// Properties:
-/// * [success] 
-/// * [data] 
-/// * [timestamp] 
+/// * [success]
+/// * [data]
+/// * [timestamp]
 @BuiltValue()
 abstract class RedeemInviteResponse implements Built<RedeemInviteResponse, RedeemInviteResponseBuilder> {
   @BuiltValueField(wireName: r'success')
@@ -136,4 +136,3 @@ class _$RedeemInviteResponseSerializer implements PrimitiveSerializer<RedeemInvi
     return result.build();
   }
 }
-

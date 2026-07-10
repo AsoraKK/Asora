@@ -108,6 +108,8 @@ class FeedItem {
   final bool isNews;
   final bool isPinned;
   final FeedTrustSummary trustSummary;
+  final String authorshipLabel;
+  final String classificationSource;
 
   const FeedItem({
     required this.id,
@@ -126,6 +128,8 @@ class FeedItem {
     this.isNews = false,
     this.isPinned = false,
     this.trustSummary = const FeedTrustSummary(),
+    this.authorshipLabel = 'Under review',
+    this.classificationSource = 'automated_classification',
   });
 }
 

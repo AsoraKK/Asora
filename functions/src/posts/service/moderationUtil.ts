@@ -34,6 +34,14 @@ export interface ExtendedModerationResult {
   configEnvelope: ModerationConfigEnvelope;
 }
 
+export interface PostModerationResult {
+  result: ModerationResult | null;
+  error?: string;
+  provider: 'hive';
+  thresholdVersion: string;
+  classifiedAt: number;
+}
+
 const AI_SIGNAL_PATTERNS = [
   /\bai\b/i,
   /generated/i,
@@ -66,7 +74,7 @@ export async function moderatePostContent(
   contentId: string,
   context: InvocationContext,
   correlationId?: string
-): Promise<{ result: ModerationResult | null; error?: string }> {
+): Promise<PostModerationResult> {
   // Get dynamic config with version info
   const configEnvelope = await getModerationConfigWithVersion();
   const { config } = configEnvelope;
@@ -87,7 +95,12 @@ export async function moderatePostContent(
       correlationId,
     });
     
-    return { result: null };
+    return {
+      result: null,
+      provider: 'hive',
+      thresholdVersion: String(configEnvelope.version),
+      classifiedAt: Date.now(),
+    };
   }
 
   // Skip moderation if HIVE_API_KEY is not configured (dev/test environments)
@@ -106,7 +119,12 @@ export async function moderatePostContent(
       correlationId,
     });
     
-    return { result: null };
+    return {
+      result: null,
+      provider: 'hive',
+      thresholdVersion: String(configEnvelope.version),
+      classifiedAt: Date.now(),
+    };
   }
 
   try {
@@ -185,7 +203,12 @@ export async function moderatePostContent(
       correlationId,
     });
 
-    return { result };
+    return {
+      result,
+      provider: 'hive',
+      thresholdVersion: String(configEnvelope.version),
+      classifiedAt: Date.now(),
+    };
   } catch (error) {
     const isHiveError = error instanceof HiveAPIError;
     const errorMessage = (error as Error).message;
@@ -221,7 +244,13 @@ export async function moderatePostContent(
       correlationId,
     });
 
-    return { result: null, error: errorMessage };
+    return {
+      result: null,
+      error: errorMessage,
+      provider: 'hive',
+      thresholdVersion: String(configEnvelope.version),
+      classifiedAt: Date.now(),
+    };
   }
 }
 

@@ -7,9 +7,9 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net
+  - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api
     description: Azure Functions staging edge endpoint
-  - url: https://${STAGING_DOMAIN}
+  - url: https://${STAGING_DOMAIN}/api
     description: Asora staging domain (set via environment)
     variables:
       STAGING_DOMAIN:
@@ -258,32 +258,27 @@ paths:
             schema:
               type: object
               required:
-                - id
                 - text
+                - aiLabel
               properties:
-                id:
-                  type: string
-                  format: uuid
-                  description: Client generated UUID v7 for the new post
-                  example: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
                 text:
                   type: string
                   description: Post body text
-                  maxLength: 2000
-                attachments:
-                  type: array
-                  description: Optional media attachments
-                  items:
-                    type: string
-                    format: uri
+                  maxLength: 5000
+                mediaUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                aiLabel:
+                  type: string
+                  enum: [human, assisted, generated]
+                  description: Required authorship disclosure.
             examples:
               basicPost:
                 summary: Basic text post
                 value:
-                  id: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
                   text: Launch checklist is locked and ready for review.
-                  attachments:
-                    - 'https://cdn.lythaus.app/media/posts/launch-checklist.png'
+                  aiLabel: human
       responses:
         '201':
           description: Post created successfully
@@ -293,23 +288,28 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    example: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
-                  status:
-                    type: string
-                    enum:
-                      - published
-                      - blocked
+                $ref: '#/components/schemas/LegacyCreatePostResponse'
               examples:
                 published:
                   summary: Published post
                   value:
-                    id: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
-                    status: published
+                    status: success
+                    post:
+                      postId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                      text: Launch checklist is locked and ready for review.
+                      mediaUrl: null
+                      authorId: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
+                      createdAt: '2026-07-10T12:00:00Z'
+                      updatedAt: '2026-07-10T12:00:00Z'
+                      stats: { likes: 0, comments: 0, replies: 0 }
+                      authorship:
+                        authorshipLabel: Human-authored
+                        declaredAuthorship: human
+                        classificationSource: user_disclosure
+                        classificationState: confirmed
+                        reviewState: not_required
+                        appealState: none
+                        labelVersion: alpha-2026-07-v1
         '400':
           description: Invalid payload
           headers:
@@ -359,9 +359,10 @@ paths:
       operationId: posts_create
       summary: Create a post with moderation and AI authenticity checks
       description: >
-        Create a post for the authenticated user. AI-generated text or media is
-        blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be
-        published only when disclosed with `aiLabel=assisted`.
+        Create a post for the authenticated user. An authorship disclosure is
+        required. Disclosed AI-assisted and AI-generated content may be published
+        with categorical labels; conflicts or unavailable classification enter
+        review. Prohibited content remains blocked regardless of authorship.
       tags:
         - Posts
       security:
@@ -1324,8 +1325,8 @@ paths:
   /_admin/invites:
     get:
       operationId: adminInvitesList
-      summary: List invite codes
-      description: Returns admin invite codes with usage metadata.
+      summary: List Alpha invites
+      description: Returns opaque invite identifiers and usage metadata. Plaintext codes are never listed.
       tags:
         - Admin
       security:
@@ -1398,32 +1399,32 @@ paths:
               $ref: '#/components/schemas/AdminInviteCreateRequest'
             examples:
               singleUse:
-                summary: Single-use beta invite
+                summary: Single-use Alpha invite
                 value:
-                  email: beta.user@example.com
-                  expiresInDays: 30
+                  email: alpha.user@example.com
+                  expiresInDays: 14
                   maxUses: 1
-                  label: beta-tester
+                  label: technical-alpha
       responses:
         '201':
           description: Invite created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminInviteResponse'
+                $ref: '#/components/schemas/AdminCreatedInvite'
               examples:
                 created:
                   summary: Invite created
                   value:
                     inviteCode: ABCD-1234
-                    email: beta.user@example.com
-                    createdBy: admin-uid-123
-                    createdAt: '2026-04-30T12:00:00Z'
-                    expiresAt: '2026-05-30T12:00:00Z'
+                    inviteId: 0197b8d8-39da-7a8b-9f9e-3d2dc9fbd741
+                    email: alpha.user@example.com
+                    createdAt: '2026-07-10T12:00:00Z'
+                    expiresAt: '2026-07-24T12:00:00Z'
                     maxUses: 1
                     usageCount: 0
                     status: ACTIVE
-                    label: beta-tester
+                    label: technical-alpha
         '400':
           description: Invalid request
           content:
@@ -1482,19 +1483,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /_admin/invites/{code}:
+  /_admin/invites/{inviteId}:
     get:
       operationId: adminInvitesGet
-      summary: Get an invite code
-      description: Fetch a single invite by code.
+      summary: Get an Alpha invite
+      description: Fetch a single invite by opaque administrative identifier.
       tags:
         - Admin
       security:
         - bearerAuth: []
       parameters:
-        - name: code
+        - name: inviteId
           in: path
-          description: Invite code
+          description: Opaque invite identifier
           required: true
           schema:
             type: string
@@ -1512,7 +1513,7 @@ paths:
                 inviteActive:
                   summary: Active invite
                   value:
-                    inviteCode: ABCD-1234
+                    inviteId: 0197b8d8-39da-7a8b-9f9e-3d2dc9fbd741
                     email: user@example.com
                     createdBy: admin-uid-123
                     createdAt: '2026-04-01T10:00:00Z'
@@ -1550,25 +1551,29 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       operationId: adminInvitesDelete
-      summary: Hard-delete an invite code
-      description: Permanently removes an invite code record. Use revoke to soft-revoke instead.
+      summary: Revoke an Alpha invite
+      description: Revokes the invite without deleting its audit record.
       tags:
         - Admin
       security:
         - bearerAuth: []
       parameters:
-        - name: code
+        - name: inviteId
           in: path
-          description: Invite code to delete
+          description: Opaque invite identifier
           required: true
           schema:
             type: string
       responses:
-        '204':
-          description: Invite deleted
+        '200':
+          description: Invite revoked
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/XCorrelationID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInviteRevokeResponse'
         '401':
           description: Missing or invalid authentication
           headers:
@@ -1596,7 +1601,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /_admin/invites/{code}/revoke:
+  /_admin/invites/{inviteId}/revoke:
     post:
       operationId: adminInvitesRevoke
       summary: Revoke an invite code
@@ -1606,9 +1611,9 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: code
+        - name: inviteId
           in: path
-          description: Invite code
+          description: Opaque invite identifier
           required: true
           schema:
             type: string
@@ -1838,10 +1843,23 @@ paths:
               type: object
               required:
                 - tier
+                - reason
               properties:
                 tier:
                   type: string
-                  enum: [free, creator, premium, enterprise]
+                  enum: [free, premium, black]
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 500
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: Required for Premium and Black Alpha grants; no more than 90 days ahead.
+                reviewAt:
+                  type: string
+                  format: date-time
+                  description: Required for Premium and Black Alpha grants; on or before expiresAt.
       responses:
         '200':
           description: Tier updated
@@ -4705,8 +4723,9 @@ paths:
       operationId: feedNews
       summary: Return News Board feed
       description: >
-        Return authenticated News Board posts. Free, Premium, Black, and Admin
-        tiers can read the News Board; publishing news posts remains restricted
+        Return authenticated News Board posts. Free receives a maximum three-item
+        preview with no cursor; Premium and Black receive the full board. Admin is
+        an authorization role, not a commercial tier. Publishing remains restricted
         to editorial contributors and approved ingestion paths.
       tags:
         - Feed
@@ -4726,7 +4745,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CursorPaginatedPostView'
+                $ref: '#/components/schemas/NewsBoardFeedResponse'
         '400':
           description: Bad request
           content:
@@ -5456,9 +5475,9 @@ paths:
       operationId: postsUpdate
       summary: Update a post with moderation and AI authenticity checks
       description: >
-        Update a post owned by the caller. AI-generated text or media is blocked
-        at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published
-        only when disclosed with `aiLabel=assisted`.
+        Update a post owned by the caller. Content or media changes require a new
+        authorship disclosure. Conflicts or unavailable classification enter
+        review; prohibited content remains blocked regardless of authorship.
       tags:
         - Posts
       security:
@@ -6641,6 +6660,9 @@ components:
         - provider
         - currentPeriodEnd
         - cancelAtPeriodEnd
+        - accessLabel
+        - manualGrantExpiresAt
+        - manualGrantReviewAt
         - entitlements
       properties:
         userId:
@@ -6651,7 +6673,6 @@ components:
             - free
             - premium
             - black
-            - admin
         status:
           type: string
           enum:
@@ -6674,19 +6695,46 @@ components:
           format: date-time
         cancelAtPeriodEnd:
           type: boolean
+        accessLabel:
+          type: string
+          enum:
+            - Alpha access
+          description: Manual Alpha entitlement label; no active payment system is implied.
+        manualGrantExpiresAt:
+          type: string
+          nullable: true
+          format: date-time
+        manualGrantReviewAt:
+          type: string
+          nullable: true
+          format: date-time
         entitlements:
           type: object
           required:
             - dailyPosts
+            - dailyComments
+            - dailyReactions
+            - dailyAppeals
+            - exportCooldownDays
             - maxMediaSizeMB
             - maxMediaPerPost
             - maxCustomFeeds
-            - newsBoardAccess
+            - newsBoardAccessLevel
+            - newsBoardPreview
             - postingRestricted
             - rewardLevelCap
             - rewardOptionsPerLevel
+            - rewardChoiceBreadth
           properties:
             dailyPosts:
+              type: integer
+            dailyComments:
+              type: integer
+            dailyReactions:
+              type: integer
+            dailyAppeals:
+              type: integer
+            exportCooldownDays:
               type: integer
             maxMediaSizeMB:
               type: integer
@@ -6695,9 +6743,13 @@ components:
             maxCustomFeeds:
               type: integer
               description: Maximum custom feeds available to this tier.
-            newsBoardAccess:
+            newsBoardAccessLevel:
+              type: string
+              enum: [preview, full]
+              description: Free receives preview; Premium and Black receive full access.
+            newsBoardPreview:
               type: boolean
-              description: Whether this tier can read the News Board.
+              description: Whether the tier can read the safe News Board preview.
             postingRestricted:
               type: boolean
               description: Whether normal posting is product-limited beyond abuse controls.
@@ -6708,6 +6760,9 @@ components:
               type: integer
               nullable: true
               description: Reward options per reputation level; null means all eligible rewards.
+            rewardChoiceBreadth:
+              type: string
+              enum: [limited, increased, full]
     NewsSourceMetadata:
       type: object
       required:
@@ -6758,11 +6813,77 @@ components:
         sourceAttestationUrl:
           type: string
           format: uri
+    PublicAuthorship:
+      type: object
+      additionalProperties: false
+      required:
+        - authorshipLabel
+        - declaredAuthorship
+        - classificationSource
+        - classificationState
+        - reviewState
+        - appealState
+        - labelVersion
+      properties:
+        authorshipLabel:
+          type: string
+          enum: [Human-authored, AI-assisted, AI-generated, Under review]
+        declaredAuthorship:
+          type: string
+          enum: [human, assisted, generated]
+        classificationSource:
+          type: string
+          enum: [user_disclosure, automated_classification, human_review, appeal_outcome]
+        classificationState:
+          type: string
+          enum: [confirmed, conflict, unavailable]
+        reviewState:
+          type: string
+          enum: [not_required, pending, in_review, resolved]
+        appealState:
+          type: string
+          enum: [none, eligible, pending, resolved]
+        labelVersion:
+          type: string
+        classifiedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+    LegacyCreatePostResponse:
+      type: object
+      required: [status, post]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        post:
+          type: object
+          additionalProperties: false
+          required: [postId, text, mediaUrl, authorId, createdAt, updatedAt, stats, authorship]
+          properties:
+            postId: { type: string }
+            text: { type: string }
+            mediaUrl: { type: string, format: uri, nullable: true }
+            authorId: { type: string, nullable: true }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            stats:
+              type: object
+              required: [likes, comments, replies]
+              properties:
+                likes: { type: integer }
+                comments: { type: integer }
+                replies: { type: integer }
+            authorship:
+              $ref: '#/components/schemas/PublicAuthorship'
     CreatePostRequest:
       type: object
       required:
         - content
         - contentType
+        - aiLabel
       properties:
         content:
           type: string
@@ -6792,7 +6913,7 @@ components:
           type: boolean
         aiLabel:
           type: string
-          description: Public authorship disclosure. `generated` is blocked at submit.
+          description: Required user authorship disclosure. Public responses use categorical labels only.
           enum:
             - human
             - assisted
@@ -6830,7 +6951,7 @@ components:
           type: boolean
         aiLabel:
           type: string
-          description: Public authorship disclosure. `generated` is blocked at submit.
+          description: Required whenever content or media changes. Public responses use categorical labels only.
           enum:
             - human
             - assisted
@@ -6874,6 +6995,7 @@ components:
         - contentType
         - visibility
         - isNews
+        - authorship
         - createdAt
         - updatedAt
       properties:
@@ -6911,6 +7033,8 @@ components:
           $ref: '#/components/schemas/NewsSourceMetadata'
         clusterId:
           type: string
+        authorship:
+          $ref: '#/components/schemas/PublicAuthorship'
         createdAt:
           type: string
           format: date-time
@@ -7005,6 +7129,20 @@ components:
         nextCursor:
           type: string
           nullable: true
+    NewsBoardFeedResponse:
+      allOf:
+        - $ref: '#/components/schemas/CursorPaginatedPostView'
+        - type: object
+          required: [accessLevel, locked]
+          properties:
+            accessLevel:
+              type: string
+              enum: [preview, full]
+            locked:
+              type: boolean
+            previewLimit:
+              type: integer
+              minimum: 1
     CustomFeedDefinition:
       type: object
       required:
@@ -7899,8 +8037,9 @@ components:
           $ref: '#/components/schemas/AdminUserStatus'
     AdminInvite:
       type: object
+      required: [inviteId, createdAt, expiresAt, maxUses, usageCount, status]
       properties:
-        inviteCode: { type: string }
+        inviteId: { type: string, format: uuid }
         email: { type: string }
         createdBy: { type: string }
         createdAt: { type: string, format: date-time }
@@ -7915,6 +8054,16 @@ components:
     AdminInviteResponse:
       allOf:
         - $ref: '#/components/schemas/AdminInvite'
+    AdminCreatedInvite:
+      allOf:
+        - $ref: '#/components/schemas/AdminInvite'
+        - type: object
+          required: [inviteCode]
+          properties:
+            inviteCode:
+              type: string
+              readOnly: true
+              description: Returned exactly once when the invite is created.
     AdminInviteListResponse:
       type: object
       required: [ invites, count ]
@@ -7922,7 +8071,7 @@ components:
         invites:
           type: array
           items:
-            $ref: '#/components/schemas/AdminInvite'
+            $ref: '#/components/schemas/AdminCreatedInvite'
         count: { type: integer }
         nextCursor: { type: string }
     AdminInviteBatchResponse:
@@ -8359,7 +8508,7 @@ components:
               example: alice
             tier:
               type: string
-              enum: [free, creator, premium, enterprise]
+              enum: [free, premium, black]
             roles:
               type: array
               items:

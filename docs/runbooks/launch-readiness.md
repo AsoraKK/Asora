@@ -1,8 +1,8 @@
 # Lythaus Launch-Readiness Checklist
 
-> **Purpose**: Machine-checkable gate list for GA launch.  
-> **Updated**: 2026-05-02  
-> **Owner**: Platform lead + product lead joint sign-off required.  
+> **Purpose**: Machine-checkable gate list for GA launch.
+> **Updated**: 2026-05-02
+> **Owner**: Platform lead + product lead joint sign-off required.
 > **Automation script**: [`scripts/check-launch-readiness.sh`](../../scripts/check-launch-readiness.sh)
 
 Run the full automated suite:

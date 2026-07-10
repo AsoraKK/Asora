@@ -12,7 +12,7 @@ part 'forbidden_error.g.dart';
 /// 403 – authenticated caller lacks required role or permission.
 ///
 /// Properties:
-/// * [error] 
+/// * [error]
 @BuiltValue()
 abstract class ForbiddenError implements Built<ForbiddenError, ForbiddenErrorBuilder> {
   @BuiltValueField(wireName: r'error')
@@ -104,4 +104,3 @@ class _$ForbiddenErrorSerializer implements PrimitiveSerializer<ForbiddenError> 
     return result.build();
   }
 }
-

@@ -23,8 +23,6 @@ abstract final class AppRoutes {
   static const String post = 'post';
   static const String profile = 'profile';
   static const String invite = 'invite';
-  static const String userTest = 'user-test';
-  static const String postTest = 'post-test';
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
@@ -46,11 +44,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnLogin = state.matchedLocation == '/login';
       final isOnAuthCallback = state.matchedLocation == '/auth/callback';
       final isOnInvite = state.matchedLocation.startsWith('/invite/');
-      final isOnUserTest = state.matchedLocation == '/user/test';
-      final isOnPostTest = state.matchedLocation == '/post/test';
 
       // Auth callback and invite routes are always publicly accessible.
-      if (isOnAuthCallback || isOnInvite || isOnUserTest || isOnPostTest) {
+      if (isOnAuthCallback || isOnInvite) {
         return null;
       }
 
@@ -87,20 +83,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
       ),
 
-      // Public test deep-links used for direct-load / refresh coverage.
-      GoRoute(
-        name: AppRoutes.userTest,
-        path: '/user/test',
-        builder: (context, state) => const ProfileScreen(userId: 'test'),
-      ),
-      GoRoute(
-        name: AppRoutes.postTest,
-        path: '/post/test',
-        builder: (context, state) =>
-            const PostDetailScreen(postId: 'test', initialCommentId: null),
-      ),
-
-      // Main app shell (tabs: Discover, Create, Alerts, Profile)
+      // Main app shell (tabs: Discover, My Feeds, Create, News Board, Profile)
       GoRoute(
         name: AppRoutes.shell,
         path: '/',

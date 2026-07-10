@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -18,7 +18,7 @@ Method | HTTP request | Description
 
 Delete own account (GDPR Article 17)
 
-Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**. 
+Permanently deletes the authenticated user's account and anonymises all authored content. Requires the `X-Confirm-Delete: true` header to guard against accidental invocations. This action is **irreversible**.
 
 ### Example
 ```dart
@@ -39,7 +39,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **xConfirmDelete** | **String**| Must be set to \"true\" to confirm deletion | 
+ **xConfirmDelete** | **String**| Must be set to \"true\" to confirm deletion |
 
 ### Return type
 
@@ -61,7 +61,7 @@ Name | Type | Description  | Notes
 
 Export personal data (GDPR Article 20)
 
-Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking. 
+Returns a structured copy of all personal data held for the authenticated user. Export cooldown periods are tier-gated. The `X-Export-ID` response header contains the export identifier for tracking.
 
 ### Example
 ```dart
@@ -94,4 +94,3 @@ This endpoint does not need any parameter.
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

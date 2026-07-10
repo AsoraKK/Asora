@@ -12,21 +12,21 @@ part 'admin_invite.g.dart';
 /// AdminInvite
 ///
 /// Properties:
-/// * [inviteCode] 
-/// * [email] 
-/// * [createdBy] 
-/// * [createdAt] 
-/// * [expiresAt] 
-/// * [maxUses] 
-/// * [usageCount] 
-/// * [lastUsedAt] 
-/// * [status] 
-/// * [label] 
-/// * [usedByUserId] 
+/// * [inviteId]
+/// * [email]
+/// * [createdBy]
+/// * [createdAt]
+/// * [expiresAt]
+/// * [maxUses]
+/// * [usageCount]
+/// * [lastUsedAt]
+/// * [status]
+/// * [label]
+/// * [usedByUserId]
 @BuiltValue(instantiable: false)
 abstract class AdminInvite  {
-  @BuiltValueField(wireName: r'inviteCode')
-  String? get inviteCode;
+  @BuiltValueField(wireName: r'inviteId')
+  String get inviteId;
 
   @BuiltValueField(wireName: r'email')
   String? get email;
@@ -35,22 +35,22 @@ abstract class AdminInvite  {
   String? get createdBy;
 
   @BuiltValueField(wireName: r'createdAt')
-  DateTime? get createdAt;
+  DateTime get createdAt;
 
   @BuiltValueField(wireName: r'expiresAt')
-  DateTime? get expiresAt;
+  DateTime get expiresAt;
 
   @BuiltValueField(wireName: r'maxUses')
-  int? get maxUses;
+  int get maxUses;
 
   @BuiltValueField(wireName: r'usageCount')
-  int? get usageCount;
+  int get usageCount;
 
   @BuiltValueField(wireName: r'lastUsedAt')
   DateTime? get lastUsedAt;
 
   @BuiltValueField(wireName: r'status')
-  AdminInviteStatus? get status;
+  AdminInviteStatus get status;
   // enum statusEnum {  ACTIVE,  REVOKED,  EXHAUSTED,  };
 
   @BuiltValueField(wireName: r'label')
@@ -75,13 +75,11 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
     AdminInvite object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    if (object.inviteCode != null) {
-      yield r'inviteCode';
-      yield serializers.serialize(
-        object.inviteCode,
-        specifiedType: const FullType(String),
-      );
-    }
+    yield r'inviteId';
+    yield serializers.serialize(
+      object.inviteId,
+      specifiedType: const FullType(String),
+    );
     if (object.email != null) {
       yield r'email';
       yield serializers.serialize(
@@ -96,34 +94,26 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
         specifiedType: const FullType(String),
       );
     }
-    if (object.createdAt != null) {
-      yield r'createdAt';
-      yield serializers.serialize(
-        object.createdAt,
-        specifiedType: const FullType(DateTime),
-      );
-    }
-    if (object.expiresAt != null) {
-      yield r'expiresAt';
-      yield serializers.serialize(
-        object.expiresAt,
-        specifiedType: const FullType(DateTime),
-      );
-    }
-    if (object.maxUses != null) {
-      yield r'maxUses';
-      yield serializers.serialize(
-        object.maxUses,
-        specifiedType: const FullType(int),
-      );
-    }
-    if (object.usageCount != null) {
-      yield r'usageCount';
-      yield serializers.serialize(
-        object.usageCount,
-        specifiedType: const FullType(int),
-      );
-    }
+    yield r'createdAt';
+    yield serializers.serialize(
+      object.createdAt,
+      specifiedType: const FullType(DateTime),
+    );
+    yield r'expiresAt';
+    yield serializers.serialize(
+      object.expiresAt,
+      specifiedType: const FullType(DateTime),
+    );
+    yield r'maxUses';
+    yield serializers.serialize(
+      object.maxUses,
+      specifiedType: const FullType(int),
+    );
+    yield r'usageCount';
+    yield serializers.serialize(
+      object.usageCount,
+      specifiedType: const FullType(int),
+    );
     if (object.lastUsedAt != null) {
       yield r'lastUsedAt';
       yield serializers.serialize(
@@ -131,13 +121,11 @@ class _$AdminInviteSerializer implements PrimitiveSerializer<AdminInvite> {
         specifiedType: const FullType(DateTime),
       );
     }
-    if (object.status != null) {
-      yield r'status';
-      yield serializers.serialize(
-        object.status,
-        specifiedType: const FullType(AdminInviteStatus),
-      );
-    }
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(AdminInviteStatus),
+    );
     if (object.label != null) {
       yield r'label';
       yield serializers.serialize(
@@ -215,12 +203,12 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'inviteCode':
+        case r'inviteId':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.inviteCode = valueDes;
+          result.inviteId = valueDes;
           break;
         case r'email':
           final valueDes = serializers.deserialize(
@@ -320,4 +308,3 @@ class _$$AdminInviteSerializer implements PrimitiveSerializer<$AdminInvite> {
     return result.build();
   }
 }
-

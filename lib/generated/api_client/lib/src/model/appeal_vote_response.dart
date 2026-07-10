@@ -12,7 +12,7 @@ part 'appeal_vote_response.g.dart';
 /// Confirmation of a recorded appeal vote.
 ///
 /// Properties:
-/// * [vote] 
+/// * [vote]
 @BuiltValue()
 abstract class AppealVoteResponse implements Built<AppealVoteResponse, AppealVoteResponseBuilder> {
   @BuiltValueField(wireName: r'vote')
@@ -104,4 +104,3 @@ class _$AppealVoteResponseSerializer implements PrimitiveSerializer<AppealVoteRe
     return result.build();
   }
 }
-

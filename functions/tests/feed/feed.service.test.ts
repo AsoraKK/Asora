@@ -278,7 +278,7 @@ describe('feedService', () => {
       expect(mockedWithClient).not.toHaveBeenCalled();
     });
 
-    it('caps multi-author queries to MAX_AUTHOR_BATCH with cross partitioning', async () => {
+    it('preserves all followees in multi-author queries with cross partitioning', async () => {
       const followeeRows = Array.from({ length: 55 }, (_, index) => ({
         followee_uuid: `author-${index}`,
       }));
@@ -301,7 +301,7 @@ describe('feedService', () => {
         context: mockContext,
       });
 
-      expect(result.headers['X-Feed-Author-Count']).toBe('50');
+      expect(result.headers['X-Feed-Author-Count']).toBe('56');
       const options = mockItemsQuery.mock.calls[0][1];
       expect(options.partitionKey).toBeUndefined();
     });

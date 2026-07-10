@@ -20,20 +20,20 @@ part 'admin_appeal_detail_response.g.dart';
 /// AdminAppealDetailResponse
 ///
 /// Properties:
-/// * [appealId] 
-/// * [targetType] 
-/// * [targetId] 
-/// * [status] 
-/// * [createdAt] 
-/// * [lastUpdatedAt] 
-/// * [votes] 
-/// * [quorum] 
-/// * [moderatorOverrideAllowed] 
-/// * [finalDecision] 
-/// * [auditSummary] 
-/// * [appeal] 
-/// * [content] 
-/// * [originalDecision] 
+/// * [appealId]
+/// * [targetType]
+/// * [targetId]
+/// * [status]
+/// * [createdAt]
+/// * [lastUpdatedAt]
+/// * [votes]
+/// * [quorum]
+/// * [moderatorOverrideAllowed]
+/// * [finalDecision]
+/// * [auditSummary]
+/// * [appeal]
+/// * [content]
+/// * [originalDecision]
 @BuiltValue()
 abstract class AdminAppealDetailResponse implements Built<AdminAppealDetailResponse, AdminAppealDetailResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -351,4 +351,3 @@ class _$AdminAppealDetailResponseSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
-

@@ -149,14 +149,23 @@ export interface SubscriptionStatusResponse {
   provider: PaymentProvider | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  accessLabel: 'Alpha access';
+  manualGrantExpiresAt: string | null;
+  manualGrantReviewAt: string | null;
   entitlements: {
     dailyPosts: number;
+    dailyComments: number;
+    dailyReactions: number;
+    dailyAppeals: number;
+    exportCooldownDays: number;
     maxMediaSizeMB: number;
     maxMediaPerPost: number;
     maxCustomFeeds: number;
-    newsBoardAccess: boolean;
+    newsBoardAccessLevel: 'preview' | 'full';
+    newsBoardPreview: boolean;
     postingRestricted: boolean;
     rewardLevelCap: number;
     rewardOptionsPerLevel: number | null;
+    rewardChoiceBreadth: 'limited' | 'increased' | 'full';
   };
 }

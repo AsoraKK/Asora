@@ -13,7 +13,7 @@ part 'vote_on_appeal_v1_request.g.dart';
 ///
 /// Properties:
 /// * [appealId] - Appeal identifier
-/// * [vote] 
+/// * [vote]
 @BuiltValue()
 abstract class VoteOnAppealV1Request implements Built<VoteOnAppealV1Request, VoteOnAppealV1RequestBuilder> {
   /// Appeal identifier
@@ -137,4 +137,3 @@ class VoteOnAppealV1RequestVoteEnum extends EnumClass {
   static BuiltSet<VoteOnAppealV1RequestVoteEnum> get values => _$voteOnAppealV1RequestVoteEnumValues;
   static VoteOnAppealV1RequestVoteEnum valueOf(String name) => _$voteOnAppealV1RequestVoteEnumValueOf(name);
 }
-

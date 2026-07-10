@@ -8,11 +8,9 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**commentId** | **String** |  | [optional] 
-**authorId** | **String** |  | [optional] 
-**text** | **String** |  | [optional] 
-**createdAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**commentId** | **String** |  | [optional]
+**authorId** | **String** |  | [optional]
+**text** | **String** |  | [optional]
+**createdAt** | [**DateTime**](DateTime.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
-

@@ -13,9 +13,9 @@ part 'admin_content_action_response.g.dart';
 /// AdminContentActionResponse
 ///
 /// Properties:
-/// * [contentId] 
-/// * [contentType] 
-/// * [status] 
+/// * [contentId]
+/// * [contentType]
+/// * [status]
 @BuiltValue()
 abstract class AdminContentActionResponse implements Built<AdminContentActionResponse, AdminContentActionResponseBuilder> {
   @BuiltValueField(wireName: r'contentId')
@@ -145,4 +145,3 @@ class _$AdminContentActionResponseSerializer implements PrimitiveSerializer<Admi
     return result.build();
   }
 }
-

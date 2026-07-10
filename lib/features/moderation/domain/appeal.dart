@@ -40,8 +40,9 @@ class Appeal {
 
   // Moderation info
   final String flagReason;
-  final double? aiScore;
-  final Map<String, dynamic>? aiAnalysis;
+  final String authorshipLabel;
+  final String classificationSource;
+  final String reviewState;
   final List<String> flagCategories;
   final int flagCount;
 
@@ -71,8 +72,9 @@ class Appeal {
     required this.submittedAt,
     required this.expiresAt,
     required this.flagReason,
-    this.aiScore,
-    this.aiAnalysis,
+    this.authorshipLabel = 'Under review',
+    this.classificationSource = 'automated_classification',
+    this.reviewState = 'pending',
     required this.flagCategories,
     required this.flagCount,
     required this.votingStatus,
@@ -86,8 +88,6 @@ class Appeal {
   });
 
   factory Appeal.fromJson(Map<String, dynamic> json) {
-    final aiScoreValue = json['aiScore'];
-    final aiAnalysisValue = json['aiAnalysis'];
     final flagCategoriesValue = json['flagCategories'];
     final votingStatusValue = json['votingStatus'] as String?;
     final votingProgressValue = json['votingProgress'];
@@ -105,10 +105,10 @@ class Appeal {
       submittedAt: DateTime.parse(json['submittedAt'] as String),
       expiresAt: DateTime.parse(json['expiresAt'] as String),
       flagReason: json['flagReason'] as String,
-      aiScore: aiScoreValue is num ? aiScoreValue.toDouble() : null,
-      aiAnalysis: aiAnalysisValue is Map
-          ? Map<String, dynamic>.from(aiAnalysisValue)
-          : null,
+      authorshipLabel: json['authorshipLabel'] as String? ?? 'Under review',
+      classificationSource:
+          json['classificationSource'] as String? ?? 'automated_classification',
+      reviewState: json['reviewState'] as String? ?? 'pending',
       flagCategories: flagCategoriesValue is List
           ? List<String>.from(flagCategoriesValue)
           : const <String>[],
@@ -146,8 +146,9 @@ class Appeal {
       'submittedAt': submittedAt.toIso8601String(),
       'expiresAt': expiresAt.toIso8601String(),
       'flagReason': flagReason,
-      'aiScore': aiScore,
-      'aiAnalysis': aiAnalysis,
+      'authorshipLabel': authorshipLabel,
+      'classificationSource': classificationSource,
+      'reviewState': reviewState,
       'flagCategories': flagCategories,
       'flagCount': flagCount,
       'votingStatus': votingStatus.name,

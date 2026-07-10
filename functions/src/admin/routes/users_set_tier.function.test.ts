@@ -44,6 +44,16 @@ function makeItemMock(user: Record<string, unknown> | null) {
   };
 }
 
+function paidGrantBody(tier: 'premium' | 'black' = 'black') {
+  const now = Date.now();
+  return {
+    tier,
+    reason: 'Controlled Alpha tester grant',
+    reviewAt: new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
+
 describe('setUserTier', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,7 +63,7 @@ describe('setUserTier', () => {
     const req = httpReqMock({
       method: 'PATCH',
       params: {},
-      body: { tier: 'black' },
+      body: paidGrantBody(),
       principal: { sub: 'admin-1', roles: ['admin'] },
     });
 
@@ -88,7 +98,7 @@ describe('setUserTier', () => {
     const req = httpReqMock({
       method: 'PATCH',
       params: { userId: 'missing-user' },
-      body: { tier: 'black' },
+      body: paidGrantBody(),
       principal: { sub: 'admin-1', roles: ['admin'] },
     });
 
@@ -109,7 +119,7 @@ describe('setUserTier', () => {
     const req = httpReqMock({
       method: 'PATCH',
       params: { userId: 'u1' },
-      body: { tier: 'black' },
+      body: paidGrantBody(),
       principal: { sub: 'admin-1', roles: ['admin'] },
     });
 
@@ -132,8 +142,8 @@ describe('setUserTier', () => {
       expect.objectContaining({
         action: 'USER_TIER_SET',
         subjectId: 'u1',
-        before: { tier: 'free' },
-        after: { tier: 'black' },
+        before: expect.objectContaining({ tier: 'free' }),
+        after: expect.objectContaining({ tier: 'black' }),
       })
     );
   });
@@ -148,7 +158,7 @@ describe('setUserTier', () => {
     const req = httpReqMock({
       method: 'PATCH',
       params: { userId: 'u2' },
-      body: { tier: 'black' },
+      body: paidGrantBody(),
       principal: { sub: 'admin-1', roles: ['admin'] },
     });
 
@@ -156,8 +166,8 @@ describe('setUserTier', () => {
 
     expect(recordAdminAuditMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        before: { tier: 'free' },
-        after: { tier: 'black' },
+        before: expect.objectContaining({ tier: 'free' }),
+        after: expect.objectContaining({ tier: 'black' }),
       })
     );
   });

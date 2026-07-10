@@ -12,9 +12,9 @@ part 'unauthorized_error_error.g.dart';
 /// UnauthorizedErrorError
 ///
 /// Properties:
-/// * [code] 
-/// * [message] 
-/// * [correlationId] 
+/// * [code]
+/// * [message]
+/// * [correlationId]
 @BuiltValue()
 abstract class UnauthorizedErrorError implements Built<UnauthorizedErrorError, UnauthorizedErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
@@ -156,4 +156,3 @@ class UnauthorizedErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<UnauthorizedErrorErrorCodeEnum> get values => _$unauthorizedErrorErrorCodeEnumValues;
   static UnauthorizedErrorErrorCodeEnum valueOf(String name) => _$unauthorizedErrorErrorCodeEnumValueOf(name);
 }
-

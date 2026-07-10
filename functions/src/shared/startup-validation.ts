@@ -16,6 +16,7 @@ interface EnvVar {
 const REQUIRED_ENV_VARS: EnvVar[] = [
   { name: 'COSMOS_CONNECTION_STRING', required: true, description: 'Primary Cosmos DB connection' },
   { name: 'JWT_SECRET', required: true, description: 'JWT token signing key' },
+  { name: 'INVITE_CODE_PEPPER', required: true, description: 'Pepper for hashing Alpha invite codes' },
   { name: 'JWT_ISSUER', required: true, description: 'JWT issuer value' },
   { name: 'HIVE_API_KEY', required: true, description: 'Hive moderation API key' },
   { name: 'KV_URL', required: true, description: 'Azure Key Vault URL' },

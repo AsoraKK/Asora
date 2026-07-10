@@ -336,9 +336,9 @@ CI (`mobile-security-check.yml`) will now pass the pin check.
 
 **Pin match rate:**
 ```
-SELECT result, COUNT(*) 
-FROM security_events 
-WHERE type = 'tlsPinning' 
+SELECT result, COUNT(*)
+FROM security_events
+WHERE type = 'tlsPinning'
   AND environment = 'production'
   AND timestamp > NOW() - INTERVAL 24 HOURS
 GROUP BY result
@@ -395,5 +395,5 @@ GROUP BY result
 
 ---
 
-**Last Updated:** 2024-01-15  
+**Last Updated:** 2024-01-15
 **Next Review:** Before next certificate rotation

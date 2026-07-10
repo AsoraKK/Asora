@@ -8,10 +8,8 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**exportId** | **String** |  | [optional] 
-**exportedAt** | [**DateTime**](DateTime.md) |  | [optional] 
-**type** | **String** |  | [optional] 
+**exportId** | **String** |  | [optional]
+**exportedAt** | [**DateTime**](DateTime.md) |  | [optional]
+**type** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
-

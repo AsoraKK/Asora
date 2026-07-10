@@ -14,6 +14,7 @@ class PublicUser {
   final String displayName;
   final String? handle;
   final String? avatarUrl;
+  final String? bio;
   final String tier;
   final String trustPassportVisibility;
   final int reputationScore;
@@ -25,6 +26,7 @@ class PublicUser {
     required this.displayName,
     this.handle,
     this.avatarUrl,
+    this.bio,
     required this.tier,
     this.trustPassportVisibility = 'public_minimal',
     this.reputationScore = 0,
@@ -45,6 +47,7 @@ class PublicUser {
       displayName: json['displayName'] as String,
       handle: (json['handle'] as String?) ?? (json['username'] as String?),
       avatarUrl: json['avatarUrl'] as String?,
+      bio: json['bio'] as String?,
       tier: json['tier'] as String? ?? 'free',
       trustPassportVisibility: _visibilityValues.contains(visibility)
           ? visibility!

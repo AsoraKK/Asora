@@ -41,7 +41,7 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
         Vary: 'Authorization',
         'Cache-Control': hasAuthHeader
           ? 'private, no-store'
-          : 'public, max-age=60, stale-while-revalidate=30',
+          : 'public, no-cache, must-revalidate',
       },
       200,
       requestOrigin,
@@ -76,17 +76,21 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
     }
 
     context.log('feed.get.error', { message: (error as Error).message });
-    const fallback = createEmptyFeedResponse(principal);
-    const cacheControl = hasAuthHeader ? 'private, no-store' : 'public, max-age=60, stale-while-revalidate=30';
-    return createSuccessResponse(
-      fallback,
-      {
+    return {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        ...getCorsHeaders(requestOrigin),
         Vary: 'Authorization',
-        'Cache-Control': cacheControl,
+        'Cache-Control': 'no-store',
       },
-      200,
-      requestOrigin,
-    );
+      body: JSON.stringify({
+        error: {
+          code: 'FEED_UNAVAILABLE',
+          message: 'Feed is temporarily unavailable',
+        },
+      }),
+    };
   }
 }
 
@@ -99,25 +103,3 @@ app.http('getFeed', {
   route: 'feed',
   handler: rateLimitedGetFeed,
 });
-
-function createEmptyFeedResponse(principal: unknown): FeedResultBody {
-  const isAuthenticated = Boolean(principal);
-  return {
-    items: [],
-    meta: {
-      count: 0,
-      nextCursor: null,
-      sinceCursor: null,
-      timingsMs: {
-        query: 0,
-        total: 0,
-      },
-      applied: {
-        feedType: isAuthenticated ? 'home' : 'public',
-        visibilityFilters: isAuthenticated ? ['public', 'followers'] : ['public'],
-        authorCount: 0,
-        continuationToken: null,
-      },
-    },
-  };
-}

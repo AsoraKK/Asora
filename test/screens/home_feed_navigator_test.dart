@@ -129,18 +129,20 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
+    Widget buildNavigator(AlphaFeedSection section) {
+      return UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(disableAnimations: true),
             child: child!,
           ),
-          home: const HomeFeedNavigator(),
+          home: HomeFeedNavigator(key: ValueKey(section), section: section),
         ),
-      ),
-    );
+      );
+    }
+
+    await tester.pumpWidget(buildNavigator(AlphaFeedSection.discover));
     await tester.pumpAndSettle();
 
     final tracker =
@@ -153,19 +155,18 @@ void main() {
     );
     expect(find.byType(FeedCard), findsWidgets);
 
-    container.read(currentFeedIndexProvider.notifier).state = 1;
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpWidget(buildNavigator(AlphaFeedSection.newsBoard));
+    await tester.pumpAndSettle();
 
     expect(
       find.text('Hybrid newsroom + high reputation contributors.'),
       findsOneWidget,
     );
 
-    container.read(currentFeedIndexProvider.notifier).state = 2;
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpWidget(buildNavigator(AlphaFeedSection.myFeeds));
+    await tester.pumpAndSettle();
 
-    expect(container.read(currentFeedProvider).id, 'custom');
+    expect(find.text('Custom feed'), findsOneWidget);
+    expect(find.byType(FeedCard), findsWidgets);
   });
 }

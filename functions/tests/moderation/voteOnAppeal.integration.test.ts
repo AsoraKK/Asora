@@ -149,7 +149,7 @@ beforeEach(() => {
 });
 
 describe('VoteOnAppeal integration', () => {
-  it('records a community vote and resolves the appeal through the route', async () => {
+  it('records a community vote and leaves final adjudication to a human', async () => {
     setupCosmos({ appeal: createAppeal({ requiredVotes: 2 }) });
 
     const response = await voteOnAppealRoute(
@@ -159,20 +159,17 @@ describe('VoteOnAppeal integration', () => {
 
     expect(response.status).toBe(200);
     expect((response.jsonBody as any).currentTally.hasReachedQuorum).toBe(true);
+    expect((response.jsonBody as any).communityRecommendation).toBe('approved');
+    expect((response.jsonBody as any).status).toBe('pending');
     expect(votesCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         appealId: 'appeal-1',
         voterId: 'moderator-1',
       })
     );
-    expect(moderationDecisionsCreate).toHaveBeenCalled();
+    expect(moderationDecisionsCreate).not.toHaveBeenCalled();
     expect(appendReceiptEvent).toHaveBeenCalled();
-    expect(enqueueUserNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'submitter-1',
-        eventType: expect.any(String),
-      })
-    );
+    expect(enqueueUserNotification).not.toHaveBeenCalled();
   });
 
   it('returns 409 when the same user tries to vote twice through the route', async () => {

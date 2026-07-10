@@ -15,12 +15,12 @@ void main() {
       expect(s.validationError, isNull);
       expect(s.isNews, isFalse);
       expect(s.contentType, 'text');
-      expect(s.aiLabel, 'human');
+      expect(s.aiLabel, isNull);
       expect(s.proofSignals, isA<ProofSignals>());
     });
 
     test('isValid returns true for non-empty text within limit', () {
-      const s = PostCreationState(text: 'Hello world');
+      const s = PostCreationState(text: 'Hello world', aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
 
@@ -42,7 +42,7 @@ void main() {
 
     test('isValid returns true when text is exactly 5000 chars', () {
       final exactText = 'a' * 5000;
-      final s = PostCreationState(text: exactText);
+      final s = PostCreationState(text: exactText, aiLabel: 'human');
       expect(s.isValid, isTrue);
     });
 

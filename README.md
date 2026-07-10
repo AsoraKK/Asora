@@ -1,193 +1,92 @@
-Lythaus (formerly Asora) – Quick Reference
-==========================================
+# Lythaus
 
-> **Branding note:** The user-facing product is now **Lythaus**. Internal services, Azure resources, and this repository retain the **Asora** name. See [docs/branding/lythaus-transition.md](docs/branding/lythaus-transition.md) for the full naming guide.
+Lythaus (formerly Asora) is an invite-only social publishing platform focused on transparent authorship, trustworthy feeds, moderation appeals, and privacy rights. User-facing product copy uses **Lythaus**. Internal packages, Azure resources, Terraform identifiers, and legacy namespaces may retain **Asora** where renaming would create operational risk.
 
-This repo contains the **Lythaus** Flutter app and Azure Functions backend (internally codenamed Asora). For backend details, see `functions/README.md`.
+## Alpha scope
 
-## Domains
+The controlled Alpha covers the Flutter web application, Azure Functions APIs, the moderation/control panel, and required operational tooling. It is limited to 25–250 invited users across explicitly approved stages. Android, iOS, store distribution, signing, payments, and mobile certificate-pin launch readiness are Beta work and are not Alpha gates.
 
-| Domain | Purpose |
-|--------|---------|
-| **lythaus.co** | Marketing site, waitlist, invite links |
-| **asora.co.za** | Platform base (API, admin, Azure Functions) |
+Current release status and evidence: [Controlled Alpha packet](docs/evidence/alpha-readiness/2026-07-10-controlled-alpha-packet.md).
 
-Runbooks
---------
+## Repository
 
-- Privacy DSR admin workflows: `docs/runbooks/dsr.md`
+| Path | Purpose |
+| --- | --- |
+| `lib/`, `web/` | Flutter web application and shared client code |
+| `functions/` | Node 22 Azure Functions backend |
+| `api/openapi/` | Public API source, bundle, and generated-client contract |
+| `apps/control-panel/` | Administrative and moderation interface |
+| `apps/marketing-site/` | Public Lythaus site |
+| `database/`, `infra/`, `infrastructure/` | Cosmos, PostgreSQL, Azure, and alert configuration |
+| `cloudflare/`, `workers/` | Pages configuration and anonymous feed cache worker |
+| `docs/` | Architecture decisions, policies, runbooks, and release evidence |
 
-Protected vs Public routes
---------------------------
+See [README_INDEX.md](README_INDEX.md) for module-level documentation.
 
-| Route                          | Method | Access    | Module      |
-| ------------------------------ | ------ | --------- | ----------- |
-| `/feed`                        | GET    | Public    | feed        |
-| `/health`                      | GET    | Public    | shared      |
-| `/auth/token`                  | POST   | Public    | auth        |
-| `/auth/authorize`              | GET    | Public    | auth        |
-| `/auth/userinfo`               | GET    | Protected | auth        |
-| `/post`                        | POST   | Protected | feed        |
-| `/moderation/flag`             | POST   | Protected | moderation  |
-| `/moderation/appeals`          | POST   | Protected | moderation  |
-| `/moderation/appeals/{id}/vote`| POST   | Protected | moderation  |
-| `/user/export`                 | GET    | Protected | privacy     |
-| `/user/delete`                 | DELETE | Protected | privacy     |
-| `/admin/dsr/*`                 | MIXED  | Admin     | privacy     |
+## Toolchain
 
-Notes on local.settings.json and Azure Flex
--------------------------------------------
+- Flutter version: `.fvmrc`
+- Node.js: 22.x
+- npm: use the lockfiles committed for each workspace
+- Java: 17 for OpenAPI generation and Android static validation
+- Terraform: follow the version constraints in each infrastructure root
 
-- `local.settings.json` is for local development only. Do not check in real secrets.
-- For Azure Functions Flex Consumption, do not set `FUNCTIONS_WORKER_RUNTIME` or `WEBSITE_NODE_DEFAULT_VERSION` in app settings. The runtime is configured via ARM on the app. Only set `FUNCTIONS_EXTENSION_VERSION=~4`.
+## Local setup
 
----
-
-actionlint
-==========
-[![CI Status][ci-badge]][ci]
-[![API Document][apidoc-badge]][apidoc]
-
-[actionlint][repo] is a static checker for GitHub Actions workflow files. [Try it online!][playground]
-
-Features:
-
-- **Syntax check for workflow files** to check unexpected or missing keys following [workflow syntax][syntax-doc]
-- **Strong type check for `${{ }}` expressions** to catch several semantic errors like access to not existing property,
-  type mismatches, ...
-- **Actions usage check** to check that inputs at `with:` and outputs in `steps.{id}.outputs` are correct
-- **Reusable workflow check** to check inputs/outputs/secrets of reusable workflows and workflow calls
-- **[shellcheck][] and [pyflakes][] integrations** for scripts at `run:`
-- **Security checks**; [script injection][script-injection-doc] by untrusted inputs, hard-coded credentials
-- **Other several useful checks**; [glob syntax][filter-pattern-doc] validation, dependencies check for `needs:`,
-  runner label validation, cron syntax validation, ...
-
-See the [full list][checks] of checks done by actionlint.
-
-<img src="https://github.com/rhysd/ss/blob/master/actionlint/main.gif?raw=true" alt="actionlint reports 7 errors" width="806" height="492"/>
-
-**Example of broken workflow:**
-
-```yaml
-on:
-  push:
-    branch: main
-    tags:
-      - 'v\d+'
-jobs:
-  test:
-    strategy:
-      matrix:
-        os: [macos-latest, linux-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node_version: 18.x
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-        if: ${{ github.repository.permissions.admin == true }}
-      - run: npm install && npm test
+```powershell
+npm ci --ignore-scripts
+npm --prefix functions ci --ignore-scripts --workspaces=false
+flutter pub get
 ```
 
-**actionlint reports 7 errors:**
+Copy placeholders from `.env.example` into an ignored local environment file. Never place real keys in Flutter defines, source files, OpenAPI examples, evidence, or deployment archives. Alpha cloud secrets must resolve through Azure Key Vault, GitHub encrypted secrets, Cloudflare secrets, or workload identity.
 
-```
-test.yaml:3:5: unexpected key "branch" for "push" section. expected one of "branches", "branches-ignore", "paths", "paths-ignore", "tags", "tags-ignore", "types", "workflows" [syntax-check]
-  |
-3 |     branch: main
-  |     ^~~~~~~
-test.yaml:5:11: character '\' is invalid for branch and tag names. only special characters [, ?, +, *, \, ! can be escaped with \. see `man git-check-ref-format` for more details. note that regular expression is unavailable. note: filter pattern syntax is explained at https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet [glob]
-  |
-5 |       - 'v\d+'
-  |           ^~~~
-test.yaml:10:28: label "linux-latest" is unknown. available labels are "windows-latest", "windows-latest-8-cores", "windows-2025", "windows-2022", "windows-2019", "ubuntu-latest", "ubuntu-latest-4-cores", "ubuntu-latest-8-cores", "ubuntu-latest-16-cores", "ubuntu-24.04", "ubuntu-22.04", "ubuntu-20.04", "macos-latest", "macos-latest-xl", "macos-latest-xlarge", "macos-latest-large", "macos-15-xlarge", "macos-15-large", "macos-15", "macos-14-xl", "macos-14-xlarge", "macos-14-large", "macos-14", "macos-13-xl", "macos-13-xlarge", "macos-13-large", "macos-13", "self-hosted", "x64", "arm", "arm64", "linux", "macos", "windows". if it is a custom label for self-hosted runner, set list of labels in actionlint.yaml config file [runner-label]
-   |
-10 |         os: [macos-latest, linux-latest]
-   |                            ^~~~~~~~~~~~~
-test.yaml:13:41: "github.event.head_commit.message" is potentially untrusted. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions for more details [expression]
-   |
-13 |       - run: echo "Checking commit '${{ github.event.head_commit.message }}'"
-   |                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-test.yaml:17:11: input "node_version" is not defined in action "actions/setup-node@v4". available inputs are "always-auth", "architecture", "cache", "cache-dependency-path", "check-latest", "node-version", "node-version-file", "registry-url", "scope", "token" [action]
-   |
-17 |           node_version: 18.x
-   |           ^~~~~~~~~~~~~
-test.yaml:21:20: property "platform" is not defined in object type {os: string} [expression]
-   |
-21 |           key: ${{ matrix.platform }}-node-${{ hashFiles('**/package-lock.json') }}
-   |                    ^~~~~~~~~~~~~~~
-test.yaml:22:17: receiver of object dereference "permissions" must be type of object but got "string" [expression]
-   |
-22 |         if: ${{ github.repository.permissions.admin == true }}
-   |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Validate
+
+```powershell
+npm --prefix functions run typecheck
+npm --prefix functions test
+flutter analyze
+flutter test
+npm run openapi:lint
+npm run openapi:bundle
+npm run openapi:validate:examples
+npm run routes:guard
+npm run audit:production
 ```
 
-## Quick start
+Build the web application with a public HTTPS API URL:
 
-Install `actionlint` command by downloading [the released binary][releases] or by Homebrew or by `go install`. See
-[the installation document][install] for more details like how to manage the command with several package managers
-or run via Docker container.
-
-```sh
-go install github.com/rhysd/actionlint/cmd/actionlint@latest
+```powershell
+flutter build web --release --dart-define="API_BASE_URL=https://<alpha-api-host>/api"
 ```
 
-Basically all you need to do is run the `actionlint` command in your repository. actionlint automatically detects workflows and
-checks errors. actionlint focuses on finding out mistakes. It tries to catch errors as much as possible and make false positives
-as minimal as possible.
+Build the backend artifact:
 
-```sh
-actionlint
+```powershell
+npm --prefix functions run build
 ```
 
-Another option to try actionlint is [the online playground][playground]. Your browser can run actionlint through WebAssembly.
+## Deployment
 
-See [the usage document][usage] for more details.
+Deployment is approval-gated and immutable:
 
-## Documents
+1. The full `CI` workflow must pass on the exact release SHA.
+2. `.github/workflows/deploy-asora-function-staging.yml` downloads the Functions artifact from that CI run; it does not rebuild.
+3. `.github/workflows/deploy-alpha-web.yml` deploys the web artifact from the same CI run; it does not rebuild.
+4. Health, live contracts, browser smoke, DSR configuration, artifact digests, and release evidence must pass before the candidate is eligible.
 
-- [Checks][checks]: Full list of all checks done by actionlint with example inputs, outputs, and playground links.
-- [Installation][install]: Installation instructions. Prebuilt binaries, a Docker image, building from source, a download script
-  (for CI), supports by several package managers are available.
-- [Usage][usage]: How to use `actionlint` command locally or on GitHub Actions, the online playground, an official Docker image,
-  and integrations with reviewdog, Problem Matchers, super-linter, pre-commit, VS Code.
-- [Configuration][config]: How to configure actionlint behavior. Currently, the labels of self-hosted runners, the configuration
-  variables, and ignore patterns of errors for each file paths can be set.
-- [Go API][api]: How to use actionlint as Go library.
-- [References][refs]: Links to resources.
+Production deploy, rollback, cohort expansion, access-policy changes, secret rotation, destructive infrastructure changes, and bulk moderation always require Kyle’s explicit approval.
 
-## Bug reporting
+## References
 
-When you see some bugs or false positives, it is helpful to [file a new issue][issue-form] with a minimal example
-of input. Giving me some feedbacks like feature requests or ideas of additional checks is also welcome.
-
-See the [contribution guide](./CONTRIBUTING.md) for more details.
-
-## License
-
-actionlint is distributed under [the MIT license](./LICENSE.txt).
-
-[ci-badge]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml/badge.svg
-[ci]: https://github.com/rhysd/actionlint/actions/workflows/ci.yaml
-[apidoc-badge]: https://pkg.go.dev/badge/github.com/rhysd/actionlint.svg
-[apidoc]: https://pkg.go.dev/github.com/rhysd/actionlint
-[repo]: https://github.com/rhysd/actionlint
-[playground]: https://rhysd.github.io/actionlint/
-[shellcheck]: https://github.com/koalaman/shellcheck
-[pyflakes]: https://github.com/PyCQA/pyflakes
-[syntax-doc]: https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-[filter-pattern-doc]: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
-[script-injection-doc]: https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-[releases]: https://github.com/rhysd/actionlint/releases
-[checks]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/checks.md
-[install]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/install.md
-[usage]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/usage.md
-[config]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/config.md
-[api]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/api.md
-[refs]: https://github.com/rhysd/actionlint/blob/v1.7.7/docs/reference.md
-[issue-form]: https://github.com/rhysd/actionlint/issues/new
+- [Controlled Alpha ADR](docs/adr/ADR-004-controlled-web-api-alpha.md)
+- [Auth architecture](docs/AUTH_ARCHITECTURE.md)
+- [Alpha entitlement matrix](docs/product/alpha-entitlements.md)
+- [AI authorship policy](docs/policy/alpha-ai-authorship-and-moderation.md)
+- [Alpha operations runbook](docs/runbooks/alpha-operations.md)
+- [Current Alpha go/no-go packet](docs/evidence/alpha-readiness/2026-07-10-controlled-alpha-packet.md)
+- [Staged rollout specification](docs/alpha/staged-rollout.md)
+- [Rollback plan](docs/runbooks/alpha-rollback.md)
+- [Known risks](docs/alpha/known-risk-register.md)
+- [Brand transition](docs/branding/lythaus-transition.md)

@@ -27,6 +27,7 @@ doc/AdminContentActionRequest.md
 doc/AdminContentActionResponse.md
 doc/AdminContentState.md
 doc/AdminContentType.md
+doc/AdminCreatedInvite.md
 doc/AdminFlagDetailAppeal.md
 doc/AdminFlagDetailContent.md
 doc/AdminFlagDetailFlags.md
@@ -75,7 +76,6 @@ doc/AuthTokenRequest.md
 doc/BadGatewayError.md
 doc/BadGatewayErrorError.md
 doc/CreateCustomFeedRequest.md
-doc/CreatePost201Response.md
 doc/CreatePostRequest.md
 doc/CursorPaginatedPostView.md
 doc/CustomFeedDefinition.md
@@ -105,12 +105,16 @@ doc/InviteValidationPayload.md
 doc/InviteValidationResponse.md
 doc/LedgerEntry.md
 doc/LedgerPage.md
+doc/LegacyCreatePostResponse.md
+doc/LegacyCreatePostResponsePost.md
+doc/LegacyCreatePostResponsePostStats.md
 doc/LegalHoldClear.md
 doc/LegalHoldInput.md
 doc/LegalHoldRecord.md
 doc/ModerationApi.md
 doc/ModerationAppealRequest.md
 doc/ModerationBlockedResponse.md
+doc/NewsBoardFeedResponse.md
 doc/NewsSourceMetadata.md
 doc/NotificationsApi.md
 doc/OAuthTokenResponse.md
@@ -124,6 +128,7 @@ doc/PostViewAllOfRecentComments.md
 doc/PostsApi.md
 doc/PrivacyAdminApi.md
 doc/PrivacyApi.md
+doc/PublicAuthorship.md
 doc/PublicReputationView.md
 doc/RateLimitError.md
 doc/ReactionsApi.md
@@ -207,6 +212,7 @@ lib/src/model/admin_content_action_request.dart
 lib/src/model/admin_content_action_response.dart
 lib/src/model/admin_content_state.dart
 lib/src/model/admin_content_type.dart
+lib/src/model/admin_created_invite.dart
 lib/src/model/admin_flag_detail_appeal.dart
 lib/src/model/admin_flag_detail_content.dart
 lib/src/model/admin_flag_detail_flags.dart
@@ -252,7 +258,6 @@ lib/src/model/auth_token_request.dart
 lib/src/model/bad_gateway_error.dart
 lib/src/model/bad_gateway_error_error.dart
 lib/src/model/create_custom_feed_request.dart
-lib/src/model/create_post201_response.dart
 lib/src/model/create_post_request.dart
 lib/src/model/cursor_paginated_post_view.dart
 lib/src/model/custom_feed_definition.dart
@@ -280,11 +285,15 @@ lib/src/model/invite_validation_payload.dart
 lib/src/model/invite_validation_response.dart
 lib/src/model/ledger_entry.dart
 lib/src/model/ledger_page.dart
+lib/src/model/legacy_create_post_response.dart
+lib/src/model/legacy_create_post_response_post.dart
+lib/src/model/legacy_create_post_response_post_stats.dart
 lib/src/model/legal_hold_clear.dart
 lib/src/model/legal_hold_input.dart
 lib/src/model/legal_hold_record.dart
 lib/src/model/moderation_appeal_request.dart
 lib/src/model/moderation_blocked_response.dart
+lib/src/model/news_board_feed_response.dart
 lib/src/model/news_source_metadata.dart
 lib/src/model/o_auth_token_response.dart
 lib/src/model/o_auth_token_response_data.dart
@@ -293,6 +302,7 @@ lib/src/model/post_proof_signals.dart
 lib/src/model/post_trust_timeline.dart
 lib/src/model/post_view.dart
 lib/src/model/post_view_all_of_recent_comments.dart
+lib/src/model/public_authorship.dart
 lib/src/model/public_reputation_view.dart
 lib/src/model/rate_limit_error.dart
 lib/src/model/redeem_invite_request.dart

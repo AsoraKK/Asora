@@ -55,13 +55,13 @@ Lythaus uses a layered moderation pipeline:
 ```
 IF ai_confidence ≥ 0.85 AND category ∈ {hate_speech, csam, violence}:
     → BLOCK (immediate, no appeal window)
-    
+
 IF ai_confidence ∈ [0.5, 0.85]:
     → FLAG for human review (content remains visible with warning)
-    
+
 IF ai_confidence < 0.5:
     → PASS (log for analytics, no user-facing action)
-    
+
 IF appeal_type == 'false_positive':
     → PRIORITIZE review (urgency score = 8/10)
     → Check original AI analysis attached to appeal

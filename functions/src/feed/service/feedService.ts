@@ -16,12 +16,12 @@ import {
   calculateRankingScore,
   type RankingConfig,
 } from '@feed/ranking/rankingConfig';
+import { sanitizePublicPostRecord } from '@shared/authorship';
 
 type FeedMode = 'home' | 'public' | 'profile' | 'test';
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 50;
-const MAX_AUTHOR_BATCH = 50;
 const DEFAULT_CURSOR: FeedCursor = {
   ts: Number.MAX_SAFE_INTEGER,
   id: 'ffffffff-ffff-7fff-bfff-ffffffffffff',
@@ -183,6 +183,7 @@ export async function getFeed({
     : null;
 
   const authorCount = modeResult.authorCount;
+  const publicItems = sortedItems.map(sanitizePublicPostRecord);
 
   const telemetryProps = {
     'feed.type': modeResult.mode,
@@ -223,7 +224,7 @@ export async function getFeed({
 
   return {
     body: {
-      items: sortedItems,
+      items: publicItems,
       meta: {
         count: sortedItems.length,
         nextCursor,
@@ -374,8 +375,8 @@ async function fetchFollowees(principalId: string, context: InvocationContext): 
   try {
     const rows = await withClient(async client =>
       client.query({
-        text: 'SELECT followee_uuid FROM follows WHERE follower_uuid = $1 ORDER BY created_at DESC LIMIT $2',
-        values: [principalId, MAX_AUTHOR_BATCH],
+        text: 'SELECT followee_uuid FROM follows WHERE follower_uuid = $1 ORDER BY created_at DESC',
+        values: [principalId],
       })
     );
 
@@ -396,9 +397,6 @@ async function fetchFollowees(principalId: string, context: InvocationContext): 
     add(principalId);
     for (const row of rows.rows ?? []) {
       add(row?.followee_uuid);
-      if (authors.length >= MAX_AUTHOR_BATCH) {
-        break;
-      }
     }
 
     return authors;
@@ -502,7 +500,11 @@ function buildQuery(
   }
 
   const query = `
-    SELECT c.*
+    SELECT c.id, c.postId, c.authorId, c.content, c.text, c.contentType,
+      c.mediaUrls, c.mediaUrl, c.topics, c.visibility, c.isNews, c.source,
+      c.clusterId, c.status, c.createdAt, c.updatedAt, c.stats, c.authorship,
+      c.aiLabel, c.proofSignalsProvided, c.verifiedContextBadgeEligible,
+      c.featuredEligible, c.appealStatus
     FROM c
     WHERE ${clauses.join(' AND ')}
     ORDER BY c.createdAt DESC, c.id DESC

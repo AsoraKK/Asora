@@ -15,7 +15,7 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     name: 'Free',
     minXP: 0,
     privileges: [
-      'Discovery + News feeds',
+      'Discovery + News Board preview',
       '1 custom feed with personalized filters',
       'Rewards capped through reputation level 3',
       'Limited daily posting',
@@ -26,7 +26,7 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     name: 'Premium',
     minXP: 1200,
     privileges: [
-      'Discovery + News feeds',
+      'Discovery + full News Board access',
       '2 custom feeds with personalized filters',
       '1 reward per reputation level',
       'Unrestricted normal posting',
@@ -37,7 +37,7 @@ const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
     name: 'Black',
     minXP: 3200,
     privileges: [
-      'Discovery + News feeds',
+      'Discovery + full News Board access',
       '3 custom feeds with personalized filters',
       'All eligible rewards unlocked',
       'Unrestricted normal posting',

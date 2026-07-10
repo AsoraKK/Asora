@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,18 +12,36 @@ part 'subscription_status_entitlements.g.dart';
 /// SubscriptionStatusEntitlements
 ///
 /// Properties:
-/// * [dailyPosts] 
-/// * [maxMediaSizeMB] 
-/// * [maxMediaPerPost] 
+/// * [dailyPosts]
+/// * [dailyComments]
+/// * [dailyReactions]
+/// * [dailyAppeals]
+/// * [exportCooldownDays]
+/// * [maxMediaSizeMB]
+/// * [maxMediaPerPost]
 /// * [maxCustomFeeds] - Maximum custom feeds available to this tier.
-/// * [newsBoardAccess] - Whether this tier can read the News Board.
+/// * [newsBoardAccessLevel] - Free receives preview; Premium and Black receive full access.
+/// * [newsBoardPreview] - Whether the tier can read the safe News Board preview.
 /// * [postingRestricted] - Whether normal posting is product-limited beyond abuse controls.
 /// * [rewardLevelCap] - Highest reputation reward level available to this tier.
 /// * [rewardOptionsPerLevel] - Reward options per reputation level; null means all eligible rewards.
+/// * [rewardChoiceBreadth]
 @BuiltValue()
 abstract class SubscriptionStatusEntitlements implements Built<SubscriptionStatusEntitlements, SubscriptionStatusEntitlementsBuilder> {
   @BuiltValueField(wireName: r'dailyPosts')
   int get dailyPosts;
+
+  @BuiltValueField(wireName: r'dailyComments')
+  int get dailyComments;
+
+  @BuiltValueField(wireName: r'dailyReactions')
+  int get dailyReactions;
+
+  @BuiltValueField(wireName: r'dailyAppeals')
+  int get dailyAppeals;
+
+  @BuiltValueField(wireName: r'exportCooldownDays')
+  int get exportCooldownDays;
 
   @BuiltValueField(wireName: r'maxMediaSizeMB')
   int get maxMediaSizeMB;
@@ -34,9 +53,14 @@ abstract class SubscriptionStatusEntitlements implements Built<SubscriptionStatu
   @BuiltValueField(wireName: r'maxCustomFeeds')
   int get maxCustomFeeds;
 
-  /// Whether this tier can read the News Board.
-  @BuiltValueField(wireName: r'newsBoardAccess')
-  bool get newsBoardAccess;
+  /// Free receives preview; Premium and Black receive full access.
+  @BuiltValueField(wireName: r'newsBoardAccessLevel')
+  SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum get newsBoardAccessLevel;
+  // enum newsBoardAccessLevelEnum {  preview,  full,  };
+
+  /// Whether the tier can read the safe News Board preview.
+  @BuiltValueField(wireName: r'newsBoardPreview')
+  bool get newsBoardPreview;
 
   /// Whether normal posting is product-limited beyond abuse controls.
   @BuiltValueField(wireName: r'postingRestricted')
@@ -49,6 +73,10 @@ abstract class SubscriptionStatusEntitlements implements Built<SubscriptionStatu
   /// Reward options per reputation level; null means all eligible rewards.
   @BuiltValueField(wireName: r'rewardOptionsPerLevel')
   int? get rewardOptionsPerLevel;
+
+  @BuiltValueField(wireName: r'rewardChoiceBreadth')
+  SubscriptionStatusEntitlementsRewardChoiceBreadthEnum get rewardChoiceBreadth;
+  // enum rewardChoiceBreadthEnum {  limited,  increased,  full,  };
 
   SubscriptionStatusEntitlements._();
 
@@ -78,6 +106,26 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
       object.dailyPosts,
       specifiedType: const FullType(int),
     );
+    yield r'dailyComments';
+    yield serializers.serialize(
+      object.dailyComments,
+      specifiedType: const FullType(int),
+    );
+    yield r'dailyReactions';
+    yield serializers.serialize(
+      object.dailyReactions,
+      specifiedType: const FullType(int),
+    );
+    yield r'dailyAppeals';
+    yield serializers.serialize(
+      object.dailyAppeals,
+      specifiedType: const FullType(int),
+    );
+    yield r'exportCooldownDays';
+    yield serializers.serialize(
+      object.exportCooldownDays,
+      specifiedType: const FullType(int),
+    );
     yield r'maxMediaSizeMB';
     yield serializers.serialize(
       object.maxMediaSizeMB,
@@ -93,9 +141,14 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
       object.maxCustomFeeds,
       specifiedType: const FullType(int),
     );
-    yield r'newsBoardAccess';
+    yield r'newsBoardAccessLevel';
     yield serializers.serialize(
-      object.newsBoardAccess,
+      object.newsBoardAccessLevel,
+      specifiedType: const FullType(SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum),
+    );
+    yield r'newsBoardPreview';
+    yield serializers.serialize(
+      object.newsBoardPreview,
       specifiedType: const FullType(bool),
     );
     yield r'postingRestricted';
@@ -112,6 +165,11 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
     yield object.rewardOptionsPerLevel == null ? null : serializers.serialize(
       object.rewardOptionsPerLevel,
       specifiedType: const FullType.nullable(int),
+    );
+    yield r'rewardChoiceBreadth';
+    yield serializers.serialize(
+      object.rewardChoiceBreadth,
+      specifiedType: const FullType(SubscriptionStatusEntitlementsRewardChoiceBreadthEnum),
     );
   }
 
@@ -143,6 +201,34 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
           ) as int;
           result.dailyPosts = valueDes;
           break;
+        case r'dailyComments':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.dailyComments = valueDes;
+          break;
+        case r'dailyReactions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.dailyReactions = valueDes;
+          break;
+        case r'dailyAppeals':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.dailyAppeals = valueDes;
+          break;
+        case r'exportCooldownDays':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.exportCooldownDays = valueDes;
+          break;
         case r'maxMediaSizeMB':
           final valueDes = serializers.deserialize(
             value,
@@ -164,12 +250,19 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
           ) as int;
           result.maxCustomFeeds = valueDes;
           break;
-        case r'newsBoardAccess':
+        case r'newsBoardAccessLevel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum),
+          ) as SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum;
+          result.newsBoardAccessLevel = valueDes;
+          break;
+        case r'newsBoardPreview':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(bool),
           ) as bool;
-          result.newsBoardAccess = valueDes;
+          result.newsBoardPreview = valueDes;
           break;
         case r'postingRestricted':
           final valueDes = serializers.deserialize(
@@ -192,6 +285,13 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
           ) as int?;
           if (valueDes == null) continue;
           result.rewardOptionsPerLevel = valueDes;
+          break;
+        case r'rewardChoiceBreadth':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SubscriptionStatusEntitlementsRewardChoiceBreadthEnum),
+          ) as SubscriptionStatusEntitlementsRewardChoiceBreadthEnum;
+          result.rewardChoiceBreadth = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -222,3 +322,36 @@ class _$SubscriptionStatusEntitlementsSerializer implements PrimitiveSerializer<
   }
 }
 
+class SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum extends EnumClass {
+
+  /// Free receives preview; Premium and Black receive full access.
+  @BuiltValueEnumConst(wireName: r'preview')
+  static const SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum preview = _$subscriptionStatusEntitlementsNewsBoardAccessLevelEnum_preview;
+  /// Free receives preview; Premium and Black receive full access.
+  @BuiltValueEnumConst(wireName: r'full')
+  static const SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum full = _$subscriptionStatusEntitlementsNewsBoardAccessLevelEnum_full;
+
+  static Serializer<SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum> get serializer => _$subscriptionStatusEntitlementsNewsBoardAccessLevelEnumSerializer;
+
+  const SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum._(String name): super(name);
+
+  static BuiltSet<SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum> get values => _$subscriptionStatusEntitlementsNewsBoardAccessLevelEnumValues;
+  static SubscriptionStatusEntitlementsNewsBoardAccessLevelEnum valueOf(String name) => _$subscriptionStatusEntitlementsNewsBoardAccessLevelEnumValueOf(name);
+}
+
+class SubscriptionStatusEntitlementsRewardChoiceBreadthEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'limited')
+  static const SubscriptionStatusEntitlementsRewardChoiceBreadthEnum limited = _$subscriptionStatusEntitlementsRewardChoiceBreadthEnum_limited;
+  @BuiltValueEnumConst(wireName: r'increased')
+  static const SubscriptionStatusEntitlementsRewardChoiceBreadthEnum increased = _$subscriptionStatusEntitlementsRewardChoiceBreadthEnum_increased;
+  @BuiltValueEnumConst(wireName: r'full')
+  static const SubscriptionStatusEntitlementsRewardChoiceBreadthEnum full = _$subscriptionStatusEntitlementsRewardChoiceBreadthEnum_full;
+
+  static Serializer<SubscriptionStatusEntitlementsRewardChoiceBreadthEnum> get serializer => _$subscriptionStatusEntitlementsRewardChoiceBreadthEnumSerializer;
+
+  const SubscriptionStatusEntitlementsRewardChoiceBreadthEnum._(String name): super(name);
+
+  static BuiltSet<SubscriptionStatusEntitlementsRewardChoiceBreadthEnum> get values => _$subscriptionStatusEntitlementsRewardChoiceBreadthEnumValues;
+  static SubscriptionStatusEntitlementsRewardChoiceBreadthEnum valueOf(String name) => _$subscriptionStatusEntitlementsRewardChoiceBreadthEnumValueOf(name);
+}

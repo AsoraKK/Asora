@@ -68,6 +68,10 @@ jest.mock('@shared/appInsights', () => ({
   trackAppMetric: jest.fn(),
 }));
 
+jest.mock('@shared/services/reputationService', () => ({
+  awardPostCreated: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock PostgreSQL for moderation config
 jest.mock('@shared/clients/postgres', () => ({
   getPool: jest.fn(() => ({
@@ -108,6 +112,7 @@ const { AuthError } = jest.requireActual('@auth/verifyJwt');
 const verifyMock = jest.mocked(require('@auth/verifyJwt').verifyAuthorizationHeader);
 const { getTargetDatabase } = require('@shared/clients/cosmos');
 const { trackAppEvent } = require('@shared/appInsights');
+const { awardPostCreated } = require('@shared/services/reputationService');
 const dailyPostLimitModule = require('@shared/services/dailyPostLimitService');
 const mockCheckAndIncrementDailyActionCount = jest.mocked(
   dailyPostLimitModule.checkAndIncrementDailyActionCount
@@ -124,10 +129,14 @@ function guestRequest(): HttpRequest {
 }
 
 function userRequest(body?: unknown): HttpRequest {
+  const normalizedBody =
+    body && typeof body === 'object' && !Array.isArray(body)
+      ? { aiLabel: 'human', ...(body as Record<string, unknown>) }
+      : body;
   return httpReqMock({
     method: 'POST',
     headers: { authorization: 'Bearer valid-token' },
-    body,
+    body: normalizedBody,
   });
 }
 
@@ -187,6 +196,8 @@ describe('createPost route', () => {
     expect(body.status).toBe('success');
     expect(body.post).toBeDefined();
     expect(body.post.text).toBe('hello world');
+    expect(body.post.authorship.authorshipLabel).toBe('Human-authored');
+    expect(JSON.stringify(body.post)).not.toContain('confidence');
     expect(contextStub.log).toHaveBeenCalledWith('posts.create.success', expect.any(Object));
   });
 
@@ -355,8 +366,8 @@ describe('createPost route', () => {
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
       expect(body.status).toBe('success');
-      expect(body.post.moderation.status).toBe('clean');
-      expect(body.post.moderation.confidence).toBeUndefined();
+      expect(body.post.authorship.authorshipLabel).toBe('Human-authored');
+      expect(body.post.moderation).toBeUndefined();
     });
 
     it('creates post with warned status when moderation returns WARN', async () => {
@@ -371,10 +382,9 @@ describe('createPost route', () => {
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
       expect(body.status).toBe('success');
-      expect(body.post.moderation.status).toBe('warned');
-      expect(body.post.moderation.confidence).toBeUndefined();
-      expect(body.post.moderation.categories).toContain(ModerationCategory.HARASSMENT);
-      expect(body.post.moderation.reasons).toContain('Potentially harassing language');
+      expect(body.post.authorship.authorshipLabel).toBe('Human-authored');
+      expect(body.post.moderation).toBeUndefined();
+      expect(JSON.stringify(body.post)).not.toContain('Potentially harassing language');
     });
 
     it('returns 422 when moderation returns BLOCK', async () => {
@@ -426,8 +436,9 @@ describe('createPost route', () => {
       const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
-      expect(body.post.moderation.status).toBe('warned');
-      expect(body.post.moderation.error).toContain('timed out');
+      expect(body.post.authorship.authorshipLabel).toBe('Under review');
+      expect(body.post.authorship.classificationState).toBe('unavailable');
+      expect(body.post.moderation).toBeUndefined();
     });
 
     it('marks warned when moderation has network error', async () => {
@@ -438,8 +449,9 @@ describe('createPost route', () => {
       const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
-      expect(body.post.moderation.status).toBe('warned');
-      expect(body.post.moderation.error).toBeDefined();
+      expect(body.post.authorship.authorshipLabel).toBe('Under review');
+      expect(body.post.authorship.classificationState).toBe('unavailable');
+      expect(body.post.moderation).toBeUndefined();
     });
 
     it('logs moderation error event', async () => {
@@ -465,7 +477,8 @@ describe('createPost route', () => {
       const response = await createPostRoute(userRequest({ text: 'hello world' }), contextStub);
       expect(response.status).toBe(201);
       const body = JSON.parse(response.body as string);
-      expect(body.post.moderation.status).toBe('clean');
+      expect(body.post.authorship.authorshipLabel).toBe('Under review');
+      expect(body.post.authorship.classificationState).toBe('unavailable');
 
       // Now uses shared moderationUtil which logs with different format
       expect(contextStub.log).toHaveBeenCalledWith('[moderation] Moderation skipped - no API key configured', expect.objectContaining({
@@ -506,6 +519,33 @@ describe('createPost route', () => {
       expect(contextStub.log).toHaveBeenCalledWith('posts.create.success', expect.objectContaining({
         moderationStatus: 'warned',
       }));
+    });
+
+    it('requires an explicit authorship disclosure', async () => {
+      const response = await createPostRoute(
+        httpReqMock({
+          method: 'POST',
+          headers: { authorization: 'Bearer valid-token' },
+          body: { text: 'missing disclosure' },
+        }),
+        contextStub
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toContain('Authorship disclosure is required');
+    });
+
+    it('publishes disclosed AI-generated content without reputation', async () => {
+      const response = await createPostRoute(
+        userRequest({ text: 'generated but disclosed', aiLabel: 'generated' }),
+        contextStub
+      );
+
+      expect(response.status).toBe(201);
+      const body = JSON.parse(response.body as string);
+      expect(body.post.authorship.authorshipLabel).toBe('AI-generated');
+      expect(awardPostCreated).not.toHaveBeenCalled();
+      expect(JSON.stringify(body.post)).not.toContain('confidence');
     });
   });
 });

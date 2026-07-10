@@ -24,6 +24,9 @@ class SubscriptionStatus {
   final String? provider;
   final DateTime? currentPeriodEnd;
   final bool cancelAtPeriodEnd;
+  final String accessLabel;
+  final DateTime? manualGrantExpiresAt;
+  final DateTime? manualGrantReviewAt;
   final SubscriptionEntitlements entitlements;
 
   const SubscriptionStatus({
@@ -33,6 +36,9 @@ class SubscriptionStatus {
     this.provider,
     this.currentPeriodEnd,
     required this.cancelAtPeriodEnd,
+    this.accessLabel = 'Alpha access',
+    this.manualGrantExpiresAt,
+    this.manualGrantReviewAt,
     required this.entitlements,
   });
 
@@ -46,6 +52,13 @@ class SubscriptionStatus {
           ? DateTime.parse(json['currentPeriodEnd'] as String)
           : null,
       cancelAtPeriodEnd: json['cancelAtPeriodEnd'] as bool? ?? false,
+      accessLabel: json['accessLabel'] as String? ?? 'Alpha access',
+      manualGrantExpiresAt: json['manualGrantExpiresAt'] != null
+          ? DateTime.parse(json['manualGrantExpiresAt'] as String)
+          : null,
+      manualGrantReviewAt: json['manualGrantReviewAt'] != null
+          ? DateTime.parse(json['manualGrantReviewAt'] as String)
+          : null,
       entitlements: SubscriptionEntitlements.fromJson(
         json['entitlements'] as Map<String, dynamic>,
       ),
@@ -65,35 +78,55 @@ class SubscriptionStatus {
 /// Tier-based entitlements derived from the subscription
 class SubscriptionEntitlements {
   final int dailyPosts;
+  final int dailyComments;
+  final int dailyReactions;
+  final int dailyAppeals;
+  final int exportCooldownDays;
   final int maxMediaSizeMB;
   final int maxMediaPerPost;
   final int maxCustomFeeds;
-  final bool newsBoardAccess;
+  final String newsBoardAccessLevel;
+  final bool newsBoardPreview;
   final bool postingRestricted;
   final int rewardLevelCap;
   final int? rewardOptionsPerLevel;
+  final String rewardChoiceBreadth;
 
   const SubscriptionEntitlements({
     required this.dailyPosts,
+    required this.dailyComments,
+    required this.dailyReactions,
+    required this.dailyAppeals,
+    required this.exportCooldownDays,
     required this.maxMediaSizeMB,
     required this.maxMediaPerPost,
     required this.maxCustomFeeds,
-    required this.newsBoardAccess,
+    required this.newsBoardAccessLevel,
+    required this.newsBoardPreview,
     required this.postingRestricted,
     required this.rewardLevelCap,
     required this.rewardOptionsPerLevel,
+    required this.rewardChoiceBreadth,
   });
 
   factory SubscriptionEntitlements.fromJson(Map<String, dynamic> json) {
     return SubscriptionEntitlements(
       dailyPosts: json['dailyPosts'] as int,
+      dailyComments: json['dailyComments'] as int? ?? 0,
+      dailyReactions: json['dailyReactions'] as int? ?? 0,
+      dailyAppeals: json['dailyAppeals'] as int? ?? 0,
+      exportCooldownDays: json['exportCooldownDays'] as int? ?? 30,
       maxMediaSizeMB: json['maxMediaSizeMB'] as int,
       maxMediaPerPost: json['maxMediaPerPost'] as int,
       maxCustomFeeds: json['maxCustomFeeds'] as int? ?? 1,
-      newsBoardAccess: json['newsBoardAccess'] as bool? ?? true,
+      newsBoardAccessLevel:
+          json['newsBoardAccessLevel'] as String? ?? 'preview',
+      newsBoardPreview: json['newsBoardPreview'] as bool? ?? true,
       postingRestricted: json['postingRestricted'] as bool? ?? false,
       rewardLevelCap: json['rewardLevelCap'] as int? ?? 3,
       rewardOptionsPerLevel: json['rewardOptionsPerLevel'] as int?,
+      rewardChoiceBreadth:
+          json['rewardChoiceBreadth'] as String? ?? 'limited',
     );
   }
 }

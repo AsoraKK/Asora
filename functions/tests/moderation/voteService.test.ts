@@ -185,7 +185,7 @@ describe('voteService - successful voting', () => {
     expect(mockCreate).toHaveBeenCalled();
   });
 
-  it('records a moderation decision when quorum is reached', async () => {
+  it('records an advisory recommendation when quorum is reached', async () => {
     const appealDoc = {
       id: 'appeal-1',
       status: 'pending',
@@ -220,12 +220,10 @@ describe('voteService - successful voting', () => {
 
     expect(response.status).toBe(200);
     const decisionCalls = mockCreate.mock.calls.filter(call => call[0] === 'moderation_decisions');
-    expect(decisionCalls).toHaveLength(1);
-    expect(decisionCalls[0][1]).toMatchObject({
-      action: 'approved',
-      appealId: 'appeal-1',
-      appealStatus: 'approved',
-      source: 'appeal_vote',
-    });
+    expect(decisionCalls).toHaveLength(0);
+    expect(appealDoc.status).toBe('pending');
+    expect(appealDoc.votingStatus).toBe('completed');
+    expect(appealDoc.communityRecommendation).toBe('approved');
+    expect(appealDoc.finalDecision).toBeUndefined();
   });
 });

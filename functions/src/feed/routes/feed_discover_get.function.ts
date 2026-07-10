@@ -47,24 +47,15 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       // Anonymous viewer, no problem
     }
 
-    // Fetch public discovery feed — wrapped so a Cosmos/Postgres infra outage
-    // degrades gracefully to an empty feed (200) instead of a 500.
-    let feedResult: Awaited<ReturnType<typeof getFeed>>;
-    try {
-      feedResult = await getFeed({
-        principal,
-        context: ctx.context,
-        cursor,
-        limit: limit.toString(),
-        authorId: null, // Public feed, not user-specific
-      });
-    } catch (feedError) {
-      ctx.context.warn(
-        `[feed_discover_get] Feed service unavailable, returning empty feed: ${feedError}`,
-        { correlationId: ctx.correlationId }
-      );
-      return ctx.ok({ items: [], nextCursor: undefined });
-    }
+    // Fetch public discovery feed. Infrastructure failures remain visible as a
+    // controlled error so monitoring cannot mistake an empty fallback for health.
+    const feedResult = await getFeed({
+      principal,
+      context: ctx.context,
+      cursor,
+      limit: limit.toString(),
+      authorId: null,
+    });
 
     // Filter by topics if provided
     let items = feedResult.body.items;
@@ -87,12 +78,7 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
 
     // Enrich posts with author details — use allSettled so a single
     // malformed/missing document doesn't fail the whole feed.
-    const settled = await Promise.allSettled(
-      items.map((item: any) => postsService.enrichPost(item, viewerId))
-    );
-    const enrichedPosts = settled
-      .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof postsService.enrichPost>>> => r.status === 'fulfilled')
-      .map(r => r.value);
+    const enrichedPosts = await postsService.enrichFeedPosts(items as any[], viewerId);
 
     const response = ctx.ok({
       items: enrichedPosts,
@@ -102,7 +88,7 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       ...response.headers,
       'Cache-Control': isAuthenticated
         ? 'private, no-store'
-        : 'public, max-age=60, stale-while-revalidate=30',
+        : 'public, no-cache, must-revalidate',
       Vary: 'Authorization',
     };
     return response;

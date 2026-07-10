@@ -1,6 +1,8 @@
 import type { InvocationContext } from '@azure/functions';
 import { notificationDispatcher } from '../../notifications/services/notificationDispatcher';
 import type { NotificationEventType } from '../../notifications/types';
+import { EVENT_TYPE_CATEGORY } from '../../notifications/types';
+import { getAlphaConfig } from '@alpha/alphaConfig';
 
 interface EnqueueUserNotificationParams {
   context: InvocationContext;
@@ -22,6 +24,14 @@ export async function enqueueUserNotification({
   }
 
   try {
+    const category = EVENT_TYPE_CATEGORY[eventType];
+    if (category === 'SOCIAL' || category === 'NEWS' || category === 'MARKETING') {
+      const alpha = await getAlphaConfig();
+      if (alpha.features.readOnlyMode || !alpha.features.nonEssentialNotifications) {
+        context.log('notifications.enqueue.skipped', { eventType, reason: 'alpha_feature_disabled' });
+        return;
+      }
+    }
     await notificationDispatcher.enqueueNotificationEvent({
       userId,
       eventType,

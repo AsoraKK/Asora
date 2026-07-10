@@ -321,7 +321,7 @@ try {
   })();
 
   await (async () => {
-    const userUrl = buildUrl(webBaseUrl, '/user/test');
+    const userUrl = buildUrl(webBaseUrl, '/user/00000000-0000-4000-8000-000000000001');
     const response = await page.goto(userUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `User deep link request failed for ${userUrl}`);
     assert(response.status() === 200, `User deep link returned HTTP ${response.status()}`);
@@ -331,11 +331,11 @@ try {
     assert(reload, 'User deep link reload failed');
     assert(reload.status() === 200, `User deep link reload returned HTTP ${reload.status()}`);
     await waitForAnyText(page, ocrWorker, ['Profile', 'Welcome to Lythaus', 'Continue as guest']);
-    recordCheck('/user/test deep link loads without hard-404', 'passed', { path: page.url() });
+    recordCheck('/user/:id deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {
-    const postUrl = buildUrl(webBaseUrl, '/post/test');
+    const postUrl = buildUrl(webBaseUrl, '/post/00000000-0000-4000-8000-000000000001');
     const response = await page.goto(postUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `Post deep link request failed for ${postUrl}`);
     assert(response.status() === 200, `Post deep link returned HTTP ${response.status()}`);
@@ -345,7 +345,7 @@ try {
     assert(reload, 'Post deep link reload failed');
     assert(reload.status() === 200, `Post deep link reload returned HTTP ${reload.status()}`);
     await waitForAnyText(page, ocrWorker, ['Post', 'Welcome to Lythaus', 'Continue as guest']);
-    recordCheck('/post/test deep link loads without hard-404', 'passed', { path: page.url() });
+    recordCheck('/post/:id deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {

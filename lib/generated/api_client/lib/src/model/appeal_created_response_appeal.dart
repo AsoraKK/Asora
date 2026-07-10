@@ -14,8 +14,8 @@ part 'appeal_created_response_appeal.g.dart';
 /// Properties:
 /// * [id] - Generated appeal identifier
 /// * [caseId] - Linked moderation case
-/// * [status] 
-/// * [createdAt] 
+/// * [status]
+/// * [createdAt]
 @BuiltValue()
 abstract class AppealCreatedResponseAppeal implements Built<AppealCreatedResponseAppeal, AppealCreatedResponseAppealBuilder> {
   /// Generated appeal identifier
@@ -168,4 +168,3 @@ class AppealCreatedResponseAppealStatusEnum extends EnumClass {
   static BuiltSet<AppealCreatedResponseAppealStatusEnum> get values => _$appealCreatedResponseAppealStatusEnumValues;
   static AppealCreatedResponseAppealStatusEnum valueOf(String name) => _$appealCreatedResponseAppealStatusEnumValueOf(name);
 }
-

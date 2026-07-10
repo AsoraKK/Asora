@@ -12,10 +12,11 @@ class OnboardingIntroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const policyLines = [
-      'AI-generated content is blocked at publish time.',
-      "If content is blocked, you'll see a neutral notice.",
-      'You can appeal decisions. Appeals are reviewed by the community and moderators.',
-      'This is an invite-only beta focused on authentic human content.',
+      'Choose an authorship disclosure before posting.',
+      'AI-generated posts are labeled and do not earn reputation.',
+      'Disclosure conflicts may enter Under review.',
+      'Community appeal votes are advisory; moderators make final decisions.',
+      'This is an invite-only Alpha.',
     ];
 
     return Scaffold(

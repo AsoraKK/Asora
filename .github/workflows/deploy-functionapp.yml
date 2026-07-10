@@ -1,4 +1,4 @@
-name: Deploy Azure Function App
+name: Legacy Function deploy (blocked)
 
 on:
   workflow_dispatch:
@@ -38,7 +38,17 @@ env:
   WORKING_DIR: 'functions'
 
 jobs:
+  exact-sha-required:
+    name: Use exact-SHA Alpha deployment workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block rebuild-and-deploy path
+        run: |
+          echo "::error::This legacy workflow rebuilds during deployment and is disabled. Use deploy-asora-function-staging with release_sha and ci_run_id."
+          exit 1
+
   infra:
+    needs: exact-sha-required
     uses: ./.github/workflows/infra.yml
     with:
       environment: ${{ inputs.environment }}
@@ -174,7 +184,7 @@ jobs:
         run: |
           APP="$AZURE_FUNCTIONAPP_NAME"
           RG="$AZURE_RESOURCE_GROUP"
-          req=("JWT_SECRET" "HIVE_TEXT_KEY" "HIVE_IMAGE_KEY" "HIVE_DEEPFAKE_KEY" "COSMOS_KEY" "POSTGRES_CONNECTION_STRING")
+          req=("JWT_SECRET" "INVITE_CODE_PEPPER" "HIVE_API_KEY" "COSMOS_CONNECTION_STRING" "POSTGRES_CONNECTION_STRING" "AUDIT_HMAC_KEY" "FCM_PRIVATE_KEY")
           for k in "${req[@]}"; do
             v=$(az functionapp config appsettings list -g "$RG" -n "$APP" --query "[?name=='$k'].value" -o tsv || true)
             if [[ "$v" != *"@Microsoft.KeyVault"* ]]; then

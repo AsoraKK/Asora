@@ -282,7 +282,7 @@ describe('feedService', () => {
       expect(mockedWithClient).not.toHaveBeenCalled();
     });
 
-    it('caps multi-author queries to MAX_AUTHOR_BATCH with cross partitioning', async () => {
+    it('includes every followee in the controlled Alpha cohort', async () => {
       const followeeRows = Array.from({ length: 55 }, (_, index) => ({
         followee_uuid: `author-${index}`,
       }));
@@ -305,9 +305,43 @@ describe('feedService', () => {
         context: mockContext,
       });
 
-      expect(result.headers['X-Feed-Author-Count']).toBe('50');
+      expect(result.headers['X-Feed-Author-Count']).toBe('56');
       const options = mockItemsQuery.mock.calls[0][1];
       expect(options.partitionKey).toBeUndefined();
+    });
+
+    it('removes internal classifier evidence from public feed items', async () => {
+      setupCosmosResponse([
+        {
+          id: 'post-1',
+          postId: 'post-1',
+          authorId: 'author-1',
+          createdAt: 2_000,
+          aiLabel: 'generated',
+          aiDetected: true,
+          moderation: { confidence: 0.98, categories: ['ai_generated'] },
+          authorshipInternal: { provider: 'hive', score: 0.98 },
+          authorshipDisclosureHistory: [{ declaredAuthorship: 'generated' }],
+          authorship: {
+            authorshipLabel: 'AI-generated',
+            declaredAuthorship: 'generated',
+            classificationSource: 'user_disclosure',
+            classificationState: 'confirmed',
+            reviewState: 'not_required',
+            appealState: 'none',
+            labelVersion: 'alpha-v1',
+          },
+        },
+      ]);
+
+      const result = await getFeed({ principal: null, context: mockContext });
+      const item = result.body.items[0];
+      expect(item?.authorship).toMatchObject({ authorshipLabel: 'AI-generated' });
+      expect(item).not.toHaveProperty('moderation');
+      expect(item).not.toHaveProperty('aiDetected');
+      expect(item).not.toHaveProperty('aiLabel');
+      expect(item).not.toHaveProperty('authorshipInternal');
+      expect(JSON.stringify(item)).not.toContain('0.98');
     });
 
     it('restricts profile feeds to single partition key', async () => {

@@ -65,9 +65,7 @@ export const feed_user_get = httpHandler<void, CursorPaginatedPostView>(async (c
     }
 
     // Enrich posts with author details
-    const enrichedPosts = await Promise.all(
-      items.map((item: any) => postsService.enrichPost(item, viewerId))
-    );
+    const enrichedPosts = await postsService.enrichFeedPosts(items as any[], viewerId);
 
     const response = ctx.ok({
       items: enrichedPosts,

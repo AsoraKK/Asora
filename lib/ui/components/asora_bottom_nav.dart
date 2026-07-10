@@ -25,12 +25,16 @@ class AsoraBottomNav extends ConsumerWidget {
         label: 'Discover',
       ),
       const BottomNavigationBarItem(
+        icon: Icon(Icons.dynamic_feed_outlined),
+        label: 'My Feeds',
+      ),
+      const BottomNavigationBarItem(
         icon: Icon(Icons.add_circle_outline),
         label: 'Create',
       ),
       const BottomNavigationBarItem(
-        icon: Icon(Icons.notifications_outlined),
-        label: 'Alerts',
+        icon: Icon(Icons.newspaper_outlined),
+        label: 'News Board',
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.person_outline),

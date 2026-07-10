@@ -12,22 +12,22 @@ part 'create_post_request.g.dart';
 /// CreatePostRequest
 ///
 /// Properties:
-/// * [id] - Client generated UUID v7 for the new post
 /// * [text] - Post body text
-/// * [attachments] - Optional media attachments
+/// * [mediaUrl]
+/// * [aiLabel] - Required authorship disclosure.
 @BuiltValue()
 abstract class CreatePostRequest implements Built<CreatePostRequest, CreatePostRequestBuilder> {
-  /// Client generated UUID v7 for the new post
-  @BuiltValueField(wireName: r'id')
-  String get id;
-
   /// Post body text
   @BuiltValueField(wireName: r'text')
   String get text;
 
-  /// Optional media attachments
-  @BuiltValueField(wireName: r'attachments')
-  BuiltList<String>? get attachments;
+  @BuiltValueField(wireName: r'mediaUrl')
+  String? get mediaUrl;
+
+  /// Required authorship disclosure.
+  @BuiltValueField(wireName: r'aiLabel')
+  CreatePostRequestAiLabelEnum get aiLabel;
+  // enum aiLabelEnum {  human,  assisted,  generated,  };
 
   CreatePostRequest._();
 
@@ -52,23 +52,23 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
     CreatePostRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'id';
-    yield serializers.serialize(
-      object.id,
-      specifiedType: const FullType(String),
-    );
     yield r'text';
     yield serializers.serialize(
       object.text,
       specifiedType: const FullType(String),
     );
-    if (object.attachments != null) {
-      yield r'attachments';
+    if (object.mediaUrl != null) {
+      yield r'mediaUrl';
       yield serializers.serialize(
-        object.attachments,
-        specifiedType: const FullType(BuiltList, [FullType(String)]),
+        object.mediaUrl,
+        specifiedType: const FullType.nullable(String),
       );
     }
+    yield r'aiLabel';
+    yield serializers.serialize(
+      object.aiLabel,
+      specifiedType: const FullType(CreatePostRequestAiLabelEnum),
+    );
   }
 
   @override
@@ -92,13 +92,6 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.id = valueDes;
-          break;
         case r'text':
           final valueDes = serializers.deserialize(
             value,
@@ -106,12 +99,20 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
           ) as String;
           result.text = valueDes;
           break;
-        case r'attachments':
+        case r'mediaUrl':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
-          result.attachments.replace(valueDes);
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mediaUrl = valueDes;
+          break;
+        case r'aiLabel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(CreatePostRequestAiLabelEnum),
+          ) as CreatePostRequestAiLabelEnum;
+          result.aiLabel = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -142,3 +143,22 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
   }
 }
 
+class CreatePostRequestAiLabelEnum extends EnumClass {
+
+  /// Required authorship disclosure.
+  @BuiltValueEnumConst(wireName: r'human')
+  static const CreatePostRequestAiLabelEnum human = _$createPostRequestAiLabelEnum_human;
+  /// Required authorship disclosure.
+  @BuiltValueEnumConst(wireName: r'assisted')
+  static const CreatePostRequestAiLabelEnum assisted = _$createPostRequestAiLabelEnum_assisted;
+  /// Required authorship disclosure.
+  @BuiltValueEnumConst(wireName: r'generated')
+  static const CreatePostRequestAiLabelEnum generated = _$createPostRequestAiLabelEnum_generated;
+
+  static Serializer<CreatePostRequestAiLabelEnum> get serializer => _$createPostRequestAiLabelEnumSerializer;
+
+  const CreatePostRequestAiLabelEnum._(String name): super(name);
+
+  static BuiltSet<CreatePostRequestAiLabelEnum> get values => _$createPostRequestAiLabelEnumValues;
+  static CreatePostRequestAiLabelEnum valueOf(String name) => _$createPostRequestAiLabelEnumValueOf(name);
+}

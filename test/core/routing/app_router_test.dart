@@ -95,8 +95,6 @@ void main() {
       expect(AppRoutes.post, 'post');
       expect(AppRoutes.profile, 'profile');
       expect(AppRoutes.invite, 'invite');
-      expect(AppRoutes.userTest, 'user-test');
-      expect(AppRoutes.postTest, 'post-test');
       expect(AppRoutes.moderation, 'moderation');
       expect(AppRoutes.moderationAppeal, 'moderation-appeal');
       expect(AppRoutes.notificationSettings, 'notification-settings');
@@ -178,8 +176,10 @@ void main() {
           .toList();
       expect(
         topLevelPaths,
-        containsAll(['/login', '/auth/callback', '/user/test', '/post/test']),
+        containsAll(['/login', '/auth/callback', '/invite/:code']),
       );
+      expect(topLevelPaths, isNot(contains('/user/test')));
+      expect(topLevelPaths, isNot(contains('/post/test')));
     });
 
     testWidgets('route builders can construct every registered screen', (
@@ -236,10 +236,8 @@ void main() {
               pathParameters: const {'code': 'ABCD-1234'},
             ),
           );
-      final userTestWidget = routes.firstWhere((r) => r.path == '/user/test')
-          .builder!(context, buildState('/user/test', fullPath: '/user/test'));
-      final postTestWidget = routes.firstWhere((r) => r.path == '/post/test')
-          .builder!(context, buildState('/post/test', fullPath: '/post/test'));
+      expect(routes.where((r) => r.path == '/user/test'), isEmpty);
+      expect(routes.where((r) => r.path == '/post/test'), isEmpty);
       final shellWidget =
           shellRoute.builder!(context, buildState('/', fullPath: '/'));
       final shellChildren = shellRoute.routes.whereType<GoRoute>().toList();
@@ -290,8 +288,6 @@ void main() {
       expect(loginWidget, isA<AuthChoiceScreen>());
       expect(callbackWidget, isA<AuthCallbackScreen>());
       expect(inviteWidget, isA<InviteRedeemScreen>());
-      expect(userTestWidget, isA<ProfileScreen>());
-      expect(postTestWidget, isA<PostDetailScreen>());
       expect(shellWidget, isA<AdaptiveShell>());
       expect(postWidget, isA<PostDetailScreen>());
       expect(profileWidget, isA<ProfileScreen>());
@@ -319,9 +315,7 @@ void main() {
           final isOnLogin = state.matchedLocation == '/login';
           final isOnAuthCallback = state.matchedLocation == '/auth/callback';
           final isOnInvite = state.matchedLocation.startsWith('/invite/');
-          final isOnUserTest = state.matchedLocation == '/user/test';
-          final isOnPostTest = state.matchedLocation == '/post/test';
-          if (isOnAuthCallback || isOnInvite || isOnUserTest || isOnPostTest) {
+          if (isOnAuthCallback || isOnInvite) {
             return null;
           }
           if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
@@ -348,14 +342,6 @@ void main() {
             path: '/invite/:code',
             builder: (_, __) => const _StubPage(label: 'invite'),
           ),
-          GoRoute(
-            path: '/user/test',
-            builder: (_, __) => const _StubPage(label: 'user-test'),
-          ),
-          GoRoute(
-            path: '/post/test',
-            builder: (_, __) => const _StubPage(label: 'post-test'),
-          ),
         ],
       );
     }
@@ -380,46 +366,6 @@ void main() {
         expect(
           router.routerDelegate.currentConfiguration.uri.path,
           '/invite/ABCD-1234',
-        );
-      },
-    );
-
-    testWidgets(
-      'anonymous user opening /user/test is not redirected to login',
-      (tester) async {
-        final router = buildRedirectRouter(
-          isLoggedIn: false,
-          pendingCode: null,
-          initialLocation: '/user/test',
-        );
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-        await tester.pumpAndSettle();
-
-        expect(find.text('user-test'), findsOneWidget);
-        expect(find.text('login'), findsNothing);
-        expect(
-          router.routerDelegate.currentConfiguration.uri.path,
-          '/user/test',
-        );
-      },
-    );
-
-    testWidgets(
-      'anonymous user opening /post/test is not redirected to login',
-      (tester) async {
-        final router = buildRedirectRouter(
-          isLoggedIn: false,
-          pendingCode: null,
-          initialLocation: '/post/test',
-        );
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-        await tester.pumpAndSettle();
-
-        expect(find.text('post-test'), findsOneWidget);
-        expect(find.text('login'), findsNothing);
-        expect(
-          router.routerDelegate.currentConfiguration.uri.path,
-          '/post/test',
         );
       },
     );

@@ -160,7 +160,7 @@ describe('Feed Ranking', () => {
 
     it('returns default config when no env vars set', () => {
       const config = getRankingConfig();
-      expect(config.enabled).toBe(true);
+      expect(config.enabled).toBe(false);
       expect(config.recencyWeight).toBe(0.7);
       expect(config.reputationWeight).toBe(0.3);
     });

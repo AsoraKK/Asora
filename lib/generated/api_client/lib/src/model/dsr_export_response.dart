@@ -15,15 +15,15 @@ part 'dsr_export_response.g.dart';
 ///
 /// Properties:
 /// * [exportId] - Unique identifier for this export
-/// * [exportedAt] 
+/// * [exportedAt]
 /// * [exportedBy] - User ID of the exporting account
 /// * [userId] - User whose data is contained in this export
 /// * [profile] - User profile data
-/// * [posts] 
-/// * [comments] 
-/// * [bookmarks] 
-/// * [notifications] 
-/// * [previousExports] 
+/// * [posts]
+/// * [comments]
+/// * [bookmarks]
+/// * [notifications]
+/// * [previousExports]
 @BuiltValue()
 abstract class DSRExportResponse implements Built<DSRExportResponse, DSRExportResponseBuilder> {
   /// Unique identifier for this export
@@ -266,4 +266,3 @@ class _$DSRExportResponseSerializer implements PrimitiveSerializer<DSRExportResp
     return result.build();
   }
 }
-

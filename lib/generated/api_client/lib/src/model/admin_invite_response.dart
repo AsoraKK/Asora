@@ -13,17 +13,17 @@ part 'admin_invite_response.g.dart';
 /// AdminInviteResponse
 ///
 /// Properties:
-/// * [inviteCode] 
-/// * [email] 
-/// * [createdBy] 
-/// * [createdAt] 
-/// * [expiresAt] 
-/// * [maxUses] 
-/// * [usageCount] 
-/// * [lastUsedAt] 
-/// * [status] 
-/// * [label] 
-/// * [usedByUserId] 
+/// * [inviteId]
+/// * [email]
+/// * [createdBy]
+/// * [createdAt]
+/// * [expiresAt]
+/// * [maxUses]
+/// * [usageCount]
+/// * [lastUsedAt]
+/// * [status]
+/// * [label]
+/// * [usedByUserId]
 @BuiltValue()
 abstract class AdminInviteResponse implements AdminInvite, Built<AdminInviteResponse, AdminInviteResponseBuilder> {
   AdminInviteResponse._();
@@ -49,20 +49,16 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     AdminInviteResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    if (object.maxUses != null) {
-      yield r'maxUses';
-      yield serializers.serialize(
-        object.maxUses,
-        specifiedType: const FullType(int),
-      );
-    }
-    if (object.createdAt != null) {
-      yield r'createdAt';
-      yield serializers.serialize(
-        object.createdAt,
-        specifiedType: const FullType(DateTime),
-      );
-    }
+    yield r'maxUses';
+    yield serializers.serialize(
+      object.maxUses,
+      specifiedType: const FullType(int),
+    );
+    yield r'createdAt';
+    yield serializers.serialize(
+      object.createdAt,
+      specifiedType: const FullType(DateTime),
+    );
     if (object.createdBy != null) {
       yield r'createdBy';
       yield serializers.serialize(
@@ -77,13 +73,11 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
         specifiedType: const FullType(DateTime),
       );
     }
-    if (object.inviteCode != null) {
-      yield r'inviteCode';
-      yield serializers.serialize(
-        object.inviteCode,
-        specifiedType: const FullType(String),
-      );
-    }
+    yield r'inviteId';
+    yield serializers.serialize(
+      object.inviteId,
+      specifiedType: const FullType(String),
+    );
     if (object.label != null) {
       yield r'label';
       yield serializers.serialize(
@@ -105,27 +99,21 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
         specifiedType: const FullType(String),
       );
     }
-    if (object.expiresAt != null) {
-      yield r'expiresAt';
-      yield serializers.serialize(
-        object.expiresAt,
-        specifiedType: const FullType(DateTime),
-      );
-    }
-    if (object.usageCount != null) {
-      yield r'usageCount';
-      yield serializers.serialize(
-        object.usageCount,
-        specifiedType: const FullType(int),
-      );
-    }
-    if (object.status != null) {
-      yield r'status';
-      yield serializers.serialize(
-        object.status,
-        specifiedType: const FullType(AdminInviteStatus),
-      );
-    }
+    yield r'expiresAt';
+    yield serializers.serialize(
+      object.expiresAt,
+      specifiedType: const FullType(DateTime),
+    );
+    yield r'usageCount';
+    yield serializers.serialize(
+      object.usageCount,
+      specifiedType: const FullType(int),
+    );
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(AdminInviteStatus),
+    );
   }
 
   @override
@@ -177,12 +165,12 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
           ) as DateTime;
           result.lastUsedAt = valueDes;
           break;
-        case r'inviteCode':
+        case r'inviteId':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.inviteCode = valueDes;
+          result.inviteId = valueDes;
           break;
         case r'label':
           final valueDes = serializers.deserialize(
@@ -254,4 +242,3 @@ class _$AdminInviteResponseSerializer implements PrimitiveSerializer<AdminInvite
     return result.build();
   }
 }
-

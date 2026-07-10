@@ -12,10 +12,10 @@ part 'service_unavailable_error_error.g.dart';
 /// ServiceUnavailableErrorError
 ///
 /// Properties:
-/// * [code] 
-/// * [message] 
+/// * [code]
+/// * [message]
 /// * [retryAfterSeconds] - Suggested number of seconds to wait before retrying
-/// * [correlationId] 
+/// * [correlationId]
 @BuiltValue()
 abstract class ServiceUnavailableErrorError implements Built<ServiceUnavailableErrorError, ServiceUnavailableErrorErrorBuilder> {
   @BuiltValueField(wireName: r'code')
@@ -175,4 +175,3 @@ class ServiceUnavailableErrorErrorCodeEnum extends EnumClass {
   static BuiltSet<ServiceUnavailableErrorErrorCodeEnum> get values => _$serviceUnavailableErrorErrorCodeEnumValues;
   static ServiceUnavailableErrorErrorCodeEnum valueOf(String name) => _$serviceUnavailableErrorErrorCodeEnumValueOf(name);
 }
-

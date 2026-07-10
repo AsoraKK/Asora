@@ -58,6 +58,8 @@ void main() {
     expect(find.text('Please sign in to create a post.'), findsNothing);
     await tester.enterText(find.byType(TextField).first, 'Hello Lythaus');
     await tester.pump();
+    await tester.tap(find.text('Human-authored'));
+    await tester.pump();
 
     final postButton = find.widgetWithText(FilledButton, 'Post');
     expect(postButton, findsOneWidget);
@@ -124,7 +126,7 @@ void main() {
     await tester.tap(find.text('Create'));
     await tester.pump();
 
-    expect(find.text('Sign in to create a post.'), findsOneWidget);
+    expect(find.text('Sign in to use this Alpha feature.'), findsOneWidget);
     expect(find.text('Create Post'), findsNothing);
   });
 }

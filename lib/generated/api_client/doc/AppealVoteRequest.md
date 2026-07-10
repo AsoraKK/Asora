@@ -8,8 +8,6 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**vote** | **String** | `uphold` keeps content removed; `deny` requests restoration | 
+**vote** | **String** | `uphold` keeps content removed; `deny` requests restoration |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
-

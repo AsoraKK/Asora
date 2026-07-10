@@ -68,17 +68,20 @@ void main() {
   }
 
   group('AI Label Chips', () {
-    testWidgets('default AI label is human-authored', (tester) async {
+    testWidgets('shows all authorship choices without an implicit default', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildWidget(user: _testUser()));
       await tester.pumpAndSettle();
 
-      // Human-authored should be the default
       expect(find.text('Human-authored'), findsOneWidget);
-      expect(find.text('Contains AI'), findsOneWidget);
+      expect(find.text('AI-assisted'), findsOneWidget);
       expect(find.text('AI-generated'), findsOneWidget);
+      final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+      expect(chips.every((chip) => !chip.selected), isTrue);
     });
 
-    testWidgets('selecting AI-generated shows warning and disables Post', (
+    testWidgets('selecting AI-generated explains label and reputation rule', (
       tester,
     ) async {
       await tester.pumpWidget(buildWidget(user: _testUser()));
@@ -95,7 +98,7 @@ void main() {
       // Should show the AI warning text
       expect(
         find.textContaining(
-          'Lythaus blocks AI-generated content at publish time',
+          'will display AI-generated and will not earn reputation',
         ),
         findsOneWidget,
       );
@@ -113,15 +116,12 @@ void main() {
       // Select AI-generated
       await tester.tap(find.text('AI-generated'));
       await tester.pump();
-      expect(
-        find.textContaining('Lythaus blocks AI-generated'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('will display AI-generated'), findsOneWidget);
 
       // Switch back to Human-authored
       await tester.tap(find.text('Human-authored'));
       await tester.pump();
-      expect(find.textContaining('Lythaus blocks AI-generated'), findsNothing);
+      expect(find.textContaining('will display AI-generated'), findsNothing);
     });
   });
 
@@ -185,6 +185,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Some text');
       await tester.pump();
+      await tester.tap(find.text('Human-authored'));
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Post'));
       await tester.pumpAndSettle();
 
@@ -193,10 +195,19 @@ void main() {
     });
   });
 
-  group('AI label blocks submission', () {
-    testWidgets('submit with AI label returns validation error', (
+  group('AI label submission', () {
+    testWidgets('submit passes AI-generated disclosure to repository', (
       tester,
     ) async {
+      when(
+        () => mockRepo.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => const CreatePostError(message: 'test response'),
+      );
+
       await tester.pumpWidget(buildWidget(user: _testUser()));
       await tester.pumpAndSettle();
 
@@ -210,13 +221,15 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Post'));
       await tester.pumpAndSettle();
 
-      // Should not call repository
-      verifyNever(
-        () => mockRepo.createPost(
-          request: any(named: 'request'),
-          token: any(named: 'token'),
-        ),
-      );
+      final captured =
+          verify(
+                () => mockRepo.createPost(
+                  request: captureAny(named: 'request'),
+                  token: any(named: 'token'),
+                ),
+              ).captured.single
+              as CreatePostRequest;
+      expect(captured.aiLabel, 'generated');
     });
   });
 
@@ -360,7 +373,7 @@ void main() {
       expect(container.read(postCreationProvider).validationError, isNull);
     });
 
-    test('validate returns error for AI-generated label', () {
+    test('validate accepts an explicit AI-generated disclosure', () {
       final container = ProviderContainer(
         overrides: [postRepositoryProvider.overrideWithValue(mockRepo)],
       );
@@ -368,7 +381,7 @@ void main() {
       final notifier = container.read(postCreationProvider.notifier);
       notifier.updateText('Some text');
       notifier.setAiLabel('generated');
-      expect(notifier.validate(), contains('AI-generated'));
+      expect(notifier.validate(), isNull);
     });
 
     test('submit returns false when no auth token', () async {
@@ -381,6 +394,7 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(postCreationProvider.notifier);
       notifier.updateText('Valid text');
+      notifier.setAiLabel('human');
       final success = await notifier.submit();
       expect(success, isFalse);
       expect(
@@ -409,6 +423,7 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(postCreationProvider.notifier);
       notifier.updateText('Valid text');
+      notifier.setAiLabel('human');
       final success = await notifier.submit();
       expect(success, isFalse);
       expect(container.read(postCreationProvider).hasError, isTrue);

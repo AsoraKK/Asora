@@ -1,0 +1,76 @@
+name: Alpha Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Protected environment to restore"
+        required: true
+        type: choice
+        options:
+          - staging
+          - dev
+      rollback_sha:
+        description: "Exact 40-character previously validated commit SHA"
+        required: true
+        type: string
+      ci_run_id:
+        description: "Successful CI run containing immutable rollback artifacts"
+        required: true
+        type: string
+      approved_alpha_stage:
+        description: "Kyle-approved stage after rollback"
+        required: true
+        type: choice
+        options:
+          - technical_alpha
+          - controlled_alpha
+          - expanded_alpha
+          - paused
+      known_disabled_features_json:
+        description: "JSON array of intentionally disabled features"
+        required: true
+        type: string
+        default: '[]'
+      reason:
+        description: "Operator-visible rollback reason"
+        required: true
+        type: string
+      confirmation:
+        description: "Enter ROLLBACK followed by the exact SHA"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - name: Verify explicit rollback authorization
+        env:
+          ROLLBACK_SHA: ${{ inputs.rollback_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          [[ "$ROLLBACK_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::rollback_sha must be a full commit SHA"; exit 1; }
+          [ "$CONFIRMATION" = "ROLLBACK $ROLLBACK_SHA" ] || { echo "::error::Explicit rollback confirmation does not match"; exit 1; }
+          test -n "$REASON" || { echo "::error::A rollback reason is required"; exit 1; }
+          jq -e 'type == "array" and all(.[]; type == "string")' \
+            <<< '${{ inputs.known_disabled_features_json }}' >/dev/null
+
+  restore:
+    needs: authorize
+    uses: ./.github/workflows/deploy-asora-function-dev.yml
+    with:
+      target_environment: ${{ inputs.target_environment }}
+      release_sha: ${{ inputs.rollback_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      approved_alpha_stage: ${{ inputs.approved_alpha_stage }}
+      known_disabled_features_json: ${{ inputs.known_disabled_features_json }}
+    secrets: inherit

@@ -3,7 +3,7 @@
  *
  * POST /admin/invites - Create a new invite code
  * GET /admin/invites - List invite codes
- * DELETE /admin/invites/{code} - Delete an invite code
+ * DELETE /admin/invites/{inviteId} - Revoke an invite by opaque ID
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
@@ -14,22 +14,25 @@ import { validateEmail } from '@shared/utils/validate';
 import { recordAdminAudit } from '@admin/auditLogger';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import { HttpError } from '@shared/utils/errors';
+import { trackAppEvent } from '@shared/appInsights';
 import {
   createInvite,
   listInvitesPage,
-  getInvite,
-  revokeInvite,
+  getInviteById,
+  revokeInviteById,
+  assertInviteCreationCapacity,
 } from '../service/inviteStore';
 
 type Authed = HttpRequest & { principal: Principal };
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
-const DEFAULT_EXPIRY_DAYS = 30;
-const MAX_EXPIRY_DAYS = 365;
+const DEFAULT_EXPIRY_DAYS = 14;
+const MAX_EXPIRY_DAYS = 30;
 const DEFAULT_MAX_USES = 1;
-const MAX_MAX_USES = 1000;
-const MAX_BATCH_SIZE = 200;
+const MAX_MAX_USES = 10;
+const MAX_BATCH_SIZE = 50;
 
 function parseMaxUses(value: unknown): number | null {
   if (value === undefined || value === null) {
@@ -75,6 +78,17 @@ function resolveInviteStatus(invite: {
     return 'EXHAUSTED';
   }
   return 'ACTIVE';
+}
+
+function mapInviteError(error: unknown): HttpResponseInit | null {
+  if (!(error instanceof HttpError)) {
+    return null;
+  }
+  return createErrorResponse(
+    error.status,
+    error.status === 409 ? 'invite_capacity_reached' : 'alpha_unavailable',
+    error.message
+  );
 }
 
 /**
@@ -132,15 +146,26 @@ export async function createInviteHandler(req: Authed, context: InvocationContex
     });
 
     context.log('admin.invites.created', {
-      inviteCode: invite.inviteCode,
-      email: email ?? 'any',
+      inviteId: invite.inviteId,
+      emailRestricted: Boolean(email),
       createdBy: req.principal.sub,
+    });
+
+    trackAppEvent({
+      name: 'alpha_invite_created',
+      properties: {
+        count: 1,
+        emailRestricted: Boolean(email),
+        maxUses: invite.maxUses,
+        expiresInDays,
+        batch: false,
+      },
     });
 
     await recordAdminAudit({
       actorId: req.principal.sub,
       action: 'INVITE_CREATE',
-      subjectId: invite.inviteCode,
+      subjectId: invite.inviteId,
       targetType: 'invite',
       reasonCode: 'INVITE_CREATE',
       note: label ?? null,
@@ -156,6 +181,7 @@ export async function createInviteHandler(req: Authed, context: InvocationContex
     const status = resolveInviteStatus(invite);
 
     return createSuccessResponse({
+      inviteId: invite.inviteId,
       inviteCode: invite.inviteCode,
       email: invite.email,
       expiresAt: invite.expiresAt,
@@ -167,6 +193,8 @@ export async function createInviteHandler(req: Authed, context: InvocationContex
       status,
     }, { 'Content-Type': 'application/json' }, 201);
   } catch (error) {
+    const mapped = mapInviteError(error);
+    if (mapped) return mapped;
     context.error('admin.invites.create_failed', error);
     return createErrorResponse(500, 'internal_error', 'Failed to create invite');
   }
@@ -220,6 +248,7 @@ export async function createInviteBatchHandler(
     }
 
     const label = typeof body.label === 'string' ? body.label.trim() : undefined;
+    await assertInviteCreationCapacity(count);
 
     const invites = [];
     for (let i = 0; i < count; i += 1) {
@@ -244,12 +273,23 @@ export async function createInviteBatchHandler(
       before: null,
       after: { count, maxUses: maxUses ?? DEFAULT_MAX_USES },
       correlationId: context.invocationId,
-      metadata: { inviteCodes: invites.map((invite) => invite.inviteCode) },
+      metadata: { inviteIds: invites.map((invite) => invite.inviteId) },
+    });
+
+    trackAppEvent({
+      name: 'alpha_invite_created',
+      properties: {
+        count: invites.length,
+        maxUses: maxUses ?? DEFAULT_MAX_USES,
+        expiresInDays,
+        batch: true,
+      },
     });
 
     return createSuccessResponse({
       count: invites.length,
       invites: invites.map((invite) => ({
+        inviteId: invite.inviteId,
         inviteCode: invite.inviteCode,
         createdAt: invite.createdAt,
         expiresAt: invite.expiresAt,
@@ -261,6 +301,8 @@ export async function createInviteBatchHandler(
       })),
     }, { 'Content-Type': 'application/json' }, 201);
   } catch (error) {
+    const mapped = mapInviteError(error);
+    if (mapped) return mapped;
     context.error('admin.invites.batch_create_failed', error);
     return createErrorResponse(500, 'internal_error', 'Failed to create invite batch');
   }
@@ -300,7 +342,7 @@ export async function listInvitesHandler(req: Authed, context: InvocationContext
 
     return createSuccessResponse({
       invites: page.items.map(inv => ({
-        inviteCode: inv.inviteCode,
+        inviteId: inv.inviteId || inv.id,
         email: inv.email,
         createdBy: inv.createdBy,
         createdAt: inv.createdAt,
@@ -321,26 +363,26 @@ export async function listInvitesHandler(req: Authed, context: InvocationContext
 }
 
 /**
- * GET /admin/invites/{code}
- * Get a single invite by code.
+ * GET /admin/invites/{inviteId}
+ * Get a single invite by opaque administrative ID.
  */
 export async function getInviteHandler(req: Authed, context: InvocationContext): Promise<HttpResponseInit> {
   const cors = handleCorsAndMethod(req.method ?? 'GET', ['GET']);
   if (cors.shouldReturn && cors.response) return cors.response;
 
   try {
-    const code = req.params.code;
-    if (!code) {
-      return createErrorResponse(400, 'missing_code', 'Invite code is required');
+    const inviteId = req.params.inviteId;
+    if (!inviteId) {
+      return createErrorResponse(400, 'missing_invite_id', 'Invite ID is required');
     }
 
-    const invite = await getInvite(code);
+    const invite = await getInviteById(inviteId);
     if (!invite) {
       return createErrorResponse(404, 'not_found', 'Invite not found');
     }
 
     return createSuccessResponse({
-      inviteCode: invite.inviteCode,
+      inviteId: invite.inviteId || invite.id,
       email: invite.email,
       createdBy: invite.createdBy,
       createdAt: invite.createdAt,
@@ -359,8 +401,8 @@ export async function getInviteHandler(req: Authed, context: InvocationContext):
 }
 
 /**
- * DELETE /admin/invites/{code}
- * Delete an invite code.
+ * DELETE /admin/invites/{inviteId}
+ * Revoke an invite by opaque administrative ID.
  */
 interface RevokeInviteBody {
   reasonCode?: string;
@@ -372,16 +414,21 @@ async function revokeInviteInternal(req: Authed, context: InvocationContext): Pr
   if (cors.shouldReturn && cors.response) return cors.response;
 
   try {
-    const code = req.params.code;
-    if (!code) {
-      return createErrorResponse(400, 'missing_code', 'Invite code is required');
+    const inviteId = req.params.inviteId;
+    if (!inviteId) {
+      return createErrorResponse(400, 'missing_invite_id', 'Invite ID is required');
     }
 
     const body = (await req.json().catch(() => null)) as RevokeInviteBody | null;
     const reasonCode = body?.reasonCode?.trim() || 'INVITE_REVOKE';
     const note = body?.note?.trim() || null;
 
-    const revoked = await revokeInvite(code, req.principal.sub);
+    const invite = await getInviteById(inviteId);
+    if (!invite) {
+      return createErrorResponse(404, 'not_found', 'Invite not found');
+    }
+
+    const revoked = await revokeInviteById(inviteId, req.principal.sub);
     if (!revoked) {
       return createErrorResponse(404, 'not_found', 'Invite not found');
     }
@@ -389,7 +436,7 @@ async function revokeInviteInternal(req: Authed, context: InvocationContext): Pr
     await recordAdminAudit({
       actorId: req.principal.sub,
       action: 'INVITE_REVOKE',
-      subjectId: code.toUpperCase(),
+      subjectId: invite.inviteId || invite.id,
       targetType: 'invite',
       reasonCode,
       note,
@@ -398,7 +445,10 @@ async function revokeInviteInternal(req: Authed, context: InvocationContext): Pr
       correlationId: context.invocationId,
     });
 
-    context.log('admin.invites.revoked', { inviteCode: code, revokedBy: req.principal.sub });
+    context.log('admin.invites.revoked', {
+      inviteId: invite.inviteId || invite.id,
+      revokedBy: req.principal.sub,
+    });
 
     return createSuccessResponse({ revoked: true });
   } catch (error) {
@@ -447,20 +497,20 @@ app.http('admin-invites-batch', {
 app.http('admin-invites-get', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: '_admin/invites/{code}',
+  route: '_admin/invites/{inviteId}',
   handler: requireActiveAdmin(getInviteHandler),
 });
 
 app.http('admin-invites-delete', {
   methods: ['DELETE', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: '_admin/invites/{code}',
+  route: '_admin/invites/{inviteId}',
   handler: withRateLimit(requireActiveAdmin(deleteInviteHandler), (req) => getPolicyForRoute(req)),
 });
 
 app.http('admin-invites-revoke', {
   methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: '_admin/invites/{code}/revoke',
+  route: '_admin/invites/{inviteId}/revoke',
   handler: withRateLimit(requireActiveAdmin(revokeInviteHandler), (req) => getPolicyForRoute(req)),
 });

@@ -1,6 +1,6 @@
 # Business Entity Decision Tree (Non-Legal Advice)
 
-Last updated: 2026-02-16  
+Last updated: 2026-02-16
 Scope: minimum corporate setup to support Lythaus (formerly Asora) launch operations.
 
 ## Decision tree

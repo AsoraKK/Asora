@@ -1,0 +1,40 @@
+let startTime = ago(24h);
+let requestWindow = requests | where timestamp >= startTime;
+let feedRequests = requestWindow | where tostring(url) contains "/feed" or tostring(url) contains "/news";
+let authRequests = requestWindow | where tostring(url) contains "/auth/";
+let events = customEvents | where timestamp >= startTime;
+let postEvents = events | where name == "post_created" and tostring(customDimensions.isTestMode) != "true";
+let latestDsr = events | where name == "dsr.queue.monitor" | top 1 by timestamp desc;
+print
+  totalRequests = toscalar(requestWindow | count),
+  failedRequests = toscalar(requestWindow | where success == false or toint(resultCode) >= 500 | count),
+  apiErrorRatePct = 100.0 * todouble(toscalar(requestWindow | where success == false or toint(resultCode) >= 500 | count)) / todouble(max_of(1, toscalar(requestWindow | count))),
+  activeUsersEstimate = toscalar(requestWindow | where isnotempty(user_AuthenticatedId) | summarize value = dcount(user_AuthenticatedId)),
+  feedRequests = toscalar(feedRequests | count),
+  feedFailedRequests = toscalar(feedRequests | where success == false or toint(resultCode) >= 500 | count),
+  feedErrorRatePct = 100.0 * todouble(toscalar(feedRequests | where success == false or toint(resultCode) >= 500 | count)) / todouble(max_of(1, toscalar(feedRequests | count))),
+  feedP50Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 50) / 1ms)),
+  feedP95Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 95) / 1ms)),
+  feedP99Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 99) / 1ms)),
+  authRequests = toscalar(authRequests | count),
+  authFailures = toscalar(authRequests | where success == false or toint(resultCode) >= 400 | count),
+  authenticationSuccessRatePct = 100.0 * todouble(toscalar(authRequests | where success == true and toint(resultCode) < 400 | count)) / todouble(max_of(1, toscalar(authRequests | count))),
+  newUsers = toscalar(events | where name == "alpha_invite_redeemed" and tostring(customDimensions.insertedMembership) == "true" | count),
+  invitesCreated = toscalar(events | where name == "alpha_invite_created" | summarize value = sum(toint(customDimensions.count))),
+  invitesRedeemed = toscalar(events | where name == "alpha_invite_redeemed" | count),
+  appealsCreated = toscalar(events | where name == "alpha_appeal_created" | count),
+  appealsResolved = toscalar(events | where name == "alpha_appeal_resolved" | count),
+  appealsOverturned = toscalar(events | where name == "alpha_appeal_resolved" and tostring(customDimensions.overturned) == "true" | count),
+  appealOverturnRatePct = 100.0 * todouble(toscalar(events | where name == "alpha_appeal_resolved" and tostring(customDimensions.overturned) == "true" | count)) / todouble(max_of(1, toscalar(events | where name == "alpha_appeal_resolved" | count))),
+  humanAuthoredPosts = toscalar(postEvents | where tostring(customDimensions.authorshipLabel) == "Human-authored" | count),
+  aiAssistedPosts = toscalar(postEvents | where tostring(customDimensions.authorshipLabel) == "AI-assisted" | count),
+  aiGeneratedPosts = toscalar(postEvents | where tostring(customDimensions.authorshipLabel) == "AI-generated" | count),
+  underReviewPosts = toscalar(postEvents | where tostring(customDimensions.authorshipLabel) == "Under review" | count),
+  aiClassificationConflicts = toscalar(postEvents | where tostring(customDimensions.classificationState) == "conflict" | count),
+  aiClassificationUnavailable = toscalar(postEvents | where tostring(customDimensions.classificationState) == "unavailable" | count),
+  dsrQueueMessages = toint(toscalar(latestDsr | project customDimensions.approximateMessageCount)),
+  dsrPoisonMessages = toint(toscalar(latestDsr | project customDimensions.poisonApproximateMessageCount)),
+  dsrStuckRequests = toint(toscalar(latestDsr | project customDimensions.stuckQueuedCount)),
+  dsrFailedRequests = toint(toscalar(latestDsr | project customDimensions.failedRequestCount)),
+  infrastructureExceptions = toscalar(exceptions | where timestamp >= startTime | count),
+  supportIncidents = toscalar(events | where name startswith "support_" or name startswith "incident_" | count)

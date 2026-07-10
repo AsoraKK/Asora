@@ -51,8 +51,8 @@ describe('Tier Limits', () => {
       expect(normalizeTier('premium')).toBe('premium');
     });
 
-    it('should return admin tier correctly', () => {
-      expect(normalizeTier('admin')).toBe('admin');
+    it('maps the legacy admin tier to Free entitlements', () => {
+      expect(normalizeTier('admin')).toBe('free');
     });
 
     it('should return black tier correctly', () => {
@@ -62,7 +62,7 @@ describe('Tier Limits', () => {
     it('should be case insensitive', () => {
       expect(normalizeTier('FREE')).toBe('free');
       expect(normalizeTier('Premium')).toBe('premium');
-      expect(normalizeTier('ADMIN')).toBe('admin');
+      expect(normalizeTier('ADMIN')).toBe('free');
     });
 
     it('should handle whitespace', () => {
@@ -92,8 +92,8 @@ describe('Tier Limits', () => {
       expect(getDailyPostLimit('premium')).toBe(20);
     });
 
-    it('should return 10000 for admin tier', () => {
-      expect(getDailyPostLimit('admin')).toBe(10000);
+    it('should return Free limits for a legacy admin tier claim', () => {
+      expect(getDailyPostLimit('admin')).toBe(5);
     });
 
     it('should return 50 for black tier by default', () => {
@@ -146,10 +146,13 @@ describe('Tier Limits', () => {
       expect(limits).toHaveProperty('dailyPosts');
       expect(limits).toHaveProperty('dailyComments');
       expect(limits).toHaveProperty('dailyLikes');
+      expect(limits).toHaveProperty('dailyReactions');
       expect(limits.maxCustomFeeds).toBe(1);
-      expect(limits.newsBoardAccess).toBe(true);
+      expect(limits.newsBoardAccessLevel).toBe('preview');
+      expect(limits.newsBoardPreview).toBe(true);
       expect(limits.postingRestricted).toBe(true);
       expect(limits.rewardLevelCap).toBe(3);
+      expect(limits.rewardChoiceBreadth).toBe('limited');
     });
 
     it('should return higher limits for premium', () => {
@@ -180,7 +183,7 @@ describe('Tier Limits', () => {
 
     it('should return the configured appeal limit', () => {
       expect(tierLimits.getDailyAppealLimit('admin')).toBe(
-        tierLimits.TIER_LIMITS.admin.dailyAppeals
+        tierLimits.TIER_LIMITS.free.dailyAppeals
       );
     });
 
@@ -195,7 +198,7 @@ describe('Tier Limits', () => {
         tierLimits.TIER_LIMITS.premium.maxMediaSizeMB
       );
       expect(tierLimits.getMaxMediaPerPost('admin')).toBe(
-        tierLimits.TIER_LIMITS.admin.maxMediaPerPost
+        tierLimits.TIER_LIMITS.free.maxMediaPerPost
       );
     });
 
@@ -203,9 +206,13 @@ describe('Tier Limits', () => {
       expect(tierLimits.getMaxCustomFeeds('free')).toBe(1);
       expect(tierLimits.getMaxCustomFeeds('premium')).toBe(2);
       expect(tierLimits.getMaxCustomFeeds('black')).toBe(3);
-      expect(tierLimits.hasNewsBoardAccess('free')).toBe(true);
-      expect(tierLimits.hasNewsBoardAccess('premium')).toBe(true);
-      expect(tierLimits.hasNewsBoardAccess('black')).toBe(true);
+      expect(tierLimits.getNewsBoardAccessLevel('free')).toBe('preview');
+      expect(tierLimits.getNewsBoardAccessLevel('premium')).toBe('full');
+      expect(tierLimits.getNewsBoardAccessLevel('black')).toBe('full');
+      expect(tierLimits.hasFullNewsBoardAccess('free')).toBe(false);
+      expect(tierLimits.hasFullNewsBoardAccess('premium')).toBe(true);
+      expect(tierLimits.hasFullNewsBoardAccess('black')).toBe(true);
+      expect(tierLimits.hasNewsBoardPreview('free')).toBe(true);
     });
   });
 });

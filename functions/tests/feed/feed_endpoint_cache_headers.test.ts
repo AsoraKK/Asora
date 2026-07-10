@@ -6,6 +6,7 @@ import { feed_user_get } from '@feed/routes/feed_user_get.function';
 import { getFeed } from '@feed/service/feedService';
 import { extractAuthContext } from '@shared/http/authContext';
 import { postsService } from '@posts/service/postsService';
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
 
 jest.mock('@feed/service/feedService', () => ({
   getFeed: jest.fn(),
@@ -17,17 +18,22 @@ jest.mock('@shared/http/authContext', () => ({
 
 jest.mock('@posts/service/postsService', () => ({
   postsService: {
-    enrichPost: jest.fn(),
+    enrichFeedPosts: jest.fn(),
   },
+}));
+
+jest.mock('@shared/services/entitlementService', () => ({
+  getEffectiveEntitlements: jest.fn(),
 }));
 
 const mockedGetFeed = getFeed as jest.MockedFunction<typeof getFeed>;
 const mockedExtractAuthContext = extractAuthContext as jest.MockedFunction<
   typeof extractAuthContext
 >;
-const mockedEnrichPost = postsService.enrichPost as jest.MockedFunction<
-  typeof postsService.enrichPost
+const mockedEnrichFeedPosts = postsService.enrichFeedPosts as jest.MockedFunction<
+  typeof postsService.enrichFeedPosts
 >;
+const mockedGetEffectiveEntitlements = jest.mocked(getEffectiveEntitlements);
 
 const createContextStub = (): InvocationContext =>
   ({
@@ -61,7 +67,12 @@ describe('feed endpoint cache headers', () => {
       },
       headers: {},
     } as any);
-    mockedEnrichPost.mockImplementation(async (item: any) => item as any);
+    mockedEnrichFeedPosts.mockImplementation(async (items: any[]) => items as any);
+    mockedGetEffectiveEntitlements.mockImplementation(async (_userId, tier) => ({
+      tier: tier === 'black' || tier === 'premium' ? tier : 'free',
+      source: 'user_record',
+      limits: { newsBoardAccessLevel: tier === 'free' ? 'preview' : 'full' },
+    }) as any);
   });
 
   it('sets public cache headers for anonymous discover feed', async () => {
@@ -73,9 +84,7 @@ describe('feed endpoint cache headers', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers?.['Cache-Control']).toBe(
-      'public, max-age=60, stale-while-revalidate=30'
-    );
+    expect(response.headers?.['Cache-Control']).toBe('public, no-cache, must-revalidate');
     expect(response.headers?.['Vary']).toBe('Authorization');
   });
 

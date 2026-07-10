@@ -17,7 +17,7 @@ void main() {
       ),
       createdAt: DateTime(2025, 1, 1),
       moderationStatus: ModerationStatus.flagged,
-      aiScore: 0.92,
+      authorshipLabel: 'Under review',
     );
 
     await tester.pumpWidget(
@@ -30,7 +30,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('AI'), findsNothing);
+    expect(find.text('Under review'), findsOneWidget);
+    expect(find.textContaining('0.92'), findsNothing);
     expect(find.textContaining('%'), findsNothing);
   });
 }

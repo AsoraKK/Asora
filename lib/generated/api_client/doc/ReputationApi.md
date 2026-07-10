@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -28,7 +28,7 @@ Marks an appealable moderation-related ledger entry as under appeal for the auth
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReputationApi();
-final String entryId = entryId_example; // String | 
+final String entryId = entryId_example; // String |
 
 try {
     final response = api.moderationLedgerAppealPost(entryId);
@@ -42,7 +42,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **entryId** | **String**|  | 
+ **entryId** | **String**|  |
 
 ### Return type
 
@@ -71,7 +71,7 @@ Returns user-visible reputation events. Internal reason codes, raw deltas, Hive 
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReputationApi();
-final String filter = filter_example; // String | 
+final String filter = filter_example; // String |
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 
@@ -88,7 +88,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **filter** | **String**|  | [optional] [default to 'all']
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional] 
+ **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
  **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
 
 ### Return type
@@ -155,7 +155,7 @@ Get public reputation view
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReputationApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.reputationUserGet(id);
@@ -169,7 +169,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -196,7 +196,7 @@ Get public reputation view
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getReputationApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.reputationUserGetSingular(id);
@@ -210,7 +210,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -226,4 +226,3 @@ No authorization required
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

@@ -1,6 +1,6 @@
 # Device Integrity Enforcement
 
-> **Status**: ✅ Implemented  
+> **Status**: ✅ Implemented
 > **Last Updated**: 2026-01-27
 
 ## Overview

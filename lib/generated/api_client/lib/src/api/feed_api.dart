@@ -8,10 +8,10 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/feed_page_response.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
+import 'package:asora_api_client/src/model/news_board_feed_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
@@ -25,7 +25,7 @@ class FeedApi {
   const FeedApi(this._dio, this._serializers);
 
   /// Return discovery/explore feed
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -37,7 +37,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedDiscover({ 
+  Future<Response<JsonObject>> feedDiscover({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -104,12 +104,12 @@ class FeedApi {
   }
 
   /// Return News Board feed
-  /// Return authenticated News Board posts. Free, Premium, Black, and Admin tiers can read the News Board; publishing news posts remains restricted to editorial contributors and approved ingestion paths. 
+  /// Return authenticated News Board posts. Free receives a maximum three-item preview with no cursor; Premium and Black receive the full board. Admin is an authorization role, not a commercial tier. Publishing remains restricted to editorial contributors and approved ingestion paths.
   ///
   /// Parameters:
   /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
   /// * [limit] - Maximum number of items to return per page
-  /// * [region] 
+  /// * [region]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -117,9 +117,9 @@ class FeedApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [CursorPaginatedPostView] as data
+  /// Returns a [Future] containing a [Response] with a [NewsBoardFeedResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CursorPaginatedPostView>> feedNews({ 
+  Future<Response<NewsBoardFeedResponse>> feedNews({
     String? cursor,
     int? limit = 25,
     String? region,
@@ -164,14 +164,14 @@ class FeedApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    CursorPaginatedPostView? _responseData;
+    NewsBoardFeedResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(CursorPaginatedPostView),
-      ) as CursorPaginatedPostView;
+        specifiedType: const FullType(NewsBoardFeedResponse),
+      ) as NewsBoardFeedResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -183,7 +183,7 @@ class FeedApi {
       );
     }
 
-    return Response<CursorPaginatedPostView>(
+    return Response<NewsBoardFeedResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -201,8 +201,8 @@ class FeedApi {
   /// Parameters:
   /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
   /// * [limit] - Maximum number of items to return per page
-  /// * [includeTopics] 
-  /// * [excludeTopics] 
+  /// * [includeTopics]
+  /// * [excludeTopics]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -212,7 +212,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FeedPageResponse>> feedPublicGet({ 
+  Future<Response<FeedPageResponse>> feedPublicGet({
     String? cursor,
     int? limit = 25,
     String? includeTopics,
@@ -285,10 +285,10 @@ class FeedApi {
   }
 
   /// Return a public user&#39;s post feed
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [userId] 
+  /// * [userId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -298,7 +298,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> feedUser({ 
+  Future<Response<JsonObject>> feedUser({
     required String userId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -380,7 +380,7 @@ class FeedApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FeedPageResponse>> getFeed({ 
+  Future<Response<FeedPageResponse>> getFeed({
     String? cursor,
     int? limit = 25,
     CancelToken? cancelToken,

@@ -4,6 +4,7 @@ import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { getFcmConfigStatus } from '../../notifications/clients/fcmClient';
 import { getNotificationsDegradationStatus } from '../../notifications/shared/errorHandler';
 import { configService } from '../../../shared/configService';
+import { getAlphaCohortSnapshot } from '@alpha/alphaConfig';
 
 export type OpsMetricsWindow = '24h' | '7d';
 type HealthStatus = 'healthy' | 'degraded' | 'error';
@@ -40,6 +41,12 @@ export interface OpsMetricsData {
     pendingAppeals: number;
     audit24h: number;
   };
+  cohort: {
+    stage: string;
+    registeredAccounts: number;
+    capacity: number;
+    remaining: number;
+  } | null;
   trends: {
     window: OpsMetricsWindow;
     bucketSeconds: number;
@@ -346,12 +353,14 @@ export async function buildOpsMetrics(
     openFlagsCountResult,
     pendingAppealsCountResult,
     audit24hCountResult,
+    cohortResult,
   ] = await Promise.allSettled([
     queryFlagTimestamps(rangeStartIso, timeoutMs),
     queryAppealTimestamps(rangeStartIso, timeoutMs),
     queryOpenFlagsCount(timeoutMs),
     queryPendingAppealsCount(timeoutMs),
     queryAudit24hCount(auditCutoffIso, timeoutMs),
+    withTimeout(getAlphaCohortSnapshot(), timeoutMs, 'alpha cohort snapshot'),
   ]);
 
   let flagsBuckets = buildEmptyBuckets(window, nowMs);
@@ -387,6 +396,13 @@ export async function buildOpsMetrics(
     audit24h = audit24hCountResult.value;
   } else {
     errors.push(toQueryError('audit24h_unavailable', audit24hCountResult.reason));
+  }
+
+  let cohort: OpsMetricsData['cohort'] = null;
+  if (cohortResult.status === 'fulfilled') {
+    cohort = cohortResult.value;
+  } else {
+    errors.push(toQueryError('alpha_cohort_unavailable', cohortResult.reason));
   }
 
   const partial = errors.length > 0;
@@ -436,6 +452,7 @@ export async function buildOpsMetrics(
       pendingAppeals,
       audit24h,
     },
+    cohort,
     trends: {
       window,
       bucketSeconds: Math.floor(windowConfig.bucketMs / 1000),

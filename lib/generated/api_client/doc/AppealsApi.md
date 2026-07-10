@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -24,7 +24,7 @@ Submit a new appeal
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAppealsApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.appealsCreate(body);
@@ -38,7 +38,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -65,7 +65,7 @@ Get appeal detail
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAppealsApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.appealsGet(id);
@@ -79,7 +79,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -106,8 +106,8 @@ Cast a community vote on an appeal
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getAppealsApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.appealsVote(id, body);
@@ -121,8 +121,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -138,4 +138,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

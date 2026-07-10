@@ -1,7 +1,7 @@
 # Approved Product Copy (AI Policy + Tier Entitlements)
 
-Status: Approved by CEO  
-Last Updated: 2026-02-06  
+Status: Approved by CEO
+Last Updated: 2026-02-06
 Scope: Current dev-to-release track
 
 ## 1) AI authenticity and appeals copy

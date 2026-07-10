@@ -26,8 +26,15 @@ import 'package:asora/ui/screens/home/news_feed.dart';
 import 'package:asora/ui/screens/home/feed_search_screen.dart';
 import 'package:asora/ui/screens/home/trending_feed_screen.dart';
 
+enum AlphaFeedSection { discover, myFeeds, newsBoard }
+
 class HomeFeedNavigator extends ConsumerStatefulWidget {
-  const HomeFeedNavigator({super.key});
+  const HomeFeedNavigator({
+    super.key,
+    this.section = AlphaFeedSection.discover,
+  });
+
+  final AlphaFeedSection section;
 
   @override
   ConsumerState<HomeFeedNavigator> createState() => _HomeFeedNavigatorState();
@@ -35,43 +42,31 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   late final PageController _pageController;
-  late final ProviderSubscription<int> _feedIndexSub;
+  int _activeIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    final initialIndex = ref.read(currentFeedIndexProvider);
-    _pageController = PageController(initialPage: initialIndex);
-
-    _feedIndexSub = ref.listenManual<int>(currentFeedIndexProvider, (
-      previous,
-      next,
-    ) {
-      if (_pageController.hasClients &&
-          (_pageController.page?.round() ?? _pageController.initialPage) !=
-              next) {
-        _pageController.animateToPage(
-          next,
-          duration: LythMotion.standard,
-          curve: LythMotion.emphasisCurve,
-        );
-      }
-    });
+    _pageController = PageController();
   }
 
   @override
   void dispose() {
-    _feedIndexSub.close();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final feeds = ref.watch(feedListProvider);
-    final activeIndex = ref.watch(currentFeedIndexProvider);
-    final activeFeed = feeds[activeIndex];
+    final feeds = _feedsForSection(ref.watch(feedListProvider));
     final spacing = context.spacing;
+
+    if (feeds.isEmpty) {
+      return _buildEmptySection(context);
+    }
+
+    final activeIndex = _activeIndex.clamp(0, feeds.length - 1);
+    final activeFeed = feeds[activeIndex];
 
     return Scaffold(
       body: SafeArea(
@@ -86,18 +81,20 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               useWordmark: true,
             ),
             SizedBox(height: spacing.xs),
-            _FeedSwitchRail(
-              feeds: feeds,
-              activeIndex: activeIndex,
-              onSelect: _onFeedSelected,
-            ),
-            SizedBox(height: spacing.xs),
+            if (feeds.length > 1) ...[
+              _FeedSwitchRail(
+                feeds: feeds,
+                activeIndex: activeIndex,
+                onSelect: _onFeedSelected,
+              ),
+              SizedBox(height: spacing.xs),
+            ],
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (index) {
-                  ref.read(currentFeedIndexProvider.notifier).state = index;
+                  setState(() => _activeIndex = index);
                 },
                 itemCount: feeds.length,
                 itemBuilder: (context, index) => _FeedPage(feed: feeds[index]),
@@ -110,11 +107,97 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _onFeedSelected(int index) {
-    ref.read(currentFeedIndexProvider.notifier).state = index;
+    setState(() => _activeIndex = index);
     _pageController.animateToPage(
       index,
       duration: LythMotion.standard,
       curve: LythMotion.emphasisCurve,
+    );
+  }
+
+  List<FeedModel> _feedsForSection(List<FeedModel> feeds) {
+    return switch (widget.section) {
+      AlphaFeedSection.discover =>
+        feeds.where((feed) => feed.type == FeedType.discover).toList(),
+      AlphaFeedSection.myFeeds =>
+        feeds.where((feed) => feed.type == FeedType.custom).toList(),
+      AlphaFeedSection.newsBoard =>
+        feeds.where((feed) => feed.type == FeedType.news).toList(),
+    };
+  }
+
+  Widget _buildEmptySection(BuildContext context) {
+    final isMyFeeds = widget.section == AlphaFeedSection.myFeeds;
+    final title = switch (widget.section) {
+      AlphaFeedSection.discover => 'Discover',
+      AlphaFeedSection.myFeeds => 'My Feeds',
+      AlphaFeedSection.newsBoard => 'News Board',
+    };
+    final heading = switch (widget.section) {
+      AlphaFeedSection.discover => 'Discover unavailable',
+      AlphaFeedSection.myFeeds => 'No custom feeds yet',
+      AlphaFeedSection.newsBoard => 'News unavailable',
+    };
+    final description = switch (widget.section) {
+      AlphaFeedSection.discover =>
+        'Try again when the Discover service is available.',
+      AlphaFeedSection.myFeeds =>
+        'Create a feed to follow the topics and accounts you choose.',
+      AlphaFeedSection.newsBoard =>
+        'Try again when the News Board service is available.',
+    };
+    final icon = switch (widget.section) {
+      AlphaFeedSection.discover => Icons.explore_outlined,
+      AlphaFeedSection.myFeeds => Icons.dynamic_feed_outlined,
+      AlphaFeedSection.newsBoard => Icons.newspaper_outlined,
+    };
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            AsoraTopBar(
+              title: title,
+              onLogoTap: _openFeedControl,
+              onTitleTap: _openFeedControl,
+              onSearchTap: _openSearch,
+              onTrendingTap: _openTrending,
+              useWordmark: true,
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        heading,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(description, textAlign: TextAlign.center),
+                      if (isMyFeeds) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CustomFeedCreationFlow(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create custom feed'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

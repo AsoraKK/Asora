@@ -12,8 +12,8 @@ part 'flag_content_v1202_response.g.dart';
 /// FlagContentV1202Response
 ///
 /// Properties:
-/// * [flagId] 
-/// * [status] 
+/// * [flagId]
+/// * [status]
 @BuiltValue()
 abstract class FlagContentV1202Response implements Built<FlagContentV1202Response, FlagContentV1202ResponseBuilder> {
   @BuiltValueField(wireName: r'flagId')
@@ -140,4 +140,3 @@ class FlagContentV1202ResponseStatusEnum extends EnumClass {
   static BuiltSet<FlagContentV1202ResponseStatusEnum> get values => _$flagContentV1202ResponseStatusEnumValues;
   static FlagContentV1202ResponseStatusEnum valueOf(String name) => _$flagContentV1202ResponseStatusEnumValueOf(name);
 }
-

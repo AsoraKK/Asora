@@ -11,10 +11,10 @@ part 'get_my_appeals200_response_items_inner.g.dart';
 /// GetMyAppeals200ResponseItemsInner
 ///
 /// Properties:
-/// * [appealId] 
-/// * [caseId] 
-/// * [status] 
-/// * [createdAt] 
+/// * [appealId]
+/// * [caseId]
+/// * [status]
+/// * [createdAt]
 @BuiltValue()
 abstract class GetMyAppeals200ResponseItemsInner implements Built<GetMyAppeals200ResponseItemsInner, GetMyAppeals200ResponseItemsInnerBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -159,4 +159,3 @@ class _$GetMyAppeals200ResponseItemsInnerSerializer implements PrimitiveSerializ
     return result.build();
   }
 }
-

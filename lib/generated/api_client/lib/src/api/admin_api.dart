@@ -17,6 +17,7 @@ import 'package:asora_api_client/src/model/admin_appeal_queue_response.dart';
 import 'package:asora_api_client/src/model/admin_audit_list_response.dart';
 import 'package:asora_api_client/src/model/admin_content_action_request.dart';
 import 'package:asora_api_client/src/model/admin_content_action_response.dart';
+import 'package:asora_api_client/src/model/admin_created_invite.dart';
 import 'package:asora_api_client/src/model/admin_flag_detail_response.dart';
 import 'package:asora_api_client/src/model/admin_flag_queue_response.dart';
 import 'package:asora_api_client/src/model/admin_flag_resolve_request.dart';
@@ -55,7 +56,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealDecisionRequest] 
+  /// * [adminAppealDecisionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -65,7 +66,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDecisionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDecisionResponse>> adminAppealsApprove({ 
+  Future<Response<AdminAppealDecisionResponse>> adminAppealsApprove({
     required String appealId,
     required AdminAppealDecisionRequest adminAppealDecisionRequest,
     CancelToken? cancelToken,
@@ -167,7 +168,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDetailResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDetailResponse>> adminAppealsGet({ 
+  Future<Response<AdminAppealDetailResponse>> adminAppealsGet({
     required String appealId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -250,7 +251,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealQueueResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealQueueResponse>> adminAppealsList({ 
+  Future<Response<AdminAppealQueueResponse>> adminAppealsList({
     String? status,
     String? cursor,
     int? limit,
@@ -331,7 +332,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealOverrideRequest] 
+  /// * [adminAppealOverrideRequest]
   /// * [idempotencyKey] - Idempotency key for safe retries
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -342,7 +343,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealOverrideResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealOverrideResponse>> adminAppealsOverride({ 
+  Future<Response<AdminAppealOverrideResponse>> adminAppealsOverride({
     required String appealId,
     required AdminAppealOverrideRequest adminAppealOverrideRequest,
     String? idempotencyKey,
@@ -437,7 +438,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [adminAppealDecisionRequest] 
+  /// * [adminAppealDecisionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -447,7 +448,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAppealDecisionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAppealDecisionResponse>> adminAppealsReject({ 
+  Future<Response<AdminAppealDecisionResponse>> adminAppealsReject({
     required String appealId,
     required AdminAppealDecisionRequest adminAppealDecisionRequest,
     CancelToken? cancelToken,
@@ -549,7 +550,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminAuditListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminAuditListResponse>> adminAuditList({ 
+  Future<Response<AdminAuditListResponse>> adminAuditList({
     int? limit,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -622,7 +623,7 @@ class AdminApi {
   }
 
   /// Get budget configuration
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -634,7 +635,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminBudgetGet({ 
+  Future<Response<JsonObject>> adminBudgetGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -701,10 +702,10 @@ class AdminApi {
   }
 
   /// Update budget configuration
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -714,7 +715,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminBudgetUpdate({ 
+  Future<Response<JsonObject>> adminBudgetUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -801,7 +802,7 @@ class AdminApi {
   }
 
   /// Get admin runtime configuration
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -813,7 +814,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigGet({ 
+  Future<Response<JsonObject>> adminConfigGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -880,7 +881,7 @@ class AdminApi {
   }
 
   /// Get public admin configuration
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -892,7 +893,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigPublicGet({ 
+  Future<Response<JsonObject>> adminConfigPublicGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -959,10 +960,10 @@ class AdminApi {
   }
 
   /// Update public admin configuration
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -972,7 +973,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigPublicUpdate({ 
+  Future<Response<JsonObject>> adminConfigPublicUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1059,10 +1060,10 @@ class AdminApi {
   }
 
   /// Update admin runtime configuration
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1072,7 +1073,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminConfigUpdate({ 
+  Future<Response<JsonObject>> adminConfigUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1163,7 +1164,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [contentId] - Content identifier
-  /// * [adminContentActionRequest] 
+  /// * [adminContentActionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1173,7 +1174,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminContentActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminContentActionResponse>> adminContentBlock({ 
+  Future<Response<AdminContentActionResponse>> adminContentBlock({
     required String contentId,
     required AdminContentActionRequest adminContentActionRequest,
     CancelToken? cancelToken,
@@ -1266,7 +1267,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [contentId] - Content identifier
-  /// * [adminContentActionRequest] 
+  /// * [adminContentActionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1276,7 +1277,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminContentActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminContentActionResponse>> adminContentPublish({ 
+  Future<Response<AdminContentActionResponse>> adminContentPublish({
     required String contentId,
     required AdminContentActionRequest adminContentActionRequest,
     CancelToken? cancelToken,
@@ -1365,11 +1366,11 @@ class AdminApi {
   }
 
   /// Cancel a data subject request
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1379,7 +1380,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrCancel({ 
+  Future<Response<JsonObject>> adminDsrCancel({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -1467,10 +1468,10 @@ class AdminApi {
   }
 
   /// Download data subject request export
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1480,7 +1481,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrDownload({ 
+  Future<Response<JsonObject>> adminDsrDownload({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1548,10 +1549,10 @@ class AdminApi {
   }
 
   /// Get data subject request detail
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1561,7 +1562,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrGet({ 
+  Future<Response<JsonObject>> adminDsrGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1629,11 +1630,11 @@ class AdminApi {
   }
 
   /// Clear a legal hold
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1643,7 +1644,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrLegalHoldClear({ 
+  Future<Response<JsonObject>> adminDsrLegalHoldClear({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -1731,10 +1732,10 @@ class AdminApi {
   }
 
   /// Place a legal hold
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1744,7 +1745,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrLegalHoldPlace({ 
+  Future<Response<JsonObject>> adminDsrLegalHoldPlace({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1831,7 +1832,7 @@ class AdminApi {
   }
 
   /// List data subject requests
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1843,7 +1844,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrList({ 
+  Future<Response<JsonObject>> adminDsrList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1910,11 +1911,11 @@ class AdminApi {
   }
 
   /// Release a data subject request
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1924,7 +1925,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrRelease({ 
+  Future<Response<JsonObject>> adminDsrRelease({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2012,11 +2013,11 @@ class AdminApi {
   }
 
   /// Retry a failed data subject request
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2026,7 +2027,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrRetry({ 
+  Future<Response<JsonObject>> adminDsrRetry({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2114,11 +2115,11 @@ class AdminApi {
   }
 
   /// First-reviewer decision on DSR
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2128,7 +2129,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrReviewA({ 
+  Future<Response<JsonObject>> adminDsrReviewA({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2216,11 +2217,11 @@ class AdminApi {
   }
 
   /// Second-reviewer decision on DSR
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2230,7 +2231,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminDsrReviewB({ 
+  Future<Response<JsonObject>> adminDsrReviewB({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -2331,7 +2332,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminFlagDetailResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminFlagDetailResponse>> adminFlagsGet({ 
+  Future<Response<AdminFlagDetailResponse>> adminFlagsGet({
     required String flagId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2414,7 +2415,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminFlagQueueResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminFlagQueueResponse>> adminFlagsList({ 
+  Future<Response<AdminFlagQueueResponse>> adminFlagsList({
     String? status,
     String? cursor,
     int? limit,
@@ -2495,7 +2496,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [flagId] - Flag identifier
-  /// * [adminFlagResolveRequest] 
+  /// * [adminFlagResolveRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2505,7 +2506,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminResolveResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminResolveResponse>> adminFlagsResolve({ 
+  Future<Response<AdminResolveResponse>> adminFlagsResolve({
     required String flagId,
     required AdminFlagResolveRequest adminFlagResolveRequest,
     CancelToken? cancelToken,
@@ -2597,7 +2598,7 @@ class AdminApi {
   /// Creates multiple invite codes in a single request.
   ///
   /// Parameters:
-  /// * [adminInviteBatchRequest] 
+  /// * [adminInviteBatchRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2607,7 +2608,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteBatchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteBatchResponse>> adminInvitesBatch({ 
+  Future<Response<AdminInviteBatchResponse>> adminInvitesBatch({
     required AdminInviteBatchRequest adminInviteBatchRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2698,7 +2699,7 @@ class AdminApi {
   /// Creates a single admin invite code.
   ///
   /// Parameters:
-  /// * [adminInviteCreateRequest] 
+  /// * [adminInviteCreateRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2706,9 +2707,9 @@ class AdminApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [AdminInviteResponse] as data
+  /// Returns a [Future] containing a [Response] with a [AdminCreatedInvite] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteResponse>> adminInvitesCreate({ 
+  Future<Response<AdminCreatedInvite>> adminInvitesCreate({
     required AdminInviteCreateRequest adminInviteCreateRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2764,14 +2765,14 @@ class AdminApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    AdminInviteResponse? _responseData;
+    AdminCreatedInvite? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(AdminInviteResponse),
-      ) as AdminInviteResponse;
+        specifiedType: const FullType(AdminCreatedInvite),
+      ) as AdminCreatedInvite;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2783,7 +2784,7 @@ class AdminApi {
       );
     }
 
-    return Response<AdminInviteResponse>(
+    return Response<AdminCreatedInvite>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2795,11 +2796,11 @@ class AdminApi {
     );
   }
 
-  /// Hard-delete an invite code
-  /// Permanently removes an invite code record. Use revoke to soft-revoke instead.
+  /// Revoke an Alpha invite
+  /// Revokes the invite without deleting its audit record.
   ///
   /// Parameters:
-  /// * [code] - Invite code to delete
+  /// * [inviteId] - Opaque invite identifier
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2807,10 +2808,10 @@ class AdminApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future]
+  /// Returns a [Future] containing a [Response] with a [AdminInviteRevokeResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> adminInvitesDelete({ 
-    required String code,
+  Future<Response<AdminInviteRevokeResponse>> adminInvitesDelete({
+    required String inviteId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2818,7 +2819,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
+    final _path = r'/_admin/invites/{inviteId}'.replaceAll('{' r'inviteId' '}', encodeQueryParameter(_serializers, inviteId, const FullType(String)).toString());
     final _options = Options(
       method: r'DELETE',
       headers: <String, dynamic>{
@@ -2845,14 +2846,42 @@ class AdminApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    return _response;
+    AdminInviteRevokeResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminInviteRevokeResponse),
+      ) as AdminInviteRevokeResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AdminInviteRevokeResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
   }
 
-  /// Get an invite code
-  /// Fetch a single invite by code.
+  /// Get an Alpha invite
+  /// Fetch a single invite by opaque administrative identifier.
   ///
   /// Parameters:
-  /// * [code] - Invite code
+  /// * [inviteId] - Opaque invite identifier
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2862,8 +2891,8 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteResponse>> adminInvitesGet({ 
-    required String code,
+  Future<Response<AdminInviteResponse>> adminInvitesGet({
+    required String inviteId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2871,7 +2900,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
+    final _path = r'/_admin/invites/{inviteId}'.replaceAll('{' r'inviteId' '}', encodeQueryParameter(_serializers, inviteId, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -2929,8 +2958,8 @@ class AdminApi {
     );
   }
 
-  /// List invite codes
-  /// Returns admin invite codes with usage metadata.
+  /// List Alpha invites
+  /// Returns opaque invite identifiers and usage metadata. Plaintext codes are never listed.
   ///
   /// Parameters:
   /// * [createdBy] - Filter by creator id
@@ -2946,7 +2975,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteListResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteListResponse>> adminInvitesList({ 
+  Future<Response<AdminInviteListResponse>> adminInvitesList({
     String? createdBy,
     bool? unused,
     String? cursor,
@@ -3028,8 +3057,8 @@ class AdminApi {
   /// Revokes an invite code immediately.
   ///
   /// Parameters:
-  /// * [code] - Invite code
-  /// * [adminInviteRevokeRequest] 
+  /// * [inviteId] - Opaque invite identifier
+  /// * [adminInviteRevokeRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3039,8 +3068,8 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminInviteRevokeResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminInviteRevokeResponse>> adminInvitesRevoke({ 
-    required String code,
+  Future<Response<AdminInviteRevokeResponse>> adminInvitesRevoke({
+    required String inviteId,
     AdminInviteRevokeRequest? adminInviteRevokeRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3049,7 +3078,7 @@ class AdminApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/_admin/invites/{code}/revoke'.replaceAll('{' r'code' '}', encodeQueryParameter(_serializers, code, const FullType(String)).toString());
+    final _path = r'/_admin/invites/{inviteId}/revoke'.replaceAll('{' r'inviteId' '}', encodeQueryParameter(_serializers, inviteId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -3128,11 +3157,11 @@ class AdminApi {
   }
 
   /// Reset a moderation class to defaults
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [className] 
-  /// * [body] 
+  /// * [className]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3142,7 +3171,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationClassReset({ 
+  Future<Response<JsonObject>> adminModerationClassReset({
     required String className,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3230,7 +3259,7 @@ class AdminApi {
   }
 
   /// List moderation label classes
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -3242,7 +3271,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationClassesList({ 
+  Future<Response<JsonObject>> adminModerationClassesList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -3309,10 +3338,10 @@ class AdminApi {
   }
 
   /// Proxy DELETE to Hive AI test endpoint
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [path] 
+  /// * [path]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3322,7 +3351,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestDelete({ 
+  Future<Response<JsonObject>> adminModerationTestDelete({
     required String path,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3390,10 +3419,10 @@ class AdminApi {
   }
 
   /// Proxy GET to Hive AI test endpoint
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [path] 
+  /// * [path]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3403,7 +3432,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestGet({ 
+  Future<Response<JsonObject>> adminModerationTestGet({
     required String path,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3471,11 +3500,11 @@ class AdminApi {
   }
 
   /// Proxy PATCH to Hive AI test endpoint
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [path] 
-  /// * [body] 
+  /// * [path]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3485,7 +3514,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPatch({ 
+  Future<Response<JsonObject>> adminModerationTestPatch({
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3573,11 +3602,11 @@ class AdminApi {
   }
 
   /// Proxy POST to Hive AI test endpoint
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [path] 
-  /// * [body] 
+  /// * [path]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3587,7 +3616,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPost({ 
+  Future<Response<JsonObject>> adminModerationTestPost({
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3675,11 +3704,11 @@ class AdminApi {
   }
 
   /// Proxy PUT to Hive AI test endpoint
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [path] 
-  /// * [body] 
+  /// * [path]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3689,7 +3718,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationTestPut({ 
+  Future<Response<JsonObject>> adminModerationTestPut({
     required String path,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -3777,10 +3806,10 @@ class AdminApi {
   }
 
   /// Bulk-update moderation class weights
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3790,7 +3819,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminModerationWeightsUpdate({ 
+  Future<Response<JsonObject>> adminModerationWeightsUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3877,10 +3906,10 @@ class AdminApi {
   }
 
   /// Ingest news items into the news board
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3890,7 +3919,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminNewsIngest({ 
+  Future<Response<JsonObject>> adminNewsIngest({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -3977,7 +4006,7 @@ class AdminApi {
   }
 
   /// Get operational metrics
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -3989,7 +4018,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsMetrics({ 
+  Future<Response<JsonObject>> adminOpsMetrics({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -4056,7 +4085,7 @@ class AdminApi {
   }
 
   /// Get operational state flags
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -4068,7 +4097,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsStateGet({ 
+  Future<Response<JsonObject>> adminOpsStateGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -4135,10 +4164,10 @@ class AdminApi {
   }
 
   /// Update operational state flags
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4148,7 +4177,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> adminOpsStateUpdate({ 
+  Future<Response<JsonObject>> adminOpsStateUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -4239,7 +4268,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [userId] - User identifier
-  /// * [adminSetUserTierRequest] 
+  /// * [adminSetUserTierRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4249,7 +4278,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserActionResponse>> adminSetUserTier({ 
+  Future<Response<AdminUserActionResponse>> adminSetUserTier({
     required String userId,
     required AdminSetUserTierRequest adminSetUserTierRequest,
     CancelToken? cancelToken,
@@ -4338,10 +4367,10 @@ class AdminApi {
   }
 
   /// Purge test data outside production
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [adminTestDataPurgeRequest] 
+  /// * [adminTestDataPurgeRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4351,7 +4380,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminTestDataPurge200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminTestDataPurge200Response>> adminTestDataPurge({ 
+  Future<Response<AdminTestDataPurge200Response>> adminTestDataPurge({
     AdminTestDataPurgeRequest? adminTestDataPurgeRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -4443,7 +4472,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [userId] - User identifier
-  /// * [adminUserDisableRequest] 
+  /// * [adminUserDisableRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4453,7 +4482,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserActionResponse>> adminUsersDisable({ 
+  Future<Response<AdminUserActionResponse>> adminUsersDisable({
     required String userId,
     required AdminUserDisableRequest adminUserDisableRequest,
     CancelToken? cancelToken,
@@ -4546,7 +4575,7 @@ class AdminApi {
   ///
   /// Parameters:
   /// * [userId] - User identifier
-  /// * [adminUserEnableRequest] 
+  /// * [adminUserEnableRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -4556,7 +4585,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserActionResponse>> adminUsersEnable({ 
+  Future<Response<AdminUserActionResponse>> adminUsersEnable({
     required String userId,
     AdminUserEnableRequest? adminUserEnableRequest,
     CancelToken? cancelToken,
@@ -4659,7 +4688,7 @@ class AdminApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AdminUserSearchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AdminUserSearchResponse>> adminUsersSearch({ 
+  Future<Response<AdminUserSearchResponse>> adminUsersSearch({
     required String q,
     int? limit,
     CancelToken? cancelToken,

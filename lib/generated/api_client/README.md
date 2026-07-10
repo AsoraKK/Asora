@@ -49,7 +49,7 @@ import 'package:asora_api_client/asora_api_client.dart';
 
 final api = AsoraApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest | 
+final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
 try {
     final response = await api.adminAppealsApprove(appealId, adminAppealDecisionRequest);
@@ -62,7 +62,7 @@ try {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
@@ -95,10 +95,10 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminFlagsResolve**](doc/AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesBatch**](doc/AdminApi.md#admininvitesbatch) | **POST** /_admin/invites/batch | Batch create invite codes
 [*AdminApi*](doc/AdminApi.md) | [**adminInvitesCreate**](doc/AdminApi.md#admininvitescreate) | **POST** /_admin/invites | Create an invite code
-[*AdminApi*](doc/AdminApi.md) | [**adminInvitesDelete**](doc/AdminApi.md#admininvitesdelete) | **DELETE** /_admin/invites/{code} | Hard-delete an invite code
-[*AdminApi*](doc/AdminApi.md) | [**adminInvitesGet**](doc/AdminApi.md#admininvitesget) | **GET** /_admin/invites/{code} | Get an invite code
-[*AdminApi*](doc/AdminApi.md) | [**adminInvitesList**](doc/AdminApi.md#admininviteslist) | **GET** /_admin/invites | List invite codes
-[*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{code}/revoke | Revoke an invite code
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesDelete**](doc/AdminApi.md#admininvitesdelete) | **DELETE** /_admin/invites/{inviteId} | Revoke an Alpha invite
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesGet**](doc/AdminApi.md#admininvitesget) | **GET** /_admin/invites/{inviteId} | Get an Alpha invite
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesList**](doc/AdminApi.md#admininviteslist) | **GET** /_admin/invites | List Alpha invites
+[*AdminApi*](doc/AdminApi.md) | [**adminInvitesRevoke**](doc/AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{inviteId}/revoke | Revoke an invite code
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationClassReset**](doc/AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationClassesList**](doc/AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationTestDelete**](doc/AdminApi.md#adminmoderationtestdelete) | **DELETE** /admin/moderation/test/{path} | Proxy DELETE to Hive AI test endpoint
@@ -233,6 +233,7 @@ Class | Method | HTTP request | Description
  - [AdminContentActionResponse](doc/AdminContentActionResponse.md)
  - [AdminContentState](doc/AdminContentState.md)
  - [AdminContentType](doc/AdminContentType.md)
+ - [AdminCreatedInvite](doc/AdminCreatedInvite.md)
  - [AdminFlagDetailAppeal](doc/AdminFlagDetailAppeal.md)
  - [AdminFlagDetailContent](doc/AdminFlagDetailContent.md)
  - [AdminFlagDetailFlags](doc/AdminFlagDetailFlags.md)
@@ -278,7 +279,6 @@ Class | Method | HTTP request | Description
  - [BadGatewayError](doc/BadGatewayError.md)
  - [BadGatewayErrorError](doc/BadGatewayErrorError.md)
  - [CreateCustomFeedRequest](doc/CreateCustomFeedRequest.md)
- - [CreatePost201Response](doc/CreatePost201Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
  - [CursorPaginatedPostView](doc/CursorPaginatedPostView.md)
  - [CustomFeedDefinition](doc/CustomFeedDefinition.md)
@@ -305,11 +305,15 @@ Class | Method | HTTP request | Description
  - [InviteValidationResponse](doc/InviteValidationResponse.md)
  - [LedgerEntry](doc/LedgerEntry.md)
  - [LedgerPage](doc/LedgerPage.md)
+ - [LegacyCreatePostResponse](doc/LegacyCreatePostResponse.md)
+ - [LegacyCreatePostResponsePost](doc/LegacyCreatePostResponsePost.md)
+ - [LegacyCreatePostResponsePostStats](doc/LegacyCreatePostResponsePostStats.md)
  - [LegalHoldClear](doc/LegalHoldClear.md)
  - [LegalHoldInput](doc/LegalHoldInput.md)
  - [LegalHoldRecord](doc/LegalHoldRecord.md)
  - [ModerationAppealRequest](doc/ModerationAppealRequest.md)
  - [ModerationBlockedResponse](doc/ModerationBlockedResponse.md)
+ - [NewsBoardFeedResponse](doc/NewsBoardFeedResponse.md)
  - [NewsSourceMetadata](doc/NewsSourceMetadata.md)
  - [OAuthTokenResponse](doc/OAuthTokenResponse.md)
  - [OAuthTokenResponseData](doc/OAuthTokenResponseData.md)
@@ -318,6 +322,7 @@ Class | Method | HTTP request | Description
  - [PostTrustTimeline](doc/PostTrustTimeline.md)
  - [PostView](doc/PostView.md)
  - [PostViewAllOfRecentComments](doc/PostViewAllOfRecentComments.md)
+ - [PublicAuthorship](doc/PublicAuthorship.md)
  - [PublicReputationView](doc/PublicReputationView.md)
  - [RateLimitError](doc/RateLimitError.md)
  - [RedeemInviteRequest](doc/RedeemInviteRequest.md)
@@ -356,6 +361,3 @@ Authentication schemes defined for the API:
 
 
 ## Author
-
-
-

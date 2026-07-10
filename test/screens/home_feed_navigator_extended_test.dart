@@ -112,6 +112,43 @@ void main() {
   }
 
   group('_FeedPage states', () {
+    testWidgets('empty Alpha sections render scoped recovery states', (
+      tester,
+    ) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      Widget buildEmpty(AlphaFeedSection section) {
+        return ProviderScope(
+          overrides: [feedListProvider.overrideWith((ref) => const [])],
+          child: MaterialApp(
+            key: ValueKey(section),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: HomeFeedNavigator(key: ValueKey(section), section: section),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildEmpty(AlphaFeedSection.myFeeds));
+      await tester.pumpAndSettle();
+      expect(find.text('No custom feeds yet'), findsOneWidget);
+      expect(find.text('Create custom feed'), findsOneWidget);
+
+      await tester.tap(find.text('Create custom feed'));
+      await tester.pumpAndSettle();
+      expect(find.text('Create Custom Feed'), findsOneWidget);
+
+      await tester.pumpWidget(buildEmpty(AlphaFeedSection.newsBoard));
+      await tester.pumpAndSettle();
+      expect(find.text('News unavailable'), findsOneWidget);
+      expect(find.text('No custom feeds yet'), findsNothing);
+    });
+
     testWidgets('shows loading indicator during initial load', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
@@ -159,9 +196,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        buildWithState(
-          stateForFeed: (feed) => const LiveFeedState(items: []),
-        ),
+        buildWithState(stateForFeed: (feed) => const LiveFeedState(items: [])),
       );
       await tester.pumpAndSettle();
 
@@ -170,7 +205,9 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets('moderation feed type shows placeholder text', (tester) async {
+    testWidgets('unconfigured Discover shows its own empty state', (
+      tester,
+    ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -215,7 +252,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Moderation feed not in carousel.'), findsOneWidget);
+      expect(find.text('Discover unavailable'), findsOneWidget);
+      expect(find.text('News unavailable'), findsNothing);
     });
 
     testWidgets('shows and clears New posts pill on restore fallback', (
@@ -287,7 +325,9 @@ void main() {
   });
 
   group('Feed switching via Discover rail', () {
-    testWidgets('rail taps update currentFeedIndex', (tester) async {
+    testWidgets('rail switches between configured Discover feeds', (
+      tester,
+    ) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -295,7 +335,22 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          feedListProvider.overrideWith((ref) => _feeds.sublist(0, 2)),
+          feedListProvider.overrideWith(
+            (ref) => [
+              _feeds.first,
+              const FeedModel(
+                id: 'discover-local',
+                name: 'Local',
+                type: FeedType.discover,
+                contentFilters: ContentFilters(
+                  allowedTypes: {ContentType.mixed},
+                ),
+                sorting: SortingRule.newest,
+                refinements: FeedRefinements(),
+                subscriptionLevelRequired: 0,
+              ),
+            ],
+          ),
           liveFeedStateProvider.overrideWith(
             (ref, feed) => _StaticLiveFeedNotifier(
               LiveFeedState(
@@ -331,10 +386,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('News'));
+      await tester.tap(find.text('Local'));
       await tester.pumpAndSettle();
 
-      expect(container.read(currentFeedIndexProvider), 1);
+      final selected = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Local'),
+      );
+      expect(selected.selected, isTrue);
     });
 
     testWidgets('PageView disables swipe gestures by design', (tester) async {
@@ -436,6 +494,102 @@ void main() {
       expect(find.textContaining('Search across feeds'), findsOneWidget);
     });
 
+    testWidgets('top bar trending button opens trending feed', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.trending_up_outlined));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Trending'), findsOneWidget);
+    });
+
+    testWidgets('feed tools open moderation destination', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Moderation hub'));
+      await tester.pump();
+      expect(find.text('Moderation'), findsWidgets);
+    });
+
+    testWidgets('feed tools open appeals destination', (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+      addTearDown(
+        () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
+      );
+
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (feed) => LiveFeedState(
+            items: [
+              FeedItem(
+                id: '${feed.id}-1',
+                feedId: feed.id,
+                author: 'Alex',
+                contentType: ContentType.text,
+                title: 'T',
+                body: 'B',
+                publishedAt: DateTime(2024),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appeals queue'));
+      await tester.pump();
+      expect(find.text('My Appeals'), findsOneWidget);
+    });
+
     testWidgets('feed control panel opens custom feed flow', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
@@ -471,6 +625,5 @@ void main() {
       expect(find.text('Create Custom Feed'), findsOneWidget);
       expect(find.text('What type of content?'), findsOneWidget);
     });
-
   });
 }

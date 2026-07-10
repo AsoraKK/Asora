@@ -12,6 +12,8 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -149,6 +151,7 @@ export const createComment = requireActiveUser(
     }
 
     try {
+      await assertAlphaFeature('commentCreation');
       const db = getTargetDatabase();
 
       // Verify post exists (binary content states: only check blocked/deleted)
@@ -244,6 +247,12 @@ export const createComment = requireActiveUser(
         },
       });
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          status: error.status,
+          jsonBody: { error: error.message },
+        };
+      }
       context.log('comments.create.error', { postId, message: (error as Error).message });
       return serverError();
     }

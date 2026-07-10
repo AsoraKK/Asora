@@ -1,6 +1,6 @@
 # Secret Rotation Runbook
 
-> **Audience**: Platform engineering, security leads.  
+> **Audience**: Platform engineering, security leads.
 > **Frequency**: Quarterly minimum, or immediately after suspected compromise.
 
 ---

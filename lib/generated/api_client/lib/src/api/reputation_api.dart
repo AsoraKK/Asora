@@ -27,7 +27,7 @@ class ReputationApi {
   /// Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
   ///
   /// Parameters:
-  /// * [entryId] 
+  /// * [entryId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +37,7 @@ class ReputationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AcceptedResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AcceptedResponse>> moderationLedgerAppealPost({ 
+  Future<Response<AcceptedResponse>> moderationLedgerAppealPost({
     required String entryId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -108,7 +108,7 @@ class ReputationApi {
   /// Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
   ///
   /// Parameters:
-  /// * [filter] 
+  /// * [filter]
   /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
   /// * [limit] - Maximum number of items to return per page
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -120,7 +120,7 @@ class ReputationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [LedgerPage] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<LedgerPage>> reputationLedgerGet({ 
+  Future<Response<LedgerPage>> reputationLedgerGet({
     String? filter = 'all',
     String? cursor,
     int? limit = 25,
@@ -209,7 +209,7 @@ class ReputationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ReputationSummary] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ReputationSummary>> reputationMeGet({ 
+  Future<Response<ReputationSummary>> reputationMeGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -276,10 +276,10 @@ class ReputationApi {
   }
 
   /// Get public reputation view
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -289,7 +289,7 @@ class ReputationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PublicReputationView] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PublicReputationView>> reputationUserGet({ 
+  Future<Response<PublicReputationView>> reputationUserGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -351,10 +351,10 @@ class ReputationApi {
   }
 
   /// Get public reputation view
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -364,7 +364,7 @@ class ReputationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PublicReputationView] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PublicReputationView>> reputationUserGetSingular({ 
+  Future<Response<PublicReputationView>> reputationUserGetSingular({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,

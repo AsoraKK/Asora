@@ -16,6 +16,7 @@ const textExtensions = new Set([
   '.dart',
   '.json',
   '.md',
+  '.ts',
   '.yaml',
   '.yml',
 ]);
@@ -37,7 +38,9 @@ function walk(targetPath) {
   }
 
   const original = fs.readFileSync(targetPath, 'utf8');
-  const trimmed = original.replace(/[ \t]+$/gmu, '');
+  const trimmed = original
+    .replace(/[ \t]+$/gmu, '')
+    .replace(/(?:\r?\n)*$/u, '\n');
   if (trimmed !== original) {
     fs.writeFileSync(targetPath, trimmed, 'utf8');
   }

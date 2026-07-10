@@ -102,6 +102,11 @@ class _PostCardState extends ConsumerState<PostCard> {
                                 color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
                         ),
+                        const SizedBox(height: 4),
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          label: Text(widget.post.authorshipLabel),
+                        ),
                       ],
                     ),
                   ),
@@ -386,7 +391,7 @@ class Post {
   final DateTime createdAt;
   final List<String> mediaUrls;
   final ModerationStatus moderationStatus;
-  final double? aiScore;
+  final String authorshipLabel;
   final String? appealStatus;
   final bool isLiked;
   final int likeCount;
@@ -400,7 +405,7 @@ class Post {
     required this.createdAt,
     this.mediaUrls = const [],
     this.moderationStatus = ModerationStatus.clean,
-    this.aiScore,
+    this.authorshipLabel = 'Under review',
     this.appealStatus,
     this.isLiked = false,
     this.likeCount = 0,

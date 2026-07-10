@@ -1,0 +1,152 @@
+name: Deploy Alpha web (approved exact artifact)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA already validated by CI
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI workflow run ID for the exact release SHA
+        required: true
+        type: string
+      target_environment:
+        description: Protected deployment environment
+        required: true
+        type: choice
+        options: [staging, production]
+      pages_project:
+        description: Cloudflare Pages project name
+        required: true
+        default: lythaus-web
+        type: string
+      pages_branch:
+        description: Pages branch alias to deploy
+        required: true
+        default: alpha
+        type: string
+      web_base_url:
+        description: Public HTTPS URL expected to serve this deployment
+        required: true
+        type: string
+      api_base_url:
+        description: Canonical Alpha API HTTPS /api URL
+        required: true
+        type: string
+      admin_api_url:
+        description: Cloudflare-protected admin API origin
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy-and-smoke:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify exact-SHA CI and download immutable web artifact
+        id: web_artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release_sha must be a full commit SHA"; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::ci_run_id must be numeric"; exit 1; }
+          RUN_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")
+          test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$RELEASE_SHA"
+          test "$(jq -r '.name' <<<"$RUN_JSON")" = "CI"
+          test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = "success"
+
+          ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
+          WEB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
+          test -n "$WEB_DIGEST" && test "$WEB_DIGEST" != "null"
+          mkdir -p downloaded/web
+          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name flutter-web-release --dir downloaded/web
+          test -f downloaded/web/index.html
+          test -f downloaded/web/_headers
+          test -f downloaded/web/_redirects
+          scripts/secret-scan.sh --artifact downloaded/web
+          bash scripts/check-web-security-headers.sh downloaded/web/_headers
+          echo "web_digest=$WEB_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy immutable Pages artifact
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PAGES_PROJECT: ${{ inputs.pages_project }}
+          PAGES_BRANCH: ${{ inputs.pages_branch }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.110.0 pages deploy downloaded/web \
+            --project-name "$PAGES_PROJECT" \
+            --branch "$PAGES_BRANCH" \
+            --commit-hash "$RELEASE_SHA" \
+            --commit-dirty=false
+
+      - name: Install browser smoke tooling
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+
+      - name: Run required web Alpha browser smoke
+        env:
+          WEB_BASE_URL: ${{ inputs.web_base_url }}
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          ADMIN_API_URL: ${{ inputs.admin_api_url }}
+          BETA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
+          BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json
+        run: |
+          set -euo pipefail
+          curl -fsSIL --max-time 20 "$WEB_BASE_URL"
+          node scripts/beta-smoke.mjs
+
+      - name: Write web deployment evidence
+        if: success()
+        env:
+          WEB_GITHUB_DIGEST: ${{ steps.web_artifact.outputs.web_digest }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          WEB_BASE_URL: ${{ inputs.web_base_url }}
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+        run: |
+          jq -n \
+            --arg commitSha "$RELEASE_SHA" \
+            --arg webGithubArtifactDigest "$WEB_GITHUB_DIGEST" \
+            --arg ciRunId "$CI_RUN_ID" \
+            --arg webBaseUrl "$WEB_BASE_URL" \
+            --arg environment "$TARGET_ENVIRONMENT" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion: 1, commitSha: $commitSha, webGithubArtifactDigest: $webGithubArtifactDigest, ciRunId: $ciRunId, webBaseUrl: $webBaseUrl, environment: $environment, deployedAt: $date, browserSmoke: "passed"}' \
+            > alpha-web-deployment-evidence.json
+
+      - name: Upload browser and web deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: alpha-web-evidence-${{ inputs.release_sha }}
+          path: |
+            ${{ runner.temp }}/alpha-web-smoke-report.json
+            alpha-web-deployment-evidence.json
+          if-no-files-found: warn

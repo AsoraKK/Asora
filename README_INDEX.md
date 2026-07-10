@@ -3,7 +3,7 @@
 Lythaus (formerly Asora) repository index of README files for quick navigation.
 
 ## Root
-- `README.md`: Lythaus/Asora quick reference, domains, runbook pointer, protected routes, and embedded actionlint documentation.
+- `README.md`: Lythaus overview, controlled Alpha scope, setup, validation, and immutable deployment flow.
 
 ## Apps
 - `apps/control-panel/README.md`: Lythaus control panel build steps and API proxy configuration.
@@ -18,7 +18,11 @@ Lythaus (formerly Asora) repository index of README files for quick navigation.
 - `database/README.md`: Terraform root for Cosmos containers and indexing policy guidance.
 
 ## Docs
-- `docs/README.md`: Documentation index (actionlint docs links and Cosmos runbook reference).
+- `docs/README.md`: Documentation index and repository guidance.
+- `docs/evidence/alpha-readiness/2026-07-10-controlled-alpha-packet.md`: canonical current Alpha go/no-go evidence.
+- `docs/runbooks/alpha-operations.md`: human-readable Alpha incident and kill-switch procedures.
+- `docs/runbooks/alpha-operations.yaml`: machine-readable operational-agent runbooks.
+- `docs/runbooks/alpha-rollback.md`: protected immutable-artifact rollback and rehearsal plan.
 
 ## Functions
 - `functions/README.md`: Backend Functions layout, local setup, routes, invite system, and tests.

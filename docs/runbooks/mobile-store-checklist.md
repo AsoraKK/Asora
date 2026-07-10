@@ -1,7 +1,7 @@
 # Mobile Store Checklist (Android)
 
-Version: 1.0  
-Last Updated: 2026-02-06  
+Version: 1.0
+Last Updated: 2026-02-06
 Scope: Android only (iOS deferred)
 
 ## 1. Build and signing

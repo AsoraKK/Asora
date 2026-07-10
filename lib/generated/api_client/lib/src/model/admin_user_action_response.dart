@@ -12,8 +12,8 @@ part 'admin_user_action_response.g.dart';
 /// AdminUserActionResponse
 ///
 /// Properties:
-/// * [userId] 
-/// * [status] 
+/// * [userId]
+/// * [status]
 @BuiltValue()
 abstract class AdminUserActionResponse implements Built<AdminUserActionResponse, AdminUserActionResponseBuilder> {
   @BuiltValueField(wireName: r'userId')
@@ -125,4 +125,3 @@ class _$AdminUserActionResponseSerializer implements PrimitiveSerializer<AdminUs
     return result.build();
   }
 }
-

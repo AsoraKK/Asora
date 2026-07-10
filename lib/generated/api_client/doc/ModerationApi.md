@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -37,7 +37,7 @@ Flag content for review.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final FlagContentRequest flagContentRequest = {"targetId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","reason":"spam","notes":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest | 
+final FlagContentRequest flagContentRequest = {"targetId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","reason":"spam","notes":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest |
 
 try {
     final response = api.flagContent(flagContentRequest);
@@ -51,7 +51,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **flagContentRequest** | [**FlagContentRequest**](FlagContentRequest.md)|  | 
+ **flagContentRequest** | [**FlagContentRequest**](FlagContentRequest.md)|  |
 
 ### Return type
 
@@ -80,7 +80,7 @@ Alias of `/moderation/flag` — legacy v1 route used by the function runtime.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final FlagContentV1Request flagContentV1Request = ; // FlagContentV1Request | 
+final FlagContentV1Request flagContentV1Request = ; // FlagContentV1Request |
 
 try {
     final response = api.flagContentV1(flagContentV1Request);
@@ -94,7 +94,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **flagContentV1Request** | [**FlagContentV1Request**](FlagContentV1Request.md)|  | 
+ **flagContentV1Request** | [**FlagContentV1Request**](FlagContentV1Request.md)|  |
 
 ### Return type
 
@@ -138,8 +138,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **status** | **String**| Filter by appeal status | [optional] 
- **cursor** | **String**| Pagination cursor | [optional] 
+ **status** | **String**| Filter by appeal status | [optional]
+ **cursor** | **String**| Pagination cursor | [optional]
 
 ### Return type
 
@@ -166,8 +166,8 @@ Record a decision on a moderation case
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.moderationCasesDecision(id, body);
@@ -181,8 +181,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -209,7 +209,7 @@ Get moderation case detail
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.moderationCasesGet(id);
@@ -223,7 +223,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -252,7 +252,7 @@ Marks an appealable moderation-related ledger entry as under appeal for the auth
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final String entryId = entryId_example; // String | 
+final String entryId = entryId_example; // String |
 
 try {
     final response = api.moderationLedgerAppealPost(entryId);
@@ -266,7 +266,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **entryId** | **String**|  | 
+ **entryId** | **String**|  |
 
 ### Return type
 
@@ -367,7 +367,7 @@ Submit content to moderation pipeline for testing
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.moderationTest(body);
@@ -381,7 +381,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -411,7 +411,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final ReviewAppealedContentRequest reviewAppealedContentRequest = ; // ReviewAppealedContentRequest | 
+final ReviewAppealedContentRequest reviewAppealedContentRequest = ; // ReviewAppealedContentRequest |
 
 try {
     final response = api.reviewAppealedContent(appealId, reviewAppealedContentRequest);
@@ -425,8 +425,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
- **reviewAppealedContentRequest** | [**ReviewAppealedContentRequest**](ReviewAppealedContentRequest.md)|  | 
+ **appealId** | **String**| Appeal identifier |
+ **reviewAppealedContentRequest** | [**ReviewAppealedContentRequest**](ReviewAppealedContentRequest.md)|  |
 
 ### Return type
 
@@ -455,7 +455,7 @@ Alias of `/moderation/appeals` — legacy v1 route used by the function runtime.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final ModerationAppealRequest moderationAppealRequest = ; // ModerationAppealRequest | 
+final ModerationAppealRequest moderationAppealRequest = ; // ModerationAppealRequest |
 
 try {
     final response = api.submitAppealV1(moderationAppealRequest);
@@ -469,7 +469,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **moderationAppealRequest** | [**ModerationAppealRequest**](ModerationAppealRequest.md)|  | 
+ **moderationAppealRequest** | [**ModerationAppealRequest**](ModerationAppealRequest.md)|  |
 
 ### Return type
 
@@ -491,14 +491,14 @@ Name | Type | Description  | Notes
 
 Submit a moderation appeal
 
-File an appeal against a moderation decision. Authenticated users with active accounts may appeal content removals. Daily appeal limits are tier-gated. 
+File an appeal against a moderation decision. Authenticated users with active accounts may appeal content removals. Daily appeal limits are tier-gated.
 
 ### Example
 ```dart
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final ModerationAppealRequest moderationAppealRequest = {"caseId":"case_01HZPQ2B3C4D5E6F7G8H9JABCD","statement":"I believe this was flagged in error because...","evidenceUrls":["https://example.com/evidence/screenshot.png"]}; // ModerationAppealRequest | 
+final ModerationAppealRequest moderationAppealRequest = {"caseId":"case_01HZPQ2B3C4D5E6F7G8H9JABCD","statement":"I believe this was flagged in error because...","evidenceUrls":["https://example.com/evidence/screenshot.png"]}; // ModerationAppealRequest |
 
 try {
     final response = api.submitModerationAppeal(moderationAppealRequest);
@@ -512,7 +512,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **moderationAppealRequest** | [**ModerationAppealRequest**](ModerationAppealRequest.md)|  | 
+ **moderationAppealRequest** | [**ModerationAppealRequest**](ModerationAppealRequest.md)|  |
 
 ### Return type
 
@@ -541,7 +541,7 @@ Alias of `/moderation/appeals/{appealId}/vote` — accepts appealId in the reque
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final VoteOnAppealV1Request voteOnAppealV1Request = ; // VoteOnAppealV1Request | 
+final VoteOnAppealV1Request voteOnAppealV1Request = ; // VoteOnAppealV1Request |
 
 try {
     final response = api.voteOnAppealV1(voteOnAppealV1Request);
@@ -555,7 +555,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **voteOnAppealV1Request** | [**VoteOnAppealV1Request**](VoteOnAppealV1Request.md)|  | 
+ **voteOnAppealV1Request** | [**VoteOnAppealV1Request**](VoteOnAppealV1Request.md)|  |
 
 ### Return type
 
@@ -577,7 +577,7 @@ Name | Type | Description  | Notes
 
 Cast a community vote on an appeal
 
-Authenticated community members may cast a weighted vote (`uphold` or `deny`) on an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules are enforced server-side. 
+Authenticated community members may cast a weighted vote (`uphold` or `deny`) on an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules are enforced server-side.
 
 ### Example
 ```dart
@@ -585,7 +585,7 @@ import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
 final String appealId = appealId_example; // String | Appeal identifier
-final AppealVoteRequest appealVoteRequest = {"vote":"uphold"}; // AppealVoteRequest | 
+final AppealVoteRequest appealVoteRequest = {"vote":"uphold"}; // AppealVoteRequest |
 
 try {
     final response = api.voteOnModerationAppeal(appealId, appealVoteRequest);
@@ -599,8 +599,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier | 
- **appealVoteRequest** | [**AppealVoteRequest**](AppealVoteRequest.md)|  | 
+ **appealId** | **String**| Appeal identifier |
+ **appealVoteRequest** | [**AppealVoteRequest**](AppealVoteRequest.md)|  |
 
 ### Return type
 
@@ -616,4 +616,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

@@ -30,7 +30,7 @@ class PostCreationState {
   final String? validationError;
   final bool isNews;
   final String contentType;
-  final String aiLabel;
+  final String? aiLabel;
   final ProofSignals proofSignals;
 
   const PostCreationState({
@@ -41,7 +41,7 @@ class PostCreationState {
     this.validationError,
     this.isNews = false,
     this.contentType = 'text',
-    this.aiLabel = 'human',
+    this.aiLabel,
     this.proofSignals = const ProofSignals(),
   });
 
@@ -75,7 +75,8 @@ class PostCreationState {
   }
 
   /// Check if the form is valid for submission
-  bool get isValid => text.trim().isNotEmpty && text.length <= 5000;
+  bool get isValid =>
+      text.trim().isNotEmpty && text.length <= 5000 && aiLabel != null;
 
   /// Check if there's a successful result
   bool get isSuccess => result is CreatePostSuccess;
@@ -208,8 +209,8 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       return 'Post text cannot exceed $postTextMaxLength characters';
     }
 
-    if (state.aiLabel == 'generated') {
-      return 'AI-generated content cannot be published on Lythaus';
+    if (state.aiLabel == null) {
+      return 'Choose an authorship disclosure before posting';
     }
 
     return null;
@@ -252,7 +253,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
           mediaUrl: state.mediaUrl,
           isNews: state.isNews,
           contentType: state.contentType,
-          aiLabel: state.aiLabel,
+          aiLabel: state.aiLabel!,
           proofSignals: state.proofSignals,
         ),
         token: token,

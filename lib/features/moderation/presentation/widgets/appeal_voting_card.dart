@@ -270,7 +270,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
   Widget _buildModerationInfo() {
     final spacing = context.spacing;
     final scheme = context.colorScheme;
-    final aiLabel = _aiLabel(widget.appeal.aiScore);
+    final aiLabel = widget.appeal.authorshipLabel;
 
     return Container(
       padding: EdgeInsets.all(spacing.md),
@@ -295,7 +295,7 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
               ),
             ],
           ),
-          if (aiLabel != null) ...[
+          if (aiLabel.isNotEmpty) ...[
             SizedBox(height: spacing.sm),
             LythChip(
               label: aiLabel,
@@ -638,14 +638,6 @@ class _AppealVotingCardState extends ConsumerState<AppealVotingCard> {
     if (urgency >= 60) return scheme.primary;
     if (urgency >= 40) return scheme.tertiary;
     return scheme.onSurface.withValues(alpha: 0.6);
-  }
-
-  String? _aiLabel(double? score) {
-    if (score == null) return null;
-    if (score >= 0.8) return 'AI flagged';
-    if (score >= 0.6) return 'AI review';
-    if (score >= 0.4) return 'AI signal';
-    return 'AI clear';
   }
 
   IconData _getContentIcon(String contentType) {

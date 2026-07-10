@@ -22,6 +22,7 @@ import 'package:asora/ui/components/tier_badge.dart';
 import 'package:asora/ui/theme/spacing.dart';
 import 'package:asora/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:asora/ui/screens/profile/settings_screen.dart';
+import 'package:asora/ui/screens/profile/edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.userId});
@@ -177,6 +178,15 @@ class ProfileScreen extends ConsumerWidget {
           ),
           if (isOwner) ...[
             const Divider(),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit profile'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => EditProfileScreen(profile: profile),
+                ),
+              ),
+            ),
             if (canModerate)
               ListTile(
                 leading: const Icon(Icons.shield_outlined),

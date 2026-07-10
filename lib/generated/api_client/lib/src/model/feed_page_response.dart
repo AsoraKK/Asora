@@ -15,7 +15,7 @@ part 'feed_page_response.g.dart';
 ///
 /// Properties:
 /// * [items] - Feed items for this page
-/// * [meta] 
+/// * [meta]
 @BuiltValue()
 abstract class FeedPageResponse implements Built<FeedPageResponse, FeedPageResponseBuilder> {
   /// Feed items for this page
@@ -123,4 +123,3 @@ class _$FeedPageResponseSerializer implements PrimitiveSerializer<FeedPageRespon
     return result.build();
   }
 }
-

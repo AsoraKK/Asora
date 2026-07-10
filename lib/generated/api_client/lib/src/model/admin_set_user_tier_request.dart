@@ -12,12 +12,26 @@ part 'admin_set_user_tier_request.g.dart';
 /// AdminSetUserTierRequest
 ///
 /// Properties:
-/// * [tier] 
+/// * [tier]
+/// * [reason]
+/// * [expiresAt] - Required for Premium and Black Alpha grants; no more than 90 days ahead.
+/// * [reviewAt] - Required for Premium and Black Alpha grants; on or before expiresAt.
 @BuiltValue()
 abstract class AdminSetUserTierRequest implements Built<AdminSetUserTierRequest, AdminSetUserTierRequestBuilder> {
   @BuiltValueField(wireName: r'tier')
   AdminSetUserTierRequestTierEnum get tier;
-  // enum tierEnum {  free,  creator,  premium,  enterprise,  };
+  // enum tierEnum {  free,  premium,  black,  };
+
+  @BuiltValueField(wireName: r'reason')
+  String get reason;
+
+  /// Required for Premium and Black Alpha grants; no more than 90 days ahead.
+  @BuiltValueField(wireName: r'expiresAt')
+  DateTime? get expiresAt;
+
+  /// Required for Premium and Black Alpha grants; on or before expiresAt.
+  @BuiltValueField(wireName: r'reviewAt')
+  DateTime? get reviewAt;
 
   AdminSetUserTierRequest._();
 
@@ -47,6 +61,25 @@ class _$AdminSetUserTierRequestSerializer implements PrimitiveSerializer<AdminSe
       object.tier,
       specifiedType: const FullType(AdminSetUserTierRequestTierEnum),
     );
+    yield r'reason';
+    yield serializers.serialize(
+      object.reason,
+      specifiedType: const FullType(String),
+    );
+    if (object.expiresAt != null) {
+      yield r'expiresAt';
+      yield serializers.serialize(
+        object.expiresAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.reviewAt != null) {
+      yield r'reviewAt';
+      yield serializers.serialize(
+        object.reviewAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
   }
 
   @override
@@ -76,6 +109,27 @@ class _$AdminSetUserTierRequestSerializer implements PrimitiveSerializer<AdminSe
             specifiedType: const FullType(AdminSetUserTierRequestTierEnum),
           ) as AdminSetUserTierRequestTierEnum;
           result.tier = valueDes;
+          break;
+        case r'reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.reason = valueDes;
+          break;
+        case r'expiresAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.expiresAt = valueDes;
+          break;
+        case r'reviewAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.reviewAt = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -110,12 +164,10 @@ class AdminSetUserTierRequestTierEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'free')
   static const AdminSetUserTierRequestTierEnum free = _$adminSetUserTierRequestTierEnum_free;
-  @BuiltValueEnumConst(wireName: r'creator')
-  static const AdminSetUserTierRequestTierEnum creator = _$adminSetUserTierRequestTierEnum_creator;
   @BuiltValueEnumConst(wireName: r'premium')
   static const AdminSetUserTierRequestTierEnum premium = _$adminSetUserTierRequestTierEnum_premium;
-  @BuiltValueEnumConst(wireName: r'enterprise')
-  static const AdminSetUserTierRequestTierEnum enterprise = _$adminSetUserTierRequestTierEnum_enterprise;
+  @BuiltValueEnumConst(wireName: r'black')
+  static const AdminSetUserTierRequestTierEnum black = _$adminSetUserTierRequestTierEnum_black;
 
   static Serializer<AdminSetUserTierRequestTierEnum> get serializer => _$adminSetUserTierRequestTierEnumSerializer;
 
@@ -124,4 +176,3 @@ class AdminSetUserTierRequestTierEnum extends EnumClass {
   static BuiltSet<AdminSetUserTierRequestTierEnum> get values => _$adminSetUserTierRequestTierEnumValues;
   static AdminSetUserTierRequestTierEnum valueOf(String name) => _$adminSetUserTierRequestTierEnumValueOf(name);
 }
-

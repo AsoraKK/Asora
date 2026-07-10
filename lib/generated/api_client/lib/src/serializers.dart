@@ -39,6 +39,7 @@ import 'package:asora_api_client/src/model/admin_content_action_request.dart';
 import 'package:asora_api_client/src/model/admin_content_action_response.dart';
 import 'package:asora_api_client/src/model/admin_content_state.dart';
 import 'package:asora_api_client/src/model/admin_content_type.dart';
+import 'package:asora_api_client/src/model/admin_created_invite.dart';
 import 'package:asora_api_client/src/model/admin_flag_detail_appeal.dart';
 import 'package:asora_api_client/src/model/admin_flag_detail_content.dart';
 import 'package:asora_api_client/src/model/admin_flag_detail_flags.dart';
@@ -84,7 +85,6 @@ import 'package:asora_api_client/src/model/auth_token_request.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error.dart';
 import 'package:asora_api_client/src/model/bad_gateway_error_error.dart';
 import 'package:asora_api_client/src/model/create_custom_feed_request.dart';
-import 'package:asora_api_client/src/model/create_post201_response.dart';
 import 'package:asora_api_client/src/model/create_post_request.dart';
 import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
 import 'package:asora_api_client/src/model/custom_feed_definition.dart';
@@ -111,11 +111,15 @@ import 'package:asora_api_client/src/model/invite_validation_payload.dart';
 import 'package:asora_api_client/src/model/invite_validation_response.dart';
 import 'package:asora_api_client/src/model/ledger_entry.dart';
 import 'package:asora_api_client/src/model/ledger_page.dart';
+import 'package:asora_api_client/src/model/legacy_create_post_response.dart';
+import 'package:asora_api_client/src/model/legacy_create_post_response_post.dart';
+import 'package:asora_api_client/src/model/legacy_create_post_response_post_stats.dart';
 import 'package:asora_api_client/src/model/legal_hold_clear.dart';
 import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
 import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/news_board_feed_response.dart';
 import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response_data.dart';
@@ -124,6 +128,7 @@ import 'package:asora_api_client/src/model/post_proof_signals.dart';
 import 'package:asora_api_client/src/model/post_trust_timeline.dart';
 import 'package:asora_api_client/src/model/post_view.dart';
 import 'package:asora_api_client/src/model/post_view_all_of_recent_comments.dart';
+import 'package:asora_api_client/src/model/public_authorship.dart';
 import 'package:asora_api_client/src/model/public_reputation_view.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/redeem_invite_request.dart';
@@ -179,6 +184,7 @@ part 'serializers.g.dart';
   AdminContentActionResponse,
   AdminContentState,
   AdminContentType,
+  AdminCreatedInvite,
   AdminFlagDetailAppeal,
   AdminFlagDetailContent,
   AdminFlagDetailFlags,
@@ -224,9 +230,8 @@ part 'serializers.g.dart';
   BadGatewayError,
   BadGatewayErrorError,
   CreateCustomFeedRequest,
-  CreatePost201Response,
   CreatePostRequest,
-  CursorPaginatedPostView,
+  CursorPaginatedPostView,$CursorPaginatedPostView,
   CustomFeedDefinition,
   CustomFeedListResponse,
   DSRExportResponse,
@@ -251,11 +256,15 @@ part 'serializers.g.dart';
   InviteValidationResponse,
   LedgerEntry,
   LedgerPage,
+  LegacyCreatePostResponse,
+  LegacyCreatePostResponsePost,
+  LegacyCreatePostResponsePostStats,
   LegalHoldClear,
   LegalHoldInput,
   LegalHoldRecord,
   ModerationAppealRequest,
   ModerationBlockedResponse,
+  NewsBoardFeedResponse,
   NewsSourceMetadata,
   OAuthTokenResponse,
   OAuthTokenResponseData,
@@ -264,6 +273,7 @@ part 'serializers.g.dart';
   PostTrustTimeline,
   PostView,
   PostViewAllOfRecentComments,
+  PublicAuthorship,
   PublicReputationView,
   RateLimitError,
   RedeemInviteRequest,
@@ -297,6 +307,7 @@ Serializers serializers = (_$serializers.toBuilder()
         () => MapBuilder<String, JsonObject>(),
       )
       ..add(AdminInvite.serializer)
+      ..add(CursorPaginatedPostView.serializer)
       ..add(Post.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())

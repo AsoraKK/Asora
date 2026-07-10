@@ -10,6 +10,7 @@ const trackExceptionMock = jest.mocked(trackException);
 const baseEnv: Record<string, string> = {
   COSMOS_CONNECTION_STRING: 'AccountEndpoint=https://example/;',
   JWT_SECRET: '0123456789abcdef0123456789abcdef',
+  INVITE_CODE_PEPPER: 'invite-pepper-0123456789abcdef0123456789',
   JWT_ISSUER: 'asora-auth',
   HIVE_API_KEY: 'hive-test-key',
   KV_URL: 'https://example.vault.azure.net/',

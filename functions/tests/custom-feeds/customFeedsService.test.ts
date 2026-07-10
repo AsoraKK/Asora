@@ -244,12 +244,10 @@ describe('createCustomFeed — tier limits', () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
-  it('admin tier: allows 20 feeds', async () => {
-    for (let i = 0; i < 20; i++) {
-      await createCustomFeed('user-admin', minPayload(`Feed ${i}`), 'admin');
-    }
+  it('legacy admin tier falls back to the Free commercial entitlement', async () => {
+    await createCustomFeed('user-admin', minPayload('Feed 1'), 'admin');
     await expect(
-      createCustomFeed('user-admin', minPayload('Feed 21'), 'admin')
+      createCustomFeed('user-admin', minPayload('Feed 2'), 'admin')
     ).rejects.toMatchObject({ status: 403 });
   });
 
@@ -462,9 +460,9 @@ describe('listCustomFeeds — cursor pagination', () => {
 
   it('returns nextCursor when there are more results', async () => {
     // Create 3 feeds but request only 2 per page
-    await createCustomFeed('owner-pag2', minPayload('F1'), 'admin');
-    await createCustomFeed('owner-pag2', minPayload('F2'), 'admin');
-    await createCustomFeed('owner-pag2', minPayload('F3'), 'admin');
+    await createCustomFeed('owner-pag2', minPayload('F1'), 'black');
+    await createCustomFeed('owner-pag2', minPayload('F2'), 'black');
+    await createCustomFeed('owner-pag2', minPayload('F3'), 'black');
 
     const { feeds, nextCursor } = await listCustomFeeds('owner-pag2', undefined, 2);
     expect(feeds).toHaveLength(2);

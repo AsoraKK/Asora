@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:asora_api_client/src/model/public_authorship.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,18 +14,19 @@ part 'post.g.dart';
 /// Post
 ///
 /// Properties:
-/// * [id] 
-/// * [authorId] 
-/// * [content] 
-/// * [contentType] 
-/// * [mediaUrls] 
-/// * [topics] 
-/// * [visibility] 
-/// * [isNews] 
-/// * [source_] 
-/// * [clusterId] 
-/// * [createdAt] 
-/// * [updatedAt] 
+/// * [id]
+/// * [authorId]
+/// * [content]
+/// * [contentType]
+/// * [mediaUrls]
+/// * [topics]
+/// * [visibility]
+/// * [isNews]
+/// * [source_]
+/// * [clusterId]
+/// * [authorship]
+/// * [createdAt]
+/// * [updatedAt]
 @BuiltValue(instantiable: false)
 abstract class Post  {
   @BuiltValueField(wireName: r'id')
@@ -58,6 +60,9 @@ abstract class Post  {
 
   @BuiltValueField(wireName: r'clusterId')
   String? get clusterId;
+
+  @BuiltValueField(wireName: r'authorship')
+  PublicAuthorship get authorship;
 
   @BuiltValueField(wireName: r'createdAt')
   DateTime get createdAt;
@@ -139,6 +144,11 @@ class _$PostSerializer implements PrimitiveSerializer<Post> {
         specifiedType: const FullType(String),
       );
     }
+    yield r'authorship';
+    yield serializers.serialize(
+      object.authorship,
+      specifiedType: const FullType(PublicAuthorship),
+    );
     yield r'createdAt';
     yield serializers.serialize(
       object.createdAt,
@@ -282,6 +292,13 @@ class _$$PostSerializer implements PrimitiveSerializer<$Post> {
           ) as String;
           result.clusterId = valueDes;
           break;
+        case r'authorship':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PublicAuthorship),
+          ) as PublicAuthorship;
+          result.authorship.replace(valueDes);
+          break;
         case r'createdAt':
           final valueDes = serializers.deserialize(
             value,
@@ -360,4 +377,3 @@ class PostVisibilityEnum extends EnumClass {
   static BuiltSet<PostVisibilityEnum> get values => _$postVisibilityEnumValues;
   static PostVisibilityEnum valueOf(String name) => _$postVisibilityEnumValueOf(name);
 }
-
