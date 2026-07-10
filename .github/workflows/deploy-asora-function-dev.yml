@@ -158,9 +158,11 @@ jobs:
 
           ARTIFACT_SHA256=$(sha256sum functions-dist.zip | awk '{print $1}')
           echo "FUNCTION_ARTIFACT_SHA256=$ARTIFACT_SHA256" >> "$GITHUB_ENV"
-          echo "functions_sha256=$ARTIFACT_SHA256" >> "$GITHUB_OUTPUT"
-          echo "functions_github_digest=$FUNCTIONS_GITHUB_DIGEST" >> "$GITHUB_OUTPUT"
-          echo "web_github_digest=$WEB_GITHUB_DIGEST" >> "$GITHUB_OUTPUT"
+          {
+            echo "functions_sha256=$ARTIFACT_SHA256"
+            echo "functions_github_digest=$FUNCTIONS_GITHUB_DIGEST"
+            echo "web_github_digest=$WEB_GITHUB_DIGEST"
+          } >> "$GITHUB_OUTPUT"
           echo "Verified CI run $CI_RUN_ID for $RELEASE_SHA"
           echo "Functions artifact SHA-256: $ARTIFACT_SHA256"
 
@@ -319,7 +321,6 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
           KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
 
           if [ -z "$KEY_VAULT" ]; then
@@ -370,7 +371,6 @@ jobs:
       - name: Validate Flex app settings
         run: |
           set -euo pipefail
-          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
           SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
           EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
           if [ "$EXT_VERSION" != "~4" ]; then
