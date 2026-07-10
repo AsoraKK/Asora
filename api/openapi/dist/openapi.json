@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus (formerly Asora) API",
-    "version": "v2",
+    "version": "v3",
     "description": "HTTP contract for Lythaus (formerly Asora) Functions v1.",
     "license": {
       "name": "MIT",
