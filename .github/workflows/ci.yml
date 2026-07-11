@@ -847,6 +847,9 @@ jobs:
       - name: Test DSR storage verifier CLI contract
         run: node --test scripts/tests/verify-dsr-storage.test.js
 
+      - name: Test Cosmos network verifier CLI contract
+        run: node --test scripts/tests/verify-cosmos-network.test.js
+
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest

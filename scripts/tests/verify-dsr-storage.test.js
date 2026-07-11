@@ -32,4 +32,18 @@ test('retention checks follow the current management policy response shape', () 
     verifier,
     /definition\.actions\.snapshot\.delete\.daysAfterCreationGreaterThan/
   );
+  assert.match(
+    verifier,
+    /\^30\(\[\.\]0\+\)\?\$/
+  );
+});
+
+test('cost-constrained mode requires Entra-only HTTPS storage controls', () => {
+  assert.match(verifier, /NETWORK_MODE="\$\{4:-private\}"/);
+  assert.match(verifier, /"\$NETWORK_MODE" == "public-rbac"/);
+  assert.match(verifier, /allowSharedKeyAccess/);
+  assert.match(verifier, /allowBlobPublicAccess/);
+  assert.match(verifier, /enableHttpsTrafficOnly/);
+  assert.match(verifier, /minimumTlsVersion/);
+  assert.match(verifier, /defaultToOAuthAuthentication/);
 });

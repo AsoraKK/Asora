@@ -62,6 +62,8 @@ This amends the earlier manifesto/policy interpretation that all AI-generated co
 - Alpha registrations remain disabled until provider rotations, live contracts, DSR, browser smoke, feed performance, and rollback gates pass.
 - Shared infrastructure increases blast radius. Mitigations are the Technical Alpha cap, explicit stage controls, test-data isolation, audited kill switches, read-only mode, immutable deployment metadata, and short review periods.
 - No workflow may silently select the first Key Vault in a multi-vault resource group. Staging explicitly selects `kv-asora-flex-dev`.
+- For Technical Alpha only, the reused DSR storage and Cosmos DB accounts may retain their public Azure service endpoints because the shared Function App has no VNet integration. DSR storage requires private containers, anonymous blob access disabled, shared-key authorization disabled, Entra OAuth as the default, HTTPS-only transport, TLS 1.2, audited RBAC, and 30-day lifecycle deletion. Cosmos requires TLS 1.2, and its application credential must remain a resolved Key Vault reference verified during every deployment.
+- Production continues to require private networking. Progression to Controlled Alpha requires private DSR storage and Cosmos networking, or a new measured ADR amendment approved by Kyle. Cosmos managed-identity migration remains required before local authentication can be disabled safely.
 - A separate staging resource group and service stack is deferred until revenue supports the cost or before Beta, whichever comes first. Migration requires a reviewed plan and tested rollback.
 
 ## Implementation status

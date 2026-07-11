@@ -1,6 +1,6 @@
 # Controlled Alpha Known-Risk Register
 
-Status: current as of 2026-07-10
+Status: current as of 2026-07-11
 
 | Priority | Risk | Current control | Closure evidence |
 | --- | --- | --- | --- |
@@ -10,6 +10,7 @@ Status: current as of 2026-07-10
 | P1 | Current dev feed p95 exceeds 200 ms | Query/hydration/index/cursor remediation plus exact-SHA k6 matrix | Representative warm p95 below approved threshold and errors below 1% |
 | P1 | Rollback procedure is implemented but not rehearsed | Protected manual immutable-artifact rollback workflow | Successful staging rehearsal and restoration evidence |
 | P1 | Kyle is the only human operator | Cohort limits, kill switches, alerts, daily reports, reversible config, approval boundaries | Stage A operational review shows sustainable workload |
+| P1 | Cost-constrained Technical Alpha DSR storage and Cosmos DB use public Azure service endpoints | DSR is private-container and Entra/RBAC-only with HTTPS/TLS 1.2 and 30-day lifecycle; Cosmos requires TLS 1.2 and a deployment-verified Key Vault connection reference | Private networking and Cosmos managed identity before Controlled Alpha, or a new Kyle-approved measured ADR amendment |
 | P1 | Active-user estimate depends on authenticated telemetry identity population | Report labels it as an estimate and excludes raw identities | Telemetry validation against aggregate cohort/account counts |
 | P2 | Moderate npm advisories remain in non-production telemetry/tooling paths | High/critical production audit fails closed; dependency review remains required | Upstream upgrades or documented dependency replacement |
 | P2 | Old architecture/product snapshots remain for historical context | Superseded banners and canonical index identify current sources | Periodic documentation drift check |
