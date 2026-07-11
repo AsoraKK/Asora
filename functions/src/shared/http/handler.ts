@@ -122,17 +122,26 @@ function applyStandardResponseHeaders(
 /**
  * Create HTTP Handler Context
  */
-function createHandlerContext<TRequest>(
+async function createHandlerContext<TRequest>(
   request: HttpRequest,
   context: InvocationContext,
   correlationId: string
-): HttpHandlerContext<TRequest> {
+): Promise<HttpHandlerContext<TRequest>> {
   // Parse request body if present
   let body: TRequest | undefined;
   try {
     const rawBody = request.body;
     if (rawBody) {
-      body = (typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody) as TRequest;
+      if (typeof rawBody === 'string') {
+        body = JSON.parse(rawBody) as TRequest;
+      } else if (
+        typeof request.json === 'function' &&
+        typeof (rawBody as { getReader?: unknown }).getReader === 'function'
+      ) {
+        body = (await request.json()) as TRequest;
+      } else {
+        body = rawBody as TRequest;
+      }
     }
   } catch (err) {
     context.warn(`[HTTP Handler] Failed to parse request body: ${err instanceof Error ? err.message : err}`);
@@ -305,7 +314,7 @@ export function httpHandler<TRequest = unknown, TResponse = unknown>(
 
     try {
       return await runWithRequestOrigin(requestOrigin, async () => {
-        const ctx = createHandlerContext<TRequest>(request, context, correlationId);
+        const ctx = await createHandlerContext<TRequest>(request, context, correlationId);
         const response = await handler(ctx);
 
         applyStandardResponseHeaders(

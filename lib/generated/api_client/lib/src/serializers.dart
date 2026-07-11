@@ -90,12 +90,13 @@ import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
 import 'package:asora_api_client/src/model/custom_feed_definition.dart';
 import 'package:asora_api_client/src/model/custom_feed_list_response.dart';
 import 'package:asora_api_client/src/model/dsr_export_response.dart';
-import 'package:asora_api_client/src/model/dsr_export_response_previous_exports_inner.dart';
+import 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:asora_api_client/src/model/dsr_request_input.dart';
 import 'package:asora_api_client/src/model/dsr_request_summary.dart';
 import 'package:asora_api_client/src/model/error.dart';
 import 'package:asora_api_client/src/model/error_response.dart';
 import 'package:asora_api_client/src/model/error_response_error.dart';
+import 'package:asora_api_client/src/model/feed_page_envelope.dart';
 import 'package:asora_api_client/src/model/feed_page_response.dart';
 import 'package:asora_api_client/src/model/feed_page_response_meta.dart';
 import 'package:asora_api_client/src/model/flag_content202_response.dart';
@@ -119,6 +120,7 @@ import 'package:asora_api_client/src/model/legal_hold_input.dart';
 import 'package:asora_api_client/src/model/legal_hold_record.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
 import 'package:asora_api_client/src/model/moderation_blocked_response.dart';
+import 'package:asora_api_client/src/model/moderation_flag_validation_error.dart';
 import 'package:asora_api_client/src/model/news_board_feed_response.dart';
 import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:asora_api_client/src/model/o_auth_token_response.dart';
@@ -141,12 +143,12 @@ import 'package:asora_api_client/src/model/reward_redemption.dart';
 import 'package:asora_api_client/src/model/rewards_me_response.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:asora_api_client/src/model/service_unavailable_error_error.dart';
+import 'package:asora_api_client/src/model/simple_error.dart';
 import 'package:asora_api_client/src/model/submit_reaction_request.dart';
 import 'package:asora_api_client/src/model/submit_reaction_response.dart';
 import 'package:asora_api_client/src/model/subscription_status.dart';
 import 'package:asora_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
-import 'package:asora_api_client/src/model/unauthorized_error_error.dart';
 import 'package:asora_api_client/src/model/update_custom_feed_request.dart';
 import 'package:asora_api_client/src/model/update_post_request.dart';
 import 'package:asora_api_client/src/model/user_info_response.dart';
@@ -235,12 +237,13 @@ part 'serializers.g.dart';
   CustomFeedDefinition,
   CustomFeedListResponse,
   DSRExportResponse,
-  DSRExportResponsePreviousExportsInner,
+  DSRExportResponseMetadata,
   DsrRequestInput,
   DsrRequestSummary,
   Error,
   ErrorResponse,
   ErrorResponseError,
+  FeedPageEnvelope,
   FeedPageResponse,
   FeedPageResponseMeta,
   FlagContent202Response,
@@ -264,6 +267,7 @@ part 'serializers.g.dart';
   LegalHoldRecord,
   ModerationAppealRequest,
   ModerationBlockedResponse,
+  ModerationFlagValidationError,
   NewsBoardFeedResponse,
   NewsSourceMetadata,
   OAuthTokenResponse,
@@ -286,12 +290,12 @@ part 'serializers.g.dart';
   RewardsMeResponse,
   ServiceUnavailableError,
   ServiceUnavailableErrorError,
+  SimpleError,
   SubmitReactionRequest,
   SubmitReactionResponse,
   SubscriptionStatus,
   SubscriptionStatusEntitlements,
   UnauthorizedError,
-  UnauthorizedErrorError,
   UpdateCustomFeedRequest,
   UpdatePostRequest,
   UserInfoResponse,

@@ -20,6 +20,7 @@ import 'package:asora_api_client/src/model/flag_content_v1_request.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/get_my_appeals200_response.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
+import 'package:asora_api_client/src/model/moderation_flag_validation_error.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/review_appealed_content_request.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';

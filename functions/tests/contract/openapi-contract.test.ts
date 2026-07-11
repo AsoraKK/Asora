@@ -18,9 +18,14 @@ interface RequestOptions {
 const spec = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', '..', '..', 'api/openapi/dist/openapi.json'), 'utf-8')
 );
-const server = process.env.STAGING_DOMAIN
-  ? `https://${process.env.STAGING_DOMAIN}`
-  : spec.servers?.[0]?.url;
+const requireLiveContracts = process.env.REQUIRE_LIVE_CONTRACTS === 'true';
+const server = process.env.ALPHA_API_BASE_URL
+  ? process.env.ALPHA_API_BASE_URL
+  : process.env.STAGING_DOMAIN
+  ? `https://${process.env.STAGING_DOMAIN}/api`
+  : requireLiveContracts
+  ? spec.servers?.[0]?.url
+  : undefined;
 const jwt = process.env.STAGING_SMOKE_TOKEN;
 
 test('OpenAPI spec omits legacy auth config path', () => {

@@ -1,4 +1,4 @@
-# asora_api_client.model.UnauthorizedError
+# asora_api_client.model.DSRExportResponseMetadata
 
 ## Load the model package
 ```dart
@@ -8,6 +8,10 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**error** | [**ErrorResponseError**](ErrorResponseError.md) |  |
+**exportId** | **String** |  |
+**exportedAt** | [**DateTime**](DateTime.md) |  |
+**exportedBy** | **String** |  |
+**dataVersion** | **String** |  |
+**retentionPeriod** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -254,14 +254,17 @@ export async function getFeed({
 }
 
 function resolveLimit(value?: string | number | null): number {
-  const parsed =
-    typeof value === 'string' ? Number.parseInt(value, 10) : Number(value ?? Number.NaN);
-
-  if (!Number.isFinite(parsed) || parsed < 1) {
+  if (value === null || value === undefined || value === '') {
     return DEFAULT_LIMIT;
   }
 
-  return Math.min(parsed, MAX_LIMIT);
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_LIMIT) {
+    throw new HttpError(400, `limit must be an integer between 1 and ${MAX_LIMIT}`);
+  }
+
+  return parsed;
 }
 
 export function parseCursor(cursor?: string | null): FeedCursor | null {

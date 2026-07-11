@@ -1,4 +1,4 @@
-# asora_api_client.model.UnauthorizedError
+# asora_api_client.model.SimpleError
 
 ## Load the model package
 ```dart
@@ -8,6 +8,6 @@ import 'package:asora_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**error** | [**ErrorResponseError**](ErrorResponseError.md) |  |
+**error** | **String** | Machine-readable or plain-language error identifier. |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

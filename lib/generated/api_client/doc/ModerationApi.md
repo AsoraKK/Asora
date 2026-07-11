@@ -37,7 +37,7 @@ Flag content for review.
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getModerationApi();
-final FlagContentRequest flagContentRequest = {"targetId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","reason":"spam","notes":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest |
+final FlagContentRequest flagContentRequest = {"contentId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","contentType":"post","reason":"spam","additionalDetails":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest |
 
 try {
     final response = api.flagContent(flagContentRequest);

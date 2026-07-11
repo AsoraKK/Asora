@@ -191,7 +191,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getFeed**
-> FeedPageResponse getFeed(cursor, limit)
+> FeedPageEnvelope getFeed(cursor, limit)
 
 Retrieve personalized feed items
 
@@ -222,7 +222,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**FeedPageResponse**](FeedPageResponse.md)
+[**FeedPageEnvelope**](FeedPageEnvelope.md)
 
 ### Authorization
 

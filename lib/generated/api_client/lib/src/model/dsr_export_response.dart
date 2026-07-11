@@ -4,7 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
-import 'package:asora_api_client/src/model/dsr_export_response_previous_exports_inner.dart';
+import 'package:asora_api_client/src/model/dsr_export_response_metadata.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -14,51 +14,35 @@ part 'dsr_export_response.g.dart';
 /// GDPR Article 20 data portability export payload.
 ///
 /// Properties:
-/// * [exportId] - Unique identifier for this export
-/// * [exportedAt]
-/// * [exportedBy] - User ID of the exporting account
-/// * [userId] - User whose data is contained in this export
-/// * [profile] - User profile data
-/// * [posts]
-/// * [comments]
-/// * [bookmarks]
-/// * [notifications]
-/// * [previousExports]
+/// * [metadata]
+/// * [userProfile]
+/// * [content]
+/// * [interactions]
+/// * [moderation]
+/// * [reputation]
+/// * [privacy]
 @BuiltValue()
 abstract class DSRExportResponse implements Built<DSRExportResponse, DSRExportResponseBuilder> {
-  /// Unique identifier for this export
-  @BuiltValueField(wireName: r'exportId')
-  String get exportId;
+  @BuiltValueField(wireName: r'metadata')
+  DSRExportResponseMetadata get metadata;
 
-  @BuiltValueField(wireName: r'exportedAt')
-  DateTime get exportedAt;
+  @BuiltValueField(wireName: r'userProfile')
+  BuiltMap<String, JsonObject?> get userProfile;
 
-  /// User ID of the exporting account
-  @BuiltValueField(wireName: r'exportedBy')
-  String get exportedBy;
+  @BuiltValueField(wireName: r'content')
+  BuiltMap<String, JsonObject?> get content;
 
-  /// User whose data is contained in this export
-  @BuiltValueField(wireName: r'userId')
-  String get userId;
+  @BuiltValueField(wireName: r'interactions')
+  BuiltMap<String, JsonObject?> get interactions;
 
-  /// User profile data
-  @BuiltValueField(wireName: r'profile')
-  BuiltMap<String, JsonObject?>? get profile;
+  @BuiltValueField(wireName: r'moderation')
+  BuiltMap<String, JsonObject?> get moderation;
 
-  @BuiltValueField(wireName: r'posts')
-  BuiltList<BuiltMap<String, JsonObject?>>? get posts;
+  @BuiltValueField(wireName: r'reputation')
+  BuiltMap<String, JsonObject?> get reputation;
 
-  @BuiltValueField(wireName: r'comments')
-  BuiltList<BuiltMap<String, JsonObject?>>? get comments;
-
-  @BuiltValueField(wireName: r'bookmarks')
-  BuiltList<BuiltMap<String, JsonObject?>>? get bookmarks;
-
-  @BuiltValueField(wireName: r'notifications')
-  BuiltList<BuiltMap<String, JsonObject?>>? get notifications;
-
-  @BuiltValueField(wireName: r'previousExports')
-  BuiltList<DSRExportResponsePreviousExportsInner>? get previousExports;
+  @BuiltValueField(wireName: r'privacy')
+  BuiltMap<String, JsonObject?> get privacy;
 
   DSRExportResponse._();
 
@@ -83,68 +67,41 @@ class _$DSRExportResponseSerializer implements PrimitiveSerializer<DSRExportResp
     DSRExportResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'exportId';
+    yield r'metadata';
     yield serializers.serialize(
-      object.exportId,
-      specifiedType: const FullType(String),
+      object.metadata,
+      specifiedType: const FullType(DSRExportResponseMetadata),
     );
-    yield r'exportedAt';
+    yield r'userProfile';
     yield serializers.serialize(
-      object.exportedAt,
-      specifiedType: const FullType(DateTime),
+      object.userProfile,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
-    yield r'exportedBy';
+    yield r'content';
     yield serializers.serialize(
-      object.exportedBy,
-      specifiedType: const FullType(String),
+      object.content,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
-    yield r'userId';
+    yield r'interactions';
     yield serializers.serialize(
-      object.userId,
-      specifiedType: const FullType(String),
+      object.interactions,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
-    if (object.profile != null) {
-      yield r'profile';
-      yield serializers.serialize(
-        object.profile,
-        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-      );
-    }
-    if (object.posts != null) {
-      yield r'posts';
-      yield serializers.serialize(
-        object.posts,
-        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-      );
-    }
-    if (object.comments != null) {
-      yield r'comments';
-      yield serializers.serialize(
-        object.comments,
-        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-      );
-    }
-    if (object.bookmarks != null) {
-      yield r'bookmarks';
-      yield serializers.serialize(
-        object.bookmarks,
-        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-      );
-    }
-    if (object.notifications != null) {
-      yield r'notifications';
-      yield serializers.serialize(
-        object.notifications,
-        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-      );
-    }
-    if (object.previousExports != null) {
-      yield r'previousExports';
-      yield serializers.serialize(
-        object.previousExports,
-        specifiedType: const FullType(BuiltList, [FullType(DSRExportResponsePreviousExportsInner)]),
-      );
-    }
+    yield r'moderation';
+    yield serializers.serialize(
+      object.moderation,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+    );
+    yield r'reputation';
+    yield serializers.serialize(
+      object.reputation,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+    );
+    yield r'privacy';
+    yield serializers.serialize(
+      object.privacy,
+      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+    );
   }
 
   @override
@@ -168,75 +125,54 @@ class _$DSRExportResponseSerializer implements PrimitiveSerializer<DSRExportResp
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'exportId':
+        case r'metadata':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.exportId = valueDes;
+            specifiedType: const FullType(DSRExportResponseMetadata),
+          ) as DSRExportResponseMetadata;
+          result.metadata.replace(valueDes);
           break;
-        case r'exportedAt':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
-          result.exportedAt = valueDes;
-          break;
-        case r'exportedBy':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.exportedBy = valueDes;
-          break;
-        case r'userId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.userId = valueDes;
-          break;
-        case r'profile':
+        case r'userProfile':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
-          result.profile.replace(valueDes);
+          result.userProfile.replace(valueDes);
           break;
-        case r'posts':
+        case r'content':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
-          result.posts.replace(valueDes);
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.content.replace(valueDes);
           break;
-        case r'comments':
+        case r'interactions':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
-          result.comments.replace(valueDes);
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.interactions.replace(valueDes);
           break;
-        case r'bookmarks':
+        case r'moderation':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
-          result.bookmarks.replace(valueDes);
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.moderation.replace(valueDes);
           break;
-        case r'notifications':
+        case r'reputation':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
-          result.notifications.replace(valueDes);
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.reputation.replace(valueDes);
           break;
-        case r'previousExports':
+        case r'privacy':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(DSRExportResponsePreviousExportsInner)]),
-          ) as BuiltList<DSRExportResponsePreviousExportsInner>;
-          result.previousExports.replace(valueDes);
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.privacy.replace(valueDes);
           break;
         default:
           unhandled.add(key);

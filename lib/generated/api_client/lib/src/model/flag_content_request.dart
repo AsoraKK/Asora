@@ -12,14 +12,20 @@ part 'flag_content_request.g.dart';
 /// FlagContentRequest
 ///
 /// Properties:
-/// * [targetId] - Identifier of the content being flagged
+/// * [contentId] - Identifier of the content being flagged
+/// * [contentType]
 /// * [reason] - Moderation reason
-/// * [notes] - Additional details supporting the flag
+/// * [additionalDetails] - Additional details supporting the flag
+/// * [urgency]
 @BuiltValue()
 abstract class FlagContentRequest implements Built<FlagContentRequest, FlagContentRequestBuilder> {
   /// Identifier of the content being flagged
-  @BuiltValueField(wireName: r'targetId')
-  String get targetId;
+  @BuiltValueField(wireName: r'contentId')
+  String get contentId;
+
+  @BuiltValueField(wireName: r'contentType')
+  FlagContentRequestContentTypeEnum get contentType;
+  // enum contentTypeEnum {  post,  comment,  user,  message,  };
 
   /// Moderation reason
   @BuiltValueField(wireName: r'reason')
@@ -27,15 +33,20 @@ abstract class FlagContentRequest implements Built<FlagContentRequest, FlagConte
   // enum reasonEnum {  spam,  harassment,  hate_speech,  violence,  adult_content,  misinformation,  copyright,  privacy,  other,  };
 
   /// Additional details supporting the flag
-  @BuiltValueField(wireName: r'notes')
-  String? get notes;
+  @BuiltValueField(wireName: r'additionalDetails')
+  String? get additionalDetails;
+
+  @BuiltValueField(wireName: r'urgency')
+  FlagContentRequestUrgencyEnum? get urgency;
+  // enum urgencyEnum {  low,  medium,  high,  };
 
   FlagContentRequest._();
 
   factory FlagContentRequest([void updates(FlagContentRequestBuilder b)]) = _$FlagContentRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(FlagContentRequestBuilder b) => b;
+  static void _defaults(FlagContentRequestBuilder b) => b
+      ..urgency = const FlagContentRequestUrgencyEnum._('medium');
 
   @BuiltValueSerializer(custom: true)
   static Serializer<FlagContentRequest> get serializer => _$FlagContentRequestSerializer();
@@ -53,21 +64,33 @@ class _$FlagContentRequestSerializer implements PrimitiveSerializer<FlagContentR
     FlagContentRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'targetId';
+    yield r'contentId';
     yield serializers.serialize(
-      object.targetId,
+      object.contentId,
       specifiedType: const FullType(String),
+    );
+    yield r'contentType';
+    yield serializers.serialize(
+      object.contentType,
+      specifiedType: const FullType(FlagContentRequestContentTypeEnum),
     );
     yield r'reason';
     yield serializers.serialize(
       object.reason,
       specifiedType: const FullType(FlagContentRequestReasonEnum),
     );
-    if (object.notes != null) {
-      yield r'notes';
+    if (object.additionalDetails != null) {
+      yield r'additionalDetails';
       yield serializers.serialize(
-        object.notes,
+        object.additionalDetails,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.urgency != null) {
+      yield r'urgency';
+      yield serializers.serialize(
+        object.urgency,
+        specifiedType: const FullType(FlagContentRequestUrgencyEnum),
       );
     }
   }
@@ -93,12 +116,19 @@ class _$FlagContentRequestSerializer implements PrimitiveSerializer<FlagContentR
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'targetId':
+        case r'contentId':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.targetId = valueDes;
+          result.contentId = valueDes;
+          break;
+        case r'contentType':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(FlagContentRequestContentTypeEnum),
+          ) as FlagContentRequestContentTypeEnum;
+          result.contentType = valueDes;
           break;
         case r'reason':
           final valueDes = serializers.deserialize(
@@ -107,12 +137,19 @@ class _$FlagContentRequestSerializer implements PrimitiveSerializer<FlagContentR
           ) as FlagContentRequestReasonEnum;
           result.reason = valueDes;
           break;
-        case r'notes':
+        case r'additionalDetails':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.notes = valueDes;
+          result.additionalDetails = valueDes;
+          break;
+        case r'urgency':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(FlagContentRequestUrgencyEnum),
+          ) as FlagContentRequestUrgencyEnum;
+          result.urgency = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -141,6 +178,25 @@ class _$FlagContentRequestSerializer implements PrimitiveSerializer<FlagContentR
     );
     return result.build();
   }
+}
+
+class FlagContentRequestContentTypeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'post')
+  static const FlagContentRequestContentTypeEnum post = _$flagContentRequestContentTypeEnum_post;
+  @BuiltValueEnumConst(wireName: r'comment')
+  static const FlagContentRequestContentTypeEnum comment = _$flagContentRequestContentTypeEnum_comment;
+  @BuiltValueEnumConst(wireName: r'user')
+  static const FlagContentRequestContentTypeEnum user = _$flagContentRequestContentTypeEnum_user;
+  @BuiltValueEnumConst(wireName: r'message')
+  static const FlagContentRequestContentTypeEnum message = _$flagContentRequestContentTypeEnum_message;
+
+  static Serializer<FlagContentRequestContentTypeEnum> get serializer => _$flagContentRequestContentTypeEnumSerializer;
+
+  const FlagContentRequestContentTypeEnum._(String name): super(name);
+
+  static BuiltSet<FlagContentRequestContentTypeEnum> get values => _$flagContentRequestContentTypeEnumValues;
+  static FlagContentRequestContentTypeEnum valueOf(String name) => _$flagContentRequestContentTypeEnumValueOf(name);
 }
 
 class FlagContentRequestReasonEnum extends EnumClass {
@@ -179,4 +235,21 @@ class FlagContentRequestReasonEnum extends EnumClass {
 
   static BuiltSet<FlagContentRequestReasonEnum> get values => _$flagContentRequestReasonEnumValues;
   static FlagContentRequestReasonEnum valueOf(String name) => _$flagContentRequestReasonEnumValueOf(name);
+}
+
+class FlagContentRequestUrgencyEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'low')
+  static const FlagContentRequestUrgencyEnum low = _$flagContentRequestUrgencyEnum_low;
+  @BuiltValueEnumConst(wireName: r'medium')
+  static const FlagContentRequestUrgencyEnum medium = _$flagContentRequestUrgencyEnum_medium;
+  @BuiltValueEnumConst(wireName: r'high')
+  static const FlagContentRequestUrgencyEnum high = _$flagContentRequestUrgencyEnum_high;
+
+  static Serializer<FlagContentRequestUrgencyEnum> get serializer => _$flagContentRequestUrgencyEnumSerializer;
+
+  const FlagContentRequestUrgencyEnum._(String name): super(name);
+
+  static BuiltSet<FlagContentRequestUrgencyEnum> get values => _$flagContentRequestUrgencyEnumValues;
+  static FlagContentRequestUrgencyEnum valueOf(String name) => _$flagContentRequestUrgencyEnumValueOf(name);
 }

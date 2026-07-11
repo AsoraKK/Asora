@@ -9,10 +9,12 @@ import 'package:dio/dio.dart';
 
 import 'package:asora_api_client/src/api_util.dart';
 import 'package:asora_api_client/src/model/error.dart';
+import 'package:asora_api_client/src/model/feed_page_envelope.dart';
 import 'package:asora_api_client/src/model/feed_page_response.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/news_board_feed_response.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
+import 'package:asora_api_client/src/model/simple_error.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
 
@@ -378,9 +380,9 @@ class FeedApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [FeedPageResponse] as data
+  /// Returns a [Future] containing a [Response] with a [FeedPageEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FeedPageResponse>> getFeed({
+  Future<Response<FeedPageEnvelope>> getFeed({
     String? cursor,
     int? limit = 25,
     CancelToken? cancelToken,
@@ -423,14 +425,14 @@ class FeedApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    FeedPageResponse? _responseData;
+    FeedPageEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(FeedPageResponse),
-      ) as FeedPageResponse;
+        specifiedType: const FullType(FeedPageEnvelope),
+      ) as FeedPageEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -442,7 +444,7 @@ class FeedApi {
       );
     }
 
-    return Response<FeedPageResponse>(
+    return Response<FeedPageEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

@@ -221,7 +221,6 @@ const describeIfServer = baseUrl || requireLiveContracts ? describe : describe.s
 const describeIfAuth = (baseUrl && jwt) || requireLiveContracts ? describe : describe.skip;
 
 const unauthorizedCases: Array<{ method: HttpMethod; path: string; body?: () => Record<string, unknown> }> = [
-  { method: 'get', path: '/feed' },
   {
     method: 'post',
     path: '/posts',
@@ -259,6 +258,18 @@ describeIfServer('Authorization guards', () => {
   });
 });
 
+describeIfServer('Public feed contract', () => {
+  test('GET /feed is publicly readable and matches the response envelope', async () => {
+    const result = await runOrSkip(() =>
+      request({ method: 'get', pathKey: '/feed', auth: false, query: { limit: 5 } })
+    );
+    if (!result) return;
+    expect(result.response.status).toBe(200);
+    const validate = getValidator('/feed', 'get', '200');
+    expect(validate(result.payload)).toBe(true);
+  });
+});
+
 const successCases: Array<{
   name: string;
   method: HttpMethod;
@@ -275,9 +286,9 @@ const successCases: Array<{
     status: 200,
     query: { limit: 5 },
     snapshot: (payload) => ({
-      hasItems: Array.isArray(payload.items) && payload.items.length > 0,
-      hasNextCursor: Boolean(payload.meta?.nextCursor),
-      metaKeyCount: typeof payload.meta === 'object' ? Object.keys(payload.meta).length : 0
+      hasItems: Array.isArray(payload.data?.items) && payload.data.items.length > 0,
+      hasNextCursor: Boolean(payload.data?.meta?.nextCursor),
+      metaKeyCount: typeof payload.data?.meta === 'object' ? Object.keys(payload.data.meta).length : 0
     })
   },
   {
@@ -342,7 +353,7 @@ describeIfAuth('Authenticated contract coverage', () => {
           metaKeyCount: expect.any(Number)
         },
         `
-Object {
+{
   "hasItems": Any<Boolean>,
   "hasNextCursor": Any<Boolean>,
   "metaKeyCount": Any<Number>,
@@ -367,7 +378,12 @@ Object {
   });
 
   test('POST /moderation/flag rejects bad reason', async () => {
-    const invalidBody = { targetId: 'not-a-uuid', reason: 'invalid', notes: 'bad reason' };
+    const invalidBody = {
+      contentId: 'not-a-uuid',
+      contentType: 'post',
+      reason: 'invalid',
+      additionalDetails: 'bad reason'
+    };
     const result = await runOrSkip(() =>
       request({ method: 'post', pathKey: '/moderation/flag', auth: true, body: invalidBody })
     );
@@ -393,11 +409,11 @@ Object {
     const validate = getValidator('/feed', 'get', '200');
     expect(validate(payload)).toBe(true);
 
-    expect(Array.isArray(payload.items)).toBe(true);
-    expect(payload.items.length).toBeLessThanOrEqual(limit);
-    expect(payload.meta?.count).toBeLessThanOrEqual(limit);
-    if (payload.meta?.nextCursor) {
-      expect(typeof payload.meta.nextCursor).toBe('string');
+    expect(Array.isArray(payload.data?.items)).toBe(true);
+    expect(payload.data.items.length).toBeLessThanOrEqual(limit);
+    expect(payload.data.meta?.count).toBeLessThanOrEqual(limit);
+    if (payload.data.meta?.nextCursor) {
+      expect(typeof payload.data.meta.nextCursor).toBe('string');
     }
   });
 
@@ -489,7 +505,7 @@ Object {
       if (!(await isServerReachable())) {
         throw new StagingUnavailableError(`Staging endpoint ${baseUrl} is unreachable.`);
       }
-      const url = new URL('/user/delete', baseUrl);
+      const url = new URL('user/delete', `${baseUrl!.replace(/\/?$/, '/')}`);
       const headers: Record<string, string> = {};
       if (jwt) headers.Authorization = `Bearer ${jwt}`;
       const controller = new AbortController();

@@ -4,66 +4,64 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
-import 'package:asora_api_client/src/model/feed_page_response_meta.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'feed_page_response.g.dart';
+part 'moderation_flag_validation_error.g.dart';
 
-/// Paginated feed page data and metadata.
+/// Validation response returned by the moderation flag handler.
 ///
 /// Properties:
-/// * [items] - Feed items for this page
-/// * [meta]
+/// * [error]
+/// * [details]
 @BuiltValue()
-abstract class FeedPageResponse implements Built<FeedPageResponse, FeedPageResponseBuilder> {
-  /// Feed items for this page
-  @BuiltValueField(wireName: r'items')
-  BuiltList<BuiltMap<String, JsonObject?>> get items;
+abstract class ModerationFlagValidationError implements Built<ModerationFlagValidationError, ModerationFlagValidationErrorBuilder> {
+  @BuiltValueField(wireName: r'error')
+  String get error;
 
-  @BuiltValueField(wireName: r'meta')
-  FeedPageResponseMeta get meta;
+  @BuiltValueField(wireName: r'details')
+  BuiltList<BuiltMap<String, JsonObject?>> get details;
 
-  FeedPageResponse._();
+  ModerationFlagValidationError._();
 
-  factory FeedPageResponse([void updates(FeedPageResponseBuilder b)]) = _$FeedPageResponse;
+  factory ModerationFlagValidationError([void updates(ModerationFlagValidationErrorBuilder b)]) = _$ModerationFlagValidationError;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(FeedPageResponseBuilder b) => b;
+  static void _defaults(ModerationFlagValidationErrorBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<FeedPageResponse> get serializer => _$FeedPageResponseSerializer();
+  static Serializer<ModerationFlagValidationError> get serializer => _$ModerationFlagValidationErrorSerializer();
 }
 
-class _$FeedPageResponseSerializer implements PrimitiveSerializer<FeedPageResponse> {
+class _$ModerationFlagValidationErrorSerializer implements PrimitiveSerializer<ModerationFlagValidationError> {
   @override
-  final Iterable<Type> types = const [FeedPageResponse, _$FeedPageResponse];
+  final Iterable<Type> types = const [ModerationFlagValidationError, _$ModerationFlagValidationError];
 
   @override
-  final String wireName = r'FeedPageResponse';
+  final String wireName = r'ModerationFlagValidationError';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    FeedPageResponse object, {
+    ModerationFlagValidationError object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'items';
+    yield r'error';
     yield serializers.serialize(
-      object.items,
-      specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+      object.error,
+      specifiedType: const FullType(String),
     );
-    yield r'meta';
+    yield r'details';
     yield serializers.serialize(
-      object.meta,
-      specifiedType: const FullType(FeedPageResponseMeta),
+      object.details,
+      specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
     );
   }
 
   @override
   Object serialize(
     Serializers serializers,
-    FeedPageResponse object, {
+    ModerationFlagValidationError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -74,26 +72,26 @@ class _$FeedPageResponseSerializer implements PrimitiveSerializer<FeedPageRespon
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required FeedPageResponseBuilder result,
+    required ModerationFlagValidationErrorBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'items':
+        case r'error':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.error = valueDes;
+          break;
+        case r'details':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
           ) as BuiltList<BuiltMap<String, JsonObject?>>;
-          result.items.replace(valueDes);
-          break;
-        case r'meta':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(FeedPageResponseMeta),
-          ) as FeedPageResponseMeta;
-          result.meta.replace(valueDes);
+          result.details.replace(valueDes);
           break;
         default:
           unhandled.add(key);
@@ -104,12 +102,12 @@ class _$FeedPageResponseSerializer implements PrimitiveSerializer<FeedPageRespon
   }
 
   @override
-  FeedPageResponse deserialize(
+  ModerationFlagValidationError deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = FeedPageResponseBuilder();
+    final result = ModerationFlagValidationErrorBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

@@ -12,6 +12,7 @@ function createMockRequest(options: {
   method?: string;
   url?: string;
   body?: unknown;
+  json?: () => Promise<unknown>;
   params?: Record<string, string>;
   query?: Map<string, string>;
   headers?: Record<string, string>;
@@ -28,6 +29,7 @@ function createMockRequest(options: {
       entries: () => headersMap.entries(),
     },
     body: options.body,
+    json: options.json,
     params: options.params || {},
     query: queryMap,
   } as HttpRequest;
@@ -120,6 +122,25 @@ describe('httpHandler', () => {
       const context = createMockContext();
 
       await handler(request, context);
+    });
+
+    it('should parse Azure ReadableStream bodies with request.json()', async () => {
+      const requestBody = { name: 'streamed', value: 456 };
+      const json = jest.fn().mockResolvedValue(requestBody);
+      const handler = httpHandler<typeof requestBody>(async (ctx) => {
+        expect(ctx.body).toEqual(requestBody);
+        return ctx.ok({ message: 'success' });
+      });
+
+      const request = createMockRequest({
+        method: 'POST',
+        body: { getReader: jest.fn() },
+        json,
+      });
+      const context = createMockContext();
+
+      await handler(request, context);
+      expect(json).toHaveBeenCalledTimes(1);
     });
 
     it('should handle empty body gracefully', async () => {
