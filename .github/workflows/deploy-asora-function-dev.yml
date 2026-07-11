@@ -154,6 +154,7 @@ jobs:
           }
           cp downloaded/functions/dist-v4-final.zip functions-dist.zip
           scripts/secret-scan.sh --artifact functions-dist.zip
+          ZIP=functions-dist.zip bash .github/scripts/preflight.sh
 
           rm -rf /tmp/lythaus-release-artifact
           mkdir -p /tmp/lythaus-release-artifact

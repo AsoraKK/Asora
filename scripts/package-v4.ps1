@@ -7,9 +7,9 @@ Write-Host "🚀 Azure Functions v4 Packaging Started" -ForegroundColor Green
 Write-Host "🧹 Cleaning previous artifacts..." -ForegroundColor Yellow
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist, deploy, dist-v4-final.zip
 
-# Install production dependencies only
-Write-Host "📦 Installing production dependencies..." -ForegroundColor Yellow
-npm ci --omit=dev
+# Install build dependencies; the build writes production dependencies into dist/.
+Write-Host "📦 Installing build dependencies..." -ForegroundColor Yellow
+npm ci
 
 # Build TypeScript to dist/src/*
 Write-Host "🔨 Building TypeScript..." -ForegroundColor Yellow
@@ -21,7 +21,10 @@ New-Item -ItemType Directory -Force -Path deploy | Out-Null
 
 # Copy essential files to zip root
 Write-Host "📋 Copying configuration files..." -ForegroundColor Yellow
-Copy-Item host.json, package.json -Destination deploy/
+Copy-Item dist/host.json, dist/package.json -Destination deploy/
+
+# Use the entrypoint generated and verified by the build.
+Copy-Item dist/index.js -Destination deploy/index.js
 
 # Copy compiled source
 Write-Host "📄 Copying compiled source..." -ForegroundColor Yellow
@@ -29,7 +32,7 @@ Copy-Item -Recurse dist/src -Destination deploy/src
 
 # Copy production node_modules
 Write-Host "📚 Copying production node_modules..." -ForegroundColor Yellow
-Copy-Item -Recurse node_modules -Destination deploy/node_modules
+Copy-Item -Recurse dist/node_modules -Destination deploy/node_modules
 
 # Create final zip (paths relative to zip root)
 Write-Host "🗜️  Creating deployment zip..." -ForegroundColor Yellow

@@ -762,9 +762,6 @@ jobs:
           test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
           cp -R -- "$ROOT/functions/dist/." "$ROOT/deploy/"
 
-          # thin entrypoint for v4 runtime
-          cp -- "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
-
           # function.json directories
           echo "Copying function.json directories..."
           for d in "$ROOT/functions"/*; do
@@ -787,6 +784,8 @@ jobs:
           (cd "$ROOT/deploy" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db")
 
           echo "Created $ROOT/dist-v4-final.zip"
+
+          ZIP="$ROOT/dist-v4-final.zip" bash "$ROOT/.github/scripts/preflight.sh"
 
       - name: Scan Functions package and archive for secrets
         working-directory: ${{ github.workspace }}
