@@ -34,6 +34,7 @@ addFormats(ajv);
 const validatorCache = new Map<string, import('ajv').ValidateFunction>();
 const baseUrl = server ? server.replace(/\/?$/, '') : undefined;
 const REQUEST_TIMEOUT_MS = Number(process.env.CONTRACT_TIMEOUT_MS ?? 5000);
+const LIVE_HOOK_TIMEOUT_MS = Math.max(REQUEST_TIMEOUT_MS + 5000, 10_000);
 
 class StagingUnavailableError extends Error {
   constructor(message: string, cause?: unknown) {
@@ -215,7 +216,7 @@ beforeAll(async () => {
   if (!(await isServerReachable())) {
     throw new Error(`Required live contract endpoint is unreachable: ${baseUrl}`);
   }
-});
+}, LIVE_HOOK_TIMEOUT_MS);
 
 const describeIfServer = baseUrl || requireLiveContracts ? describe : describe.skip;
 const describeIfAuth = (baseUrl && jwt) || requireLiveContracts ? describe : describe.skip;
