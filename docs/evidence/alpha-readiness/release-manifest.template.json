@@ -21,7 +21,7 @@
     "alphaCohortSchema": "passed",
     "dsrQueueRegression": "passed",
     "dsrStorage": "passed",
-    "cosmosPrivateNetworking": "passed",
+    "cosmosNetworkPosture": "passed",
     "browserSmoke": "passed",
     "feedPerformance": "passed",
     "rollbackRehearsal": "passed",

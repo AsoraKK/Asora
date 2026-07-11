@@ -850,6 +850,9 @@ jobs:
       - name: Test Cosmos network verifier CLI contract
         run: node --test scripts/tests/verify-cosmos-network.test.js
 
+      - name: Test live DSR drill success criteria
+        run: node --test scripts/tests/live-dsr-queue-drill.test.js
+
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest

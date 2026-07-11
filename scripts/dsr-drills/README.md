@@ -61,6 +61,7 @@ export DSR_DRILL_BASE_URL="https://asora-function-dev.azurewebsites.net"
 export DSR_DRILL_BEARER_TOKEN="<privacy_admin_jwt>"
 export DSR_DRILL_QUEUE_ACCOUNT="stasoradsrdev"
 export DSR_DRILL_QUEUE_NAME="dsr-requests"
+export DSR_DRILL_EXPORT_USER_ID="<persistent_synthetic_user_uuid>"
 export DSR_DRILL_REPORT_PATH="docs/evidence/alpha-readiness/dsr-live-drill-report.json"
 node scripts/dsr-drills/live-dsr-queue-drill.mjs
 ```
@@ -68,9 +69,10 @@ node scripts/dsr-drills/live-dsr-queue-drill.mjs
 **Expected outcome:**
 - Export and delete enqueue return HTTP 2xx
 - Queue visibility is checked by count only when Azure queue RBAC allows it
-- Poll evidence shows each request leaves `queued`
-- Attempt changes from `0`
-- The script exits non-zero if a request stays `queued` with `attempt=0`
+- Export uses a persistent synthetic identity and reaches `awaiting_review` or a later successful state
+- Delete uses an isolated ephemeral identity and reaches `succeeded`
+- Failure reasons and target user identifiers are hashed in the report
+- The script exits non-zero for failed/canceled requests or when a successful terminal state is not reached
 
 ## Results
 

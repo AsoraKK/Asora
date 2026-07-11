@@ -820,6 +820,7 @@ jobs:
           DSR_DRILL_BEARER_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
           DSR_DRILL_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
           DSR_DRILL_REPORT_PATH: release-evidence/dsr-live-drill-report.json
+          DSR_DRILL_EXPORT_USER_ID: ${{ vars.ALPHA_SMOKE_USER_ID }}
         run: |
           set -euo pipefail
           DSR_DRILL_QUEUE_ACCOUNT=$(az storage account list -g "$RG" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
@@ -887,7 +888,7 @@ jobs:
                 alphaCohortSchema: "passed",
                 dsrQueueRegression: "passed",
                 dsrStorage: "passed",
-                cosmosPrivateNetworking: "passed"
+                cosmosNetworkPosture: "passed"
               }
             }' > release-manifest.json
 

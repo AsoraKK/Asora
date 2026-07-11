@@ -15,6 +15,11 @@ const pollCount = Number(process.env.DSR_DRILL_POLL_COUNT || '18');
 const pollIntervalMs = Number(process.env.DSR_DRILL_POLL_INTERVAL_MS || '5000');
 const queueAccount = (process.env.DSR_DRILL_QUEUE_ACCOUNT || '').trim();
 const queueName = (process.env.DSR_DRILL_QUEUE_NAME || 'dsr-requests').trim();
+const successfulTerminalStatuses = {
+  export: new Set(['awaiting_review', 'ready_to_release', 'released', 'succeeded']),
+  delete: new Set(['succeeded']),
+};
+const failedTerminalStatuses = new Set(['failed', 'canceled']);
 
 function fail(message) {
   throw new Error(message);
@@ -133,11 +138,14 @@ async function poll(type, requestId) {
       status: typeof data.status === 'string' ? data.status : null,
       attempt: typeof data.attempt === 'number' ? data.attempt : null,
       completedAt: typeof data.completedAt === 'string' ? data.completedAt : null,
-      failureReason: typeof data.failureReason === 'string' ? data.failureReason.slice(0, 240) : null,
+      failureReasonHash: typeof data.failureReason === 'string' ? hash(data.failureReason) : null,
     };
     polls.push(state);
 
-    if (state.status && state.status !== 'queued') {
+    if (
+      successfulTerminalStatuses[type].has(state.status)
+      || failedTerminalStatuses.has(state.status)
+    ) {
       break;
     }
   }
@@ -145,18 +153,25 @@ async function poll(type, requestId) {
   const last = polls[polls.length - 1];
   const movedBeyondQueued = Boolean(last?.status && last.status !== 'queued');
   const attemptChanged = polls.some(item => typeof item.attempt === 'number' && item.attempt > 0);
+  const passed = successfulTerminalStatuses[type].has(last?.status);
   return {
     type,
     requestId,
     polls,
     movedBeyondQueued,
     attemptChanged,
-    terminalStatus: movedBeyondQueued ? last.status : null,
-    stuckReason: movedBeyondQueued
+    passed,
+    terminalStatus: successfulTerminalStatuses[type].has(last?.status)
+      || failedTerminalStatuses.has(last?.status)
+      ? last.status
+      : null,
+    stuckReason: passed
       ? null
-      : attemptChanged
-        ? 'status_still_queued_after_attempt_change'
-        : 'status_queued_attempt_zero_after_poll_window',
+      : failedTerminalStatuses.has(last?.status)
+        ? `terminal_status_${last.status}`
+        : attemptChanged
+          ? 'successful_terminal_status_not_reached'
+          : 'status_queued_attempt_zero_after_poll_window',
   };
 }
 
@@ -172,12 +187,19 @@ async function main() {
   }
 
   const runId = uuidv7();
-  const targetUserId = process.env.DSR_DRILL_USER_ID || uuidv7();
+  const exportUserId = (process.env.DSR_DRILL_EXPORT_USER_ID || '').trim();
+  const deleteUserId = (process.env.DSR_DRILL_DELETE_USER_ID || uuidv7()).trim();
+  if (!exportUserId) {
+    fail('DSR_DRILL_EXPORT_USER_ID is required and must identify a persistent synthetic test identity');
+  }
   const report = {
     runId,
     generatedAt: new Date().toISOString(),
     baseUrl,
-    targetUserIdHash: hash(targetUserId),
+    targetUserHashes: {
+      export: hash(exportUserId),
+      delete: hash(deleteUserId),
+    },
     queue: {
       accountName: queueAccount || null,
       queueName,
@@ -191,6 +213,7 @@ async function main() {
   report.checks.push(await peekQueueCount('before_enqueue'));
 
   for (const type of ['export', 'delete']) {
+    const targetUserId = type === 'export' ? exportUserId : deleteUserId;
     const enqueued = await enqueue(type, targetUserId, runId);
     report.enqueues.push(enqueued);
     report.checks.push(await peekQueueCount(`after_${type}_enqueue`));
@@ -204,7 +227,7 @@ async function main() {
     report.polls.push(await poll(type, enqueued.requestId));
   }
 
-  const failedPoll = report.polls.find(item => !item.movedBeyondQueued || !item.attemptChanged);
+  const failedPoll = report.polls.find(item => !item.passed);
   if (report.result !== 'failed') {
     report.result = failedPoll ? 'failed' : 'passed';
     if (failedPoll) {
@@ -219,7 +242,7 @@ async function main() {
   console.log(`DSR drill result: ${report.result}`);
   for (const item of report.polls) {
     const last = item.polls[item.polls.length - 1];
-    console.log(`${item.type}: requestId=${item.requestId}; status=${last?.status}; attempt=${last?.attempt}; movedBeyondQueued=${item.movedBeyondQueued}`);
+    console.log(`${item.type}: requestId=${item.requestId}; status=${last?.status}; attempt=${last?.attempt}; passed=${item.passed}`);
   }
 
   if (report.result !== 'passed') {
