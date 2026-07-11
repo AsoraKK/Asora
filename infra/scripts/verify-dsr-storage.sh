@@ -47,7 +47,7 @@ else
 fi
 
 rule_count=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "policy.rules[?name=='${RULE_NAME}'] | length(@)" \
   -o tsv 2>/dev/null || echo "0")
@@ -58,7 +58,7 @@ if [[ "$rule_count" != "1" ]]; then
 fi
 
 prefix=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.filters.prefixMatch[0]" \
   -o tsv 2>/dev/null || echo "")
@@ -69,15 +69,15 @@ if [[ "$prefix" != "${CONTAINER_NAME}/" ]]; then
 fi
 
 base_days=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
-  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.baseBlob.deleteAfterDaysSinceModificationGreaterThan" \
+  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.baseBlob.delete.daysAfterModificationGreaterThan" \
   -o tsv 2>/dev/null || echo "")
 
 snapshot_days=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
-  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.snapshot.deleteAfterDaysSinceCreationGreaterThan" \
+  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.snapshot.delete.daysAfterCreationGreaterThan" \
   -o tsv 2>/dev/null || echo "")
 
 if [[ "$base_days" != "30" || "$snapshot_days" != "30" ]]; then

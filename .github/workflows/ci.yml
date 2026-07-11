@@ -844,6 +844,9 @@ jobs:
       - name: Check DSR required keys match deploy workflow
         run: bash scripts/check-dsr-runbook-consistency.sh
 
+      - name: Test DSR storage verifier CLI contract
+        run: node --test scripts/tests/verify-dsr-storage.test.js
+
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest
