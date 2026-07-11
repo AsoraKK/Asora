@@ -209,20 +209,28 @@ describe('limit boundary values', () => {
     expect(opts.maxItemCount).toBe(expected);
   }
 
+  async function checkRejectedLimit(limit: any) {
+    setupCosmosResponse([]);
+    await expect(
+      getFeed({ principal: null, context: mockContext, limit })
+    ).rejects.toMatchObject({ status: 400 });
+    expect(mockItemsQuery).not.toHaveBeenCalled();
+  }
+
   it('limit=1 → maxItemCount=1', () => checkMaxItemCount(1, 1));
   it('limit=49 → maxItemCount=49', () => checkMaxItemCount(49, 49));
   it('limit=50 (MAX) → maxItemCount=50', () => checkMaxItemCount(50, 50));
-  it('limit=51 is capped to 50', () => checkMaxItemCount(51, 50));
-  it('limit=100 is capped to 50', () => checkMaxItemCount(100, 50));
-  it('limit=0 falls back to default 30', () => checkMaxItemCount(0, 30));
-  it('limit=-1 falls back to default 30', () => checkMaxItemCount(-1, 30));
-  it('limit=-999 falls back to default 30', () => checkMaxItemCount(-999, 30));
-  it('limit=NaN falls back to default 30', () => checkMaxItemCount(NaN, 30));
+  it('limit=51 is rejected', () => checkRejectedLimit(51));
+  it('limit=100 is rejected', () => checkRejectedLimit(100));
+  it('limit=0 is rejected', () => checkRejectedLimit(0));
+  it('limit=-1 is rejected', () => checkRejectedLimit(-1));
+  it('limit=-999 is rejected', () => checkRejectedLimit(-999));
+  it('limit=NaN is rejected', () => checkRejectedLimit(NaN));
   it('limit=null falls back to default 30', () => checkMaxItemCount(null, 30));
   it('limit=undefined falls back to default 30', () => checkMaxItemCount(undefined, 30));
-  it('limit="NaN" string falls back to default 30', () => checkMaxItemCount('NaN', 30));
-  it('limit="0" string falls back to default 30', () => checkMaxItemCount('0', 30));
-  it('limit="51" string is capped to 50', () => checkMaxItemCount('51', 50));
+  it('limit="NaN" string is rejected', () => checkRejectedLimit('NaN'));
+  it('limit="0" string is rejected', () => checkRejectedLimit('0'));
+  it('limit="51" string is rejected', () => checkRejectedLimit('51'));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
