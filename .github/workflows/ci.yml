@@ -786,6 +786,7 @@ jobs:
           echo "Created $ROOT/dist-v4-final.zip"
 
           ZIP="$ROOT/dist-v4-final.zip" bash "$ROOT/.github/scripts/preflight.sh"
+          node "$ROOT/functions/scripts/verify-dist-structure.cjs" "$ROOT/dist-v4-final.zip"
 
       - name: Scan Functions package and archive for secrets
         working-directory: ${{ github.workspace }}
