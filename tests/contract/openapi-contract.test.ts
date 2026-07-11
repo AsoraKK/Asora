@@ -23,7 +23,9 @@ const server = process.env.ALPHA_API_BASE_URL
   ? process.env.ALPHA_API_BASE_URL
   : process.env.STAGING_DOMAIN
   ? `https://${process.env.STAGING_DOMAIN}/api`
-  : spec.servers?.[0]?.url;
+  : requireLiveContracts
+  ? spec.servers?.[0]?.url
+  : undefined;
 const jwt = process.env.STAGING_SMOKE_TOKEN;
 
 const ajv = new Ajv({ strict: false, allErrors: true });

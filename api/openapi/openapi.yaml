@@ -7,7 +7,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api
+  - url: https://asora-function-dev.azurewebsites.net/api
     description: Azure Functions staging edge endpoint
   - url: https://${STAGING_DOMAIN}/api
     description: Asora staging domain (set via environment)

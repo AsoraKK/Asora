@@ -56,7 +56,7 @@ jobs:
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TARGET_ENV: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
-      APP: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'asora-function-staging' || github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
+      APP: ${{ github.event.inputs.function_app_name || 'asora-function-dev' }}
       RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
     permissions:
       id-token: write

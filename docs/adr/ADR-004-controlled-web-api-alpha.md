@@ -54,6 +54,16 @@ This amends the earlier manifesto/policy interpretation that all AI-generated co
 - CI, artifact build, deployment, live contracts, browser smoke, and release evidence must refer to the same full commit SHA.
 - Deployment workflows consume CI artifacts and do not rebuild.
 
+### Shared-cost Alpha environment amendment (2026-07-11)
+
+- To avoid new infrastructure cost before revenue, the protected Alpha staging workflow reuses the existing `asora-psql-flex` resource group, `asora-function-dev` Function App, and `kv-asora-flex-dev` Key Vault.
+- `staging` remains the GitHub protected environment and release-evidence label even though Azure resources retain their existing internal `dev` names.
+- The canonical Alpha API URL is `https://asora-function-dev.azurewebsites.net/api`.
+- Alpha registrations remain disabled until provider rotations, live contracts, DSR, browser smoke, feed performance, and rollback gates pass.
+- Shared infrastructure increases blast radius. Mitigations are the Technical Alpha cap, explicit stage controls, test-data isolation, audited kill switches, read-only mode, immutable deployment metadata, and short review periods.
+- No workflow may silently select the first Key Vault in a multi-vault resource group. Staging explicitly selects `kv-asora-flex-dev`.
+- A separate staging resource group and service stack is deferred until revenue supports the cost or before Beta, whichever comes first. Migration requires a reviewed plan and tested rollback.
+
 ## Implementation status
 
 | Area | State | Source of truth |
@@ -62,7 +72,7 @@ This amends the earlier manifesto/policy interpretation that all AI-generated co
 | Invite hashing and revocation | Live in code; deployment verification pending | `functions/src/auth/service/inviteStore.ts` |
 | Authorship model | Live in code; deployment verification pending | `functions/src/shared/authorship.ts` |
 | Tier entitlements | Live in code; deployment verification pending | `functions/src/shared/services/tierLimits.ts` |
-| Exact-SHA deployment | Live in workflow source; not executed for this candidate | `.github/workflows/deploy-asora-function-dev.yml` |
+| Exact-SHA deployment | Live in workflow source; shared-cost staging deployment verification pending | `.github/workflows/deploy-asora-function-dev.yml` |
 | Feed target | Failed on current dev baseline; exact candidate not measured | `docs/evidence/alpha-readiness/2026-07-10-feed-performance.md` |
 | Mobile launch readiness | Deferred to Beta | `docs/alpha/deferred-beta-register.md` |
 

@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
+All URIs are relative to *https://asora-function-dev.azurewebsites.net/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------

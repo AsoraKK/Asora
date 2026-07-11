@@ -70,8 +70,8 @@ jobs:
           failed=false
           if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
             echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty."
-            echo "  Host: asora-function-staging.northeurope-01.azurewebsites.net"
-            echo "  Run: ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net"
+            echo "  Host: asora-function-dev.azurewebsites.net (shared-cost Alpha)"
+            echo "  Run: ./scripts/extract-spki-pins.sh asora-function-dev.azurewebsites.net"
             echo "  Then populate _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE"
             echo "  See: docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning"
             failed=true

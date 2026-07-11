@@ -31,6 +31,10 @@ on:
         description: "Optional Azure resource group override"
         required: false
         type: string
+      key_vault_name:
+        description: "Optional Key Vault override"
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       target_environment:
@@ -71,6 +75,10 @@ on:
         description: "Optional Azure resource group override"
         required: false
         type: string
+      key_vault_name:
+        description: "Optional Key Vault override"
+        required: false
+        type: string
 permissions:
   actions: read
   contents: read
@@ -81,8 +89,9 @@ env:
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   TARGET_ENV: ${{ inputs.target_environment }}
-  RG: ${{ inputs.resource_group || (inputs.target_environment == 'staging' && 'asora-staging' || 'asora-psql-flex') }}
-  FUNC_APP: ${{ inputs.function_app_name || (inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
+  RG: ${{ inputs.resource_group || 'asora-psql-flex' }}
+  FUNC_APP: ${{ inputs.function_app_name || 'asora-function-dev' }}
+  KEY_VAULT: ${{ inputs.key_vault_name || (inputs.target_environment == 'staging' && 'kv-asora-flex-dev' || '') }}
   RELEASE_SHA: ${{ inputs.release_sha }}
   CI_RUN_ID: ${{ inputs.ci_run_id }}
   APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
@@ -321,10 +330,18 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
-
+          KEY_VAULT=$(echo "$KEY_VAULT" | tr -d '\r')
           if [ -z "$KEY_VAULT" ]; then
-            echo "::error::No Key Vault found in RG $RG_CLEAN — Alpha secrets require Key Vault in every environment"
+            mapfile -t KEY_VAULTS < <(az keyvault list -g "$RG_CLEAN" --query "[].name" -o tsv 2>/dev/null)
+            if [ "${#KEY_VAULTS[@]}" -ne 1 ]; then
+              echo "::error::Set key_vault_name explicitly when the resource group has zero or multiple Key Vaults"
+              exit 1
+            fi
+            KEY_VAULT="${KEY_VAULTS[0]}"
+          fi
+          VAULT_RG=$(az keyvault show --name "$KEY_VAULT" --query resourceGroup -o tsv 2>/dev/null || echo "")
+          if [ "$VAULT_RG" != "$RG_CLEAN" ]; then
+            echo "::error::Key Vault $KEY_VAULT is not in resource group $RG_CLEAN"
             exit 1
           fi
 
@@ -723,7 +740,7 @@ jobs:
           
           # Store secret via Key Vault reference (secure approach)
           # Requires: Key Vault must exist with write access via managed identity
-          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
+          KEY_VAULT=$(echo "$KEY_VAULT" | tr -d '\r')
           
           if [ -z "$KEY_VAULT" ]; then
             echo "::error::No Key Vault found; refusing to store CF_ACCESS_CLIENT_SECRET as plaintext"

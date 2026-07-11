@@ -62,7 +62,7 @@ try {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api*
+All URIs are relative to *https://asora-function-dev.azurewebsites.net/api*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------

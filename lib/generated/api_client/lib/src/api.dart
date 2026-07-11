@@ -29,7 +29,7 @@ import 'package:asora_api_client/src/api/subscription_api.dart';
 import 'package:asora_api_client/src/api/users_api.dart';
 
 class AsoraApiClient {
-  static const String basePath = r'https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api';
+  static const String basePath = r'https://asora-function-dev.azurewebsites.net/api';
 
   final Dio dio;
   final Serializers serializers;

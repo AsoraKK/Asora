@@ -81,7 +81,7 @@ void main() {
     test('should extract hostname from API base URL', () {
       const envConfig = EnvironmentConfig(
         environment: Environment.staging,
-        apiBaseUrl: 'https://asora-function-staging.azurewebsites.net/api',
+        apiBaseUrl: 'https://asora-function-dev.azurewebsites.net/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
@@ -96,7 +96,7 @@ void main() {
 
       // Test URI parsing
       final uri = Uri.parse(envConfig.apiBaseUrl);
-      expect(uri.host, equals('asora-function-staging.azurewebsites.net'));
+      expect(uri.host, equals('asora-function-dev.azurewebsites.net'));
     });
   });
 }

@@ -45,11 +45,11 @@ az keyvault secret set \
 
 # 4. Restart function app to pick up new reference
 az functionapp restart --name asora-function-flex --resource-group asora-rg
-az functionapp restart --name asora-function-staging --resource-group asora-rg
+az functionapp restart --name asora-function-dev --resource-group asora-psql-flex
 
 # 5. Verify health
 curl -s https://asora-function-flex.azurewebsites.net/api/health | jq .status
-curl -s https://asora-function-staging.azurewebsites.net/api/health | jq .status
+curl -s https://asora-function-dev.azurewebsites.net/api/health | jq .status
 ```
 
 ### 2.2 JWT Signing Key

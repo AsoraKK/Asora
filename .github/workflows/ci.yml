@@ -431,7 +431,6 @@ jobs:
       - name: Verify certificate pins
         env:
           BASE_URL: 'https://asora-function-dev.azurewebsites.net'
-          EXTRA_PIN_HOSTS: 'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net'
         run: python3 scripts/verify_pins.py
 
   flutter_tests:

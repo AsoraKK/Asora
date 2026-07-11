@@ -34,8 +34,8 @@ jobs:
         shell: bash
         env:
           ALPHA_API_BASE_URL: ${{ vars.ALPHA_API_BASE_URL }}
-          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-staging' }}
-          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-staging' }}
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
           AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
           ALPHA_REPORT_ADMIN_TOKEN: ${{ secrets.ALPHA_REPORT_ADMIN_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
@@ -50,7 +50,7 @@ jobs:
       - name: Query aggregate telemetry
         shell: bash
         env:
-          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-staging' }}
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
           AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
         run: |
           set -euo pipefail
@@ -88,8 +88,8 @@ jobs:
         id: deployment
         shell: bash
         env:
-          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-staging' }}
-          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-staging' }}
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
         run: |
           set -euo pipefail
           SHA=$(az functionapp config appsettings list \

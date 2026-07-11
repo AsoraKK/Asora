@@ -175,11 +175,11 @@ jobs:
           failed=false
           if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
             echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
-            echo "  Staging API host: asora-function-staging.northeurope-01.azurewebsites.net"
+            echo "  Staging API host: asora-function-dev.azurewebsites.net (shared-cost Alpha)"
             echo "  TLS pinning is currently FAIL-OPEN for staging (all connections pass unchecked)."
             echo ""
             echo "  To fix, extract and populate the staging SPKI pin:"
-            echo "    ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net"
+            echo "    ./scripts/extract-spki-pins.sh asora-function-dev.azurewebsites.net"
             echo "  Then add the output to _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
             echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
             failed=true
@@ -200,9 +200,8 @@ jobs:
 
           if [ "$failed" = "true" ]; then
             echo ""
-            echo "  NOTE: These environments may not be provisioned yet. If the Azure Function Apps"
-            echo "  (asora-function-staging, asora-function-prod) are not deployed, pin extraction"
-            echo "  will fail gracefully. Once deployed, re-run pin extraction and update the config."
+            echo "  NOTE: Alpha staging shares asora-function-dev; mobile remains Beta scope."
+            echo "  Production may not be provisioned yet, so pin extraction can fail gracefully."
             exit 1
           fi
 
@@ -218,7 +217,7 @@ jobs:
 
       - name: Verify live certificate pins
         env:
-          EXTRA_PIN_HOSTS: asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net,asora-function-staging.northeurope-01.azurewebsites.net,asora-function-prod.northeurope-01.azurewebsites.net
+          EXTRA_PIN_HOSTS: asora-function-dev.azurewebsites.net,asora-function-prod.northeurope-01.azurewebsites.net
         shell: bash
         run: |
           set -euo pipefail
