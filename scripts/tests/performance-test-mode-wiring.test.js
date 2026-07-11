@@ -26,6 +26,12 @@ test('performance matrix sends a signed-session-bound test context', () => {
   assert.match(workflow, /ALPHA_TEST_SESSION_ID: \$\{\{ vars\.ALPHA_TEST_SESSION_ID \}\}/);
 });
 
+test('performance matrix stays compatible with pinned k6 0.52', () => {
+  assert.doesNotMatch(matrix, /\?\./);
+  assert.doesNotMatch(matrix, /\?\?/);
+  assert.doesNotMatch(matrix, /catch\s*\{/);
+});
+
 test('all performance feed surfaces authorize test mode', () => {
   const authorizationCalls = routeSources.match(/extractAuthorizedTestModeContext\(/g) ?? [];
   assert.equal(authorizationCalls.length, 5);

@@ -144,8 +144,11 @@ export function paginationWarm() {
   let cursor;
   try {
     const body = first.json();
-    cursor = body.nextCursor || body.meta?.nextCursor || body.data?.nextCursor || body.data?.meta?.nextCursor;
-  } catch {
+    cursor = body.nextCursor
+      || (body.meta && body.meta.nextCursor)
+      || (body.data && body.data.nextCursor)
+      || (body.data && body.data.meta && body.data.meta.nextCursor);
+  } catch (error) {
     cursor = undefined;
   }
   if (cursor) request('pagination_warm', `feed/discover?limit=10&cursor=${encodeURIComponent(cursor)}`);
@@ -157,8 +160,11 @@ export function refreshWarm() {
   let cursor;
   try {
     const body = first.json();
-    cursor = body.nextCursor || body.meta?.nextCursor || body.data?.nextCursor || body.data?.meta?.nextCursor;
-  } catch {
+    cursor = body.nextCursor
+      || (body.meta && body.meta.nextCursor)
+      || (body.data && body.data.nextCursor)
+      || (body.data && body.data.meta && body.data.meta.nextCursor);
+  } catch (error) {
     cursor = undefined;
   }
   if (cursor) request('refresh_warm', `feed/discover?limit=10&since=${encodeURIComponent(cursor)}`);
