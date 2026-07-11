@@ -852,6 +852,13 @@ jobs:
           [ "$COHORT_CAP" -le "$HARD_CAP" ] || { echo "::error::Configured cohort cap exceeds stage hard cap"; exit 1; }
           DEPLOYMENT_ID=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query id -o tsv)
           DEPLOYED_HOST=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query defaultHostName -o tsv)
+          if [[ -z "$DEPLOYED_HOST" || "$DEPLOYED_HOST" == "null" ]]; then
+            DEPLOYED_HOST="${FUNC_APP}.azurewebsites.net"
+          fi
+          [[ "$DEPLOYED_HOST" =~ ^[A-Za-z0-9.-]+\.azurewebsites\.net$ ]] || {
+            echo "::error::Unable to derive a valid deployed Function hostname"
+            exit 1
+          }
           jq -n \
             --arg commitSha "$RELEASE_SHA" \
             --arg functionsArtifactSha256 "$FUNCTIONS_ARTIFACT_SHA256" \

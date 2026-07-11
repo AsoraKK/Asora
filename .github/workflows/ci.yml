@@ -853,6 +853,9 @@ jobs:
       - name: Test live DSR drill success criteria
         run: node --test scripts/tests/live-dsr-queue-drill.test.js
 
+      - name: Test release manifest workflow contract
+        run: node --test scripts/tests/release-manifest-workflow.test.js
+
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest
