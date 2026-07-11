@@ -324,7 +324,7 @@ jobs:
           echo "Waiting 90s for Flex host warmup..."
           sleep 90
 
-      - name: Provision AUDIT_HMAC_KEY via Key Vault
+      - name: Configure and verify Key Vault references
         continue-on-error: false
         run: |
           set -euo pipefail
@@ -345,37 +345,39 @@ jobs:
             exit 1
           fi
 
-          # Check if the secret already exists (may fail if SP lacks get permission)
-          if az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "id" -o tsv >/dev/null 2>&1; then
-            echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
-          else
-            echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
-            HMAC_KEY=$(openssl rand -hex 32)
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings \
+              "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
+              "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
+              "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
+              "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+            --output none
 
-            if az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
-              --value "$HMAC_KEY" --output none; then
-              echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
-            else
-              echo "::error::Failed to create Key Vault secret audit-hmac-key"
-              echo "::error::Grant the deployment principal Key Vault Secrets Officer permission on $KEY_VAULT"
+          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET)
+          for attempt in $(seq 1 12); do
+            REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
+            unresolved=false
+            for setting in "${REQUIRED_REFERENCES[@]}"; do
+              STATUS=$(jq -r --arg setting "$setting" \
+                '[.value[] | select((.id | split("/") | last) == $setting) | .properties.status][0] // "Missing"' \
+                <<<"$REFERENCES_JSON")
+              if [ "$STATUS" != "Resolved" ]; then
+                unresolved=true
+                echo "Key Vault reference $setting status: $STATUS (attempt $attempt/12)"
+              fi
+            done
+            if [ "$unresolved" = false ]; then
+              echo "✅ Required Key Vault references resolved"
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::One or more required Key Vault references did not resolve"
               exit 1
             fi
-          fi
-
-          # Wire as Key Vault reference in Function App
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
-            --output none
-          echo "✅ AUDIT_HMAC_KEY wired as Key Vault reference"
-
-          if ! az keyvault secret show --vault-name "$KEY_VAULT" --name "invite-code-pepper" --query "id" -o tsv >/dev/null 2>&1; then
-            echo "::error::Key Vault secret invite-code-pepper is missing; Kyle must create and verify it before deployment"
-            exit 1
-          fi
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
-            --output none
-          echo "✅ INVITE_CODE_PEPPER wired as Key Vault reference"
+            sleep 10
+          done
 
       - name: Record immutable deployment metadata
         run: |
@@ -721,39 +723,18 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          
-          # Extract CF Access credentials from GitHub Actions secrets
-          # Note: Secret names use underscores due to GitHub Actions naming constraints
+
           CF_CLIENT_ID="${{ secrets.CF_Access_Client_Id }}"
-          CF_CLIENT_SECRET="${{ secrets.CF_Access_Client_Secret }}"
-          
-          if [ -z "$CF_CLIENT_ID" ] || [ -z "$CF_CLIENT_SECRET" ]; then
-            echo "::error::Cloudflare Access credentials are required for the Alpha control panel"
+
+          if [ -z "$CF_CLIENT_ID" ]; then
+            echo "::error::Cloudflare Access client ID is required for the Alpha control panel"
             exit 1
           fi
-          
-          echo "Configuring Cloudflare Access credentials in Function App..."
-          
-          # Store client ID directly (non-sensitive)
+
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
-          
-          # Store secret via Key Vault reference (secure approach)
-          # Requires: Key Vault must exist with write access via managed identity
-          KEY_VAULT=$(echo "$KEY_VAULT" | tr -d '\r')
-          
-          if [ -z "$KEY_VAULT" ]; then
-            echo "::error::No Key Vault found; refusing to store CF_ACCESS_CLIENT_SECRET as plaintext"
-            exit 1
-          fi
-          echo "Setting CF_ACCESS_CLIENT_SECRET via Key Vault reference..."
-          az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
-            --value "$CF_CLIENT_SECRET" --output none
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
-            --output none
-          
-          echo "✅ Cloudflare Access credentials configured"
+            --settings CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+
+          echo "✅ Cloudflare Access client ID configured; secret remains Key Vault-backed"
 
       - name: Configure DSR environment variables
         run: |
