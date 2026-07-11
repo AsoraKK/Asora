@@ -288,7 +288,12 @@ describe('custom feed handlers', () => {
       'custom::1',
       undefined,
       10,
-      'user-123'
+      'user-123',
+      expect.objectContaining({
+        isTestMode: false,
+        sessionId: null,
+        rateLimitBucket: 'production',
+      })
     );
     expect(response.status).toBe(200);
     expect(response.jsonBody).toEqual({ items: [], nextCursor: undefined });

@@ -53,7 +53,7 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       viewerId = auth.userId;
       const testContext = extractAuthorizedTestModeContext(
         ctx.request,
-        auth.token.test_session,
+        auth.token?.test_session,
         ctx.context
       );
       includeTestPosts = testContext.isTestMode;

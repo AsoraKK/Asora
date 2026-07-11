@@ -59,7 +59,7 @@ export const feed_news_get = httpHandler<void, NewsBoardFeedResponse>(async ctx 
     try {
       testContext = extractAuthorizedTestModeContext(
         ctx.request,
-        auth.token.test_session,
+        auth.token?.test_session,
         ctx.context
       );
     } catch (error) {

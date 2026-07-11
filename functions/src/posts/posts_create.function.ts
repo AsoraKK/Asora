@@ -71,7 +71,7 @@ export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
     try {
       testContext = extractAuthorizedTestModeContext(
         ctx.request,
-        auth.token.test_session,
+        auth.token?.test_session,
         ctx.context
       );
     } catch (error) {

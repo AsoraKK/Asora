@@ -55,7 +55,7 @@ export const customFeeds_getItems = httpHandler<void, CursorPaginatedPostView>(a
     try {
       testContext = extractAuthorizedTestModeContext(
         ctx.request,
-        auth.token.test_session,
+        auth.token?.test_session,
         ctx.context
       );
     } catch (error) {
