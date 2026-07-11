@@ -9,6 +9,7 @@ import type {
   CustomFeedDefinition,
   CursorPaginatedPostView,
 } from '@shared/types/openapi';
+import type { TestModeContext } from '@shared/testMode/testModeContext';
 
 const DEFAULT_FEED_LIMIT = 20;
 const MAX_FEED_LIMIT = 50;
@@ -273,12 +274,19 @@ export async function listCustomFeeds(
   };
 }
 
-function buildPostFilters(feed: CustomFeedDocument): {
+function buildPostFilters(feed: CustomFeedDocument, testContext?: TestModeContext): {
   clauses: string[];
   parameters: Array<{ name: string; value: any }>;
 } {
   const clauses: string[] = [`c.status = 'published'`];
   const parameters: Array<{ name: string; value: any }> = [];
+
+  if (testContext?.isTestMode && testContext.sessionId) {
+    clauses.push('c.isTestPost = true AND c.testSessionId = @testSessionId');
+    parameters.push({ name: '@testSessionId', value: testContext.sessionId });
+  } else {
+    clauses.push('(NOT IS_DEFINED(c.isTestPost) OR c.isTestPost = false)');
+  }
 
   if (feed.contentType !== 'mixed') {
     clauses.push('c.contentType = @contentType');
@@ -329,7 +337,8 @@ export async function getCustomFeedItems(
   feedId: string,
   cursor?: string,
   limit?: number,
-  viewerId?: string
+  viewerId?: string,
+  testContext?: TestModeContext
 ): Promise<CursorPaginatedPostView> {
   const feedDoc = await readCustomFeedDocument(ownerId, feedId);
   if (!feedDoc) {
@@ -338,7 +347,7 @@ export async function getCustomFeedItems(
 
   const resolvedLimit = clampLimit(limit);
   const cursorValue = decodeCursor(cursor);
-  const { clauses, parameters } = buildPostFilters(feedDoc);
+  const { clauses, parameters } = buildPostFilters(feedDoc, testContext);
 
   if (cursorValue) {
     clauses.push('(c.createdAt < @cursorTs OR (c.createdAt = @cursorTs AND c.id < @cursorId))');

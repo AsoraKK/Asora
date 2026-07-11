@@ -7,6 +7,7 @@ const errors = new Rate('alpha_feed_errors');
 
 const BASE = (__ENV.ALPHA_API_BASE_URL || '').replace(/\/+$/, '');
 const TOKEN = __ENV.ALPHA_SMOKE_TOKEN || '';
+const TEST_SESSION_ID = __ENV.ALPHA_TEST_SESSION_ID || '';
 const CUSTOM_FEED_ID = __ENV.ALPHA_CUSTOM_FEED_ID || '';
 const EMPTY_PROFILE_ID = __ENV.ALPHA_EMPTY_PROFILE_ID || '';
 const SMALL_PROFILE_ID = __ENV.ALPHA_SMALL_PROFILE_ID || '';
@@ -15,6 +16,7 @@ const POPULATED_PROFILE_ID = __ENV.ALPHA_POPULATED_PROFILE_ID || '';
 for (const [name, value] of Object.entries({
   ALPHA_API_BASE_URL: BASE,
   ALPHA_SMOKE_TOKEN: TOKEN,
+  ALPHA_TEST_SESSION_ID: TEST_SESSION_ID,
   ALPHA_CUSTOM_FEED_ID: CUSTOM_FEED_ID,
   ALPHA_EMPTY_PROFILE_ID: EMPTY_PROFILE_ID,
   ALPHA_SMALL_PROFILE_ID: SMALL_PROFILE_ID,
@@ -84,7 +86,12 @@ function url(path) {
 
 function request(feedScenario, path) {
   const response = http.get(url(path), {
-    headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/json' },
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      Accept: 'application/json',
+      'X-Test-Mode': 'true',
+      'X-Test-Session-Id': TEST_SESSION_ID,
+    },
     tags: { feed_scenario: feedScenario },
   });
   const ok = check(response, { [`${feedScenario} returns 200`]: (r) => r.status === 200 });

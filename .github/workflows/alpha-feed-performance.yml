@@ -47,6 +47,7 @@ jobs:
         env:
           ALPHA_API_BASE_URL: ${{ inputs.alpha_api_base_url }}
           ALPHA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+          ALPHA_TEST_SESSION_ID: ${{ vars.ALPHA_TEST_SESSION_ID }}
           ALPHA_CUSTOM_FEED_ID: ${{ vars.ALPHA_PERF_CUSTOM_FEED_ID }}
           ALPHA_EMPTY_PROFILE_ID: ${{ vars.ALPHA_PERF_EMPTY_PROFILE_ID }}
           ALPHA_SMALL_PROFILE_ID: ${{ vars.ALPHA_PERF_SMALL_PROFILE_ID }}
@@ -58,6 +59,7 @@ jobs:
           docker run --rm \
             -e ALPHA_API_BASE_URL \
             -e ALPHA_SMOKE_TOKEN \
+            -e ALPHA_TEST_SESSION_ID \
             -e ALPHA_CUSTOM_FEED_ID \
             -e ALPHA_EMPTY_PROFILE_ID \
             -e ALPHA_SMALL_PROFILE_ID \

@@ -17,6 +17,11 @@ import type { CursorPaginatedPostView } from '@shared/types/openapi';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
+import {
+  extractAuthorizedTestModeContext,
+  extractTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 
 export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(async (ctx) => {
   const cors = handleCorsAndMethod(ctx.request.method ?? 'GET', ['GET']);
@@ -38,12 +43,25 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
     let isAuthenticated = false;
     let principal = null;
     let viewerId: string | undefined;
+    let includeTestPosts = false;
+    let testSessionId: string | null = null;
+    const requestedTestContext = extractTestModeContext(ctx.request);
     try {
       const auth = await extractAuthContext(ctx);
       isAuthenticated = true;
       principal = { sub: auth.userId, roles: auth.roles };
       viewerId = auth.userId;
-    } catch {
+      const testContext = extractAuthorizedTestModeContext(
+        ctx.request,
+        auth.token.test_session,
+        ctx.context
+      );
+      includeTestPosts = testContext.isTestMode;
+      testSessionId = testContext.sessionId;
+    } catch (error) {
+      if (requestedTestContext.isTestMode || error instanceof TestModeAuthorizationError) {
+        return ctx.forbidden('Test mode requires an authorized session', 'TEST_MODE_NOT_AUTHORIZED');
+      }
       // Anonymous viewer, no problem
     }
 
@@ -55,6 +73,8 @@ export const feed_discover_get = httpHandler<void, CursorPaginatedPostView>(asyn
       cursor,
       limit: limit.toString(),
       authorId: null,
+      includeTestPosts,
+      testSessionId,
     });
 
     // Filter by topics if provided

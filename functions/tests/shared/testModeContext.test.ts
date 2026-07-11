@@ -6,7 +6,9 @@
 
 import { HttpRequest, InvocationContext } from '@azure/functions';
 import {
+  extractAuthorizedTestModeContext,
   extractTestModeContext,
+  TestModeAuthorizationError,
   isTestModeRequest,
   buildTestModeHeaders,
   TEST_MODE_RATE_LIMITS,
@@ -172,6 +174,32 @@ describe('testModeContext', () => {
 
       expect(result.isTestMode).toBe(true);
       expect(result.sessionStarted).toBe(NaN);
+    });
+  });
+
+  describe('extractAuthorizedTestModeContext', () => {
+    it('accepts a matching signed session', () => {
+      const req = createMockRequest({
+        'X-Test-Mode': 'true',
+        'X-Test-Session-Id': 'alpha-contracts',
+      });
+
+      const result = extractAuthorizedTestModeContext(req, 'alpha-contracts');
+
+      expect(result.isTestMode).toBe(true);
+      expect(result.sessionId).toBe('alpha-contracts');
+    });
+
+    it('rejects a mismatched or unsigned session', () => {
+      const req = createMockRequest({
+        'X-Test-Mode': 'true',
+        'X-Test-Session-Id': 'spoofed-session',
+      });
+
+      expect(() => extractAuthorizedTestModeContext(req, 'alpha-contracts'))
+        .toThrow(TestModeAuthorizationError);
+      expect(() => extractAuthorizedTestModeContext(req, null))
+        .toThrow(TestModeAuthorizationError);
     });
   });
 

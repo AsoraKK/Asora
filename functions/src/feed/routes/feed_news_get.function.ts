@@ -19,6 +19,10 @@ import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getEffectiveEntitlements } from '@shared/services/entitlementService';
 import { assertAlphaFeature } from '@alpha/alphaConfig';
+import {
+  extractAuthorizedTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 
 const FREE_PREVIEW_LIMIT = 3;
 
@@ -51,6 +55,20 @@ export const feed_news_get = httpHandler<void, NewsBoardFeedResponse>(async ctx 
       return ctx.unauthorized('Authentication required for News Board access', 'UNAUTHORIZED');
     }
 
+    let testContext;
+    try {
+      testContext = extractAuthorizedTestModeContext(
+        ctx.request,
+        auth.token.test_session,
+        ctx.context
+      );
+    } catch (error) {
+      if (error instanceof TestModeAuthorizationError) {
+        return ctx.forbidden(error.message, error.code);
+      }
+      throw error;
+    }
+
     const effective = await getEffectiveEntitlements(auth.userId, auth.tier);
     const accessLevel = effective.limits.newsBoardAccessLevel;
     const previewOnly = accessLevel === 'preview';
@@ -64,6 +82,8 @@ export const feed_news_get = httpHandler<void, NewsBoardFeedResponse>(async ctx 
       cursor: previewOnly ? undefined : cursor,
       limit: Math.min(limit, previewOnly ? FREE_PREVIEW_LIMIT : 50).toString(),
       authorId: null,
+      includeTestPosts: testContext.isTestMode,
+      testSessionId: testContext.sessionId,
     });
 
     // Filter for news posts (isNews=true)

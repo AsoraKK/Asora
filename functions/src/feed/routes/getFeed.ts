@@ -8,6 +8,11 @@ import { getChaosContext } from '@shared/chaos/chaosConfig';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import type { FeedResultBody } from '@feed/types';
+import {
+  extractAuthorizedTestModeContext,
+  extractTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 
 export async function getFeed(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestOrigin = req.headers.get('Origin') || req.headers.get('origin') || undefined;
@@ -16,6 +21,15 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
 
   try {
     principal = await parseAuth(req);
+    const requestedTestContext = extractTestModeContext(req);
+    if (requestedTestContext.isTestMode && !principal) {
+      throw new TestModeAuthorizationError();
+    }
+    const testContext = extractAuthorizedTestModeContext(
+      req,
+      typeof principal?.raw?.test_session === 'string' ? principal.raw.test_session : null,
+      context
+    );
     const cursor = typeof req.query?.get === 'function' ? req.query.get('cursor') ?? null : null;
     const since = typeof req.query?.get === 'function' ? req.query.get('since') ?? null : null;
     const limit = typeof req.query?.get === 'function' ? req.query.get('limit') ?? null : null;
@@ -32,6 +46,8 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
       limit,
       authorId,
       chaosContext,
+      includeTestPosts: testContext.isTestMode,
+      testSessionId: testContext.sessionId,
     });
 
     return createSuccessResponse(
@@ -47,6 +63,18 @@ export async function getFeed(req: HttpRequest, context: InvocationContext): Pro
       requestOrigin,
     );
   } catch (error) {
+    if (error instanceof TestModeAuthorizationError) {
+      return {
+        status: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getCorsHeaders(requestOrigin),
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify({ error: { code: error.code, message: error.message } }),
+      };
+    }
+
     if (error instanceof HttpError) {
       return {
         status: error.status,

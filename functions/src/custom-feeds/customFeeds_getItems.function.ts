@@ -14,6 +14,10 @@ import type { CursorPaginatedPostView } from '@shared/types/openapi';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getCustomFeedItems } from './customFeedsService';
 import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
+import {
+  extractAuthorizedTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -47,12 +51,27 @@ export const customFeeds_getItems = httpHandler<void, CursorPaginatedPostView>(a
   }
 
   try {
+    let testContext;
+    try {
+      testContext = extractAuthorizedTestModeContext(
+        ctx.request,
+        auth.token.test_session,
+        ctx.context
+      );
+    } catch (error) {
+      if (error instanceof TestModeAuthorizationError) {
+        return ctx.forbidden(error.message, error.code);
+      }
+      throw error;
+    }
+
     const feedItems = await getCustomFeedItems(
       auth.userId,
       feedId,
       cursor,
       limit,
-      auth.userId
+      auth.userId,
+      testContext
     );
     return ctx.ok(feedItems);
   } catch (error) {

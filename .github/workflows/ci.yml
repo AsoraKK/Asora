@@ -856,6 +856,9 @@ jobs:
       - name: Test release manifest workflow contract
         run: node --test scripts/tests/release-manifest-workflow.test.js
 
+      - name: Test performance fixture isolation wiring
+        run: node --test scripts/tests/performance-test-mode-wiring.test.js
+
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest

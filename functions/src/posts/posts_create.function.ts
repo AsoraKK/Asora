@@ -25,7 +25,11 @@ import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { awardPostCreated } from '@shared/services/reputationService';
 import { recordReputationEvent } from '../reputation/reputationEventService';
 import { LedgerEventType } from '../reputation/types';
-import { extractTestModeContext, checkTestModeRateLimit } from '@shared/testMode/testModeContext';
+import {
+  checkTestModeRateLimit,
+  extractAuthorizedTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 import {
   checkAndIncrementPostCount,
   DailyPostLimitExceededError,
@@ -60,34 +64,44 @@ function mediaValidationMessage(reason?: string): string {
 }
 
 export const posts_create = httpHandler<CreatePostRequest, Post>(async ctx => {
-  // Extract test mode context FIRST (before any other processing)
-  const testContext = extractTestModeContext(ctx.request, ctx.context);
-
-  if (testContext.isTestMode) {
-    ctx.context.log(
-      `[posts_create] TEST MODE - Creating test post [session=${testContext.sessionId}] [${ctx.correlationId}]`
-    );
-
-    // Check rate limits for test mode
-    const rateLimit = await checkTestModeRateLimit(
-      testContext.sessionId || 'unknown',
-      'postsPerHour',
-      ctx.context
-    );
-
-    if (!rateLimit.allowed) {
-      return ctx.tooManyRequests('Test mode rate limit exceeded', 'TEST_RATE_LIMIT', {
-        remaining: rateLimit.remaining,
-        resetAt: new Date(rateLimit.resetAt).toISOString(),
-      });
-    }
-  } else {
-    ctx.context.log(`[posts_create] Creating new post [${ctx.correlationId}]`);
-  }
-
   try {
     // Extract and verify JWT
     const auth = await extractAuthContext(ctx);
+    let testContext;
+    try {
+      testContext = extractAuthorizedTestModeContext(
+        ctx.request,
+        auth.token.test_session,
+        ctx.context
+      );
+    } catch (error) {
+      if (error instanceof TestModeAuthorizationError) {
+        return ctx.forbidden(error.message, error.code);
+      }
+      throw error;
+    }
+
+    if (testContext.isTestMode) {
+      ctx.context.log(
+        `[posts_create] TEST MODE - Creating test post [session=${testContext.sessionId}] [${ctx.correlationId}]`
+      );
+
+      const rateLimit = await checkTestModeRateLimit(
+        testContext.sessionId || 'unknown',
+        'postsPerHour',
+        ctx.context
+      );
+
+      if (!rateLimit.allowed) {
+        return ctx.tooManyRequests('Test mode rate limit exceeded', 'TEST_RATE_LIMIT', {
+          remaining: rateLimit.remaining,
+          resetAt: new Date(rateLimit.resetAt).toISOString(),
+        });
+      }
+    } else {
+      ctx.context.log(`[posts_create] Creating new post [${ctx.correlationId}]`);
+    }
+
     const alphaConfig = await assertAlphaFeature('postCreation');
     const effectiveEntitlements = await getEffectiveEntitlements(auth.userId, auth.tier);
 
