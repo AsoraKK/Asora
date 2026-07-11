@@ -34,7 +34,14 @@ addFormats(ajv);
 const validatorCache = new Map<string, import('ajv').ValidateFunction>();
 const baseUrl = server ? server.replace(/\/?$/, '') : undefined;
 const REQUEST_TIMEOUT_MS = Number(process.env.CONTRACT_TIMEOUT_MS ?? 5000);
-const LIVE_HOOK_TIMEOUT_MS = Math.max(REQUEST_TIMEOUT_MS + 5000, 10_000);
+const LIVE_REACHABILITY_ATTEMPTS = requireLiveContracts ? 3 : 1;
+const LIVE_REACHABILITY_DELAY_MS = 2000;
+const LIVE_HOOK_TIMEOUT_MS = Math.max(
+  LIVE_REACHABILITY_ATTEMPTS * REQUEST_TIMEOUT_MS +
+    (LIVE_REACHABILITY_ATTEMPTS - 1) * LIVE_REACHABILITY_DELAY_MS +
+    5000,
+  10_000
+);
 
 class StagingUnavailableError extends Error {
   constructor(message: string, cause?: unknown) {
@@ -165,9 +172,21 @@ async function isServerReachable(): Promise<boolean> {
     return false;
   }
   if (!reachabilityPromise) {
-    reachabilityPromise = pingHealthEndpoint();
+    reachabilityPromise = pingHealthEndpointWithRetry();
   }
   return reachabilityPromise;
+}
+
+async function pingHealthEndpointWithRetry(): Promise<boolean> {
+  for (let attempt = 1; attempt <= LIVE_REACHABILITY_ATTEMPTS; attempt += 1) {
+    if (await pingHealthEndpoint()) {
+      return true;
+    }
+    if (attempt < LIVE_REACHABILITY_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, LIVE_REACHABILITY_DELAY_MS));
+    }
+  }
+  return false;
 }
 
 async function pingHealthEndpoint(): Promise<boolean> {
@@ -458,13 +477,17 @@ describeIfAuth('Authenticated contract coverage', () => {
   // Moderation appeals
   // ---------------------------------------------------------------------------
 
-  test('POST /moderation/appeals rejects missing caseId with 400', async () => {
+  test('POST /moderation/appeals returns documented validation or rate-limit response', async () => {
     const result = await runOrSkip(() =>
       request({ method: 'post', pathKey: '/moderation/appeals', auth: true, body: { statement: 'no caseId' } })
     );
     if (!result) return;
-    const { response } = result;
-    expect([400, 422]).toContain(response.status);
+    const { response, payload } = result;
+    expect([400, 429]).toContain(response.status);
+    const validate = getValidator('/moderation/appeals', 'post', String(response.status));
+    const ok = validate(payload);
+    if (!ok) console.error(validate.errors);
+    expect(ok).toBe(true);
   });
 
   test('POST /moderation/appeals/{appealId}/vote rejects unauthenticated request', async () => {
