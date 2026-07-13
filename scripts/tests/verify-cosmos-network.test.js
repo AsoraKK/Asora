@@ -29,11 +29,11 @@ test('unknown Cosmos network modes fail closed', () => {
   assert.match(verifier, /Invalid Cosmos network mode/);
 });
 
-test('deployment selects the exception only for dev and staging', () => {
+test('deployment selects the exception only for the shared MVP environment', () => {
   assert.match(workflow, /COSMOS_NETWORK_MODE="private"/);
   assert.match(
     workflow,
-    /if \[\[ "\$TARGET_ENV" == "dev" \|\| "\$TARGET_ENV" == "staging" \]\]; then/
+    /if \[\[ "\$TARGET_ENV" == "mvp" \]\]; then/
   );
   assert.match(workflow, /COSMOS_NETWORK_MODE="public-keyvault"/);
 });
