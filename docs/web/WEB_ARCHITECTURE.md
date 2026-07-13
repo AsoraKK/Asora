@@ -189,7 +189,7 @@ cross-origin SSO is required.
 
 ### Post-Deploy Smoke Checklist
 
-`.github/workflows/beta-smoke.yml` automates this checklist after staging deploys and documents the per-deployment report artifact. Keep the table below as the contract it enforces:
+`.github/workflows/beta-smoke.yml` runs this checklist only with explicit exact Pages/Worker preview URLs and documents the per-deployment report artifact. Keep the table below as the contract it enforces:
 
 | # | Test | URL / Action | Expected |
 |---|---|---|---|

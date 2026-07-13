@@ -3,30 +3,30 @@
 Last updated: 2026-02-19
 Scope: In-repo execution paths and external handoffs.
 
-## M0: Internal CI and staging readiness
+## M0: Internal CI and MVP preview readiness
 
 In-repo automation:
 - CI gates: `.github/workflows/ci.yml`
 - OpenAPI gates: `.github/workflows/openapi.yml`
 - Function deploy workflow with environment dispatch:
   - `.github/workflows/deploy-asora-function-dev.yml`
-  - `.github/workflows/deploy-asora-function-staging.yml`
+  - `.github/workflows/deploy-asora-function-mvp.yml`
   - `workflow_dispatch` inputs:
-    - `target_environment`: `dev` or `staging`
-    - `function_app_name`: optional override
-    - `resource_group`: optional override
-- Dedicated staging entrypoint:
-  - Run `deploy-asora-function-staging` for operator-safe staging deploys.
+    - `target_environment`: `mvp`
+    - Function App: fixed to existing `asora-function-dev`
+    - Resource group: fixed to existing `asora-psql-flex`
+- Dedicated MVP entrypoint:
+  - Run `Deploy Lythaus MVP backend` only with an exact validated artifact and approval.
 - E2E smoke workflow with matching environment dispatch:
   - `.github/workflows/e2e-integration.yml`
-  - Auto-targets staging when triggered by `deploy-asora-function-staging`.
+  - Targets the protected existing `dev` GitHub environment/OIDC subject while classifying the Azure backend as MVP shared.
 
 Recommended execution order:
-1. Run `deploy-asora-function-staging`.
-2. Run `E2E Integration Test` with `target_environment=staging`.
+1. Deploy the exact web artifact to Cloudflare Pages preview.
+2. Run the temporary Worker preview against the existing MVP origin.
 3. Confirm `health`, admin function index, and feed probes pass.
 4. Confirm trust endpoints smoke passes (`scripts/smoke-trust-endpoints.sh` via `.github/workflows/e2e-integration.yml`).
-5. Confirm `Beta Browser Smoke` passes (`.github/workflows/beta-smoke.yml`) and upload the per-deployment report artifact.
+5. Confirm `MVP Preview Browser Smoke` passes (`.github/workflows/beta-smoke.yml`) with explicit preview URLs.
 6. Confirm auth refresh behavior is consistent between `/api/auth/token` and `/api/auth/refresh` before widening cohort.
 
 ## M1: Core social MVP
@@ -40,7 +40,7 @@ Verification:
 - `flutter test test/screens/home_feed_navigator_test.dart`
 - `flutter test test/ui_components/feed_control_panel_test.dart`
 - `flutter test test/ui/screens/p1_screen_smoke_test.dart`
-- Staging auth drill validates token exchange and refresh parity (`/api/auth/token` vs `/api/auth/refresh`) before expanding beta access.
+- An exact preview auth drill against the shared MVP origin validates token exchange and refresh parity (`/api/auth/token` vs `/api/auth/refresh`) before expanding beta access.
 
 ## M2: Moderation and AI authenticity
 
@@ -51,7 +51,7 @@ In-repo status:
 
 Verification:
 - Run moderation service tests in `functions/tests`.
-- Validate vote + override flows in staging.
+- Validate vote + override flows through an exact preview using isolated test identities.
 - Validate OpenAPI `posts_create` path behavior in `functions/tests/posts/posts.route.test.ts` (not only legacy `createPost` route coverage).
 
 ## M3: Privacy and compliance
@@ -96,7 +96,7 @@ External handoff:
 
 ## External-only checklist (not closable by code alone)
 
-- Azure account/resource provisioning state for staging/prod.
+- Shared MVP origin safety, backup/rollback, exact CORS, OAuth callback, and origin-token state.
 - Secret population and rotation in cloud secret stores.
 - Play Console and (later) App Store Connect artifact/form completion.
 - Store submission evidence checklist maintained and signed:

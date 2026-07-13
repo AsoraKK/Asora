@@ -130,7 +130,7 @@ Invite deep-link:    https://lythaus.co/invite/{code}
 
 ## Redirect strategy
 
-After the ADR-005 staging and rollback gates pass:
+After the ADR-005 exact-preview and rollback gates pass:
 
 | From | To | Type |
 |------|----|------|

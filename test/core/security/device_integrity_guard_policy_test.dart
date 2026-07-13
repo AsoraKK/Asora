@@ -122,7 +122,7 @@ void main() {
     test('staging with QA override returns warnOnly for compromised', () async {
       fakeService.setCompromised(true);
       final guard = createGuard(
-        environment: Environment.staging,
+        environment: Environment.preview,
         configOverride: const MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: false,
@@ -131,7 +131,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: true,
+          allowRootedInPreviewForQa: true,
         ),
       );
       final decision = await guard.evaluate(IntegrityUseCase.signIn);

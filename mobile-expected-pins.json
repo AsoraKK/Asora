@@ -2,8 +2,7 @@
   "_states": {
     "asora-function-dev.azurewebsites.net": "live",
     "asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net": "deprecated",
-    "asora-function-staging.northeurope-01.azurewebsites.net": "planned",
-    "asora-function-prod.northeurope-01.azurewebsites.net": "planned"
+    "api.lythaus.co": "planned"
   },
   "asora-function-dev.azurewebsites.net": [
     "q/NAtXjKO6gUw/KPFBywpWfsBpcnilAYw9+8tYUGkUE=",
@@ -19,8 +18,6 @@
     "sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=",
     "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
   ],
-  "_comment_staging": "PLANNED: run ./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net once the host is provisioned, then populate this array",
-  "asora-function-staging.northeurope-01.azurewebsites.net": [],
-  "_comment_prod": "PLANNED: run ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net (leaf + intermediate) once the host is provisioned, then populate this array",
-  "asora-function-prod.northeurope-01.azurewebsites.net": []
+  "_comment_mvp": "PLANNED: run ./scripts/extract-spki-pins.sh api.lythaus.co after the Worker custom domain certificate is live, then populate this array with leaf and backup pins",
+  "api.lythaus.co": []
 }

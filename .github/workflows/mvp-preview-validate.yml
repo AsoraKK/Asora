@@ -1,0 +1,30 @@
+name: MVP Preview Edge Cache Validate
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Exact temporary Worker preview hostname"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run validation against explicit preview
+        env:
+          DOMAIN: ${{ inputs.domain }}
+          PATH_FEED: /api/feed/discover
+          QS1: limit=20&cursor=first&includeTopics=tech
+          QS2: limit=21&cursor=first&includeTopics=tech
+          MVP_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$MVP_SMOKE_TOKEN" || { echo "MVP_SMOKE_TOKEN is required"; exit 1; }
+          export AUTH_HDR="Authorization: Bearer $MVP_SMOKE_TOKEN"
+          bash ./scripts/validate_edge_cache.sh

@@ -2,7 +2,7 @@
 
 /// ASORA ENVIRONMENT CONFIGURATION
 ///
-/// 🎯 Purpose: Environment-specific configuration (dev/staging/prod)
+/// 🎯 Purpose: Environment-specific configuration (local/preview/MVP live)
 /// 🔐 Security: Embeds TLS pins and device integrity policies per environment
 /// 📱 Platform: Flutter multi-environment support
 library;
@@ -13,7 +13,7 @@ import 'package:asora/core/config/web_release_guard.dart';
 /// Environment enumeration
 enum Environment {
   development,
-  staging,
+  preview,
   production;
 
   /// Get current environment from build configuration
@@ -30,9 +30,9 @@ enum Environment {
       case 'production':
       case 'prod':
         return Environment.production;
-      case 'staging':
-      case 'stg':
-        return Environment.staging;
+      case 'preview':
+      case 'pr':
+        return Environment.preview;
       case 'development':
       case 'dev':
       default:
@@ -41,16 +41,12 @@ enum Environment {
   }
 
   bool get isDev => this == Environment.development;
-  bool get isStaging => this == Environment.staging;
+  bool get isPreview => this == Environment.preview;
   bool get isProd => this == Environment.production;
 }
 
 /// TLS certificate pinning configuration
-enum PinLifecycleState {
-  live,
-  planned,
-  deprecated,
-}
+enum PinLifecycleState { live, planned, deprecated }
 
 class TlsPinConfig {
   final bool enabled;
@@ -78,20 +74,20 @@ class MobileSecurityConfig {
   final TlsPinConfig tlsPins;
   final bool strictDeviceIntegrity;
   final bool blockRootedDevices;
-  final bool allowRootedInStagingForQa;
+  final bool allowRootedInPreviewForQa;
 
   const MobileSecurityConfig({
     required this.tlsPins,
     required this.strictDeviceIntegrity,
     required this.blockRootedDevices,
-    this.allowRootedInStagingForQa = false,
+    this.allowRootedInPreviewForQa = false,
   });
 
   Map<String, dynamic> toJson() => {
     'tlsPins': tlsPins.toJson(),
     'strictDeviceIntegrity': strictDeviceIntegrity,
     'blockRootedDevices': blockRootedDevices,
-    'allowRootedInStagingForQa': allowRootedInStagingForQa,
+    'allowRootedInPreviewForQa': allowRootedInPreviewForQa,
   };
 }
 
@@ -126,15 +122,15 @@ class EnvironmentConfig {
       return EnvironmentConfig(
         environment: env,
         apiBaseUrl: apiBaseUrl,
-        security: env.isStaging ? _stagingMobileSecurity : _prodMobileSecurity,
+        security: env.isPreview ? _previewMobileSecurity : _prodMobileSecurity,
       );
     }
 
     switch (env) {
       case Environment.development:
         return _devConfig;
-      case Environment.staging:
-        return _stagingConfig;
+      case Environment.preview:
+        return _previewConfig;
       case Environment.production:
         return _prodConfig;
     }
@@ -149,8 +145,8 @@ class EnvironmentConfig {
     switch (env) {
       case Environment.development:
         return _devConfig;
-      case Environment.staging:
-        return _stagingConfig;
+      case Environment.preview:
+        return _previewConfig;
       case Environment.production:
         return _prodConfig;
     }
@@ -178,7 +174,7 @@ const _devMobileSecurity = MobileSecurityConfig(
   ),
   strictDeviceIntegrity: false,
   blockRootedDevices: false,
-  allowRootedInStagingForQa: false,
+  allowRootedInPreviewForQa: false,
 );
 
 const _devConfig = EnvironmentConfig(
@@ -191,25 +187,26 @@ const _devConfig = EnvironmentConfig(
   security: _devMobileSecurity,
 );
 
-// Staging configuration: strict but can be relaxed for QA
-const _stagingMobileSecurity = MobileSecurityConfig(
+// Preview security posture. Cloudflare preview builds must supply API_BASE_URL
+// explicitly; there is no permanent preview API or separate Azure backend.
+const _previewMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: true,
     strictMode: true, // block on mismatch
     lifecycleState: PinLifecycleState.planned,
     spkiPinsBase64: [
-      // Planned: populate after the staging host is provisioned and reachable.
+      // Planned: preview hostnames are ephemeral and are not shipped as pins.
     ],
   ),
   strictDeviceIntegrity: true,
   blockRootedDevices: true,
-  allowRootedInStagingForQa: false, // Toggle to true for QA testing
+  allowRootedInPreviewForQa: false,
 );
 
-const _stagingConfig = EnvironmentConfig(
-  environment: Environment.staging,
-  apiBaseUrl: 'https://api.staging.lythaus.co/api',
-  security: _stagingMobileSecurity,
+const _previewConfig = EnvironmentConfig(
+  environment: Environment.preview,
+  apiBaseUrl: 'https://api.lythaus.co/api',
+  security: _previewMobileSecurity,
 );
 
 // Production configuration: strict, secure defaults
@@ -224,7 +221,7 @@ const _prodMobileSecurity = MobileSecurityConfig(
   ),
   strictDeviceIntegrity: true,
   blockRootedDevices: true,
-  allowRootedInStagingForQa: false,
+  allowRootedInPreviewForQa: false,
 );
 
 const _prodConfig = EnvironmentConfig(

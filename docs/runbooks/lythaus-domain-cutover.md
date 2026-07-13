@@ -2,50 +2,57 @@
 
 ## Gate
 
-Do not perform provider writes unless both zones, Pages, Workers, custom domains/routes, Access, rulesets, production Azure origin, CORS, OAuth callbacks, certificates, secrets, and rollback snapshots are verified. Any `UNKNOWN` is `NO-GO` for the affected write.
+This pass is audit and repository preparation only. Do not perform provider writes without separate authorization after both Cloudflare zones, Pages, Workers, custom domains/routes, Access, rulesets, certificates, the Azure MVP origin, CORS, OAuth callbacks, secrets, and rollback snapshots are verified.
 
-## Pre-cutover capture
+## Environment model
 
-Store raw exports only under `.artifacts/cloudflare-audit/` and commit sanitized summaries. Capture DNS, Pages domains/deployments, Worker routes/custom domains/version, Access apps/policies, redirect/rulesets, Azure app-setting names/redacted presence, platform CORS, and OAuth callbacks. Record exact repository SHA and provider deployment IDs.
+- **Local:** local Flutter and Functions where supported.
+- **Preview:** exact Cloudflare Pages preview plus temporary Worker preview; both use the existing Azure MVP origin.
+- **MVP live:** official Lythaus domains using the same Azure origin.
 
-## Staging sequence
+Do not create permanent staging hostnames, new Azure Function Apps, or new databases.
 
-1. Re-run `scripts/cloudflare/audit-domains.ps1`; require a verified read-only token and zero required-permission failures.
-2. Identify the marketing, Flutter, and control-panel Pages projects by source, build output, response content, and deployment SHA.
-3. Identify the production and staging Azure Function Apps; reject any ambiguous or development origin.
-4. Configure the gateway staging `ORIGIN_BASE`, secret `ORIGIN_AUTH_TOKEN`, rate-limit KV binding, logs, and `api.staging.lythaus.co` custom domain.
-5. Set the matching Azure `ORIGIN_GATEWAY_TOKEN`, exact staging CORS origins, and OAuth callback; keep `ORIGIN_GATEWAY_AUTH_REQUIRED=false` initially.
-6. Deploy immutable exact-SHA marketing, Flutter, gateway, Functions, and control-panel artifacts.
-7. Verify DNS/TLS, `/api/health`, discovery, preflight, auth code/PKCE/token/userinfo, protected reads, controlled writes, moderation, and DSR-safe operations.
-8. Verify Azure hostnames are absent from browser assets, redirects, errors, and OpenAPI.
-9. Enable `ORIGIN_GATEWAY_AUTH_REQUIRED=true`; repeat health, auth, monitoring, deployment, and emergency-access checks.
-10. Exercise rollback, restore staging, and repeat all smoke tests.
+## Pre-change capture
 
-Do not attach staging admin domains unless the UI, API, Access policies, audience validation, and service-token smoke path are all ready.
+Store raw exports only under `.artifacts/cloudflare-audit/`; commit sanitized summaries. Capture DNS, Pages domains/deployments, Worker routes/custom domains/version, Access apps/policies, rulesets, Azure app-setting names/redacted state, platform CORS, OAuth callbacks, Function deployment SHA/package, and database backup posture.
 
-## Production sequence
+## Preview sequence
 
-1. Require a successful staging/rollback packet on the exact production SHA.
-2. Attach `lythaus.co` to the identified marketing Pages project and verify canonical/sitemap output.
-3. Configure `www.lythaus.co` permanent path/query-preserving redirect.
-4. Attach `app.lythaus.co` to the identified Flutter Pages project; verify SPA refresh and OAuth callback allowlist.
-5. Attach `api.lythaus.co` to the verified production gateway/origin; verify CORS, auth, cache bypass, controlled writes, and origin concealment.
-6. Attach administration domains only after Access and origin-role checks pass.
-7. Begin legacy web redirects and API compatibility proxying; do not delete legacy bindings.
-8. Record post-cutover DNS, certificate, Pages, Worker, Access, CORS, OAuth, monitoring, and exact deployment identifiers.
+1. Re-run `scripts/cloudflare/audit-domains.ps1`; require both exact zones and all read permissions.
+2. Identify marketing, Flutter, and control-panel Pages projects by source, output, response content, and deployment SHA.
+3. Deploy the exact PR Flutter artifact to a Pages preview.
+4. Deploy the gateway temporarily through Wrangler preview/workers.dev with explicit preview hostname and CORS origin, the existing MVP `ORIGIN_BASE`, secret `ORIGIN_AUTH_TOKEN`, and rate-limit binding.
+5. Keep `ORIGIN_GATEWAY_AUTH_REQUIRED=false` initially; do not change production DNS.
+6. Validate health, path forwarding, preflight, discovery, authenticated cache bypass, protected rejection, header stripping, correlation IDs, origin concealment, SPA refresh, login, and callback error handling.
+7. Add only the exact Pages preview origin to Azure CORS for the validation window, record it, and remove it afterward unless separately approved.
+8. Enable origin enforcement only after gateway and emergency paths are proven; repeat health/auth/deployment checks.
+9. Restore the prior Function package and Worker version, verify rollback, then restore the exact candidate SHA and repeat tests.
+
+## Authorised provider-change plan
+
+After a separate approval:
+
+1. Attach `lythaus.co` to the identified marketing Pages project and verify canonical/sitemap output.
+2. Configure the path/query-preserving `www.lythaus.co` redirect.
+3. Attach `app.lythaus.co` to the identified Flutter Pages project and verify SPA/OAuth behavior.
+4. Attach `api.lythaus.co` to the verified gateway using the existing MVP origin.
+5. Set exact Lythaus Azure CORS and OAuth callback values.
+6. Attach administration domains only after Access policy, audience, service-token, and origin-role checks pass.
+7. Begin reviewed legacy redirects/API compatibility without deleting old bindings.
+8. Record DNS, TLS, Pages/Worker versions, Access, CORS, OAuth, monitoring, and exact deployment identifiers.
 
 ## Rollback order
 
-1. Restore the previous Worker deployment version.
+1. Restore the previous Worker version.
 2. Restore previous Worker custom-domain/route bindings.
-3. Restore the previous Pages deployments and custom-domain bindings.
-4. Restore previous DNS and redirect/ruleset configuration.
-5. Restore prior Azure CORS, OAuth callbacks, and origin-token enforcement state.
-6. Run health, discovery, auth, protected-cache, and Access tests.
-7. Compare authoritative DNS and edge routing to the pre-cutover snapshot and eliminate split-brain state.
+3. Restore the previous Function package.
+4. Restore previous Pages deployments/bindings.
+5. Restore previous DNS and redirects.
+6. Restore prior CORS, OAuth callbacks, and origin-token enforcement.
+7. Run health, readiness, discovery, auth, cache, Access, and split-brain checks.
 
-Rollback must use exported, still-existing resources. Initial cutover does not delete old DNS, bindings, versions, Access applications, or compatibility routes.
+Rollback uses exported, still-existing resources. Initial cutover does not delete old DNS, bindings, versions, Access applications, or compatibility routes.
 
 ## Current execution
 
-On 2026-07-13 no staging or production provider change was applied. Rollback is documented but not proven.
+On 2026-07-13 no provider write was applied. Azure was audited read-only; Cloudflare remains unauditable without a replacement token. Rollback is documented but not proven.

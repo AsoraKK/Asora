@@ -5,10 +5,6 @@ import { dirname } from 'node:path';
 import { chromium } from 'playwright';
 import { createWorker } from 'tesseract.js';
 
-const DEFAULT_WEB_BASE_URL = 'https://app.staging.lythaus.co';
-const DEFAULT_API_BASE_URL = 'https://api.staging.lythaus.co/api';
-const DEFAULT_ADMIN_API_URL = 'https://admin-api.staging.lythaus.co/api';
-
 function isPrivateOrLocalHost(host) {
   const normalized = host.trim().toLowerCase();
   if (!normalized) return true;
@@ -107,22 +103,22 @@ async function fetchWithBody(url, init = {}) {
 }
 
 const webBaseUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('WEB_BASE_URL', process.env.WEB_BASE_URL || DEFAULT_WEB_BASE_URL),
+  requirePublicHttpsOrigin('WEB_BASE_URL', process.env.WEB_BASE_URL),
 );
 const apiBaseUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('API_BASE_URL', process.env.API_BASE_URL || DEFAULT_API_BASE_URL),
+  requirePublicHttpsOrigin('API_BASE_URL', process.env.API_BASE_URL),
 );
 const adminApiUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('ADMIN_API_URL', process.env.ADMIN_API_URL || DEFAULT_ADMIN_API_URL),
+  requirePublicHttpsOrigin('ADMIN_API_URL', process.env.ADMIN_API_URL),
 );
 
-const smokeToken = (process.env.BETA_SMOKE_TOKEN || process.env.STAGING_SMOKE_TOKEN || '').trim();
+const smokeToken = (process.env.BETA_SMOKE_TOKEN || process.env.MVP_SMOKE_TOKEN || '').trim();
 const accessClientId = (process.env.CF_ACCESS_CLIENT_ID || process.env.CF_Access_Client_Id || '').trim();
 const accessClientSecret = (process.env.CF_ACCESS_CLIENT_SECRET || process.env.CF_Access_Client_Secret || '').trim();
 const reportPath = (process.env.BETA_SMOKE_REPORT_PATH || '').trim();
 
 if (!smokeToken) {
-  throw new Error('BETA_SMOKE_TOKEN or STAGING_SMOKE_TOKEN is required for authenticated API smoke checks');
+  throw new Error('BETA_SMOKE_TOKEN or MVP_SMOKE_TOKEN is required for authenticated API smoke checks');
 }
 
 if (!accessClientId || !accessClientSecret) {

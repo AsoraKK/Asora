@@ -8,10 +8,10 @@ import worker, {
 describe('Lythaus API gateway Worker', () => {
   const mockCache = { match: jest.fn(), put: jest.fn() };
   const env = {
-    EXPECTED_HOSTNAMES: 'api.staging.lythaus.co',
+    EXPECTED_HOSTNAMES: 'lythaus-api-preview.example.workers.dev',
     ORIGIN_BASE: 'https://origin.example.com',
     ORIGIN_AUTH_TOKEN: 'origin-secret',
-    CORS_ALLOWED_ORIGINS: 'https://app.staging.lythaus.co',
+    CORS_ALLOWED_ORIGINS: 'https://preview.example.pages.dev',
     RATE_LIMIT_REQUIRED: 'false',
   } as any;
   const fetchSpy = jest.spyOn(globalThis, 'fetch');
@@ -32,11 +32,11 @@ describe('Lythaus API gateway Worker', () => {
   afterAll(() => fetchSpy.mockRestore());
 
   function request(path: string, init: RequestInit = {}): Request {
-    return new Request(`https://api.staging.lythaus.co${path}`, init);
+    return new Request(`https://lythaus-api-preview.example.workers.dev${path}`, init);
   }
 
   it('accepts only configured hostnames and fails closed without an origin', async () => {
-    expect(isExpectedHostname(new URL('https://api.staging.lythaus.co/api/health'), env)).toBe(true);
+    expect(isExpectedHostname(new URL('https://lythaus-api-preview.example.workers.dev/api/health'), env)).toBe(true);
     expect(isExpectedHostname(new URL('https://api.lythaus.co/api/health'), env)).toBe(false);
 
     const response = await worker.fetch(request('/api/health'), { ...env, ORIGIN_BASE: '' }, { waitUntil: jest.fn() } as any);
@@ -69,7 +69,7 @@ describe('Lythaus API gateway Worker', () => {
       request('/api/health', {
         method: 'OPTIONS',
         headers: {
-          Origin: 'https://app.staging.lythaus.co',
+          Origin: 'https://preview.example.pages.dev',
           'Access-Control-Request-Method': 'GET',
         },
       }),
@@ -77,7 +77,7 @@ describe('Lythaus API gateway Worker', () => {
       { waitUntil: jest.fn() } as any
     );
     expect(allowed.status).toBe(204);
-    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://app.staging.lythaus.co');
+    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://preview.example.pages.dev');
 
     const denied = await worker.fetch(
       request('/api/health', { headers: { Origin: 'https://attacker.example' } }),
@@ -92,7 +92,7 @@ describe('Lythaus API gateway Worker', () => {
     expect(isAnonymousCacheRequest(request('/api/feed/discover', { headers: { Authorization: 'Bearer token' } }))).toBe(false);
     expect(isAnonymousCacheRequest(request('/api/feed/discover', { headers: { Cookie: 'session=1' } }))).toBe(false);
     expect(isAnonymousCacheRequest(request('/api/feed/news'))).toBe(false);
-    const key = buildCacheKeyUrl(new URL('https://api.staging.lythaus.co/api/feed/discover?limit=20&ignored=yes'));
+    const key = buildCacheKeyUrl(new URL('https://lythaus-api-preview.example.workers.dev/api/feed/discover?limit=20&ignored=yes'));
     expect(key.search).toBe('?limit=20');
   });
 

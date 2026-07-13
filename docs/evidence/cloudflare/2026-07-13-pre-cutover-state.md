@@ -2,7 +2,7 @@
 
 ## Decision
 
-`NO-GO`. No provider-side snapshot could be completed because `CLOUDFLARE_AUDIT_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` were absent. Raw local observations are under the gitignored `.artifacts/cloudflare-audit/` directory.
+`NO-GO`. The Azure MVP origin was captured read-only, but no Cloudflare provider snapshot could be completed because `CLOUDFLARE_AUDIT_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` were absent. Raw local observations are under the gitignored `.artifacts/cloudflare-audit/` directory.
 
 ## Repository
 
@@ -10,7 +10,21 @@
 - Base SHA: `0cb3ffdeca506e891553c74b9e8b66de8f60890b`
 - Migration branch: `codex/lythaus-domain-migration`
 - PR 452: open draft, migration stacked on its head
-- Conflict map: 30 of the initial 64 migration files overlap PR 452
+- Migration scope: 136 files relative to the stacked base
+- Conflict map: 52 migration paths overlap PR 452
+
+## Azure MVP origin
+
+- Function App: `asora-function-dev` in `asora-psql-flex`, North Europe
+- State/runtime: running, Node 22, Flex Consumption FC1
+- Deployment: immutable package SHA matches PR 452, not the unmerged PR 453 candidate
+- Health/readiness: `/api/health` and `/api/ready` returned HTTP 200; Cosmos readiness passed
+- Platform CORS: does not allow `https://app.lythaus.co`
+- Gateway origin authentication: absent or disabled
+- Direct-origin access: public network access remains enabled
+- Provider writes: none
+
+The sanitized setting-name/state and resource snapshot is in `2026-07-13-azure-mvp-audit.md` and `.json`.
 
 ## Public observations
 

@@ -1,20 +1,23 @@
 {
   "date": "2026-07-13",
   "result": "NO-GO",
+  "architecture": "SINGLE_AZURE_MVP_SHARED_ENVIRONMENT",
   "repository": {
     "baseBranch": "codex/alpha-release-candidate",
     "baseSha": "0cb3ffdeca506e891553c74b9e8b66de8f60890b",
     "migrationBranch": "codex/lythaus-domain-migration",
     "releaseCandidatePr": 452,
     "releaseCandidateState": "OPEN_DRAFT",
-    "migrationFileCount": 84,
-    "conflictMapCount": 36
+    "migrationFileCount": 136,
+    "conflictMapCount": 52
   },
   "credentials": {
     "cloudflareAuditToken": "MISSING",
     "cloudflareAccountId": "MISSING",
+    "wranglerSession": "EXPIRED",
+    "azureCliSession": "AUTHENTICATED",
     "cloudflareWriteTokenUsed": false,
-    "azureWriteCredentialUsed": false
+    "azureWriteApplied": false
   },
   "zones": {
     "lythaus.co": {
@@ -50,29 +53,61 @@
     "applicationsAndPolicies": "UNKNOWN",
     "audienceMatch": "UNKNOWN"
   },
+  "azureMvp": {
+    "evidence": "docs/evidence/cloudflare/2026-07-13-azure-mvp-audit.json",
+    "origin": "asora-function-dev",
+    "originVerified": true,
+    "health": "HTTP_200_HEALTHY",
+    "ready": "HTTP_200_READY_COSMOS_TRUE",
+    "cors": "LYTHAUS_ORIGIN_NOT_ALLOWED",
+    "originAuthentication": "ABSENT_OR_DISABLED",
+    "directPublicAccess": true,
+    "deploymentMatchesPr452": true,
+    "deploymentMatchesPr453": false,
+    "rollback": "NOT_PROVEN"
+  },
   "email": {
     "asora.co.za": "GOOGLE_MX_OBSERVED_PROVIDER_AUTH_UNKNOWN",
     "lythaus.co": "NOT_READY_NO_MX_OBSERVED_AUTH_UNKNOWN"
   },
   "repositoryInventory": {
-    "matches": 529,
+    "matches": 359,
     "csv": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.csv",
     "markdown": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.md"
+  },
+  "validation": {
+    "flutterAnalyze": "PASS",
+    "flutterTests": "PASS_3623_SKIPPED_5",
+    "flutterPreviewBuild": "PASS_LOCAL_ARTIFACT_ONLY",
+    "flutterMvpBuild": "PASS",
+    "functionsTypecheckBuild": "PASS",
+    "functionsTests": "PASS_2254_SKIPPED_18",
+    "gatewayTests": "PASS",
+    "wranglerPreviewDryRun": "PASS",
+    "wranglerMvpDryRun": "PASS",
+    "marketingBuildAndOutputContract": "PASS_10_ROUTES",
+    "controlPanelTests": "PASS_21",
+    "openApiLintExamplesContract": "PASS",
+    "routeGuard": "PASS_129_ROUTES",
+    "domainContract": "PASS",
+    "repositorySecretScanner": "PASS",
+    "gitleaks": "UNAVAILABLE_LOCAL_BINARY",
+    "actionlint": "UNAVAILABLE_LOCAL_BINARY",
+    "cloudflarePreviewDeployment": "BLOCKED_NO_AUTH",
+    "browserAuthRollbackSmoke": "NOT_RUN_NO_PREVIEW"
   },
   "providerChangesApplied": false,
   "rollback": "DOCUMENTED_NOT_PROVEN",
   "blockers": [
-    "Cloudflare read-only audit token missing",
-    "Cloudflare account identifier missing",
-    "Both zones cannot be fully audited",
+    "Cloudflare replacement token and account ID are not loaded",
+    "Both Cloudflare zones cannot be fully audited",
     "Pages projects cannot be identified",
     "Worker routes and custom domains cannot be identified",
     "Access applications and policies cannot be identified",
-    "Production Azure origin cannot be verified",
-    "Production CORS and OAuth callbacks cannot be verified",
+    "Lythaus Azure CORS is not configured",
+    "Origin gateway authentication is not configured",
     "Certificate ownership and issuance cannot be verified",
-    "Provider rollback snapshots cannot be captured",
-    "Authentication and rollback cannot be exercised safely in staging",
-    "PR 452 retarget conflict map requires reconciliation after merge"
+    "Exact PR 453 preview and rollback are not proven",
+    "OAuth callback and Access isolation are not proven"
   ]
 }

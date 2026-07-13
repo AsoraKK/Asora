@@ -27,7 +27,7 @@ import 'package:asora/features/auth/domain/user.dart';
 
 /// Centralized configuration for Microsoft Entra / OAuth2 endpoints used by the
 /// Flutter client. The defaults mirror our Azure Functions wrappers so the
-/// mobile app can talk to staging environments without manual overrides.
+/// mobile app can use an explicitly configured preview without fallback URLs.
 class OAuth2Config {
   static const String authorizationEndpoint = String.fromEnvironment(
     'OAUTH2_AUTHORIZATION_ENDPOINT',

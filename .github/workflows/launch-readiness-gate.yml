@@ -34,7 +34,7 @@ jobs:
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: bash scripts/validate-signing-material.sh
 
-      - name: Check staging/prod SPKI pin lifecycle state
+      - name: Check preview/MVP SPKI pin lifecycle state
         shell: bash
         run: |
           set -euo pipefail
@@ -48,18 +48,18 @@ jobs:
               | head -n 1
           }
 
-          staging_state="$(get_state '_stagingMobileSecurity' '_stagingConfig')"
+          preview_state="$(get_state '_previewMobileSecurity' '_previewConfig')"
           prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
 
-          staging_state="${staging_state:-live}"
+          preview_state="${preview_state:-live}"
           prod_state="${prod_state:-live}"
 
-          staging_empty=false
+          preview_empty=false
           prod_empty=false
 
-          if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+          if awk '/^const _previewMobileSecurity/,/^const _previewConfig/' "$ENV_FILE" \
               | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
-            staging_empty=true
+            preview_empty=true
           fi
 
           if awk '/^const _prodMobileSecurity/,/^const _prodConfig/' "$ENV_FILE" \
@@ -68,35 +68,34 @@ jobs:
           fi
 
           failed=false
-          if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty."
-            echo "  Host: asora-function-dev.azurewebsites.net (shared-cost Alpha)"
-            echo "  Run: ./scripts/extract-spki-pins.sh asora-function-dev.azurewebsites.net"
-            echo "  Then populate _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE"
+          if [ "$preview_state" = "live" ] && [ "$preview_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: preview pins are marked live but spkiPinsBase64 is empty."
+            echo "  Preview API host is supplied explicitly per deployment."
+            echo "  Populate _previewMobileSecurity.tlsPins.spkiPinsBase64 or keep its lifecycle planned."
             echo "  See: docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning"
             failed=true
           fi
 
           if [ "$prod_state" = "live" ] && [ "$prod_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: production pins are marked live but spkiPinsBase64 is empty."
-            echo "  Host: asora-function-prod.northeurope-01.azurewebsites.net"
-            echo "  Run: ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
-            echo "  Also: CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
+            echo "::error::LAUNCH BLOCKER: MVP pins are marked live but spkiPinsBase64 is empty."
+            echo "  Host: api.lythaus.co"
+            echo "  Run: ./scripts/extract-spki-pins.sh api.lythaus.co"
+            echo "  Also: CERT_INDEX=1 ./scripts/extract-spki-pins.sh api.lythaus.co"
             echo "  Then populate _prodMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE (include ≥2 pins)"
             echo "  See: docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning"
             failed=true
           fi
 
-          if [ "$staging_state" = "planned" ] && [ "$staging_empty" = "true" ]; then
-            echo "ℹ staging pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          if [ "$preview_state" = "planned" ] && [ "$preview_empty" = "true" ]; then
+            echo "ℹ preview pins are planned; empty spkiPinsBase64 is intentional for ephemeral preview hosts."
           fi
 
           if [ "$prod_state" = "planned" ] && [ "$prod_empty" = "true" ]; then
-            echo "ℹ production pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+            echo "ℹ MVP pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
           fi
 
           if [ "$failed" = "true" ]; then exit 1; fi
-          echo "✓ Staging and production SPKI lifecycle states are explicit."
+          echo "✓ Preview and MVP SPKI lifecycle states are explicit."
 
       - name: Setup Flutter (for SPKI pin gate tests)
         uses: subosito/flutter-action@v2

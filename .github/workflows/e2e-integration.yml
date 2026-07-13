@@ -5,13 +5,12 @@ on:
   workflow_dispatch:
     inputs:
       target_environment:
-        description: "Target environment for smoke checks"
+        description: "Target classification for smoke checks"
         type: choice
         required: true
-        default: dev
+        default: mvp
         options:
-          - dev
-          - staging
+          - mvp
       function_app_name:
         description: "Optional Function App override"
         required: false
@@ -21,7 +20,7 @@ on:
         required: false
         type: string
   workflow_run:
-    workflows: ["deploy-asora-function-dev", "deploy-asora-function-staging"]
+    workflows: ["Deploy Lythaus MVP backend"]
     types: [completed]
     branches: [main, "infra/azure-retirement-hardening-node22-tls-kv-pg-ha"]
 
@@ -33,7 +32,7 @@ jobs:
   verify-secrets:
     name: Verify Required Variables
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
+    environment: dev
     steps:
       - name: Ensure required variables
         env:
@@ -50,12 +49,12 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     needs: verify-secrets
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
+    environment: dev
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      TARGET_ENV: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.name == 'deploy-asora-function-staging' && 'staging' || github.event.inputs.target_environment || 'dev' }}
+      TARGET_ENV: mvp
       APP: ${{ github.event.inputs.function_app_name || 'asora-function-dev' }}
       RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
     permissions:

@@ -12,7 +12,6 @@ import { HttpResponseInit } from '@azure/functions';
  */
 export const ALLOWED_ORIGINS = [
   'https://admin.lythaus.co',
-  'https://admin.staging.lythaus.co',
   // Development origins
   'http://localhost:3000',
   'http://localhost:5173',

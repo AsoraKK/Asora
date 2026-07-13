@@ -21,7 +21,7 @@ required = [
     'X-Frame-Options: DENY',
     'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), local-network-access=()',
     'Strict-Transport-Security: max-age=31536000; includeSubDomains',
-    "Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https:; upgrade-insecure-requests",
+    "Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://api.lythaus.co; upgrade-insecure-requests",
 ]
 
 missing = [line for line in required if line not in content]

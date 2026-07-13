@@ -24,7 +24,9 @@
 5. **Query Parameter Cache Hit** → Validates separate cache entry hit
    - Confirms query-specific cache entries work correctly
 
-### ✅ **CI/CD Workflow**: `.github/workflows/staging-validate.yml`
+### Historical CI/CD workflow
+
+This record predates ADR-005. The active workflow is `.github/workflows/mvp-preview-validate.yml`; no permanent staging environment exists.
 **Automated validation pipeline:**
 
 - **Trigger**: Runs after successful "Staging Deploy" workflow

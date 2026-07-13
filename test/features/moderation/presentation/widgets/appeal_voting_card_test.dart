@@ -47,9 +47,9 @@ DeviceIntegrityGuard _createCleanGuard() {
       ),
       strictDeviceIntegrity: false,
       blockRootedDevices: false,
-      allowRootedInStagingForQa: true,
+      allowRootedInPreviewForQa: true,
     ),
-    environment: Environment.staging,
+    environment: Environment.preview,
   );
 }
 

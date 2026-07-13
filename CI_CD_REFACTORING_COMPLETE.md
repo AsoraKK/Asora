@@ -7,7 +7,7 @@ Successfully refactored the Asora repository from a multi-environment CI/CD setu
 
 ### GitHub Workflows (Staging/Production)
 - ✅ `deploy-production-tag.yml` - Production tag deployment
-- ✅ `staging-validate.yml` - Staging edge cache validation
+- Historical note: the former permanent-environment validation workflow was replaced by `mvp-preview-validate.yml` under ADR-005.
 - ✅ `deploy-functionapp.yml` - Multi-environment function app deployment
 - ✅ `flutter-ci.yml` - Duplicate Flutter CI workflow
 - ✅ `infra.yml` - Infrastructure provisioning workflow

@@ -1,4 +1,4 @@
-name: Deploy Production (approved exact SHA)
+name: Promote MVP backend (approved exact SHA)
 
 on:
   workflow_dispatch:
@@ -12,12 +12,12 @@ on:
         required: true
         type: string
       approved_alpha_stage:
-        description: "Kyle-approved Alpha stage"
+        description: "Kyle-approved MVP stage"
         required: true
         type: choice
         options: [technical_alpha, controlled_alpha, expanded_alpha, paused]
       known_disabled_features_json:
-        description: "JSON array of intentionally disabled Alpha features"
+        description: "JSON array of intentionally disabled MVP features"
         required: true
         default: '[]'
         type: string
@@ -36,18 +36,12 @@ jobs:
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1
+      - run: bash scripts/validate-store-submission-evidence.sh
+      - run: bash scripts/validate-signing-material.sh
+      - run: bash scripts/validate-alert-routing-config.sh
 
-      - name: Validate store submission evidence
-        run: bash scripts/validate-store-submission-evidence.sh
-
-      - name: Validate signing material
-        run: bash scripts/validate-signing-material.sh
-
-      - name: Validate alert routing config
-        run: bash scripts/validate-alert-routing-config.sh
-
-  beta-smoke-gate:
-    name: Require beta browser smoke
+  preview-smoke-gate:
+    name: Require exact-SHA MVP preview smoke
     runs-on: ubuntu-latest
     needs: launch-readiness-gate
     steps:
@@ -57,35 +51,30 @@ jobs:
         with:
           script: |
             const sha = process.env.RELEASE_SHA;
-            const workflowId = 'beta-smoke.yml';
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: workflowId,
+              workflow_id: 'beta-smoke.yml',
               per_page: 50,
             });
-
             const matches = data.workflow_runs.filter((run) => run.head_sha === sha);
             const passed = matches.find((run) => run.conclusion === 'success');
-
             if (!passed) {
               const latest = matches[0];
-              const summary = latest
-                ? `${latest.conclusion || latest.status} at ${latest.html_url}`
-                : 'no matching workflow run found';
-              core.setFailed(`Beta smoke must pass for ${sha} before production promotion. Latest match: ${summary}`);
+              core.setFailed(`MVP preview smoke must pass for ${sha}. Latest: ${latest?.html_url || 'none'}`);
             }
 
   deploy:
-    name: Production Deploy
-    needs: beta-smoke-gate
+    name: Deploy shared MVP backend
+    needs: preview-smoke-gate
     uses: ./.github/workflows/deploy-asora-function-dev.yml
     with:
-      target_environment: production
+      target_environment: mvp
       release_sha: ${{ inputs.release_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
       approved_alpha_stage: ${{ inputs.approved_alpha_stage }}
       known_disabled_features_json: ${{ inputs.known_disabled_features_json }}
-      function_app_name: asora-function-production
-      resource_group: asora-production
+      function_app_name: asora-function-dev
+      resource_group: asora-psql-flex
+      key_vault_name: kv-asora-flex-dev
     secrets: inherit

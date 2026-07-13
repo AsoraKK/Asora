@@ -67,7 +67,7 @@ void main() {
           ),
           strictDeviceIntegrity: false,
           blockRootedDevices: false,
-          allowRootedInStagingForQa: true,
+          allowRootedInPreviewForQa: true,
         ),
       );
 
@@ -80,17 +80,17 @@ void main() {
 
     test('should extract hostname from API base URL', () {
       const envConfig = EnvironmentConfig(
-        environment: Environment.staging,
+        environment: Environment.preview,
         apiBaseUrl: 'https://asora-function-dev.azurewebsites.net/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
             strictMode: true,
-            spkiPinsBase64: ['TODO_STAGING_PIN'],
+            spkiPinsBase64: ['TODO_PREVIEW_PIN'],
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
       );
 

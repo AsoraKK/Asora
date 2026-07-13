@@ -126,7 +126,7 @@ jobs:
             echo "Reference pins live in lib/core/security/cert_pinning.dart."
           fi
 
-      - name: Check staging/prod SPKI pin lifecycle state
+      - name: Check preview/MVP SPKI pin lifecycle state
         shell: bash
         run: |
           set -euo pipefail
@@ -144,22 +144,22 @@ jobs:
               | head -n 1
           }
 
-          # Check for empty spkiPinsBase64 arrays inside the staging/prod security const blocks
+          # Check for empty spkiPinsBase64 arrays inside the preview/MVP security const blocks
           # and only fail if a live lifecycle state is marked empty.
-          staging_state="$(get_state '_stagingMobileSecurity' '_stagingConfig')"
+          preview_state="$(get_state '_previewMobileSecurity' '_previewConfig')"
           prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
-          staging_state="${staging_state:-live}"
+          preview_state="${preview_state:-live}"
           prod_state="${prod_state:-live}"
 
-          staging_empty=false
+          preview_empty=false
           prod_empty=false
 
-          # Extract staging block and check for empty array
-          if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+          # Extract preview block and check for empty array
+          if awk '/^const _previewMobileSecurity/,/^const _previewConfig/' "$ENV_FILE" \
               | grep -Eq 'spkiPinsBase64:[[:space:]]*\['; then
-            if awk '/^const _stagingMobileSecurity/,/^const _stagingConfig/' "$ENV_FILE" \
+            if awk '/^const _previewMobileSecurity/,/^const _previewConfig/' "$ENV_FILE" \
                 | grep -Eq 'spkiPinsBase64:[[:space:]]*\[[[:space:]]*\]'; then
-              staging_empty=true
+              preview_empty=true
             fi
           fi
 
@@ -173,26 +173,24 @@ jobs:
           fi
 
           failed=false
-          if [ "$staging_state" = "live" ] && [ "$staging_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: staging pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
-            echo "  Staging API host: asora-function-dev.azurewebsites.net (shared-cost Alpha)"
-            echo "  TLS pinning is currently FAIL-OPEN for staging (all connections pass unchecked)."
+          if [ "$preview_state" = "live" ] && [ "$preview_empty" = "true" ]; then
+            echo "::error::LAUNCH BLOCKER: preview pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
+            echo "  Preview API host is supplied explicitly per deployment."
+            echo "  TLS pinning is currently FAIL-OPEN for preview (all connections pass unchecked)."
             echo ""
-            echo "  To fix, extract and populate the staging SPKI pin:"
-            echo "    ./scripts/extract-spki-pins.sh asora-function-dev.azurewebsites.net"
-            echo "  Then add the output to _stagingMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
+            echo "  Populate _previewMobileSecurity.tlsPins.spkiPinsBase64 or keep its lifecycle planned."
             echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
             failed=true
           fi
 
           if [ "$prod_state" = "live" ] && [ "$prod_empty" = "true" ]; then
-            echo "::error::LAUNCH BLOCKER: production pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
-            echo "  Production API host: asora-function-prod.northeurope-01.azurewebsites.net"
-            echo "  TLS pinning is currently FAIL-OPEN for production (all connections pass unchecked)."
+            echo "::error::LAUNCH BLOCKER: MVP pins are marked live but spkiPinsBase64 is empty in $ENV_FILE."
+            echo "  MVP API host: api.lythaus.co"
+            echo "  TLS pinning is currently FAIL-OPEN for MVP live (all connections pass unchecked)."
             echo ""
-            echo "  To fix, extract and populate the production SPKI pins (include a backup):"
-            echo "    ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
-            echo "    CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net"
+            echo "  To fix, extract and populate the MVP SPKI pins (include a backup):"
+            echo "    ./scripts/extract-spki-pins.sh api.lythaus.co"
+            echo "    CERT_INDEX=1 ./scripts/extract-spki-pins.sh api.lythaus.co"
             echo "  Then add both outputs to _prodMobileSecurity.tlsPins.spkiPinsBase64 in $ENV_FILE."
             echo "  See docs/runbooks/tls-pinning-rotation.md for the full procedure."
             failed=true
@@ -200,24 +198,24 @@ jobs:
 
           if [ "$failed" = "true" ]; then
             echo ""
-            echo "  NOTE: Alpha staging shares asora-function-dev; mobile remains Beta scope."
-            echo "  Production may not be provisioned yet, so pin extraction can fail gracefully."
+            echo "  NOTE: Preview and MVP live share the authorised Azure MVP origin; mobile remains Beta scope."
+            echo "  The public API host may not be provisioned yet, so pin extraction can fail gracefully."
             exit 1
           fi
 
-          if [ "$staging_state" = "planned" ] && [ "$staging_empty" = "true" ]; then
-            echo "ℹ staging pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+          if [ "$preview_state" = "planned" ] && [ "$preview_empty" = "true" ]; then
+            echo "ℹ preview pins are planned; empty spkiPinsBase64 is intentional for ephemeral preview hosts."
           fi
 
           if [ "$prod_state" = "planned" ] && [ "$prod_empty" = "true" ]; then
-            echo "ℹ production pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
+            echo "ℹ MVP pins are planned; empty spkiPinsBase64 is intentional until the host is provisioned."
           fi
 
-          echo "✓ Staging and production SPKI lifecycle states are explicit."
+          echo "✓ Preview and MVP SPKI lifecycle states are explicit."
 
       - name: Verify live certificate pins
         env:
-          EXTRA_PIN_HOSTS: asora-function-dev.azurewebsites.net,asora-function-prod.northeurope-01.azurewebsites.net
+          EXTRA_PIN_HOSTS: asora-function-dev.azurewebsites.net,api.lythaus.co
         shell: bash
         run: |
           set -euo pipefail

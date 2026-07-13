@@ -12,10 +12,10 @@ on:
         required: true
         type: string
       target_environment:
-        description: Protected deployment environment
+        description: Cloudflare deployment class
         required: true
         type: choice
-        options: [staging, production]
+        options: [preview, mvp]
       pages_project:
         description: Cloudflare Pages project name
         required: true
@@ -113,7 +113,7 @@ jobs:
           WEB_BASE_URL: ${{ inputs.web_base_url }}
           API_BASE_URL: ${{ inputs.api_base_url }}
           ADMIN_API_URL: ${{ inputs.admin_api_url }}
-          BETA_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+          BETA_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
           BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json

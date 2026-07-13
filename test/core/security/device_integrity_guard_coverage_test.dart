@@ -167,9 +167,9 @@ void main() {
             tlsPins: defaultTlsPins,
             strictDeviceIntegrity: false,
             blockRootedDevices: true,
-            allowRootedInStagingForQa: true,
+            allowRootedInPreviewForQa: true,
           ),
-          environment: Environment.staging,
+          environment: Environment.preview,
         );
 
         final d = await guard.evaluate(IntegrityUseCase.postContent);

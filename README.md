@@ -72,7 +72,7 @@ npm --prefix functions run build
 Deployment is approval-gated and immutable:
 
 1. The full `CI` workflow must pass on the exact release SHA.
-2. `.github/workflows/deploy-asora-function-staging.yml` downloads the Functions artifact from that CI run; it does not rebuild.
+2. `.github/workflows/deploy-asora-function-mvp.yml` downloads the Functions artifact from that CI run and deploys only to the existing `asora-function-dev` MVP backend; it does not rebuild.
 3. `.github/workflows/deploy-alpha-web.yml` deploys the web artifact from the same CI run; it does not rebuild.
 4. Health, live contracts, browser smoke, DSR configuration, artifact digests, and release evidence must pass before the candidate is eligible.
 

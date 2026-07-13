@@ -12,11 +12,7 @@
   "servers": [
     {
       "url": "https://api.lythaus.co/api",
-      "description": "Lythaus production API gateway"
-    },
-    {
-      "url": "https://api.staging.lythaus.co/api",
-      "description": "Lythaus staging API gateway"
+      "description": "Lythaus MVP API gateway"
     }
   ],
   "tags": [

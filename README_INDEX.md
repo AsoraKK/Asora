@@ -24,7 +24,7 @@ Lythaus (formerly Asora) repository index of README files for quick navigation.
 - `docs/runbooks/alpha-operations.yaml`: machine-readable operational-agent runbooks.
 - `docs/runbooks/alpha-rollback.md`: protected immutable-artifact rollback and rehearsal plan.
 - `docs/adr/ADR-005-lythaus-public-domain-cutover.md`: approved public-domain architecture and provider-write gates.
-- `docs/runbooks/lythaus-domain-cutover.md`: staging, production, and rollback sequence.
+- `docs/runbooks/lythaus-domain-cutover.md`: Cloudflare preview, authorised MVP cutover, and rollback sequence.
 - `docs/runbooks/asora-domain-retirement.md`: legacy web redirects and API compatibility retirement.
 
 ## Functions

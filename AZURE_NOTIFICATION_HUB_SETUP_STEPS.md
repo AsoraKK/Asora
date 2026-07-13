@@ -313,7 +313,7 @@ export COSMOS_CONNECTION_STRING="..."
 ## Next Steps After Completion
 
 1. **iOS Configuration**: Add APNs certificate/key to Notification Hub
-2. **Production Deployment**: Repeat for `asora-function-prod` environment
+2. **MVP Deployment**: Reuse the existing `asora-function-dev` shared MVP environment; do not create a separate production Function App
 3. **Monitoring Setup**: Configure Azure Monitor alerts for push failures
 4. **Rate Limit Testing**: Verify 3/hr social notification cap
 5. **Quiet Hours Testing**: Verify notifications respect user preferences

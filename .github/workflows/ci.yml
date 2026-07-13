@@ -520,21 +520,24 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
-      - name: Validate canonical Alpha API URL
+      - name: Validate canonical MVP API URL
         env:
-          ALPHA_API_BASE_URL: ${{ vars.ALPHA_API_BASE_URL }}
+          MVP_API_BASE_URL: https://api.lythaus.co/api
         run: |
           set -euo pipefail
-          [[ "$ALPHA_API_BASE_URL" == https://*/api ]] || {
-            echo "ALPHA_API_BASE_URL repository variable must be an HTTPS /api URL" >&2
+          [[ "$MVP_API_BASE_URL" == "https://api.lythaus.co/api" ]] || {
+            echo "MVP_API_BASE_URL must be the canonical Lythaus /api URL" >&2
             exit 1
           }
       - name: Build immutable web release
         env:
-          ALPHA_API_BASE_URL: ${{ vars.ALPHA_API_BASE_URL }}
+          MVP_API_BASE_URL: https://api.lythaus.co/api
         run: |
           flutter pub get
-          flutter build web --release --dart-define="API_BASE_URL=$ALPHA_API_BASE_URL"
+          flutter build web --release \
+            --dart-define="ENVIRONMENT=production" \
+            --dart-define="API_BASE_URL=$MVP_API_BASE_URL" \
+            --dart-define="AUTH_URL=$MVP_API_BASE_URL"
       - name: Scan generated web bundle for secrets
         run: scripts/secret-scan.sh --artifact build/web
       - uses: actions/upload-artifact@v6

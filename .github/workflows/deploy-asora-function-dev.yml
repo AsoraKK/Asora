@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       target_environment:
-        description: "Deployment environment"
+        description: "Operational classification; only the shared MVP backend is authorised"
         required: true
         type: string
       release_sha:
@@ -38,13 +38,12 @@ on:
   workflow_dispatch:
     inputs:
       target_environment:
-        description: "Deployment environment"
+        description: "Operational classification"
         type: choice
         required: true
-        default: dev
+        default: mvp
         options:
-          - dev
-          - staging
+          - mvp
       release_sha:
         description: "Exact 40-character commit SHA already validated by CI"
         required: true
@@ -91,7 +90,8 @@ env:
   TARGET_ENV: ${{ inputs.target_environment }}
   RG: ${{ inputs.resource_group || 'asora-psql-flex' }}
   FUNC_APP: ${{ inputs.function_app_name || 'asora-function-dev' }}
-  KEY_VAULT: ${{ inputs.key_vault_name || (inputs.target_environment == 'staging' && 'kv-asora-flex-dev' || '') }}
+  KEY_VAULT: ${{ inputs.key_vault_name || 'kv-asora-flex-dev' }}
+  MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
   RELEASE_SHA: ${{ inputs.release_sha }}
   CI_RUN_ID: ${{ inputs.ci_run_id }}
   APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
@@ -101,7 +101,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target_environment }}
+    # Keep the existing protected environment/OIDC subject; Azure resource
+    # names stay internal even though the backend is operationally MVP live.
+    environment: dev
     outputs:
       functions_artifact_sha256: ${{ steps.release_artifact.outputs.functions_sha256 }}
       functions_github_digest: ${{ steps.release_artifact.outputs.functions_github_digest }}
@@ -188,10 +190,13 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$MVP_CORS_ALLOWED_ORIGINS" || { echo "::error::MVP_CORS_ALLOWED_ORIGINS repository variable is required"; exit 1; }
+          node -e 'for (const raw of process.env.MVP_CORS_ALLOWED_ORIGINS.split(",")) { const u = new URL(raw.trim()); if (u.protocol !== "https:" || !(u.hostname === "app.lythaus.co" || u.hostname === "admin.lythaus.co" || u.hostname.endsWith(".pages.dev"))) throw new Error(`Unsafe CORS origin: ${u.hostname}`); }'
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
-            --settings CORS_ALLOWED_ORIGINS='https://app.staging.lythaus.co,https://admin.staging.lythaus.co'
+            --settings CORS_ALLOWED_ORIGINS="$MVP_CORS_ALLOWED_ORIGINS" \
+            --output none
 
       - name: Inspect CORS allowed origins
         run: |
@@ -212,15 +217,14 @@ jobs:
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
           SUBS_CLEAN=$(az account show --query id -o tsv | tr -d '\r')
           CORS_URI="https://management.azure.com/subscriptions/${SUBS_CLEAN}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/web?api-version=2026-03-15"
+          ALLOWED_ORIGINS=$(jq -Rn --arg csv "$MVP_CORS_ALLOWED_ORIGINS" \
+            '$csv | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')
           CORS_BODY=$(jq -n \
-            --arg admin "https://admin.staging.lythaus.co" \
-            --arg app "https://app.staging.lythaus.co" \
-            --arg localhost8080 "http://localhost:8080" \
-            --arg localhost4200 "http://localhost:4200" \
+            --argjson origins "$ALLOWED_ORIGINS" \
             '{
               properties: {
                 cors: {
-                  allowedOrigins: [$admin, $app, $localhost8080, $localhost4200],
+                  allowedOrigins: $origins,
                   supportCredentials: false
                 }
               }
@@ -588,7 +592,7 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     needs: deploy
-    environment: ${{ inputs.target_environment }}
+    environment: dev
     steps:
       - uses: actions/checkout@v5
         with:
@@ -684,12 +688,12 @@ jobs:
       - name: Required live OpenAPI contracts
         env:
           ALPHA_API_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net/api
-          STAGING_SMOKE_TOKEN: ${{ secrets.STAGING_SMOKE_TOKEN }}
+          STAGING_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
           REQUIRE_LIVE_CONTRACTS: 'true'
           CONTRACT_TIMEOUT_MS: '15000'
         run: |
           set -euo pipefail
-          test -n "$STAGING_SMOKE_TOKEN" || { echo "::error::STAGING_SMOKE_TOKEN is required"; exit 1; }
+          test -n "$STAGING_SMOKE_TOKEN" || { echo "::error::MVP_SMOKE_TOKEN is required"; exit 1; }
           npm run openapi:test:contract
 
       - name: Verify DSR export storage configuration
@@ -704,7 +708,7 @@ jobs:
             exit 1
           fi
           DSR_NETWORK_MODE="private"
-          if [[ "$TARGET_ENV" == "dev" || "$TARGET_ENV" == "staging" ]]; then
+          if [[ "$TARGET_ENV" == "mvp" ]]; then
             DSR_NETWORK_MODE="public-rbac"
           fi
           bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID" "$DSR_NETWORK_MODE"
@@ -716,7 +720,7 @@ jobs:
           COSMOS_ACCOUNT=$(az cosmosdb list -g "$RG_CLEAN" --query "[0].name" -o tsv)
           if [ -n "$COSMOS_ACCOUNT" ]; then
             COSMOS_NETWORK_MODE="private"
-            if [[ "$TARGET_ENV" == "dev" || "$TARGET_ENV" == "staging" ]]; then
+            if [[ "$TARGET_ENV" == "mvp" ]]; then
               COSMOS_NETWORK_MODE="public-keyvault"
             fi
             bash infra/scripts/verify-cosmos-private-endpoint.sh "$COSMOS_ACCOUNT" "$RG_CLEAN" "$COSMOS_NETWORK_MODE"

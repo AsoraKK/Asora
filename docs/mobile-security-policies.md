@@ -82,7 +82,7 @@ These operations are **allowed with warning** on compromised devices:
 **Warning Message:**
 > "Some features may be limited on this device."
 
-### Staging Environment
+### Preview Environment
 
 | Device State | Write Operations | Read Operations |
 |--------------|-----------------|-----------------|
@@ -90,10 +90,10 @@ These operations are **allowed with warning** on compromised devices:
 | Rooted/Jailbroken | ⚠️ Warn-only (QA flag) | ⚠️ Warn-only |
 | Emulator | ⚠️ Warn-only (QA flag) | ⚠️ Warn-only |
 
-**QA Override:** When `allowRootedInStagingForQa: true`, compromised devices are allowed with warnings.
+**QA Override:** When `allowRootedInPreviewForQa: true`, compromised devices are allowed with warnings.
 
 **Warning Message:**
-> "[STAGING] Device integrity check skipped for QA testing."
+> "[PREVIEW] Device integrity check skipped for QA testing."
 
 ### Development Environment
 
@@ -120,9 +120,9 @@ class DeviceIntegrityGuard {
       return DeviceIntegrityDecision.warnOnly('security.device_compromised_dev');
     }
 
-    // Staging with QA override: warn-only
-    if (_environment.isStaging && _config.allowRootedInStagingForQa) {
-      return DeviceIntegrityDecision.warnOnly('security.device_compromised_staging_qa');
+    // Preview with an explicit QA override: warn-only
+    if (_environment.isPreview && _config.allowRootedInPreviewForQa) {
+      return DeviceIntegrityDecision.warnOnly('security.device_compromised_preview_qa');
     }
 
     // Production: block ALL write operations, warn for read-only
@@ -245,7 +245,7 @@ Support overrides have 48-hour validity and must reference a support ticket ID.
 {
   "type": "securityOverride",
   "result": "override_applied",
-  "environment": "staging",
+  "environment": "preview",
   "reason": "QA: Testing payment flow on rooted Samsung S21",
   "metadata": {
     "override_type": "device_integrity",
@@ -260,22 +260,22 @@ Support overrides have 48-hour validity and must reference a support ticket ID.
 ### Key Metrics
 
 1. **Block Rate by Environment:**
-   - Production: Expect <5% of users blocked
-   - Staging: Varies (QA testing)
+   - MVP live: Expect <5% of users blocked
+   - Preview: Varies only during approved QA testing
    - Dev: None (warn-only)
 
 2. **Device Compromise Rate:**
    - Rooted/jailbroken: Industry baseline 2-5%
-   - Emulator: Expect near 0% in production
+   - Emulator: Expect near 0% in MVP live
 
 3. **Override Usage:**
-   - QA overrides: Normal in staging
+   - QA overrides: Allowed only for an approved preview artifact
    - Support overrides: <1 per week (investigate spikes)
 
 ### Alerting Rules
 
 **Critical:**
-- Production block rate >10% (potential false positives)
+- MVP-live block rate >10% (potential false positives)
 - Support overrides >5 per day (potential abuse)
 
 **Warning:**
@@ -328,24 +328,24 @@ Support overrides have 48-hour validity and must reference a support ticket ID.
 MobileSecurityConfig(
   strictDeviceIntegrity: true,        // Enforce or warn-only
   blockRootedDevices: true,           // Block high-risk on rooted
-  allowRootedInStagingForQa: false,   // QA override in staging
+  allowRootedInPreviewForQa: false,   // Explicit QA override in preview
 )
 ```
 
-| Field | Development | Staging | Production |
+| Field | Development | Preview | MVP live |
 |-------|------------|---------|------------|
 | `strictDeviceIntegrity` | false | false/true | true |
 | `blockRootedDevices` | false | true | true |
-| `allowRootedInStagingForQa` | true | true | false |
+| `allowRootedInPreviewForQa` | true | false by default | false |
 
 ## Testing
 
 See `test/core/security/device_integrity_guard_test.dart` for comprehensive policy matrix tests covering:
 
 - Development warn-only behavior
-- Production block behavior for high-risk operations
-- Production warn-only for low-risk operations
-- Staging QA override
+- MVP-live block behavior for high-risk operations
+- MVP-live warn-only for low-risk operations
+- Preview QA override
 - Security override application
 - Override expiry
 

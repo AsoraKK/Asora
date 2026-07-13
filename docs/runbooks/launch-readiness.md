@@ -36,11 +36,11 @@ Each item is tagged:
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
 | 1.1 | All write endpoints (`POST`/`PUT`/`PATCH`/`DELETE`) carry an auth guard | AUTO | `node scripts/validate-functions-route-guards.js` | |
-| 1.2 | Guest (unauthenticated) read of public feed returns HTTP 200 | AUTO | `bash scripts/check_api_health.sh` + `bash scripts/smoke-trust-endpoints.sh` against staging | |
+| 1.2 | Guest (unauthenticated) read of public feed returns HTTP 200 | AUTO | Run `bash scripts/check_api_health.sh` + `bash scripts/smoke-trust-endpoints.sh` against the exact preview Worker URL | |
 | 1.3 | Auth-required endpoints return HTTP 401 without token | AUTO | `node scripts/validate-functions-route-guards.js` (also covered by `e2e-integration.yml`) | |
 | 1.4 | JWT clock-skew tolerance set to ≤ 60 s | AUTO | `grep MAX_CLOCK_SKEW functions/src/auth/config.ts` | |
 | 1.5 | PKCE S256 enforced for mobile OAuth flow | AUTO | `grep S256 functions/src/auth/service/tokenService.ts` | |
-| 1.6 | Sign-in/sign-out smoke on staging with the live auth environment | MANUAL | Run `scripts/verify-b2c-google-idp.sh` (legacy compatibility wrapper) against staging; attach screenshot | |
+| 1.6 | Sign-in/sign-out smoke through an exact preview with the live auth environment | MANUAL | Use an isolated test identity against the exact preview Worker/Pages artifacts; attach sanitized evidence | |
 
 ---
 
@@ -48,7 +48,7 @@ Each item is tagged:
 
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
-| 2.1 | Feed p95 latency < 200 ms under canary load | AUTO | `canary-k6.yml` — thresholds: `p95<200ms`, `p99<400ms`, `error_rate<1%` | |
+| 2.1 | Feed p95 latency < 200 ms under approved canary load | AUTO | `canary-k6.yml` requires `ALLOW_SHARED_MVP_LOAD_TESTS=true`; thresholds: `p95<200ms`, `p99<400ms`, `error_rate<1%` | |
 | 2.2 | Pagination cursor returns correct next page without duplicates | AUTO | Jest integration: `tests/feed/postCreate.integration.test.ts` | |
 | 2.3 | Feed read test produces zero errors in k6 run | AUTO | `canary-k6.yml` → k6 artifact `k6-canary-*` | |
 | 2.4 | Redis cache TTL headers present on anonymous feed requests | AUTO | `bash scripts/validate_edge_cache.sh` | |
@@ -60,8 +60,8 @@ Each item is tagged:
 
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
-| 3.1 | Hive AI primary path reachable from staging | MANUAL | Trigger test post via moderation demo screen; verify `hive_ok` in health endpoint | |
-| 3.2 | Azure Content Safety fallback activates when Hive times out | MANUAL | Run chaos test: `scripts/dsr-drills/` or disable Hive key in staging, submit post, confirm fallback in logs | |
+| 3.1 | Hive AI primary path reachable through preview | MANUAL | Use an isolated test post through the exact preview and verify the sanitized health signal | |
+| 3.2 | Azure Content Safety fallback activates when Hive times out | MANUAL | Prove with dependency-injection tests; do not disable live keys or run chaos against the shared MVP origin without explicit approval | |
 | 3.3 | Appeal submission endpoint returns 200 and queues review task | AUTO | `functions/src/__tests__/reviewAppealedContent.focused.test.ts` | |
 | 3.4 | Black-tier user sees zero feed content (limit enforced) | AUTO | `functions/src/feed/ranking/rankingConfig.test.ts` | |
 | 3.5 | Hive DPA signed / vendor contract in legal register | MANUAL | See `docs/compliance/privacy-audit-packet.md` §2; check `docs/legal/README.md` vendor register | |
@@ -75,9 +75,9 @@ Each item is tagged:
 |---|------|------|--------------------|--------|
 | 4.1 | DSR runbook keys match deploy workflow | AUTO | `bash scripts/check-dsr-runbook-consistency.sh` (also in `ci.yml`) | |
 | 4.2 | `GET /api/user/export` returns valid JSON export within 72 h SLA | AUTO | `functions/src/` privacy tests; manual: trigger export, verify receipt | |
-| 4.3 | `DELETE /api/user/delete` soft-deletes immediately, hard-deletes ≤ 30 days | MANUAL | Trigger delete on staging account, verify soft-delete flag; schedule hard-delete check | |
+| 4.3 | `DELETE /api/user/delete` soft-deletes immediately, hard-deletes ≤ 30 days | MANUAL | Use an isolated shared-MVP test account through preview; verify soft-delete and scheduled hard-delete evidence | |
 | 4.4 | PII redaction active in telemetry (no raw user IDs in App Insights) | AUTO | `tests/privacy/redaction.test.ts` | |
-| 4.5 | Privacy policy and terms of service live at public URL | MANUAL | Navigate to `https://lythaus.app/privacy` and `https://lythaus.app/terms`; confirm content is current | |
+| 4.5 | Privacy policy and terms of service live at public URL | MANUAL | Navigate to `https://lythaus.co/privacy` and `https://lythaus.co/terms`; confirm content is current | |
 | 4.6 | GDPR/POPIA article mapping complete | MANUAL | Review `docs/compliance/privacy-audit-packet.md` §1; all rights must show ✅ | |
 | 4.7 | **[LAUNCH BLOCKER]** Admin/operational DSR queue worker healthy, or an internal-only exception is explicitly signed off | MANUAL | If external/public launch: attach [2026-06-29-dsr-queue-listener-investigation.md](../evidence/observability/2026-06-29-dsr-queue-listener-investigation.md) proving the queue listener is fixed. If internal-only alpha exception: attach [2026-06-29-dsr-alpha-decision.md](../evidence/observability/2026-06-29-dsr-alpha-decision.md) and [dsr-internal-alpha-fallback.md](./dsr-internal-alpha-fallback.md). | |
 
@@ -115,7 +115,7 @@ Each item is tagged:
 | 7.4 | `canary-k6.yml` green post last deploy | AUTO | Canary SLO badge above | |
 | 7.5 | `launch-readiness-gate.yml` green | AUTO | Launch Gate badge above; run: `gh workflow run launch-readiness-gate.yml` | |
 | 7.6 | `mobile-release-build.yml` green (Android AAB + iOS archive artifacts uploaded) | AUTO | Mobile Release badge above | |
-| 7.7 | `e2e-integration.yml` green post last staging deploy | AUTO | Check Actions tab for last `e2e-integration` run | |
+| 7.7 | `e2e-integration.yml` green after the last exact MVP deployment | AUTO | Check Actions for the run tied to the exact deployment SHA | |
 | 7.8 | actionlint + shellcheck pass on all workflows | AUTO | `ci.yml` → "Lint workflows" step | |
 | 7.9 | No high/critical CVEs in dependency review | AUTO | `ci.yml` → "Dependency CVE review" step | |
 
@@ -138,7 +138,7 @@ Keep 95% as a future GA/public-launch target unless leadership changes it.
 
 ## 9. Security Hardening
 
-> Pin lifecycle: the primary dev host is live, staging and production are planned until their Azure hostnames are provisioned, and the legacy dev hostname stays deprecated for compatibility.
+> Pin lifecycle: ephemeral preview hosts remain `planned`; the MVP public API remains `planned` until `api.lythaus.co` is provisioned and both primary and backup pins are captured. The Azure resource hostname is internal origin context only.
 
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
@@ -148,12 +148,12 @@ Keep 95% as a future GA/public-launch target unless leadership changes it.
 | 9.4 | TLS pinning rotation runbook reviewed | MANUAL | `docs/runbooks/tls-pinning-rotation.md` — confirm current pins match production certs | |
 | 9.5 | `Cache-Control: no-store, no-cache, private` on auth endpoints | AUTO | `grep 'no-store' functions/shared/utils/http.ts` | |
 | 9.6 | JWT minimum secret length ≥ 32 bytes enforced | AUTO | `grep MIN_JWT_SECRET_BYTES functions/src/auth/config.ts` | |
-| 9.7 | Mobile security checks pass (obfuscation, root detection) | AUTO | `mobile-security-check.yml` (now hard-fails on empty staging/prod SPKI pins on push to main/release) | |
+| 9.7 | Mobile security checks pass (obfuscation, root detection) | AUTO | `mobile-security-check.yml` validates explicit preview/MVP SPKI lifecycle states | |
 | 9.8 | Android obfuscation mapping file uploaded as CI artifact | AUTO | `mobile-release-build.yml` → `android-release` artifact | |
 | 9.9 | External penetration test completed (pre-GA) | MANUAL | Attach pentest report or sign-off letter to `docs/compliance/`; record finding count and resolution status | |
 | 9.10 | Secret rotation runbook reviewed by on-call | MANUAL | `docs/runbooks/secret-rotation.md` — confirm Key Vault rotation schedule is active | |
-| 9.11 | **[PLANNED]** Staging SPKI pins provisioned | MANUAL | `lib/core/config/environment_config.dart` marks staging pins as `PinLifecycleState.planned`. Once `asora-function-staging` is deployed and reachable, run `./scripts/extract-spki-pins.sh asora-function-staging.northeurope-01.azurewebsites.net`, paste the output into `_stagingMobileSecurity.tlsPins.spkiPinsBase64`, then flip the lifecycle state to `live` and update `mobile-expected-pins.json`. Verify with `SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart`. | |
-| 9.12 | **[PLANNED]** Production SPKI pins provisioned (leaf + backup) | MANUAL | `lib/core/config/environment_config.dart` marks production pins as `PinLifecycleState.planned`. Once `asora-function-prod` is deployed and reachable, run `./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net` and `CERT_INDEX=1 ./scripts/extract-spki-pins.sh asora-function-prod.northeurope-01.azurewebsites.net`, paste both pins into `_prodMobileSecurity.tlsPins.spkiPinsBase64`, flip the lifecycle state to `live`, and update `mobile-expected-pins.json` plus `lib/core/security/cert_pinning_common.dart` (`kPinnedDomains`). Full procedure: `docs/runbooks/tls-pinning-rotation.md §Initial Pin Provisioning`. | |
+| 9.11 | **[PLANNED]** Preview security profile verified | MANUAL | Preview uses exact ephemeral Cloudflare URLs and the existing MVP backend; it does not provision a staging host. Verify the release build contains no Azure hostname and run the domain contract. | |
+| 9.12 | **[PLANNED]** MVP API SPKI pins provisioned (leaf + backup) | MANUAL | After `api.lythaus.co` is live, run `./scripts/extract-spki-pins.sh api.lythaus.co` and `CERT_INDEX=1 ./scripts/extract-spki-pins.sh api.lythaus.co`, then update the production pin configuration and `mobile-expected-pins.json`. | |
 
 ---
 
@@ -161,11 +161,11 @@ Keep 95% as a future GA/public-launch target unless leadership changes it.
 
 | # | Item | Type | Command / Evidence | Status |
 |---|------|------|--------------------|--------|
-| 10.1 | Alert routing config valid for staging and prod | AUTO | `bash scripts/validate-alert-routing-config.sh` (also in `ci.yml` and `launch-readiness-gate.yml`) | |
-| 10.2 | `observability_enabled = true` in both `staging` and `prod` tfvars | AUTO | `bash scripts/validate-alert-routing-config.sh` (checks tfvars) | |
-| 10.3 | On-call email addresses populated in Terraform (`observability_alert_email_addresses`) | MANUAL | `grep observability_alert_email infra/terraform/envs/prod/prod.tfvars`; confirm real addresses | |
-| 10.4 | Alerting drill completed on staging (p95 latency + 5xx + Cosmos throttle) | MANUAL | Follow `docs/runbooks/observability-alerting-drill.md`; attach drill evidence | |
-| 10.5 | App Insights connected to prod Function App | AUTO | `bash scripts/diagnostics-v4.sh` → check `APPLICATIONINSIGHTS_CONNECTION_STRING` in app settings | |
+| 10.1 | Existing `appi-asora-dev` is connected to the shared MVP Function App | MANUAL | Verify the app-setting state and live telemetry without exposing the connection string | |
+| 10.2 | Health, 5xx, latency, throttling, and DSR alert paths are proven for the shared MVP origin | MANUAL | Attach sanitized Azure alert and telemetry evidence | |
+| 10.3 | On-call recipients and action groups are populated | MANUAL | Inspect names/state only; never commit recipient values | |
+| 10.4 | Alerting drill completed without endangering shared MVP users | MANUAL | Use controlled probes and dependency injection; destructive chaos requires separate approval | |
+| 10.5 | Application Insights correlation works through the preview Worker | MANUAL | Trace a synthetic correlation ID from Worker to Azure telemetry | |
 | 10.6 | Azure retirement hardening checks pass | AUTO | `ci.yml` → "Azure Retirement Hardening Checks" step; `bash scripts/validate-azure-retirement.sh` | |
 | 10.7 | Budget alert configured in Azure subscription | MANUAL | Log in to Azure Portal → Cost Management → Budgets; confirm alert threshold and recipient email set | |
 

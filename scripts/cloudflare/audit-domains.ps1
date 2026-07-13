@@ -2,7 +2,8 @@
 param(
   [string]$Date = (Get-Date -Format 'yyyy-MM-dd'),
   [string]$ArtifactDirectory = '.artifacts/cloudflare-audit',
-  [string]$EvidenceDirectory = 'docs/evidence/cloudflare'
+  [string]$EvidenceDirectory = 'docs/evidence/cloudflare',
+  [switch]$RepositoryOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,9 +47,9 @@ function Get-IntendedValue([string]$Value, [string]$Classification, [string]$Pat
   if ($Classification -in @('Historical evidence', 'Azure infrastructure configuration')) { return 'Retain internal or historical value' }
   if ($Value -match 'admin-api\.asora\.co\.za') { return 'admin-api.lythaus.co' }
   if ($Value -match '(?:control|admin)\.asora\.co\.za') { return 'admin.lythaus.co' }
-  if ($Value -match 'lythaus-web\.pages\.dev') { return $(if ($Path -match 'staging|smoke|canary') { 'app.staging.lythaus.co' } else { 'app.lythaus.co' }) }
+  if ($Value -match 'lythaus-web\.pages\.dev') { return 'app.lythaus.co or an exact ephemeral Pages preview' }
   if ($Value -match 'lythaus\.asora\.co\.za|(?:www\.)?asora\.co\.za') { return 'lythaus.co or explicit legacy compatibility' }
-  if ($Value -match 'api\.asora\.co\.za|azurewebsites\.net') { return $(if ($Path -match 'staging|smoke|canary') { 'api.staging.lythaus.co/api' } else { 'api.lythaus.co/api' }) }
+  if ($Value -match 'api\.asora\.co\.za|azurewebsites\.net') { return 'api.lythaus.co/api or an exact ephemeral Worker preview' }
   return 'Review against ADR-005'
 }
 
@@ -117,24 +118,39 @@ New-Item -ItemType Directory -Force -Path $ArtifactDirectory, $EvidenceDirectory
 git check-ignore -q (Join-Path $ArtifactDirectory 'probe.json')
 if ($LASTEXITCODE -ne 0) { throw "$ArtifactDirectory must be gitignored before audit data is written." }
 
-$inventory = New-ReferenceInventory
-$token = $env:CLOUDFLARE_AUDIT_API_TOKEN
+$token = if ($env:CLOUDFLARE_AUDIT_API_TOKEN) {
+  $env:CLOUDFLARE_AUDIT_API_TOKEN
+} else {
+  $env:CLOUDFLARE_API_TOKEN
+}
+$tokenSource = if ($env:CLOUDFLARE_AUDIT_API_TOKEN) { 'CLOUDFLARE_AUDIT_API_TOKEN' } elseif ($env:CLOUDFLARE_API_TOKEN) { 'CLOUDFLARE_API_TOKEN' } else { 'NONE' }
 $accountId = $env:CLOUDFLARE_ACCOUNT_ID
 $result = [ordered]@{
   capturedAt = (Get-Date).ToUniversalTime().ToString('o')
-  token = [ordered]@{ status = 'MISSING'; source = 'CLOUDFLARE_AUDIT_API_TOKEN'; unavailablePermissions = @('ALL') }
+  token = [ordered]@{ status = 'MISSING'; source = $tokenSource; unavailablePermissions = @('ALL') }
   account = [ordered]@{ id = $(if ($accountId) { Protect-Identifier $accountId } else { 'UNKNOWN' }) }
   zones = @()
   pages = @()
   workers = @()
+  workerDomains = @()
   access = @()
+  identityProviders = @()
+  serviceTokens = @()
   rulesets = @()
+  registrar = @()
+  bulkRedirectLists = @()
   blockers = @()
-  repositoryReferenceCount = $inventory.Count
+  repositoryReferenceCount = 0
+}
+
+if ($RepositoryOnly) {
+  $inventory = New-ReferenceInventory
+  Write-Output "Repository domain inventory complete: $($inventory.Count) match(es)."
+  exit 0
 }
 
 if ([string]::IsNullOrWhiteSpace($token)) {
-  $result.blockers += 'CLOUDFLARE_AUDIT_API_TOKEN is missing.'
+  $result.blockers += 'CLOUDFLARE_AUDIT_API_TOKEN and CLOUDFLARE_API_TOKEN are missing.'
   Write-JsonFile (Join-Path $ArtifactDirectory 'sanitized-cloudflare-audit.json') $result
   Write-Output 'Cloudflare audit: NO-GO (read-only token missing)'
   exit 2
@@ -160,26 +176,18 @@ if (-not $verify.success -or $verify.result.status -ne 'active') {
   exit 3
 }
 $result.token.status = 'VERIFIED_ACTIVE'
-if ([string]::IsNullOrWhiteSpace($accountId)) {
-  $result.blockers += 'CLOUDFLARE_ACCOUNT_ID is missing.'
-} else {
-  $pages = Invoke-Cloudflare "/accounts/$accountId/pages/projects" 'pages-projects.raw.json'
-  $scripts = Invoke-Cloudflare "/accounts/$accountId/workers/scripts" 'worker-scripts.raw.json'
-  $apps = Invoke-Cloudflare "/accounts/$accountId/access/apps" 'access-apps.raw.json'
-  $accountRulesets = Invoke-Cloudflare "/accounts/$accountId/rulesets" 'account-rulesets.raw.json'
-  if ($pages) { $result.pages = @($pages.result | ForEach-Object { [ordered]@{ name=$_.name; productionBranch=$_.production_branch; domains=$_.domains; latestDeploymentId=(Protect-Identifier $_.latest_deployment.id) } }) }
-  if ($scripts) { $result.workers = @($scripts.result | ForEach-Object { [ordered]@{ name=$_.id; modifiedOn=$_.modified_on } }) }
-  if ($apps) { $result.access = @($apps.result | ForEach-Object { [ordered]@{ name=$_.name; domain=$_.domain; type=$_.type; aud=(Protect-Identifier $_.aud); sessionDuration=$_.session_duration } }) }
-  if ($accountRulesets) { $result.rulesets += @($accountRulesets.result | ForEach-Object { [ordered]@{ scope='account'; name=$_.name; kind=$_.kind; phase=$_.phase } }) }
-}
+$inventory = New-ReferenceInventory
+$result.repositoryReferenceCount = $inventory.Count
+$discoveredAccountIds = [System.Collections.Generic.HashSet[string]]::new()
 
 foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
-  $zoneResponse = Invoke-Cloudflare "/zones?name=$zoneName&status=active" "$zoneName-zone.raw.json"
+  $zoneResponse = Invoke-Cloudflare "/zones?name=$zoneName" "$zoneName-zone.raw.json"
   if (-not $zoneResponse -or @($zoneResponse.result).Count -ne 1) {
     $result.blockers += "$zoneName zone could not be uniquely audited."
     continue
   }
   $zone = $zoneResponse.result[0]
+  [void]$discoveredAccountIds.Add([string]$zone.account.id)
   $zoneId = $zone.id
   $dns = Invoke-Cloudflare "/zones/$zoneId/dns_records?per_page=50000" "$zoneName-dns.raw.json"
   $settings = Invoke-Cloudflare "/zones/$zoneId/settings" "$zoneName-settings.raw.json"
@@ -187,6 +195,8 @@ foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
   $rules = Invoke-Cloudflare "/zones/$zoneId/rulesets" "$zoneName-rulesets.raw.json"
   $routes = Invoke-Cloudflare "/zones/$zoneId/workers/routes" "$zoneName-worker-routes.raw.json"
   $email = Invoke-Cloudflare "/zones/$zoneId/email/routing" "$zoneName-email-routing.raw.json"
+  $certificates = Invoke-Cloudflare "/zones/$zoneId/ssl/certificate_packs?status=all" "$zoneName-certificate-packs.raw.json"
+  $pageRules = Invoke-Cloudflare "/zones/$zoneId/pagerules?status=active" "$zoneName-page-rules.raw.json"
   $sanitizedDns = @()
   if ($dns) {
     $sanitizedDns = @($dns.result | ForEach-Object {
@@ -199,10 +209,94 @@ foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
     paused=$zone.paused; plan=$zone.plan.name; nameservers=$zone.name_servers;
     dnssec=$(if($dnssec){$dnssec.result.status}else{'UNKNOWN'});
     settings=$(if($settings){@($settings.result | ForEach-Object {[ordered]@{id=$_.id;value=$_.value}})}else{@()});
-    dns=$sanitizedDns; workerRoutes=$(if($routes){$routes.result}else{@()});
-    emailRouting=$(if($email){$email.result.status}else{'UNKNOWN'})
+    dns=$sanitizedDns;
+    workerRoutes=$(if($routes){@($routes.result | ForEach-Object {[ordered]@{pattern=$_.pattern;script=$_.script}})}else{@()});
+    emailRouting=$(if($email){$email.result.status}else{'UNKNOWN'});
+    certificatePacks=$(if($certificates){@($certificates.result | ForEach-Object {[ordered]@{type=$_.type;status=$_.status;hosts=$_.hosts;issuer=$_.issuer;validityDays=$_.validity_days}})}else{@()});
+    pageRules=$(if($pageRules){@($pageRules.result | ForEach-Object {[ordered]@{status=$_.status;priority=$_.priority;targets=@($_.targets | ForEach-Object {$_.constraint.value});actions=@($_.actions | ForEach-Object {$_.id})}})}else{@()})
   }
-  if ($rules) { $result.rulesets += @($rules.result | ForEach-Object { [ordered]@{ scope=$zoneName; name=$_.name; kind=$_.kind; phase=$_.phase } }) }
+  if ($rules) {
+    foreach ($ruleset in @($rules.result)) {
+      $detail = Invoke-Cloudflare "/zones/$zoneId/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json"
+      $result.rulesets += [ordered]@{
+        scope=$zoneName; name=$ruleset.name; kind=$ruleset.kind; phase=$ruleset.phase;
+        rules=$(if($detail){@($detail.result.rules | ForEach-Object {[ordered]@{enabled=$_.enabled;description=$_.description;expression=$_.expression;action=$_.action}})}else{@()})
+      }
+    }
+  }
+}
+
+if ($discoveredAccountIds.Count -ne 1) {
+  $result.blockers += 'The two required zones do not resolve to one unambiguous Cloudflare account.'
+} else {
+  $discoveredAccountId = @($discoveredAccountIds)[0]
+  if ($accountId -and $accountId -ne $discoveredAccountId) {
+    $result.blockers += 'CLOUDFLARE_ACCOUNT_ID does not match the account discovered from both zones.'
+  } else {
+    $accountId = $discoveredAccountId
+    $result.account.id = Protect-Identifier $accountId
+    $pages = Invoke-Cloudflare "/accounts/$accountId/pages/projects" 'pages-projects.raw.json'
+    $scripts = Invoke-Cloudflare "/accounts/$accountId/workers/scripts" 'worker-scripts.raw.json'
+    $workerDomains = Invoke-Cloudflare "/accounts/$accountId/workers/domains" 'worker-domains.raw.json'
+    $apps = Invoke-Cloudflare "/accounts/$accountId/access/apps" 'access-apps.raw.json'
+    $identityProviders = Invoke-Cloudflare "/accounts/$accountId/access/identity_providers" 'access-identity-providers.raw.json'
+    $serviceTokens = Invoke-Cloudflare "/accounts/$accountId/access/service_tokens" 'access-service-tokens.raw.json'
+    $accountRulesets = Invoke-Cloudflare "/accounts/$accountId/rulesets" 'account-rulesets.raw.json'
+    $bulkRedirectLists = Invoke-Cloudflare "/accounts/$accountId/rules/lists?kind=redirect" 'bulk-redirect-lists.raw.json'
+    foreach ($zone in @($result.zones)) {
+      $registration = Invoke-Cloudflare "/accounts/$accountId/registrar/domains/$($zone.name)" "$($zone.name)-registrar.raw.json"
+      if ($registration) {
+        $result.registrar += [ordered]@{name=$zone.name;status=$registration.result.status;expiresAt=$registration.result.expires_at;autoRenew=$registration.result.auto_renew;locked=$registration.result.locked}
+      }
+    }
+    if ($pages) {
+      foreach ($project in @($pages.result)) {
+        $projectName = [Uri]::EscapeDataString([string]$project.name)
+        $deployments = Invoke-Cloudflare "/accounts/$accountId/pages/projects/$projectName/deployments?per_page=25" "pages-$($project.name)-deployments.raw.json"
+        $envNames = @()
+        foreach ($configName in @('production', 'preview')) {
+          $config = $project.deployment_configs.$configName
+          if ($config -and $config.env_vars) { $envNames += @($config.env_vars.PSObject.Properties.Name) }
+        }
+        $result.pages += [ordered]@{
+          name=$project.name; productionBranch=$project.production_branch; domains=$project.domains;
+          sourceRepository=$project.source.config.repo_name; sourceOwner=$project.source.config.owner;
+          buildCommand=$project.build_config.build_command; outputDirectory=$project.build_config.destination_dir;
+          environmentVariableNames=@($envNames | Sort-Object -Unique);
+          latestDeploymentId=(Protect-Identifier $project.latest_deployment.id);
+          deployments=$(if($deployments){@($deployments.result | ForEach-Object {[ordered]@{id=(Protect-Identifier $_.id);environment=$_.environment;url=$_.url;createdOn=$_.created_on;status=$_.latest_stage.status;commitHash=$_.deployment_trigger.metadata.commit_hash}})}else{@()})
+        }
+      }
+    }
+    if ($scripts) {
+      foreach ($script in @($scripts.result)) {
+        $scriptName = [Uri]::EscapeDataString([string]$script.id)
+        $deployments = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/deployments" "worker-$($script.id)-deployments.raw.json"
+        $settings = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/settings" "worker-$($script.id)-settings.raw.json"
+        $secrets = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/secrets" "worker-$($script.id)-secrets.raw.json"
+        $result.workers += [ordered]@{
+          name=$script.id; modifiedOn=$script.modified_on; compatibilityDate=$script.compatibility_date;
+          deployments=$(if($deployments){@($deployments.result.deployments | ForEach-Object {[ordered]@{id=(Protect-Identifier $_.id);createdOn=$_.created_on;strategy=$_.strategy}})}else{@()});
+          bindings=$(if($settings){@($settings.result.bindings | ForEach-Object {[ordered]@{name=$_.name;type=$_.type;namespace=$_.namespace_id;service=$_.service}})}else{@()});
+          secretNames=$(if($secrets){@($secrets.result | ForEach-Object {$_.name})}else{@()})
+        }
+      }
+    }
+    if ($workerDomains) { $result.workerDomains = @($workerDomains.result | ForEach-Object {[ordered]@{hostname=$_.hostname;service=$_.service;zone=(Protect-Identifier $_.zone_id)}}) }
+    if ($apps) {
+      foreach ($app in @($apps.result)) {
+        $policies = Invoke-Cloudflare "/accounts/$accountId/access/apps/$($app.id)/policies" "access-$($app.id)-policies.raw.json"
+        $result.access += [ordered]@{
+          name=$app.name; domain=$app.domain; type=$app.type; aud=(Protect-Identifier $app.aud); sessionDuration=$app.session_duration;
+          policies=$(if($policies){@($policies.result | ForEach-Object {[ordered]@{name=$_.name;decision=$_.decision;precedence=$_.precedence;includeTypes=@($_.include | ForEach-Object {$_.PSObject.Properties.Name});excludeTypes=@($_.exclude | ForEach-Object {$_.PSObject.Properties.Name});requireTypes=@($_.require | ForEach-Object {$_.PSObject.Properties.Name})}})}else{@()})
+        }
+      }
+    }
+    if ($identityProviders) { $result.identityProviders = @($identityProviders.result | ForEach-Object {[ordered]@{name=$_.name;type=$_.type}}) }
+    if ($serviceTokens) { $result.serviceTokens = @($serviceTokens.result | ForEach-Object {[ordered]@{name=$_.name;duration=$_.duration;expiresAt=$_.expires_at}}) }
+    if ($bulkRedirectLists) { $result.bulkRedirectLists = @($bulkRedirectLists.result | ForEach-Object {[ordered]@{name=$_.name;description=$_.description;items=$_.numitems}}) }
+    if ($accountRulesets) { $result.rulesets += @($accountRulesets.result | ForEach-Object { [ordered]@{ scope='account'; name=$_.name; kind=$_.kind; phase=$_.phase } }) }
+  }
 }
 
 $result.token.unavailablePermissions = @($result.token.unavailablePermissions | Sort-Object -Unique)

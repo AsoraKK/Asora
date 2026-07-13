@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $violations = [System.Collections.Generic.List[string]]::new()
 $bannedPublicPattern = '(?i)(asora\.co\.za|lythaus-web\.pages\.dev|api\.asora\.co\.za|admin-api\.asora\.co\.za|[a-z0-9.-]*azurewebsites\.net)'
 $allowlist = Get-Content -LiteralPath 'scripts/cloudflare/domain-reference-allowlist.json' -Raw | ConvertFrom-Json
+$retiredEnvironmentPattern = '(?i)(?:app|api|admin|admin-api)\.staging\.lythaus\.co|asora-function-(?:staging|prod)'
 
 function Test-PathForPattern([string]$Path, [string]$Pattern, [string]$Label, [bool]$UseAllowlist = $false) {
   if (-not (Test-Path -LiteralPath $Path)) {
@@ -46,7 +47,11 @@ $runtimePaths = @(
 )
 foreach ($path in $runtimePaths) {
   Test-PathForPattern $path $bannedPublicPattern "Public runtime path $path" $true
+  Test-PathForPattern $path $retiredEnvironmentPattern "Retired environment reference in $path"
 }
+
+Test-PathForPattern 'cloudflare/api-gateway/wrangler.toml' $retiredEnvironmentPattern 'Gateway configuration'
+Test-PathForPattern '.github/workflows' $retiredEnvironmentPattern 'Deployment workflows'
 
 $gateway = Get-Content -LiteralPath 'cloudflare/api-gateway/worker.ts' -Raw
 if ($gateway -match '(?i)azurewebsites\.net|DEFAULT_ORIGIN|development-origin') {
@@ -58,8 +63,8 @@ if ($gateway -notmatch "Cache-Control', 'private, no-store" -or $gateway -notmat
 
 $openApi = Get-Content -LiteralPath 'api/openapi/dist/openapi.json' -Raw | ConvertFrom-Json
 $servers = @($openApi.servers.url)
-if ($servers -notcontains 'https://api.lythaus.co/api' -or $servers -notcontains 'https://api.staging.lythaus.co/api') {
-  $violations.Add('OpenAPI production and staging servers are not canonical.')
+if ($servers.Count -ne 1 -or $servers[0] -ne 'https://api.lythaus.co/api') {
+  $violations.Add('OpenAPI must expose only the canonical Lythaus MVP server.')
 }
 
 if ($violations.Count -gt 0) {

@@ -325,5 +325,5 @@ curl -si -H "Origin: https://admin.lythaus.co" \
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 az rest --method patch \
   --uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/web?api-version=2023-01-01" \
-  --body '{"properties":{"cors":{"allowedOrigins":["https://admin.staging.lythaus.co","http://localhost:8080","http://localhost:4200"],"supportCredentials":true}}}'
+  --body '{"properties":{"cors":{"allowedOrigins":["https://admin.lythaus.co"],"supportCredentials":false}}}'
 ```

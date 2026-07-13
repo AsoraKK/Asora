@@ -11,11 +11,11 @@ Lythaus enforces device integrity checks to protect both users and the platform 
 
 | Environment | Write Operations | Read Operations |
 |-------------|------------------|-----------------|
-| **Production** | ❌ Blocked | ⚠️ Warn + Allow |
-| **Staging** | ❌ Blocked* | ⚠️ Warn + Allow |
+| **MVP live** | ❌ Blocked | ⚠️ Warn + Allow |
+| **Preview** | ❌ Blocked* | ⚠️ Warn + Allow |
 | **Development** | ⚠️ Warn + Allow | ✅ Allow |
 
-*Staging can be relaxed for QA testing via `allowRootedInStagingForQa` config flag.
+*Preview can be relaxed only for an approved QA artifact via the `allowRootedInPreviewForQa` config flag.
 
 ## Blocked Write Operations
 

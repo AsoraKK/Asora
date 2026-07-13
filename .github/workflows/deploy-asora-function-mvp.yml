@@ -1,4 +1,4 @@
-name: deploy-asora-function-staging
+name: Deploy Lythaus MVP backend
 
 on:
   workflow_dispatch:
@@ -12,26 +12,14 @@ on:
         required: true
         type: string
       approved_alpha_stage:
-        description: "Kyle-approved Alpha stage"
+        description: "Kyle-approved MVP stage"
         required: true
         type: choice
         options: [technical_alpha, controlled_alpha, expanded_alpha, paused]
       known_disabled_features_json:
-        description: "JSON array of intentionally disabled Alpha features"
+        description: "JSON array of intentionally disabled MVP features"
         required: true
         default: '[]'
-        type: string
-      function_app_name:
-        description: "Optional Function App override"
-        required: false
-        type: string
-      resource_group:
-        description: "Optional Azure resource group override"
-        required: false
-        type: string
-      key_vault_name:
-        description: "Optional Key Vault override"
-        required: false
         type: string
 
 permissions:
@@ -40,15 +28,15 @@ permissions:
   id-token: write
 
 jobs:
-  deploy-staging:
+  deploy-mvp:
     uses: ./.github/workflows/deploy-asora-function-dev.yml
     with:
-      target_environment: staging
+      target_environment: mvp
       release_sha: ${{ inputs.release_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
       approved_alpha_stage: ${{ inputs.approved_alpha_stage }}
       known_disabled_features_json: ${{ inputs.known_disabled_features_json }}
-      function_app_name: ${{ github.event.inputs.function_app_name || 'asora-function-dev' }}
-      resource_group: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
-      key_vault_name: ${{ github.event.inputs.key_vault_name || 'kv-asora-flex-dev' }}
+      function_app_name: asora-function-dev
+      resource_group: asora-psql-flex
+      key_vault_name: kv-asora-flex-dev
     secrets: inherit

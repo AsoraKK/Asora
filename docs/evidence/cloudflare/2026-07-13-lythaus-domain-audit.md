@@ -2,201 +2,155 @@
 
 ## 1. Executive result
 
-**NO-GO.** The required read-only Cloudflare token and account identifier were not present. The write token was not used. Provider state that cannot be proven is `UNKNOWN`, which triggers mandatory `NO-GO` conditions. No Cloudflare, Azure, DNS, Pages, Worker, Access, ruleset, certificate, CORS, OAuth, or email write was applied.
+**NO-GO.** Azure is now positively audited as a single authorised **Lythaus MVP shared environment** using `asora-function-dev`. Cloudflare remains unauditable because no API token/account variable is loaded and the cached Wrangler login is expired. No provider write was performed.
 
-Safe repository preparation proceeded: public build values, OpenAPI/generated client, marketing canonicals, exact CORS, a separate fail-closed API gateway, opt-in constant-time Azure origin guard, audit/validation scripts, ADR, architecture, runbooks, and tests.
+Repository preparation now uses Local → exact Cloudflare Preview → MVP Live. It does not require or configure permanent staging domains, separate Azure staging/production Function Apps, or separate databases.
 
-## 2. Cloudflare account and zones
+## 2. Cloudflare account and zone findings
 
-| Field | `lythaus.co` | `asora.co.za` |
-|---|---|---|
-| Public delegation | `ryan.ns.cloudflare.com`, `vida.ns.cloudflare.com` | `jerome.ns.cloudflare.com`, `zelda.ns.cloudflare.com` |
-| Provider zone ID/account/status/type/paused/plan | `UNKNOWN` | `UNKNOWN` |
-| Cloudflare authoritative | Public NS delegation observed; API confirmation `UNKNOWN` | Public NS delegation observed; API confirmation `UNKNOWN` |
-| Registrar/expiration/auto-renew | `UNKNOWN` | `UNKNOWN` |
-| DNSSEC | No conclusive public DS evidence; API state `UNKNOWN` | No conclusive public DS evidence; API state `UNKNOWN` |
-| SSL mode/minimum TLS/Universal SSL | `UNKNOWN` | `UNKNOWN` |
-| HTTPS rewrites/HSTS/HTTP2/HTTP3/Brotli/security settings | `UNKNOWN` | `UNKNOWN` |
-| CAA/provider certificate packs | `UNKNOWN` | `UNKNOWN` |
+| Zone | Public observation | Provider evidence | Gate |
+|---|---|---|---|
+| `lythaus.co` | Cloudflare NS `ryan`/`vida`; intended hosts did not resolve | `UNKNOWN` | NO-GO |
+| `asora.co.za` | Cloudflare NS `jerome`/`zelda`; apex and `www` HTTP 200 | `UNKNOWN` | NO-GO |
 
-The token verification gate recorded `MISSING`; permissions are unavailable for all required provider resources.
+Zone/account IDs, authoritative status, registrar, DNSSEC, SSL mode, universal certificates, TLS settings, HSTS, HTTP/2/3, Brotli, CAA, DNS records, email routing, and security settings remain `UNKNOWN`. The token file is absent and ignored by `*.env`; the Wrangler session is expired.
 
 ## 3. Current DNS matrix
 
-| Hostname | Public observation | Control mechanism | Proposed action |
-|---|---|---|---|
-| `lythaus.co` | Zone delegates to Cloudflare; apex did not resolve | `UNKNOWN` | Identify marketing Pages project, validate ownership/certificate, then attach |
-| `www.lythaus.co` | Did not resolve | `UNKNOWN` | Add path/query-preserving permanent redirect only after audit |
-| `app.lythaus.co` | Did not resolve | `UNKNOWN` | Attach identified Flutter Pages project after staging |
-| `api.lythaus.co` | Did not resolve | `UNKNOWN` | Attach verified production gateway custom domain after staging |
-| `admin.lythaus.co` | Did not resolve | `UNKNOWN` | Keep absent until UI and Access are ready |
-| `admin-api.lythaus.co` | Did not resolve | `UNKNOWN` | Keep absent until API, Access, roles, and audience are ready |
-| `status.lythaus.co` | Did not resolve | None observed | Do not configure |
-| `media.lythaus.co` | Did not resolve | None observed | Do not configure |
-| `asora.co.za` | Cloudflare anycast A/AAAA; HTTP 200 | DNS/Worker/ruleset identity `UNKNOWN` | Later redirect mapped public GET pages |
-| `www.asora.co.za` | Cloudflare anycast A/AAAA; HTTP 200 | DNS/Worker/ruleset identity `UNKNOWN` | Later redirect to Lythaus apex |
-| `lythaus.asora.co.za` | Did not resolve | `UNKNOWN` | Confirm provider inventory before adding redirect compatibility |
-| `api.asora.co.za` | Did not resolve | `UNKNOWN` | If active elsewhere, use compatibility proxy, never mutation redirect |
-| `admin-api.asora.co.za` | Cloudflare anycast; Access challenge | Access app/route details `UNKNOWN` | Preserve until audited and replacement proven |
-| `lythaus-web.pages.dev` | Cloudflare Pages anycast | Pages project identity `UNKNOWN` | De-index/redirect only after custom domain works |
-
-Duplicate records, wildcard records, proxied/unproxied conflicts, direct Azure targets, validation records, and hidden custom-domain ownership are `UNKNOWN` because the DNS API export was unavailable.
-
-## 4. Pages matrix
-
-| Surface | Observation | Project/source/build/custom domains/deployment SHA |
+| Host | Observation | Ownership/routing conclusion |
 |---|---|---|
-| Flutter web | `lythaus-web.pages.dev` returns 200 for `/`, `/login`, `/auth/callback`, post/user/invite/moderation/settings paths; SPA fallback is present in `web/_redirects` | `UNKNOWN` provider identity |
-| Marketing | Repository Astro site exists; no serving `lythaus.co` host observed | `UNKNOWN` project |
-| Admin UI | Repository Vite/React control panel exists; no `admin.lythaus.co` host observed | `UNKNOWN` project |
+| `lythaus.co`, `www.lythaus.co` | No serving address/HTTPS observed | `UNKNOWN` |
+| `app.lythaus.co`, `api.lythaus.co` | Did not resolve | Unconfigured publicly |
+| `admin.lythaus.co`, `admin-api.lythaus.co` | Did not resolve | Unconfigured publicly |
+| `asora.co.za`, `www.asora.co.za` | Cloudflare HTTP 200 | Azure audit shows these names bound to `asora-function-dev`; Cloudflare edge details unknown |
+| `lythaus.asora.co.za`, `api.asora.co.za` | Did not resolve | No public route observed |
+| `admin-api.asora.co.za` | Cloudflare Access challenge | Also bound to `asora-function-dev`; Access app/policy unknown |
+| `lythaus-web.pages.dev` | HTTP 200 Flutter SPA | Pages project metadata unknown |
 
-All Pages build commands, environment names, preview policy, domain validation, latest success/failure, deployment IDs, and source repository associations are `UNKNOWN`.
+Duplicate/conflicting records, wildcards, validation records, Worker custom domains/routes, and hidden redirects require the Cloudflare API.
 
-## 5. Worker matrix
+## 4. Current Pages matrix
 
-| Worker | Repository state | Live state |
-|---|---|---|
-| `feed-cache-worker` / `feed-cache` | `cloudflare/worker.ts` contains a development-origin fallback; legacy wrapper route targets `dev.asora.co.za` | Script/version/routes/custom domains/traffic `UNKNOWN` |
-| Prepared Lythaus gateway | Separate `cloudflare/api-gateway/worker.ts`; exact hostname/CORS, origin token, correlation ID, header stripping, no-store default, discovery-only cache, endpoint-class limits, controlled errors | Not deployed |
-| Redirect/compatibility Workers | No verified provider inventory | `UNKNOWN` |
-| Pages Functions | No verified provider inventory | `UNKNOWN` |
+`lythaus-web.pages.dev` serves the SPA publicly. The marketing, Flutter, and control-panel Pages projects, branches, repositories, build commands, variables, custom domains, validation state, deployments, and exact SHAs remain `UNKNOWN`.
 
-The unknown live identity prevents modification or deployment of the existing feed worker. The prepared gateway has no route/custom-domain declaration and cannot receive traffic accidentally.
+## 5. Current Worker matrix
 
-## 6. Access matrix
+Cloudflare scripts, versions, deployments, routes, custom domains, bindings, secret names, and traffic remain `UNKNOWN`. The live relationship among `feed-cache-worker`, `cloudflare/worker.ts`, Asora workers.dev hosts, and `admin-api.asora.co.za` cannot be established. PR 453 prepares a separate fail-closed gateway without claiming it is live.
 
-| Surface | Evidence | Unknowns |
-|---|---|---|
-| `admin-api.asora.co.za` | HTTP 302 to a Cloudflare Access login host; no-store and HSTS observed | App name, audience, IdPs, policy order, bypasses, service tokens, session duration, origin JWT match |
-| Admin UI/API target hosts | No DNS/HTTP surface | All provider policy state |
-| Public API | No target host | Must prove it does not inherit admin Access |
+## 6. Current Access matrix
 
-The Access API inventory is unavailable, so administration migration is blocked.
+`admin-api.asora.co.za` presents an Access challenge. Applications, audience tags, IdPs, policy order, bypass rules, service tokens, and public-API isolation remain `UNKNOWN`. Azure App Service Authentication is disabled; admin security therefore depends on the unverified Access layer plus origin-side roles.
 
 ## 7. Redirect/ruleset matrix
 
-No provider ruleset, Page Rule, Bulk Redirect, Origin Rule, Transform Rule, Cache Rule, WAF, rate-limit rule, or Worker-route ordering could be enumerated. Publicly, `asora.co.za` and `www.asora.co.za` both return 200 rather than redirecting. Shadowed or contradictory rules are `UNKNOWN`.
+Redirect, bulk redirect, Page, origin, transform, cache, configuration, WAF, rate-limit, bot, and Worker-route ordering remain `UNKNOWN`. Publicly, Asora apex and `www` return 200 rather than redirecting.
 
 ## 8. Repository reference inventory
 
-The required `rg`-driven inventory contains 529 classified matches:
-
-- [CSV](2026-07-13-domain-reference-inventory.csv)
-- [Markdown](2026-07-13-domain-reference-inventory.md)
-
-High-risk active references included the feed-worker development fallback, Flutter staging/production API defaults, OAuth defaults, OpenAPI server, generated client, Pages release values, marketing canonical/sitemap/robots, admin CORS/proxy defaults, workflow smoke defaults, and active architecture/branding documents. Azure deployment, SCM, IaC, pinning, monitoring, historical evidence, explicit tests, and internal Asora identifiers are classified separately rather than globally suppressed.
+The `rg`-driven inventory contains 359 classified matches and is committed as [CSV](2026-07-13-domain-reference-inventory.csv) and [Markdown](2026-07-13-domain-reference-inventory.md). It classifies runtime, preview, local, Cloudflare, Azure, CI/CD, OpenAPI, CORS/OAuth, public/internal documentation, tests, generated output, history, legacy compatibility, and safe internal identifiers.
 
 ## 9. Marketing page inventory
 
-| Intended surface | Repository route | Status |
-|---|---|---|
-| Home | `/` | Exists |
-| About | `/about` | Exists |
-| Manifesto | — | Missing |
-| Editorial | — | Missing |
-| News | — | Missing |
-| Safety | `/ai-moderation` is related but not an exact safety route | Missing exact route |
-| Transparency | — | Missing |
-| Waitlist | `/#waitlist` anchor | Partial; no standalone route |
-| Download | — | Missing |
-| Privacy | `/privacy` | Exists |
-| Terms | `/terms` | Exists |
-| Community guidelines | `/guidelines` | Exists |
-| Appeals | — | Missing marketing route |
-| Contact | `/contact` | Exists |
-| Invite links | `/invite` plus `_redirects` for `/invite/*` | Exists |
-| Public post links | — | Missing marketing route; app route exists |
-| Public user links | — | Missing marketing route; app route exists |
-| 404 | — | Missing custom page |
+The Astro build produced ten routes: `/`, `/about`, `/ai-moderation`, `/contact`, `/features`, `/guidelines`, `/invite`, `/pricing`, `/privacy`, and `/terms`. Manifesto, editorial, news, safety, transparency, waitlist, download, appeals, public post/user, and an explicit custom 404 route are missing and are not claimed. Canonical, sitemap, robots, Open Graph, and structured URLs target `lythaus.co`.
 
-Additional existing routes are `/features` and `/pricing`. Marketing canonicals, Open Graph URLs, Astro `site`, robots, and sitemap are prepared for `lythaus.co`; built output must still be validated before deployment.
+## 10. Web application route inventory
 
-## 10. Web application routes
+GoRouter includes `/`, `/login`, `/auth/callback`, `/post/:postId`, `/user/:userId`, `/invite/:code`, moderation, and settings routes. `web/_redirects` supplies SPA fallback. Exact preview direct-load/refresh proof must be repeated on the final PR artifact.
 
-| Route | Source status | Refresh status |
-|---|---|---|
-| `/` | Exists | SPA fallback configured |
-| `/login` | Exists | SPA fallback configured |
-| `/auth/callback` | Exists | SPA fallback configured |
-| `/post/:postId` | Exists | SPA fallback configured |
-| `/user/:userId` | Exists | SPA fallback configured |
-| `/invite/:code` | Exists | SPA fallback configured |
-| `/moderation` and `/moderation/appeal` | Exists | SPA fallback configured |
-| `/settings/notifications` | Exists | SPA fallback configured |
+## 11. API/auth configuration inventory
 
-Source and existing Pages-host probes support the SPA claim. `app.lythaus.co` itself cannot be tested because it does not resolve.
+Canonical public values are `https://api.lythaus.co/api` and `https://app.lythaus.co/auth/callback`. OpenAPI exposes one MVP server. Preview URLs are required explicit inputs with no permanent hostname or fallback.
 
-## 11. API/auth configuration
+Azure audit confirms:
 
-Prepared values use `https://api.lythaus.co/api` and staging equivalents. OAuth endpoints and callback conform to ADR-005. OpenAPI production/staging servers were updated and the Dart client regenerated. Exact CORS replaces implicit Pages/legacy fallbacks. The admin CORS boundary allows exact production/staging admin origins and omits credentials for unknown origins.
+- `asora-function-dev` is running on Node 22 Flex Consumption and is the only authorised MVP origin.
+- `/api/health` and `/api/ready` return 200; readiness confirms Cosmos.
+- The deployed SHA matches PR 452, not PR 453.
+- Platform CORS does not allow `https://app.lythaus.co`.
+- Origin gateway authentication is absent/disabled.
+- Rate limiting is enabled; test-user and chaos overrides are absent; purge defaults closed because `NODE_ENV` is absent.
+- The Function App is directly public with an allow-all network rule.
+- EasyAuth is disabled.
 
-The production Azure Function origin, deployed CORS, platform CORS, OAuth callback allowlists, Access audience validation, and safe staging authentication exercise remain `UNKNOWN`. No production client is intentionally configured to use the development Function App after the preparation patch; internal dev, deployment, monitoring, pinning, and historical references remain classified.
+See [Azure MVP evidence](2026-07-13-azure-mvp-audit.md).
 
-## 12. Gap analysis
+## 12. Gap analysis against target architecture
 
 | Target | Gap |
 |---|---|
-| Marketing/app/admin Pages | Projects and custom-domain validation unidentified |
-| API/admin API | Origins, deployed Workers, routes/custom domains, Access, rate-limit binding unidentified |
-| TLS/DNSSEC | Provider state and ownership validation unavailable |
-| Email | `lythaus.co` MX/SPF/DKIM/DMARC/provider readiness not established |
-| Auth/CORS | Deployed values and safe staging auth not verified |
-| Legacy continuity | Active provider routes/rules and traffic cannot be enumerated |
-| Rollback | Provider snapshots and rehearsal absent |
+| Marketing/app Pages mappings | Cloudflare project identity unknown |
+| API Worker/custom domain | Worker inventory and bindings unknown |
+| Shared MVP origin | Proven, but CORS/origin token/rollback incomplete |
+| Admin Pages/API | Access mapping/audience/service tokens unknown |
+| TLS/DNSSEC | Ownership and issuance unknown |
+| Legacy compatibility | Existing Cloudflare routes/rules unknown |
+| Email | Lythaus provider/records unknown; no MX observed |
+| Preview proof | Exact Pages/Worker preview and rollback not completed |
 
 ## 13. Security findings
 
-- **Critical:** Cloudflare provider state cannot be proven with the missing audit token.
-- **High:** The existing repository feed worker has a silent development-origin fallback; live deployment identity is unknown, so it was not modified or deployed.
-- **High:** Production origin, CORS, OAuth, Access policies, certificate state, and rollback versions are unknown.
-- **Medium:** `asora.co.za` and `www.asora.co.za` are live 200 surfaces without observed HSTS or migration redirects.
-- **Medium:** `lythaus.co` email readiness is unproven; no guessed mail records were created.
-- **Prepared control:** New gateway fails closed without origin/token/rate-limit binding, strips spoofable headers, conceals origin headers, and caches only anonymous credential-free discovery.
+- **Critical:** Cloudflare control plane cannot be audited.
+- **Critical:** Gateway origin token is not configured or enforced.
+- **High:** Future Lythaus app CORS is absent; current Azure CORS contains legacy/local origins.
+- **High:** Direct Azure origin and data services use public network access.
+- **High:** PostgreSQL has seven-day backups but no HA or geo-redundant backup.
+- **High:** Access applications/policies and admin isolation are unknown.
+- **High:** Rollback from PR 453 to the current PR 452 Function package is unproven.
+- **Medium:** Key Vault purge protection was not observed enabled.
+- **Prepared:** Gateway cache/header/origin controls, constant-time origin guard, explicit preview inputs, and load/chaos workflow approval gates are implemented in repository code.
 
-No credential value, TXT value, JWT, cookie, raw provider export, user data, or origin token is committed.
+No secret value, TXT value, access token, JWT, cookie, database credential, user data, or raw provider export is committed.
 
 ## 14. Migration conflict map
 
-PR 452 remains open/draft at `0cb3ffdeca506e891553c74b9e8b66de8f60890b`. The migration branch is based on that exact head. The final map found 36 overlaps among 84 migration files, primarily `.env.example`, the Azure deployment workflow, OpenAPI bundle/source, startup validation, shared HTTP tests, Flutter environment config, generated client server docs/API, `.gitignore`, README files, and smoke tooling.
-
-This is acceptable for a stacked draft PR but must be reconciled and retested when retargeting to `main` after PR 452 merges.
+PR 452 remains the stacked base at `0cb3ffdeca506e891553c74b9e8b66de8f60890b`. The migration contains 136 paths relative to that base; 52 overlap paths changed by PR 452. The overlap is expected because domain values touch the same release workflows, runtime configuration, generated client, and launch documentation. The exact paths are recorded in [the conflict map](2026-07-13-migration-conflict-map.md). PR 453 must remain stacked until PR 452 merges; then retarget it to `main`, reconcile all 52 overlap paths, regenerate artifacts, and rerun every check.
 
 ## 15. Proposed exact changes
 
-1. Restore read-only Cloudflare audit access and export both zones/account resources.
-2. Positively identify Pages projects and current Worker/Access/ruleset ownership.
-3. Identify non-development staging and production Azure origins.
-4. Configure gateway origins/secrets/KV and matching Azure token/CORS/OAuth settings in staging.
-5. Attach staging domains, deploy exact SHA, run auth/moderation/DSR/browser/API/cache tests, and rehearse rollback.
-6. Repeat the gated sequence for production, then enable reviewed legacy redirects/compatibility proxying.
+1. Load a replacement Cloudflare token through environment variables and audit both exact zones/account resources.
+2. Identify exact Pages, Worker, Access, DNS, ruleset, email, and certificate resources.
+3. Deploy exact PR artifacts to Pages/Worker previews using the existing MVP origin; no permanent preview DNS.
+4. Prove CORS, OAuth, auth, cache, header stripping, monitoring, and rollback.
+5. After separate approval, attach official Lythaus domains, configure exact Azure CORS/OAuth/origin token, and preserve Asora compatibility.
 
 ## 16. Rollback plan
 
-The required order is Worker version, Worker binding, Pages deployment/binding, DNS/redirect rules, Azure CORS/OAuth/origin enforcement, then health/auth/split-brain verification. See [cutover runbook](../../runbooks/lythaus-domain-cutover.md). The plan is documented but not proven because no provider snapshot or staging change was possible.
+Restore Worker version/bindings, Function package, Pages deployment/bindings, DNS/redirects, then Azure CORS/OAuth/origin enforcement. Run health, readiness, discovery, auth, protected-cache, Access, and split-brain tests. Rollback is documented but not proven.
 
 ## 17. Evidence locations
 
-- `.artifacts/cloudflare-audit/` — ignored local DNS/HTTP/reference observations and sanitized audit state
+Executed repository validation:
+
+- `flutter analyze`: passed.
+- `flutter test`: 3,623 passed; 5 launch-gate tests skipped by design.
+- Functions typecheck/build and Jest: passed; 2,254 tests passed and 18 skipped.
+- OpenAPI lint/examples/contract, gateway tests, 129-route guard, control-panel tests/build, and both Wrangler dry-runs: passed.
+- Marketing Astro build: 10 routes; document-shell, canonical, Open Graph, sitemap, robots, internal-link, CSS, and forbidden-host contract passed.
+- Flutter preview and MVP production builds: passed; built artifacts contain no forbidden Azure, Asora public, or Pages-development hostname.
+- Repository secret scanner: passed. `gitleaks` and `actionlint` binaries are unavailable locally; workflow YAML parsing passed and CI remains required.
+- Cloudflare preview deployment, browser auth smoke, and rollback rehearsal: not run because Cloudflare authentication is unavailable.
+
+- `.artifacts/cloudflare-audit/` — ignored local observations
+- `docs/evidence/cloudflare/2026-07-13-azure-mvp-audit.md`
+- `docs/evidence/cloudflare/2026-07-13-azure-mvp-audit.json`
 - `docs/evidence/cloudflare/2026-07-13-pre-cutover-state.md`
 - `docs/evidence/cloudflare/2026-07-13-post-cutover-state.md`
 - `docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.csv`
 - `docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.md`
+- `docs/evidence/cloudflare/2026-07-13-migration-conflict-map.md`
 - `scripts/cloudflare/audit-domains.ps1`
 - `scripts/cloudflare/validate-domain-contract.ps1`
-
-Repository validation passed for Flutter analysis and 3,623 tests (5 skipped), the Flutter production web build, Astro's 10-page production build and control-panel tests (21), Functions typecheck/build and 204 suites (2,254 passed, 18 skipped), route guards (129 routes, no guard violations), OpenAPI lint/examples/contracts, both gateway Wrangler dry-runs, the domain contract, `git diff --check`, the documentation/config secret scan, and gitleaks across 1,406 commits. The root `npm run lint-check` command is unavailable because the Functions package has no `lint` script; `actionlint` is not installed. Provider-side browser/auth/CORS/cache/rollback tests were not run because the live audit gate failed.
 
 ## 18. Unknowns and blockers
 
 | Severity | Owner | Required action |
 |---|---|---|
-| Critical | Cloudflare account owner | Provide `CLOUDFLARE_AUDIT_API_TOKEN` with all required read permissions and `CLOUDFLARE_ACCOUNT_ID` via environment variables |
-| Critical | Cloudflare account owner | Permit zones, DNS, Pages, Workers/routes/custom domains, Access/policies, rulesets, certificates, settings, registrar, and email audit |
-| Critical | Azure owner | Identify staging/production Function Apps and export redacted CORS/OAuth/app-setting state |
-| High | Identity owner | Prove staging auth code/PKCE/token/userinfo and callback allowlists safely |
-| High | Platform owner | Capture restorable provider snapshots and complete rollback rehearsal |
-| High | Release owner | Reconcile the 36-file PR 452 overlap when retargeting |
-| Medium | Mail owner | Select/confirm mail provider and approved MX/SPF/DKIM/DMARC values |
-| Medium | Product/content owner | Decide whether missing marketing routes are required before public launch |
+| Critical | Cloudflare owner | Load replacement audit token/account ID and permit complete read-only inventory |
+| Critical | Platform owner | Configure/prove Worker origin token without blocking SCM/emergency access |
+| High | Platform owner | Identify Pages/Worker/custom domains/routes and exact preview deployment |
+| High | Identity owner | Prove OAuth callback and Access audience/service-token isolation |
+| High | Azure/data owner | Approve shared-MVP backup/rollback posture and exact CORS transition |
+| High | Release owner | Rehearse Function/Worker/Pages rollback on the exact candidate SHA |
+| Medium | Mail owner | Select/confirm Lythaus email provider and records |
 
-Smallest path to `GO`: restore audit-only Cloudflare access, identify every provider resource and both Azure origins, resolve any DNS/certificate conflicts, then complete exact-SHA staging plus rollback evidence. Until then, production cutover is forbidden.
+Smallest path to GO: complete the Cloudflare audit, resolve the Azure gateway/CORS/Access blockers, prove exact preview and rollback, then obtain separate authorization for provider writes.

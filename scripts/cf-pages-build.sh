@@ -6,14 +6,30 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_CONFIG="${ROOT_DIR}/cloudflare/pages-release.sh"
+PREVIEW_CONFIG="${ROOT_DIR}/cloudflare/pages-preview.sh"
 
-if [[ ! -f "${RELEASE_CONFIG}" ]]; then
-  echo "Missing release config: ${RELEASE_CONFIG}" >&2
+REQUESTED_ENVIRONMENT="${ENVIRONMENT:-production}"
+
+case "${REQUESTED_ENVIRONMENT,,}" in
+  preview|pr)
+    SELECTED_CONFIG="${PREVIEW_CONFIG}"
+    ;;
+  mvp|live|prod|production)
+    SELECTED_CONFIG="${RELEASE_CONFIG}"
+    ;;
+  *)
+    echo "ENVIRONMENT must be preview or production for Cloudflare Pages builds" >&2
+    exit 1
+    ;;
+esac
+
+if [[ ! -f "${SELECTED_CONFIG}" ]]; then
+  echo "Missing Pages config: ${SELECTED_CONFIG}" >&2
   exit 1
 fi
 
 # shellcheck source=/dev/null
-source "${RELEASE_CONFIG}"
+source "${SELECTED_CONFIG}"
 
 cd "${ROOT_DIR}"
 
@@ -56,8 +72,8 @@ for name in ("API_BASE_URL", "AUTH_URL"):
         raise SystemExit(f"{name} must not target localhost or a private host")
 
 env = os.environ.get("ENVIRONMENT", "").strip().lower()
-if env and env not in {"production", "prod", "staging", "stg"}:
-    raise SystemExit("ENVIRONMENT must be production or staging for release web builds")
+if env not in {"production", "preview"}:
+    raise SystemExit("ENVIRONMENT must resolve to production or preview for Pages builds")
 PY
 
 bash scripts/check-web-release-hosts.sh

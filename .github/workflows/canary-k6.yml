@@ -8,8 +8,9 @@ on:
     branches: [main]
 
 env:
-  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://api.staging.lythaus.co' }}          # set in repo/org Variables
+  K6_BASE_URL: ${{ vars.K6_BASE_URL }}
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
+  ALLOW_SHARED_MVP_LOAD_TESTS: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS }}
 
 jobs:
   canary-k6:
@@ -24,6 +25,8 @@ jobs:
 
       - name: Verify environment and connectivity
         run: |
+          [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
+          test -n "$K6_BASE_URL" || { echo "K6_BASE_URL is required"; exit 1; }
           echo "K6_BASE_URL=$K6_BASE_URL"
           node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
           sudo apt-get update -y && sudo apt-get install -y dnsutils curl
@@ -99,12 +102,13 @@ jobs:
             </details>
 
   canary-k6-chaos:
+    if: ${{ vars.ALLOW_SHARED_MVP_CHAOS_TESTS == 'true' }}
     needs: [canary-k6]
     name: Run k6 chaos scenarios
     runs-on: ubuntu-latest
     env:
       CHAOS_ENABLED: "true"
-      K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://api.staging.lythaus.co' }}
+      K6_BASE_URL: ${{ vars.K6_BASE_URL }}
       K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
     steps:
       - uses: actions/checkout@v5
@@ -114,6 +118,8 @@ jobs:
 
       - name: Verify environment and connectivity
         run: |
+          [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
+          test -n "$K6_BASE_URL" || { echo "K6_BASE_URL is required"; exit 1; }
           echo "K6_BASE_URL=$K6_BASE_URL"
           node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
           sudo apt-get update -y && sudo apt-get install -y dnsutils curl
