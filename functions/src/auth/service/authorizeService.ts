@@ -19,6 +19,7 @@ import { usersService } from './usersService';
 import * as crypto from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
+import { isRegisteredRedirectUri } from './redirectUriPolicy';
 
 const logger = getAzureLogger('auth/authorize');
 
@@ -339,11 +340,10 @@ function validateAuthorizeRequest(request: AuthorizeRequest): string | null {
     return 'Invalid client_id parameter';
   }
 
-  // Validate redirect_uri
-  try {
-    new URL(request.redirect_uri);
-  } catch {
-    return 'Invalid redirect_uri parameter';
+  // Require an exact registered callback. This blocks open redirects while
+  // preserving established native schemes and configured immutable previews.
+  if (!isRegisteredRedirectUri(request.redirect_uri)) {
+    return 'Invalid or unregistered redirect_uri parameter';
   }
 
   // Validate state parameter (required for security)

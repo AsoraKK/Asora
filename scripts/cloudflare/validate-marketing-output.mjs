@@ -61,8 +61,10 @@ for (const file of htmlFiles) {
 
 const sitemapPath = join(output, 'sitemap.xml');
 const robotsPath = join(output, 'robots.txt');
+const headersPath = join(output, '_headers');
 if (!existsSync(sitemapPath)) violations.push('sitemap.xml is missing');
 if (!existsSync(robotsPath)) violations.push('robots.txt is missing');
+if (!existsSync(headersPath)) violations.push('_headers is missing');
 
 if (existsSync(sitemapPath)) {
   const sitemap = readFileSync(sitemapPath, 'utf8');
@@ -77,6 +79,25 @@ if (existsSync(sitemapPath)) {
 if (existsSync(robotsPath)) {
   const robots = readFileSync(robotsPath, 'utf8');
   if (!robots.includes(`Sitemap: ${site}/sitemap.xml`)) violations.push('robots.txt has no canonical sitemap URL');
+}
+
+if (existsSync(headersPath)) {
+  const headers = readFileSync(headersPath, 'utf8');
+  const requiredHeaders = [
+    'X-Content-Type-Options: nosniff',
+    'Referrer-Policy: strict-origin-when-cross-origin',
+    'X-Frame-Options: DENY',
+    'Permissions-Policy:',
+    'Strict-Transport-Security: max-age=31536000; includeSubDomains',
+    "Content-Security-Policy: default-src 'self'",
+    "connect-src 'self' https://api.lythaus.co",
+  ];
+  for (const required of requiredHeaders) {
+    if (!headers.includes(required)) violations.push(`_headers is missing ${required}`);
+  }
+  if (/(asora\.co\.za|pages\.dev|azurewebsites\.net)/i.test(headers)) {
+    violations.push('_headers contains a forbidden public-domain reference');
+  }
 }
 
 if (violations.length) {
