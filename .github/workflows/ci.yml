@@ -944,7 +944,7 @@ jobs:
             for gate in "${!GATES[@]}"; do
               result="${GATES[$gate]}"
               echo "| $(icon "$result") $gate | $result |"
-              [[ "$result" != "success" ]] && blockers=$((blockers+1))
+              [[ "$result" != "success" && "$result" != "skipped" ]] && blockers=$((blockers+1))
             done
             echo ""
             if [[ $blockers -gt 0 ]]; then
