@@ -55,4 +55,4 @@ Rollback uses exported, still-existing resources. Initial cutover does not delet
 
 ## Current execution
 
-On 2026-07-13 no provider write was applied. Azure was audited read-only; Cloudflare remains unauditable without a replacement token. Rollback is documented but not proven.
+On 2026-07-13 no provider write was applied. Azure and Cloudflare were audited read-only. The Cloudflare token enumerated both zones, DNS, Pages, Workers, routes/custom domains, Access, certificates, email routing, and zone settings, but registrar, Bulk Redirect, and managed-ruleset detail reads returned HTTP 403. Rollback references are captured for the current Function package, two Pages projects, and three legacy Workers; the full rollback sequence remains unproven.

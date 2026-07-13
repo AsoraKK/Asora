@@ -18,9 +18,22 @@ function Protect-Identifier([string]$Value) {
   return "$($Value.Substring(0, 4))...$($Value.Substring($Value.Length - 4))"
 }
 
+function Protect-CloudflarePath([string]$Path) {
+  return [regex]::Replace($Path, '(?i)(?<![a-f0-9])[a-f0-9]{32}(?![a-f0-9])', {
+    param($match)
+    Protect-Identifier $match.Value
+  })
+}
+
 function Get-Sha256([string]$Value) {
   $bytes = [Text.Encoding]::UTF8.GetBytes($Value)
-  return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
+  $sha256 = [Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha256.ComputeHash($bytes)
+    return ([BitConverter]::ToString($hash) -replace '-', '').ToLowerInvariant()
+  } finally {
+    $sha256.Dispose()
+  }
 }
 
 function Get-Classification([string]$Path, [string]$Value) {
@@ -127,7 +140,7 @@ $tokenSource = if ($env:CLOUDFLARE_AUDIT_API_TOKEN) { 'CLOUDFLARE_AUDIT_API_TOKE
 $accountId = $env:CLOUDFLARE_ACCOUNT_ID
 $result = [ordered]@{
   capturedAt = (Get-Date).ToUniversalTime().ToString('o')
-  token = [ordered]@{ status = 'MISSING'; source = $tokenSource; unavailablePermissions = @('ALL') }
+  token = [ordered]@{ status = 'MISSING'; source = $tokenSource; unavailablePermissions = @() }
   account = [ordered]@{ id = $(if ($accountId) { Protect-Identifier $accountId } else { 'UNKNOWN' }) }
   zones = @()
   pages = @()
@@ -163,7 +176,12 @@ function Invoke-Cloudflare([string]$Path, [string]$RawName) {
     Write-JsonFile (Join-Path $ArtifactDirectory $RawName) $response
     return $response
   } catch {
-    $result.token.unavailablePermissions += $Path
+    $statusCode = if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+      [int]$_.Exception.Response.StatusCode
+    } else {
+      0
+    }
+    $result.token.unavailablePermissions += "$(Protect-CloudflarePath $Path) (HTTP $statusCode)"
     return $null
   }
 }
@@ -300,6 +318,9 @@ if ($discoveredAccountIds.Count -ne 1) {
 }
 
 $result.token.unavailablePermissions = @($result.token.unavailablePermissions | Sort-Object -Unique)
+if ($result.token.unavailablePermissions.Count -gt 0) {
+  $result.blockers += 'Cloudflare endpoints required for a complete audit were unavailable to the audit token.'
+}
 Write-JsonFile (Join-Path $ArtifactDirectory 'sanitized-cloudflare-audit.json') $result
 Write-Output "Cloudflare audit complete: $($result.blockers.Count) blocker(s); raw data remains gitignored."
 if ($result.blockers.Count -gt 0 -or $result.token.unavailablePermissions.Count -gt 0) { exit 4 }
