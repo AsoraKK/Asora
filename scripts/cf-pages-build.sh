@@ -35,6 +35,9 @@ cd "${ROOT_DIR}"
 
 : "${API_BASE_URL:?API_BASE_URL is required}"
 : "${AUTH_URL:?AUTH_URL is required}"
+: "${OAUTH2_AUTHORIZATION_ENDPOINT:?OAUTH2_AUTHORIZATION_ENDPOINT is required}"
+: "${OAUTH2_TOKEN_ENDPOINT:?OAUTH2_TOKEN_ENDPOINT is required}"
+: "${OAUTH2_USERINFO_ENDPOINT:?OAUTH2_USERINFO_ENDPOINT is required}"
 : "${ENVIRONMENT:=production}"
 
 python3 - <<'PY'
@@ -61,7 +64,13 @@ def is_private_or_local(host: str) -> bool:
             return True
     return False
 
-for name in ("API_BASE_URL", "AUTH_URL"):
+for name in (
+    "API_BASE_URL",
+    "AUTH_URL",
+    "OAUTH2_AUTHORIZATION_ENDPOINT",
+    "OAUTH2_TOKEN_ENDPOINT",
+    "OAUTH2_USERINFO_ENDPOINT",
+):
     value = os.environ.get(name, "").strip()
     if not value:
         raise SystemExit(f"{name} is required")
@@ -82,11 +91,12 @@ bash scripts/check-web-release-hosts.sh
 FLUTTER_VERSION=$(python3 -c "import json,sys; print(json.load(open('.fvmrc'))['flutter'])")
 echo "==> Installing Flutter ${FLUTTER_VERSION}"
 
-FLUTTER_TAR="flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
-FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/${FLUTTER_TAR}"
-
-curl -fsSL -o "/tmp/${FLUTTER_TAR}" "${FLUTTER_URL}"
-tar xf "/tmp/${FLUTTER_TAR}" -C /tmp
+if [[ ! -x /tmp/flutter/bin/flutter ]]; then
+  FLUTTER_TAR="flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+  FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/${FLUTTER_TAR}"
+  curl -fsSL -o "/tmp/${FLUTTER_TAR}" "${FLUTTER_URL}"
+  tar xf "/tmp/${FLUTTER_TAR}" -C /tmp
+fi
 export PATH="/tmp/flutter/bin:/tmp/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
 flutter precache --web
@@ -99,7 +109,10 @@ echo "==> Building web release"
 flutter build web --release --no-tree-shake-icons \
   --dart-define=ENVIRONMENT="${ENVIRONMENT}" \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
-  --dart-define=AUTH_URL="${AUTH_URL}"
+  --dart-define=AUTH_URL="${AUTH_URL}" \
+  --dart-define=OAUTH2_AUTHORIZATION_ENDPOINT="${OAUTH2_AUTHORIZATION_ENDPOINT}" \
+  --dart-define=OAUTH2_TOKEN_ENDPOINT="${OAUTH2_TOKEN_ENDPOINT}" \
+  --dart-define=OAUTH2_USERINFO_ENDPOINT="${OAUTH2_USERINFO_ENDPOINT}"
 
 echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects
