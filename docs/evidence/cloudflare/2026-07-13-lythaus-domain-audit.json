@@ -1,169 +1,135 @@
 {
   "date": "2026-07-13",
-  "capturedAt": "2026-07-13T19:08:42Z",
   "result": "NO-GO",
   "architecture": "SINGLE_AZURE_MVP_SHARED_ENVIRONMENT",
   "repository": {
     "baseBranch": "codex/alpha-release-candidate",
     "baseSha": "0cb3ffdeca506e891553c74b9e8b66de8f60890b",
     "migrationBranch": "codex/lythaus-domain-migration",
-    "releaseCandidatePr": 452,
+    "validatedCandidateSha": "dd2b386f8f630fd3585dbd864decaa475e6af3d5",
+    "pullRequest": 453,
+    "pullRequestState": "OPEN_DRAFT_STACKED",
+    "releaseCandidatePullRequest": 452,
     "releaseCandidateState": "OPEN_DRAFT",
-    "migrationFileCount": 136,
     "conflictMapCount": 52
   },
-  "credentials": {
-    "cloudflareAuditToken": "VERIFIED_ACTIVE",
-    "cloudflareAccountId": "e5b7...1af0",
-    "unavailableEndpointCount": 7,
-    "cloudflareWriteTokenUsed": false,
-    "cloudflareProviderWritesApplied": false,
-    "azureCliSession": "AUTHENTICATED",
-    "azureWriteApplied": false
-  },
-  "zones": {
-    "lythaus.co": {
-      "id": "7bc5...9382",
-      "status": "active",
-      "type": "full",
-      "paused": false,
-      "nameservers": ["ryan.ns.cloudflare.com", "vida.ns.cloudflare.com"],
-      "dnsRecordCount": 0,
-      "dnssec": "active",
-      "sslMode": "full",
-      "minimumTls": "1.0",
-      "alwaysUseHttps": false,
-      "hsts": false,
-      "http2": true,
-      "http3": true,
-      "brotli": true,
-      "universalCertificate": "active",
-      "emailRouting": "unconfigured",
-      "caaRecordCount": 0
+  "cloudflareAudit": {
+    "token": "VERIFIED_ACTIVE",
+    "zones": {
+      "lythaus.co": "ACTIVE_AUTHORITATIVE_DNSSEC_ACTIVE_SSL_FULL",
+      "asora.co.za": "ACTIVE_AUTHORITATIVE_DNSSEC_DISABLED_SSL_STRICT"
     },
-    "asora.co.za": {
-      "id": "55d3...c9e5",
-      "status": "active",
-      "type": "full",
-      "paused": false,
-      "nameservers": ["jerome.ns.cloudflare.com", "zelda.ns.cloudflare.com"],
-      "dnsRecordCount": 20,
-      "dnsTypes": {"CNAME": 6, "MX": 5, "TXT": 9},
-      "dnssec": "disabled",
-      "sslMode": "strict",
-      "minimumTls": "1.0",
-      "alwaysUseHttps": true,
-      "hsts": false,
-      "http2": true,
-      "http3": true,
-      "brotli": true,
-      "universalCertificate": "active",
-      "emailRouting": "unconfigured",
-      "caaRecordCount": 0
-    }
+    "unavailableEndpointCount": 7,
+    "unavailable": [
+      "lythaus.co registrar",
+      "asora.co.za registrar",
+      "account Bulk Redirect lists",
+      "lythaus.co normalization detail",
+      "lythaus.co DDoS detail",
+      "asora.co.za normalization detail",
+      "asora.co.za DDoS detail"
+    ],
+    "productionDnsWrites": false,
+    "productionCustomDomainWrites": false
   },
   "pages": {
-    "accountProjectCount": 4,
+    "marketing": {
+      "project": "lythaus-marketing",
+      "deployment": "b1e3...e610",
+      "url": "https://b1e30d74.lythaus-marketing.pages.dev",
+      "commit": "dd2b386f8f630fd3585dbd864decaa475e6af3d5",
+      "routes": 10,
+      "result": "PASS"
+    },
     "flutter": {
       "project": "lythaus-web",
-      "productionBranch": "main",
-      "domains": ["lythaus-web.pages.dev", "app.lythaus.asora.co.za"],
-      "buildCommand": "bash scripts/cf-pages-build.sh",
-      "outputDirectory": "build/web",
-      "productionRollbackDeployment": "7155...91ee",
-      "productionRollbackCommit": "d2d251edcfc8742649fdc9a09860e2c92f5f60e3",
-      "candidatePreviewDeployment": "57f2...7736",
-      "candidatePreviewCommit": "c6d7bc718887f6fcd827d2bb5e54edc7037581f9",
-      "candidatePreviewResult": "SUCCESS_EDGE_FALLBACK_FAIL_APP_HASH_ROUTING"
+      "deployment": "7ca0...03a5",
+      "url": "https://7ca0cf37.lythaus-web.pages.dev",
+      "commit": "dd2b386f8f630fd3585dbd864decaa475e6af3d5",
+      "edgeRoutes": "PASS_8_OF_8",
+      "renderedRoutes": "PARTIAL_AUTH_REDIRECT_GAPS"
     },
     "controlPanel": {
       "project": "asora",
-      "productionBranch": "main",
-      "domains": ["asora-6bi.pages.dev", "control.asora.co.za"],
-      "buildCommand": "npm run build",
-      "outputDirectory": "dist",
-      "productionRollbackDeployment": "8bfd...c7e2",
-      "productionRollbackCommit": "d2d251edcfc8742649fdc9a09860e2c92f5f60e3",
-      "candidatePreviewDeployment": "d59f...77e2",
-      "candidatePreviewResult": "SUCCESS_PUBLIC_WITHOUT_ACCESS_CHALLENGE"
-    },
-    "marketing": "MISSING",
-    "unrelatedProjects": ["nite-owl-staging", "nite-owl-placeholder"]
+      "preview": "https://093ab684.asora-6bi.pages.dev",
+      "unauthenticatedHttp": 302,
+      "accessProtected": true
+    }
   },
-  "workers": {
-    "accountWorkerCount": 5,
-    "relevant": [
-      {"name": "feed-cache", "deployment": "caa3...fd40", "versionCount": 10, "route": "dev.asora.co.za/api/feed*", "originCategory": "AZURE_FUNCTION", "secretNames": []},
-      {"name": "control-api-proxy", "deployment": "4b6c...4f4e", "versionCount": 3, "route": "control.asora.co.za/api/*", "originCategory": "AZURE_FUNCTION", "secretNames": []},
-      {"name": "asora-feed-edge-development", "deployment": "538f...476c", "versionCount": 4, "route": null, "originCategory": "CONFIGURED_BINDING", "secretNames": []}
-    ],
-    "lythausApiGateway": "NOT_DEPLOYED",
-    "lythausOrAsoraCustomDomains": [],
-    "unrelatedWorkers": ["nite-owl-web", "nite-owl-web-preview"]
+  "worker": {
+    "name": "lythaus-api-gateway-preview",
+    "url": "https://lythaus-api-gateway-preview.asora.workers.dev",
+    "version": "efdf...1801",
+    "health": 200,
+    "exactCors": "PASS",
+    "wrongOrigin": "REJECTED_403",
+    "anonymousDiscoveryCache": "HIT",
+    "credentialedDiscovery": "PRIVATE_NO_STORE",
+    "protectedRoutes": "PRIVATE_NO_STORE",
+    "originLeak": false,
+    "originAuthSecret": "SET_REDACTED",
+    "originEnforcement": "BLOCKED_TO_PRESERVE_LEGACY_TRAFFIC"
   },
   "access": {
-    "applicationCount": 5,
-    "identityProviders": ["onetimepin", "google"],
-    "serviceTokenNames": ["asora-dev-admin-api-st", "control-panel-to-admin-api"],
-    "legacyApplications": ["Asora Control Panel", "Asora Control Panel API", "Asora Admin API"],
-    "targetAdminUiApplication": "MISSING",
-    "targetAdminApiApplication": "MISSING",
-    "bypassPolicyObserved": false,
-    "publicApiAdminPolicyInherited": false
-  },
-  "redirectsAndRules": {
-    "pageRules": [],
-    "customRulesets": [],
-    "workerRoutes": ["dev.asora.co.za/api/feed*", "control.asora.co.za/api/*"],
-    "bulkRedirectInventory": "HTTP_403",
-    "managedRulesetDetailReads": "HTTP_403",
-    "asoraApexRedirects": false
-  },
-  "email": {
-    "asora.co.za": {"mx": "GOOGLE_5_RECORDS", "spf": true, "dkim": true, "dmarc": true, "mtaSts": false, "tlsRpt": false},
-    "lythaus.co": {"mx": false, "spf": false, "dkim": false, "dmarc": false, "ready": false}
+    "adminUi": "EXPLICIT_ADMIN_ALLOW_CI_SERVICE_TOKEN_DENY_ALL",
+    "adminApi": "EXPLICIT_ADMIN_ALLOW_TWO_SERVICE_TOKENS_DENY_ALL",
+    "controlPanelPreview": "EXPLICIT_ADMIN_ALLOW_CI_SERVICE_TOKEN_DENY_ALL",
+    "everyoneAllow": false,
+    "bypass": false,
+    "publicApiProtected": false
   },
   "azureMvp": {
     "origin": "asora-function-dev",
-    "originVerified": true,
-    "health": "HTTP_200_HEALTHY",
-    "ready": "HTTP_200_READY_COSMOS_TRUE",
-    "cors": "LYTHAUS_ORIGIN_NOT_ALLOWED",
-    "originAuthentication": "ABSENT_OR_DISABLED",
-    "directPublicAccess": true,
-    "deploymentMatchesPr452": true,
-    "deploymentMatchesPr453": false,
-    "rollback": "DOCUMENTED_NOT_REHEARSED"
+    "candidateDeployment": {
+      "sha": "dd2b386f8f630fd3585dbd864decaa475e6af3d5",
+      "workflowRun": 29288372154,
+      "packageAndHealth": "PASS",
+      "liveContracts": "FAIL_MODERATION_APPEAL_ERROR_SCHEMA"
+    },
+    "currentDeployment": {
+      "sha": "0cb3ffdeca506e891553c74b9e8b66de8f60890b",
+      "rollbackWorkflowRun": 29288922941,
+      "directHealth": 200,
+      "workerHealth": 200,
+      "liveContracts": "FAIL_SAME_PREEXISTING_SCHEMA_DRIFT"
+    },
+    "cors": "EXACT_PREVIEW_PLUS_EXPLICIT_LEGACY_COMPATIBILITY",
+    "oauthCallback": "https://7ca0cf37.lythaus-web.pages.dev/auth/callback",
+    "originToken": "SET_REDACTED",
+    "originEnforcement": "ABSENT",
+    "directMissingToken": 200,
+    "directInvalidToken": 200
   },
-  "repositoryInventory": {
-    "matches": 373,
-    "csv": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.csv",
-    "markdown": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.md"
+  "browser": {
+    "pkceS256": true,
+    "statePresent": true,
+    "invalidStateRejected": true,
+    "inviteRefresh": true,
+    "postUserPrivacyTermsRootPublicState": false,
+    "approvedIdentityAvailable": false,
+    "tokenExchangeUserInfoRestoreSignOut": "UNKNOWN"
+  },
+  "rollback": {
+    "worker": "PROVEN_AND_CURRENT_RESTORED",
+    "pages": "PROVEN_ON_PREVIEW_BRANCH_AND_CURRENT_RESTORED",
+    "azurePackage": "PROVEN_PREVIOUS_PACKAGE_RESTORED",
+    "fullAcceptance": "NOT_PROVEN_CONTRACT_DRIFT"
   },
   "validation": {
-    "flutterAnalyze": "PASS",
-    "flutterTests": {"passed": 3624, "skipped": 5, "result": "PASS"},
-    "flutterProductionWebBuild": "PASS",
-    "webSecurityHeaders": "PASS",
+    "exactHeadCiRun": 29287761322,
+    "exactHeadCi": "PASS",
+    "gatewayTests": "11_PASS",
+    "wranglerDryRun": "PASS",
     "domainContract": "PASS",
-    "repositorySecretScan": "PASS",
-    "tokenPrefixMatches": {"tracked": 0, "artifacts": 0},
-    "gitDiffCheck": "PASS",
-    "optimizedLocalBrowserRoutes": "PASS",
-    "newImmutablePagesPreview": "PENDING"
+    "marketingOutput": "10_PASS",
+    "repositoryReferenceCount": 373
   },
-  "providerChangesApplied": false,
-  "rollback": "PARTIAL_REFERENCES_CAPTURED_NOT_REHEARSED",
   "blockers": [
-    "Required Cloudflare registrar, Bulk Redirect, and ruleset detail endpoints return HTTP 403",
-    "No marketing Pages project exists",
-    "No Lythaus API gateway Worker is deployed",
-    "The Lythaus zone has no DNS records or target bindings",
-    "Lythaus Azure CORS is not configured",
-    "Origin gateway authentication is not configured",
-    "Target admin Access applications do not exist",
-    "Flutter path routing fix is not proven on a new immutable preview",
-    "Public post and user share-link behavior is not proven",
-    "OAuth callback and full rollback are not proven"
+    "Seven required Cloudflare reads return HTTP 403",
+    "Origin enforcement would block active legacy Asora HTTP paths",
+    "Live moderation appeal response fails the OpenAPI error schema",
+    "No approved isolated identity was available for full browser authentication",
+    "Post, user, privacy, terms, and root render login instead of the requested public state",
+    "PR 452 remains open; final reconciliation must happen once after merge"
   ]
 }
