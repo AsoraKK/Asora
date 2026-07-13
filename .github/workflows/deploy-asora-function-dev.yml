@@ -191,7 +191,7 @@ jobs:
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
-            --settings CORS_ALLOWED_ORIGINS='https://control.asora.co.za,https://lythaus-web.pages.dev,https://*.lythaus-web.pages.dev,https://app.lythaus.asora.co.za'
+            --settings CORS_ALLOWED_ORIGINS='https://app.staging.lythaus.co,https://admin.staging.lythaus.co'
 
       - name: Inspect CORS allowed origins
         run: |
@@ -213,15 +213,14 @@ jobs:
           SUBS_CLEAN=$(az account show --query id -o tsv | tr -d '\r')
           CORS_URI="https://management.azure.com/subscriptions/${SUBS_CLEAN}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/web?api-version=2026-03-15"
           CORS_BODY=$(jq -n \
-            --arg control "https://control.asora.co.za" \
-            --arg pages "https://lythaus-web.pages.dev" \
-            --arg app "https://app.lythaus.asora.co.za" \
+            --arg admin "https://admin.staging.lythaus.co" \
+            --arg app "https://app.staging.lythaus.co" \
             --arg localhost8080 "http://localhost:8080" \
             --arg localhost4200 "http://localhost:4200" \
             '{
               properties: {
                 cors: {
-                  allowedOrigins: [$control, $pages, $app, $localhost8080, $localhost4200],
+                  allowedOrigins: [$admin, $app, $localhost8080, $localhost4200],
                   supportCredentials: false
                 }
               }

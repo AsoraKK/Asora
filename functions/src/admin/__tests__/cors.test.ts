@@ -8,7 +8,7 @@ import { handleCors, ALLOWED_ORIGINS, corsHeaders } from '../cors';
 
 describe('ALLOWED_ORIGINS', () => {
   it('includes production control panel domain', () => {
-    expect(ALLOWED_ORIGINS).toContain('https://control.asora.co.za');
+    expect(ALLOWED_ORIGINS).toContain('https://admin.lythaus.co');
   });
 
   it('includes localhost for development', () => {
@@ -21,9 +21,9 @@ describe('ALLOWED_ORIGINS', () => {
 
 describe('corsHeaders', () => {
   it('generates correct headers for allowed origin', () => {
-    const headers = corsHeaders('https://control.asora.co.za');
+    const headers = corsHeaders('https://admin.lythaus.co');
 
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
     expect(headers['Access-Control-Allow-Methods']).toContain('GET');
     expect(headers['Access-Control-Allow-Methods']).toContain('PUT');
     expect(headers['Access-Control-Allow-Methods']).toContain('OPTIONS');
@@ -37,7 +37,7 @@ describe('corsHeaders', () => {
 
 describe('handleCors', () => {
   it('returns 204 for OPTIONS preflight from allowed origin', () => {
-    const result = handleCors('OPTIONS', 'https://control.asora.co.za');
+    const result = handleCors('OPTIONS', 'https://admin.lythaus.co');
 
     if (!result || !result.headers) {
       throw new Error('Expected CORS preflight response');
@@ -45,11 +45,11 @@ describe('handleCors', () => {
     const headers = result.headers as Record<string, string>;
 
     expect(result.status).toBe(204);
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
   });
 
   it('returns null for non-OPTIONS requests (let handler proceed)', () => {
-    const result = handleCors('GET', 'https://control.asora.co.za');
+    const result = handleCors('GET', 'https://admin.lythaus.co');
 
     expect(result).toBeNull();
   });

@@ -85,7 +85,7 @@ describe('feed endpoint cache headers', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers?.['Cache-Control']).toBe('public, no-cache, must-revalidate');
-    expect(response.headers?.['Vary']).toBe('Authorization');
+    expect(response.headers?.['Vary']).toBe('Authorization, Origin');
   });
 
   it('sets no-store cache headers for authenticated discover feed', async () => {
@@ -102,7 +102,7 @@ describe('feed endpoint cache headers', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers?.['Cache-Control']).toBe('private, no-store');
-    expect(response.headers?.['Vary']).toBe('Authorization');
+    expect(response.headers?.['Vary']).toBe('Authorization, Origin');
   });
 
   it('returns 401 for anonymous news feed (News Board requires authentication)', async () => {
@@ -139,6 +139,6 @@ describe('feed endpoint cache headers', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers?.['Cache-Control']).toBe('private, no-store');
-    expect(response.headers?.['Vary']).toBe('Authorization');
+    expect(response.headers?.['Vary']).toBe('Authorization, Origin');
   });
 });

@@ -8,8 +8,10 @@
 
 // Bootstrap: environment validation and observability
 import './shared/appInsights'; // initialize App Insights early
+import { registerOriginGatewayGuard } from './shared/security/originGatewayAuth';
 import { validateStartupEnvironment } from './shared/startup-validation';
 validateStartupEnvironment();
+registerOriginGatewayGuard();
 
 // Health endpoint - must load synchronously for reliability
 import './health/health.function';

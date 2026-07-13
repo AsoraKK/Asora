@@ -62,7 +62,7 @@ try {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *https://asora-function-dev.azurewebsites.net/api*
+All URIs are relative to *https://api.lythaus.co/api*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------

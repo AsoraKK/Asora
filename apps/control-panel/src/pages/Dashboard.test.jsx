@@ -91,7 +91,7 @@ describe('Dashboard', () => {
     window.localStorage.clear();
     vi.useRealTimers();
 
-    getAbsoluteAdminApiUrl.mockReturnValue('https://control.asora.co.za/api/admin');
+    getAbsoluteAdminApiUrl.mockReturnValue('https://admin-api.lythaus.co/api');
     getAdminApiUrl.mockReturnValue('/api/admin');
     getAdminToken.mockReturnValue('token');
     getAdminTokenExpiry.mockReturnValue(null);

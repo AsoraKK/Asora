@@ -1,0 +1,78 @@
+{
+  "date": "2026-07-13",
+  "result": "NO-GO",
+  "repository": {
+    "baseBranch": "codex/alpha-release-candidate",
+    "baseSha": "0cb3ffdeca506e891553c74b9e8b66de8f60890b",
+    "migrationBranch": "codex/lythaus-domain-migration",
+    "releaseCandidatePr": 452,
+    "releaseCandidateState": "OPEN_DRAFT",
+    "migrationFileCount": 84,
+    "conflictMapCount": 36
+  },
+  "credentials": {
+    "cloudflareAuditToken": "MISSING",
+    "cloudflareAccountId": "MISSING",
+    "cloudflareWriteTokenUsed": false,
+    "azureWriteCredentialUsed": false
+  },
+  "zones": {
+    "lythaus.co": {
+      "publicNameservers": ["ryan.ns.cloudflare.com", "vida.ns.cloudflare.com"],
+      "providerAudit": "UNKNOWN",
+      "servingRecords": "NOT_OBSERVED",
+      "dnssec": "UNKNOWN",
+      "certificate": "UNAVAILABLE"
+    },
+    "asora.co.za": {
+      "publicNameservers": ["jerome.ns.cloudflare.com", "zelda.ns.cloudflare.com"],
+      "providerAudit": "UNKNOWN",
+      "apexHttp": 200,
+      "wwwHttp": 200,
+      "certificateNotAfter": "2026-08-15T12:03:32Z",
+      "dnssec": "UNKNOWN"
+    }
+  },
+  "pages": {
+    "lythaus-web.pages.dev": "HTTP_200_SPA_OBSERVED",
+    "projectIdentity": "UNKNOWN",
+    "marketingProject": "UNKNOWN",
+    "flutterProject": "UNKNOWN",
+    "adminProject": "UNKNOWN"
+  },
+  "workers": {
+    "providerInventory": "UNKNOWN",
+    "repositoryFeedWorkerLiveIdentity": "UNKNOWN",
+    "preparedGateway": "cloudflare/api-gateway/worker.ts"
+  },
+  "access": {
+    "admin-api.asora.co.za": "ACCESS_CHALLENGE_OBSERVED",
+    "applicationsAndPolicies": "UNKNOWN",
+    "audienceMatch": "UNKNOWN"
+  },
+  "email": {
+    "asora.co.za": "GOOGLE_MX_OBSERVED_PROVIDER_AUTH_UNKNOWN",
+    "lythaus.co": "NOT_READY_NO_MX_OBSERVED_AUTH_UNKNOWN"
+  },
+  "repositoryInventory": {
+    "matches": 529,
+    "csv": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.csv",
+    "markdown": "docs/evidence/cloudflare/2026-07-13-domain-reference-inventory.md"
+  },
+  "providerChangesApplied": false,
+  "rollback": "DOCUMENTED_NOT_PROVEN",
+  "blockers": [
+    "Cloudflare read-only audit token missing",
+    "Cloudflare account identifier missing",
+    "Both zones cannot be fully audited",
+    "Pages projects cannot be identified",
+    "Worker routes and custom domains cannot be identified",
+    "Access applications and policies cannot be identified",
+    "Production Azure origin cannot be verified",
+    "Production CORS and OAuth callbacks cannot be verified",
+    "Certificate ownership and issuance cannot be verified",
+    "Provider rollback snapshots cannot be captured",
+    "Authentication and rollback cannot be exercised safely in staging",
+    "PR 452 retarget conflict map requires reconciliation after merge"
+  ]
+}

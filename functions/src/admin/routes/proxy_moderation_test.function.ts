@@ -2,8 +2,8 @@
  * Control Panel API Proxy - Moderation Test Endpoints
  *
  * Serves as a same-origin proxy for control-panel to call Hive AI testing endpoints.
- * Browser calls https://control.asora.co.za/api/admin/moderation/test/* → this function
- * Function calls https://admin-api.asora.co.za/moderation/test/* with Cloudflare Access service token
+ * Browser calls https://admin.lythaus.co/api/admin/moderation/test/* → this function
+ * Function calls https://admin-api.lythaus.co/api/moderation/test/* with Cloudflare Access service token
  * Response streamed back to browser
  *
  * Purpose:
@@ -19,7 +19,7 @@
  * Environment variables:
  * - CF_ACCESS_CLIENT_ID: Cloudflare Access service token client ID
  * - CF_ACCESS_CLIENT_SECRET: Cloudflare Access service token secret
- * - ADMIN_API_URL: Base URL for admin API (default: https://admin-api.asora.co.za)
+ * - ADMIN_API_URL: Base URL for admin API (default: https://admin-api.lythaus.co/api)
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
@@ -183,7 +183,7 @@ async function proxyModerationTest(
 
   // Build target URL
   const adminApiUrl =
-    process.env.ADMIN_API_URL || 'https://admin-api.asora.co.za';
+    process.env.ADMIN_API_URL || 'https://admin-api.lythaus.co/api';
   const targetPath = request.url.replace(/^.*\/api\/admin\/moderation\/test/, '/moderation/test');
   const targetUrl = `${adminApiUrl}${targetPath}`;
 

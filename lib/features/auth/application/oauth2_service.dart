@@ -31,20 +31,17 @@ import 'package:asora/features/auth/domain/user.dart';
 class OAuth2Config {
   static const String authorizationEndpoint = String.fromEnvironment(
     'OAUTH2_AUTHORIZATION_ENDPOINT',
-    defaultValue:
-        'https://asora-function-flex.azurewebsites.net/api/auth/authorize',
+    defaultValue: 'https://api.lythaus.co/api/auth/authorize',
   );
 
   static const String tokenEndpoint = String.fromEnvironment(
     'OAUTH2_TOKEN_ENDPOINT',
-    defaultValue:
-        'https://asora-function-flex.azurewebsites.net/api/auth/token',
+    defaultValue: 'https://api.lythaus.co/api/auth/token',
   );
 
   static const String userInfoEndpoint = String.fromEnvironment(
     'OAUTH2_USERINFO_ENDPOINT',
-    defaultValue:
-        'https://asora-function-flex.azurewebsites.net/api/auth/userinfo',
+    defaultValue: 'https://api.lythaus.co/api/auth/userinfo',
   );
 
   static const String endSessionEndpoint = String.fromEnvironment(

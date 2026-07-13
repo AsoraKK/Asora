@@ -32,6 +32,8 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'RATE_LIMITS_ENABLED', required: false, description: 'Enable/disable global rate limiting guard' },
   { name: 'RATE_LIMIT_CONTAINER', required: false, description: 'Cosmos container for rate limit state' },
   { name: 'AUDIT_HMAC_KEY', required: false, description: 'HMAC secret for audit PII pseudonymisation (Key Vault)' },
+  { name: 'ORIGIN_GATEWAY_AUTH_REQUIRED', required: false, description: 'Require the Cloudflare gateway token for HTTP origins' },
+  { name: 'ORIGIN_GATEWAY_TOKEN', required: false, description: 'Cloudflare-to-Azure origin authentication secret' },
 ];
 
 export function validateStartupEnvironment(): void {
@@ -50,6 +52,13 @@ export function validateStartupEnvironment(): void {
     if (!process.env[v.name]) {
       warnings.push(`${v.name} — ${v.description}`);
     }
+  }
+
+  if (
+    process.env.ORIGIN_GATEWAY_AUTH_REQUIRED?.toLowerCase() === 'true' &&
+    !process.env.ORIGIN_GATEWAY_TOKEN
+  ) {
+    missing.push('ORIGIN_GATEWAY_TOKEN â€” required when ORIGIN_GATEWAY_AUTH_REQUIRED=true');
   }
 
   if (warnings.length > 0) {

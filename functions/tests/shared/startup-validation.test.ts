@@ -118,6 +118,8 @@ describe('startup-validation', () => {
     process.env.RATE_LIMITS_ENABLED = 'true';
     process.env.RATE_LIMIT_CONTAINER = 'test';
     process.env.AUDIT_HMAC_KEY = 'test-hmac-key';
+    process.env.ORIGIN_GATEWAY_AUTH_REQUIRED = 'false';
+    process.env.ORIGIN_GATEWAY_TOKEN = 'test-origin-token';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();

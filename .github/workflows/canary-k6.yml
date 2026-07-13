@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 env:
-  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net' }}          # set in repo/org Variables
+  K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://api.staging.lythaus.co' }}          # set in repo/org Variables
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
 
 jobs:
@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CHAOS_ENABLED: "true"
-      K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net' }}
+      K6_BASE_URL: ${{ vars.K6_BASE_URL || 'https://api.staging.lythaus.co' }}
       K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
     steps:
       - uses: actions/checkout@v5

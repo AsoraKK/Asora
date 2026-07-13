@@ -11,18 +11,12 @@
   },
   "servers": [
     {
-      "url": "https://asora-function-dev.azurewebsites.net/api",
-      "description": "Azure Functions staging edge endpoint"
+      "url": "https://api.lythaus.co/api",
+      "description": "Lythaus production API gateway"
     },
     {
-      "url": "https://${STAGING_DOMAIN}/api",
-      "description": "Asora staging domain (set via environment)",
-      "variables": {
-        "STAGING_DOMAIN": {
-          "default": "asora.example.com",
-          "description": "Injected staging domain hostname"
-        }
-      }
+      "url": "https://api.staging.lythaus.co/api",
+      "description": "Lythaus staging API gateway"
     }
   ],
   "tags": [

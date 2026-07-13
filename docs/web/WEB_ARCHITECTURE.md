@@ -34,8 +34,8 @@ Cloudflare Access JWT verification.
 
 | Surface | URL |
 |---|---|
-| Flutter web app | `https://lythaus-web.pages.dev` |
-| Marketing site | `https://lythaus.asora.co.za` |
+| Flutter web app | `https://app.lythaus.co` |
+| Marketing site | `https://lythaus.co` |
 
 ## Architecture Diagram
 
@@ -61,9 +61,9 @@ Browser
 
 | Field | Value |
 |---|---|
-| Authorization endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/authorize` |
-| Token endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/token` |
-| UserInfo endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/userinfo` |
+| Authorization endpoint | `https://api.lythaus.co/api/auth/authorize` |
+| Token endpoint | `https://api.lythaus.co/api/auth/token` |
+| UserInfo endpoint | `https://api.lythaus.co/api/auth/userinfo` |
 | Client ID | `asora-mobile-app` |
 | Redirect URI | `${Uri.base.origin}/auth/callback` |
 | Scopes | `openid email profile offline_access` |
@@ -156,13 +156,13 @@ promoted to enforced `Content-Security-Policy`.
 
 | Variable | Where | Purpose | Example |
 |---|---|---|---|
-| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Allow web origin for API CORS | `https://lythaus-web.pages.dev` |
-| `OAUTH2_AUTHORIZATION_ENDPOINT` | Build-time config | OAuth2 authorization endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/authorize` |
-| `OAUTH2_TOKEN_ENDPOINT` | Build-time config | OAuth2 token endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/token` |
-| `OAUTH2_USERINFO_ENDPOINT` | Build-time config | OAuth2 userinfo endpoint | `https://asora-function-flex.azurewebsites.net/api/auth/userinfo` |
+| `CORS_ALLOWED_ORIGINS` | Azure Functions app settings | Exact allowed web/admin origins | `https://app.lythaus.co,https://admin.lythaus.co` |
+| `OAUTH2_AUTHORIZATION_ENDPOINT` | Build-time config | OAuth2 authorization endpoint | `https://api.lythaus.co/api/auth/authorize` |
+| `OAUTH2_TOKEN_ENDPOINT` | Build-time config | OAuth2 token endpoint | `https://api.lythaus.co/api/auth/token` |
+| `OAUTH2_USERINFO_ENDPOINT` | Build-time config | OAuth2 userinfo endpoint | `https://api.lythaus.co/api/auth/userinfo` |
 | `OAUTH2_CLIENT_ID` | Build-time config | OAuth2 client ID | `asora-mobile-app` |
 | `OAUTH2_SCOPE` | Build-time config | OAuth2 scopes | `openid email profile offline_access` |
-| `API_BASE_URL` | Build-time config | Functions API endpoint | `https://asora-function-dev.azurewebsites.net/api` |
+| `API_BASE_URL` | Build-time config | Public API gateway | `https://api.lythaus.co/api` |
 
 Build-time values are baked into the JS bundle. They are not secrets.
 
@@ -170,8 +170,8 @@ Build-time values are baked into the JS bundle. They are not secrets.
 
 | Record | Value | Purpose |
 |---|---|---|
-| `lythaus-web.pages.dev` | Cloudflare Pages subdomain | Flutter web app |
-| `lythaus.asora.co.za` / `www.lythaus.asora.co.za` | CNAME to marketing host | Astro marketing site |
+| `app.lythaus.co` | Cloudflare Pages custom domain | Flutter web app |
+| `lythaus.co` / `www.lythaus.co` | Pages apex plus permanent redirect | Astro marketing site |
 | Both domains must have HTTPS | Managed by hosting provider | PKCE redirect and secure cookies |
 
 The web app and marketing site are separate origins. No cookie sharing or
@@ -180,7 +180,7 @@ cross-origin SSO is required.
 ### Pre-Deploy Checklist
 
 1. Confirm `WebAuthService.redirectUri` resolves to the deployed web origin.
-2. Set `CORS_ALLOWED_ORIGINS=https://lythaus-web.pages.dev` in Azure Functions.
+2. Set exact `CORS_ALLOWED_ORIGINS` for the target environment in Azure Functions.
 3. Run `bash scripts/cf-pages-build.sh` from the repo root.
 4. Deploy `build/web/` to the static hosting target.
 5. Deploy the marketing site separately from `apps/marketing-site`.
@@ -193,7 +193,7 @@ cross-origin SSO is required.
 
 | # | Test | URL / Action | Expected |
 |---|---|---|---|
-| 1 | Landing loads | `https://lythaus-web.pages.dev/` | Redirects to `/login` when unauthenticated |
+| 1 | Landing loads | `https://app.lythaus.co/` | Redirects to `/login` when unauthenticated |
 | 2 | Login screen | `/login` | AuthChoiceScreen renders |
 | 3 | Guest mode | Click "Continue as guest" | Redirects to `/`, Discover tab loads |
 | 4 | Auth callback | `/auth/callback` with no params | Shows an error and a back button |

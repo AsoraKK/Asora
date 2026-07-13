@@ -10,8 +10,8 @@ import {
 } from '../../src/admin/cors';
 
 describe('isOriginAllowed', () => {
-  it('allows control.asora.co.za', () => {
-    expect(isOriginAllowed('https://control.asora.co.za')).toBe(true);
+  it('allows the production admin origin', () => {
+    expect(isOriginAllowed('https://admin.lythaus.co')).toBe(true);
   });
 
   it('allows localhost development origins', () => {
@@ -33,9 +33,9 @@ describe('isOriginAllowed', () => {
 
 describe('getAdminCorsHeaders', () => {
   it('returns correct headers for allowed origin', () => {
-    const headers = getAdminCorsHeaders('https://control.asora.co.za');
+    const headers = getAdminCorsHeaders('https://admin.lythaus.co');
 
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
     expect(headers['Access-Control-Allow-Methods']).toContain('GET');
     expect(headers['Access-Control-Allow-Methods']).toContain('PUT');
     expect(headers['Access-Control-Allow-Headers']).toContain('Cf-Access-Jwt-Assertion');
@@ -45,21 +45,22 @@ describe('getAdminCorsHeaders', () => {
     expect(headers['Cache-Control']).toBe('no-store, no-cache, private');
   });
 
-  it('defaults to control.asora.co.za for unknown origins', () => {
+  it('does not reflect unknown origins', () => {
     const headers = getAdminCorsHeaders('https://evil.com');
 
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBeUndefined();
+    expect(headers['Access-Control-Allow-Credentials']).toBeUndefined();
   });
 });
 
 describe('createCorsPreflightResponse', () => {
   it('returns 204 with CORS headers', () => {
-    const response = createCorsPreflightResponse('https://control.asora.co.za');
+    const response = createCorsPreflightResponse('https://admin.lythaus.co');
 
     expect(response.status).toBe(204);
     expect(response.headers).toBeDefined();
     const headers = response.headers as Record<string, string>;
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
     expect(headers['Content-Length']).toBe('0');
   });
 });
@@ -75,14 +76,14 @@ describe('withCorsHeaders', () => {
       },
     };
 
-    const result = withCorsHeaders(original, 'https://control.asora.co.za');
+    const result = withCorsHeaders(original, 'https://admin.lythaus.co');
 
     expect(result.status).toBe(200);
     expect(result.jsonBody).toEqual({ ok: true });
     const headers = result.headers as Record<string, string>;
     expect(headers['Content-Type']).toBe('application/json');
     expect(headers['X-Correlation-ID']).toBe('test-123');
-    expect(headers['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(headers['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
   });
 
   it('handles response without headers', () => {

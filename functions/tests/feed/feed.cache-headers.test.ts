@@ -136,7 +136,7 @@ describe('feed_discover_get cache headers', () => {
 
     const response = await feed_discover_get(req, makeContext('disc-vary-auth'));
     const headers = response.headers as Record<string, string>;
-    expect(headers['Vary']).toBe('Authorization');
+    expect(headers['Vary']).toBe('Authorization, Origin');
   });
 
   it('requires revalidation for anonymous requests so label changes are not stale', async () => {
@@ -154,7 +154,7 @@ describe('feed_discover_get cache headers', () => {
 
     const response = await feed_discover_get(req, makeContext('disc-vary-anon'));
     const headers = response.headers as Record<string, string>;
-    expect(headers['Vary']).toBe('Authorization');
+    expect(headers['Vary']).toBe('Authorization, Origin');
   });
 
   it('does not include private directive in anonymous response', async () => {
@@ -214,6 +214,6 @@ describe('feed_news_get cache headers', () => {
     const token = await signedToken();
     const authReq = httpReqMock({ headers: { authorization: `Bearer ${token}` } });
     const authRes = await feed_news_get(authReq, makeContext('news-vary-auth'));
-    expect((authRes.headers as Record<string, string>)['Vary']).toBe('Authorization');
+    expect((authRes.headers as Record<string, string>)['Vary']).toBe('Authorization, Origin');
   });
 });

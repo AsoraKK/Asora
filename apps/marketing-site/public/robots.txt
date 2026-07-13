@@ -1,8 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://lythaus.asora.co.za/sitemap.xml
-User-agent: *
-Allow: /
-
-Sitemap: https://lythaus.asora.co.za/sitemap.xml
+Sitemap: https://lythaus.co/sitemap.xml

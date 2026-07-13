@@ -18,7 +18,7 @@ Current release status and evidence: [Controlled Alpha packet](docs/evidence/alp
 | `apps/control-panel/` | Administrative and moderation interface |
 | `apps/marketing-site/` | Public Lythaus site |
 | `database/`, `infra/`, `infrastructure/` | Cosmos, PostgreSQL, Azure, and alert configuration |
-| `cloudflare/`, `workers/` | Pages configuration and anonymous feed cache worker |
+| `cloudflare/`, `workers/` | Pages configuration, prepared API gateway, and legacy anonymous feed cache worker |
 | `docs/` | Architecture decisions, policies, runbooks, and release evidence |
 
 See [README_INDEX.md](README_INDEX.md) for module-level documentation.
@@ -58,7 +58,7 @@ npm run audit:production
 Build the web application with a public HTTPS API URL:
 
 ```powershell
-flutter build web --release --dart-define="API_BASE_URL=https://<alpha-api-host>/api"
+flutter build web --release --dart-define="ENVIRONMENT=production" --dart-define="API_BASE_URL=https://api.lythaus.co/api" --dart-define="AUTH_URL=https://api.lythaus.co/api"
 ```
 
 Build the backend artifact:
@@ -90,3 +90,5 @@ Production deploy, rollback, cohort expansion, access-policy changes, secret rot
 - [Rollback plan](docs/runbooks/alpha-rollback.md)
 - [Known risks](docs/alpha/known-risk-register.md)
 - [Brand transition](docs/branding/lythaus-transition.md)
+- [Public-domain cutover ADR](docs/adr/ADR-005-lythaus-public-domain-cutover.md)
+- [Public-domain cutover runbook](docs/runbooks/lythaus-domain-cutover.md)

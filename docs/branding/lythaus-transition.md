@@ -54,12 +54,12 @@ These decisions are **locked** to prevent rework. Do not change without explicit
 
 ### 2.2 Environments + Endpoints
 
-**Decision: API base URL remains `*.asora.co.za` for beta.**
+**Decision amended by ADR-005: public APIs use `*.lythaus.co`; internal Azure resource names remain Asora.**
 
 | Component | Value | Change? |
 |-----------|-------|---------|
-| API base URL | `https://api.asora.co.za/v1/...` | ❌ No change |
-| Functions host | `asora-function-dev.azurewebsites.net` | ❌ No change |
+| API base URL | `https://api.lythaus.co/api/...` | Public hostname migration |
+| Functions host | Internal Azure origin behind the gateway | Internal name retained |
 | JWT issuer claim | Internal issuer (`asora-auth`) (unchanged) | ❌ No change |
 | User IDs | UUIDv7 strategy (per ADR-002) | ❌ No change |
 | DB schemas | Cosmos containers, Postgres tables | ❌ No change |
@@ -99,14 +99,17 @@ Do **not** use "Asora" in any new user-facing copy.
 
 | Domain | Purpose | Status |
 |--------|---------|--------|
-| **asora.co.za** | Platform base: API endpoints, admin portals, Functions host | Active—do not change |
-| **lythaus.co** | Marketing site, waitlist, invite links, public landing | Primary public-facing |
-| **asora.co** | Legacy/redirect | Future: 301 → lythaus.co |
+| **lythaus.co** | Marketing, legal, waitlist, invite and share links | Approved public apex; provider cutover gated |
+| **app.lythaus.co** | Flutter web application | Approved public app host; provider cutover gated |
+| **api.lythaus.co** | Public API with `/api` base path | Approved gateway host; provider cutover gated |
+| **admin.lythaus.co** | Access-protected control panel | Configure only when policy/UI are ready |
+| **admin-api.lythaus.co** | Restricted admin API | Configure only when policy/API are ready |
+| **asora.co.za** | Defensive legacy domain | Retain for reviewed redirects and API compatibility |
 
 ### URL Examples
 
 ```
-Production API:      https://api.asora.co.za/v1/...
+Production API:      https://api.lythaus.co/api/...
 Marketing home:      https://lythaus.co
 Waitlist signup:     https://lythaus.co/waitlist
 Invite deep-link:    https://lythaus.co/invite/{code}
@@ -125,16 +128,16 @@ Invite deep-link:    https://lythaus.co/invite/{code}
 
 ---
 
-## Redirect Strategy (Future)
+## Redirect strategy
 
-When ready to unify domains:
+After the ADR-005 staging and rollback gates pass:
 
 | From | To | Type |
 |------|----|------|
-| asora.co | lythaus.co | 301 Permanent |
-| asora.co.za/app | lythaus.co/download | 301 Permanent |
+| asora.co.za public GET pages | lythaus.co equivalents | Permanent, preserve path/query |
+| Legacy API hosts | api.lythaus.co backend | Compatibility proxy; no blind mutation redirect |
 
-Implementation deferred until marketing launch.
+Implementation is governed by `docs/runbooks/lythaus-domain-cutover.md` and `docs/runbooks/asora-domain-retirement.md`.
 
 ---
 

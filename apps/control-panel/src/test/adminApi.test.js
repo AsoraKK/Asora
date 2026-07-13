@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockOrigin = 'https://control.asora.co.za';
+const mockOrigin = 'https://admin.lythaus.co';
 
 function createStorageMock(initial = {}) {
   const store = new Map(Object.entries(initial));
@@ -57,10 +57,10 @@ afterEach(() => {
 describe('adminApi URL construction', () => {
   describe('resolveToAbsoluteUrl', () => {
     it('returns absolute URLs unchanged', async () => {
-      window.localStorage.setItem('controlPanelAdminApiUrl', 'https://admin-api.asora.co.za/api');
+      window.localStorage.setItem('controlPanelAdminApiUrl', 'https://admin-api.lythaus.co/api');
 
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.asora.co.za/api');
+      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.lythaus.co/api');
     });
 
     it('resolves relative paths against window.location.origin', async () => {
@@ -152,7 +152,7 @@ describe('adminApi URL construction', () => {
     });
 
     it('works with an absolute admin API URL', async () => {
-      const directApiUrl = 'https://admin-api.asora.co.za';
+      const directApiUrl = 'https://admin-api.lythaus.co/api';
       window.localStorage.setItem('controlPanelAdminApiUrl', directApiUrl);
 
       let capturedUrl = null;

@@ -5,9 +5,9 @@ import { dirname } from 'node:path';
 import { chromium } from 'playwright';
 import { createWorker } from 'tesseract.js';
 
-const DEFAULT_WEB_BASE_URL = 'https://lythaus-web.pages.dev';
-const DEFAULT_API_BASE_URL = 'https://asora-function-dev.azurewebsites.net/api';
-const DEFAULT_ADMIN_API_URL = 'https://admin-api.asora.co.za';
+const DEFAULT_WEB_BASE_URL = 'https://app.staging.lythaus.co';
+const DEFAULT_API_BASE_URL = 'https://api.staging.lythaus.co/api';
+const DEFAULT_ADMIN_API_URL = 'https://admin-api.staging.lythaus.co/api';
 
 function isPrivateOrLocalHost(host) {
   const normalized = host.trim().toLowerCase();

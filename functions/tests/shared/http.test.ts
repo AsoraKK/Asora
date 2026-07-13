@@ -33,9 +33,9 @@ describe('http utility responses', () => {
     const response = createSuccessResponse({ id: '123' }, { 'X-Custom': 'yes' }, 202);
     expect(response.status).toBe(202);
     expect(response.headers).toMatchObject({
-      'Access-Control-Allow-Origin': '*',
       'X-Custom': 'yes',
     });
+    expect(response.headers['Access-Control-Allow-Origin']).toBeUndefined();
     const parsed = JSON.parse(response.body);
     expect(parsed).toMatchObject({ success: true, data: { id: '123' } });
     expect(typeof parsed.timestamp).toBe('string');
@@ -44,7 +44,7 @@ describe('http utility responses', () => {
   it('reflects the active request origin inside async-local response helpers', async () => {
     const originalOrigins = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS =
-      '["https://control.asora.co.za","https://lythaus-web.pages.dev","https://*.lythaus-web.pages.dev"]';
+      '["https://admin.staging.lythaus.co","https://app.staging.lythaus.co"]';
     jest.resetModules();
 
     try {
@@ -54,7 +54,7 @@ describe('http utility responses', () => {
         runWithRequestOrigin,
       } = require('@shared/utils/http') as typeof import('@shared/utils/http');
 
-      const requestOrigin = 'https://be18fa23.lythaus-web.pages.dev';
+      const requestOrigin = 'https://app.staging.lythaus.co';
 
       const success = await runWithRequestOrigin(requestOrigin, async () => {
         await Promise.resolve();

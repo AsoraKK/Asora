@@ -208,7 +208,7 @@ const _stagingMobileSecurity = MobileSecurityConfig(
 
 const _stagingConfig = EnvironmentConfig(
   environment: Environment.staging,
-  apiBaseUrl: 'https://asora-function-dev.azurewebsites.net/api',
+  apiBaseUrl: 'https://api.staging.lythaus.co/api',
   security: _stagingMobileSecurity,
 );
 
@@ -229,7 +229,6 @@ const _prodMobileSecurity = MobileSecurityConfig(
 
 const _prodConfig = EnvironmentConfig(
   environment: Environment.production,
-  apiBaseUrl:
-      'https://asora-function-prod.northeurope-01.azurewebsites.net/api',
+  apiBaseUrl: 'https://api.lythaus.co/api',
   security: _prodMobileSecurity,
 );

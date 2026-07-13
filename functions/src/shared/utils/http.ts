@@ -76,12 +76,12 @@ function originMatchesAllowedOrigin(requestOrigin: string, allowedOrigin: string
  */
 function parseAllowedOrigins(raw: string | undefined): string[] {
   if (!raw) {
-    return ['*'];
+    return [];
   }
 
   const trimmed = raw.trim();
   if (!trimmed) {
-    return ['*'];
+    return [];
   }
 
   if (trimmed === '*') {
@@ -93,7 +93,7 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed)) {
         const values = parsed.map((entry) => String(entry).trim()).filter(Boolean);
-        return values.length > 0 ? values : ['*'];
+        return values;
       }
     } catch {
       // Fall through to comma-separated parsing.
@@ -105,30 +105,10 @@ function parseAllowedOrigins(raw: string | undefined): string[] {
     .map((entry) => entry.replace(/^[\s"'[\]]+|[\s"'[\]]+$/g, '').trim())
     .filter(Boolean);
 
-  return values.length > 0 ? values : ['*'];
+  return values;
 }
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS);
-
-function matchesFallbackOrigin(requestOrigin: string): boolean {
-  try {
-    const origin = new URL(requestOrigin);
-    if (origin.protocol !== 'https:') {
-      return false;
-    }
-
-    if (origin.hostname === 'control.asora.co.za') {
-      return true;
-    }
-
-    return (
-      origin.hostname === 'lythaus-web.pages.dev' ||
-      origin.hostname.endsWith('.lythaus-web.pages.dev')
-    );
-  } catch {
-    return false;
-  }
-}
 
 export function getAllowedOrigin(requestOrigin?: string): string | undefined {
   if (ALLOWED_ORIGINS.includes('*')) return '*';
@@ -138,10 +118,6 @@ export function getAllowedOrigin(requestOrigin?: string): string | undefined {
     resolvedOrigin &&
     ALLOWED_ORIGINS.some((allowed) => originMatchesAllowedOrigin(resolvedOrigin, allowed))
   ) {
-    return resolvedOrigin;
-  }
-
-  if (resolvedOrigin && matchesFallbackOrigin(resolvedOrigin)) {
     return resolvedOrigin;
   }
 

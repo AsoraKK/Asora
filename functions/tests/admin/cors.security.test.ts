@@ -47,7 +47,7 @@ describe('CORS allowlist – no wildcard', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('getAdminCorsHeaders – allowed origin', () => {
-  const ALLOWED = 'https://control.asora.co.za';
+  const ALLOWED = 'https://admin.lythaus.co';
 
   it('echoes the allowed origin in Access-Control-Allow-Origin', () => {
     const headers = getAdminCorsHeaders(ALLOWED);
@@ -71,12 +71,9 @@ describe('getAdminCorsHeaders – allowed origin', () => {
 
 describe('getAdminCorsHeaders – disallowed origin', () => {
   const ATTACKER = 'https://evil.example.com';
-  const PRODUCTION_FALLBACK = 'https://control.asora.co.za';
-
-  it('falls back to the production domain, NOT the attacker origin', () => {
+  it('omits the allow-origin header', () => {
     const headers = getAdminCorsHeaders(ATTACKER);
-    expect(headers['Access-Control-Allow-Origin']).toBe(PRODUCTION_FALLBACK);
-    expect(headers['Access-Control-Allow-Origin']).not.toBe(ATTACKER);
+    expect(headers['Access-Control-Allow-Origin']).toBeUndefined();
   });
 
   it('does NOT reflect the disallowed origin back to the client', () => {
@@ -92,14 +89,9 @@ describe('getAdminCorsHeaders – disallowed origin', () => {
     }
   });
 
-  it('does not omit Access-Control-Allow-Credentials when falling back (fallback itself is fine)', () => {
-    // When we fallback to the production domain the browser will still block
-    // the request if the attacker's origin ≠ fallback, so credentials header
-    // being present here is not a vulnerability.
+  it('omits credentials for a disallowed origin', () => {
     const headers = getAdminCorsHeaders(ATTACKER);
-    // The header may be present but the browser enforces the origin mismatch.
-    // What we must NOT do is echo the attacker's origin — already tested above.
-    expect(headers['Access-Control-Allow-Origin']).toBe(PRODUCTION_FALLBACK);
+    expect(headers['Access-Control-Allow-Credentials']).toBeUndefined();
   });
 });
 
@@ -131,7 +123,7 @@ describe('handleCors – OPTIONS preflight from disallowed origin', () => {
 });
 
 describe('handleCors – OPTIONS preflight from allowed origin', () => {
-  const ALLOWED = 'https://control.asora.co.za';
+  const ALLOWED = 'https://admin.lythaus.co';
 
   it('returns 204 (preflight success)', () => {
     const response = handleCors('OPTIONS', ALLOWED);
@@ -154,11 +146,11 @@ describe('handleCors – OPTIONS preflight from allowed origin', () => {
 
 describe('handleCors – non-OPTIONS methods', () => {
   it('returns null for GET (caller handles normally)', () => {
-    expect(handleCors('GET', 'https://control.asora.co.za')).toBeNull();
+    expect(handleCors('GET', 'https://admin.lythaus.co')).toBeNull();
   });
 
   it('returns null for POST', () => {
-    expect(handleCors('POST', 'https://control.asora.co.za')).toBeNull();
+    expect(handleCors('POST', 'https://admin.lythaus.co')).toBeNull();
   });
 });
 
@@ -169,10 +161,10 @@ describe('handleCors – non-OPTIONS methods', () => {
 describe('withCorsHeaders – response decoration', () => {
   it('adds CORS headers to an existing response without losing existing headers', () => {
     const base = { status: 200, body: 'ok', headers: { 'X-Custom': 'value' } };
-    const decorated = withCorsHeaders(base, 'https://control.asora.co.za');
+    const decorated = withCorsHeaders(base, 'https://admin.lythaus.co');
     const h = decorated.headers as Record<string, string>;
     expect(h['X-Custom']).toBe('value');
-    expect(h['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(h['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
   });
 
   it('does not set wildcard origin even when composing with a 200 response', () => {
@@ -188,10 +180,10 @@ describe('withCorsHeaders – response decoration', () => {
 
 describe('createCorsPreflightResponse', () => {
   it('returns 204 with correct CORS headers for an allowed origin', () => {
-    const resp = createCorsPreflightResponse('https://control.asora.co.za');
+    const resp = createCorsPreflightResponse('https://admin.lythaus.co');
     expect(resp.status).toBe(204);
     const h = resp.headers as Record<string, string>;
-    expect(h['Access-Control-Allow-Origin']).toBe('https://control.asora.co.za');
+    expect(h['Access-Control-Allow-Origin']).toBe('https://admin.lythaus.co');
     expect(h['Access-Control-Allow-Credentials']).toBe('true');
     expect(h['Access-Control-Max-Age']).toBeDefined();
   });

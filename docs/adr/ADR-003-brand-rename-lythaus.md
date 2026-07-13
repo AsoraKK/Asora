@@ -4,6 +4,8 @@
 
 **Accepted** | 2026-01-08
 
+**Domain amendment:** ADR-005 supersedes sections 3 and 5 for public domains. Internal naming, identifiers, auth/privacy/moderation, and data decisions in this ADR remain active.
+
 ## Context
 
 The product formerly known as "Asora" is rebranding to **Lythaus** for all user-facing contexts. This decision is driven by marketing and brand identity considerations, not technical architecture changes.
