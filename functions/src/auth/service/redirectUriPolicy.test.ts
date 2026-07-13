@@ -15,8 +15,8 @@ describe('OAuth redirect URI policy', () => {
   });
 
   it('allows only an explicitly configured immutable preview callback', () => {
-    process.env.OAUTH_REDIRECT_URIS = 'https://a606f6f7.lythaus-web.pages.dev/auth/callback';
-    expect(isRegisteredRedirectUri('https://a606f6f7.lythaus-web.pages.dev/auth/callback')).toBe(true);
+    process.env.OAUTH_REDIRECT_URIS = 'https://preview-commit.lythaus-web.pages.dev/auth/callback';
+    expect(isRegisteredRedirectUri('https://preview-commit.lythaus-web.pages.dev/auth/callback')).toBe(true);
     expect(isRegisteredRedirectUri('https://other-preview.lythaus-web.pages.dev/auth/callback')).toBe(false);
   });
 

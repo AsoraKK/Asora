@@ -53,7 +53,7 @@ describe('authorizeService - parameter validation', () => {
     const req = httpReqMock({
       query: {
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -70,7 +70,7 @@ describe('authorizeService - parameter validation', () => {
     const req = httpReqMock({
       query: {
         client_id: 'test-client',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -87,7 +87,7 @@ describe('authorizeService - parameter validation', () => {
       query: {
         client_id: 'test-client',
         response_type: 'token',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -122,7 +122,7 @@ describe('authorizeService - parameter validation', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge_method: 'S256',
       },
@@ -138,7 +138,7 @@ describe('authorizeService - parameter validation', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'plain',
@@ -157,7 +157,7 @@ describe('authorizeService - user verification', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -178,7 +178,7 @@ describe('authorizeService - user verification', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -201,7 +201,7 @@ describe('authorizeService - user verification', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -223,7 +223,7 @@ describe('authorizeService - user verification', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
@@ -244,7 +244,7 @@ describe('authorizeService - user verification', () => {
       query: {
         client_id: 'test-client',
         response_type: 'code',
-        redirect_uri: 'https://example.com/callback',
+        redirect_uri: 'https://app.lythaus.co/auth/callback',
         state: 'xyz',
         code_challenge: VALID_CODE_CHALLENGE,
         code_challenge_method: 'S256',
