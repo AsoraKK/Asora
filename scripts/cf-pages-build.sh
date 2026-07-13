@@ -105,6 +105,34 @@ echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects
 echo "==> Copying _headers for CSP and cache rules"
 cp web/_headers build/web/_headers
-bash scripts/check-web-security-headers.sh build/web/_headers
+
+API_ORIGIN=$(python3 - <<'PY'
+import os
+from urllib.parse import urlparse
+
+parsed = urlparse(os.environ['API_BASE_URL'])
+print(f'{parsed.scheme}://{parsed.netloc}')
+PY
+)
+
+if [[ "${ENVIRONMENT}" == "preview" ]]; then
+  python3 - "${API_ORIGIN}" <<'PY'
+from pathlib import Path
+import sys
+
+header_file = Path('build/web/_headers')
+expected_origin = sys.argv[1]
+content = header_file.read_text(encoding='utf-8')
+canonical_origin = 'https://api.lythaus.co'
+if canonical_origin not in content:
+    raise SystemExit(f'Missing canonical API origin in {header_file}')
+header_file.write_text(
+    content.replace(canonical_origin, expected_origin),
+    encoding='utf-8',
+)
+PY
+fi
+
+bash scripts/check-web-security-headers.sh build/web/_headers "${API_ORIGIN}"
 
 echo "==> Build complete — output in build/web"

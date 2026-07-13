@@ -4,12 +4,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HEADER_FILE="${1:-${ROOT_DIR}/web/_headers}"
+EXPECTED_CONNECT_ORIGIN="${2:-https://api.lythaus.co}"
 
-python3 - "$HEADER_FILE" <<'PY'
+python3 - "$HEADER_FILE" "$EXPECTED_CONNECT_ORIGIN" <<'PY'
 from pathlib import Path
 import sys
 
 header_file = Path(sys.argv[1])
+expected_connect_origin = sys.argv[2]
 if not header_file.is_file():
     raise SystemExit(f'Missing header file: {header_file}')
 
@@ -21,7 +23,7 @@ required = [
     'X-Frame-Options: DENY',
     'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), local-network-access=()',
     'Strict-Transport-Security: max-age=31536000; includeSubDomains',
-    "Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://api.lythaus.co; upgrade-insecure-requests",
+    f"Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https:; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' {expected_connect_origin}; upgrade-insecure-requests",
 ]
 
 missing = [line for line in required if line not in content]
