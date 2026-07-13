@@ -193,7 +193,7 @@ jobs:
           test -n "$MVP_CORS_ALLOWED_ORIGINS" || { echo "::error::MVP_CORS_ALLOWED_ORIGINS repository variable is required"; exit 1; }
           # The JavaScript template literal is evaluated by Node, not the shell.
           # shellcheck disable=SC2016
-          node -e 'for (const raw of process.env.MVP_CORS_ALLOWED_ORIGINS.split(",")) { const u = new URL(raw.trim()); if (u.protocol !== "https:" || !(u.hostname === "app.lythaus.co" || u.hostname === "admin.lythaus.co" || u.hostname.endsWith(".pages.dev"))) throw new Error(`Unsafe CORS origin: ${u.hostname}`); }'
+          node -e 'for (const raw of process.env.MVP_CORS_ALLOWED_ORIGINS.split(",")) { const u = new URL(raw.trim()); const allowedHttps = u.protocol === "https:" && (u.hostname === "app.lythaus.co" || u.hostname === "admin.lythaus.co" || u.hostname === "control.asora.co.za" || u.hostname === "lythaus-web.pages.dev" || u.hostname === "app.lythaus.asora.co.za" || u.hostname.endsWith(".lythaus-web.pages.dev") || u.hostname.endsWith(".asora-6bi.pages.dev")); const allowedLoopback = u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1"); if (!allowedHttps && !allowedLoopback) throw new Error(`Unsafe CORS origin: ${u.hostname}`); }'
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
