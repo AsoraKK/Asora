@@ -3,7 +3,8 @@ param(
   [string]$Date = (Get-Date -Format 'yyyy-MM-dd'),
   [string]$ArtifactDirectory = '.artifacts/cloudflare-audit',
   [string]$EvidenceDirectory = 'docs/evidence/cloudflare',
-  [switch]$RepositoryOnly
+  [switch]$RepositoryOnly,
+  [switch]$RecheckPreviouslyUnavailable
 )
 
 $ErrorActionPreference = 'Stop'
@@ -194,6 +195,62 @@ if (-not $verify.success -or $verify.result.status -ne 'active') {
   exit 3
 }
 $result.token.status = 'VERIFIED_ACTIVE'
+
+if ($RecheckPreviouslyUnavailable) {
+  $result.mode = 'PREVIOUSLY_UNAVAILABLE_RECHECK'
+  $recheckZones = @()
+
+  foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
+    $zoneResponse = Invoke-Cloudflare "/zones?name=$zoneName" "$zoneName-zone.raw.json"
+    if (-not $zoneResponse -or @($zoneResponse.result).Count -ne 1) {
+      $result.blockers += "$zoneName zone could not be uniquely rechecked."
+      continue
+    }
+
+    $zone = $zoneResponse.result[0]
+    $recheckZones += [pscustomobject]@{ name = $zoneName; id = $zone.id; accountId = $zone.account.id }
+    $rules = Invoke-Cloudflare "/zones/$($zone.id)/rulesets" "$zoneName-rulesets.raw.json"
+    if (-not $rules) { continue }
+
+    $requiredRulesets = @($rules.result | Where-Object {
+      $_.name -eq 'Cloudflare Normalization Ruleset' -or $_.name -eq 'DDoS L7 ruleset'
+    })
+    if ($requiredRulesets.Count -ne 2) {
+      $result.blockers += "$zoneName required normalization or DDoS ruleset could not be identified."
+      continue
+    }
+
+    foreach ($ruleset in $requiredRulesets) {
+      [void](Invoke-Cloudflare "/zones/$($zone.id)/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json")
+    }
+  }
+
+  $discoveredAccounts = @($recheckZones | ForEach-Object { [string]$_.accountId } | Select-Object -Unique)
+  if ($discoveredAccounts.Count -ne 1) {
+    $result.blockers += 'The rechecked zones do not resolve to exactly one Cloudflare account.'
+  } else {
+    $discoveredAccountId = $discoveredAccounts[0]
+    $result.account.id = Protect-Identifier $discoveredAccountId
+    if ($accountId -and $accountId -ne $discoveredAccountId) {
+      $result.blockers += 'CLOUDFLARE_ACCOUNT_ID does not match the account discovered from both zones.'
+    }
+
+    foreach ($zone in $recheckZones) {
+      [void](Invoke-Cloudflare "/accounts/$discoveredAccountId/registrar/domains/$($zone.name)" "$($zone.name)-registrar.raw.json")
+    }
+    [void](Invoke-Cloudflare "/accounts/$discoveredAccountId/rules/lists?kind=redirect" 'bulk-redirect-lists.raw.json')
+  }
+
+  $result.token.unavailablePermissions = @($result.token.unavailablePermissions | Sort-Object -Unique)
+  if ($result.token.unavailablePermissions.Count -gt 0) {
+    $result.blockers += 'One or more previously unavailable Cloudflare endpoints remain inaccessible.'
+  }
+  Write-JsonFile (Join-Path $ArtifactDirectory 'sanitized-cloudflare-audit.json') $result
+  Write-Output "Cloudflare recheck complete: $($result.blockers.Count) blocker(s); raw data remains gitignored."
+  if ($result.blockers.Count -gt 0 -or $result.token.unavailablePermissions.Count -gt 0) { exit 4 }
+  exit 0
+}
+
 $inventory = New-ReferenceInventory
 $result.repositoryReferenceCount = $inventory.Count
 $discoveredAccountIds = [System.Collections.Generic.HashSet[string]]::new()
