@@ -81,6 +81,12 @@ The seven denied reads were rerun through a GitHub Actions workflow using the se
 
 This resolves the audit-token permission blocker only. It does not change the overall NO-GO result, because origin enforcement, live OpenAPI acceptance, full browser authentication proof, public-route behavior, provider-side validation, and PR 452 sequencing remain unresolved.
 
+### 2026-07-15 targeted inventory correction
+
+A later sanitized full inventory found one additional audit-only requirement: account-ruleset detail. `GET /accounts/{redacted}/rulesets/{redacted}` returned HTTP 403 when the audit added a hostname-intersection assertion. That assertion is necessary to prove that account-level rules do not intercept `lythaus.co`, `www.lythaus.co`, `app.lythaus.co`, `api.lythaus.co`, `admin.lythaus.co`, or `admin-api.lythaus.co`.
+
+The required grant is **Account Rulesets: Read** at Account scope. The original seven rechecked endpoints remain accessible; this correction supersedes the statement that all Cloudflare read-permission blockers were resolved. See [the current audit update](2026-07-15-lythaus-domain-audit.md).
+
 ## 8. Repository reference inventory
 
 The `rg`-driven inventory contains 373 classified matches in [CSV](2026-07-13-domain-reference-inventory.csv) and [Markdown](2026-07-13-domain-reference-inventory.md). It separates runtime, preview, legacy compatibility, Azure infrastructure, generated output, historical evidence, and safe internal identifiers.

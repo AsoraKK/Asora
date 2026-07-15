@@ -1,13 +1,6 @@
 name: Deploy Lythaus marketing preview
 
 on:
-  push:
-    branches:
-      - codex/lythaus-domain-migration
-    paths:
-      - '.github/workflows/deploy-marketing-preview.yml'
-      - 'apps/marketing-site/**'
-      - 'scripts/cloudflare/validate-marketing-output.mjs'
   workflow_dispatch:
 
 permissions:
