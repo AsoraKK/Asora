@@ -33,6 +33,11 @@ jobs:
           cache: npm
           cache-dependency-path: apps/marketing-site/package-lock.json
 
+      - name: Install preview validation prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
       - name: Build and validate marketing artifact
         working-directory: apps/marketing-site
         run: |
