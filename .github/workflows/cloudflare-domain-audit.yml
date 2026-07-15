@@ -1,6 +1,12 @@
 name: Cloudflare Domain Audit
 
 on:
+  push:
+    branches:
+      - codex/lythaus-domain-migration
+    paths:
+      - '.github/workflows/cloudflare-domain-audit.yml'
+      - 'scripts/cloudflare/audit-domains.ps1'
   workflow_dispatch:
 
 permissions:
@@ -26,9 +32,9 @@ jobs:
         shell: bash
         run: test -n "$CLOUDFLARE_AUDIT_API_TOKEN"
 
-      - name: Recheck Cloudflare audit permissions
+      - name: Run Cloudflare domain audit
         shell: pwsh
-        run: ./scripts/cloudflare/audit-domains.ps1 -RecheckPreviouslyUnavailable
+        run: ./scripts/cloudflare/audit-domains.ps1
 
       - name: Upload sanitized audit evidence
         if: always()
