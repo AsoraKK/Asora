@@ -63,6 +63,10 @@ Read-only Worker probes against the existing preview gateway succeeded:
 
 The last two results prove that `ORIGIN_GATEWAY_AUTH_REQUIRED` is currently disabled or otherwise not active at the HTTP boundary. The source guard is registered and has constant-time comparison tests, but enabling it could break direct legacy traffic. Direct-origin traffic requirements and the emergency access path are **UNKNOWN**, so this pass did not write an Azure token, change the enforcement flag, or deploy a Worker version.
 
+### Direct-origin dependency audit addendum
+
+The follow-up read-only audit confirms that the origin token now exists in Azure as a redacted setting state, while the enforcement flag remains absent. It also confirms that direct origin health is HTTP 200 without a token, legacy Azure custom host bindings remain active, the deployed legacy Flutter bundle contains the Azure hostname, and deployment/operational workflows call the origin directly. See [the direct-origin dependency audit](2026-07-15-direct-origin-dependency-audit.md). This is a **NO-GO** for enabling origin enforcement until the documented consumers are migrated or have an approved, bounded operational path.
+
 Local validation passed:
 
 ```text
