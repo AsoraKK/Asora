@@ -4,7 +4,7 @@
 
 set -e
 
-BASE_URL="${K6_BASE_URL:-https://asora-function-dev.azurewebsites.net}"
+BASE_URL="${K6_API_BASE_URL:-${K6_BASE_URL:-https://api.lythaus.co/api}}"
 FUNCTION_APP="${FUNC_APP:-asora-function-dev}"
 RESOURCE_GROUP="${RG:-asora-psql-flex}"
 
@@ -14,8 +14,12 @@ echo ""
 
 # Check 1: Basic HTTP connectivity
 echo "📡 Check 1: HTTP Connectivity"
-echo "Testing: GET $BASE_URL/api/health"
-HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "$BASE_URL/api/health")
+if [[ ! "$BASE_URL" =~ ^https:// ]] || [[ "$BASE_URL" =~ \.azurewebsites\.net(/|$) ]]; then
+  echo "ERROR: K6_API_BASE_URL must be an HTTPS gateway URL; direct Azure origins are not permitted" >&2
+  exit 2
+fi
+echo "Testing: GET $BASE_URL/health"
+HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "$BASE_URL/health")
 HTTP_CODE=$(echo "$HEALTH_RESPONSE" | tail -n 1)
 BODY=$(echo "$HEALTH_RESPONSE" | head -n -1)
 

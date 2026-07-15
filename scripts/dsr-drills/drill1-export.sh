@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-BASE_URL="${DSR_BASE_URL:-https://asora-function-dev.azurewebsites.net}"
+BASE_URL="${DSR_API_BASE_URL:-https://admin-api.lythaus.co/api}"
 TEST_USER_ID="${1:-}"
 BEARER_TOKEN="${BEARER_TOKEN:-}"
 
@@ -31,6 +31,10 @@ fi
 if [[ -z "$BEARER_TOKEN" ]]; then
   echo "ERROR: BEARER_TOKEN not set"
   echo "  Export a JWT with 'privacy_admin' role first"
+  exit 1
+fi
+if [[ ! "$BASE_URL" =~ ^https:// ]] || [[ "$BASE_URL" =~ \.azurewebsites\.net(/|$) ]]; then
+  echo "ERROR: DSR_API_BASE_URL must be an HTTPS Access-protected admin gateway; direct Azure origins are not permitted" >&2
   exit 1
 fi
 

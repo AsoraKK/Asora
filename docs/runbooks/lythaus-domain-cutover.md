@@ -43,16 +43,25 @@ After a separate approval:
 
 ## Rollback order
 
-1. Restore the previous Worker version.
-2. Restore previous Worker custom-domain/route bindings.
-3. Restore the previous Function package.
-4. Restore previous Pages deployments/bindings.
-5. Restore previous DNS and redirects.
-6. Restore prior CORS, OAuth callbacks, and origin-token enforcement.
-7. Run health, readiness, discovery, auth, cache, Access, and split-brain checks.
+1. Move Azure origin authentication from `enforce` to `observe` or a reviewed, unexpired `dual` configuration.
+2. Verify direct Azure health using only the health-scoped operational token.
+3. Restore the previous Worker version.
+4. Restore previous Worker custom-domain and route bindings.
+5. Verify both gateway and legacy-compatibility traffic.
+6. Restore the previous Pages deployment if required.
+7. Restore CORS and OAuth values only when they were changed.
+8. Check for split-brain routing before restoring the candidate.
+9. Restore the candidate Worker and Pages artifacts.
+10. Re-run health, auth, cache, Access, contract, and DSR checks.
+11. Re-enable `enforce` only after every path passes.
 
 Rollback uses exported, still-existing resources. Initial cutover does not delete old DNS, bindings, versions, Access applications, or compatibility routes.
 
 ## Current execution
 
-On 2026-07-13 PR 453 completed preview-only provider work without binding production domains: immutable marketing and Flutter Pages previews, an ephemeral gateway Worker, exact preview CORS/OAuth values, target Access applications, and wildcard control-panel preview protection. Worker and Pages preview rollback were proven. The candidate Functions package was deployed, failed mandatory live OpenAPI acceptance, and was rolled back to `0cb3ffdeca506e891553c74b9e8b66de8f60890b`; health passed after restoration, but the same moderation-appeal schema drift still blocks full acceptance. Origin enforcement remains disabled because it would currently block active legacy Asora HTTP paths. Registrar, Bulk Redirect, and managed-ruleset detail reads still return HTTP 403. Production DNS, custom domains, redirects, and certificates remain unchanged.
+PR 453 is draft and stacked on PR 452. Repository preparation is complete only
+where evidence is recorded in `docs/evidence/cloudflare/`; current Worker,
+Pages, Azure origin-authentication, browser-authentication, Access, and
+rollback rehearsals must be repeated against the exact candidate before
+cutover. Production DNS, custom domains, redirects, email DNS, certificates,
+and Access bindings remain unchanged.

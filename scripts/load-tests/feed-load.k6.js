@@ -7,7 +7,7 @@
  * Usage:
  *   k6 run scripts/load-tests/feed-load.k6.js
  *   k6 run --vus 100 --duration 5m scripts/load-tests/feed-load.k6.js
- *   K6_BASE_URL=https://asora-function-dev.azurewebsites.net k6 run scripts/load-tests/feed-load.k6.js
+ *   K6_API_BASE_URL=https://api.lythaus.co/api k6 run scripts/load-tests/feed-load.k6.js
  */
 
 import http from 'k6/http';
@@ -21,7 +21,7 @@ const feedErrorRate = new Rate('feed_errors');
 const feedSuccessRate = new Rate('feed_success');
 
 // Configuration
-const BASE_URL = __ENV.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net';
+const BASE_URL = (__ENV.K6_API_BASE_URL || __ENV.K6_BASE_URL || 'https://api.lythaus.co/api').replace(/\/$/, '');
 
 export const options = {
   // Staged load test
@@ -49,7 +49,7 @@ export const options = {
 // Test scenarios
 export function setup() {
   // Warm-up request
-  const warmupRes = http.get(`${BASE_URL}/api/health`);
+  const warmupRes = http.get(`${BASE_URL}/health`);
   console.log(`Warm-up health check: ${warmupRes.status}`);
   
   return {
@@ -61,10 +61,10 @@ export function setup() {
 export default function (data) {
   // Test feed endpoint with various pagination scenarios
   const scenarios = [
-    { name: 'feed_default', url: `${data.baseUrl}/api/feed` },
-    { name: 'feed_limit_10', url: `${data.baseUrl}/api/feed?limit=10` },
-    { name: 'feed_limit_20', url: `${data.baseUrl}/api/feed?limit=20` },
-    { name: 'feed_limit_50', url: `${data.baseUrl}/api/feed?limit=50` },
+    { name: 'discover_default', url: `${data.baseUrl}/feed/discover` },
+    { name: 'discover_limit_10', url: `${data.baseUrl}/feed/discover?limit=10` },
+    { name: 'discover_limit_20', url: `${data.baseUrl}/feed/discover?limit=20` },
+    { name: 'discover_limit_50', url: `${data.baseUrl}/feed/discover?limit=50` },
   ];
   
   // Pick a random scenario

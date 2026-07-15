@@ -92,6 +92,8 @@ env:
   FUNC_APP: ${{ inputs.function_app_name || 'asora-function-dev' }}
   KEY_VAULT: ${{ inputs.key_vault_name || 'kv-asora-flex-dev' }}
   MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
+  MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+  MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
   RELEASE_SHA: ${{ inputs.release_sha }}
   CI_RUN_ID: ${{ inputs.ci_run_id }}
   APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
@@ -440,23 +442,25 @@ jobs:
 
           echo "✅ Required Alpha secrets are configured as Key Vault references"
 
-      - name: Post-deploy probe /api/health
+      - name: Post-deploy direct-origin health diagnostic
+        env:
+          ORIGIN_OPERATIONAL_TOKEN: ${{ secrets.ORIGIN_OPERATIONAL_TOKEN }}
         run: |
           set -euo pipefail
+          test -n "$ORIGIN_OPERATIONAL_TOKEN" || { echo "::error::ORIGIN_OPERATIONAL_TOKEN is required for direct-origin health diagnostics"; exit 1; }
           
           # Strip CRLF from variables
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
           
           URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
-          BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
           
           echo "Running V4 PROGRAMMATIC MODEL runtime gates..."
           
           # Gate 1: Health returns 200 (20 probes, 5s intervals)
           GATE1_PASSED=false
           for i in $(seq 1 20); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "X-Lythaus-Operational-Token: $ORIGIN_OPERATIONAL_TOKEN" "$URL" || true)
             echo "Gate 1 - probe $i/20: /api/health returned HTTP $code"
             if [ "$code" = "200" ]; then
               echo "✅ Gate 1 PASSED: health endpoint returns 200"
@@ -473,17 +477,8 @@ jobs:
             exit 1
           fi
           
-          # Gate 2: Bogus route returns 404 (not 500, validates host routing)
-          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
-          echo "Gate 2 - bogus route returned HTTP $bogus_code"
-          if [ "$bogus_code" = "404" ]; then
-            echo "✅ Gate 2 PASSED: bogus route returns 404 (host routing intact)"
-          else
-            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing correctly)"
-            exit 1
-          fi
-          
-          # Gate 3: Admin /functions lists at least 'health' (v4 programmatic model)
+          # Gate 2: Azure host-admin is an infrastructure diagnostic, not an
+          # application traffic path.
           # Note: Programmatic model registers multiple functions
           ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
           FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
@@ -619,11 +614,13 @@ jobs:
       - name: Acceptance checks (Flex)
         run: |
           set -euo pipefail
-          BASE="https://${FUNC_APP}.azurewebsites.net"
+          test -n "$MVP_PUBLIC_API_BASE_URL" || { echo "::error::MVP_PUBLIC_API_BASE_URL must point to the tested public gateway"; exit 1; }
+          node -e 'const value = process.env.MVP_PUBLIC_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api");'
+          BASE="${MVP_PUBLIC_API_BASE_URL%/}"
 
           # 1) Liveness must be 200
-          echo "🔍 Testing health endpoint: $BASE/api/health"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
+          echo "🔍 Testing public gateway health endpoint"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health")
           echo "   Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "❌ Health check failed: expected 200, got $STATUS"
@@ -632,8 +629,8 @@ jobs:
           echo "✅ Health check passed"
 
           # 2) Bogus route must be 404
-          echo "🔍 Testing 404 route: $BASE/api/__bogus__"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/__bogus__")
+          echo "🔍 Testing public gateway 404 route"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/__bogus__")
           echo "   Status: $STATUS"
           if [ "$STATUS" != "404" ]; then
             echo "❌ 404 check failed: expected 404, got $STATUS"
@@ -645,7 +642,7 @@ jobs:
           echo "🔍 Testing unauthenticated notification endpoints"
           
           # Test /api/notifications/devices (GET without auth)
-          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/devices")
+          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/notifications/devices")
           echo "   /api/notifications/devices (no auth): $DEVICES_STATUS"
           if [ "$DEVICES_STATUS" = "500" ]; then
             echo "❌ Notifications devices returned 500 (should be 401/403)"
@@ -658,7 +655,7 @@ jobs:
           fi
 
           # Test /api/notifications/preferences (GET without auth)
-          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/preferences")
+          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/notifications/preferences")
           echo "   /api/notifications/preferences (no auth): $PREFS_STATUS"
           if [ "$PREFS_STATUS" = "500" ]; then
             echo "❌ Notifications preferences returned 500 (should be 401/403)"
@@ -689,13 +686,14 @@ jobs:
 
       - name: Required live OpenAPI contracts
         env:
-          ALPHA_API_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net/api
+          ALPHA_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
           STAGING_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
           REQUIRE_LIVE_CONTRACTS: 'true'
           CONTRACT_TIMEOUT_MS: '15000'
         run: |
           set -euo pipefail
           test -n "$STAGING_SMOKE_TOKEN" || { echo "::error::MVP_SMOKE_TOKEN is required"; exit 1; }
+          test -n "$ALPHA_API_BASE_URL" || { echo "::error::MVP_PUBLIC_API_BASE_URL is required for public API contracts"; exit 1; }
           npm run openapi:test:contract
 
       - name: Verify DSR export storage configuration
@@ -737,7 +735,6 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-
           CF_CLIENT_ID="${{ secrets.CF_Access_Client_Id }}"
 
           if [ -z "$CF_CLIENT_ID" ]; then
@@ -809,9 +806,11 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$ALPHA_RELEASE_ADMIN_TOKEN" || { echo "::error::ALPHA_RELEASE_ADMIN_TOKEN is required"; exit 1; }
+          test -n "$MVP_ADMIN_API_BASE_URL" || { echo "::error::MVP_ADMIN_API_BASE_URL must point to the Access-protected admin gateway"; exit 1; }
+          node -e 'const value = process.env.MVP_ADMIN_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_ADMIN_API_BASE_URL must be an HTTPS admin gateway ending in /api");'
           curl --fail-with-body --silent --show-error --max-time 30 \
             --header "Authorization: Bearer $ALPHA_RELEASE_ADMIN_TOKEN" \
-            "https://${FUNC_APP}.azurewebsites.net/api/_admin/ops/metrics?window=24h" \
+            "${MVP_ADMIN_API_BASE_URL%/}/_admin/ops/metrics?window=24h" \
             > alpha-ops-preflight.json
           jq --arg stage "$APPROVED_ALPHA_STAGE" -e \
             '.success == true and .data.partial == false and .data.cohort != null and .data.cohort.stage == $stage' \
@@ -823,7 +822,7 @@ jobs:
       - name: Run live DSR queue regression
         env:
           DSR_DRILL_BEARER_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
-          DSR_DRILL_BASE_URL: https://${{ env.FUNC_APP }}.azurewebsites.net
+          DSR_DRILL_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
           DSR_DRILL_REPORT_PATH: release-evidence/dsr-live-drill-report.json
           DSR_DRILL_EXPORT_USER_ID: ${{ vars.ALPHA_SMOKE_USER_ID }}
         run: |

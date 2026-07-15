@@ -57,7 +57,7 @@ Tests MI permissions after storage role rotation.
 Records pass/fail evidence for the queue trigger without printing tokens or raw user data.
 
 ```bash
-export DSR_DRILL_BASE_URL="https://asora-function-dev.azurewebsites.net"
+export DSR_DRILL_API_BASE_URL="https://admin-api.lythaus.co/api"
 export DSR_DRILL_BEARER_TOKEN="<privacy_admin_jwt>"
 export DSR_DRILL_QUEUE_ACCOUNT="stasoradsrdev"
 export DSR_DRILL_QUEUE_NAME="dsr-requests"
@@ -65,6 +65,10 @@ export DSR_DRILL_EXPORT_USER_ID="<persistent_synthetic_user_uuid>"
 export DSR_DRILL_REPORT_PATH="docs/evidence/alpha-readiness/dsr-live-drill-report.json"
 node scripts/dsr-drills/live-dsr-queue-drill.mjs
 ```
+
+The drill only accepts an HTTPS, Access-protected admin gateway. Direct Azure
+application origins are intentionally rejected; Azure platform diagnostics are
+limited to health-only operational access with an approved incident reference.
 
 **Expected outcome:**
 - Export and delete enqueue return HTTP 2xx

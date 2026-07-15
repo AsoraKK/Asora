@@ -16,7 +16,7 @@ import { Rate, Trend } from 'k6/metrics';
 const healthLatency = new Trend('health_latency_ms');
 const healthSuccess = new Rate('health_success');
 
-const BASE_URL = __ENV.K6_BASE_URL || 'https://asora-function-dev.azurewebsites.net';
+const BASE_URL = (__ENV.K6_API_BASE_URL || __ENV.K6_BASE_URL || 'https://api.lythaus.co/api').replace(/\/$/, '');
 
 export const options = {
   stages: [
@@ -35,14 +35,14 @@ export const options = {
 };
 
 export function setup() {
-  const warmup = http.get(`${BASE_URL}/api/health`);
+  const warmup = http.get(`${BASE_URL}/health`);
   console.log(`Warm-up: ${warmup.status} in ${warmup.timings.duration}ms`);
   return { baseUrl: BASE_URL };
 }
 
 export default function (data) {
   const start = Date.now();
-  const res = http.get(`${data.baseUrl}/api/health`, {
+  const res = http.get(`${data.baseUrl}/health`, {
     headers: { 'Accept': 'application/json' },
   });
   const duration = Date.now() - start;

@@ -240,7 +240,7 @@ To grant Black tier to a tester during soft launch:
 
 ```bash
 # Requires an admin JWT (role: admin) in AUTH_TOKEN
-curl -X PATCH "https://asora-function-dev.azurewebsites.net/api/admin/users/<USER_ID>/tier" \
+curl -X PATCH "https://admin-api.lythaus.co/api/admin/users/<USER_ID>/tier" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tier":"black"}'

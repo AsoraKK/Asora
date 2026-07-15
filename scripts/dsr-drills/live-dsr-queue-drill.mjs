@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-const baseUrl = (process.env.DSR_DRILL_BASE_URL || 'https://asora-function-dev.azurewebsites.net').replace(/\/+$/, '');
+const apiBaseUrl = (process.env.DSR_DRILL_API_BASE_URL || 'https://admin-api.lythaus.co/api').replace(/\/+$/, '');
 const token = (process.env.DSR_DRILL_BEARER_TOKEN || '').trim();
 const reportPath = process.env.DSR_DRILL_REPORT_PATH || 'docs/evidence/alpha-readiness/dsr-live-drill-report.json';
 const pollCount = Number(process.env.DSR_DRILL_POLL_COUNT || '18');
@@ -49,7 +49,7 @@ function sleep(ms) {
 }
 
 async function request(path, init = {}) {
-  const response = await fetch(`${baseUrl}/api${path}`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       Accept: 'application/json',
@@ -179,6 +179,9 @@ async function main() {
   if (!token) {
     fail('DSR_DRILL_BEARER_TOKEN is required');
   }
+  if (!apiBaseUrl.startsWith('https://') || /\.azurewebsites\.net(?:\/|$)/i.test(apiBaseUrl)) {
+    fail('DSR_DRILL_API_BASE_URL must be an HTTPS Access-protected admin gateway; direct Azure origins are not permitted');
+  }
   if (!Number.isFinite(pollCount) || pollCount < 1) {
     fail('DSR_DRILL_POLL_COUNT must be a positive number');
   }
@@ -195,7 +198,7 @@ async function main() {
   const report = {
     runId,
     generatedAt: new Date().toISOString(),
-    baseUrl,
+    apiBaseUrl,
     targetUserHashes: {
       export: hash(exportUserId),
       delete: hash(deleteUserId),

@@ -7,12 +7,15 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $PSBoundParameters.ContainsKey('BaseUrl') -or [string]::IsNullOrEmpty($BaseUrl)) {
-  $BaseUrl = 'https://asora-function-dev.azurewebsites.net'
+  $BaseUrl = 'https://api.lythaus.co/api'
 }
 if (-not $PSBoundParameters.ContainsKey('Count') -or $Count -le 0) {
   $Count = 20
 }
 if (-not $PSBoundParameters.ContainsKey('AuthToken')) { $AuthToken = '' }
+if (-not $BaseUrl.StartsWith('https://') -or $BaseUrl -match '\.azurewebsites\.net(/|$)') {
+  throw 'BaseUrl must be an HTTPS API gateway URL; direct Azure origins are not permitted.'
+}
 
 function Measure-Endpoint {
   param(
@@ -42,10 +45,10 @@ function Measure-Endpoint {
 }
 
 $report = [ordered]@{}
-$report.following = Measure-Endpoint -Path '/api/feed/following?pageSize=20'
-$report.local = Measure-Endpoint -Path '/api/feed/local?location=City&pageSize=20'
-$report.trending = Measure-Endpoint -Path '/api/trending?pageSize=20'
-$report.newCreators = Measure-Endpoint -Path '/api/feed/newCreators?pageSize=20'
+$report.following = Measure-Endpoint -Path '/feed/following?pageSize=20'
+$report.local = Measure-Endpoint -Path '/feed/local?location=City&pageSize=20'
+$report.trending = Measure-Endpoint -Path '/trending?pageSize=20'
+$report.newCreators = Measure-Endpoint -Path '/feed/newCreators?pageSize=20'
 
 $json = ($report | ConvertTo-Json -Depth 5)
 Set-Content -Path 'feed-metrics.json' -Value $json -Encoding UTF8
