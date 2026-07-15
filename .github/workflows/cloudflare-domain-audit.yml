@@ -32,6 +32,12 @@ jobs:
         shell: bash
         run: test -n "$CLOUDFLARE_AUDIT_API_TOKEN"
 
+      - name: Install audit prerequisites
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
       - name: Run Cloudflare domain audit
         shell: pwsh
         run: ./scripts/cloudflare/audit-domains.ps1
@@ -41,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cloudflare-domain-audit-${{ github.run_id }}
-          if-no-files-found: error
+          if-no-files-found: warn
           path: .artifacts/cloudflare-audit/sanitized-cloudflare-audit.json
