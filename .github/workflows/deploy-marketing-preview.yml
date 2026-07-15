@@ -54,7 +54,7 @@ jobs:
             --branch "$PAGES_BRANCH" \
             --commit-hash "$GITHUB_SHA" \
             --commit-dirty=false | tee wrangler-output.txt
-          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' wrangler-output.txt | tail -n 1)"
+          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' wrangler-output.txt | head -n 1)"
           test -n "$preview_url"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
@@ -67,8 +67,11 @@ jobs:
           routes=(/ /about /ai-moderation /contact /features /guidelines /invite /pricing /privacy /terms)
           for route in "${routes[@]}"; do
             name="${route//\//_}"
-            status="$(curl --silent --show-error --max-time 20 --output "preview-pages/${name:-root}.html" --write-out '%{http_code}' "${PREVIEW_URL}${route}")"
+            response="$(curl --location --silent --show-error --max-time 20 --output "preview-pages/${name:-root}.html" --write-out '%{http_code}|%{url_effective}' "${PREVIEW_URL}${route}")"
+            status="${response%%|*}"
+            effective_url="${response#*|}"
             test "$status" = 200 || { echo "Unexpected status $status for $route"; exit 1; }
+            [[ "$effective_url" == "${PREVIEW_URL}"* && "$effective_url" != *'#'* ]] || { echo "Unexpected final route $effective_url for $route"; exit 1; }
           done
           curl --silent --show-error --max-time 20 --output sitemap.xml --write-out '%{http_code}' "${PREVIEW_URL}/sitemap.xml" | grep -qx 200
           curl --silent --show-error --max-time 20 --output robots.txt --write-out '%{http_code}' "${PREVIEW_URL}/robots.txt" | grep -qx 200
