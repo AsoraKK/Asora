@@ -48,7 +48,7 @@ $TargetHostnames = @(
 
 function Get-TargetHostMatches([object[]]$Values) {
   $serialized = @($Values | ForEach-Object { [string]$_ }) -join "`n"
-  $matches = @()
+  $matchedHostnames = @()
   foreach ($hostname in $TargetHostnames) {
     $exactPattern = "(?i)(?<![a-z0-9.-])$([regex]::Escape($hostname))(?![a-z0-9.-])"
     $wildcardPattern = if ($hostname -eq 'lythaus.co') {
@@ -57,10 +57,10 @@ function Get-TargetHostMatches([object[]]$Values) {
       '(?i)\*\.lythaus\.co(?![a-z0-9.-])'
     }
     if ($serialized -match $exactPattern -or ($wildcardPattern -and $serialized -match $wildcardPattern)) {
-      $matches += $hostname
+      $matchedHostnames += $hostname
     }
   }
-  return @($matches)
+  return @($matchedHostnames)
 }
 
 function Get-Classification([string]$Path, [string]$Value) {
