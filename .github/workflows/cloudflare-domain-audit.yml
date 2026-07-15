@@ -2,6 +2,15 @@ name: Cloudflare Domain Audit
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Sanitized read-only audit scope
+        required: true
+        default: account_rulesets
+        type: choice
+        options:
+          - account_rulesets
+          - full
 
 permissions:
   contents: read
@@ -34,7 +43,12 @@ jobs:
 
       - name: Run Cloudflare domain audit
         shell: pwsh
-        run: ./scripts/cloudflare/audit-domains.ps1
+        run: |
+          if ('${{ inputs.mode }}' -eq 'account_rulesets') {
+            ./scripts/cloudflare/audit-domains.ps1 -RecheckAccountRulesets
+          } else {
+            ./scripts/cloudflare/audit-domains.ps1
+          }
 
       - name: Upload sanitized audit evidence
         if: always()

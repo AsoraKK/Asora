@@ -4,7 +4,8 @@ param(
   [string]$ArtifactDirectory = '.artifacts/cloudflare-audit',
   [string]$EvidenceDirectory = 'docs/evidence/cloudflare',
   [switch]$RepositoryOnly,
-  [switch]$RecheckPreviouslyUnavailable
+  [switch]$RecheckPreviouslyUnavailable,
+  [switch]$RecheckAccountRulesets
 )
 
 $ErrorActionPreference = 'Stop'
@@ -179,6 +180,7 @@ $result = [ordered]@{
   rulesets = @()
   registrar = @()
   bulkRedirectLists = @()
+  accountRuleIntersections = @()
   targetHostnames = $TargetHostnames
   blockers = @()
   repositoryReferenceCount = 0
@@ -222,6 +224,59 @@ if (-not $verify.success -or $verify.result.status -ne 'active') {
   exit 3
 }
 $result.token.status = 'VERIFIED_ACTIVE'
+
+if ($RecheckAccountRulesets) {
+  $result.mode = 'ACCOUNT_RULESETS_RECHECK'
+  if ([string]::IsNullOrWhiteSpace($accountId)) {
+    $result.blockers += 'CLOUDFLARE_ACCOUNT_ID is required for the account-rulesets recheck.'
+  } else {
+    $result.account.id = Protect-Identifier $accountId
+    $accountRulesets = Invoke-Cloudflare "/accounts/$accountId/rulesets" 'account-rulesets.raw.json'
+    if ($accountRulesets) {
+      foreach ($ruleset in @($accountRulesets.result)) {
+        $detail = Invoke-Cloudflare "/accounts/$accountId/rulesets/$($ruleset.id)" "account-ruleset-$($ruleset.id).raw.json"
+        if (-not $detail) { continue }
+
+        $rulesetRules = @($detail.result.rules)
+        $enabledRules = @($rulesetRules | Where-Object { $_.enabled -eq $true })
+        $result.rulesets += [ordered]@{
+          scope='account'; name=$ruleset.name; kind=$ruleset.kind; phase=$ruleset.phase;
+          ruleCount=$rulesetRules.Count; enabledRuleCount=$enabledRules.Count;
+          actionCounts=@($rulesetRules | Group-Object action | ForEach-Object {[ordered]@{action=$_.Name;count=$_.Count}});
+          targetHostMatches=(Get-TargetHostMatches @($rulesetRules | ForEach-Object { $_.expression }));
+          enabledTargetHostMatches=(Get-TargetHostMatches @($enabledRules | ForEach-Object { $_.expression }))
+        }
+
+        for ($ruleIndex = 0; $ruleIndex -lt $rulesetRules.Count; $ruleIndex++) {
+          $rule = $rulesetRules[$ruleIndex]
+          $expressionMatches = Get-TargetHostMatches @($rule.expression)
+          $actionParameterText = if ($null -ne $rule.action_parameters) {
+            $rule.action_parameters | ConvertTo-Json -Depth 20 -Compress
+          } else {
+            ''
+          }
+          $targetMatches = Get-TargetHostMatches @($actionParameterText)
+          if ($expressionMatches.Count -gt 0 -or $targetMatches.Count -gt 0) {
+            $result.accountRuleIntersections += [ordered]@{
+              ruleset=$ruleset.name; phase=$ruleset.phase; ruleOrdinal=($ruleIndex + 1);
+              enabled=($rule.enabled -eq $true); action=$rule.action;
+              expressionHostMatches=$expressionMatches; targetHostMatches=$targetMatches
+            }
+          }
+        }
+      }
+    }
+  }
+
+  $result.token.unavailablePermissions = @($result.token.unavailablePermissions | Sort-Object -Unique)
+  if ($result.token.unavailablePermissions.Count -gt 0) {
+    $result.blockers += 'One or more account-ruleset detail endpoints remain inaccessible.'
+  }
+  Write-JsonFile (Join-Path $ArtifactDirectory 'sanitized-cloudflare-audit.json') $result
+  Write-Output "Cloudflare account-rulesets recheck complete: $($result.blockers.Count) blocker(s); raw data remains gitignored."
+  if ($result.blockers.Count -gt 0 -or $result.token.unavailablePermissions.Count -gt 0) { exit 4 }
+  exit 0
+}
 
 if ($RecheckPreviouslyUnavailable) {
   $result.mode = 'PREVIOUSLY_UNAVAILABLE_RECHECK'
