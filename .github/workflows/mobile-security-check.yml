@@ -213,14 +213,9 @@ jobs:
 
           echo "✓ Preview and MVP SPKI lifecycle states are explicit."
 
-      - name: Verify live certificate pins
-        env:
-          EXTRA_PIN_HOSTS: asora-function-dev.azurewebsites.net,api.lythaus.co
+      - name: Reject strict pinning without validated pins
         shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/verify_pins.py
-          cat mobile-pin-report.json
+        run: bash scripts/validate-mvp-tls-pinning.sh
 
       - name: Upload pin verification report
         uses: actions/upload-artifact@v6

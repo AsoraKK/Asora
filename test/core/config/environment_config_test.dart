@@ -203,10 +203,16 @@ void main() {
       expect(config.security.blockRootedDevices, isFalse);
     });
 
-    test('dev config has tls pins enabled', () {
+    test('dev config keeps strict TLS pinning disabled for MVP', () {
       final config = EnvironmentConfig.fromEnvironment();
 
-      expect(config.security.tlsPins.enabled, isTrue);
+      expect(config.security.tlsPins.enabled, isFalse);
+      expect(config.security.tlsPins.strictMode, isFalse);
+      expect(
+        config.security.tlsPins.lifecycleState,
+        PinLifecycleState.disabled,
+      );
+      expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
     });
   });
 }

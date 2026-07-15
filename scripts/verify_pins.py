@@ -112,6 +112,14 @@ def main() -> int:
     for host in hosts:
         state = states.get(host, "live")
         allowed = set(expected.get(host, []))
+        if state == "disabled":
+            report[host] = {
+                "ok": True,
+                "skipped": "strict_pinning_disabled_for_mvp",
+                "expected": [],
+                "state": state,
+            }
+            continue
         try:
             observed = compute_spki(host)
         except Exception as exc:  # pragma: no cover

@@ -416,22 +416,13 @@ jobs:
         run: node scripts/check-npm-audit.js apps/marketing-site
 
   pin_verification:
-    name: Verify TLS certificate pins
+    name: Validate MVP TLS pinning guard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-
-      - name: Install OpenSSL (already available on ubuntu-latest)
-        run: which openssl
-
-      - name: Verify certificate pins
-        env:
-          BASE_URL: 'https://asora-function-dev.azurewebsites.net'
-        run: python3 scripts/verify_pins.py
+      - name: Reject strict pinning without validated pins
+        run: bash scripts/validate-mvp-tls-pinning.sh
 
   flutter_tests:
     name: Flutter tests + coverage
@@ -537,7 +528,8 @@ jobs:
           flutter build web --release \
             --dart-define="ENVIRONMENT=production" \
             --dart-define="API_BASE_URL=$MVP_API_BASE_URL" \
-            --dart-define="AUTH_URL=$MVP_API_BASE_URL"
+            --dart-define="AUTH_URL=$MVP_API_BASE_URL" \
+            --dart-define="ENABLE_CERT_PINNING=false"
       - name: Scan generated web bundle for secrets
         run: scripts/secret-scan.sh --artifact build/web
       - uses: actions/upload-artifact@v6
@@ -642,7 +634,23 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=ENVIRONMENT=production \
+            --dart-define=API_BASE_URL=https://api.lythaus.co/api \
+            --dart-define=AUTH_URL=https://api.lythaus.co/api \
+            --dart-define=ENABLE_CERT_PINNING=false
+
+      - name: Reject legacy origins in iOS release artifact
+        run: |
+          set -euo pipefail
+          artifact="build/ios/iphoneos/Runner.app"
+          test -d "$artifact"
+          if grep -R -a -Eiq 'azurewebsites\.net|asora-function-(dev|prod)|api\.asora\.co\.za|admin-api\.asora\.co\.za' "$artifact"; then
+            echo "iOS release artifact contains a forbidden direct-origin reference." >&2
+            exit 1
+          fi
+          echo "iOS release artifact contains no direct Azure or obsolete public API origin."
 
       - name: Archive iOS app (no codesign)
         run: |

@@ -20,7 +20,11 @@ Scope: Android only (iOS deferred)
 - Build signed artifact:
 
 ```bash
-flutter build appbundle --release
+flutter build appbundle --release \
+  --dart-define=ENVIRONMENT=production \
+  --dart-define=API_BASE_URL=https://api.lythaus.co/api \
+  --dart-define=AUTH_URL=https://api.lythaus.co/api \
+  --dart-define=ENABLE_CERT_PINNING=false
 ```
 
 ## 2. Crash reporting
@@ -52,6 +56,8 @@ flutter test test/core/observability/crash_reporting_test.dart
 ## 5. Release validation
 
 - Smoke test auth, feed, post create, appeals, notifications.
+- Scan the signed artifact for `azurewebsites.net`, `asora-function-dev`, and obsolete public Asora API hosts.
+- Treat all previous development mobile builds as unsupported; no client compatibility window is required.
 - Verify notifications device registration endpoint responds `201`.
 - Verify moderation block responses include neutral appeal path copy.
 

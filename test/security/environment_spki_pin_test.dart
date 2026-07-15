@@ -8,8 +8,8 @@ import 'package:asora/core/config/environment_config.dart';
 /// SPKI Pin Provisioning Gate Tests
 ///
 /// These tests enforce that preview and MVP-live pin lifecycle states stay
-/// explicit. Planned states may remain empty until the public gateway
-/// certificate is provisioned; live states must carry populated pins.
+/// explicit. MVP strict pinning is intentionally disabled until the public
+/// gateway certificate rotation and rollback procedure is proven.
 ///
 /// To enforce them (e.g. in the launch-readiness gate), set the environment
 /// variable SPKI_GATE=true before running flutter test:
@@ -42,7 +42,7 @@ void main() {
 
   group('SPKI pin provisioning gate [launch-gate]', () {
     test(
-      'preview security-profile pins remain explicitly planned',
+      'preview strict pinning remains explicitly disabled',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
@@ -51,14 +51,16 @@ void main() {
 
         expect(
           config.security.tlsPins.lifecycleState,
-          PinLifecycleState.planned,
+          PinLifecycleState.disabled,
         );
+        expect(config.security.tlsPins.enabled, isFalse);
+        expect(config.security.tlsPins.strictMode, isFalse);
         expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );
 
     test(
-      'preview pins are validated when promoted to live',
+      'preview pin promotion remains guarded',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
@@ -91,7 +93,7 @@ void main() {
     );
 
     test(
-      'production pins are planned until the host is provisioned',
+      'production strict pinning remains explicitly disabled',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
@@ -100,8 +102,10 @@ void main() {
 
         expect(
           config.security.tlsPins.lifecycleState,
-          PinLifecycleState.planned,
+          PinLifecycleState.disabled,
         );
+        expect(config.security.tlsPins.enabled, isFalse);
+        expect(config.security.tlsPins.strictMode, isFalse);
         expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );

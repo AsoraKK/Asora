@@ -46,7 +46,7 @@ enum Environment {
 }
 
 /// TLS certificate pinning configuration
-enum PinLifecycleState { live, planned, deprecated }
+enum PinLifecycleState { live, planned, deprecated, disabled }
 
 class TlsPinConfig {
   final bool enabled;
@@ -159,18 +159,14 @@ class EnvironmentConfig {
   };
 }
 
-// Dev configuration: warn-only, flexible for development
+// Pinning is disabled for the shared MVP until Cloudflare certificate rotation
+// and rollback are rehearsed with a current and backup public-gateway pin.
 const _devMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
-    enabled: true,
-    strictMode: false, // warn-only in dev
-    lifecycleState: PinLifecycleState.live,
-    spkiPinsBase64: [
-      // Dev Function App SPKI pins (primary + backups)
-      'x4RU2Q1zHRX8ud1k4dfVdVS3SnE+v+yU9tFEWH+y5W0=',
-      'sAgmPn4rf81EWKQFg+momPe9NFYswENqbsBnpcm16jM=',
-      '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=',
-    ],
+    enabled: false,
+    strictMode: false,
+    lifecycleState: PinLifecycleState.disabled,
+    spkiPinsBase64: [],
   ),
   strictDeviceIntegrity: false,
   blockRootedDevices: false,
@@ -179,11 +175,9 @@ const _devMobileSecurity = MobileSecurityConfig(
 
 const _devConfig = EnvironmentConfig(
   environment: Environment.development,
-  apiBaseUrl: kDebugMode
-      ? (kIsWeb
-            ? 'http://localhost:7072/api' // Local Functions on web
-            : 'http://10.0.2.2:7072/api') // Android emulator loopback
-      : 'https://asora-function-dev.azurewebsites.net/api',
+  apiBaseUrl: kIsWeb
+      ? 'http://localhost:7072/api' // Local Functions on web
+      : 'http://10.0.2.2:7072/api', // Android emulator loopback
   security: _devMobileSecurity,
 );
 
@@ -191,12 +185,10 @@ const _devConfig = EnvironmentConfig(
 // explicitly; there is no permanent preview API or separate Azure backend.
 const _previewMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
-    enabled: true,
-    strictMode: true, // block on mismatch
-    lifecycleState: PinLifecycleState.planned,
-    spkiPinsBase64: [
-      // Planned: preview hostnames are ephemeral and are not shipped as pins.
-    ],
+    enabled: false,
+    strictMode: false,
+    lifecycleState: PinLifecycleState.disabled,
+    spkiPinsBase64: [],
   ),
   strictDeviceIntegrity: true,
   blockRootedDevices: true,
@@ -209,15 +201,14 @@ const _previewConfig = EnvironmentConfig(
   security: _previewMobileSecurity,
 );
 
-// Production configuration: strict, secure defaults
+// MVP production deliberately relies on platform TLS validation. Strict SPKI
+// pinning must not be re-enabled until the public gateway pin lifecycle is proven.
 const _prodMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
-    enabled: true,
-    strictMode: true, // block on mismatch
-    lifecycleState: PinLifecycleState.planned,
-    spkiPinsBase64: [
-      // Planned: populate after the production host is provisioned and reachable.
-    ],
+    enabled: false,
+    strictMode: false,
+    lifecycleState: PinLifecycleState.disabled,
+    spkiPinsBase64: [],
   ),
   strictDeviceIntegrity: true,
   blockRootedDevices: true,

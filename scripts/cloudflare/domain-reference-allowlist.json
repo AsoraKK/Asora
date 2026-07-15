@@ -1,10 +1,3 @@
 {
-  "entries": [
-    {
-      "path": "lib/core/config/environment_config.dart",
-      "pattern": "asora-function-dev\\.azurewebsites\\.net/api",
-      "classification": "Local-development configuration",
-      "reason": "Non-web debug fallback only; production artifacts are scanned separately and must not contain it."
-    }
-  ]
+  "entries": []
 }

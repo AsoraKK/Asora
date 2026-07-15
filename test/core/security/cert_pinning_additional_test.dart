@@ -65,14 +65,8 @@ void main() {
           type: errorType,
         );
 
-        // Only connection, unknown, and badCertificate errors should return true for pinned domains
-        if (errorType == DioExceptionType.connectionError ||
-            errorType == DioExceptionType.unknown ||
-            errorType == DioExceptionType.badCertificate) {
-          expect(isPinValidationError(pinnedError), isTrue);
-        } else {
-          expect(isPinValidationError(pinnedError), isFalse);
-        }
+        // The MVP has no pinned hosts while strict pinning is disabled.
+        expect(isPinValidationError(pinnedError), isFalse);
 
         // Unpinned domains should never return true
         expect(isPinValidationError(unpinnedError), isFalse);
@@ -123,8 +117,8 @@ void main() {
       }
     });
 
-    test('kPinnedDomains validation and structure', () {
-      expect(kPinnedDomains, isNotEmpty);
+    test('kPinnedDomains is empty while strict pinning is disabled', () {
+      expect(kPinnedDomains, isEmpty);
 
       for (final entry in kPinnedDomains.entries) {
         final domain = entry.key;
@@ -158,11 +152,8 @@ void main() {
       expect(kEnableCertPinning, isA<bool>());
       expect(kPinnedDomains, isA<Map<String, List<String>>>());
 
-      // Verify domains contain expected Azure patterns
-      final azureDomains = kPinnedDomains.keys.where(
-        (d) => d.contains('azurewebsites.net'),
-      );
-      expect(azureDomains, isNotEmpty);
+      expect(kEnableCertPinning, isFalse);
+      expect(kPinnedDomains, isEmpty);
     });
 
     test('CertPinningInfo edge cases', () {

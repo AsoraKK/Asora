@@ -2,11 +2,20 @@
 
 ## Scope
 
-Mobile release traffic pins the public gateway hostname `api.lythaus.co`, not the internal Azure origin. The internal `asora-function-dev.azurewebsites.net` pins remain development-only compatibility data and must not be selected by production builds.
+MVP release traffic uses platform TLS validation for the public gateway hostname `api.lythaus.co`. Strict SPKI pinning is deliberately disabled until the Cloudflare certificate rotation and rollback lifecycle is proven with an exact mobile artifact.
 
 There is no staging or separate production Azure hostname. Cloudflare preview hostnames are ephemeral and are not pinned into a shipped mobile build.
 
-## Initial MVP provisioning
+## Current MVP deviation
+
+- `ENABLE_CERT_PINNING=false` is passed by the Android and iOS release workflows.
+- No host pins are shipped in Flutter, Android, or iOS client configuration.
+- The release gate rejects strict pinning without at least a current and backup pin.
+- Previous development builds are unsupported; no installed-client compatibility window exists.
+
+This deviation preserves availability while the gateway certificate lifecycle is unproven. It does not authorize a direct Azure fallback.
+
+## Future pinning enablement
 
 After `api.lythaus.co` is bound to the reviewed Worker and its certificate is stable:
 
@@ -21,14 +30,14 @@ Record at least the current leaf and one independently valid backup/intermediate
 - `api.lythaus.co` in `mobile-expected-pins.json`
 - `api.lythaus.co` in `lib/core/security/cert_pinning_common.dart`
 
-Then promote the production pin lifecycle from `planned` to `live` and run:
+Then promote the production pin lifecycle from `disabled` to `live`, enable strict pinning deliberately, and run:
 
 ```bash
 SPKI_GATE=true flutter test test/security/environment_spki_pin_test.dart
 python3 scripts/verify_pins.py
 ```
 
-Do not promote a lifecycle state to `live` with an empty list.
+Do not enable strict pinning with an empty list or only one tested pin.
 
 ## Rotation
 

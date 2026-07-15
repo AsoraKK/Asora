@@ -44,9 +44,7 @@ class AuthService {
     }
 
     if (kDebugMode) {
-      return kIsWeb
-          ? 'http://localhost:7072/api'
-          : 'https://asora-function-dev.azurewebsites.net/api';
+      return kIsWeb ? 'http://localhost:7072/api' : 'http://10.0.2.2:7072/api';
     }
 
     return EnvironmentConfig.fromEnvironment().apiBaseUrl;

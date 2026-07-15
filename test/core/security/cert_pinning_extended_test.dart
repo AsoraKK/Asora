@@ -81,12 +81,8 @@ void main() {
   // ────── kPinnedDomains ──────
 
   group('kPinnedDomains', () {
-    test('contains expected domains', () {
-      expect(kPinnedDomains, isNotEmpty);
-      expect(
-        kPinnedDomains.containsKey('asora-function-dev.azurewebsites.net'),
-        isTrue,
-      );
+    test('is empty while MVP strict pinning is disabled', () {
+      expect(kPinnedDomains, isEmpty);
     });
 
     test('all pins are non-empty strings', () {
@@ -102,34 +98,34 @@ void main() {
   // ────── isPinValidationError ──────
 
   group('isPinValidationError', () {
-    test('returns true for connectionError on pinned domain', () {
+    test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.connectionError,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
-    test('returns true for unknown error on pinned domain', () {
+    test('returns false for unknown error while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.unknown,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
-    test('returns true for badCertificate on pinned domain', () {
+    test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.badCertificate,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
     test('returns false for connectionError on non-pinned domain', () {
@@ -201,11 +197,15 @@ void main() {
       dio.close();
     });
 
-    test('has interceptors when pinning enabled', () {
+    test('does not add interceptors when pinning is disabled', () {
       final dio = createPinnedDio();
-      // The dio should have at least one interceptor (CertPinningInterceptor)
-      // when kEnableCertPinning is true (the default in debug builds)
-      expect(dio.interceptors, isNotEmpty);
+      expect(
+        dio.interceptors.any(
+          (interceptor) =>
+              interceptor.runtimeType.toString().contains('CertPinning'),
+        ),
+        isFalse,
+      );
       dio.close();
     });
   });
