@@ -223,13 +223,16 @@ if ($RecheckPreviouslyUnavailable) {
     foreach ($ruleset in $requiredRulesets) {
       $detail = Invoke-Cloudflare "/zones/$($zone.id)/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json"
       if ($detail) {
+        $rulesetRules = @($detail.result.rules)
         $result.rulesets += [ordered]@{
           scope = $zoneName
           name = $ruleset.name
           kind = $ruleset.kind
           phase = $ruleset.phase
-          rules = @($detail.result.rules | ForEach-Object {
-            [ordered]@{ enabled = $_.enabled; description = $_.description; expression = $_.expression; action = $_.action }
+          ruleCount = $rulesetRules.Count
+          enabledRuleCount = @($rulesetRules | Where-Object { $_.enabled -eq $true }).Count
+          actionCounts = @($rulesetRules | Group-Object action | ForEach-Object {
+            [ordered]@{ action = $_.Name; count = $_.Count }
           })
         }
       }
