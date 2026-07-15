@@ -56,6 +56,7 @@ jobs:
           ALPHA_FEED_RATE: '1'
         run: |
           set -euo pipefail
+          node -e 'const url = new URL(process.env.ALPHA_API_BASE_URL); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("alpha_api_base_url must be an HTTPS API gateway ending in /api");'
           docker run --rm \
             -e ALPHA_API_BASE_URL \
             -e ALPHA_SMOKE_TOKEN \

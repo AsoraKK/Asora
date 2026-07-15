@@ -33,7 +33,7 @@ jobs:
       - name: Validate report configuration
         shell: bash
         env:
-          ALPHA_API_BASE_URL: ${{ vars.ALPHA_API_BASE_URL }}
+          ALPHA_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
           AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
           AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
           AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
@@ -42,7 +42,8 @@ jobs:
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
         run: |
           set -euo pipefail
-          [[ "$ALPHA_API_BASE_URL" == https://*/api ]] || { echo "::error::ALPHA_API_BASE_URL must be an HTTPS /api URL"; exit 1; }
+          [[ "$ALPHA_API_BASE_URL" == https://*/api ]] || { echo "::error::MVP_ADMIN_API_BASE_URL must be an HTTPS /api URL"; exit 1; }
+          [[ "$ALPHA_API_BASE_URL" != *.azurewebsites.net* ]] || { echo "::error::MVP_ADMIN_API_BASE_URL must not use a direct Azure origin"; exit 1; }
           for key in AZURE_RESOURCE_GROUP AZURE_FUNCTIONAPP_NAME AZURE_APPINSIGHTS_NAME ALPHA_REPORT_ADMIN_TOKEN CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET; do
             test -n "${!key:-}" || { echo "::error::$key is required"; exit 1; }
           done
@@ -66,7 +67,7 @@ jobs:
       - name: Read administrative snapshots
         shell: bash
         env:
-          ALPHA_API_BASE_URL: ${{ vars.ALPHA_API_BASE_URL }}
+          ALPHA_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
           ALPHA_REPORT_ADMIN_TOKEN: ${{ secrets.ALPHA_REPORT_ADMIN_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}

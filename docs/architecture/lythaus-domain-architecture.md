@@ -35,4 +35,14 @@ Azure progresses from `ORIGIN_GATEWAY_AUTH_MODE=observe` through time-bounded `d
 
 ## Current state
 
-Azure audit confirms `asora-function-dev` is running, HTTPS-only, directly public, and currently serves PR 452. Lythaus CORS and gateway-origin authentication are not configured. Cloudflare account resources remain `UNKNOWN` because no valid Cloudflare token is loaded. The cutover is therefore `NO-GO`.
+The repository now contains the mode-based Azure origin guard, token-injecting
+public/legacy/admin gateway definitions, and gateway-only operational tooling.
+Those changes are not proof of a live deployment. The shared Azure origin is
+still directly public until the exact candidate, distinct Key Vault-backed
+tokens, Worker preview, legacy compatibility routes, Access policy, browser
+authentication, and rollback rehearsal are proven together.
+
+Cloudflare audit evidence is available under `docs/evidence/cloudflare/`, but
+the target custom domains remain unbound. A credential-type repository variable
+was found during configuration review; it must be rotated and removed before
+any provider-side rehearsal. The cutover remains `NO-GO`.

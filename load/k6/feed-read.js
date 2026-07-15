@@ -36,16 +36,16 @@ const BASE = __ENV.K6_BASE_URL;
 if (!BASE) throw new Error('K6_BASE_URL is required');
 
 function buildFeedUrl() {
-  const feedBase = resolveUrl(BASE, __ENV.FEED_PATH || '/api/feed');
+  const feedBase = resolveUrl(BASE, __ENV.FEED_PATH || '/feed/discover');
   const query = __ENV.FEED_QUERY || 'guest=1&limit=10';
   return `${feedBase}?${query}`;
 }
 
 export default function () {
-  const headers = __ENV.K6_SMOKE_TOKEN
-    ? { Authorization: `Bearer ${__ENV.K6_SMOKE_TOKEN}` }
-    : undefined;
-  const res = http.get(buildFeedUrl(), { headers, tags: { endpoint: 'feed' } });
+  // Discovery is intentionally credential-free so the gateway's approved
+  // anonymous cache behaviour is exercised. Authenticated traffic is covered
+  // by the protected API smoke suite and must never be cacheable.
+  const res = http.get(buildFeedUrl(), { tags: { endpoint: 'feed' } });
   check(res, { 'status 200/204': (r) => r.status === 200 || r.status === 204 });
   sleep(1);
 }

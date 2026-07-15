@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 env:
-  K6_BASE_URL: ${{ vars.K6_BASE_URL }}
+  K6_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
   K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }} # set in repo Secrets
   ALLOW_SHARED_MVP_LOAD_TESTS: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS }}
 
@@ -26,14 +26,13 @@ jobs:
       - name: Verify environment and connectivity
         run: |
           [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
-          test -n "$K6_BASE_URL" || { echo "K6_BASE_URL is required"; exit 1; }
-          echo "K6_BASE_URL=$K6_BASE_URL"
-          node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
+          test -n "$K6_BASE_URL" || { echo "MVP_PUBLIC_API_BASE_URL is required"; exit 1; }
+          node -e "const u=new URL(process.env.K6_BASE_URL); if (u.protocol !== 'https:' || u.hostname.endsWith('.azurewebsites.net') || !u.pathname.endsWith('/api')) throw new Error('MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api');"
           sudo apt-get update -y && sudo apt-get install -y dnsutils curl
           H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
-          echo "Resolving $H..."
+          echo "Resolving configured public gateway..."
           dig +short "$H" || { echo "DNS resolution failed for $H"; exit 1; }
-          echo "Testing connectivity to $K6_BASE_URL/health..."
+          echo "Testing public gateway health..."
           curl -f --max-time 10 "$K6_BASE_URL/health" || { echo "Health endpoint unreachable"; exit 1; }
 
       - name: Smoke test
@@ -108,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CHAOS_ENABLED: "true"
-      K6_BASE_URL: ${{ vars.K6_BASE_URL }}
+      K6_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
       K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
     steps:
       - uses: actions/checkout@v5
@@ -119,14 +118,13 @@ jobs:
       - name: Verify environment and connectivity
         run: |
           [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
-          test -n "$K6_BASE_URL" || { echo "K6_BASE_URL is required"; exit 1; }
-          echo "K6_BASE_URL=$K6_BASE_URL"
-          node -e "const u=new URL(process.env.K6_BASE_URL);console.log('HOST:',u.hostname)"
+          test -n "$K6_BASE_URL" || { echo "MVP_PUBLIC_API_BASE_URL is required"; exit 1; }
+          node -e "const u=new URL(process.env.K6_BASE_URL); if (u.protocol !== 'https:' || u.hostname.endsWith('.azurewebsites.net') || !u.pathname.endsWith('/api')) throw new Error('MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api');"
           sudo apt-get update -y && sudo apt-get install -y dnsutils curl
           H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
-          echo "Resolving $H..."
+          echo "Resolving configured public gateway..."
           dig +short "$H" || { echo "DNS resolution failed for $H"; exit 1; }
-          echo "Testing connectivity to $K6_BASE_URL/health..."
+          echo "Testing public gateway health..."
           curl -f --max-time 10 "$K6_BASE_URL/health" || { echo "Health endpoint unreachable"; exit 1; }
 
       - name: Run chaos scenarios
