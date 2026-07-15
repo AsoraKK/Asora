@@ -253,7 +253,7 @@ if (-not [string]::IsNullOrWhiteSpace($SnapshotWorkerName)) {
     $deployments = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/deployments" "worker-$SnapshotWorkerName-deployments.raw.json"
     $settings = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/settings" "worker-$SnapshotWorkerName-settings.raw.json"
     $secrets = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/secrets" "worker-$SnapshotWorkerName-secrets.raw.json"
-    $source = Invoke-CloudflareContent "/accounts/$accountId/workers/scripts/$scriptName/content" "worker-$SnapshotWorkerName-source.raw.js"
+    $source = Invoke-CloudflareContent "/accounts/$accountId/workers/scripts/$scriptName/content/v2" "worker-$SnapshotWorkerName-source.raw.js"
 
     $result.workerSnapshot = [ordered]@{
       name = $SnapshotWorkerName
