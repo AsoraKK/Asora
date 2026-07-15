@@ -1,6 +1,12 @@
 name: Cloudflare Domain Audit
 
 on:
+  push:
+    branches:
+      - codex/lythaus-domain-migration
+    paths:
+      - '.github/workflows/cloudflare-domain-audit.yml'
+      - 'scripts/cloudflare/audit-domains.ps1'
   workflow_dispatch:
 
 permissions:
