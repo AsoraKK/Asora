@@ -75,6 +75,12 @@ Audience tags were captured in sanitized form. Existing origin-side administrato
 
 Rule priority, shadowing, and hidden Bulk Redirect behavior therefore remain unproven. This is a mandatory NO-GO.
 
+### 2026-07-15 permission recheck addendum
+
+The seven denied reads were rerun through a GitHub Actions workflow using the separate `CLOUDFLARE_AUDIT_API_TOKEN` secret. The token was verified active and every rechecked call succeeded. The recheck found no account Bulk Redirect lists and captured safe aggregate details for the normalization and L7 DDoS rulesets in [the dated recheck report](2026-07-15-cloudflare-read-permission-recheck.md).
+
+This resolves the audit-token permission blocker only. It does not change the overall NO-GO result, because origin enforcement, live OpenAPI acceptance, full browser authentication proof, public-route behavior, provider-side validation, and PR 452 sequencing remain unresolved.
+
 ## 8. Repository reference inventory
 
 The `rg`-driven inventory contains 373 classified matches in [CSV](2026-07-13-domain-reference-inventory.csv) and [Markdown](2026-07-13-domain-reference-inventory.md). It separates runtime, preview, legacy compatibility, Azure infrastructure, generated output, historical evidence, and safe internal identifiers.
