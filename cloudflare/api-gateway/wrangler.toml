@@ -13,6 +13,11 @@ EXPECTED_HOSTNAMES = "lythaus-api-gateway-preview.asora.workers.dev"
 ORIGIN_BASE = "https://asora-function-dev.azurewebsites.net"
 RATE_LIMIT_REQUIRED = "true"
 
+[[env.mvp.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+# Shared MVP binding. Confirm its retention and rate-limit policy before live deploy.
+id = "5dfa59d0d2684a9d8637b66e03d4de24"
+
 [[env.preview.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "5dfa59d0d2684a9d8637b66e03d4de24"

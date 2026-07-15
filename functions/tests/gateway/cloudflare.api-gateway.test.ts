@@ -2,6 +2,7 @@ import worker, {
   buildCacheKeyUrl,
   buildOriginRequest,
   isAnonymousCacheRequest,
+  isAdminGatewayRoute,
   isExpectedHostname,
 } from '../../../cloudflare/api-gateway/worker';
 
@@ -50,6 +51,8 @@ describe('Lythaus API gateway Worker', () => {
         method: 'POST',
         headers: {
           'X-Lythaus-Origin-Token': 'client-spoof',
+          'X-Lythaus-Operational-Token': 'client-spoof',
+          'X-Lythaus-Gateway-Class': 'admin_gateway',
           'X-Forwarded-Host': 'attacker.example',
           Authorization: 'Bearer client-token',
         },
@@ -60,6 +63,8 @@ describe('Lythaus API gateway Worker', () => {
     );
     expect(originRequest.url).toBe('https://origin.example.com/api/auth/token?mode=test');
     expect(originRequest.headers.get('X-Lythaus-Origin-Token')).toBe('origin-secret');
+    expect(originRequest.headers.get('X-Lythaus-Operational-Token')).toBeNull();
+    expect(originRequest.headers.get('X-Lythaus-Gateway-Class')).toBe('lythaus_gateway');
     expect(originRequest.headers.get('X-Forwarded-Host')).toBeNull();
     expect(originRequest.headers.get('Authorization')).toBe('Bearer client-token');
   });
@@ -94,6 +99,40 @@ describe('Lythaus API gateway Worker', () => {
     expect(isAnonymousCacheRequest(request('/api/feed/news'))).toBe(false);
     const key = buildCacheKeyUrl(new URL('https://lythaus-api-preview.example.workers.dev/api/feed/discover?limit=20&ignored=yes'));
     expect(key.search).toBe('?limit=20');
+  });
+
+  it('restricts the admin gateway to explicit administrator route classes and disables caching', async () => {
+    const adminEnv = { ...env, GATEWAY_POLICY: 'admin', GATEWAY_CLASS: 'admin_gateway' } as any;
+    expect(isAdminGatewayRoute(new URL('https://admin.example/api/moderation/cases'), adminEnv)).toBe(true);
+    expect(isAdminGatewayRoute(new URL('https://admin.example/api/feed/discover'), adminEnv)).toBe(false);
+    expect(isAnonymousCacheRequest(request('/api/feed/discover'), adminEnv)).toBe(false);
+
+    const rejected = await worker.fetch(
+      request('/api/feed/discover'),
+      adminEnv,
+      { waitUntil: jest.fn() } as any
+    );
+    expect(rejected.status).toBe(403);
+    expect(await rejected.json()).toMatchObject({ error: 'admin_route_restricted' });
+  });
+
+  it('adds controlled deprecation metadata only on the legacy compatibility gateway', async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const response = await worker.fetch(
+      request('/api/health'),
+      {
+        ...env,
+        GATEWAY_CLASS: 'legacy_custom',
+        LEGACY_API_SUNSET: 'Tue, 15 Sep 2026 00:00:00 GMT',
+        LEGACY_SUCCESSOR: 'https://api.lythaus.co/api',
+      },
+      { waitUntil: jest.fn() } as any
+    );
+    expect(response.headers.get('Deprecation')).toBe('true');
+    expect(response.headers.get('Sunset')).toBe('Tue, 15 Sep 2026 00:00:00 GMT');
+    expect(response.headers.get('Link')).toContain('https://api.lythaus.co/api');
   });
 
   it('marks protected responses private and never exposes origin headers', async () => {

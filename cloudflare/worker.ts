@@ -5,13 +5,35 @@ import { applyEdgeRateLimitHeaders, enforceEdgeRateLimit } from '../edge/worker/
 export interface Env {
   FEED_CACHE_ENABLED?: string;
   ORIGIN_BASE?: string;
+  ORIGIN_AUTH_TOKEN?: string;
+  GATEWAY_CLASS?: 'legacy_custom';
   RATE_LIMIT_KV?: KVNamespace;
   EMAIL_HASH_SALT?: string;
 }
 
 const FEED_PATH_PREFIX = '/api/feed';
-const DEFAULT_ORIGIN_BASE = 'https://asora-function-dev.azurewebsites.net';
 export const ANON_CACHEABLE_FEED_PATHS = new Set(['/api/feed/discover']);
+const CLIENT_SPOOFABLE_HEADERS = [
+  'x-lythaus-origin-token',
+  'x-lythaus-operational-token',
+  'x-lythaus-gateway-class',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+  'x-forwarded-port',
+  'x-original-host',
+  'x-original-url',
+  'x-internal-user',
+  'x-internal-roles',
+  'x-azure-clientip',
+];
+const ORIGIN_DISCLOSURE_HEADERS = [
+  'server',
+  'x-powered-by',
+  'x-azure-ref',
+  'x-azure-ref-originshield',
+  'x-ms-request-id',
+  'x-ms-routing-request-id',
+];
 const CACHE_KEY_PARAMS = new Set([
   'cursor',
   'limit',
@@ -28,14 +50,45 @@ const CACHE_KEY_PARAMS = new Set([
 const EDGE_LIMIT = { limit: 60, windowSeconds: 60 };
 
 function getOriginBase(env: Env): string {
-  return (env.ORIGIN_BASE || DEFAULT_ORIGIN_BASE).replace(/\/+$/, '');
+  const raw = env.ORIGIN_BASE?.trim();
+  if (!raw) throw new Error('origin_not_configured');
+  const origin = new URL(raw);
+  if (origin.protocol !== 'https:' || origin.username || origin.password) {
+    throw new Error('origin_invalid');
+  }
+  return origin.toString().replace(/\/+$/, '');
 }
 
-function buildOriginRequest(request: Request, env: Env): Request {
+export function buildOriginRequest(request: Request, env: Env): Request {
+  if (!env.ORIGIN_AUTH_TOKEN?.trim()) throw new Error('origin_token_not_configured');
   const requestUrl = new URL(request.url);
   const originBase = getOriginBase(env);
   const originUrl = new URL(`${requestUrl.pathname}${requestUrl.search}`, originBase);
-  return new Request(originUrl.toString(), request);
+  const originRequest = new Request(originUrl.toString(), request);
+  for (const header of CLIENT_SPOOFABLE_HEADERS) originRequest.headers.delete(header);
+  originRequest.headers.set('X-Lythaus-Origin-Token', env.ORIGIN_AUTH_TOKEN);
+  originRequest.headers.set('X-Lythaus-Gateway-Class', env.GATEWAY_CLASS ?? 'legacy_custom');
+  return originRequest;
+}
+
+function sanitizeOriginResponse(originResponse: Response): Response {
+  const headers = new Headers(originResponse.headers);
+  for (const header of ORIGIN_DISCLOSURE_HEADERS) headers.delete(header);
+  return new Response(originResponse.body, {
+    status: originResponse.status,
+    statusText: originResponse.statusText,
+    headers,
+  });
+}
+
+function gatewayNotConfigured(): Response {
+  return new Response(JSON.stringify({ error: 'gateway_not_configured' }), {
+    status: 503,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'private, no-store',
+    },
+  });
 }
 
 export function isAnonymousCacheRequest(request: Request, url = new URL(request.url)): boolean {
@@ -102,12 +155,17 @@ export default {
     // Only anonymous feed reads are cacheable here; public, authenticated, and
     // admin traffic bypass this worker path entirely.
     const isAnonCacheableFeedPath = isAnonymousCacheRequest(request, url);
-    const originRequest = buildOriginRequest(request, env);
+    let originRequest: Request;
+    try {
+      originRequest = buildOriginRequest(request, env);
+    } catch {
+      return gatewayNotConfigured();
+    }
 
     // Bypass conditions: non-feed, auth present, or disabled via env.
     if (!isFeed || auth || hasCookie || !cachingEnabled || !isAnonCacheableFeedPath) {
       const resp = await fetch(originRequest);
-      const r = new Response(resp.body, resp);
+      const r = sanitizeOriginResponse(resp);
       r.headers.set("Vary", "Authorization");
       if (auth || hasCookie || (isFeed && !isAnonCacheableFeedPath)) {
         r.headers.set("Cache-Control", "private, no-store");
@@ -146,12 +204,7 @@ export default {
 
     // Miss: fetch origin
     const originResp = await fetch(originRequest);
-    console.log('feed-cache origin fetch success', {
-      path: url.pathname,
-      origin: originRequest.url,
-      status: originResp.status,
-    });
-    const resp = new Response(originResp.body, originResp);
+    const resp = sanitizeOriginResponse(originResp);
 
     if (!shouldCacheFeedResponse(resp)) {
       resp.headers.set('Cache-Control', 'private, no-store');

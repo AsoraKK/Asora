@@ -118,8 +118,12 @@ describe('startup-validation', () => {
     process.env.RATE_LIMITS_ENABLED = 'true';
     process.env.RATE_LIMIT_CONTAINER = 'test';
     process.env.AUDIT_HMAC_KEY = 'test-hmac-key';
-    process.env.ORIGIN_GATEWAY_AUTH_REQUIRED = 'false';
+    process.env.ORIGIN_GATEWAY_AUTH_MODE = 'observe';
     process.env.ORIGIN_GATEWAY_TOKEN = 'test-origin-token';
+    process.env.ORIGIN_GATEWAY_TOKEN_NEXT = 'test-origin-token-next';
+    process.env.ORIGIN_OPERATIONAL_TOKEN = 'test-operational-token';
+    process.env.ORIGIN_GATEWAY_DUAL_UNTIL = '2099-01-01T00:00:00Z';
+    process.env.ORIGIN_GATEWAY_LEGACY_ALLOWLIST = '[]';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();

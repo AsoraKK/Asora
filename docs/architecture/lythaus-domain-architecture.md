@@ -20,7 +20,7 @@ No permanent staging hostname or separate Azure staging/production origin exists
 
 The gateway preserves `/api/*`, removes spoofable internal headers, generates or propagates correlation IDs, hides Azure response headers, and returns controlled errors. Requests with `Authorization` or `Cookie` are never anonymous/cacheable. Origin-side authorization remains authoritative.
 
-Azure enables `ORIGIN_GATEWAY_AUTH_REQUIRED=true` only after the preview proxy, monitoring, deployment, rollback, and emergency direct-access path are proven. The origin compares SHA-256 digests with `timingSafeEqual`; SCM deployment traffic is not affected.
+Azure progresses from `ORIGIN_GATEWAY_AUTH_MODE=observe` through time-bounded `dual` to `enforce` only after the preview proxy, monitoring, deployment, rollback, and emergency direct-access path are proven. `off` is rejected in MVP/production. The origin compares SHA-256 digests with `timingSafeEqual`; SCM deployment traffic is not affected.
 
 ## Operational invariants
 

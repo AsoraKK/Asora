@@ -16,6 +16,10 @@ export interface Env {
   RATE_LIMIT_REQUIRED?: string;
   RATE_LIMIT_KV?: KVNamespace;
   EMAIL_HASH_SALT?: string;
+  GATEWAY_CLASS?: 'lythaus_gateway' | 'legacy_custom' | 'admin_gateway';
+  GATEWAY_POLICY?: 'public' | 'admin';
+  LEGACY_API_SUNSET?: string;
+  LEGACY_SUCCESSOR?: string;
 }
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
@@ -36,6 +40,8 @@ const ANONYMOUS_CACHE_PATH = '/api/feed/discover';
 const CORRELATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const CLIENT_SPOOFABLE_HEADERS = [
   'x-lythaus-origin-token',
+  'x-lythaus-operational-token',
+  'x-lythaus-gateway-class',
   'x-forwarded-host',
   'x-forwarded-proto',
   'x-forwarded-port',
@@ -45,6 +51,7 @@ const CLIENT_SPOOFABLE_HEADERS = [
   'x-internal-roles',
   'x-azure-clientip',
 ];
+const ADMIN_ROUTE_PATTERN = /^\/api\/(?:_admin|admin|moderation|privacy|appeals|dsr)(?:\/|$)/;
 const ORIGIN_DISCLOSURE_HEADERS = [
   'server',
   'x-powered-by',
@@ -130,6 +137,14 @@ export function isExpectedHostname(url: URL, env: Env): boolean {
   return splitExactValues(env.EXPECTED_HOSTNAMES).has(url.hostname);
 }
 
+function gatewayClass(env: Env): NonNullable<Env['GATEWAY_CLASS']> {
+  return env.GATEWAY_CLASS ?? 'lythaus_gateway';
+}
+
+export function isAdminGatewayRoute(url: URL, env: Env): boolean {
+  return env.GATEWAY_POLICY !== 'admin' || ADMIN_ROUTE_PATTERN.test(url.pathname);
+}
+
 function requireOriginBase(env: Env): URL {
   const raw = env.ORIGIN_BASE?.trim();
   if (!raw) throw new Error('origin_not_configured');
@@ -158,18 +173,30 @@ export function buildOriginRequest(
   const originRequest = new Request(originUrl.toString(), request);
   for (const header of CLIENT_SPOOFABLE_HEADERS) originRequest.headers.delete(header);
   originRequest.headers.set('X-Lythaus-Origin-Token', env.ORIGIN_AUTH_TOKEN);
+  originRequest.headers.set('X-Lythaus-Gateway-Class', gatewayClass(env));
   originRequest.headers.set('X-Correlation-ID', correlationId);
   return originRequest;
 }
 
-export function isAnonymousCacheRequest(request: Request): boolean {
+export function isAnonymousCacheRequest(request: Request, env?: Env): boolean {
   const url = new URL(request.url);
   return (
+    env?.GATEWAY_POLICY !== 'admin' &&
     request.method.toUpperCase() === 'GET' &&
     url.pathname === ANONYMOUS_CACHE_PATH &&
     !request.headers.has('authorization') &&
     !request.headers.has('cookie')
   );
+}
+
+function applyLegacyDeprecationHeaders(response: Response, env: Env): Response {
+  if (gatewayClass(env) !== 'legacy_custom') return response;
+  response.headers.set('Deprecation', 'true');
+  if (env.LEGACY_API_SUNSET?.trim()) response.headers.set('Sunset', env.LEGACY_API_SUNSET.trim());
+  if (env.LEGACY_SUCCESSOR?.trim()) {
+    response.headers.set('Link', `<${env.LEGACY_SUCCESSOR.trim()}>; rel="successor-version"`);
+  }
+  return response;
 }
 
 export function buildCacheKeyUrl(requestUrl: URL): URL {
@@ -264,6 +291,9 @@ export default {
     if (!ALLOWED_METHODS.has(method)) {
       return gatewayError(405, 'method_not_allowed', correlationId, corsOrigin);
     }
+    if (!isAdminGatewayRoute(url, env)) {
+      return gatewayError(403, 'admin_route_restricted', correlationId, corsOrigin);
+    }
     if (request.headers.has('origin') && !corsOrigin) {
       return gatewayError(403, 'cors_origin_denied', correlationId);
     }
@@ -288,7 +318,7 @@ export default {
       return limited;
     }
 
-    const anonymousDiscovery = isAnonymousCacheRequest(request);
+    const anonymousDiscovery = isAnonymousCacheRequest(request, env);
     const cacheKey = new Request(buildCacheKeyUrl(url).toString(), { method: 'GET' });
     if (anonymousDiscovery) {
       const cached = await caches.default.match(cacheKey);
@@ -321,7 +351,7 @@ export default {
     }
 
     return applyRateLimit(
-      applyGatewayHeaders(response, correlationId, corsOrigin),
+      applyGatewayHeaders(applyLegacyDeprecationHeaders(response, env), correlationId, corsOrigin),
       rateLimitResult
     );
   },

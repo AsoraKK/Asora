@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - account_rulesets
+          - worker_snapshot
           - full
 
 permissions:
@@ -46,6 +47,8 @@ jobs:
         run: |
           if ('${{ inputs.mode }}' -eq 'account_rulesets') {
             ./scripts/cloudflare/audit-domains.ps1 -RecheckAccountRulesets
+          } elseif ('${{ inputs.mode }}' -eq 'worker_snapshot') {
+            ./scripts/cloudflare/audit-domains.ps1 -SnapshotWorkerName control-api-proxy
           } else {
             ./scripts/cloudflare/audit-domains.ps1
           }

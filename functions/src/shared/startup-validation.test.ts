@@ -23,7 +23,7 @@ const baseEnv: Record<string, string> = {
   RATE_LIMITS_ENABLED: 'true',
   RATE_LIMIT_CONTAINER: 'rate-limits',
   AUDIT_HMAC_KEY: 'audit-hmac-key',
-  ORIGIN_GATEWAY_AUTH_REQUIRED: 'false',
+  ORIGIN_GATEWAY_AUTH_MODE: 'off',
   STRICT_STARTUP_VALIDATION: 'true',
   NODE_ENV: 'test',
 };
@@ -66,8 +66,8 @@ describe('validateStartupEnvironment', () => {
     expect(trackExceptionMock).toHaveBeenCalled();
   });
 
-  it('fails when gateway enforcement is enabled without its token', () => {
-    process.env.ORIGIN_GATEWAY_AUTH_REQUIRED = 'true';
+  it('fails when gateway enforcement is enabled without required tokens', () => {
+    process.env.ORIGIN_GATEWAY_AUTH_MODE = 'enforce';
     delete process.env.ORIGIN_GATEWAY_TOKEN;
 
     expect(() => validateStartupEnvironment()).toThrow(/ORIGIN_GATEWAY_TOKEN/);

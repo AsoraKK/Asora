@@ -1,5 +1,6 @@
 import worker, {
   ANON_CACHEABLE_FEED_PATHS,
+  buildOriginRequest,
   buildFeedCacheKeyUrl,
   isAnonymousCacheRequest,
   shouldCacheFeedResponse,
@@ -11,7 +12,11 @@ describe('Cloudflare feed cache worker', () => {
     put: jest.fn(),
   };
   const originBase = 'https://origin.example.com';
-  const workerEnv = { FEED_CACHE_ENABLED: 'true', ORIGIN_BASE: originBase } as any;
+  const workerEnv = {
+    FEED_CACHE_ENABLED: 'true',
+    ORIGIN_BASE: originBase,
+    ORIGIN_AUTH_TOKEN: 'origin-secret',
+  } as any;
 
   const fetchSpy = jest.spyOn(globalThis, 'fetch');
 
@@ -51,6 +56,28 @@ describe('Cloudflare feed cache worker', () => {
     expect(isAnonymousCacheRequest(makeRequest('/api/feed/discover', { authorization: 'Bearer x' }))).toBe(false);
     expect(isAnonymousCacheRequest(makeRequest('/api/feed/discover', { cookie: 'session=1' }))).toBe(false);
     expect(isAnonymousCacheRequest(makeRequest('/api/feed/discover', {}, 'POST'))).toBe(false);
+  });
+
+  it('fails closed without configured origin credentials and replaces spoofed internal headers', async () => {
+    const missing = await worker.fetch(
+      makeRequest('/api/feed/discover'),
+      { ...workerEnv, ORIGIN_AUTH_TOKEN: '' },
+      { waitUntil: jest.fn() } as any
+    );
+    expect(missing.status).toBe(503);
+    expect(await missing.json()).toMatchObject({ error: 'gateway_not_configured' });
+
+    const originRequest = buildOriginRequest(
+      makeRequest('/api/feed/discover', {
+        'x-lythaus-origin-token': 'client-spoof',
+        'x-lythaus-operational-token': 'client-spoof',
+        'x-lythaus-gateway-class': 'admin_gateway',
+      }),
+      workerEnv
+    );
+    expect(originRequest.headers.get('x-lythaus-origin-token')).toBe('origin-secret');
+    expect(originRequest.headers.get('x-lythaus-operational-token')).toBeNull();
+    expect(originRequest.headers.get('x-lythaus-gateway-class')).toBe('legacy_custom');
   });
 
   it('builds a cache key from all relevant feed query parameters', () => {

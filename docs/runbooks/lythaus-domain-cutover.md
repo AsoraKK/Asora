@@ -22,7 +22,7 @@ Store raw exports only under `.artifacts/cloudflare-audit/`; commit sanitized su
 2. Identify marketing, Flutter, and control-panel Pages projects by source, output, response content, and deployment SHA.
 3. Deploy the exact PR Flutter artifact to a Pages preview.
 4. Deploy the gateway temporarily through Wrangler preview/workers.dev with explicit preview hostname and CORS origin, the existing MVP `ORIGIN_BASE`, secret `ORIGIN_AUTH_TOKEN`, and rate-limit binding.
-5. Keep `ORIGIN_GATEWAY_AUTH_REQUIRED=false` initially; do not change production DNS.
+5. Start Azure with `ORIGIN_GATEWAY_AUTH_MODE=observe` and all three distinct token settings installed through approved secret stores; do not change production DNS.
 6. Validate health, path forwarding, preflight, discovery, authenticated cache bypass, protected rejection, header stripping, correlation IDs, origin concealment, SPA refresh, login, and callback error handling.
 7. Add only the exact Pages preview origin to Azure CORS for the validation window, record it, and remove it afterward unless separately approved.
 8. Enable origin enforcement only after gateway and emergency paths are proven; repeat health/auth/deployment checks.

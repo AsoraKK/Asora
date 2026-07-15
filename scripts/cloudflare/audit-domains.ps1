@@ -5,7 +5,8 @@ param(
   [string]$EvidenceDirectory = 'docs/evidence/cloudflare',
   [switch]$RepositoryOnly,
   [switch]$RecheckPreviouslyUnavailable,
-  [switch]$RecheckAccountRulesets
+  [switch]$RecheckAccountRulesets,
+  [string]$SnapshotWorkerName
 )
 
 $ErrorActionPreference = 'Stop'
@@ -173,6 +174,7 @@ $result = [ordered]@{
   zones = @()
   pages = @()
   workers = @()
+  workerSnapshot = $null
   workerDomains = @()
   access = @()
   identityProviders = @()
@@ -216,6 +218,22 @@ function Invoke-Cloudflare([string]$Path, [string]$RawName) {
   }
 }
 
+function Invoke-CloudflareContent([string]$Path, [string]$RawName) {
+  try {
+    $response = Invoke-WebRequest -Method Get -Uri "https://api.cloudflare.com/client/v4$Path" -Headers $headers -TimeoutSec 30
+    [IO.File]::WriteAllText((Join-Path $ArtifactDirectory $RawName), [string]$response.Content, [Text.UTF8Encoding]::new($false))
+    return [string]$response.Content
+  } catch {
+    $statusCode = if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+      [int]$_.Exception.Response.StatusCode
+    } else {
+      0
+    }
+    $result.token.unavailablePermissions += "$(Protect-CloudflarePath $Path) (HTTP $statusCode)"
+    return $null
+  }
+}
+
 $verify = Invoke-Cloudflare '/user/tokens/verify' 'token-verify.raw.json'
 if (-not $verify.success -or $verify.result.status -ne 'active') {
   $result.token.status = 'INVALID'
@@ -224,6 +242,41 @@ if (-not $verify.success -or $verify.result.status -ne 'active') {
   exit 3
 }
 $result.token.status = 'VERIFIED_ACTIVE'
+
+if (-not [string]::IsNullOrWhiteSpace($SnapshotWorkerName)) {
+  $result.mode = 'WORKER_SNAPSHOT'
+  if ([string]::IsNullOrWhiteSpace($accountId)) {
+    $result.blockers += 'CLOUDFLARE_ACCOUNT_ID is required for a Worker snapshot.'
+  } else {
+    $result.account.id = Protect-Identifier $accountId
+    $scriptName = [Uri]::EscapeDataString($SnapshotWorkerName)
+    $deployments = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/deployments" "worker-$SnapshotWorkerName-deployments.raw.json"
+    $settings = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/settings" "worker-$SnapshotWorkerName-settings.raw.json"
+    $secrets = Invoke-Cloudflare "/accounts/$accountId/workers/scripts/$scriptName/secrets" "worker-$SnapshotWorkerName-secrets.raw.json"
+    $source = Invoke-CloudflareContent "/accounts/$accountId/workers/scripts/$scriptName/content" "worker-$SnapshotWorkerName-source.raw.js"
+
+    $result.workerSnapshot = [ordered]@{
+      name = $SnapshotWorkerName
+      deployments = $(if($deployments){@($deployments.result.deployments | ForEach-Object {[ordered]@{id=(Protect-Identifier $_.id);createdOn=$_.created_on;strategy=$_.strategy}})}else{@()})
+      bindings = $(if($settings){@($settings.result.bindings | ForEach-Object {[ordered]@{name=$_.name;type=$_.type;namespace=$_.namespace_id;service=$_.service}})}else{@()})
+      compatibilityDate = $(if($settings){$settings.result.compatibility_date}else{'UNKNOWN'})
+      compatibilityFlags = $(if($settings){@($settings.result.compatibility_flags)}else{@()})
+      secretNames = $(if($secrets){@($secrets.result | ForEach-Object {$_.name})}else{@()})
+      source = $(if($null -ne $source){[ordered]@{
+        bytes = ([Text.Encoding]::UTF8.GetByteCount($source))
+        sha256 = (Get-Sha256 $source)
+        containsOriginTokenHeader = ($source -match '(?i)x-lythaus-origin-token')
+        containsOriginTokenConfiguration = ($source -match '(?i)origin[_-]?(auth|gateway|token)')
+        containsClientHeaderStripping = ($source -match '(?i)headers\.delete')
+        containsFetch = ($source -match '(?i)\bfetch\s*\(')
+        containsAzureHostnameLiteral = ($source -match '(?i)azurewebsites\.net')
+      }}else{$null})
+    }
+  }
+  Write-JsonFile (Join-Path $ArtifactDirectory 'sanitized-cloudflare-audit.json') $result
+  if ($result.blockers.Count -gt 0 -or $result.token.unavailablePermissions.Count -gt 0) { exit 4 }
+  exit 0
+}
 
 if ($RecheckAccountRulesets) {
   $result.mode = 'ACCOUNT_RULESETS_RECHECK'
