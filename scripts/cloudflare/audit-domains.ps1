@@ -37,6 +37,32 @@ function Get-Sha256([string]$Value) {
   }
 }
 
+$TargetHostnames = @(
+  'lythaus.co',
+  'www.lythaus.co',
+  'app.lythaus.co',
+  'api.lythaus.co',
+  'admin.lythaus.co',
+  'admin-api.lythaus.co'
+)
+
+function Get-TargetHostMatches([object[]]$Values) {
+  $serialized = @($Values | ForEach-Object { [string]$_ }) -join "`n"
+  $matches = @()
+  foreach ($hostname in $TargetHostnames) {
+    $exactPattern = "(?i)(?<![a-z0-9.-])$([regex]::Escape($hostname))(?![a-z0-9.-])"
+    $wildcardPattern = if ($hostname -eq 'lythaus.co') {
+      $null
+    } else {
+      '(?i)\*\.lythaus\.co(?![a-z0-9.-])'
+    }
+    if ($serialized -match $exactPattern -or ($wildcardPattern -and $serialized -match $wildcardPattern)) {
+      $matches += $hostname
+    }
+  }
+  return @($matches)
+}
+
 function Get-Classification([string]$Path, [string]$Value) {
   $normalized = $Path.Replace('\', '/')
   if ($normalized -match '^docs/evidence/|^docs/audits/|^docs/archive/') { return 'Historical evidence' }
@@ -153,6 +179,7 @@ $result = [ordered]@{
   rulesets = @()
   registrar = @()
   bulkRedirectLists = @()
+  targetHostnames = $TargetHostnames
   blockers = @()
   repositoryReferenceCount = 0
 }
@@ -224,16 +251,19 @@ if ($RecheckPreviouslyUnavailable) {
       $detail = Invoke-Cloudflare "/zones/$($zone.id)/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json"
       if ($detail) {
         $rulesetRules = @($detail.result.rules)
+        $enabledRules = @($rulesetRules | Where-Object { $_.enabled -eq $true })
         $result.rulesets += [ordered]@{
           scope = $zoneName
           name = $ruleset.name
           kind = $ruleset.kind
           phase = $ruleset.phase
           ruleCount = $rulesetRules.Count
-          enabledRuleCount = @($rulesetRules | Where-Object { $_.enabled -eq $true }).Count
+          enabledRuleCount = $enabledRules.Count
           actionCounts = @($rulesetRules | Group-Object action | ForEach-Object {
             [ordered]@{ action = $_.Name; count = $_.Count }
           })
+          targetHostMatches = Get-TargetHostMatches @($rulesetRules | ForEach-Object { $_.expression })
+          enabledTargetHostMatches = Get-TargetHostMatches @($enabledRules | ForEach-Object { $_.expression })
         }
       }
     }
@@ -313,20 +343,23 @@ foreach ($zoneName in @('lythaus.co', 'asora.co.za')) {
     dnssec=$(if($dnssec){$dnssec.result.status}else{'UNKNOWN'});
     settings=$(if($settings){@($settings.result | ForEach-Object {[ordered]@{id=$_.id;value=$_.value}})}else{@()});
     dns=$sanitizedDns;
-    workerRoutes=$(if($routes){@($routes.result | ForEach-Object {[ordered]@{pattern=$_.pattern;script=$_.script}})}else{@()});
+    workerRoutes=$(if($routes){@($routes.result | ForEach-Object {[ordered]@{pattern=$_.pattern;script=$_.script;targetHostMatches=(Get-TargetHostMatches @($_.pattern))}})}else{@()});
     emailRouting=$(if($email){$email.result.status}else{'UNKNOWN'});
     certificatePacks=$(if($certificates){@($certificates.result | ForEach-Object {[ordered]@{type=$_.type;status=$_.status;hosts=$_.hosts;issuer=$_.issuer;validityDays=$_.validity_days}})}else{@()});
-    pageRules=$(if($pageRules){@($pageRules.result | ForEach-Object {[ordered]@{status=$_.status;priority=$_.priority;targets=@($_.targets | ForEach-Object {$_.constraint.value});actions=@($_.actions | ForEach-Object {$_.id})}})}else{@()})
+    pageRules=$(if($pageRules){@($pageRules.result | ForEach-Object {[ordered]@{status=$_.status;priority=$_.priority;targets=@($_.targets | ForEach-Object {$_.constraint.value});actions=@($_.actions | ForEach-Object {$_.id});targetHostMatches=(Get-TargetHostMatches @($_.targets | ForEach-Object {$_.constraint.value}))}})}else{@()})
   }
   if ($rules) {
     foreach ($ruleset in @($rules.result)) {
       $detail = Invoke-Cloudflare "/zones/$zoneId/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json"
       $rulesetRules = if ($detail) { @($detail.result.rules) } else { @() }
+      $enabledRules = @($rulesetRules | Where-Object { $_.enabled -eq $true })
       $result.rulesets += [ordered]@{
         scope=$zoneName; name=$ruleset.name; kind=$ruleset.kind; phase=$ruleset.phase;
         ruleCount=$rulesetRules.Count;
-        enabledRuleCount=@($rulesetRules | Where-Object { $_.enabled -eq $true }).Count;
+        enabledRuleCount=$enabledRules.Count;
         actionCounts=@($rulesetRules | Group-Object action | ForEach-Object {[ordered]@{action=$_.Name;count=$_.Count}})
+        targetHostMatches=(Get-TargetHostMatches @($rulesetRules | ForEach-Object { $_.expression }));
+        enabledTargetHostMatches=(Get-TargetHostMatches @($enabledRules | ForEach-Object { $_.expression }))
       }
     }
   }
@@ -366,6 +399,7 @@ if ($discoveredAccountIds.Count -ne 1) {
         }
         $result.pages += [ordered]@{
           name=$project.name; productionBranch=$project.production_branch; domains=$project.domains;
+          targetHostMatches=(Get-TargetHostMatches @($project.domains));
           sourceRepository=$project.source.config.repo_name; sourceOwner=$project.source.config.owner;
           buildCommand=$project.build_config.build_command; outputDirectory=$project.build_config.destination_dir;
           environmentVariableNames=@($envNames | Sort-Object -Unique);
@@ -388,12 +422,12 @@ if ($discoveredAccountIds.Count -ne 1) {
         }
       }
     }
-    if ($workerDomains) { $result.workerDomains = @($workerDomains.result | ForEach-Object {[ordered]@{hostname=$_.hostname;service=$_.service;zone=(Protect-Identifier $_.zone_id)}}) }
+    if ($workerDomains) { $result.workerDomains = @($workerDomains.result | ForEach-Object {[ordered]@{hostname=$_.hostname;service=$_.service;zone=(Protect-Identifier $_.zone_id);targetHostMatches=(Get-TargetHostMatches @($_.hostname))}}) }
     if ($apps) {
       foreach ($app in @($apps.result)) {
         $policies = Invoke-Cloudflare "/accounts/$accountId/access/apps/$($app.id)/policies" "access-$($app.id)-policies.raw.json"
         $result.access += [ordered]@{
-          name=$app.name; domain=$app.domain; type=$app.type; aud=(Protect-Identifier $app.aud); sessionDuration=$app.session_duration;
+          name=$app.name; domain=$app.domain; type=$app.type; aud=(Protect-Identifier $app.aud); sessionDuration=$app.session_duration; targetHostMatches=(Get-TargetHostMatches @($app.domain));
           policies=$(if($policies){@($policies.result | ForEach-Object {[ordered]@{name=$_.name;decision=$_.decision;precedence=$_.precedence;includeTypes=@($_.include | ForEach-Object {$_.PSObject.Properties.Name});excludeTypes=@($_.exclude | ForEach-Object {$_.PSObject.Properties.Name});requireTypes=@($_.require | ForEach-Object {$_.PSObject.Properties.Name})}})}else{@()})
         }
       }
@@ -401,7 +435,20 @@ if ($discoveredAccountIds.Count -ne 1) {
     if ($identityProviders) { $result.identityProviders = @($identityProviders.result | ForEach-Object {[ordered]@{name=$_.name;type=$_.type}}) }
     if ($serviceTokens) { $result.serviceTokens = @($serviceTokens.result | ForEach-Object {[ordered]@{name=$_.name;duration=$_.duration;expiresAt=$_.expires_at}}) }
     if ($bulkRedirectLists) { $result.bulkRedirectLists = @($bulkRedirectLists.result | ForEach-Object {[ordered]@{name=$_.name;description=$_.description;items=$_.numitems}}) }
-    if ($accountRulesets) { $result.rulesets += @($accountRulesets.result | ForEach-Object { [ordered]@{ scope='account'; name=$_.name; kind=$_.kind; phase=$_.phase } }) }
+    if ($accountRulesets) {
+      foreach ($ruleset in @($accountRulesets.result)) {
+        $detail = Invoke-Cloudflare "/accounts/$accountId/rulesets/$($ruleset.id)" "account-ruleset-$($ruleset.id).raw.json"
+        $rulesetRules = if ($detail) { @($detail.result.rules) } else { @() }
+        $enabledRules = @($rulesetRules | Where-Object { $_.enabled -eq $true })
+        $result.rulesets += [ordered]@{
+          scope='account'; name=$ruleset.name; kind=$ruleset.kind; phase=$ruleset.phase;
+          ruleCount=$rulesetRules.Count; enabledRuleCount=$enabledRules.Count;
+          actionCounts=@($rulesetRules | Group-Object action | ForEach-Object {[ordered]@{action=$_.Name;count=$_.Count}});
+          targetHostMatches=(Get-TargetHostMatches @($rulesetRules | ForEach-Object { $_.expression }));
+          enabledTargetHostMatches=(Get-TargetHostMatches @($enabledRules | ForEach-Object { $_.expression }))
+        }
+      }
+    }
   }
 }
 
