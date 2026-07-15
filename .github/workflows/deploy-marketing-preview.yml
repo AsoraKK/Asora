@@ -1,0 +1,108 @@
+name: Deploy Lythaus marketing preview
+
+on:
+  push:
+    branches:
+      - codex/lythaus-domain-migration
+    paths:
+      - '.github/workflows/deploy-marketing-preview.yml'
+      - 'apps/marketing-site/**'
+      - 'scripts/cloudflare/validate-marketing-output.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-marketing-preview
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PAGES_PROJECT: lythaus-marketing
+      PAGES_BRANCH: codex/lythaus-domain-migration
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/marketing-site/package-lock.json
+
+      - name: Build and validate marketing artifact
+        working-directory: apps/marketing-site
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          node ../../scripts/cloudflare/validate-marketing-output.mjs dist
+
+      - name: Deploy immutable preview only
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch "$PAGES_BRANCH" \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-dirty=false | tee wrangler-output.txt
+          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' wrangler-output.txt | tail -n 1)"
+          test -n "$preview_url"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Validate deployed public surface
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p preview-pages
+          routes=(/ /about /ai-moderation /contact /features /guidelines /invite /pricing /privacy /terms)
+          for route in "${routes[@]}"; do
+            name="${route//\//_}"
+            status="$(curl --silent --show-error --max-time 20 --output "preview-pages/${name:-root}.html" --write-out '%{http_code}' "${PREVIEW_URL}${route}")"
+            test "$status" = 200 || { echo "Unexpected status $status for $route"; exit 1; }
+          done
+          curl --silent --show-error --max-time 20 --output sitemap.xml --write-out '%{http_code}' "${PREVIEW_URL}/sitemap.xml" | grep -qx 200
+          curl --silent --show-error --max-time 20 --output robots.txt --write-out '%{http_code}' "${PREVIEW_URL}/robots.txt" | grep -qx 200
+          rg -in '(asora\.co\.za|azurewebsites\.net|lythaus-marketing\.pages\.dev)' preview-pages && exit 1 || true
+          rg -Fqx 'Sitemap: https://lythaus.co/sitemap.xml' robots.txt
+          rg -F '<loc>https://lythaus.co/' sitemap.xml
+          curl --silent --show-error --max-time 20 --dump-header headers.txt --output /dev/null "${PREVIEW_URL}/"
+          for header in \
+            'X-Content-Type-Options: nosniff' \
+            'Referrer-Policy: strict-origin-when-cross-origin' \
+            'X-Frame-Options: DENY' \
+            'Strict-Transport-Security: max-age=300' \
+            'Content-Security-Policy:'; do
+            rg -F -i "$header" headers.txt
+          done
+
+      - name: Write sanitized preview evidence
+        if: success()
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          jq -n \
+            --arg commitSha "$GITHUB_SHA" \
+            --arg project "$PAGES_PROJECT" \
+            --arg branch "$PAGES_BRANCH" \
+            --arg previewUrl "$PREVIEW_URL" \
+            --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion: 1, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, routeCount: 10, customDomainsChanged: false, createdAt: $createdAt}' \
+            > marketing-preview-evidence.json
+
+      - name: Upload preview evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: marketing-preview-evidence-${{ github.sha }}
+          if-no-files-found: warn
+          path: marketing-preview-evidence.json

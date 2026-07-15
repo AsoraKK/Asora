@@ -88,7 +88,7 @@ if (existsSync(headersPath)) {
     'Referrer-Policy: strict-origin-when-cross-origin',
     'X-Frame-Options: DENY',
     'Permissions-Policy:',
-    'Strict-Transport-Security: max-age=31536000; includeSubDomains',
+    'Strict-Transport-Security: max-age=300',
     "Content-Security-Policy: default-src 'self'",
     "connect-src 'self' https://api.lythaus.co",
   ];
