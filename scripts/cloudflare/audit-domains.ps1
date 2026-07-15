@@ -221,7 +221,18 @@ if ($RecheckPreviouslyUnavailable) {
     }
 
     foreach ($ruleset in $requiredRulesets) {
-      [void](Invoke-Cloudflare "/zones/$($zone.id)/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json")
+      $detail = Invoke-Cloudflare "/zones/$($zone.id)/rulesets/$($ruleset.id)" "$zoneName-ruleset-$($ruleset.id).raw.json"
+      if ($detail) {
+        $result.rulesets += [ordered]@{
+          scope = $zoneName
+          name = $ruleset.name
+          kind = $ruleset.kind
+          phase = $ruleset.phase
+          rules = @($detail.result.rules | ForEach-Object {
+            [ordered]@{ enabled = $_.enabled; description = $_.description; expression = $_.expression; action = $_.action }
+          })
+        }
+      }
     }
   }
 
@@ -236,9 +247,23 @@ if ($RecheckPreviouslyUnavailable) {
     }
 
     foreach ($zone in $recheckZones) {
-      [void](Invoke-Cloudflare "/accounts/$discoveredAccountId/registrar/domains/$($zone.name)" "$($zone.name)-registrar.raw.json")
+      $registration = Invoke-Cloudflare "/accounts/$discoveredAccountId/registrar/domains/$($zone.name)" "$($zone.name)-registrar.raw.json"
+      if ($registration) {
+        $result.registrar += [ordered]@{
+          name = $zone.name
+          status = $registration.result.status
+          expiresAt = $registration.result.expires_at
+          autoRenew = $registration.result.auto_renew
+          locked = $registration.result.locked
+        }
+      }
     }
-    [void](Invoke-Cloudflare "/accounts/$discoveredAccountId/rules/lists?kind=redirect" 'bulk-redirect-lists.raw.json')
+    $bulkRedirectLists = Invoke-Cloudflare "/accounts/$discoveredAccountId/rules/lists?kind=redirect" 'bulk-redirect-lists.raw.json'
+    if ($bulkRedirectLists) {
+      $result.bulkRedirectLists = @($bulkRedirectLists.result | ForEach-Object {
+        [ordered]@{ name = $_.name; description = $_.description; items = $_.numitems }
+      })
+    }
   }
 
   $result.token.unavailablePermissions = @($result.token.unavailablePermissions | Sort-Object -Unique)
