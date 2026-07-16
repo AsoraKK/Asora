@@ -196,9 +196,7 @@ jobs:
           test -n "$MVP_CORS_ALLOWED_ORIGINS" || { echo "::error::MVP_CORS_ALLOWED_ORIGINS repository variable is required"; exit 1; }
           # The immutable preview value, when present, must be one exact
           # pages.dev origin. Wildcards and retired public domains are rejected.
-          # The JavaScript template literal is intentionally single-quoted for the shell.
-          # shellcheck disable=SC2016
-          node -e 'const configured = process.env.MVP_CORS_ALLOWED_ORIGINS.split(",").map(v => v.trim()).filter(Boolean); const preview = process.env.MVP_PREVIEW_APP_ORIGIN.trim(); const fixed = new Set(["https://app.lythaus.co", "https://admin.lythaus.co", "https://control.asora.co.za"]); if (preview) { const u = new URL(preview); if (u.protocol !== "https:" || !u.hostname.endsWith(".pages.dev") || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact HTTPS Pages origin"); fixed.add(u.origin); } for (const raw of configured) { const u = new URL(raw); if (u.origin !== raw || !fixed.has(u.origin)) throw new Error(`Unsafe CORS origin: ${u.origin}`); }'
+          node -e 'const configured = process.env.MVP_CORS_ALLOWED_ORIGINS.split(",").map(v => v.trim()).filter(Boolean); const preview = process.env.MVP_PREVIEW_APP_ORIGIN.trim(); const fixed = new Set(["https://app.lythaus.co", "https://admin.lythaus.co", "https://control.asora.co.za"]); if (preview) { const u = new URL(preview); if (u.protocol !== "https:" || !u.hostname.endsWith(".pages.dev") || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact HTTPS Pages origin"); fixed.add(u.origin); } for (const raw of configured) { const u = new URL(raw); if (u.origin !== raw || !fixed.has(u.origin)) throw new Error("Unsafe CORS origin: " + u.origin); }'
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
