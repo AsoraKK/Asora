@@ -99,9 +99,6 @@ jobs:
           bash scripts/cf-pages-build.sh
           bash scripts/check-web-release-hosts.sh build/web
           scripts/secret-scan.sh --artifact build/web
-          if rg -i '(azurewebsites\.net|asora-function-dev|asora-function-prod|api\.asora\.co\.za|admin-api\.asora\.co\.za|lythaus-web\.pages\.dev)' build/web; then
-            exit 1
-          fi
 
       - name: Deploy immutable Pages preview
         id: deploy

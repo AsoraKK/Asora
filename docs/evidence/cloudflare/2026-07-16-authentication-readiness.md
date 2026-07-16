@@ -4,8 +4,9 @@
 
 **NO-GO.** Repository-controlled authentication hardening, immutable Flutter and
 gateway previews, exact preview CORS/callback configuration, email provider
-foundation, and an exact backend deployment are complete. Live Google login,
-live email account lifecycle, authenticated contract acceptance, admin/legacy
+configuration and provider acceptance, and an exact backend deployment are
+complete. Live Google login, mailbox-confirmed email account lifecycle,
+authenticated contract acceptance, admin/legacy
 token-injecting gateways, and enforcement rollback remain unproven. No public
 Lythaus DNS or custom-domain cutover was performed.
 
@@ -15,7 +16,7 @@ Lythaus DNS or custom-domain cutover was performed.
 | --- | --- |
 | Branch | `codex/lythaus-domain-migration` |
 | Draft PR | `#453` targeting `main` |
-| Evidence head before this update | `141c6f2deb0ad5c360f1a8b6b0794d02537c8ab0` |
+| Evidence parent head before this update | `a073c2b147042a5126b22ed1f8b64c44e6b605ba` |
 | Deployed backend artifact SHA | `0c4e3367466eab45b437832a7bc6806e1bd7527b` |
 | Exact artifact CI | GitHub Actions run `29534973990` — passed |
 | Latest exact-head CI | GitHub Actions run `29536159758` — running when captured; no failed job observed |
@@ -51,13 +52,17 @@ Lythaus DNS or custom-domain cutover was performed.
 | Provider | State | Evidence |
 | --- | --- | --- |
 | Google | **Blocked** | No Google client/provider setting or Azure EasyAuth provider is configured; no live issuer, audience, signature, nonce, callback, refresh, or logout proof exists |
-| Email/password | **Prepared, not live-proven** | Six routes deployed; Azure Communication Services endpoint/sender are configured; email-token and JWT secrets use Key Vault references; empty-input routes fail safely through the gateway |
+| Email/password | **Provider ready, lifecycle not live-proven** | Six routes deployed; ACS domain/SPF/DKIM/DKIM2 are verified; sender and Function managed-identity authorization are active; one provider send was accepted; mailbox delivery and account lifecycle remain unconfirmed |
 | Apple | **Disabled for MVP** | Hidden in Flutter; backend returns controlled unavailable result; unit/contract policy tests pass |
 | World ID | **Disabled for MVP** | Hidden in Flutter; backend returns controlled unavailable result; unit/contract policy tests pass |
 
 The dedicated test mailbox was not automated because its password may only be
 entered interactively. No mailbox credential appears in repository files,
 commands, logs, screenshots, artifacts, GitHub variables, or evidence.
+
+The locked MVP email model is email/password only. Magic links and email OTPs
+are not enabled. The exact visible choices are `Continue with Google` and
+`Continue with email`.
 
 ## Immutable preview evidence
 
@@ -116,6 +121,18 @@ commands, logs, screenshots, artifacts, GitHub variables, or evidence.
 | Google provider/client settings | Missing |
 | Unsafe test-user override | Missing |
 
+The GitHub OIDC identity has `Contributor` at subscription and resource-group
+scope, which is sufficient for Communication resources and Function settings,
+but it has no Key Vault secret data action or role-assignment write capability.
+The Function managed identity already has `Communication and Email Service
+Owner` scoped to the exact Communication service.
+
+The protected `AZURE_CLIENT_ID` secret is the active deployment source. A stale
+same-name repository variable resolves to a different enabled Entra application
+with no direct RBAC assignment. All branch workflows now use the protected
+secret. Delete the obsolete variable only after this change reaches `main`, so
+the current default-branch workflows are not broken mid-review.
+
 Direct Azure health remains available in observe mode. Enforce mode was not
 entered because public authenticated traffic, the admin gateway, legacy
 compatibility gateways, and rollback restoration have not all passed.
@@ -146,23 +163,33 @@ controlled HTTP 400 for empty input with exact CORS and `private, no-store`.
 Repeated invalid verification/reset requests returned HTTP 429. No account was
 created and no password or token was submitted.
 
+The ACS data-plane accepted one minimal message from the approved sender to the
+dedicated test mailbox. This proves provider acceptance, not inbox delivery.
+Application telemetry now records only message class and attempted, accepted,
+or failed outcome. No ACS delivery/bounce/suppression Event Grid subscription is
+configured. A resource-filtered monthly budget warns at $10 and becomes critical
+at $25; current spend was $0 when captured.
+
 ## Repository validation
 
 | Check | Result |
 | --- | --- |
-| Functions typecheck/tests | Passed on immutable artifact CI `29534973990` |
+| Functions typecheck/tests | Typecheck passed; focused provider/email telemetry 13/13 and broader auth suite 365/365 passed locally |
 | Flutter full tests and coverage | Passed; 3,644 tests, 5 skipped, 90.04% line coverage |
-| Focused auth tests | Passed; 61 tests |
+| Focused Flutter auth tests | Passed; 23 tests including active labels, email screens, and deferred-provider visibility |
 | OpenAPI lint/generation/drift | Passed on exact-head workflows |
+| Local OpenAPI lint/contracts | Lint passed; 20 local examples passed and 17 live-only cases skipped |
 | Flutter web artifact scan | Passed |
 | Android/iOS artifact guards | Passed on prior exact-head CI; current exact-head jobs pending when captured |
 | Workflow lint | Passed on exact-head run `29536159758` |
 | Gitleaks | Passed on exact-head run `29536159758` |
+| Current local secret scan | Passed; 1,457 commits scanned, no leaks found |
 | Immutable route refresh | Passed for eight routes |
 | Live unauthenticated gateway contracts | Passed |
 | Live authenticated contracts | Failed: protected smoke credential rejected |
 | Live Google browser lifecycle | Not run: provider configuration absent |
 | Live email lifecycle | Not run: interactive credential entry required |
+| ACS provider acceptance | Passed; inbox delivery confirmation pending |
 | Access + backend-role proof | Not complete |
 | Observe/dual/enforce/rollback | Observe only; dual/enforce/rollback withheld |
 

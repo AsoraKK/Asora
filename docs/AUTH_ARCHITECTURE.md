@@ -150,6 +150,12 @@ Apple and World ID remain deferred architecture hooks and fail closed when invok
 | World ID | `World` | Deferred; hidden in UI and rejected as `provider_unavailable` |
 | Guest | â€” | Enabled for public read-only use |
 
+The email MVP is deliberately limited to email plus password: registration,
+verification and resend, login, forgot/reset, access and refresh tokens, logout,
+and revocation. Magic links and email one-time codes are not active MVP flows.
+The user-facing choices are exactly `Continue with Google` and
+`Continue with email`.
+
 **How IdP hints work**: the Flutter client passes `idp=Google` to
 `/api/auth/authorize`. The backend MVP provider policy accepts Google and email only;
 Apple, World ID, and unknown hints receive a controlled unavailable response.

@@ -196,7 +196,14 @@ class LythButton extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: textStyle),
+          Flexible(
+            child: Text(
+              label,
+              style: textStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           SizedBox(width: gap),
           iconWidget,
         ],
@@ -208,7 +215,14 @@ class LythButton extends StatelessWidget {
       children: [
         iconWidget,
         SizedBox(width: gap),
-        Text(label, style: textStyle),
+        Flexible(
+          child: Text(
+            label,
+            style: textStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

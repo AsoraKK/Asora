@@ -46,5 +46,8 @@ Cloudflare audit evidence is available under `docs/evidence/cloudflare/`, but
 the target public custom domains remain unbound. Credential-like repository
 variables have been removed while protected secret copies remain. The approved
 Europe ACS Email foundation is provisioned with local key authentication
-disabled; custom-domain verification and live auth proof are still pending.
+disabled. The customer-managed domain, SPF, DKIM, and DKIM2 are verified; the
+approved sender is linked and a provider acceptance test passed. Mailbox
+delivery confirmation and the full live email authentication lifecycle are
+still pending.
 The cutover remains `NO-GO`.

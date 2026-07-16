@@ -48,7 +48,7 @@ void main() {
     );
 
     // Renders both buttons
-    expect(find.text('Continue with Email'), findsOneWidget);
+    expect(find.text('Continue with email'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
 
     // Tap Google
@@ -56,7 +56,7 @@ void main() {
     await tester.pump();
 
     // Tap Email
-    await tester.tap(find.text('Continue with Email'));
+    await tester.tap(find.text('Continue with email'));
     await tester.pump();
 
     // Verify calls incremented

@@ -45,8 +45,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Continue as guest'), findsOneWidget);
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with email'), findsOneWidget);
     expect(find.text('Redeem invite'), findsOneWidget);
     // Debug mode button
     expect(find.text('Security Debug'), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpWidget(buildScreen());
     await tester.pump();
 
-    await tester.tap(find.text('Email'));
+    await tester.tap(find.text('Continue with email'));
     await tester.pumpAndSettle();
 
     expect(find.text('Sign in with email'), findsNWidgets(2));

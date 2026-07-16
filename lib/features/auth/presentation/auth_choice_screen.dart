@@ -110,13 +110,13 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                   ),
                   const SizedBox(height: 32),
                   LythButton.primary(
-                    label: 'Google',
+                    label: 'Continue with Google',
                     icon: Icons.g_mobiledata,
                     onPressed: _handleGoogle,
                   ),
                   const SizedBox(height: 12),
                   LythButton.secondary(
-                    label: 'Email',
+                    label: 'Continue with email',
                     icon: Icons.email_outlined,
                     onPressed: _handleEmail,
                   ),

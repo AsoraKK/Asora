@@ -1,5 +1,8 @@
 import { EmailClient } from '@azure/communication-email';
 import { DefaultAzureCredential } from '@azure/identity';
+import { trackAppEvent } from '@shared/appInsights';
+
+type AuthEmailMessageClass = 'verification' | 'password_reset';
 
 export interface AuthEmailSender {
   sendVerification(address: string, token: string): Promise<void>;
@@ -51,6 +54,7 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
     url.searchParams.set('token', token);
     await this.send(
       address,
+      'verification',
       'Verify your Lythaus email',
       `Verify your Lythaus email address: ${url.toString()}\n\nThis link expires shortly and can be used once.`,
       `<p>Verify your Lythaus email address:</p><p><a href="${htmlEscape(url.toString())}">Verify email</a></p><p>This link expires shortly and can be used once.</p>`
@@ -62,23 +66,44 @@ export class AzureCommunicationAuthEmailSender implements AuthEmailSender {
     url.searchParams.set('token', token);
     await this.send(
       address,
+      'password_reset',
       'Reset your Lythaus password',
       `Reset your Lythaus password: ${url.toString()}\n\nThis link expires shortly and can be used once.`,
       `<p>Reset your Lythaus password:</p><p><a href="${htmlEscape(url.toString())}">Reset password</a></p><p>This link expires shortly and can be used once.</p>`
     );
   }
 
-  private async send(address: string, subject: string, plainText: string, html: string): Promise<void> {
-    const poller = await this.client.beginSend({
-      senderAddress: this.senderAddress,
-      content: { subject, plainText, html },
-      recipients: { to: [{ address }] },
-      replyTo: [{ address: this.senderAddress, displayName: this.senderDisplayName }],
-      headers: { 'X-Lythaus-Message-Class': 'authentication' },
-    });
-    const result = await poller.pollUntilDone();
-    if (result.status !== 'Succeeded') {
-      throw new Error('Authentication email delivery was not accepted');
+  private async send(
+    address: string,
+    messageClass: AuthEmailMessageClass,
+    subject: string,
+    plainText: string,
+    html: string
+  ): Promise<void> {
+    const recordOutcome = (outcome: 'attempted' | 'accepted' | 'failed') => {
+      trackAppEvent({
+        name: 'auth_email_delivery',
+        properties: { messageClass, outcome },
+      });
+    };
+
+    recordOutcome('attempted');
+    try {
+      const poller = await this.client.beginSend({
+        senderAddress: this.senderAddress,
+        content: { subject, plainText, html },
+        recipients: { to: [{ address }] },
+        replyTo: [{ address: this.senderAddress, displayName: this.senderDisplayName }],
+        headers: { 'X-Lythaus-Message-Class': 'authentication' },
+      });
+      const result = await poller.pollUntilDone();
+      if (result.status !== 'Succeeded') {
+        throw new Error('Authentication email delivery was not accepted');
+      }
+      recordOutcome('accepted');
+    } catch (error) {
+      recordOutcome('failed');
+      throw error;
     }
   }
 }

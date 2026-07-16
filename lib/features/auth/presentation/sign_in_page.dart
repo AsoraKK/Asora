@@ -51,7 +51,7 @@ class SignInPage extends ConsumerWidget {
 
               // Email sign-in button
               LythButton.primary(
-                label: 'Continue with Email',
+                label: 'Continue with email',
                 icon: Icons.email_outlined,
                 onPressed: authState.isLoading
                     ? null

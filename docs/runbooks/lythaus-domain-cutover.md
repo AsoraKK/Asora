@@ -64,6 +64,9 @@ where evidence is recorded in `docs/evidence/cloudflare/`; current Worker,
 Pages, Azure origin-authentication, browser-authentication, Access, and
 rollback rehearsals must be repeated against the exact candidate before
 cutover. PR 452 has merged; retarget PR 453 to `main` after the new commit exists.
-ACS Email resources and the additive empty email-auth schema are prepared.
-Email DNS changes are limited to exact Azure-issued verification records through
-the protected workflow; public app/API/marketing custom domains remain unchanged.
+ACS Email resources, verified customer-managed domain, approved sender, scoped
+Function identity, provider acceptance test, cost budget, and additive empty
+email-auth schema are prepared. Mailbox delivery and the full application email
+auth lifecycle are not yet proven. Email DNS remains limited to exact
+Azure-issued verification records; public app/API/marketing custom domains
+remain unchanged.

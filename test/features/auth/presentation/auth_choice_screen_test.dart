@@ -84,8 +84,8 @@ void main() {
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
     expect(find.text('Continue as guest'), findsOneWidget);
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with email'), findsOneWidget);
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
     expect(find.text('Security Debug'), findsOneWidget);
@@ -151,7 +151,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Google'));
+    await tester.tap(find.text('Continue with Google'));
     await tester.pumpAndSettle();
 
     verify(() => notifier.signInWithProvider(OAuth2Provider.google)).called(1);
@@ -187,7 +187,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Email'));
+    await tester.tap(find.text('Continue with email'));
     await tester.pumpAndSettle();
 
     expect(find.byType(EmailAuthScreen), findsOneWidget);
