@@ -673,7 +673,14 @@ jobs:
           # 4) At least health is registered (v4 programmatic model)
           echo "🔍 Checking function registration"
           ADMIN_KEY=$(az functionapp keys list -g "$RG" -n "$FUNC_APP" --query 'masterKey' -o tsv)
-          FUNCTIONS=$(curl -s "$BASE/admin/functions" -H "x-functions-key: $ADMIN_KEY")
+          ORIGIN_ADMIN_BASE="https://${FUNC_APP}.azurewebsites.net"
+          FUNCTIONS=$(curl --fail-with-body --silent --show-error --max-time 30 \
+            "$ORIGIN_ADMIN_BASE/admin/functions" \
+            -H "x-functions-key: $ADMIN_KEY")
+          if ! echo "$FUNCTIONS" | jq -e 'type == "array"' >/dev/null; then
+            echo "Function registration check failed: host-admin response was not a JSON array"
+            exit 1
+          fi
           echo "   Functions registered:"
           echo "$FUNCTIONS" | jq -r '.[].name' | sed 's/^/     - /'
           FUNC_COUNT=$(echo "$FUNCTIONS" | jq -r '. | length')
