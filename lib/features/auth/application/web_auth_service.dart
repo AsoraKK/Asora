@@ -173,6 +173,23 @@ class WebAuthService {
   /// Returns the stored access token, or null if not signed in.
   String? getAccessToken() => _storage.read(_accessTokenKey);
 
+  /// Store a token pair issued by the email/password endpoint in the same
+  /// session-scoped store used by the OAuth callback.
+  void storeDirectSession({
+    required String accessToken,
+    required String refreshToken,
+    required int expiresIn,
+    required User user,
+  }) {
+    _storage.write(_accessTokenKey, accessToken);
+    _storage.write(_refreshTokenKey, refreshToken);
+    _storage.write(
+      _tokenExpiryKey,
+      DateTime.now().add(Duration(seconds: expiresIn)).toIso8601String(),
+    );
+    _storage.write(_userDataKey, jsonEncode(user.toJson()));
+  }
+
   /// Returns the stored user, or null.
   User? getStoredUser() {
     final json = _storage.read(_userDataKey);

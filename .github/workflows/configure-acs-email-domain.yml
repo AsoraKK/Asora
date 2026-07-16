@@ -1,0 +1,133 @@
+name: Configure ACS email domain
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: configure-acs-email-domain
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: asora-psql-flex
+      EMAIL_SERVICE_NAME: lythaus-mvp-email
+      EMAIL_DOMAIN: mail.lythaus.co
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Apply exact Azure-issued DNS records
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Cloudflare write secret is unavailable" >&2; exit 1; }
+
+          domain_uri="https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Communication/emailServices/${EMAIL_SERVICE_NAME}/domains/${EMAIL_DOMAIN}?api-version=2025-09-01"
+          domain_json="${RUNNER_TEMP}/acs-email-domain.json"
+          az rest --method get --uri "${domain_uri}" --output json > "${domain_json}"
+
+          record_count="$(jq '.properties.verificationRecords | length' "${domain_json}")"
+          test "${record_count}" -eq 4 || { echo "Expected exactly four Azure verification records; found ${record_count}" >&2; exit 1; }
+
+          zone_json="${RUNNER_TEMP}/cf-zone.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            'https://api.cloudflare.com/client/v4/zones?name=lythaus.co&status=active&per_page=50' \
+            -o "${zone_json}"
+          test "$(jq '.success' "${zone_json}")" = true
+          test "$(jq '.result | length' "${zone_json}")" -eq 1 || { echo "Expected one active lythaus.co zone" >&2; exit 1; }
+          zone_id="$(jq -r '.result[0].id' "${zone_json}")"
+          echo "::add-mask::${zone_id}"
+
+          while IFS=$'\t' read -r purpose record_type record_name record_value; do
+            test -n "${record_value}" || { echo "Azure returned an empty ${purpose} value" >&2; exit 1; }
+            echo "::add-mask::${record_value}"
+
+            if [[ "${record_name}" == "${EMAIL_DOMAIN}" || "${record_name}" == *.lythaus.co ]]; then
+              fqdn="${record_name}"
+            else
+              fqdn="${record_name}.${EMAIL_DOMAIN}"
+            fi
+
+            existing_json="${RUNNER_TEMP}/cf-${purpose}-existing.json"
+            encoded_name="$(jq -rn --arg value "${fqdn}" '$value|@uri')"
+            encoded_type="$(jq -rn --arg value "${record_type}" '$value|@uri')"
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${encoded_type}&name=${encoded_name}&per_page=100" \
+              -o "${existing_json}"
+            test "$(jq '.success' "${existing_json}")" = true
+
+            if jq -e --arg content "${record_value}" '.result[]? | select(.content == $content)' "${existing_json}" >/dev/null; then
+              echo "${purpose}: matching ${record_type} record already exists"
+              continue
+            fi
+
+            if [[ "${record_type}" == CNAME && "$(jq '.result | length' "${existing_json}")" -ne 0 ]]; then
+              echo "Refusing to overwrite conflicting CNAME for ${fqdn}" >&2
+              exit 1
+            fi
+
+            payload="${RUNNER_TEMP}/cf-${purpose}-create.json"
+            jq -n \
+              --arg type "${record_type}" \
+              --arg name "${fqdn}" \
+              --arg content "${record_value}" \
+              '{type:$type,name:$name,content:$content,ttl:3600,proxied:false}' > "${payload}"
+            response="${RUNNER_TEMP}/cf-${purpose}-response.json"
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data-binary "@${payload}" \
+              "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records" \
+              -o "${response}"
+            test "$(jq '.success' "${response}")" = true
+            echo "${purpose}: created ${record_type} record"
+          done < <(jq -r '.properties.verificationRecords | to_entries[] | [.key,.value.type,.value.name,.value.value] | @tsv' "${domain_json}")
+
+          rm -f "${RUNNER_TEMP}"/acs-email-domain.json "${RUNNER_TEMP}"/cf-*.json
+
+      - name: Start Azure domain verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          base="https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Communication/emailServices/${EMAIL_SERVICE_NAME}/domains/${EMAIL_DOMAIN}"
+          for verification in Domain SPF DKIM DKIM2; do
+            body="${RUNNER_TEMP}/verify-${verification}.json"
+            jq -n --arg verificationType "${verification}" '{verificationType:$verificationType}' > "${body}"
+            az rest --method post \
+              --uri "${base}/initiateVerification?api-version=2025-09-01" \
+              --headers Content-Type=application/json \
+              --body "@${body}" \
+              --output none
+            echo "${verification}: verification requested"
+          done
+          rm -f "${RUNNER_TEMP}"/verify-*.json
+
+      - name: Report sanitized verification status
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Communication/emailServices/${EMAIL_SERVICE_NAME}/domains/${EMAIL_DOMAIN}?api-version=2025-09-01"
+          az rest --method get --uri "${base}" \
+            --query 'properties.verificationStates.{Domain:Domain.status,SPF:SPF.status,DKIM:DKIM.status,DKIM2:DKIM2.status}' \
+            --output table

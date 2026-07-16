@@ -57,7 +57,7 @@ paths:
     post:
       tags:
       - auth
-      summary: Exchange provider code or email magic link for JWT access.
+      summary: Exchange an OAuth authorization code or refresh token for Lythaus JWTs.
       description: Unauthenticated, rate-limited entry point that returns access/refresh tokens and the merged identity/profile
         projection.
       security: []

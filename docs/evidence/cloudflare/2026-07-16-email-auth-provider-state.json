@@ -1,0 +1,44 @@
+{
+  "date": "2026-07-16",
+  "result": "FOUNDATION_READY_LIVE_EMAIL_NO_GO",
+  "azure": {
+    "communicationProviderRegistered": true,
+    "dataLocation": "Europe",
+    "emailService": {
+      "name": "lythaus-mvp-email",
+      "provisioningState": "Succeeded"
+    },
+    "domain": {
+      "name": "mail.lythaus.co",
+      "management": "CustomerManaged",
+      "provisioningState": "Succeeded",
+      "domainVerified": false,
+      "spfVerified": false,
+      "dkimVerified": false,
+      "dkim2Verified": false
+    },
+    "communicationService": {
+      "name": "lythaus-mvp-communication",
+      "provisioningState": "Succeeded",
+      "localAuthDisabled": true,
+      "linkedDomainCount": 0
+    },
+    "functionManagedIdentityPresent": true,
+    "functionAcsRoleScoped": true,
+    "emailTokenHmacStorage": "KEY_VAULT_REFERENCE",
+    "databaseSchemaTables": 2,
+    "databaseCredentialRows": 0,
+    "databaseTokenRows": 0
+  },
+  "github": {
+    "oidcRole": "Contributor",
+    "oidcCanCreateCommunicationResources": true,
+    "oidcCanAssignRoles": false,
+    "oidcCanWriteKeyVaultSecretData": false,
+    "cloudflareAuditSecretPresent": true,
+    "cloudflareAuditRepositoryVariablePresent": false,
+    "retiredAccessRepositoryVariablePresent": false
+  },
+  "publicDomainCutoverPerformed": false,
+  "secretsDisclosed": false
+}

@@ -586,6 +586,12 @@ export function getPolicyForFunction(routeId: string): RateLimitPolicy {
     case 'auth-token':
     case 'auth-token-refresh':
     case 'auth-authorize':
+    case 'auth-email-register':
+    case 'auth-email-login':
+    case 'auth-email-verify':
+    case 'auth-email-resend':
+    case 'auth-email-forgot-password':
+    case 'auth-email-reset-password':
       return createAuthEndpointPolicy(routeId);
     case 'auth-redeem-invite':
       return createAuthEndpointPolicy(routeId);

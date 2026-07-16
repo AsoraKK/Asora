@@ -33,12 +33,15 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/authEmail',
+        '/auth/email/login',
         data: any(named: 'data'),
       ),
     ).thenAnswer(
-      (_) async =>
-          _response({'token': 'jwt-token'}, '/authEmail', statusCode: 200),
+      (_) async => _response(
+        {'access_token': 'jwt-token', 'refresh_token': 'refresh-token'},
+        '/auth/email/login',
+        statusCode: 200,
+      ),
     );
 
     when(
@@ -49,10 +52,16 @@ void main() {
     ).thenAnswer((_) async => {});
 
     final service = AuthService(dio: dio, storage: storage);
-    final result = await service.loginWithEmail('user@example.com');
+    final result = await service.loginWithEmail(
+      'user@example.com',
+      'correct-horse-battery-staple',
+    );
 
     expect(result, true);
     verify(() => storage.write(key: 'jwt_token', value: 'jwt-token')).called(1);
+    verify(
+      () => storage.write(key: 'refresh_token', value: 'refresh-token'),
+    ).called(1);
   });
 
   test('loginWithEmail returns false when token is missing', () async {
@@ -62,13 +71,18 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/authEmail',
+        '/auth/email/login',
         data: any(named: 'data'),
       ),
-    ).thenAnswer((_) async => _response({}, '/authEmail', statusCode: 200));
+    ).thenAnswer(
+      (_) async => _response({}, '/auth/email/login', statusCode: 200),
+    );
 
     final service = AuthService(dio: dio, storage: storage);
-    final result = await service.loginWithEmail('user@example.com');
+    final result = await service.loginWithEmail(
+      'user@example.com',
+      'correct-horse-battery-staple',
+    );
 
     expect(result, false);
   });
@@ -80,15 +94,18 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/authEmail',
+        '/auth/email/login',
         data: any(named: 'data'),
       ),
     ).thenThrow(
-      DioException(requestOptions: RequestOptions(path: '/authEmail')),
+      DioException(requestOptions: RequestOptions(path: '/auth/email/login')),
     );
 
     final service = AuthService(dio: dio, storage: storage);
-    final result = await service.loginWithEmail('user@example.com');
+    final result = await service.loginWithEmail(
+      'user@example.com',
+      'correct-horse-battery-staple',
+    );
 
     expect(result, false);
   });
@@ -132,11 +149,15 @@ void main() {
     when(() => dio.options).thenReturn(BaseOptions());
 
     when(() => storage.delete(key: 'jwt_token')).thenAnswer((_) async => {});
+    when(
+      () => storage.delete(key: 'refresh_token'),
+    ).thenAnswer((_) async => {});
 
     final service = AuthService(dio: dio, storage: storage);
     await service.logout();
 
     verify(() => storage.delete(key: 'jwt_token')).called(1);
+    verify(() => storage.delete(key: 'refresh_token')).called(1);
   });
 
   test('getCurrentUser returns null when token missing', () async {
@@ -160,11 +181,12 @@ void main() {
     ).thenAnswer((_) async => 'jwt-token');
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/getMe',
+        '/auth/userinfo',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
-      (_) async => _response({'id': 'user-1'}, '/getMe', statusCode: 200),
+      (_) async =>
+          _response({'id': 'user-1'}, '/auth/userinfo', statusCode: 200),
     );
 
     final service = AuthService(dio: dio, storage: storage);
@@ -182,10 +204,12 @@ void main() {
     ).thenAnswer((_) async => 'jwt-token');
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/getMe',
+        '/auth/userinfo',
         options: any(named: 'options'),
       ),
-    ).thenThrow(DioException(requestOptions: RequestOptions(path: '/getMe')));
+    ).thenThrow(
+      DioException(requestOptions: RequestOptions(path: '/auth/userinfo')),
+    );
 
     final service = AuthService(dio: dio, storage: storage);
     final result = await service.getCurrentUser();

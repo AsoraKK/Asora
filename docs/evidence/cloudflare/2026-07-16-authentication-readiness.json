@@ -7,11 +7,11 @@
   "productionWrites": false,
   "credentialRotation": {
     "formerVariableName": "CF_ACCESS_CLIENT_SECRET",
-    "repositoryVariablePresent": true,
+    "repositoryVariablePresent": false,
     "approvedSecretPresent": true,
     "workflowVariableReferenceFound": false,
     "retiredValueRead": false,
-    "result": "blocked"
+    "result": "passed"
   },
   "live": {
     "lythausApplicationDnsPublished": false,
@@ -19,6 +19,8 @@
     "lythausMarketingDnsPublished": false,
     "googleFlowProven": false,
     "emailFlowProven": false,
+    "emailProviderFoundationProvisioned": true,
+    "emailDomainVerified": false,
     "originEnforcementProven": false,
     "rollbackProven": false
   },
@@ -61,9 +63,8 @@
     "artifactSecretScans": "passed"
   },
   "blockers": [
-    "credential_named_repository_variable_present",
     "google_provider_handoff_not_configured_or_proven",
-    "email_auth_backend_and_delivery_not_configured_or_proven",
+    "email_domain_dns_verification_and_live_delivery_not_proven",
     "immutable_preview_not_deployed",
     "origin_guard_runtime_settings_incomplete",
     "legacy_b2c_browser_service_reachable",

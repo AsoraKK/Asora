@@ -13,6 +13,7 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
+import 'package:asora/features/auth/presentation/email_auth_screen.dart';
 
 class _FakeAnalyticsClient implements AnalyticsClient {
   final List<String> loggedEvents = [];
@@ -83,8 +84,10 @@ void main() {
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
     expect(find.text('Continue as guest'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('World ID'), findsNothing);
     expect(find.text('Security Debug'), findsOneWidget);
   });
 
@@ -117,7 +120,6 @@ void main() {
       analytics.loggedEvents,
       contains(AnalyticsEvents.authChoiceSelected),
     );
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
   testWidgets('sign in logs analytics and triggers auth notifier', (
@@ -149,8 +151,6 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Google'));
     await tester.pumpAndSettle();
 
@@ -159,11 +159,9 @@ void main() {
       analytics.loggedEvents,
       contains(AnalyticsEvents.authChoiceSelected),
     );
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authStarted));
-    expect(analytics.loggedEvents, contains(AnalyticsEvents.authCompleted));
   });
 
-  testWidgets('cancelling provider picker does not start auth flow', (
+  testWidgets('email action opens the MVP email authentication screen', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 800));
@@ -189,16 +187,11 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Apple'), findsNothing);
-    expect(find.text('World ID'), findsNothing);
-
-    await tester.tapAt(const Offset(12, 12));
+    await tester.tap(find.text('Email'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(EmailAuthScreen), findsOneWidget);
+    expect(find.text('Sign in with email'), findsNWidgets(2));
     verifyNever(() => notifier.signInWithProvider(OAuth2Provider.google));
     expect(
       analytics.loggedEvents,
@@ -237,9 +230,6 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
 

@@ -79,6 +79,97 @@ async function signJwtToken(
     .sign(getJwtSecretBytes());
 }
 
+export interface TokenIssuanceUser {
+  id: string;
+  email: string;
+  roles?: string[];
+  role?: string;
+  tier?: string;
+  reputationScore?: number;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+export interface IssuedTokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type: 'Bearer';
+  expires_in: number;
+  scope: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    roles: string[];
+    tier: string;
+    reputationScore: number;
+    createdAt: string;
+    lastLoginAt: string;
+  };
+}
+
+/** Issue the canonical Lythaus access/refresh pair for a verified user. */
+export async function issueTokenPairForUser(
+  user: TokenIssuanceUser,
+  audience: string
+): Promise<IssuedTokenPair> {
+  if (!isInternalUserId(user.id)) {
+    throw new Error('User account identifier is not a valid internal UUIDv7');
+  }
+  if (!audience.trim()) {
+    throw new Error('Token audience is required');
+  }
+
+  const roles = user.roles?.length ? user.roles : [user.role || 'user'];
+  const role = roles[0] || 'user';
+  const tier = user.tier || 'free';
+  const reputationScore = user.reputationScore ?? 0;
+  const issuedAt = new Date().toISOString();
+  const createdAt = user.createdAt || issuedAt;
+  const lastLoginAt = user.lastLoginAt || issuedAt;
+  const accessToken = await signJwtToken(
+    {
+      sub: user.id,
+      email: user.email,
+      role,
+      roles,
+      tier,
+      reputation: reputationScore,
+      iss: JWT_ISSUER,
+      aud: audience,
+      type: 'access',
+    },
+    ACCESS_TOKEN_EXPIRY
+  );
+
+  const refreshJti = crypto.randomUUID();
+  const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const refreshToken = await signJwtToken(
+    { sub: user.id, iss: JWT_ISSUER, aud: audience, type: 'refresh' },
+    REFRESH_TOKEN_EXPIRY,
+    refreshJti
+  );
+  await storeRefreshToken(refreshJti, user.id, refreshExpiresAt);
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    token_type: 'Bearer',
+    expires_in: 15 * 60,
+    scope: 'read write',
+    user: {
+      id: user.id,
+      email: user.email,
+      role,
+      roles,
+      tier,
+      reputationScore,
+      createdAt,
+      lastLoginAt,
+    },
+  };
+}
+
 
 
 class InviteRequiredError extends Error {

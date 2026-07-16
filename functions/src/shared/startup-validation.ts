@@ -39,7 +39,61 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'ORIGIN_OPERATIONAL_TOKEN', required: false, description: 'Health-only direct operational token' },
   { name: 'ORIGIN_GATEWAY_DUAL_UNTIL', required: false, description: 'UTC dual-mode expiry' },
   { name: 'ORIGIN_GATEWAY_LEGACY_ALLOWLIST', required: false, description: 'Strict JSON temporary legacy route allowlist' },
+  { name: 'APP_ORIGIN', required: false, description: 'Canonical Lythaus application origin' },
+  { name: 'ACS_EMAIL_ENDPOINT', required: false, description: 'Azure Communication Services endpoint' },
+  { name: 'AUTH_EMAIL_FROM_ADDRESS', required: false, description: 'Verified Lythaus email sender' },
+  { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
+  { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email verification/reset token HMAC key' },
+  { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
 ];
+
+function isMvpEnvironment(): boolean {
+  const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+  const appEnv = (process.env.APP_ENV ?? '').toLowerCase();
+  return nodeEnv === 'production' || appEnv === 'production' || appEnv === 'prod' || appEnv === 'mvp';
+}
+
+export function emailAuthConfigurationErrors(): string[] {
+  if (!isMvpEnvironment()) return [];
+
+  const errors: string[] = [];
+  const appOrigin = process.env.APP_ORIGIN?.trim();
+  if (appOrigin !== 'https://app.lythaus.co') {
+    errors.push('APP_ORIGIN must be https://app.lythaus.co in the MVP environment');
+  }
+
+  const endpoint = process.env.ACS_EMAIL_ENDPOINT?.trim();
+  try {
+    const parsed = new URL(endpoint ?? '');
+    if (
+      parsed.protocol !== 'https:' ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== '/' ||
+      parsed.search ||
+      parsed.hash ||
+      !parsed.hostname.endsWith('.communication.azure.com')
+    ) {
+      throw new Error('invalid endpoint');
+    }
+  } catch {
+    errors.push('ACS_EMAIL_ENDPOINT must be an Azure Communication Services HTTPS endpoint');
+  }
+
+  if (process.env.AUTH_EMAIL_FROM_ADDRESS?.trim().toLowerCase() !== 'no-reply@mail.lythaus.co') {
+    errors.push('AUTH_EMAIL_FROM_ADDRESS must be no-reply@mail.lythaus.co');
+  }
+  if ((process.env.AUTH_EMAIL_FROM_NAME?.trim() || 'Lythaus') !== 'Lythaus') {
+    errors.push('AUTH_EMAIL_FROM_NAME must be Lythaus');
+  }
+  if ((process.env.EMAIL_TOKEN_HMAC_SECRET?.trim().length ?? 0) < 32) {
+    errors.push('EMAIL_TOKEN_HMAC_SECRET must contain at least 32 characters');
+  }
+  if (!(process.env.AUTH_EMAIL_CLIENT_ID?.trim() || process.env.JWT_AUDIENCE?.trim())) {
+    errors.push('AUTH_EMAIL_CLIENT_ID or JWT_AUDIENCE is required for email token issuance');
+  }
+  return errors;
+}
 
 export function validateStartupEnvironment(): void {
   const missing: string[] = [];
@@ -58,6 +112,7 @@ export function validateStartupEnvironment(): void {
   }
 
   missing.push(...originGatewayConfigurationErrors());
+  missing.push(...emailAuthConfigurationErrors());
 
   if (warnings.length > 0) {
     // eslint-disable-next-line no-console

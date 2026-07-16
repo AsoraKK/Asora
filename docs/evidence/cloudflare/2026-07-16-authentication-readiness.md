@@ -2,16 +2,15 @@
 
 ## Executive result
 
-**NO-GO.** Repository hardening is partially complete, but Google and email
-authentication cannot be proven through an immutable preview or the Lythaus
-gateway. No production DNS, custom domain, Cloudflare Access policy, CORS,
-OAuth callback, Worker secret, or Azure setting was changed in this audit.
+**NO-GO.** Email/password implementation and its Azure provider foundation are
+now prepared, but Google and email authentication still require immutable-preview
+and gateway proof. No public Lythaus DNS/custom-domain cutover was performed.
 
 ## Scope and evidence method
 
 - Branch: `codex/lythaus-domain-migration` (stacked draft PR #453).
-- Base PR #452 remains open; no rebase or large conflict reconciliation was
-  performed.
+- PR #452 is merged. The migration branch was fast-forwarded to the merged main
+  head once; PR #453 remains draft pending this new commit and exact-head CI.
 - GitHub secrets and variables were listed by **name only**. No value was
   read, printed, or included here.
 - Azure app settings were classified by name and value state only
@@ -34,15 +33,13 @@ OAuth callback, Worker secret, or Azure setting was changed in this audit.
 
 | Item | Evidence | Result |
 | --- | --- | --- |
-| Former credential storage class | Repository variable named `CF_ACCESS_CLIENT_SECRET` | Non-compliant residual exists |
-| Approved replacement storage | GitHub repository secret with the same name exists | Name-only presence confirmed |
+| Former credential storage class | Repository variable named `CF_ACCESS_CLIENT_SECRET` | Variable absent |
+| Approved replacement storage | Approved GitHub/Key Vault secret stores | Name-only presence confirmed |
 | Workflow variable use | No `vars.CF_ACCESS_CLIENT_SECRET` reference found | Pass |
 | Retired value | Not searched, printed, or reconstructed | Preserved safety boundary |
+| Cloudflare audit token | Protected GitHub secret | Duplicate credential-like repository variable removed |
 
-The residual credential-named repository variable prevents a clean rotation
-attestation. Its value was deliberately not read. The variable must be removed
-after confirming no approved workflow depends on it; workflows already use the
-GitHub Actions secret form.
+Credential-rotation storage verification now passes. No retired value was read.
 
 ## Live Azure MVP configuration inventory
 
@@ -63,7 +60,12 @@ setting names and states:
 | `ORIGIN_GATEWAY_DUAL_UNTIL` | Absent | Blocks bounded-dual rehearsal |
 | `ORIGIN_GATEWAY_LEGACY_ALLOWLIST` | Absent | Blocks safe legacy exception review |
 | Google provider configuration | No relevant setting name found | Google live proof blocked |
-| Email provider/sender configuration | No relevant setting name found | Email delivery proof blocked |
+| `APP_ORIGIN` | Set public configuration | Canonical `https://app.lythaus.co` |
+| `ACS_EMAIL_ENDPOINT` | Set public configuration | Europe Communication resource endpoint |
+| `AUTH_EMAIL_FROM_ADDRESS` | Set public configuration | `no-reply@mail.lythaus.co` |
+| `AUTH_EMAIL_FROM_NAME` | Set public configuration | `Lythaus` |
+| `EMAIL_TOKEN_HMAC_SECRET` | Key Vault reference | Approved storage class |
+| Email provider resources | Provisioned | Europe Email service, custom domain, and unlinked Communication service |
 
 ## Implementation inventory
 
@@ -73,7 +75,7 @@ setting names and states:
 | `/api/auth/token` | Authorization-code and refresh grants; refresh rotation is implemented | Source-only evidence |
 | `/api/auth/userinfo` | Protected endpoint | Source-only evidence |
 | Google | Client sends a Google IdP hint | No configured Google handoff, issuer/JWKS/audience/nonce live proof |
-| Email | Flutter still references an `authEmail` path | No corresponding Functions email registration/login/verification/reset route found |
+| Email | Email/password registration, verification/resend, login, forgot/reset, Argon2id, token hashing, throttling and session revocation implemented | Unit/integration proof complete; live delivery pending DNS verification and deployment |
 | Apple / World ID | Hidden in the MVP selector; client and backend reject them as unavailable | Unit-tested source hardening only |
 | Browser callback | State and S256 verifier are cleared; nonce is generated; callback query is removed from browser history; errors are neutral | Not live-proven |
 | Redirect policy | Canonical Lythaus callback accepted; obsolete Asora and Pages defaults removed; only exact configured non-production Pages callback allowed | Unit-tested |
@@ -96,6 +98,11 @@ setting names and states:
   missing audience validation can no longer silently deploy.
 - Updated active documents that named Azure, obsolete Asora endpoints, or a
   Pages development hostname as canonical public endpoints.
+- Added the six email/password API routes, database schema, official generated
+  client, Azure Communication Services sender, and exact provider startup checks.
+- Provisioned the approved Europe Email/Communication resources, disabled local
+  ACS key authentication, stored the email-token HMAC key in Key Vault, and
+  applied the additive empty email-auth database schema.
 
 ## Validation completed
 
@@ -125,13 +132,13 @@ setting names and states:
 
 ## Required owner/provider actions
 
-1. Remove the residual repository variable named `CF_ACCESS_CLIENT_SECRET`;
-   retain the GitHub Actions secret only.
+1. Run the protected ACS DNS workflow and wait for Domain/SPF/DKIM/DKIM2 verification;
+   then link the verified domain and create the `no-reply` sender identity.
 2. Select and configure the actual Google authentication control plane. The
    current Functions authorisation route expects an upstream principal, but no
    Google redirect/issuer/JWKS validation path is configured or proven.
-3. Supply an approved email provider, sender identity, and secret-store
-   configuration, then implement and review the missing email auth lifecycle.
+3. Deploy the implemented email lifecycle and prove live delivery, verification,
+   login, reset, refresh, logout, replay resistance, and rate limiting.
 4. Create immutable Pages and Worker previews, register exactly one temporary
    callback and CORS origin, and perform supervised interactive login.
 5. Populate the origin-auth mode, next-token, operational-token, dual-expiry,

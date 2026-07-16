@@ -39,12 +39,14 @@ void main() {
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
     expect(
-      find.text('Browse the feed as a guest or sign in to interact.'),
+      find.text(
+        'Browse as a guest or use one of the secure MVP sign-in methods.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Continue as guest'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
     expect(find.text('Redeem invite'), findsOneWidget);
     // Debug mode button
     expect(find.text('Security Debug'), findsOneWidget);
@@ -66,7 +68,7 @@ void main() {
     ).called(greaterThanOrEqualTo(1));
   });
 
-  testWidgets('sign in shows provider picker', (tester) async {
+  testWidgets('deferred providers are not rendered', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -74,18 +76,11 @@ void main() {
     await tester.pumpWidget(buildScreen());
     await tester.pump();
 
-    await tester.tap(find.text('Sign in'));
-    await tester.pumpAndSettle();
-
-    // Bottom sheet should show provider options
-    expect(find.text('Sign in with'), findsOneWidget);
-    expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Apple'), findsNothing);
-    expect(find.text('World ID'), findsNothing);
+    expect(find.textContaining('Apple'), findsNothing);
+    expect(find.textContaining('World ID'), findsNothing);
   });
 
-  testWidgets('create account shows provider picker', (tester) async {
+  testWidgets('email action opens email authentication', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -93,11 +88,11 @@ void main() {
     await tester.pumpWidget(buildScreen());
     await tester.pump();
 
-    await tester.tap(find.text('Create account'));
+    await tester.tap(find.text('Email'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create account with'), findsOneWidget);
-    expect(find.text('Google'), findsOneWidget);
+    expect(find.text('Sign in with email'), findsNWidgets(2));
+    expect(find.text('Create account'), findsOneWidget);
   });
 
   testWidgets('redeem invite navigates', (tester) async {

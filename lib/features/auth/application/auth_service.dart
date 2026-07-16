@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:asora/features/auth/domain/auth_failure.dart';
 import 'package:asora/features/auth/domain/user.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/features/auth/application/web_auth_service.dart';
 import 'package:asora/core/config/web_release_guard.dart';
 
 class AuthService {
@@ -36,10 +37,11 @@ class AuthService {
   final String _authUrl;
 
   static const _jwtKey = 'jwt';
+  static const _refreshTokenKey = 'refreshToken';
   static const _userKey = 'userData';
   static const _defaultAuthUrl = String.fromEnvironment('AUTH_URL');
 
-  /// Email login with comprehensive error handling
+  /// Sign in with the Lythaus MVP email/password endpoint.
   Future<User> loginWithEmail(String email, String password) async {
     if (email.trim().isEmpty) {
       throw AuthFailure.invalidCredentials('Email cannot be empty');
@@ -49,58 +51,49 @@ class AuthService {
     }
 
     try {
-      dev.log(
-        'Attempting email login for: ${email.replaceAll(RegExp(r'(?<=.).(?=.*@)'), '*')}',
-        name: 'auth',
-      );
-
       final response = await _httpClient.post(
-        Uri.parse('$_authUrl/authEmail'),
+        Uri.parse('$_authUrl/auth/email/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email.trim(), 'password': password}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-
-        // Extract JWT token
-        final token = data['token'] as String?;
-        if (token == null) {
-          throw AuthFailure.serverError('Invalid response: missing token');
-        }
-
-        // Extract user data
+        final accessToken = data['access_token'] as String?;
+        final refreshToken = data['refresh_token'] as String?;
+        final expiresIn = data['expires_in'] as int? ?? 900;
         final userData = data['user'] as Map<String, dynamic>?;
-        if (userData == null) {
-          throw AuthFailure.serverError('Invalid response: missing user data');
+        if (accessToken == null || refreshToken == null || userData == null) {
+          throw AuthFailure.serverError('Sign-in response was incomplete');
         }
-
-        // Create User object
         final user = User.fromJson(userData);
-
-        // Store authentication data securely
-        await Future.wait([
-          _secureStorage.write(key: _jwtKey, value: token),
-          _secureStorage.write(key: _userKey, value: jsonEncode(userData)),
-        ]);
-
-        dev.log('Email login successful for user: ${user.id}', name: 'auth');
+        if (kIsWeb) {
+          WebAuthService().storeDirectSession(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresIn: expiresIn,
+            user: user,
+          );
+        } else {
+          await Future.wait([
+            _secureStorage.write(key: _jwtKey, value: accessToken),
+            _secureStorage.write(key: _refreshTokenKey, value: refreshToken),
+            _secureStorage.write(key: _userKey, value: jsonEncode(userData)),
+          ]);
+        }
         return user;
       } else if (response.statusCode == 401) {
-        final errorData = response.body.isNotEmpty
-            ? jsonDecode(response.body) as Map<String, dynamic>
-            : <String, dynamic>{};
-        final errorMessage =
-            errorData['error'] as String? ?? 'Invalid credentials';
-        throw AuthFailure.invalidCredentials(errorMessage);
+        throw AuthFailure.invalidCredentials('Email or password is incorrect');
+      } else if (response.statusCode == 403) {
+        throw AuthFailure.invalidCredentials(
+          'Verify your email before signing in',
+        );
       } else if (response.statusCode >= 500) {
-        throw AuthFailure.serverError('Server error: ${response.statusCode}');
+        throw AuthFailure.serverError(
+          'Email sign-in is temporarily unavailable',
+        );
       } else {
-        final errorData = response.body.isNotEmpty
-            ? jsonDecode(response.body) as Map<String, dynamic>
-            : <String, dynamic>{};
-        final errorMessage = errorData['error'] as String? ?? 'Login failed';
-        throw AuthFailure.serverError(errorMessage);
+        throw AuthFailure.invalidCredentials('Email or password is incorrect');
       }
     } on AuthFailure {
       rethrow;
@@ -112,7 +105,57 @@ class AuthService {
         stackTrace: st,
         level: 1000,
       );
-      throw AuthFailure.serverError('Network error: ${e.toString()}');
+      throw AuthFailure.networkError('Unable to reach Lythaus authentication');
+    }
+  }
+
+  Future<void> registerWithEmail(String email, String password) async {
+    await _postEmailOperation('register', {
+      'email': email.trim(),
+      'password': password,
+    });
+  }
+
+  Future<void> resendEmailVerification(String email) async {
+    await _postEmailOperation('resend', {'email': email.trim()});
+  }
+
+  Future<void> requestPasswordReset(String email) async {
+    await _postEmailOperation('forgot-password', {'email': email.trim()});
+  }
+
+  Future<void> verifyEmailToken(String token) async {
+    await _postEmailOperation('verify', {'token': token});
+  }
+
+  Future<void> resetEmailPassword(String token, String newPassword) async {
+    await _postEmailOperation('reset-password', {
+      'token': token,
+      'new_password': newPassword,
+    });
+  }
+
+  Future<void> _postEmailOperation(
+    String operation,
+    Map<String, String> body,
+  ) async {
+    try {
+      final response = await _httpClient.post(
+        Uri.parse('$_authUrl/auth/email/$operation'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AuthFailure.serverError(
+          response.statusCode >= 500
+              ? 'Email authentication is temporarily unavailable'
+              : 'The request could not be completed',
+        );
+      }
+    } on AuthFailure {
+      rethrow;
+    } catch (_) {
+      throw AuthFailure.networkError('Unable to reach Lythaus authentication');
     }
   }
 
@@ -212,7 +255,9 @@ class AuthService {
 
     await Future.wait([
       safeRun(() => _secureStorage.delete(key: _jwtKey)),
+      safeRun(() => _secureStorage.delete(key: _refreshTokenKey)),
       safeRun(() => _secureStorage.delete(key: _userKey)),
+      if (kIsWeb) safeRun(() async => WebAuthService().signOut()),
       // Social provider sign-out is handled via the OAuth2 end-session flow.
       // No direct google_sign_in SDK call is used.
       safeRun(() => _oauth2Service.signOut()),

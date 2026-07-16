@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@azure/app-configuration": "^1.6.0",
+    "@azure/communication-email": "1.1.0",
     "@azure/cosmos": "^4.9.0",
     "@azure/functions": "^4.14.0",
     "@azure/identity": "^4.13.1",
@@ -23,6 +24,7 @@
     "@azure/storage-blob": "^12.33.0",
     "@azure/storage-queue": "^12.28.1",
     "applicationinsights": "^2.9.2",
+    "argon2": "0.44.0",
     "archiver": "^7.0.1",
     "axios": "1.18.1",
     "fast-json-stable-stringify": "^2.1.0",
