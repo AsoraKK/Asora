@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:http/http.dart' as http;
 
 import 'package:asora/core/auth/pkce_helper.dart';
@@ -46,6 +46,15 @@ class WebAuthService {
   // coverage:ignore-start browser-only redirect
   void startSignIn({OAuth2Provider provider = OAuth2Provider.google}) {
     assert(kIsWeb, 'WebAuthService.startSignIn must only be called on web');
+    final authUrl = prepareAuthorizationRequest(provider: provider);
+    webRedirectTo(authUrl.toString());
+  }
+
+  /// Builds and persists one browser authorization transaction.
+  @visibleForTesting
+  Uri prepareAuthorizationRequest({
+    OAuth2Provider provider = OAuth2Provider.google,
+  }) {
     _validateReleaseWebEndpoints();
     requireMvpAuthProvider(provider);
 
@@ -78,11 +87,9 @@ class WebAuthService {
       ...additionalParams,
     };
 
-    final authUrl = Uri.parse(
+    return Uri.parse(
       OAuth2Config.authorizationEndpoint,
     ).replace(queryParameters: queryParams);
-
-    webRedirectTo(authUrl.toString());
   }
   // coverage:ignore-end browser-only redirect
 

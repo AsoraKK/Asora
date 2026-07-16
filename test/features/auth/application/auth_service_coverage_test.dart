@@ -251,6 +251,115 @@ void main() {
 
   // ─────── getCurrentUser ───────
 
+  group('email lifecycle operations', () {
+    test(
+      'posts every operation to its exact endpoint with normalized input',
+      () async {
+        final requests = <http.Request>[];
+        final client = http_testing.MockClient((request) async {
+          requests.add(request);
+          return http.Response('', 204);
+        });
+        final service = AuthService(
+          secureStorage: storage,
+          httpClient: client,
+          oauth2Service: oauth2,
+          authUrl: 'https://api.lythaus.co/api',
+        );
+
+        await service.registerWithEmail(
+          ' person@example.com ',
+          'StrongPass!123',
+        );
+        await service.resendEmailVerification(' person@example.com ');
+        await service.requestPasswordReset(' person@example.com ');
+        await service.verifyEmailToken('verification-token');
+        await service.resetEmailPassword('reset-token', 'NewStrongPass!123');
+
+        expect(requests.map((request) => request.url.path), [
+          '/api/auth/email/register',
+          '/api/auth/email/resend',
+          '/api/auth/email/forgot-password',
+          '/api/auth/email/verify',
+          '/api/auth/email/reset-password',
+        ]);
+        expect(jsonDecode(requests.first.body), {
+          'email': 'person@example.com',
+          'password': 'StrongPass!123',
+        });
+        expect(jsonDecode(requests.last.body), {
+          'token': 'reset-token',
+          'new_password': 'NewStrongPass!123',
+        });
+      },
+    );
+
+    test(
+      'maps client and server failures to controlled auth failures',
+      () async {
+        var status = 400;
+        final client = http_testing.MockClient((request) async {
+          return http.Response('', status);
+        });
+        final service = AuthService(
+          secureStorage: storage,
+          httpClient: client,
+          oauth2Service: oauth2,
+          authUrl: 'https://api.lythaus.co/api',
+        );
+
+        await expectLater(
+          service.verifyEmailToken('invalid-token'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'The request could not be completed',
+            ),
+          ),
+        );
+
+        status = 503;
+        await expectLater(
+          service.requestPasswordReset('person@example.com'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Email authentication is temporarily unavailable',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'maps transport failures without leaking implementation detail',
+      () async {
+        final client = http_testing.MockClient((request) async {
+          throw http.ClientException('provider detail');
+        });
+        final service = AuthService(
+          secureStorage: storage,
+          httpClient: client,
+          oauth2Service: oauth2,
+          authUrl: 'https://api.lythaus.co/api',
+        );
+
+        await expectLater(
+          service.resendEmailVerification('person@example.com'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Unable to reach Lythaus authentication',
+            ),
+          ),
+        );
+      },
+    );
+  });
+
   group('getCurrentUser', () {
     test('returns null when no stored data', () async {
       final service = AuthService(
