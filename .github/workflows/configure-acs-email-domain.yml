@@ -87,7 +87,7 @@ jobs:
             encoded_name="$(jq -rn --arg value "${fqdn}" '$value|@uri')"
             encoded_type="$(jq -rn --arg value "${record_type}" '$value|@uri')"
             curl --fail --silent --show-error \
-              -H "Authorization: Bearer ${CLOUDFLARE_AUDIT_API_TOKEN}" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
               "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${encoded_type}&name=${encoded_name}&per_page=100" \
               -o "${existing_json}"
             test "$(jq '.success' "${existing_json}")" = true
