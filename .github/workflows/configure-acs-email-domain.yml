@@ -25,6 +25,7 @@ jobs:
       AZURE_RESOURCE_GROUP: asora-psql-flex
       EMAIL_SERVICE_NAME: lythaus-mvp-email
       EMAIL_DOMAIN: mail.lythaus.co
+      CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CHANGE_TICKET: ${{ inputs.change_ticket }}
     steps:
@@ -51,6 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           set +x
+          test -n "${CLOUDFLARE_AUDIT_API_TOKEN:-}" || { echo "Cloudflare audit secret is unavailable" >&2; exit 1; }
           test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Cloudflare write secret is unavailable" >&2; exit 1; }
 
           domain_uri="https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.Communication/emailServices/${EMAIL_SERVICE_NAME}/domains/${EMAIL_DOMAIN}?api-version=2025-09-01"
@@ -62,7 +64,7 @@ jobs:
 
           zone_json="${RUNNER_TEMP}/cf-zone.json"
           curl --fail --silent --show-error \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_AUDIT_API_TOKEN}" \
             -H 'Content-Type: application/json' \
             'https://api.cloudflare.com/client/v4/zones?name=lythaus.co&status=active&per_page=50' \
             -o "${zone_json}"
@@ -85,7 +87,7 @@ jobs:
             encoded_name="$(jq -rn --arg value "${fqdn}" '$value|@uri')"
             encoded_type="$(jq -rn --arg value "${record_type}" '$value|@uri')"
             curl --fail --silent --show-error \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Authorization: Bearer ${CLOUDFLARE_AUDIT_API_TOKEN}" \
               "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${encoded_type}&name=${encoded_name}&per_page=100" \
               -o "${existing_json}"
             test "$(jq '.success' "${existing_json}")" = true
