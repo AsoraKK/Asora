@@ -41,16 +41,17 @@ class _FakeAdapter implements HttpClientAdapter {
 }
 
 void main() {
-  test('createPinnedDio sets adapter and interceptor', () {
+  test('createPinnedDio keeps strict pinning disabled by default', () {
     final dio = createPinnedDio(baseUrl: 'https://example.com');
     expect(dio.options.baseUrl, 'https://example.com');
-    expect(dio.httpClientAdapter, isA<PinnedCertHttpClientAdapter>());
-    // Interceptor type name should be present
+    expect(kEnableCertPinning, isFalse);
+    expect(dio.httpClientAdapter, isNot(isA<PinnedCertHttpClientAdapter>()));
     expect(
       dio.interceptors.any(
-        (i) => i.runtimeType.toString().contains('CertPinning'),
+        (interceptor) =>
+            interceptor.runtimeType.toString().contains('CertPinning'),
       ),
-      isTrue,
+      isFalse,
     );
   });
 
@@ -78,7 +79,7 @@ void main() {
     expect(() => pinned.fetch(opts, null, null), throwsA(isA<DioException>()));
   });
 
-  test('isPinValidationError detects for pinned host connection errors', () {
+  test('isPinValidationError does not claim pin failures while disabled', () {
     final ro = RequestOptions(path: '/x', method: 'GET');
     ro.baseUrl = 'https://asora-function-dev.azurewebsites.net';
     final err = DioException(
@@ -86,7 +87,7 @@ void main() {
       type: DioExceptionType.connectionError,
       error: Exception('conn'),
     );
-    expect(isPinValidationError(err), isTrue);
+    expect(isPinValidationError(err), isFalse);
 
     final ro2 = RequestOptions(path: '/x', method: 'GET');
     ro2.baseUrl = 'https://not-pinned.example';
@@ -98,10 +99,10 @@ void main() {
     expect(isPinValidationError(err2), isFalse);
   });
 
-  test('getCertPinningInfo contains pinned domains', () {
+  test('getCertPinningInfo records the empty MVP pin set', () {
     final info = getCertPinningInfo();
     expect(info.enabled, kEnableCertPinning);
-    expect(info.pins.keys, contains('asora-function-dev.azurewebsites.net'));
+    expect(info.pins, isEmpty);
   });
 
   test('interceptor maps connectionError for pinned host', () async {
@@ -117,8 +118,7 @@ void main() {
       await dio.get<Map<String, dynamic>>('/x');
       fail('should throw');
     } on DioException catch (e) {
-      expect(isPinValidationError(e), isTrue);
-      expect(e.message, contains('Secure connection could not be established'));
+      expect(isPinValidationError(e), isFalse);
     }
   });
 }

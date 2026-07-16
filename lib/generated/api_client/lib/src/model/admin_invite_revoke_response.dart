@@ -11,7 +11,7 @@ part 'admin_invite_revoke_response.g.dart';
 /// AdminInviteRevokeResponse
 ///
 /// Properties:
-/// * [revoked] 
+/// * [revoked]
 @BuiltValue()
 abstract class AdminInviteRevokeResponse implements Built<AdminInviteRevokeResponse, AdminInviteRevokeResponseBuilder> {
   @BuiltValueField(wireName: r'revoked')
@@ -105,4 +105,3 @@ class _$AdminInviteRevokeResponseSerializer implements PrimitiveSerializer<Admin
     return result.build();
   }
 }
-

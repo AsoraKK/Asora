@@ -143,7 +143,7 @@ Implement comprehensive mobile security hardening with:
 **Rejected**: Too aggressive, alienates legitimate users (e.g., enthusiasts, developers).
 
 ### 5. Third-Party Mobile Security SDK
-**Considered**: SafetyNet/Play Integrity (Android), DeviceCheck (iOS)  
+**Considered**: SafetyNet/Play Integrity (Android), DeviceCheck (iOS)
 **Decision**: Start with open-source detection, integrate platform APIs in future iteration.
 
 ## References
@@ -164,6 +164,6 @@ Implement comprehensive mobile security hardening with:
 
 ---
 
-**Author:** Engineering Team  
-**Reviewers:** Security Team, Product, QA  
+**Author:** Engineering Team
+**Reviewers:** Security Team, Product, QA
 **Approved:** [Pending]

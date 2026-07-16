@@ -13,9 +13,9 @@ part 'admin_appeal_queue_response.g.dart';
 /// AdminAppealQueueResponse
 ///
 /// Properties:
-/// * [items] 
-/// * [nextCursor] 
-/// * [count] 
+/// * [items]
+/// * [nextCursor]
+/// * [count]
 @BuiltValue()
 abstract class AdminAppealQueueResponse implements Built<AdminAppealQueueResponse, AdminAppealQueueResponseBuilder> {
   @BuiltValueField(wireName: r'items')
@@ -139,4 +139,3 @@ class _$AdminAppealQueueResponseSerializer implements PrimitiveSerializer<AdminA
     return result.build();
   }
 }
-

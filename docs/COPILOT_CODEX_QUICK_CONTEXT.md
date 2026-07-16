@@ -10,8 +10,11 @@
 - Control panel SPA in `apps/control-panel` for admin operations.
 
 ## Domains
-- `asora.co.za`: platform base (API, control panel).
-- `lythaus.co`: marketing and waitlist.
+- `lythaus.co`: marketing, legal, invite, and share surfaces.
+- `app.lythaus.co`: Flutter web application.
+- `api.lythaus.co/api`: public API and auth endpoints.
+- `admin.lythaus.co` / `admin-api.lythaus.co`: Access-protected administration.
+- `asora.co.za`: defensive legacy compatibility only; internal Azure names may remain Asora.
 
 ## Launch Gates
 - Content states are binary: PUBLISHED or BLOCKED.

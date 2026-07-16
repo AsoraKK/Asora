@@ -10,6 +10,7 @@ const trackExceptionMock = jest.mocked(trackException);
 const baseEnv: Record<string, string> = {
   COSMOS_CONNECTION_STRING: 'AccountEndpoint=https://example/;',
   JWT_SECRET: '0123456789abcdef0123456789abcdef',
+  INVITE_CODE_PEPPER: 'invite-pepper-0123456789abcdef0123456789',
   JWT_ISSUER: 'asora-auth',
   HIVE_API_KEY: 'hive-test-key',
   KV_URL: 'https://example.vault.azure.net/',
@@ -22,6 +23,7 @@ const baseEnv: Record<string, string> = {
   RATE_LIMITS_ENABLED: 'true',
   RATE_LIMIT_CONTAINER: 'rate-limits',
   AUDIT_HMAC_KEY: 'audit-hmac-key',
+  ORIGIN_GATEWAY_AUTH_MODE: 'off',
   STRICT_STARTUP_VALIDATION: 'true',
   NODE_ENV: 'test',
 };
@@ -62,5 +64,12 @@ describe('validateStartupEnvironment', () => {
 
     expect(() => validateStartupEnvironment()).toThrow(/JWT_SECRET/);
     expect(trackExceptionMock).toHaveBeenCalled();
+  });
+
+  it('fails when gateway enforcement is enabled without required tokens', () => {
+    process.env.ORIGIN_GATEWAY_AUTH_MODE = 'enforce';
+    delete process.env.ORIGIN_GATEWAY_TOKEN;
+
+    expect(() => validateStartupEnvironment()).toThrow(/ORIGIN_GATEWAY_TOKEN/);
   });
 });

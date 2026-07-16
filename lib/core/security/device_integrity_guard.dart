@@ -166,16 +166,16 @@ class DeviceIntegrityGuard {
       return DeviceIntegrityDecision.allow();
     }
 
-    // Staging: respect allowRootedInStagingForQa flag
-    if (_environment.isStaging && _config.allowRootedInStagingForQa) {
+    // Preview: respect the explicit QA relaxation flag.
+    if (_environment.isPreview && _config.allowRootedInPreviewForQa) {
       if (state.isCompromised) {
         return DeviceIntegrityDecision.warnOnly(
-          'security.device_compromised_staging_qa',
+          'security.device_compromised_preview_qa',
         );
       }
     }
 
-    // Production and staging (without QA override):
+    // MVP live and preview (without QA override):
     // Write operations: block on compromised devices
     // Read-only operations: warn-only
     //
@@ -325,8 +325,8 @@ String _getLocalizedMessage(String key) {
         'Some features may be limited on this device.',
     'security.device_compromised_dev':
         '[DEV] Device integrity check skipped in development mode.',
-    'security.device_compromised_staging_qa':
-        '[STAGING] Device integrity check skipped for QA testing.',
+    'security.device_compromised_preview_qa':
+        '[PREVIEW] Device integrity check skipped for QA testing.',
     'security.device_compromised_override':
         'Security override active. Proceeding with caution.',
     'security.default':

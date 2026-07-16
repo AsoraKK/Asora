@@ -12,6 +12,8 @@ import { rateLimitedByRoute } from '@http/rateLimitDecorators';
 import { getAzureLogger } from '@shared/utils/logger';
 import { deleteReaction } from './reactionService';
 import { STRUCTURED_REACTIONS_ENABLED } from './types';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
 
 const logger = getAzureLogger('reactions/delete');
 
@@ -34,10 +36,17 @@ if (STRUCTURED_REACTIONS_ENABLED) {
       }
 
       try {
+        await assertAlphaFeature('reactions');
         await deleteReaction(reactionId, auth.userId);
         logger.info('reactions.delete.ok', { reactionId, userId: auth.userId });
         return ctx.noContent();
       } catch (err: unknown) {
+        if (err instanceof HttpError) {
+          return {
+            status: err.status,
+            jsonBody: { error: { code: 'ALPHA_FEATURE_DISABLED', message: err.message } },
+          };
+        }
         const status = (err as { statusCode?: number }).statusCode;
         if (status === 404) {
           return ctx.notFound('Reaction not found');

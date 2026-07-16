@@ -3,23 +3,29 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: verify-dsr-storage.sh <storage-account> <resource-group> <function-principal-id>
+Usage: verify-dsr-storage.sh <storage-account> <resource-group> <function-principal-id> [private|public-rbac]
 
 Example:
-  verify-dsr-storage.sh stasoradsr-staging-12345 asora-psql-flex 00000000-0000-0000-0000-000000000000
+  verify-dsr-storage.sh stasoradsr-staging-12345 asora-psql-flex 00000000-0000-0000-0000-000000000000 public-rbac
 EOF
   exit 1
 }
 
-if [[ $# -ne 3 ]]; then
+if [[ $# -lt 3 || $# -gt 4 ]]; then
   usage
 fi
 
 STORAGE_ACCOUNT="$1"
 RESOURCE_GROUP="$2"
 PRINCIPAL_ID="$3"
+NETWORK_MODE="${4:-private}"
 CONTAINER_NAME="dsr-exports"
 RULE_NAME="dsr-export-lifecycle"
+
+if [[ "$NETWORK_MODE" != "private" && "$NETWORK_MODE" != "public-rbac" ]]; then
+  echo "Invalid DSR network mode: ${NETWORK_MODE}"
+  usage
+fi
 
 echo "Verifying DSR storage account ${STORAGE_ACCOUNT} (${RESOURCE_GROUP})"
 
@@ -47,7 +53,7 @@ else
 fi
 
 rule_count=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "policy.rules[?name=='${RULE_NAME}'] | length(@)" \
   -o tsv 2>/dev/null || echo "0")
@@ -58,7 +64,7 @@ if [[ "$rule_count" != "1" ]]; then
 fi
 
 prefix=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.filters.prefixMatch[0]" \
   -o tsv 2>/dev/null || echo "")
@@ -69,18 +75,18 @@ if [[ "$prefix" != "${CONTAINER_NAME}/" ]]; then
 fi
 
 base_days=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
-  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.baseBlob.deleteAfterDaysSinceModificationGreaterThan" \
+  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.baseBlob.delete.daysAfterModificationGreaterThan" \
   -o tsv 2>/dev/null || echo "")
 
 snapshot_days=$(az storage account management-policy show \
-  --name "$STORAGE_ACCOUNT" \
+  --account-name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
-  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.snapshot.deleteAfterDaysSinceCreationGreaterThan" \
+  --query "policy.rules[?name=='${RULE_NAME}'] | [0].definition.actions.snapshot.delete.daysAfterCreationGreaterThan" \
   -o tsv 2>/dev/null || echo "")
 
-if [[ "$base_days" != "30" || "$snapshot_days" != "30" ]]; then
+if [[ ! "$base_days" =~ ^30([.]0+)?$ || ! "$snapshot_days" =~ ^30([.]0+)?$ ]]; then
   echo "  ❌ Lifecycle retention mismatch (base=${base_days:-missing}, snapshot=${snapshot_days:-missing})"
   exit 1
 fi
@@ -126,6 +132,40 @@ done
 echo "  ✅ ${PRINCIPAL_ID} granted DSR storage blob/queue roles on ${STORAGE_ACCOUNT}"
 
 # Network hardening checks
+if [[ "$NETWORK_MODE" == "public-rbac" ]]; then
+  shared_key_access=$(az storage account show \
+    --name "$STORAGE_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "allowSharedKeyAccess" -o tsv 2>/dev/null || echo "true")
+  blob_public_access=$(az storage account show \
+    --name "$STORAGE_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "allowBlobPublicAccess" -o tsv 2>/dev/null || echo "true")
+  https_only=$(az storage account show \
+    --name "$STORAGE_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "enableHttpsTrafficOnly" -o tsv 2>/dev/null || echo "false")
+  min_tls=$(az storage account show \
+    --name "$STORAGE_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "minimumTlsVersion" -o tsv 2>/dev/null || echo "")
+  oauth_default=$(az storage account show \
+    --name "$STORAGE_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "defaultToOAuthAuthentication" -o tsv 2>/dev/null || echo "false")
+
+  if [[ "$shared_key_access" != "false" || "$blob_public_access" != "false" ]]; then
+    echo "  ERROR: public-rbac mode requires shared-key and public-blob access to be disabled"
+    exit 1
+  fi
+  if [[ "$https_only" != "true" || "$min_tls" != "TLS1_2" || "$oauth_default" != "true" ]]; then
+    echo "  ERROR: public-rbac mode requires HTTPS, TLS1_2, and OAuth-default authentication"
+    exit 1
+  fi
+  echo "  PASS: Cost-constrained public endpoint is Entra/RBAC-only with HTTPS and TLS1_2"
+  exit 0
+fi
+
 pub_net=$(az storage account show \
   --name "$STORAGE_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \

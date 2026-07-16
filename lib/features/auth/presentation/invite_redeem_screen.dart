@@ -33,13 +33,12 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     super.initState();
     _controller = TextEditingController(text: widget.inviteCode ?? '');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _logScreenView();
       // Arriving at the invite screen means the pending-code redirect already
       // fired (or the user navigated directly). Clear the saved code so the
       // router does not loop back here after a subsequent rebuild.
-      if (mounted) {
-        ref.read(pendingInviteCodeProvider.notifier).state = null;
-      }
+      ref.read(pendingInviteCodeProvider.notifier).state = null;
     });
   }
 
@@ -209,7 +208,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
     final data = error.response?.data;
     final message = data is Map<String, dynamic>
         ? (data['message'] as String? ??
-            (data['error'] is String ? data['error'] as String : null))
+              (data['error'] is String ? data['error'] as String : null))
         : null;
 
     switch (message) {

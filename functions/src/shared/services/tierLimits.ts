@@ -9,7 +9,9 @@
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type UserTier = 'free' | 'premium' | 'black' | 'admin';
+export type UserTier = 'free' | 'premium' | 'black';
+export type NewsBoardAccessLevel = 'preview' | 'full';
+export type RewardChoiceBreadth = 'limited' | 'increased' | 'full';
 
 export interface TierLimits {
   /** Maximum posts per day */
@@ -18,6 +20,8 @@ export interface TierLimits {
   dailyComments: number;
   /** Maximum likes per day */
   dailyLikes: number;
+  /** Maximum reactions per day (canonical name; dailyLikes is the legacy alias) */
+  dailyReactions: number;
   /** Maximum appeals per day */
   dailyAppeals: number;
   /** Minimum cooldown between exports, in days */
@@ -28,14 +32,18 @@ export interface TierLimits {
   maxMediaPerPost: number;
   /** Maximum custom feeds the user can create */
   maxCustomFeeds: number;
-  /** Whether the user can read the News Board */
-  newsBoardAccess: boolean;
+  /** News Board access level. Free is preview-only; paid tiers receive the full board. */
+  newsBoardAccessLevel: NewsBoardAccessLevel;
+  /** Whether a News Board preview is available */
+  newsBoardPreview: boolean;
   /** Whether normal posting is product-limited beyond abuse controls */
   postingRestricted: boolean;
   /** Highest reputation reward level available to this tier */
   rewardLevelCap: number;
   /** Reward options per level; null means all eligible rewards */
   rewardOptionsPerLevel: number | null;
+  /** Plain categorical reward-choice entitlement */
+  rewardChoiceBreadth: RewardChoiceBreadth;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,58 +59,52 @@ export const TIER_LIMITS: Record<UserTier, TierLimits> = {
     dailyPosts: parseInt(process.env.TIER_FREE_DAILY_POSTS ?? '5', 10),
     dailyComments: parseInt(process.env.TIER_FREE_DAILY_COMMENTS ?? '20', 10),
     dailyLikes: parseInt(process.env.TIER_FREE_DAILY_LIKES ?? '100', 10),
+    dailyReactions: parseInt(process.env.TIER_FREE_DAILY_LIKES ?? '100', 10),
     dailyAppeals: parseInt(process.env.TIER_FREE_DAILY_APPEALS ?? '1', 10),
     exportCooldownDays: parseInt(process.env.TIER_FREE_EXPORT_COOLDOWN_DAYS ?? '30', 10),
     maxMediaSizeMB: 10,
     maxMediaPerPost: 1,
     maxCustomFeeds: 1,
-    newsBoardAccess: true,
+    newsBoardAccessLevel: 'preview',
+    newsBoardPreview: true,
     postingRestricted: true,
     rewardLevelCap: 3,
     rewardOptionsPerLevel: 1,
+    rewardChoiceBreadth: 'limited',
   },
   premium: {
     dailyPosts: parseInt(process.env.TIER_PREMIUM_DAILY_POSTS ?? '20', 10),
     dailyComments: parseInt(process.env.TIER_PREMIUM_DAILY_COMMENTS ?? '100', 10),
     dailyLikes: parseInt(process.env.TIER_PREMIUM_DAILY_LIKES ?? '1000', 10),
+    dailyReactions: parseInt(process.env.TIER_PREMIUM_DAILY_LIKES ?? '1000', 10),
     dailyAppeals: parseInt(process.env.TIER_PREMIUM_DAILY_APPEALS ?? '3', 10),
     exportCooldownDays: parseInt(process.env.TIER_PREMIUM_EXPORT_COOLDOWN_DAYS ?? '7', 10),
     maxMediaSizeMB: 25,
     maxMediaPerPost: 4,
     maxCustomFeeds: 2,
-    newsBoardAccess: true,
+    newsBoardAccessLevel: 'full',
+    newsBoardPreview: true,
     postingRestricted: false,
     rewardLevelCap: 5,
     rewardOptionsPerLevel: 1,
+    rewardChoiceBreadth: 'increased',
   },
   black: {
     dailyPosts: parseInt(process.env.TIER_BLACK_DAILY_POSTS ?? '50', 10),
     dailyComments: parseInt(process.env.TIER_BLACK_DAILY_COMMENTS ?? '300', 10),
     dailyLikes: parseInt(process.env.TIER_BLACK_DAILY_LIKES ?? '1500', 10),
+    dailyReactions: parseInt(process.env.TIER_BLACK_DAILY_LIKES ?? '1500', 10),
     dailyAppeals: parseInt(process.env.TIER_BLACK_DAILY_APPEALS ?? '10', 10),
     exportCooldownDays: parseInt(process.env.TIER_BLACK_EXPORT_COOLDOWN_DAYS ?? '1', 10),
     maxMediaSizeMB: 25,
     maxMediaPerPost: 5,
     maxCustomFeeds: 3,
-    newsBoardAccess: true,
+    newsBoardAccessLevel: 'full',
+    newsBoardPreview: true,
     postingRestricted: false,
     rewardLevelCap: 5,
     rewardOptionsPerLevel: null,
-  },
-  admin: {
-    // Admins have effectively unlimited (very high) limits
-    dailyPosts: 10000,
-    dailyComments: 10000,
-    dailyLikes: 10000,
-    dailyAppeals: 10000,
-    exportCooldownDays: 0,
-    maxMediaSizeMB: 50,
-    maxMediaPerPost: 10,
-    maxCustomFeeds: 20,
-    newsBoardAccess: true,
-    postingRestricted: false,
-    rewardLevelCap: 5,
-    rewardOptionsPerLevel: null,
+    rewardChoiceBreadth: 'full',
   },
 };
 
@@ -144,7 +146,13 @@ export function normalizeTier(tier: string | undefined | null): UserTier {
     return 'premium';
   }
 
-  if (['free', 'premium', 'black', 'admin'].includes(normalized)) {
+  // `admin` is an internal role, never a commercial tier. Legacy tier claims
+  // fail safely to Free; authorization continues to use roles.
+  if (normalized === 'admin') {
+    return 'free';
+  }
+
+  if (['free', 'premium', 'black'].includes(normalized)) {
     return normalized as UserTier;
   }
 
@@ -180,6 +188,11 @@ export function getDailyCommentLimit(tier: string | undefined | null): number {
 export function getDailyLikeLimit(tier: string | undefined | null): number {
   const normalizedTier = normalizeTier(tier);
   return TIER_LIMITS[normalizedTier].dailyLikes;
+}
+
+export function getDailyReactionLimit(tier: string | undefined | null): number {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].dailyReactions;
 }
 
 /**
@@ -223,9 +236,20 @@ export function getMaxCustomFeeds(tier: string | undefined | null): number {
 }
 
 /**
- * Whether the tier can access the News Board
+ * News Board access level for the tier.
  */
-export function hasNewsBoardAccess(tier: string | undefined | null): boolean {
+export function getNewsBoardAccessLevel(
+  tier: string | undefined | null
+): NewsBoardAccessLevel {
   const normalizedTier = normalizeTier(tier);
-  return TIER_LIMITS[normalizedTier].newsBoardAccess;
+  return TIER_LIMITS[normalizedTier].newsBoardAccessLevel;
+}
+
+export function hasFullNewsBoardAccess(tier: string | undefined | null): boolean {
+  return getNewsBoardAccessLevel(tier) === 'full';
+}
+
+export function hasNewsBoardPreview(tier: string | undefined | null): boolean {
+  const normalizedTier = normalizeTier(tier);
+  return TIER_LIMITS[normalizedTier].newsBoardPreview;
 }

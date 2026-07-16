@@ -176,9 +176,9 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: true,
+          allowRootedInPreviewForQa: true,
         ),
-        environment: Environment.staging,
+        environment: Environment.preview,
       );
 
       final decision = await guard.evaluate(IntegrityUseCase.postContent);

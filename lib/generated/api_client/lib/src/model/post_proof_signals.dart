@@ -11,9 +11,9 @@ part 'post_proof_signals.g.dart';
 /// PostProofSignals
 ///
 /// Properties:
-/// * [captureMetadataHash] 
-/// * [editHistoryHash] 
-/// * [sourceAttestationUrl] 
+/// * [captureMetadataHash]
+/// * [editHistoryHash]
+/// * [sourceAttestationUrl]
 @BuiltValue()
 abstract class PostProofSignals implements Built<PostProofSignals, PostProofSignalsBuilder> {
   @BuiltValueField(wireName: r'captureMetadataHash')
@@ -141,4 +141,3 @@ class _$PostProofSignalsSerializer implements PrimitiveSerializer<PostProofSigna
     return result.build();
   }
 }
-

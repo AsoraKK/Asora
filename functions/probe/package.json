@@ -2,6 +2,6 @@
   "name": "probe",
   "main": "index.js",
   "dependencies": {
-    "@azure/functions": "^4"
+    "@azure/functions": "^4.16.2"
   }
 }

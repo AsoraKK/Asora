@@ -30,10 +30,10 @@ class CreatePostModal extends ConsumerStatefulWidget {
 
 class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   static const String _policyReminderMessage =
-      'AI-generated content is blocked at publish time.\n'
-      "If content is blocked, you'll see a neutral notice.\n"
-      'You can appeal decisions. Appeals are reviewed by the community and moderators.\n'
-      'This is an invite-only beta focused on authentic human content.';
+      'Choose Human-authored, AI-assisted, or AI-generated before posting.\n'
+      'AI-generated posts are labeled and do not earn reputation.\n'
+      'Community appeal votes are advisory; a moderator records the final decision.\n'
+      'This is an invite-only Alpha.';
 
   ContentType selectedType = ContentType.text;
   bool isNews = false;
@@ -161,6 +161,36 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
             maxLines: 4,
             placeholder: 'Share an update...',
             errorText: state.validationError,
+          ),
+          SizedBox(height: spacing.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Authorship disclosure (required)',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
+          SizedBox(height: spacing.xs),
+          Wrap(
+            spacing: spacing.xs,
+            runSpacing: spacing.xs,
+            children: [
+              ChoiceChip(
+                label: const Text('Human-authored'),
+                selected: state.aiLabel == 'human',
+                onSelected: (_) => notifier.setAiLabel('human'),
+              ),
+              ChoiceChip(
+                label: const Text('AI-assisted'),
+                selected: state.aiLabel == 'assisted',
+                onSelected: (_) => notifier.setAiLabel('assisted'),
+              ),
+              ChoiceChip(
+                label: const Text('AI-generated'),
+                selected: state.aiLabel == 'generated',
+                onSelected: (_) => notifier.setAiLabel('generated'),
+              ),
+            ],
           ),
           SizedBox(height: spacing.lg),
           Align(

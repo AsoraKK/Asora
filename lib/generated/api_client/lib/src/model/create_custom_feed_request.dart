@@ -12,14 +12,14 @@ part 'create_custom_feed_request.g.dart';
 /// CreateCustomFeedRequest
 ///
 /// Properties:
-/// * [name] 
-/// * [contentType] 
-/// * [sorting] 
-/// * [includeKeywords] 
-/// * [excludeKeywords] 
-/// * [includeAccounts] 
-/// * [excludeAccounts] 
-/// * [isHome] 
+/// * [name]
+/// * [contentType]
+/// * [sorting]
+/// * [includeKeywords]
+/// * [excludeKeywords]
+/// * [includeAccounts]
+/// * [excludeAccounts]
+/// * [isHome]
 @BuiltValue()
 abstract class CreateCustomFeedRequest implements Built<CreateCustomFeedRequest, CreateCustomFeedRequestBuilder> {
   @BuiltValueField(wireName: r'name')
@@ -268,4 +268,3 @@ class CreateCustomFeedRequestSortingEnum extends EnumClass {
   static BuiltSet<CreateCustomFeedRequestSortingEnum> get values => _$createCustomFeedRequestSortingEnumValues;
   static CreateCustomFeedRequestSortingEnum valueOf(String name) => _$createCustomFeedRequestSortingEnumValueOf(name);
 }
-

@@ -33,7 +33,7 @@ export interface ReceiptProofSignals {
 
 export interface ReceiptEventMetadata {
   appealId?: string;
-  moderationAction?: 'none' | 'limited' | 'blocked' | 'removed';
+  moderationAction?: 'none' | 'under_review' | 'limited' | 'blocked' | 'removed';
   proofSignals?: ReceiptProofSignals;
   vote?: { choice: 'for' | 'against' };
 }

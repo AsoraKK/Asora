@@ -32,6 +32,7 @@ class Post {
   final bool proofSignalsProvided;
   final bool verifiedContextBadgeEligible;
   final bool featuredEligible;
+  final PostAuthorship authorship;
 
   const Post({
     required this.id,
@@ -56,6 +57,7 @@ class Post {
     this.proofSignalsProvided = false,
     this.verifiedContextBadgeEligible = false,
     this.featuredEligible = false,
+    this.authorship = const PostAuthorship.underReview(),
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -128,6 +130,14 @@ class Post {
       verifiedContextBadgeEligible:
           json['verifiedContextBadgeEligible'] as bool? ?? false,
       featuredEligible: json['featuredEligible'] as bool? ?? false,
+      authorship: PostAuthorship.fromJson(
+        json['authorship'] is Map<String, dynamic>
+            ? json['authorship'] as Map<String, dynamic>
+            : json['authorship'] is Map
+            ? Map<String, dynamic>.from(json['authorship'] as Map)
+            : null,
+        legacyValue: json['aiLabel']?.toString(),
+      ),
     );
   }
 
@@ -155,6 +165,7 @@ class Post {
       'proofSignalsProvided': proofSignalsProvided,
       'verifiedContextBadgeEligible': verifiedContextBadgeEligible,
       'featuredEligible': featuredEligible,
+      'authorship': authorship.toJson(),
     };
   }
 
@@ -522,7 +533,7 @@ enum FeedType { notable, newest, local, following, newCreators }
 
 /// Content authorship labels for AI transparency display.
 /// Labels match the Lythaus public transparency taxonomy:
-/// Human-authored, AI-assisted, Under review, and Blocked after review for appeal/moderation history.
+/// Human-authored, AI-assisted, AI-generated, and Under review.
 enum ContentAuthorship {
   humanAuthored,
   aiAssisted,
@@ -532,7 +543,7 @@ enum ContentAuthorship {
   String get label => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
     ContentAuthorship.aiAssisted => 'AI-assisted',
-    ContentAuthorship.aiGenerated => 'Blocked after review',
+    ContentAuthorship.aiGenerated => 'AI-generated',
     ContentAuthorship.underReview => 'Under review',
   };
 
@@ -541,10 +552,20 @@ enum ContentAuthorship {
   /// canonical authorship strings (human_authored/ai_assisted/ai_generated/under_review).
   static ContentAuthorship fromString(String? confidence) {
     return switch (confidence?.toLowerCase()) {
-      'human_authored' || 'human' || 'high' => ContentAuthorship.humanAuthored,
-      'ai_assisted' || 'medium' || 'low' => ContentAuthorship.aiAssisted,
-      'ai_generated' || 'ai_gen' => ContentAuthorship.aiGenerated,
-      'under_review' => ContentAuthorship.underReview,
+      'human-authored' ||
+      'human_authored' ||
+      'human' ||
+      'high' => ContentAuthorship.humanAuthored,
+      'ai-assisted' ||
+      'ai_assisted' ||
+      'assisted' ||
+      'medium' ||
+      'low' => ContentAuthorship.aiAssisted,
+      'ai-generated' ||
+      'ai_generated' ||
+      'ai_gen' ||
+      'generated' => ContentAuthorship.aiGenerated,
+      'under review' || 'under_review' => ContentAuthorship.underReview,
       _ => ContentAuthorship.underReview,
     };
   }
@@ -554,7 +575,70 @@ extension ContentAuthorshipExtension on ContentAuthorship {
   String get displayLabel => switch (this) {
     ContentAuthorship.humanAuthored => 'Human-authored',
     ContentAuthorship.aiAssisted => 'AI-assisted',
-    ContentAuthorship.aiGenerated => 'Blocked after review',
+    ContentAuthorship.aiGenerated => 'AI-generated',
     ContentAuthorship.underReview => 'Under review',
+  };
+}
+
+class PostAuthorship {
+  final ContentAuthorship label;
+  final String classificationSource;
+  final String classificationState;
+  final String reviewState;
+  final String appealState;
+  final String labelVersion;
+
+  const PostAuthorship({
+    required this.label,
+    required this.classificationSource,
+    required this.classificationState,
+    required this.reviewState,
+    required this.appealState,
+    required this.labelVersion,
+  });
+
+  const PostAuthorship.underReview()
+    : label = ContentAuthorship.underReview,
+      classificationSource = 'automated_classification',
+      classificationState = 'unavailable',
+      reviewState = 'pending',
+      appealState = 'eligible',
+      labelVersion = 'legacy-unclassified';
+
+  factory PostAuthorship.fromJson(
+    Map<String, dynamic>? json, {
+    String? legacyValue,
+  }) {
+    if (json == null) {
+      final legacyLabel = ContentAuthorship.fromString(legacyValue);
+      return PostAuthorship(
+        label: legacyLabel,
+        classificationSource: 'user_disclosure',
+        classificationState: legacyValue == null ? 'unavailable' : 'confirmed',
+        reviewState: legacyValue == null ? 'pending' : 'not_required',
+        appealState: legacyValue == null ? 'eligible' : 'none',
+        labelVersion: 'legacy-migrated-v1',
+      );
+    }
+    return PostAuthorship(
+      label: ContentAuthorship.fromString(json['authorshipLabel']?.toString()),
+      classificationSource:
+          json['classificationSource']?.toString() ??
+          'automated_classification',
+      classificationState:
+          json['classificationState']?.toString() ?? 'unavailable',
+      reviewState: json['reviewState']?.toString() ?? 'pending',
+      appealState: json['appealState']?.toString() ?? 'eligible',
+      labelVersion: json['labelVersion']?.toString() ?? 'unknown',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'authorshipLabel': label.label,
+    'classificationSource': classificationSource,
+    'classificationState': classificationState,
+    'reviewState': reviewState,
+    'appealState': appealState,
+    'labelVersion': labelVersion,
   };
 }

@@ -12,9 +12,9 @@ part 'submit_reaction_request.g.dart';
 /// SubmitReactionRequest
 ///
 /// Properties:
-/// * [targetContentId] 
-/// * [targetUserId] 
-/// * [reactionType] 
+/// * [targetContentId]
+/// * [targetUserId]
+/// * [reactionType]
 @BuiltValue()
 abstract class SubmitReactionRequest implements Built<SubmitReactionRequest, SubmitReactionRequestBuilder> {
   @BuiltValueField(wireName: r'targetContentId')
@@ -164,4 +164,3 @@ class SubmitReactionRequestReactionTypeEnum extends EnumClass {
   static BuiltSet<SubmitReactionRequestReactionTypeEnum> get values => _$submitReactionRequestReactionTypeEnumValues;
   static SubmitReactionRequestReactionTypeEnum valueOf(String name) => _$submitReactionRequestReactionTypeEnumValueOf(name);
 }
-

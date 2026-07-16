@@ -1,10 +1,12 @@
 # Lythaus Reputation, Rewards & Public Feed Eligibility System — v1
 
-**Status:** Product/architecture specification — draft approved for implementation planning  
-**Date:** 26 May 2026  
-**Product:** Lythaus, formerly Asora  
-**Repository:** AsoraKK/Asora  
-**Owner:** Product / Platform  
+> **Superseded for controlled Alpha (2026-07-10).** The AI-authorship, community-vote, and News Board statements in this draft are replaced by `docs/adr/ADR-004-controlled-web-api-alpha.md`, `docs/policy/alpha-ai-authorship-and-moderation.md`, and `docs/product/alpha-entitlements.md`. Free receives a three-item News Board preview; Premium and Black receive full access.
+
+**Status:** Product/architecture specification — draft approved for implementation planning
+**Date:** 26 May 2026
+**Product:** Lythaus, formerly Asora
+**Repository:** AsoraKK/Asora
+**Owner:** Product / Platform
 **Related areas:** reputation, rewards, moderation, AI transparency, public feed ranking, subscriptions, Editorial, user profile transparency
 
 ---
@@ -37,9 +39,9 @@ The system is designed to reward constructive human participation, discourage AI
 
 The core product logic is:
 
-> Reputation measures contribution trust.  
-> Verification measures account authenticity and human uniqueness signals.  
-> Rewards use subscription tier and reputation level to unlock benefits.  
+> Reputation measures contribution trust.
+> Verification measures account authenticity and human uniqueness signals.
+> Rewards use subscription tier and reputation level to unlock benefits.
 > Public feed featuring uses reputation as a trust signal, not as a guarantee of visibility.
 
 ---
@@ -1060,8 +1062,8 @@ This specification should be implemented behind feature flags and calibrated wit
 
 Default posture:
 
-> Be transparent about the reason for reputation changes.  
-> Be conservative with penalties.  
-> Be strict with manipulation.  
-> Never sell credibility.  
+> Be transparent about the reason for reputation changes.
+> Be conservative with penalties.
+> Be strict with manipulation.
+> Never sell credibility.
 > Never make AI detection feel like a public shaming system.

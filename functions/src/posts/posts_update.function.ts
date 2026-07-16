@@ -23,31 +23,11 @@ import {
 } from '@posts/service/moderationUtil';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
 import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
-import { recordReputationEvent } from '../reputation/reputationEventService';
-import { LedgerEventType } from '../reputation/types';
-
-function normalizeAiLabel(label: unknown): 'human' | 'assisted' | 'generated' | undefined {
-  if (label === undefined || label === null) {
-    return undefined;
-  }
-  if (typeof label !== 'string') {
-    return undefined;
-  }
-
-  const normalized = label.trim().toLowerCase();
-  if (
-    normalized === 'human' ||
-    normalized === 'assisted' ||
-    normalized === 'ai_assisted' ||
-    normalized === 'generated'
-  ) {
-    if (normalized === 'ai_assisted') {
-      return 'assisted';
-    }
-    return normalized;
-  }
-  return undefined;
-}
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import {
+  normalizeDeclaredAuthorship,
+  resolveAuthorship,
+} from '@shared/authorship';
 
 function mediaValidationMessage(reason?: string): string {
   switch (reason) {
@@ -76,6 +56,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
 
   try {
     const auth = await extractAuthContext(ctx);
+    const alphaConfig = await assertAlphaFeature('postCreation');
 
     if (!ctx.body) {
       return ctx.badRequest('Request body is required', 'INVALID_REQUEST');
@@ -111,7 +92,15 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
     }
 
     const rawAiLabel = aiLabel as unknown;
-    if (rawAiLabel !== undefined && normalizeAiLabel(rawAiLabel) === undefined) {
+    const requiresRenewedDisclosure = content !== undefined || mediaUrls !== undefined;
+    const declaredAuthorship = normalizeDeclaredAuthorship(rawAiLabel);
+    if (requiresRenewedDisclosure && !declaredAuthorship) {
+      return ctx.badRequest(
+        'Authorship disclosure is required when post content or media changes',
+        rawAiLabel === undefined ? 'AI_LABEL_REQUIRED' : 'INVALID_AI_LABEL'
+      );
+    }
+    if (rawAiLabel !== undefined && !declaredAuthorship) {
       return ctx.badRequest(
         'aiLabel must be "human", "assisted", or "generated"',
         'INVALID_AI_LABEL'
@@ -120,7 +109,8 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
 
     const effectiveContent = content ?? existing.content;
     const effectiveMediaUrls = mediaUrls ?? existing.mediaUrls;
-    const effectiveAiLabel = String(normalizeAiLabel(rawAiLabel) ?? existing.aiLabel ?? 'human');
+    const effectiveAiLabel =
+      declaredAuthorship ?? normalizeDeclaredAuthorship(existing.aiLabel) ?? 'human';
 
     if (mediaUrls !== undefined) {
       const mediaValidation = await validateOwnedMediaUrls(existing.authorId, mediaUrls);
@@ -136,7 +126,12 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
       }
     }
 
-    const { result: moderationResult, error: moderationError } = await moderatePostContent(
+    const {
+      result: moderationResult,
+      error: moderationError,
+      thresholdVersion,
+      classifiedAt,
+    } = await moderatePostContent(
       effectiveContent,
       auth.userId,
       postId,
@@ -168,42 +163,42 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
       });
     }
 
-    if (mediaModeration.aiDetected) {
-      return ctx.badRequest(
-        'AI-generated media cannot be published. You can appeal this decision.',
-        'AI_CONTENT_BLOCKED',
-        {
-          appealEligible: true,
-          caseId: postId,
-          categories: mediaModeration.categories,
-        }
-      );
-    }
-
     const aiDetected = hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
 
-    if (effectiveAiLabel === 'generated') {
-      return ctx.badRequest(
-        'AI-generated content cannot be published. You can appeal this decision.',
-        'AI_CONTENT_BLOCKED',
-        { appealEligible: true, caseId: postId }
-      );
+    const classifierAvailable =
+      !alphaConfig.features.aiClassificationEnforcement ||
+      (moderationResult !== null && !moderationError && !mediaModeration.error);
+    if (
+      alphaConfig.features.aiClassificationEnforcement &&
+      !classifierAvailable &&
+      alphaConfig.aiClassificationFailureMode === 'fail_closed'
+    ) {
+      return {
+        status: 503,
+        jsonBody: {
+          error: {
+            code: 'AI_CLASSIFICATION_UNAVAILABLE',
+            message: 'AI classification is temporarily unavailable',
+            correlationId: ctx.correlationId,
+          },
+        },
+      };
     }
 
-    if (aiDetected && effectiveAiLabel !== 'generated') {
-      void recordReputationEvent({
-        userId: auth.userId,
-        ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
-        sourceId: postId,
-        sourceType: 'post',
-      }).catch(error => {
-        ctx.context.warn?.('[posts_update] Failed to record undisclosed AI reputation event', {
-          postId,
-          userId: auth.userId.slice(0, 8),
-          message: (error as Error).message,
-        });
-      });
-    }
+    const authorship = resolveAuthorship({
+      declaration: effectiveAiLabel,
+      actorId: auth.userId,
+      aiDetected,
+      classifierAvailable,
+      classifiedAt,
+      score: Math.max(moderationMeta.confidence ?? 0, mediaModeration.confidence ?? 0) || undefined,
+      thresholdVersion,
+      categories: Array.from(
+        new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
+      ),
+      providerError: moderationError ?? mediaModeration.error,
+      priorDisclosureCount: existing.authorshipDisclosureHistory?.length ?? 0,
+    });
 
     const mergedCategories = Array.from(
       new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
@@ -213,7 +208,7 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
       mediaModeration.confidence ?? 0
     );
     const mergedStatus =
-      (aiDetected && effectiveAiLabel !== 'generated') ||
+      authorship.public.reviewState === 'pending' ||
       moderationMeta.status === 'warned' ||
       mediaModeration.status === 'warned'
         ? 'warned'
@@ -243,13 +238,12 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
         error: moderationMeta.error ?? mediaModeration.error,
       },
       {
-        aiLabel:
-          effectiveAiLabel === 'generated'
-            ? 'generated'
-            : effectiveAiLabel === 'assisted'
-              ? 'assisted'
-              : 'human',
+        aiLabel: effectiveAiLabel,
         aiDetected,
+        authorship: authorship.public,
+        authorshipInternal: authorship.internal,
+        disclosureEvent: authorship.disclosureEvent,
+        status: authorship.publicationStatus,
       }
     );
 
@@ -295,13 +289,14 @@ export const posts_update = httpHandler<UpdatePostRequest, Post>(async ctx => {
       type: 'MODERATION_DECIDED',
       summary: 'Moderation completed',
       reason:
-        mergedStatus === 'warned'
+        authorship.public.reviewState === 'pending'
           ? 'Automated checks completed and marked this post for closer review.'
           : 'Automated checks completed and no moderation action was applied.',
       policyLinks,
       actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
       metadata: {
-        moderationAction: mergedStatus === 'warned' ? 'limited' : 'none',
+        moderationAction:
+          authorship.public.reviewState === 'pending' ? 'under_review' : 'none',
         proofSignals,
       },
     }).catch(error => {

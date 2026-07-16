@@ -12,15 +12,15 @@ part 'news_source_metadata.g.dart';
 /// NewsSourceMetadata
 ///
 /// Properties:
-/// * [type] 
-/// * [name] 
-/// * [url] 
-/// * [feedUrl] 
-/// * [externalId] 
-/// * [publishedAt] 
-/// * [ingestedAt] 
-/// * [ingestedBy] 
-/// * [ingestMethod] 
+/// * [type]
+/// * [name]
+/// * [url]
+/// * [feedUrl]
+/// * [externalId]
+/// * [publishedAt]
+/// * [ingestedAt]
+/// * [ingestedBy]
+/// * [ingestMethod]
 @BuiltValue()
 abstract class NewsSourceMetadata implements Built<NewsSourceMetadata, NewsSourceMetadataBuilder> {
   @BuiltValueField(wireName: r'type')
@@ -274,4 +274,3 @@ class NewsSourceMetadataIngestMethodEnum extends EnumClass {
   static BuiltSet<NewsSourceMetadataIngestMethodEnum> get values => _$newsSourceMetadataIngestMethodEnumValues;
   static NewsSourceMetadataIngestMethodEnum valueOf(String name) => _$newsSourceMetadataIngestMethodEnumValueOf(name);
 }
-

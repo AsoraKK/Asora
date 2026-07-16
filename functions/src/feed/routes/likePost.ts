@@ -4,6 +4,7 @@ import { requireAuth } from '@shared/middleware/auth';
 import type { Principal } from '@shared/middleware/auth';
 import { badRequest, ok, notFound, serverError } from '@shared/utils/http';
 import { HttpError } from '@shared/utils/errors';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
@@ -55,6 +56,7 @@ export const likePost = requireAuth(async (req: AuthenticatedRequest, context: I
   }
 
   try {
+    const alphaConfig = await assertAlphaFeature('reactions');
     const db = getTargetDatabase();
     const postsContainer = db.posts;
     const reactionsContainer = db.reactions;
@@ -143,14 +145,16 @@ export const likePost = requireAuth(async (req: AuthenticatedRequest, context: I
     // Award Reputation - +2 to post author (fire and forget)
     // ─────────────────────────────────────────────────────────────
     const authorId = postResponse.resource.authorId;
-    awardPostLiked(authorId, postId, principal.sub).catch(err => {
-      context.log('posts.like.reputation_error', {
-        postId,
-        authorId,
-        likerId: principal.sub,
-        error: err.message,
+    if (alphaConfig.features.reputationAwards) {
+      awardPostLiked(authorId, postId, principal.sub).catch(err => {
+        context.log('posts.like.reputation_error', {
+          postId,
+          authorId,
+          likerId: principal.sub,
+          error: err.message,
+        });
       });
-    });
+    }
 
     return ok({
       status: 'success',
@@ -186,6 +190,7 @@ export const unlikePost = requireAuth(async (req: AuthenticatedRequest, context:
   }
 
   try {
+    await assertAlphaFeature('reactions');
     const db = getTargetDatabase();
     const postsContainer = db.posts;
     const reactionsContainer = db.reactions;

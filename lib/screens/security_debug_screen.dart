@@ -80,8 +80,8 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
             _buildKeyValue('Environment', config.environment.name),
             _buildKeyValue('Is Dev', config.environment.isDev.toString()),
             _buildKeyValue(
-              'Is Staging',
-              config.environment.isStaging.toString(),
+              'Is Preview',
+              config.environment.isPreview.toString(),
             ),
             _buildKeyValue('Is Prod', config.environment.isProd.toString()),
           ],
@@ -170,8 +170,8 @@ class _SecurityDebugScreenState extends ConsumerState<SecurityDebugScreen> {
               config.security.blockRootedDevices.toString(),
             ),
             _buildKeyValue(
-              'Allow Rooted (Staging QA)',
-              config.security.allowRootedInStagingForQa.toString(),
+              'Allow Rooted (Preview QA)',
+              config.security.allowRootedInPreviewForQa.toString(),
             ),
           ],
         ),

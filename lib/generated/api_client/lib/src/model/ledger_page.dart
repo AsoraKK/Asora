@@ -13,8 +13,8 @@ part 'ledger_page.g.dart';
 /// LedgerPage
 ///
 /// Properties:
-/// * [entries] 
-/// * [nextCursor] 
+/// * [entries]
+/// * [nextCursor]
 @BuiltValue()
 abstract class LedgerPage implements Built<LedgerPage, LedgerPageBuilder> {
   @BuiltValueField(wireName: r'entries')
@@ -123,4 +123,3 @@ class _$LedgerPageSerializer implements PrimitiveSerializer<LedgerPage> {
     return result.build();
   }
 }
-

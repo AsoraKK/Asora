@@ -71,8 +71,9 @@ export const DEFAULT_RANKING_CONFIG: RankingConfig = {
   // Unknown authors get zero reputation bonus
   defaultReputation: 0,
 
-  // Ranking enabled by default
-  enabled: true,
+  // Alpha defaults to deterministic recency pagination. Reputation ranking is
+  // opt-in until ranked cursor snapshots are deployed.
+  enabled: false,
 };
 
 /**
@@ -81,7 +82,7 @@ export const DEFAULT_RANKING_CONFIG: RankingConfig = {
  */
 export function getRankingConfig(): RankingConfig {
   // Environment overrides for tuning
-  const enabled = process.env.FEED_RANKING_ENABLED !== 'false';
+  const enabled = process.env.FEED_RANKING_ENABLED === 'true';
   const recencyWeight = parseFloat(process.env.FEED_RANKING_RECENCY_WEIGHT ?? '') || DEFAULT_RANKING_CONFIG.recencyWeight;
   const reputationWeight = parseFloat(process.env.FEED_RANKING_REPUTATION_WEIGHT ?? '') || DEFAULT_RANKING_CONFIG.reputationWeight;
 

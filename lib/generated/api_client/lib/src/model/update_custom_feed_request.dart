@@ -12,14 +12,14 @@ part 'update_custom_feed_request.g.dart';
 /// UpdateCustomFeedRequest
 ///
 /// Properties:
-/// * [name] 
-/// * [contentType] 
-/// * [sorting] 
-/// * [includeKeywords] 
-/// * [excludeKeywords] 
-/// * [includeAccounts] 
-/// * [excludeAccounts] 
-/// * [isHome] 
+/// * [name]
+/// * [contentType]
+/// * [sorting]
+/// * [includeKeywords]
+/// * [excludeKeywords]
+/// * [includeAccounts]
+/// * [excludeAccounts]
+/// * [isHome]
 @BuiltValue()
 abstract class UpdateCustomFeedRequest implements Built<UpdateCustomFeedRequest, UpdateCustomFeedRequestBuilder> {
   @BuiltValueField(wireName: r'name')
@@ -274,4 +274,3 @@ class UpdateCustomFeedRequestSortingEnum extends EnumClass {
   static BuiltSet<UpdateCustomFeedRequestSortingEnum> get values => _$updateCustomFeedRequestSortingEnumValues;
   static UpdateCustomFeedRequestSortingEnum valueOf(String name) => _$updateCustomFeedRequestSortingEnumValueOf(name);
 }
-

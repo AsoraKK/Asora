@@ -1,7 +1,7 @@
 # Crash Reporting Runbook (Android)
 
-Version: 1.0  
-Last Updated: 2026-02-05  
+Version: 1.0
+Last Updated: 2026-02-05
 Owners: Mobile + Platform
 
 ## 1. Scope

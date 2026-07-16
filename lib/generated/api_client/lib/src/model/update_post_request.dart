@@ -13,14 +13,14 @@ part 'update_post_request.g.dart';
 /// UpdatePostRequest
 ///
 /// Properties:
-/// * [content] 
-/// * [contentType] 
-/// * [mediaUrls] 
-/// * [topics] 
-/// * [visibility] 
-/// * [isNews] 
-/// * [aiLabel] - Public authorship disclosure. `generated` is blocked at submit.
-/// * [proofSignals] 
+/// * [content]
+/// * [contentType]
+/// * [mediaUrls]
+/// * [topics]
+/// * [visibility]
+/// * [isNews]
+/// * [aiLabel] - Required whenever content or media changes. Public responses use categorical labels only.
+/// * [proofSignals]
 @BuiltValue()
 abstract class UpdatePostRequest implements Built<UpdatePostRequest, UpdatePostRequestBuilder> {
   @BuiltValueField(wireName: r'content')
@@ -43,7 +43,7 @@ abstract class UpdatePostRequest implements Built<UpdatePostRequest, UpdatePostR
   @BuiltValueField(wireName: r'isNews')
   bool? get isNews;
 
-  /// Public authorship disclosure. `generated` is blocked at submit.
+  /// Required whenever content or media changes. Public responses use categorical labels only.
   @BuiltValueField(wireName: r'aiLabel')
   UpdatePostRequestAiLabelEnum? get aiLabel;
   // enum aiLabelEnum {  human,  assisted,  generated,  };
@@ -276,13 +276,13 @@ class UpdatePostRequestVisibilityEnum extends EnumClass {
 
 class UpdatePostRequestAiLabelEnum extends EnumClass {
 
-  /// Public authorship disclosure. `generated` is blocked at submit.
+  /// Required whenever content or media changes. Public responses use categorical labels only.
   @BuiltValueEnumConst(wireName: r'human')
   static const UpdatePostRequestAiLabelEnum human = _$updatePostRequestAiLabelEnum_human;
-  /// Public authorship disclosure. `generated` is blocked at submit.
+  /// Required whenever content or media changes. Public responses use categorical labels only.
   @BuiltValueEnumConst(wireName: r'assisted')
   static const UpdatePostRequestAiLabelEnum assisted = _$updatePostRequestAiLabelEnum_assisted;
-  /// Public authorship disclosure. `generated` is blocked at submit.
+  /// Required whenever content or media changes. Public responses use categorical labels only.
   @BuiltValueEnumConst(wireName: r'generated')
   static const UpdatePostRequestAiLabelEnum generated = _$updatePostRequestAiLabelEnum_generated;
 
@@ -293,4 +293,3 @@ class UpdatePostRequestAiLabelEnum extends EnumClass {
   static BuiltSet<UpdatePostRequestAiLabelEnum> get values => _$updatePostRequestAiLabelEnumValues;
   static UpdatePostRequestAiLabelEnum valueOf(String name) => _$updatePostRequestAiLabelEnumValueOf(name);
 }
-

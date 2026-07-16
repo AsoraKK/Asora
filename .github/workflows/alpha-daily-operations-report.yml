@@ -1,0 +1,126 @@
+name: Alpha Daily Operations Report
+
+on:
+  schedule:
+    - cron: "15 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: alpha-daily-operations-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate report configuration
+        shell: bash
+        env:
+          ALPHA_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
+          AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+          ALPHA_REPORT_ADMIN_TOKEN: ${{ secrets.ALPHA_REPORT_ADMIN_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
+        run: |
+          set -euo pipefail
+          [[ "$ALPHA_API_BASE_URL" == https://*/api ]] || { echo "::error::MVP_ADMIN_API_BASE_URL must be an HTTPS /api URL"; exit 1; }
+          [[ "$ALPHA_API_BASE_URL" != *.azurewebsites.net* ]] || { echo "::error::MVP_ADMIN_API_BASE_URL must not use a direct Azure origin"; exit 1; }
+          for key in AZURE_RESOURCE_GROUP AZURE_FUNCTIONAPP_NAME AZURE_APPINSIGHTS_NAME ALPHA_REPORT_ADMIN_TOKEN CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET; do
+            test -n "${!key:-}" || { echo "::error::$key is required"; exit 1; }
+          done
+
+      - name: Query aggregate telemetry
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+        run: |
+          set -euo pipefail
+          QUERY="$(<scripts/queries/alpha-daily-operations.kql)"
+          az monitor app-insights query \
+            --app "$AZURE_APPINSIGHTS_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --analytics-query "$QUERY" \
+            --offset 24h \
+            --output json > alpha-telemetry.json
+          jq -e '.tables[0].rows | length == 1' alpha-telemetry.json >/dev/null
+
+      - name: Read administrative snapshots
+        shell: bash
+        env:
+          ALPHA_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+          ALPHA_REPORT_ADMIN_TOKEN: ${{ secrets.ALPHA_REPORT_ADMIN_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
+        run: |
+          set -euo pipefail
+          HEADERS=(
+            --header "Authorization: Bearer $ALPHA_REPORT_ADMIN_TOKEN"
+            --header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID"
+            --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+          )
+          curl --fail-with-body --silent --show-error --max-time 30 "${HEADERS[@]}" \
+            "$ALPHA_API_BASE_URL/_admin/config" > alpha-config.json
+          curl --fail-with-body --silent --show-error --max-time 30 "${HEADERS[@]}" \
+            "$ALPHA_API_BASE_URL/_admin/ops/metrics?window=24h" > alpha-ops.json
+          jq -e '.payload.alpha.stage' alpha-config.json >/dev/null
+          jq -e '.success == true and .data.schemaVersion == 1' alpha-ops.json >/dev/null
+
+      - name: Read exact deployed SHA
+        id: deployment
+        shell: bash
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
+          AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
+        run: |
+          set -euo pipefail
+          SHA=$(az functionapp config appsettings list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_FUNCTIONAPP_NAME" \
+            --query "[?name=='DEPLOYMENT_SHA'].value | [0]" \
+            --output tsv)
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::DEPLOYMENT_SHA is absent or invalid"; exit 1; }
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Build privacy-safe daily report
+        run: |
+          node scripts/build-alpha-daily-report.mjs \
+            --telemetry alpha-telemetry.json \
+            --config alpha-config.json \
+            --ops alpha-ops.json \
+            --deployment-sha "${{ steps.deployment.outputs.sha }}" \
+            --environment staging \
+            --output alpha-daily-report.json \
+            --markdown-output alpha-daily-report.md
+
+      - name: Publish job summary
+        run: cat alpha-daily-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: alpha-daily-operations-${{ steps.deployment.outputs.sha }}
+          path: |
+            alpha-daily-report.json
+            alpha-daily-report.md
+          if-no-files-found: error
+          retention-days: 90

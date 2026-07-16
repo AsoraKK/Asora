@@ -17,6 +17,8 @@ import { mapHttpErrorToResponse } from './customFeedsHandlerUtils';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { requireAuth } from '@auth/requireAuth';
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
 
 const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 
@@ -35,7 +37,9 @@ export const customFeeds_create = httpHandler<CreateCustomFeedRequest, CustomFee
   }
 
   try {
-    const feed = await createCustomFeed(auth.userId, ctx.body, auth.tier);
+    await assertAlphaFeature('customFeedCreation');
+    const effective = await getEffectiveEntitlements(auth.userId, auth.tier);
+    const feed = await createCustomFeed(auth.userId, ctx.body, effective.tier);
     return ctx.created(feed);
   } catch (error) {
     const mapped = mapHttpErrorToResponse(ctx, error);

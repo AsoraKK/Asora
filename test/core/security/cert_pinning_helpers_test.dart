@@ -62,34 +62,34 @@ void main() {
   });
 
   group('isPinValidationError', () {
-    test('true for connectionError on pinned domain', () {
+    test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.connectionError,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
-    test('true for badCertificate on pinned domain', () {
+    test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.badCertificate,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
-    test('true for unknown type on pinned domain', () {
+    test('returns false for unknown errors while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
           path: 'https://asora-function-dev.azurewebsites.net/api/test',
         ),
         type: DioExceptionType.unknown,
       );
-      expect(isPinValidationError(err), isTrue);
+      expect(isPinValidationError(err), isFalse);
     });
 
     test('false for unpinned domain', () {
@@ -124,12 +124,8 @@ void main() {
   });
 
   group('kPinnedDomains', () {
-    test('contains expected domains', () {
-      expect(kPinnedDomains.keys, isNotEmpty);
-      expect(
-        kPinnedDomains.containsKey('asora-function-dev.azurewebsites.net'),
-        isTrue,
-      );
+    test('is empty while MVP strict pinning is disabled', () {
+      expect(kPinnedDomains, isEmpty);
     });
 
     test('pins are non-empty base64 strings', () {

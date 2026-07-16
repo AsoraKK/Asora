@@ -6,12 +6,22 @@ import { recordAdminAudit } from '../auditLogger';
 import { fetchContentById } from '../moderationAdminUtils';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import {
+  applyAppealOutcomeToAuthorship,
+  type AuthorshipLabel,
+} from '@shared/authorship';
+import { trackAppEvent } from '@shared/appInsights';
 
 type AppealDecision = 'approve' | 'reject';
 
 interface AppealDecisionBody {
   reasonCode?: string;
   note?: string;
+  finalLabel?: Exclude<AuthorshipLabel, 'Under review'>;
+}
+
+function isFinalLabel(value: unknown): value is Exclude<AuthorshipLabel, 'Under review'> {
+  return value === 'Human-authored' || value === 'AI-assisted' || value === 'AI-generated';
 }
 
 const DECISION_TO_STATUS: Record<AppealDecision, 'approved' | 'rejected'> = {
@@ -45,6 +55,9 @@ async function handleAppealDecision(
     return createErrorResponse(400, 'missing_reason', 'reasonCode is required');
   }
   const note = body?.note?.trim() || null;
+  if (body?.finalLabel !== undefined && !isFinalLabel(body.finalLabel)) {
+    return createErrorResponse(400, 'invalid_final_label', 'finalLabel is invalid');
+  }
 
   const actorId = (req as HttpRequest & { principal: { sub: string } }).principal.sub;
   const nowIso = new Date().toISOString();
@@ -71,6 +84,14 @@ async function handleAppealDecision(
     const contentLookup = await fetchContentById(contentType, contentId);
     if (!contentLookup) {
       return createErrorResponse(404, 'content_not_found', 'Content not found');
+    }
+
+    if (contentType === 'post' && !isFinalLabel(body?.finalLabel)) {
+      return createErrorResponse(
+        400,
+        'missing_final_label',
+        'finalLabel is required when adjudicating a post appeal'
+      );
     }
 
     const { container, document, partitionKey } = contentLookup;
@@ -101,6 +122,23 @@ async function handleAppealDecision(
         value: Date.now(),
       });
     }
+    if (contentType === 'post' && isFinalLabel(body?.finalLabel)) {
+      contentPatch.push({
+        op: 'set' as const,
+        path: '/authorship',
+        value: applyAppealOutcomeToAuthorship(
+          document.authorship as import('@shared/authorship').PublicAuthorship | undefined,
+          document.aiLabel,
+          body.finalLabel,
+          nowIso
+        ),
+      });
+      contentPatch.push({
+        op: 'set' as const,
+        path: '/authorshipLabelUpdatedAt',
+        value: nowIso,
+      });
+    }
 
     await container.item(contentId, partitionKey).patch(contentPatch);
 
@@ -112,6 +150,18 @@ async function handleAppealDecision(
       { op: 'set' as const, path: '/resolvedBy', value: actorId },
       { op: 'set' as const, path: '/decisionReasonCode', value: reasonCode },
       { op: 'set' as const, path: '/decisionNote', value: note },
+      { op: 'set' as const, path: '/reviewState', value: 'resolved' },
+      { op: 'set' as const, path: '/finalLabel', value: body?.finalLabel ?? null },
+      {
+        op: 'set' as const,
+        path: '/finalModerationAction',
+        value: decision === 'approve' ? 'none' : 'blocked',
+      },
+      {
+        op: 'set' as const,
+        path: '/decisionVersion',
+        value: Number(appeal.decisionVersion ?? 0) + 1,
+      },
     ]);
 
     await recordAdminAudit({
@@ -124,7 +174,17 @@ async function handleAppealDecision(
       before: { status: appeal.status ?? 'pending' },
       after: { status: DECISION_TO_STATUS[decision].toUpperCase() },
       correlationId: context.invocationId,
-      metadata: { contentId, contentType },
+      metadata: { contentId, contentType, finalLabel: body?.finalLabel ?? null },
+    });
+
+    trackAppEvent({
+      name: 'alpha_appeal_resolved',
+      properties: {
+        decision,
+        overturned: decision === 'approve',
+        contentType,
+        finalLabel: body?.finalLabel,
+      },
     });
 
     return createSuccessResponse({

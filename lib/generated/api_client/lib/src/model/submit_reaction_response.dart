@@ -12,11 +12,11 @@ part 'submit_reaction_response.g.dart';
 /// SubmitReactionResponse
 ///
 /// Properties:
-/// * [id] 
-/// * [reactionType] 
-/// * [includedInReputation] 
-/// * [antiGamingStatus] 
-/// * [createdAt] 
+/// * [id]
+/// * [reactionType]
+/// * [includedInReputation]
+/// * [antiGamingStatus]
+/// * [createdAt]
 @BuiltValue()
 abstract class SubmitReactionResponse implements Built<SubmitReactionResponse, SubmitReactionResponseBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -188,4 +188,3 @@ class SubmitReactionResponseAntiGamingStatusEnum extends EnumClass {
   static BuiltSet<SubmitReactionResponseAntiGamingStatusEnum> get values => _$submitReactionResponseAntiGamingStatusEnumValues;
   static SubmitReactionResponseAntiGamingStatusEnum valueOf(String name) => _$submitReactionResponseAntiGamingStatusEnumValueOf(name);
 }
-

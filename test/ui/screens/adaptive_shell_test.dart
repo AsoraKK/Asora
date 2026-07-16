@@ -129,7 +129,7 @@ void main() {
       await tester.tap(find.text('Create'));
       await tester.pump();
 
-      expect(find.text('Sign in to create a post.'), findsOneWidget);
+      expect(find.text('Sign in to use this Alpha feature.'), findsOneWidget);
     });
 
     testWidgets('breakpoint constant is 768', (tester) async {

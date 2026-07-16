@@ -161,7 +161,7 @@ Returns audit log entries (newest first).
 ## Cloudflare Access Setup
 
 1. Create a Self-hosted Application in Cloudflare Zero Trust
-2. Set hostname to `admin-api.asora.co.za`
+2. Set hostname to `admin-api.lythaus.co`
 3. Create Allow policy for `kyle.kern@asora.co.za`
 4. Copy the Application Audience (AUD) Tag
 5. Set environment variables:
@@ -185,10 +185,10 @@ Current Cloudflare Zero Trust configuration for the admin surface:
 
 | Application | Hostname / Path | Policy | Session |
 |-------------|-----------------|--------|---------|
-| `Asora Admin API` | `admin-api.asora.co.za` | Allow `kyle.kern@asora.co.za` | `30m` |
-| `Asora Admin API` | `admin-api.asora.co.za` | Allow service token `asora-dev-admin-api-st` | `6h` |
-| `Asora Control Panel` | `control.asora.co.za` | Allow `kyle.kern@asora.co.za`, then deny all others | `30m` |
-| `Asora Control Panel API` | `control.asora.co.za/api/*` | Allow service token `control-panel-to-admin-api` | `24h` |
+| `Lythaus Admin API` | `admin-api.lythaus.co` | Approved administrator policy | `30m` |
+| `Lythaus Admin API` | `admin-api.lythaus.co` | Approved service-token policy | `6h` |
+| `Lythaus Control Panel` | `admin.lythaus.co` | Approved administrator policy, then deny all others | `30m` |
+| `Lythaus Control Panel API` | `admin.lythaus.co/api/*` | Approved service-token policy | `24h` |
 
 These are deny-by-default Access apps. There is no public bypass route for the
 admin control surfaces.
@@ -235,18 +235,18 @@ npm test -- --testPathPattern=accessAuth.crypto
 ## Smoke Test Commands
 
 ```bash
-# Test 1: No header -> 401
-curl -s https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+# Test 1: No Access header -> 401 through the reviewed admin gateway
+curl -s https://admin-api.lythaus.co/api/_admin/config | jq .
 # Expected: {"error":{"code":"UNAUTHORIZED","message":"Missing Cf-Access-Jwt-Assertion header",...}}
 
 # Test 2: Bogus token -> 401 (proves signature verification)
 curl -s -H "Cf-Access-Jwt-Assertion: eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJmYWtlIn0.invalid" \
-  https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+  https://admin-api.lythaus.co/api/_admin/config | jq .
 # Expected: {"error":{"code":"INVALID_TOKEN",...}}
 
-# Test 3: Firebase auth endpoint still works (invites)
-curl -s -X POST https://asora-function-dev.azurewebsites.net/admin/invites | jq .
-# Expected: {"error":"Authorization header missing"}
+# Test 3: Admin routes require both Access and application authorization.
+curl -s -X POST https://admin-api.lythaus.co/api/admin/invites | jq .
+# Expected: controlled authorization error
 ```
 
 ## Curl Examples (with Access Session)
@@ -256,18 +256,18 @@ curl -s -X POST https://asora-function-dev.azurewebsites.net/admin/invites | jq 
 
 # Get config
 curl -H "Cf-Access-Jwt-Assertion: $JWT" \
-  https://admin-api.asora.co.za/api/_admin/config
+  https://admin-api.lythaus.co/api/_admin/config
 
 # Update config
 curl -X PUT \
   -H "Cf-Access-Jwt-Assertion: $JWT" \
   -H "Content-Type: application/json" \
   -d '{"schemaVersion": 1, "payload": {"threshold": 0.9}}' \
-  https://admin-api.asora.co.za/api/_admin/config
+  https://admin-api.lythaus.co/api/_admin/config
 
 # Get audit log
 curl -H "Cf-Access-Jwt-Assertion: $JWT" \
-  "https://admin-api.asora.co.za/api/_admin/audit?limit=20"
+  "https://admin-api.lythaus.co/api/_admin/audit?limit=20"
 ```
 
 ## Integration with Moderation
@@ -293,7 +293,7 @@ az rest --method get \
   --query "properties.cors"
 
 # Allowed origins:
-# - https://control.asora.co.za
+# - https://admin.lythaus.co
 # - http://localhost:8080
 # - http://localhost:4200
 ```
@@ -303,19 +303,19 @@ az rest --method get \
 ```bash
 # Test 1: OPTIONS preflight (should return CORS headers)
 curl -sI -X OPTIONS \
-  -H "Origin: https://control.asora.co.za" \
+  -H "Origin: https://admin.lythaus.co" \
   -H "Access-Control-Request-Method: GET" \
-  "https://asora-function-dev.azurewebsites.net/api/_admin/config"
+  "https://admin-api.lythaus.co/api/_admin/config"
 # Expected: 204 with Access-Control-Allow-Origin header
 
 # Test 2: GET without tokens (should return 401 with CORS headers)
-curl -si -H "Origin: https://control.asora.co.za" \
-  "https://asora-function-dev.azurewebsites.net/api/_admin/config" | head -10
-# Expected: 401 with Access-Control-Allow-Origin: https://control.asora.co.za
+curl -si -H "Origin: https://admin.lythaus.co" \
+  "https://admin-api.lythaus.co/api/_admin/config" | head -10
+# Expected: 401 with Access-Control-Allow-Origin: https://admin.lythaus.co
 
 # Test 3: GET via Cloudflare (302 redirect with CORS)
-curl -si -H "Origin: https://control.asora.co.za" \
-  "https://admin-api.asora.co.za/api/_admin/config" | head -10
+curl -si -H "Origin: https://admin.lythaus.co" \
+  "https://admin-api.lythaus.co/api/_admin/config" | head -10
 # Expected: 302 with access-control-allow-origin header
 ```
 
@@ -325,5 +325,5 @@ curl -si -H "Origin: https://control.asora.co.za" \
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 az rest --method patch \
   --uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/asora-psql-flex/providers/Microsoft.Web/sites/asora-function-dev/config/web?api-version=2023-01-01" \
-  --body '{"properties":{"cors":{"allowedOrigins":["https://control.asora.co.za","http://localhost:8080","http://localhost:4200"],"supportCredentials":true}}}'
+  --body '{"properties":{"cors":{"allowedOrigins":["https://admin.lythaus.co"],"supportCredentials":false}}}'
 ```

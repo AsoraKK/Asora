@@ -3,20 +3,23 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/unauthorized_error_error.dart';
+import 'package:asora_api_client/src/model/error_response_error.dart';
+import 'package:asora_api_client/src/model/error_response.dart';
+import 'package:asora_api_client/src/model/simple_error.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
+import 'package:one_of/one_of.dart';
 
 part 'unauthorized_error.g.dart';
 
 /// 401 – missing or invalid bearer token.
 ///
 /// Properties:
-/// * [error] 
+/// * [error]
 @BuiltValue()
 abstract class UnauthorizedError implements Built<UnauthorizedError, UnauthorizedErrorBuilder> {
-  @BuiltValueField(wireName: r'error')
-  UnauthorizedErrorError get error;
+  /// One Of [ErrorResponse], [SimpleError]
+  OneOf get oneOf;
 
   UnauthorizedError._();
 
@@ -41,11 +44,6 @@ class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedE
     UnauthorizedError object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'error';
-    yield serializers.serialize(
-      object.error,
-      specifiedType: const FullType(UnauthorizedErrorError),
-    );
   }
 
   @override
@@ -54,34 +52,8 @@ class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedE
     UnauthorizedError object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
-
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required UnauthorizedErrorBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'error':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(UnauthorizedErrorError),
-          ) as UnauthorizedErrorError;
-          result.error.replace(valueDes);
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
+    final oneOf = object.oneOf;
+    return serializers.serialize(oneOf.value, specifiedType: FullType(oneOf.valueType))!;
   }
 
   @override
@@ -91,17 +63,10 @@ class _$UnauthorizedErrorSerializer implements PrimitiveSerializer<UnauthorizedE
     FullType specifiedType = FullType.unspecified,
   }) {
     final result = UnauthorizedErrorBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
+    Object? oneOfDataSrc;
+    final targetType = const FullType(OneOf, [FullType(SimpleError), FullType(ErrorResponse), ]);
+    oneOfDataSrc = serialized;
+    result.oneOf = serializers.deserialize(oneOfDataSrc, specifiedType: targetType) as OneOf;
     return result.build();
   }
 }
-

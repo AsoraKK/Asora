@@ -47,10 +47,10 @@ abstract final class ErrorCodes {
   /// Content was blocked by AI moderation.
   static const String contentBlocked = 'CONTENT_BLOCKED';
 
-  /// AI-generated content cannot be published.
+  /// AI-generated content violates a prohibited-content rule.
   static const String aiContentBlocked = 'AI_CONTENT_BLOCKED';
 
-  /// AI-signaled content requires explicit label and remains non-publishable.
+  /// An authorship disclosure is required.
   static const String aiLabelRequired = 'AI_LABEL_REQUIRED';
 
   /// Appeal already exists for this content.
@@ -85,11 +85,10 @@ abstract final class ErrorMessages {
     ErrorCodes.contentBlocked:
         'This content cannot be posted as it may violate our community guidelines.',
     ErrorCodes.aiContentBlocked:
-        'AI-generated content cannot be published on Lythaus.\n'
+        'This AI-generated content is prohibited by the safety policy.\n'
         'You can appeal this decision.',
     ErrorCodes.aiLabelRequired:
-        'Potential AI-generated content must be labeled and cannot be published.\n'
-        'You can appeal this decision.',
+        'Choose Human-authored, AI-assisted, or AI-generated before posting.',
     ErrorCodes.appealExists:
         'You have already submitted an appeal for this content.',
     ErrorCodes.validationFailed: 'Please check your input and try again.',

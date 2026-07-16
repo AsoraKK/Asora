@@ -106,13 +106,19 @@ void main() {
           cancelAtPeriodEnd: true,
           entitlements: const SubscriptionEntitlements(
             dailyPosts: 20,
+            dailyComments: 100,
+            dailyReactions: 300,
+            dailyAppeals: 6,
+            exportCooldownDays: 14,
             maxMediaSizeMB: 30,
             maxMediaPerPost: 4,
             maxCustomFeeds: 2,
-            newsBoardAccess: true,
+            newsBoardAccessLevel: 'full',
+            newsBoardPreview: true,
             postingRestricted: false,
             rewardLevelCap: 5,
             rewardOptionsPerLevel: 1,
+            rewardChoiceBreadth: 'increased',
           ),
         );
 

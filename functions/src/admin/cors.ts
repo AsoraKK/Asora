@@ -1,7 +1,7 @@
 /**
  * Admin API CORS Configuration
  * 
- * Handles CORS for cross-origin requests from control.asora.co.za
+ * Handles CORS for exact Lythaus administration origins.
  */
 
 import { HttpResponseInit } from '@azure/functions';
@@ -11,7 +11,7 @@ import { HttpResponseInit } from '@azure/functions';
  * Control panel on different subdomain requires CORS
  */
 export const ALLOWED_ORIGINS = [
-  'https://control.asora.co.za',
+  'https://admin.lythaus.co',
   // Development origins
   'http://localhost:3000',
   'http://localhost:5173',
@@ -43,14 +43,16 @@ export function isOriginAllowed(origin: string | null | undefined): boolean {
  * Get CORS headers for admin API responses
  */
 export function getAdminCorsHeaders(origin: string | null | undefined): Record<string, string> {
-  const allowedOrigin = isOriginAllowed(origin) ? origin! : 'https://control.asora.co.za';
-
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+    ...(isOriginAllowed(origin)
+      ? {
+          'Access-Control-Allow-Origin': origin!,
+          'Access-Control-Allow-Credentials': 'true',
+        }
+      : {}),
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Cf-Access-Jwt-Assertion, X-Correlation-ID',
     'Access-Control-Max-Age': '86400',
-    'Access-Control-Allow-Credentials': 'true',
     ...SECURITY_HEADERS,
   };
 }

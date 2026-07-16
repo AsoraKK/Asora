@@ -10,19 +10,19 @@ void main() {
 
     test('isDev returns true for development', () {
       expect(Environment.development.isDev, isTrue);
-      expect(Environment.development.isStaging, isFalse);
+      expect(Environment.development.isPreview, isFalse);
       expect(Environment.development.isProd, isFalse);
     });
 
-    test('isStaging returns true for staging', () {
-      expect(Environment.staging.isDev, isFalse);
-      expect(Environment.staging.isStaging, isTrue);
-      expect(Environment.staging.isProd, isFalse);
+    test('isPreview returns true for preview', () {
+      expect(Environment.preview.isDev, isFalse);
+      expect(Environment.preview.isPreview, isTrue);
+      expect(Environment.preview.isProd, isFalse);
     });
 
     test('isProd returns true for production', () {
       expect(Environment.production.isDev, isFalse);
-      expect(Environment.production.isStaging, isFalse);
+      expect(Environment.production.isPreview, isFalse);
       expect(Environment.production.isProd, isTrue);
     });
 
@@ -32,7 +32,7 @@ void main() {
         Environment.values,
         containsAll([
           Environment.development,
-          Environment.staging,
+          Environment.preview,
           Environment.production,
         ]),
       );
@@ -105,10 +105,10 @@ void main() {
 
       expect(config.strictDeviceIntegrity, isTrue);
       expect(config.blockRootedDevices, isTrue);
-      expect(config.allowRootedInStagingForQa, isFalse);
+      expect(config.allowRootedInPreviewForQa, isFalse);
     });
 
-    test('allowRootedInStagingForQa defaults to false', () {
+    test('allowRootedInPreviewForQa defaults to false', () {
       const config = MobileSecurityConfig(
         tlsPins: TlsPinConfig(
           enabled: false,
@@ -119,7 +119,7 @@ void main() {
         blockRootedDevices: false,
       );
 
-      expect(config.allowRootedInStagingForQa, isFalse);
+      expect(config.allowRootedInPreviewForQa, isFalse);
     });
 
     test('toJson returns correct structure', () {
@@ -131,14 +131,14 @@ void main() {
         ),
         strictDeviceIntegrity: true,
         blockRootedDevices: false,
-        allowRootedInStagingForQa: true,
+        allowRootedInPreviewForQa: true,
       );
 
       final json = config.toJson();
 
       expect(json['strictDeviceIntegrity'], isTrue);
       expect(json['blockRootedDevices'], isFalse);
-      expect(json['allowRootedInStagingForQa'], isTrue);
+      expect(json['allowRootedInPreviewForQa'], isTrue);
       expect(json['tlsPins'], isA<Map<String, dynamic>>());
       expect(json['tlsPins']['pinCount'], 1);
     });
@@ -203,10 +203,16 @@ void main() {
       expect(config.security.blockRootedDevices, isFalse);
     });
 
-    test('dev config has tls pins enabled', () {
+    test('dev config keeps strict TLS pinning disabled for MVP', () {
       final config = EnvironmentConfig.fromEnvironment();
 
-      expect(config.security.tlsPins.enabled, isTrue);
+      expect(config.security.tlsPins.enabled, isFalse);
+      expect(config.security.tlsPins.strictMode, isFalse);
+      expect(
+        config.security.tlsPins.lifecycleState,
+        PinLifecycleState.disabled,
+      );
+      expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
     });
   });
 }

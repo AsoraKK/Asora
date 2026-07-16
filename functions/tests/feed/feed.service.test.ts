@@ -278,7 +278,7 @@ describe('feedService', () => {
       expect(mockedWithClient).not.toHaveBeenCalled();
     });
 
-    it('caps multi-author queries to MAX_AUTHOR_BATCH with cross partitioning', async () => {
+    it('preserves all followees in multi-author queries with cross partitioning', async () => {
       const followeeRows = Array.from({ length: 55 }, (_, index) => ({
         followee_uuid: `author-${index}`,
       }));
@@ -301,7 +301,7 @@ describe('feedService', () => {
         context: mockContext,
       });
 
-      expect(result.headers['X-Feed-Author-Count']).toBe('50');
+      expect(result.headers['X-Feed-Author-Count']).toBe('56');
       const options = mockItemsQuery.mock.calls[0][1];
       expect(options.partitionKey).toBeUndefined();
     });
@@ -335,28 +335,40 @@ describe('feedService', () => {
       expect(options.maxItemCount).toBe(10);
     });
 
-    it('caps limit at MAX_LIMIT (50)', async () => {
+    it('rejects a limit above MAX_LIMIT (50)', async () => {
       setupCosmosResponse([]);
 
-      await getFeed({ principal: null, context: mockContext, limit: 100 });
+      await expect(
+        getFeed({ principal: null, context: mockContext, limit: 100 })
+      ).rejects.toMatchObject({ status: 400 });
 
-      const options = mockItemsQuery.mock.calls[0][1];
-      expect(options.maxItemCount).toBe(50);
+      expect(mockItemsQuery).not.toHaveBeenCalled();
     });
 
-    it('uses DEFAULT_LIMIT (30) for invalid limit', async () => {
+    it('rejects a negative limit', async () => {
       setupCosmosResponse([]);
 
-      await getFeed({ principal: null, context: mockContext, limit: -5 });
+      await expect(
+        getFeed({ principal: null, context: mockContext, limit: -5 })
+      ).rejects.toMatchObject({ status: 400 });
 
-      const options = mockItemsQuery.mock.calls[0][1];
-      expect(options.maxItemCount).toBe(30);
+      expect(mockItemsQuery).not.toHaveBeenCalled();
     });
 
-    it('uses DEFAULT_LIMIT for non-numeric limit', async () => {
+    it('rejects a non-numeric limit', async () => {
       setupCosmosResponse([]);
 
-      await getFeed({ principal: null, context: mockContext, limit: 'abc' as any });
+      await expect(
+        getFeed({ principal: null, context: mockContext, limit: 'abc' as any })
+      ).rejects.toMatchObject({ status: 400 });
+
+      expect(mockItemsQuery).not.toHaveBeenCalled();
+    });
+
+    it('uses DEFAULT_LIMIT (30) when the limit is omitted', async () => {
+      setupCosmosResponse([]);
+
+      await getFeed({ principal: null, context: mockContext });
 
       const options = mockItemsQuery.mock.calls[0][1];
       expect(options.maxItemCount).toBe(30);

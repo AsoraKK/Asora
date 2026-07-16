@@ -3,14 +3,13 @@
  * 
  * GET /api/health
  * 
- * Returns system health status, configuration summary, and readiness indicators.
+ * Returns a minimal liveness/readiness envelope.
  * Used by Azure health probes and monitoring.
  */
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { configService } from '../../shared/configService';
 import { getFcmConfigStatus } from '../notifications/clients/fcmClient';
-import { getNotificationsDegradationStatus } from '../notifications/shared/errorHandler';
 
 /**
  * Health Check Handler
@@ -23,11 +22,7 @@ import { getNotificationsDegradationStatus } from '../notifications/shared/error
  * {
  *   "status": "healthy" | "degraded",
  *   "timestamp": "ISO8601",
- *   "config": {
- *     "environment": "string",
- *     "notificationHub": { "name": "string", "enabled": boolean },
- *     "cosmos": { "endpoint": "string" }
- *   }
+ *   "ready": boolean
  * }
  */
 async function healthCheck(
@@ -40,13 +35,7 @@ async function healthCheck(
     // Get config summary (no secrets)
     const configSummary = configService.getHealthSummary();
     const cosmosInfo = configSummary.cosmos as { configured: boolean; databaseName: string };
-    const notificationsInfo = configSummary.notifications as {
-      enabled: boolean;
-      fcmConfigured: boolean;
-      fcmProjectId?: string;
-    };
     const fcmStatus = getFcmConfigStatus();
-    const notificationsDegradation = getNotificationsDegradationStatus();
 
     // Determine dependency health
     const cosmosHealthy = cosmosInfo.configured;
@@ -66,44 +55,28 @@ async function healthCheck(
 
     let status: 'healthy' | 'degraded' = 'healthy';
     let httpStatus = 200;
-    const degradations: string[] = [];
-
     if (!cosmosHealthy) {
       status = 'degraded';
       httpStatus = 503; // Cosmos is critical
-      degradations.push('cosmos_not_configured');
     }
 
     if (!notificationsHealthy) {
       status = 'degraded';
-      degradations.push('fcm_not_configured');
     }
 
     if (easyAuthMisconfigured) {
       status = 'degraded';
       httpStatus = 503; // Auth infra is critical
-      degradations.push('easyauth_not_enabled');
     }
 
+    // Do not disclose runtime environment, dependency names, infrastructure
+    // configuration, provider project IDs, or error classifications to a
+    // public health caller. Those details are available through protected
+    // operational telemetry.
     const response = {
       status,
       timestamp: new Date().toISOString(),
-      degradations,
-      auth: {
-        easyAuthEnabled,
-        easyAuthMisconfigured,
-      },
-      config: configSummary,
-      notifications: {
-        enabled: notificationsInfo.enabled,
-        fcmConfigured: fcmStatus.configured,
-        projectId: fcmStatus.projectId || notificationsInfo.fcmProjectId || null,
-        error: fcmStatus.error ?? null,
-        // Runtime degradation tracking
-        degraded: notificationsDegradation.degraded,
-        lastErrorCode: notificationsDegradation.lastErrorCode,
-        recentErrorCount: notificationsDegradation.recentErrorCount,
-      },
+      ready: status === 'healthy',
     };
 
     context.log(`[Health Check] Status: ${status}`);
@@ -124,7 +97,8 @@ async function healthCheck(
       jsonBody: {
         status: 'error',
         timestamp: new Date().toISOString(),
-        error: 'Health check failed'
+        ready: false,
+        error: 'Health check failed',
       },
       headers: {
         'Content-Type': 'application/json',

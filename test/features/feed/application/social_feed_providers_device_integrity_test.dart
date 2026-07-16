@@ -156,7 +156,7 @@ DeviceIntegrityGuard _guardFor(DeviceSecurityState state) {
       ),
       strictDeviceIntegrity: true,
       blockRootedDevices: true,
-      allowRootedInStagingForQa: false,
+      allowRootedInPreviewForQa: false,
     ),
     environment: Environment.production,
   );

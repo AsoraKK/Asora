@@ -1,16 +1,15 @@
 /**
- * Current News Board policy:
- * authenticated Free, Premium, Black, and Admin users can read News Board.
- * Anonymous requests remain blocked.
+ * Current News Board policy: Free receives a constrained preview, Premium and
+ * Black receive full access, and anonymous requests remain blocked.
  */
 
 /**
  * News Board Access Tests - Workstream 10
  *
  * Historical policy note: this originally enforced Black-tier access.
- * Current assertions below verify authenticated Free, Premium, Black, and Admin access.
+ * Current assertions below verify preview/full access metadata by tier.
  *   - Anonymous requests → 401
- *   - Free-tier users → 200
+ *   - Free-tier users → 200 preview only
  *   - Premium-tier users → 200
  *   - Black-tier users → 200
  *   - Admin-tier users → 200
@@ -20,6 +19,7 @@ import type { InvocationContext } from '@azure/functions';
 import { extractAuthContext } from '@shared/http/authContext';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
 import { httpReqMock } from '../helpers/http';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,12 +36,17 @@ jest.mock('@feed/service/feedService', () => ({
 
 jest.mock('@posts/service/postsService', () => ({
   postsService: {
-    enrichPost: jest.fn((item: unknown) => item),
+    enrichFeedPosts: jest.fn((items: unknown[]) => items),
   },
+}));
+
+jest.mock('@shared/services/entitlementService', () => ({
+  getEffectiveEntitlements: jest.fn(),
 }));
 
 const mockedExtractAuth = jest.mocked(extractAuthContext);
 const mockedGetFeed = jest.mocked(getFeed);
+const mockedGetEffectiveEntitlements = jest.mocked(getEffectiveEntitlements);
 
 const contextStub = {
   log: jest.fn(),
@@ -98,6 +103,14 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedGetFeed.mockResolvedValue(emptyFeedResult as any);
+    mockedGetEffectiveEntitlements.mockImplementation(async (_userId, tier) => ({
+      tier: tier === 'premium' || tier === 'black' ? tier : 'free',
+      source: 'user_record',
+      limits: {
+        newsBoardAccessLevel:
+          tier === 'premium' || tier === 'black' || tier === 'admin' ? 'full' : 'preview',
+      },
+    }) as any);
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -115,7 +128,7 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
     expect(body.error.code).toBe('UNAUTHORIZED');
   });
 
-  it('returns 200 for free-tier users', async () => {
+  it('returns a locked preview for free-tier users', async () => {
     mockedExtractAuth.mockResolvedValue(makeAuthContext('free') as any);
 
     const req = httpReqMock({ method: 'GET' });
@@ -123,6 +136,11 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
 
     expect(result.status).toBe(200);
     expect(mockedGetFeed).toHaveBeenCalledTimes(1);
+    expect(result.jsonBody).toMatchObject({
+      accessLevel: 'preview',
+      locked: true,
+      previewLimit: 3,
+    });
   });
 
   it('returns 200 for premium-tier users', async () => {
@@ -133,6 +151,7 @@ describe('News Board — tier gate (GET /api/feed/news)', () => {
 
     expect(result.status).toBe(200);
     expect(mockedGetFeed).toHaveBeenCalledTimes(1);
+    expect(result.jsonBody).toMatchObject({ accessLevel: 'full', locked: false });
   });
 
   // ─────────────────────────────────────────────────────────────

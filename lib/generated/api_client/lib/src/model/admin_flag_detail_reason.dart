@@ -11,9 +11,9 @@ part 'admin_flag_detail_reason.g.dart';
 /// AdminFlagDetailReason
 ///
 /// Properties:
-/// * [reason] 
-/// * [createdAt] 
-/// * [status] 
+/// * [reason]
+/// * [createdAt]
+/// * [status]
 @BuiltValue()
 abstract class AdminFlagDetailReason implements Built<AdminFlagDetailReason, AdminFlagDetailReasonBuilder> {
   @BuiltValueField(wireName: r'reason')
@@ -141,4 +141,3 @@ class _$AdminFlagDetailReasonSerializer implements PrimitiveSerializer<AdminFlag
     return result.build();
   }
 }
-

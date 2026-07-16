@@ -7,9 +7,9 @@ import 'package:asora/core/config/environment_config.dart';
 
 /// SPKI Pin Provisioning Gate Tests
 ///
-/// These tests enforce that staging and production pin lifecycle states stay
-/// explicit. Planned environments may remain empty until the Azure hostnames
-/// are provisioned; live environments must carry populated pins.
+/// These tests enforce that preview and MVP-live pin lifecycle states stay
+/// explicit. MVP strict pinning is intentionally disabled until the public
+/// gateway certificate rotation and rollback procedure is proven.
 ///
 /// To enforce them (e.g. in the launch-readiness gate), set the environment
 /// variable SPKI_GATE=true before running flutter test:
@@ -21,14 +21,11 @@ import 'package:asora/core/config/environment_config.dart';
 ///   2. Run the extraction script for each environment:
 ///
 ///        ./scripts/extract-spki-pins.sh \
-///            asora-function-staging.northeurope-01.azurewebsites.net
-///
-///        ./scripts/extract-spki-pins.sh \
-///            asora-function-prod.northeurope-01.azurewebsites.net
+///            api.lythaus.co
 ///
 ///        # Also extract the intermediate CA pin as a backup:
 ///        CERT_INDEX=1 ./scripts/extract-spki-pins.sh \
-///            asora-function-prod.northeurope-01.azurewebsites.net
+///            api.lythaus.co
 ///
 ///   3. Paste the base64 output into the corresponding spkiPinsBase64 arrays
 ///      in lib/core/config/environment_config.dart.
@@ -45,27 +42,29 @@ void main() {
 
   group('SPKI pin provisioning gate [launch-gate]', () {
     test(
-      'staging pins are planned until the host is provisioned',
+      'preview strict pinning remains explicitly disabled',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
-          Environment.staging,
+          Environment.preview,
         );
 
         expect(
           config.security.tlsPins.lifecycleState,
-          PinLifecycleState.planned,
+          PinLifecycleState.disabled,
         );
+        expect(config.security.tlsPins.enabled, isFalse);
+        expect(config.security.tlsPins.strictMode, isFalse);
         expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );
 
     test(
-      'staging pins are validated when promoted to live',
+      'preview pin promotion remains guarded',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
-          Environment.staging,
+          Environment.preview,
         );
 
         if (config.security.tlsPins.lifecycleState != PinLifecycleState.live) {
@@ -80,13 +79,13 @@ void main() {
                 pin.toUpperCase().contains('PLACEHOLDER') ||
                 pin.toUpperCase().contains('REPLACE'),
             isFalse,
-            reason: 'Placeholder found in staging pin: $pin',
+            reason: 'Placeholder found in preview pin: $pin',
           );
           expect(
             pinPattern.hasMatch(pin),
             isTrue,
             reason:
-                'Invalid base64 SHA-256 format for staging pin: $pin '
+                'Invalid base64 SHA-256 format for preview pin: $pin '
                 '(expected 43-44 base64 chars)',
           );
         }
@@ -94,7 +93,7 @@ void main() {
     );
 
     test(
-      'production pins are planned until the host is provisioned',
+      'production strict pinning remains explicitly disabled',
       skip: enforceGate ? null : gateSkipReason,
       () {
         final config = EnvironmentConfig.configForEnvironment(
@@ -103,8 +102,10 @@ void main() {
 
         expect(
           config.security.tlsPins.lifecycleState,
-          PinLifecycleState.planned,
+          PinLifecycleState.disabled,
         );
+        expect(config.security.tlsPins.enabled, isFalse);
+        expect(config.security.tlsPins.strictMode, isFalse);
         expect(config.security.tlsPins.spkiPinsBase64, isEmpty);
       },
     );
@@ -163,7 +164,7 @@ void main() {
               'to survive certificate rotation without a forced app update. '
               'Extract the intermediate CA pin with: '
               'CERT_INDEX=1 ./scripts/extract-spki-pins.sh '
-              'asora-function-prod.northeurope-01.azurewebsites.net',
+              'api.lythaus.co',
         );
       },
     );

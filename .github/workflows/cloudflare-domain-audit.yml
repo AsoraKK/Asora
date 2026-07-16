@@ -1,0 +1,62 @@
+name: Cloudflare Domain Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Sanitized read-only audit scope
+        required: true
+        default: account_rulesets
+        type: choice
+        options:
+          - account_rulesets
+          - worker_snapshot
+          - full
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-domain-audit
+  cancel-in-progress: false
+
+jobs:
+  recheck-previously-unavailable-endpoints:
+    name: Recheck previously unavailable endpoints
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Require the audit token
+        shell: bash
+        run: test -n "$CLOUDFLARE_AUDIT_API_TOKEN"
+
+      - name: Install audit prerequisites
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
+      - name: Run Cloudflare domain audit
+        shell: pwsh
+        run: |
+          if ('${{ inputs.mode }}' -eq 'account_rulesets') {
+            ./scripts/cloudflare/audit-domains.ps1 -RecheckAccountRulesets
+          } elseif ('${{ inputs.mode }}' -eq 'worker_snapshot') {
+            ./scripts/cloudflare/audit-domains.ps1 -SnapshotWorkerName control-api-proxy
+          } else {
+            ./scripts/cloudflare/audit-domains.ps1
+          }
+
+      - name: Upload sanitized audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-domain-audit-${{ github.run_id }}
+          if-no-files-found: warn
+          path: .artifacts/cloudflare-audit/sanitized-cloudflare-audit.json

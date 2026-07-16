@@ -110,7 +110,7 @@ DEV_AZURE_FUNCTION_APP_NAME=asora-function-dev
 DEV_AZURE_RESOURCE_GROUP=asora-psql-flex
 
 # Production environment (when ready)
-PROD_AZURE_FUNCTION_APP_NAME=asora-function-prod
+MVP_AZURE_FUNCTION_APP_NAME=asora-function-dev
 PROD_AZURE_RESOURCE_GROUP=asora-prod
 ```
 
@@ -132,7 +132,7 @@ For better security and environment-specific deployments:
    - Name: `production`
    - Enable "Required reviewers" for added security
    - Add environment variables:
-     - `AZURE_FUNCTIONAPP_NAME`: `asora-function-prod`
+     - `AZURE_FUNCTIONAPP_NAME`: `asora-function-dev` (operationally the Lythaus MVP shared environment)
      - `AZURE_RESOURCE_GROUP`: `asora-prod`
 
 ## 🧪 Step 4: Test the Deployment
@@ -150,9 +150,9 @@ git push origin main
 
 ### Manual Deployment
 1. Go to GitHub repository → Actions
-2. Click "Deploy Azure Function App"
+2. Click "Deploy Lythaus MVP backend"
 3. Click "Run workflow"
-4. Select environment (dev/staging/production)
+4. Supply the exact validated SHA, CI run ID, approved MVP stage, and disabled-feature manifest
 5. Click "Run workflow"
 
 ## 📊 Step 5: Monitor Deployment
@@ -180,10 +180,10 @@ az functionapp function list \
 ## 🔧 Workflow Features
 
 ### ✅ What the workflow does:
-- **Multi-runtime support**: Handles both Node.js and Python functions
-- **Smart deployment**: Only deploys when function code changes
+- **Single authorised origin**: Deploys only to `asora-function-dev` as the Lythaus MVP shared environment
+- **Exact artifact selection**: Requires a validated commit SHA and CI run ID
 - **Health verification**: Tests deployment success
-- **Environment support**: Dev/staging/production environments
+- **Environment model**: Local, ephemeral Cloudflare preview, and MVP live; no new Azure environments
 - **Security**: Uses OIDC instead of storing credentials
 - **Clean packaging**: Creates optimized deployment packages
 

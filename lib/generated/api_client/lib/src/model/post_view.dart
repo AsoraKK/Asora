@@ -6,6 +6,7 @@
 import 'package:asora_api_client/src/model/news_source_metadata.dart';
 import 'package:asora_api_client/src/model/post.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:asora_api_client/src/model/public_authorship.dart';
 import 'package:asora_api_client/src/model/post_view_all_of_recent_comments.dart';
 import 'package:asora_api_client/src/model/post_trust_timeline.dart';
 import 'package:built_value/json_object.dart';
@@ -17,36 +18,37 @@ part 'post_view.g.dart';
 /// PostView
 ///
 /// Properties:
-/// * [id] 
-/// * [authorId] 
-/// * [content] 
-/// * [contentType] 
-/// * [mediaUrls] 
-/// * [topics] 
-/// * [visibility] 
-/// * [isNews] 
-/// * [source_] 
-/// * [clusterId] 
-/// * [createdAt] 
-/// * [updatedAt] 
-/// * [author] 
-/// * [authorRole] 
-/// * [likeCount] 
-/// * [commentCount] 
-/// * [bookmarkCount] 
-/// * [viewCount] 
-/// * [viewerHasLiked] 
-/// * [viewerHasBookmarked] 
-/// * [viewerFollowsAuthor] 
-/// * [authorFollowerCount] 
-/// * [recentComments] 
-/// * [badges] 
-/// * [trustStatus] 
-/// * [timeline] 
-/// * [hasAppeal] 
-/// * [proofSignalsProvided] 
-/// * [verifiedContextBadgeEligible] 
-/// * [featuredEligible] 
+/// * [id]
+/// * [authorId]
+/// * [content]
+/// * [contentType]
+/// * [mediaUrls]
+/// * [topics]
+/// * [visibility]
+/// * [isNews]
+/// * [source_]
+/// * [clusterId]
+/// * [authorship]
+/// * [createdAt]
+/// * [updatedAt]
+/// * [author]
+/// * [authorRole]
+/// * [likeCount]
+/// * [commentCount]
+/// * [bookmarkCount]
+/// * [viewCount]
+/// * [viewerHasLiked]
+/// * [viewerHasBookmarked]
+/// * [viewerFollowsAuthor]
+/// * [authorFollowerCount]
+/// * [recentComments]
+/// * [badges]
+/// * [trustStatus]
+/// * [timeline]
+/// * [hasAppeal]
+/// * [proofSignalsProvided]
+/// * [verifiedContextBadgeEligible]
+/// * [featuredEligible]
 @BuiltValue()
 abstract class PostView implements Post, Built<PostView, PostViewBuilder> {
   @BuiltValueField(wireName: r'trustStatus')
@@ -178,6 +180,11 @@ class _$PostViewSerializer implements PrimitiveSerializer<PostView> {
     yield serializers.serialize(
       object.featuredEligible,
       specifiedType: const FullType(bool),
+    );
+    yield r'authorship';
+    yield serializers.serialize(
+      object.authorship,
+      specifiedType: const FullType(PublicAuthorship),
     );
     if (object.source_ != null) {
       yield r'source';
@@ -387,6 +394,13 @@ class _$PostViewSerializer implements PrimitiveSerializer<PostView> {
             specifiedType: const FullType(bool),
           ) as bool;
           result.featuredEligible = valueDes;
+          break;
+        case r'authorship':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PublicAuthorship),
+          ) as PublicAuthorship;
+          result.authorship.replace(valueDes);
           break;
         case r'source':
           final valueDes = serializers.deserialize(
@@ -635,4 +649,3 @@ class PostViewTrustStatusEnum extends EnumClass {
   static BuiltSet<PostViewTrustStatusEnum> get values => _$postViewTrustStatusEnumValues;
   static PostViewTrustStatusEnum valueOf(String name) => _$postViewTrustStatusEnumValueOf(name);
 }
-

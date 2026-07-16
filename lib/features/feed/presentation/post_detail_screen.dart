@@ -95,6 +95,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 _PostHeader(post: post),
                 const SizedBox(height: 12),
                 Text(post.text, style: Theme.of(context).textTheme.bodyLarge),
+                const SizedBox(height: 8),
+                Chip(
+                  avatar: const Icon(Icons.auto_awesome_outlined, size: 16),
+                  label: Text(post.authorship.label.label),
+                ),
                 if ((post.mediaUrls?.isNotEmpty ?? false)) ...[
                   const SizedBox(height: 12),
                   _PostMedia(mediaUrls: post.mediaUrls!),

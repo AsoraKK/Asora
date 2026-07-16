@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-staging.example.com}"
+DOMAIN="${DOMAIN:?Set DOMAIN to the exact temporary Worker preview hostname}"
 PATH_FEED="${PATH_FEED:-/api/feed/discover}"
 AUTH_HDR="${AUTH_HDR:-Authorization: Bearer test-token}"
 RUN_ID="${CACHE_TEST_ID:-$(date +%s)-$$-$RANDOM}"

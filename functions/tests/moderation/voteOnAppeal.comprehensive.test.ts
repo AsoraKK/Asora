@@ -198,7 +198,7 @@ describe('voteOnAppealHandler comprehensive coverage', () => {
 		expect(usersRead).not.toHaveBeenCalled();
 	});
 
-	it('records a vote, reaches quorum, and resolves the appeal', async () => {
+	it('records a vote and reaches an advisory community recommendation', async () => {
 		const appeal = createAppeal({ requiredVotes: 3, votesFor: 0, votesAgainst: 0 });
 		mockVoteQueries({ appeal, dailyCount: 0 });
 		usersService.getUserById.mockResolvedValue({ reputation_score: 0 });
@@ -217,7 +217,8 @@ describe('voteOnAppealHandler comprehensive coverage', () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect((response.jsonBody as any).finalDecision).toBe('approved');
+		expect((response.jsonBody as any).communityRecommendation).toBe('approved');
+		expect((response.jsonBody as any).status).toBe('pending');
 		expect((response.jsonBody as any).currentTally).toMatchObject({
 			votesFor: 3,
 			votesAgainst: 0,
@@ -234,30 +235,20 @@ describe('voteOnAppealHandler comprehensive coverage', () => {
 				isModerator: true,
 			})
 		);
-		expect(postsReplace).toHaveBeenCalledWith(
+		expect(appealsReplace).toHaveBeenCalledWith(
 			expect.objectContaining({
-				id: 'post-1',
-				status: 'published',
-				appealStatus: 'approved',
+				status: 'pending',
+				communityRecommendation: 'approved',
+				reviewState: 'pending_human_review',
 			})
 		);
-		expect(moderationDecisionsCreate).toHaveBeenCalledWith(
-			expect.objectContaining({
-				action: 'approved',
-				appealId: 'appeal-1',
-				source: 'appeal_vote',
-			})
-		);
+		expect(postsReplace).not.toHaveBeenCalled();
+		expect(moderationDecisionsCreate).not.toHaveBeenCalled();
 		expect(appendReceiptEvent).toHaveBeenCalled();
-		expect(enqueueUserNotification).toHaveBeenCalledWith(
-			expect.objectContaining({
-				userId: 'submitter-1',
-				eventType: expect.any(String),
-			})
-		);
+		expect(enqueueUserNotification).not.toHaveBeenCalled();
 	});
 
-	it('returns 409 and resolves expired appeals before recording the vote', async () => {
+	it('returns 409 and records an advisory recommendation for expired appeals', async () => {
 		const expiredAppeal = createAppeal({
 			votesFor: 1,
 			votesAgainst: 2,
@@ -276,15 +267,15 @@ describe('voteOnAppealHandler comprehensive coverage', () => {
 
 		expect(response.status).toBe(409);
 		expect((response.jsonBody as any).error).toBe('Appeal has expired');
-		expect((response.jsonBody as any).finalDecision).toBe('rejected');
+		expect((response.jsonBody as any).communityRecommendation).toBe('rejected');
 		expect(appealsReplace).toHaveBeenCalledWith(
 			expect.objectContaining({
-				status: 'rejected',
-				finalDecision: 'rejected',
-				resolvedBy: 'community_vote',
+				status: 'pending',
+				communityRecommendation: 'rejected',
+				reviewState: 'pending_human_review',
 			})
 		);
 		expect(votesCreate).not.toHaveBeenCalled();
-		expect(moderationDecisionsCreate).toHaveBeenCalled();
+		expect(moderationDecisionsCreate).not.toHaveBeenCalled();
 	});
 });

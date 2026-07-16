@@ -7,4 +7,8 @@ routes = [
 
 [vars]
 ORIGIN_BASE = "https://asora-function-dev.azurewebsites.net"
+GATEWAY_CLASS = "legacy_custom"
+
+# ORIGIN_AUTH_TOKEN is supplied with `wrangler secret put`; never place it in
+# this file or browser-delivered configuration.
 

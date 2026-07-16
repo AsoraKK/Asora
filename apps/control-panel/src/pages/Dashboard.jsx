@@ -40,7 +40,7 @@ const CHECKLIST_ITEMS = {
 const DASHBOARD_GUIDE = {
   title: 'How to use this dashboard',
   summary:
-    'This is the command center for control.asora.co.za. Severity is backend-computed and trends are directional operational signals.',
+    'This is the command center for admin.lythaus.co. Severity is backend-computed and trends are directional operational signals.',
   items: [
     'Read incident severity first; this state is computed server-side, not in browser.',
     'Use trend cards to spot direction changes in flags/appeals over 24h or 7d.',

@@ -5,19 +5,19 @@
 ### Environment Configuration Verification
 
 - [ ] **Dev environment**: Pinning enabled, `strictMode: false`
-- [ ] **Staging environment**: Pinning enabled, `strictMode: true`, QA override available
-- [ ] **Production environment**: Pinning enabled, `strictMode: true`, overrides disabled in release builds
+- [ ] **Preview environment**: Pinning lifecycle explicit; QA override disabled unless approved for the exact artifact
+- [ ] **MVP live environment**: Pinning enabled, `strictMode: true`, overrides disabled in release builds
 
 ### TLS Certificate Pinning Tests
 
 #### Valid Certificate Tests
-- [ ] **Dev**: App connects successfully to `asora-function-dev-*.azurewebsites.net`
-- [ ] **Staging**: App connects successfully to staging backend
-- [ ] **Production**: App connects successfully to production backend
+- [ ] **Local**: App connects to local Functions where supported
+- [ ] **Preview**: App connects through the exact temporary Worker preview URL
+- [ ] **MVP live**: App connects to `api.lythaus.co`
 
 #### Invalid Certificate Tests
-- [ ] **Staging** (wrong pin): Connection fails with TLS error
-- [ ] **Prod** (wrong pin): Connection fails with TLS error
+- [ ] **Preview** (wrong pin when promoted live): Connection fails with TLS error
+- [ ] **MVP live** (wrong pin): Connection fails with TLS error
 - [ ] **Dev** (wrong pin): Connection succeeds with warning log
 
 #### Telemetry Verification
@@ -36,15 +36,15 @@
 
 #### Rooted/Jailbroken Device
 
-**Production Build:**
+**MVP Live Build:**
 - [ ] Sign in **blocked** with UI message
 - [ ] Sign up **blocked** with UI message
 - [ ] Post creation **blocked** with UI message
 - [ ] Privacy DSR **blocked** with UI message
 - [ ] Feed reading **allowed** with warning snackbar
 
-**Staging Build (QA override enabled):**
-- [ ] All operations **allowed** with staging warning
+**Preview Build (explicit QA override enabled):**
+- [ ] All operations **allowed** with preview warning
 
 **Dev Build:**
 - [ ] All operations **allowed** with dev warning
@@ -102,8 +102,8 @@
 **Expected:** Blocking UI with message about rooted devices, sign-in prevented.
 
 ### Scenario 3: QA Testing on Rooted Device
-1. Install staging build on rooted device
-2. Ensure `allowRootedInStagingForQa: true` in config
+1. Install an exact Cloudflare preview build on a rooted device
+2. Enable `allowRootedInPreviewForQa: true` only for the approved QA artifact
 3. Perform sign in, post creation
 
 **Expected:** Warning snackbar but operations allowed.

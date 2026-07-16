@@ -3,7 +3,6 @@ import { httpReqMock } from '../helpers/http';
 
 const mockGetHealthSummary = jest.fn();
 const mockGetFcmConfigStatus = jest.fn();
-const mockGetNotificationsDegradationStatus = jest.fn();
 const mockAppHttp = jest.fn();
 
 jest.mock('@azure/functions', () => ({
@@ -20,10 +19,6 @@ jest.mock('../../shared/configService', () => ({
 
 jest.mock('../../src/notifications/clients/fcmClient', () => ({
   getFcmConfigStatus: (...args: unknown[]) => mockGetFcmConfigStatus(...args),
-}));
-
-jest.mock('../../src/notifications/shared/errorHandler', () => ({
-  getNotificationsDegradationStatus: (...args: unknown[]) => mockGetNotificationsDegradationStatus(...args),
 }));
 
 function loadHealthHandler(): (req: any, ctx: InvocationContext) => Promise<any> {
@@ -51,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('health function', () => {
-  it('returns safe healthy output without secrets', async () => {
+  it('returns a minimal healthy readiness envelope', async () => {
     mockGetHealthSummary.mockReturnValue({
       environment: 'local',
       notifications: {
@@ -69,28 +64,16 @@ describe('health function', () => {
       projectId: 'demo-project',
       error: null,
     });
-    mockGetNotificationsDegradationStatus.mockReturnValue({
-      degraded: false,
-      lastErrorCode: null,
-      recentErrorCount: 0,
-    });
 
     const handler = loadHealthHandler();
     const response = await handler(httpReqMock({ method: 'GET' }), createContext());
     const body = response.jsonBody as Record<string, unknown>;
 
     expect(response.status).toBe(200);
-    expect(body.status).toBe('healthy');
-    expect(body.degradations).toEqual([]);
-    expect(body.auth).toMatchObject({ easyAuthEnabled: false, easyAuthMisconfigured: false });
-    expect(body.notifications).toMatchObject({
-      enabled: true,
-      fcmConfigured: true,
-      projectId: 'demo-project',
-      error: null,
-      degraded: false,
-      lastErrorCode: null,
-      recentErrorCount: 0,
+    expect(body).toEqual({
+      status: 'healthy',
+      timestamp: expect.any(String),
+      ready: true,
     });
     expect(response.headers).toMatchObject({
       'Content-Type': 'application/json',
@@ -119,11 +102,6 @@ describe('health function', () => {
       projectId: 'demo-project',
       error: null,
     });
-    mockGetNotificationsDegradationStatus.mockReturnValue({
-      degraded: false,
-      lastErrorCode: null,
-      recentErrorCount: 0,
-    });
 
     const handler = loadHealthHandler();
     const response = await handler(httpReqMock({ method: 'GET' }), createContext());
@@ -131,7 +109,10 @@ describe('health function', () => {
 
     expect(response.status).toBe(503);
     expect(body.status).toBe('degraded');
-    expect(body.degradations).toContain('easyauth_not_enabled');
+    expect(body.ready).toBe(false);
+    expect(body).not.toHaveProperty('config');
+    expect(body).not.toHaveProperty('auth');
+    expect(body).not.toHaveProperty('notifications');
   });
 
   it('does not leak exception messages in the error response', async () => {
@@ -145,6 +126,7 @@ describe('health function', () => {
 
     expect(response.status).toBe(503);
     expect(body.status).toBe('error');
+    expect(body.ready).toBe(false);
     expect(String(body.error)).toBe('Health check failed');
     expect(String(body.error)).not.toContain('top-secret-token');
   });

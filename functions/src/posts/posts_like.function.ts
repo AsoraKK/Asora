@@ -23,6 +23,8 @@ import {
   DEVICE_INTEGRITY_BLOCKED_MESSAGE,
   isDeviceIntegrityBlocked,
 } from '@shared/middleware/deviceIntegrity';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
 
 interface LikeDocument {
   id: string; // Composite key: `${postId}:${userId}`
@@ -71,6 +73,7 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
 
     try {
       const auth = await extractAuthContext(ctx);
+      const alphaConfig = await assertAlphaFeature('reactions');
       const start = performance.now();
 
       if (isDeviceIntegrityBlocked(ctx.request)) {
@@ -131,9 +134,11 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
 
         // Award reputation to post author (fire and forget)
         if (postDoc.authorId !== auth.userId) {
-          awardPostLiked(postDoc.authorId, postId, auth.userId).catch(err => {
-            ctx.context.error(`[posts_like_create] Reputation error: ${err.message}`);
-          });
+          if (alphaConfig.features.reputationAwards) {
+            awardPostLiked(postDoc.authorId, postId, auth.userId).catch(err => {
+              ctx.context.error(`[posts_like_create] Reputation error: ${err.message}`);
+            });
+          }
 
           const tokenName = (auth.token as unknown as Record<string, unknown>)['name'];
           const actorName =
@@ -166,6 +171,12 @@ export const posts_like_create = httpHandler<void, { liked: boolean; likeCount: 
         likeCount: postDoc.stats.likes + (alreadyLiked ? 0 : 1),
       });
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          status: error.status,
+          jsonBody: { error: { code: 'ALPHA_FEATURE_DISABLED', message: error.message } },
+        };
+      }
       ctx.context.error(`[posts_like_create] Error: ${error}`, {
         correlationId: ctx.correlationId,
       });
@@ -198,6 +209,7 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
 
     try {
       const auth = await extractAuthContext(ctx);
+      await assertAlphaFeature('reactions');
       const start = performance.now();
 
       if (isDeviceIntegrityBlocked(ctx.request)) {
@@ -267,6 +279,12 @@ export const posts_like_delete = httpHandler<void, { liked: boolean; likeCount: 
         likeCount: finalCount,
       });
     } catch (error) {
+      if (error instanceof HttpError) {
+        return {
+          status: error.status,
+          jsonBody: { error: { code: 'ALPHA_FEATURE_DISABLED', message: error.message } },
+        };
+      }
       ctx.context.error(`[posts_like_delete] Error: ${error}`, {
         correlationId: ctx.correlationId,
       });

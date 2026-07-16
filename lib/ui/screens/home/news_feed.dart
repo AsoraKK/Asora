@@ -7,6 +7,8 @@ import 'package:asora/design_system/components/lyth_empty_state.dart';
 import 'package:asora/state/models/feed_models.dart';
 import 'package:asora/ui/components/news_card.dart';
 import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/features/auth/application/auth_providers.dart';
+import 'package:asora/features/auth/domain/subscription_tier.dart';
 
 class NewsFeed extends ConsumerWidget {
   const NewsFeed({
@@ -40,6 +42,10 @@ class NewsFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tier = ref.watch(currentUserProvider)?.subscriptionTier;
+    final isPreview = tier == null ||
+        tier == SubscriptionTier.guest ||
+        tier == SubscriptionTier.free;
     return RefreshIndicator(
       onRefresh: onRefresh ?? () async {},
       child: NotificationListener<ScrollNotification>(
@@ -62,9 +68,34 @@ class NewsFeed extends ConsumerWidget {
                   horizontal: Spacing.md,
                   vertical: Spacing.sm,
                 ),
-                child: Text(
-                  'Hybrid newsroom + high reputation contributors.',
-                  style: Theme.of(context).textTheme.bodyLarge,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hybrid newsroom + high reputation contributors.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    if (isPreview) ...[
+                      const SizedBox(height: Spacing.sm),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(Spacing.md),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.lock_outline),
+                              const SizedBox(width: Spacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'Free preview: the API limits this view to three items. Premium and Black have full News Board access. Paid billing is not connected during Alpha.',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

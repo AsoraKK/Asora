@@ -13,12 +13,12 @@ part 'user_info_response_data.g.dart';
 ///
 /// Properties:
 /// * [sub] - Subject identifier (user ID)
-/// * [email] 
-/// * [displayName] 
-/// * [handle] 
-/// * [tier] 
-/// * [roles] 
-/// * [avatarUrl] 
+/// * [email]
+/// * [displayName]
+/// * [handle]
+/// * [tier]
+/// * [roles]
+/// * [avatarUrl]
 @BuiltValue()
 abstract class UserInfoResponseData implements Built<UserInfoResponseData, UserInfoResponseDataBuilder> {
   /// Subject identifier (user ID)
@@ -36,7 +36,7 @@ abstract class UserInfoResponseData implements Built<UserInfoResponseData, UserI
 
   @BuiltValueField(wireName: r'tier')
   UserInfoResponseDataTierEnum? get tier;
-  // enum tierEnum {  free,  creator,  premium,  enterprise,  };
+  // enum tierEnum {  free,  premium,  black,  };
 
   @BuiltValueField(wireName: r'roles')
   BuiltList<String>? get roles;
@@ -219,12 +219,10 @@ class UserInfoResponseDataTierEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'free')
   static const UserInfoResponseDataTierEnum free = _$userInfoResponseDataTierEnum_free;
-  @BuiltValueEnumConst(wireName: r'creator')
-  static const UserInfoResponseDataTierEnum creator = _$userInfoResponseDataTierEnum_creator;
   @BuiltValueEnumConst(wireName: r'premium')
   static const UserInfoResponseDataTierEnum premium = _$userInfoResponseDataTierEnum_premium;
-  @BuiltValueEnumConst(wireName: r'enterprise')
-  static const UserInfoResponseDataTierEnum enterprise = _$userInfoResponseDataTierEnum_enterprise;
+  @BuiltValueEnumConst(wireName: r'black')
+  static const UserInfoResponseDataTierEnum black = _$userInfoResponseDataTierEnum_black;
 
   static Serializer<UserInfoResponseDataTierEnum> get serializer => _$userInfoResponseDataTierEnumSerializer;
 
@@ -233,4 +231,3 @@ class UserInfoResponseDataTierEnum extends EnumClass {
   static BuiltSet<UserInfoResponseDataTierEnum> get values => _$userInfoResponseDataTierEnumValues;
   static UserInfoResponseDataTierEnum valueOf(String name) => _$userInfoResponseDataTierEnumValueOf(name);
 }
-

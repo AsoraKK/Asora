@@ -1,29 +1,35 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEFAULT_BASE_URL="https://asora-function-dev.azurewebsites.net"
-BASE_URL="${BASE_URL:-${1:-$DEFAULT_BASE_URL}}"
+DEFAULT_API_BASE_URL="https://api.lythaus.co/api"
+API_BASE_URL="${API_BASE_URL:-${BASE_URL:-${1:-$DEFAULT_API_BASE_URL}}}"
+API_BASE_URL="${API_BASE_URL%/}"
 THRESHOLD_SEC="${THRESHOLD_SEC:-2.0}"   # was 0.5
 OUT_DIR="${OUT_DIR:-./functions}"
 mkdir -p "$OUT_DIR"
 
-if [[ -z "$BASE_URL" ]]; then
-  echo "ERROR: BASE_URL is required (set BASE_URL env or pass as arg)" >&2
+if [[ -z "$API_BASE_URL" ]]; then
+  echo "ERROR: API_BASE_URL is required (set API_BASE_URL env or pass as arg)" >&2
   exit 2
 fi
+if [[ ! "$API_BASE_URL" =~ ^https:// ]] || [[ "$API_BASE_URL" =~ \.azurewebsites\.net(/|$) ]]; then
+  echo "ERROR: API_BASE_URL must be an HTTPS gateway URL; direct Azure origins are not permitted" >&2
+  exit 2
+fi
+if [[ "$API_BASE_URL" != */api ]]; then
+  API_BASE_URL="${API_BASE_URL}/api"
+fi
 
-echo "[smoke] Target base URL: $BASE_URL"
+echo "[smoke] Target API gateway: $API_BASE_URL"
 
 check() {
   local name="$1" path="$2"
   local start end ms
   start=$(date +%s%3N)
   body="$(mktemp)"
-  code=$(curl -sS -w "%{http_code}" -o "$body" "${BASE_URL%/}${path}")
+  code=$(curl -sS -w "%{http_code}" -o "$body" "${API_BASE_URL}${path}")
   end=$(date +%s%3N); ms=$((end-start))
-  local snippet
-  snippet="$(head -c 240 "$body" | tr '\n' ' ' | sed 's/  */ /g')"
-  echo "${name}: status=$code latency=${ms}ms body=${snippet}"
+  echo "${name}: status=$code latency=${ms}ms"
 
   [[ "$code" == "200" ]] || { echo "ERROR: $name http=$code"; cat "$body" || true; rm -f "$body"; exit 1; }
   # Accept ok:true, success:true, or status:"ok"
@@ -39,12 +45,12 @@ check() {
 }
 
 # warm-up (ignore timing)
-if ! curl -sS --max-time 5 "${BASE_URL%/}/api/health" >/dev/null; then
-  echo "ERROR: Unable to reach ${BASE_URL%/}/api/health" >&2
+if ! curl -sS --max-time 5 "${API_BASE_URL}/health" >/dev/null; then
+  echo "ERROR: Unable to reach ${API_BASE_URL}/health" >&2
   exit 3
 fi
 
-check "health" "/api/health"
-check "feed"   "/api/feed"
+check "health" "/health"
+check "discovery" "/feed/discover"
 
 echo "Smoke OK"

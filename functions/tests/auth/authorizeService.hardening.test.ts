@@ -74,7 +74,7 @@ const contextStub = {
 const validQuery = {
   client_id: 'test-client',
   response_type: 'code',
-  redirect_uri: 'https://example.com/callback',
+  redirect_uri: 'https://app.lythaus.co/auth/callback',
   state: 'xyz',
   code_challenge: 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk', // 43 chars base64url
   code_challenge_method: 'S256',

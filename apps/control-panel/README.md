@@ -11,8 +11,8 @@ Note: Single-page app routing requires Pages redirect rules.
 ### API Base URL
 
 By default, the control-panel uses same-origin proxy routing:
-- `GET /api/admin/config` → proxied to `https://admin-api.asora.co.za/config`
-- `POST /api/admin/moderation/test` → proxied to `https://admin-api.asora.co.za/moderation/test` (URL-based tests)
+- `GET /api/admin/config` → proxied to `https://admin-api.lythaus.co/api/config`
+- `POST /api/admin/moderation/test` → proxied to `https://admin-api.lythaus.co/api/moderation/test` (URL-based tests)
 
 Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 
@@ -27,7 +27,7 @@ Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 
 To bypass proxy and call admin API directly:
 ```bash
-VITE_ADMIN_API_URL=https://admin-api.asora.co.za npm run build
+VITE_ADMIN_API_URL=https://admin-api.lythaus.co/api npm run build
 ```
 
 The Dashboard includes an Admin session panel that stores the API URL in

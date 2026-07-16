@@ -565,7 +565,7 @@ describe('voteService - vote window behavior', () => {
     expect(response.status).toBe(200);
     expect(response.jsonBody).toMatchObject({
       message: 'Vote recorded successfully',
-      finalDecision: null,
+      communityRecommendation: null,
       status: 'pending',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
@@ -617,7 +617,7 @@ describe('voteService - vote window behavior', () => {
 
     expect(response.status).toBe(200);
     expect(response.jsonBody).toMatchObject({
-      finalDecision: null,
+      communityRecommendation: null,
       status: 'pending',
     });
     expect(response.jsonBody.currentTally).toMatchObject({
@@ -668,11 +668,11 @@ describe('voteService - vote window behavior', () => {
     expect(response.status).toBe(409);
     expect(response.jsonBody).toMatchObject({
       error: 'Appeal has expired',
-      finalDecision: 'approved',
-      status: 'approved',
+      communityRecommendation: 'approved',
+      status: 'pending',
     });
 
-    // Verify appeal was resolved
+    // Verify the advisory recommendation was persisted for human review.
     expect(mockReplace).toHaveBeenCalled();
   });
 

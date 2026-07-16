@@ -117,7 +117,8 @@ Rebuild and redeploy.
 ## Escalation
 
 If health still returns 500 after these checks:
-1. Capture full response: `curl -i https://asora-function-dev.azurewebsites.net/api/health`
-2. Check App Insights live metrics for real-time errors
-3. Verify `functionAppConfig` runtime settings: `az functionapp show -g asora-psql-flex -n asora-function-dev --query properties.functionAppConfig`
-4. Contact platform team if Flex-specific issue (e.g., ARM publish failures).
+1. For normal investigation, capture the gateway response: `curl -i https://api.lythaus.co/api/health`
+2. Direct-origin health is an incident-only diagnostic: use the protected operational token, an approved incident ID, and do not paste response headers or tokens into tickets.
+3. Check App Insights live metrics for real-time errors
+4. Verify `functionAppConfig` runtime settings: `az functionapp show -g asora-psql-flex -n asora-function-dev --query properties.functionAppConfig`
+5. Contact platform team if Flex-specific issue (e.g., ARM publish failures).

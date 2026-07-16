@@ -22,6 +22,12 @@ class AuthFailure implements Exception {
   factory AuthFailure.platformError([String message = 'Platform error']) =>
       AuthFailure._(message);
 
+  factory AuthFailure.providerUnavailable() =>
+      const AuthFailure._('This sign-in method is not available yet.');
+
+  factory AuthFailure.callbackInvalid() =>
+      const AuthFailure._('Sign-in could not be completed. Please try again.');
+
   @override
   String toString() => message;
 }

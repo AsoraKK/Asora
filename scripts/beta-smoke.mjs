@@ -5,10 +5,6 @@ import { dirname } from 'node:path';
 import { chromium } from 'playwright';
 import { createWorker } from 'tesseract.js';
 
-const DEFAULT_WEB_BASE_URL = 'https://lythaus-web.pages.dev';
-const DEFAULT_API_BASE_URL = 'https://asora-function-dev.azurewebsites.net/api';
-const DEFAULT_ADMIN_API_URL = 'https://admin-api.asora.co.za';
-
 function isPrivateOrLocalHost(host) {
   const normalized = host.trim().toLowerCase();
   if (!normalized) return true;
@@ -107,22 +103,22 @@ async function fetchWithBody(url, init = {}) {
 }
 
 const webBaseUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('WEB_BASE_URL', process.env.WEB_BASE_URL || DEFAULT_WEB_BASE_URL),
+  requirePublicHttpsOrigin('WEB_BASE_URL', process.env.WEB_BASE_URL),
 );
 const apiBaseUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('API_BASE_URL', process.env.API_BASE_URL || DEFAULT_API_BASE_URL),
+  requirePublicHttpsOrigin('API_BASE_URL', process.env.API_BASE_URL),
 );
 const adminApiUrl = normalizeOrigin(
-  requirePublicHttpsOrigin('ADMIN_API_URL', process.env.ADMIN_API_URL || DEFAULT_ADMIN_API_URL),
+  requirePublicHttpsOrigin('ADMIN_API_URL', process.env.ADMIN_API_URL),
 );
 
-const smokeToken = (process.env.BETA_SMOKE_TOKEN || process.env.STAGING_SMOKE_TOKEN || '').trim();
+const smokeToken = (process.env.BETA_SMOKE_TOKEN || process.env.MVP_SMOKE_TOKEN || '').trim();
 const accessClientId = (process.env.CF_ACCESS_CLIENT_ID || process.env.CF_Access_Client_Id || '').trim();
 const accessClientSecret = (process.env.CF_ACCESS_CLIENT_SECRET || process.env.CF_Access_Client_Secret || '').trim();
 const reportPath = (process.env.BETA_SMOKE_REPORT_PATH || '').trim();
 
 if (!smokeToken) {
-  throw new Error('BETA_SMOKE_TOKEN or STAGING_SMOKE_TOKEN is required for authenticated API smoke checks');
+  throw new Error('BETA_SMOKE_TOKEN or MVP_SMOKE_TOKEN is required for authenticated API smoke checks');
 }
 
 if (!accessClientId || !accessClientSecret) {
@@ -321,7 +317,7 @@ try {
   })();
 
   await (async () => {
-    const userUrl = buildUrl(webBaseUrl, '/user/test');
+    const userUrl = buildUrl(webBaseUrl, '/user/00000000-0000-4000-8000-000000000001');
     const response = await page.goto(userUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `User deep link request failed for ${userUrl}`);
     assert(response.status() === 200, `User deep link returned HTTP ${response.status()}`);
@@ -331,11 +327,11 @@ try {
     assert(reload, 'User deep link reload failed');
     assert(reload.status() === 200, `User deep link reload returned HTTP ${reload.status()}`);
     await waitForAnyText(page, ocrWorker, ['Profile', 'Welcome to Lythaus', 'Continue as guest']);
-    recordCheck('/user/test deep link loads without hard-404', 'passed', { path: page.url() });
+    recordCheck('/user/:id deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {
-    const postUrl = buildUrl(webBaseUrl, '/post/test');
+    const postUrl = buildUrl(webBaseUrl, '/post/00000000-0000-4000-8000-000000000001');
     const response = await page.goto(postUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `Post deep link request failed for ${postUrl}`);
     assert(response.status() === 200, `Post deep link returned HTTP ${response.status()}`);
@@ -345,7 +341,7 @@ try {
     assert(reload, 'Post deep link reload failed');
     assert(reload.status() === 200, `Post deep link reload returned HTTP ${reload.status()}`);
     await waitForAnyText(page, ocrWorker, ['Post', 'Welcome to Lythaus', 'Continue as guest']);
-    recordCheck('/post/test deep link loads without hard-404', 'passed', { path: page.url() });
+    recordCheck('/post/:id deep link loads without hard-404', 'passed', { path: page.url() });
   })();
 
   await (async () => {

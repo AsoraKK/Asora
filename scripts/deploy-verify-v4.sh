@@ -22,11 +22,16 @@ az functionapp function list \
 
 # Health check via HTTP
 echo "🔍 Testing /api/health endpoint:"
-curl -I https://asora-function-dev.azurewebsites.net/api/health
+API_BASE_URL="${API_BASE_URL:-https://api.lythaus.co/api}"
+if [[ ! "$API_BASE_URL" =~ ^https:// ]] || [[ "$API_BASE_URL" =~ \.azurewebsites\.net(/|$) ]]; then
+  echo "API_BASE_URL must be an HTTPS API gateway URL; direct Azure origins are not permitted." >&2
+  exit 2
+fi
+curl -fsS -I "${API_BASE_URL%/}/health"
 
 # Alternative health check with response body
 echo "🔍 Health check with response body:"
-curl -s https://asora-function-dev.azurewebsites.net/api/health | head -5
+curl -fsS "${API_BASE_URL%/}/health" | head -5
 
 # Check function app status
 echo "⚡ Function app status:"

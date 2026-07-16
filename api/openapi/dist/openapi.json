@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus (formerly Asora) API",
-    "version": "v2",
+    "version": "v3",
     "description": "HTTP contract for Lythaus (formerly Asora) Functions v1.",
     "license": {
       "name": "MIT",
@@ -11,18 +11,8 @@
   },
   "servers": [
     {
-      "url": "https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net",
-      "description": "Azure Functions staging edge endpoint"
-    },
-    {
-      "url": "https://${STAGING_DOMAIN}",
-      "description": "Asora staging domain (set via environment)",
-      "variables": {
-        "STAGING_DOMAIN": {
-          "default": "asora.example.com",
-          "description": "Injected staging domain hostname"
-        }
-      }
+      "url": "https://api.lythaus.co/api",
+      "description": "Lythaus MVP API gateway"
     }
   ],
   "tags": [
@@ -81,6 +71,7 @@
           "Feed"
         ],
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -110,24 +101,28 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FeedPageResponse"
+                  "$ref": "#/components/schemas/FeedPageEnvelope"
                 },
                 "examples": {
                   "authenticated": {
                     "summary": "Authenticated feed page",
                     "value": {
-                      "items": [
-                        {
-                          "id": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
-                          "text": "Hello Lythaus!",
-                          "authorId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
-                          "createdAt": "2026-04-30T10:00:00Z"
+                      "success": true,
+                      "data": {
+                        "items": [
+                          {
+                            "id": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
+                            "text": "Hello Lythaus!",
+                            "authorId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                            "createdAt": "2026-04-30T10:00:00Z"
+                          }
+                        ],
+                        "meta": {
+                          "count": 1,
+                          "nextCursor": "eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0"
                         }
-                      ],
-                      "meta": {
-                        "count": 1,
-                        "nextCursor": "eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0"
-                      }
+                      },
+                      "timestamp": "2026-04-30T10:00:00Z"
                     }
                   }
                 }
@@ -144,7 +139,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/SimpleError"
                 }
               }
             }
@@ -418,28 +413,28 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "id",
-                  "text"
+                  "text",
+                  "aiLabel"
                 ],
                 "properties": {
-                  "id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "Client generated UUID v7 for the new post",
-                    "example": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21"
-                  },
                   "text": {
                     "type": "string",
                     "description": "Post body text",
-                    "maxLength": 2000
+                    "maxLength": 5000
                   },
-                  "attachments": {
-                    "type": "array",
-                    "description": "Optional media attachments",
-                    "items": {
-                      "type": "string",
-                      "format": "uri"
-                    }
+                  "mediaUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "nullable": true
+                  },
+                  "aiLabel": {
+                    "type": "string",
+                    "enum": [
+                      "human",
+                      "assisted",
+                      "generated"
+                    ],
+                    "description": "Required authorship disclosure."
                   }
                 }
               },
@@ -447,11 +442,8 @@
                 "basicPost": {
                   "summary": "Basic text post",
                   "value": {
-                    "id": "018b27d4-5b3b-73e3-bf77-bf7bb9530f21",
                     "text": "Launch checklist is locked and ready for review.",
-                    "attachments": [
-                      "https://cdn.lythaus.app/media/posts/launch-checklist.png"
-                    ]
+                    "aiLabel": "human"
                   }
                 }
               }
@@ -469,28 +461,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "example": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "published",
-                        "blocked"
-                      ]
-                    }
-                  }
+                  "$ref": "#/components/schemas/LegacyCreatePostResponse"
                 },
                 "examples": {
                   "published": {
                     "summary": "Published post",
                     "value": {
-                      "id": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
-                      "status": "published"
+                      "status": "success",
+                      "post": {
+                        "postId": "018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43",
+                        "text": "Launch checklist is locked and ready for review.",
+                        "mediaUrl": null,
+                        "authorId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "createdAt": "2026-07-10T12:00:00Z",
+                        "updatedAt": "2026-07-10T12:00:00Z",
+                        "stats": {
+                          "likes": 0,
+                          "comments": 0,
+                          "replies": 0
+                        },
+                        "authorship": {
+                          "authorshipLabel": "Human-authored",
+                          "declaredAuthorship": "human",
+                          "classificationSource": "user_disclosure",
+                          "classificationState": "confirmed",
+                          "reviewState": "not_required",
+                          "appealState": "none",
+                          "labelVersion": "alpha-2026-07-v1"
+                        }
+                      }
                     }
                   }
                 }
@@ -576,7 +575,7 @@
       "post": {
         "operationId": "posts_create",
         "summary": "Create a post with moderation and AI authenticity checks",
-        "description": "Create a post for the authenticated user. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`.\n",
+        "description": "Create a post for the authenticated user. An authorship disclosure is required. Disclosed AI-assisted and AI-generated content may be published with categorical labels; conflicts or unavailable classification enter review. Prohibited content remains blocked regardless of authorship.\n",
         "tags": [
           "Posts"
         ],
@@ -669,15 +668,24 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "targetId",
+                  "contentId",
+                  "contentType",
                   "reason"
                 ],
                 "properties": {
-                  "targetId": {
+                  "contentId": {
                     "type": "string",
-                    "format": "uuid",
                     "description": "Identifier of the content being flagged",
                     "example": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "post",
+                      "comment",
+                      "user",
+                      "message"
+                    ]
                   },
                   "reason": {
                     "type": "string",
@@ -694,10 +702,19 @@
                       "other"
                     ]
                   },
-                  "notes": {
+                  "additionalDetails": {
                     "type": "string",
                     "description": "Additional details supporting the flag",
                     "maxLength": 1000
+                  },
+                  "urgency": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "default": "medium"
                   }
                 }
               },
@@ -705,9 +722,10 @@
                 "spamFlag": {
                   "summary": "Spam flag submission",
                   "value": {
-                    "targetId": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2",
+                    "contentId": "018b27d4-6e1e-7bd3-bb5a-98f24bb968c2",
+                    "contentType": "post",
                     "reason": "spam",
-                    "notes": "Repeated duplicate promotion across multiple threads."
+                    "additionalDetails": "Repeated duplicate promotion across multiple threads."
                   }
                 }
               }
@@ -763,7 +781,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "$ref": "#/components/schemas/ModerationFlagValidationError"
                 }
               }
             }
@@ -2130,8 +2148,8 @@
     "/_admin/invites": {
       "get": {
         "operationId": "adminInvitesList",
-        "summary": "List invite codes",
-        "description": "Returns admin invite codes with usage metadata.",
+        "summary": "List Alpha invites",
+        "description": "Returns opaque invite identifiers and usage metadata. Plaintext codes are never listed.",
         "tags": [
           "Admin"
         ],
@@ -2244,12 +2262,12 @@
               },
               "examples": {
                 "singleUse": {
-                  "summary": "Single-use beta invite",
+                  "summary": "Single-use Alpha invite",
                   "value": {
-                    "email": "beta.user@example.com",
-                    "expiresInDays": 30,
+                    "email": "alpha.user@example.com",
+                    "expiresInDays": 14,
                     "maxUses": 1,
-                    "label": "beta-tester"
+                    "label": "technical-alpha"
                   }
                 }
               }
@@ -2262,21 +2280,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdminInviteResponse"
+                  "$ref": "#/components/schemas/AdminCreatedInvite"
                 },
                 "examples": {
                   "created": {
                     "summary": "Invite created",
                     "value": {
                       "inviteCode": "ABCD-1234",
-                      "email": "beta.user@example.com",
-                      "createdBy": "admin-uid-123",
-                      "createdAt": "2026-04-30T12:00:00Z",
-                      "expiresAt": "2026-05-30T12:00:00Z",
+                      "inviteId": "0197b8d8-39da-7a8b-9f9e-3d2dc9fbd741",
+                      "email": "alpha.user@example.com",
+                      "createdAt": "2026-07-10T12:00:00Z",
+                      "expiresAt": "2026-07-24T12:00:00Z",
                       "maxUses": 1,
                       "usageCount": 0,
                       "status": "ACTIVE",
-                      "label": "beta-tester"
+                      "label": "technical-alpha"
                     }
                   }
                 }
@@ -2383,11 +2401,11 @@
         }
       }
     },
-    "/_admin/invites/{code}": {
+    "/_admin/invites/{inviteId}": {
       "get": {
         "operationId": "adminInvitesGet",
-        "summary": "Get an invite code",
-        "description": "Fetch a single invite by code.",
+        "summary": "Get an Alpha invite",
+        "description": "Fetch a single invite by opaque administrative identifier.",
         "tags": [
           "Admin"
         ],
@@ -2398,9 +2416,9 @@
         ],
         "parameters": [
           {
-            "name": "code",
+            "name": "inviteId",
             "in": "path",
-            "description": "Invite code",
+            "description": "Opaque invite identifier",
             "required": true,
             "schema": {
               "type": "string"
@@ -2424,7 +2442,7 @@
                   "inviteActive": {
                     "summary": "Active invite",
                     "value": {
-                      "inviteCode": "ABCD-1234",
+                      "inviteId": "0197b8d8-39da-7a8b-9f9e-3d2dc9fbd741",
                       "email": "user@example.com",
                       "createdBy": "admin-uid-123",
                       "createdAt": "2026-04-01T10:00:00Z",
@@ -2488,8 +2506,8 @@
       },
       "delete": {
         "operationId": "adminInvitesDelete",
-        "summary": "Hard-delete an invite code",
-        "description": "Permanently removes an invite code record. Use revoke to soft-revoke instead.",
+        "summary": "Revoke an Alpha invite",
+        "description": "Revokes the invite without deleting its audit record.",
         "tags": [
           "Admin"
         ],
@@ -2500,9 +2518,9 @@
         ],
         "parameters": [
           {
-            "name": "code",
+            "name": "inviteId",
             "in": "path",
-            "description": "Invite code to delete",
+            "description": "Opaque invite identifier",
             "required": true,
             "schema": {
               "type": "string"
@@ -2510,11 +2528,18 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "Invite deleted",
+          "200": {
+            "description": "Invite revoked",
             "headers": {
               "X-Correlation-ID": {
                 "$ref": "#/components/headers/XCorrelationID"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInviteRevokeResponse"
+                }
               }
             }
           },
@@ -2566,7 +2591,7 @@
         }
       }
     },
-    "/_admin/invites/{code}/revoke": {
+    "/_admin/invites/{inviteId}/revoke": {
       "post": {
         "operationId": "adminInvitesRevoke",
         "summary": "Revoke an invite code",
@@ -2581,9 +2606,9 @@
         ],
         "parameters": [
           {
-            "name": "code",
+            "name": "inviteId",
             "in": "path",
-            "description": "Invite code",
+            "description": "Opaque invite identifier",
             "required": true,
             "schema": {
               "type": "string"
@@ -2958,17 +2983,32 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "tier"
+                  "tier",
+                  "reason"
                 ],
                 "properties": {
                   "tier": {
                     "type": "string",
                     "enum": [
                       "free",
-                      "creator",
                       "premium",
-                      "enterprise"
+                      "black"
                     ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 500
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Required for Premium and Black Alpha grants; no more than 90 days ahead."
+                  },
+                  "reviewAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Required for Premium and Black Alpha grants; on or before expiresAt."
                   }
                 }
               }
@@ -4535,18 +4575,34 @@
                   "exportReady": {
                     "summary": "Structured export payload",
                     "value": {
-                      "exportId": "exp_1714478400000_abc123",
-                      "exportedAt": "2026-04-30T12:00:00Z",
-                      "exportedBy": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
-                      "userId": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
-                      "profile": {
+                      "metadata": {
+                        "exportId": "exp_1714478400000_abc123",
+                        "exportedAt": "2026-04-30T12:00:00Z",
+                        "exportedBy": "usr_01HZPQ2B3C4D5E6F7G8H9JABCD",
+                        "dataVersion": "1.0"
+                      },
+                      "userProfile": {
                         "displayName": "Alice Example"
                       },
-                      "posts": [],
-                      "comments": [],
-                      "bookmarks": [],
-                      "notifications": [],
-                      "previousExports": []
+                      "content": {
+                        "posts": [],
+                        "comments": []
+                      },
+                      "interactions": {
+                        "likes": [],
+                        "flags": []
+                      },
+                      "moderation": {
+                        "appeals": [],
+                        "votes": []
+                      },
+                      "reputation": {
+                        "ledger": []
+                      },
+                      "privacy": {
+                        "previousExports": [],
+                        "dataRequests": []
+                      }
                     }
                   }
                 }
@@ -7606,11 +7662,12 @@
       "get": {
         "operationId": "feedNews",
         "summary": "Return News Board feed",
-        "description": "Return authenticated News Board posts. Free, Premium, Black, and Admin tiers can read the News Board; publishing news posts remains restricted to editorial contributors and approved ingestion paths.\n",
+        "description": "Return authenticated News Board posts. Free receives a maximum three-item preview with no cursor; Premium and Black receive the full board. Admin is an authorization role, not a commercial tier. Publishing remains restricted to editorial contributors and approved ingestion paths.\n",
         "tags": [
           "Feed"
         ],
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -7637,7 +7694,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CursorPaginatedPostView"
+                  "$ref": "#/components/schemas/NewsBoardFeedResponse"
                 }
               }
             }
@@ -7647,7 +7704,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/SimpleError"
                 }
               }
             }
@@ -8841,7 +8898,7 @@
       "patch": {
         "operationId": "postsUpdate",
         "summary": "Update a post with moderation and AI authenticity checks",
-        "description": "Update a post owned by the caller. AI-generated text or media is blocked at submit with `AI_CONTENT_BLOCKED`; AI-assisted content may be published only when disclosed with `aiLabel=assisted`.\n",
+        "description": "Update a post owned by the caller. Content or media changes require a new authorship disclosure. Conflicts or unavailable classification enter review; prohibited content remains blocked regardless of authorship.\n",
         "tags": [
           "Posts"
         ],
@@ -10729,6 +10786,18 @@
           }
         }
       },
+      "SimpleError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Machine-readable or plain-language error identifier."
+          }
+        }
+      },
       "RateLimitError": {
         "type": "object",
         "required": [
@@ -10794,6 +10863,9 @@
           "provider",
           "currentPeriodEnd",
           "cancelAtPeriodEnd",
+          "accessLabel",
+          "manualGrantExpiresAt",
+          "manualGrantReviewAt",
           "entitlements"
         ],
         "properties": {
@@ -10805,8 +10877,7 @@
             "enum": [
               "free",
               "premium",
-              "black",
-              "admin"
+              "black"
             ]
           },
           "status": {
@@ -10837,20 +10908,55 @@
           "cancelAtPeriodEnd": {
             "type": "boolean"
           },
+          "accessLabel": {
+            "type": "string",
+            "enum": [
+              "Alpha access"
+            ],
+            "description": "Manual Alpha entitlement label; no active payment system is implied."
+          },
+          "manualGrantExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "manualGrantReviewAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
           "entitlements": {
             "type": "object",
             "required": [
               "dailyPosts",
+              "dailyComments",
+              "dailyReactions",
+              "dailyAppeals",
+              "exportCooldownDays",
               "maxMediaSizeMB",
               "maxMediaPerPost",
               "maxCustomFeeds",
-              "newsBoardAccess",
+              "newsBoardAccessLevel",
+              "newsBoardPreview",
               "postingRestricted",
               "rewardLevelCap",
-              "rewardOptionsPerLevel"
+              "rewardOptionsPerLevel",
+              "rewardChoiceBreadth"
             ],
             "properties": {
               "dailyPosts": {
+                "type": "integer"
+              },
+              "dailyComments": {
+                "type": "integer"
+              },
+              "dailyReactions": {
+                "type": "integer"
+              },
+              "dailyAppeals": {
+                "type": "integer"
+              },
+              "exportCooldownDays": {
                 "type": "integer"
               },
               "maxMediaSizeMB": {
@@ -10863,9 +10969,17 @@
                 "type": "integer",
                 "description": "Maximum custom feeds available to this tier."
               },
-              "newsBoardAccess": {
+              "newsBoardAccessLevel": {
+                "type": "string",
+                "enum": [
+                  "preview",
+                  "full"
+                ],
+                "description": "Free receives preview; Premium and Black receive full access."
+              },
+              "newsBoardPreview": {
                 "type": "boolean",
-                "description": "Whether this tier can read the News Board."
+                "description": "Whether the tier can read the safe News Board preview."
               },
               "postingRestricted": {
                 "type": "boolean",
@@ -10879,6 +10993,14 @@
                 "type": "integer",
                 "nullable": true,
                 "description": "Reward options per reputation level; null means all eligible rewards."
+              },
+              "rewardChoiceBreadth": {
+                "type": "string",
+                "enum": [
+                  "limited",
+                  "increased",
+                  "full"
+                ]
               }
             }
           }
@@ -10953,11 +11075,166 @@
           }
         }
       },
+      "PublicAuthorship": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "authorshipLabel",
+          "declaredAuthorship",
+          "classificationSource",
+          "classificationState",
+          "reviewState",
+          "appealState",
+          "labelVersion"
+        ],
+        "properties": {
+          "authorshipLabel": {
+            "type": "string",
+            "enum": [
+              "Human-authored",
+              "AI-assisted",
+              "AI-generated",
+              "Under review"
+            ]
+          },
+          "declaredAuthorship": {
+            "type": "string",
+            "enum": [
+              "human",
+              "assisted",
+              "generated"
+            ]
+          },
+          "classificationSource": {
+            "type": "string",
+            "enum": [
+              "user_disclosure",
+              "automated_classification",
+              "human_review",
+              "appeal_outcome"
+            ]
+          },
+          "classificationState": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "conflict",
+              "unavailable"
+            ]
+          },
+          "reviewState": {
+            "type": "string",
+            "enum": [
+              "not_required",
+              "pending",
+              "in_review",
+              "resolved"
+            ]
+          },
+          "appealState": {
+            "type": "string",
+            "enum": [
+              "none",
+              "eligible",
+              "pending",
+              "resolved"
+            ]
+          },
+          "labelVersion": {
+            "type": "string"
+          },
+          "classifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LegacyCreatePostResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "post"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "post": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "postId",
+              "text",
+              "mediaUrl",
+              "authorId",
+              "createdAt",
+              "updatedAt",
+              "stats",
+              "authorship"
+            ],
+            "properties": {
+              "postId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "mediaUrl": {
+                "type": "string",
+                "format": "uri",
+                "nullable": true
+              },
+              "authorId": {
+                "type": "string",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "stats": {
+                "type": "object",
+                "required": [
+                  "likes",
+                  "comments",
+                  "replies"
+                ],
+                "properties": {
+                  "likes": {
+                    "type": "integer"
+                  },
+                  "comments": {
+                    "type": "integer"
+                  },
+                  "replies": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "authorship": {
+                "$ref": "#/components/schemas/PublicAuthorship"
+              }
+            }
+          }
+        }
+      },
       "CreatePostRequest": {
         "type": "object",
         "required": [
           "content",
-          "contentType"
+          "contentType",
+          "aiLabel"
         ],
         "properties": {
           "content": {
@@ -10998,7 +11275,7 @@
           },
           "aiLabel": {
             "type": "string",
-            "description": "Public authorship disclosure. `generated` is blocked at submit.",
+            "description": "Required user authorship disclosure. Public responses use categorical labels only.",
             "enum": [
               "human",
               "assisted",
@@ -11051,7 +11328,7 @@
           },
           "aiLabel": {
             "type": "string",
-            "description": "Public authorship disclosure. `generated` is blocked at submit.",
+            "description": "Required whenever content or media changes. Public responses use categorical labels only.",
             "enum": [
               "human",
               "assisted",
@@ -11111,6 +11388,7 @@
           "contentType",
           "visibility",
           "isNews",
+          "authorship",
           "createdAt",
           "updatedAt"
         ],
@@ -11162,6 +11440,9 @@
           },
           "clusterId": {
             "type": "string"
+          },
+          "authorship": {
+            "$ref": "#/components/schemas/PublicAuthorship"
           },
           "createdAt": {
             "type": "string",
@@ -11301,6 +11582,36 @@
             "nullable": true
           }
         }
+      },
+      "NewsBoardFeedResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CursorPaginatedPostView"
+          },
+          {
+            "type": "object",
+            "required": [
+              "accessLevel",
+              "locked"
+            ],
+            "properties": {
+              "accessLevel": {
+                "type": "string",
+                "enum": [
+                  "preview",
+                  "full"
+                ]
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "previewLimit": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        ]
       },
       "CustomFeedDefinition": {
         "type": "object",
@@ -12986,9 +13297,18 @@
       },
       "AdminInvite": {
         "type": "object",
+        "required": [
+          "inviteId",
+          "createdAt",
+          "expiresAt",
+          "maxUses",
+          "usageCount",
+          "status"
+        ],
         "properties": {
-          "inviteCode": {
-            "type": "string"
+          "inviteId": {
+            "type": "string",
+            "format": "uuid"
           },
           "email": {
             "type": "string"
@@ -13032,6 +13352,26 @@
           }
         ]
       },
+      "AdminCreatedInvite": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminInvite"
+          },
+          {
+            "type": "object",
+            "required": [
+              "inviteCode"
+            ],
+            "properties": {
+              "inviteCode": {
+                "type": "string",
+                "readOnly": true,
+                "description": "Returned exactly once when the invite is created."
+              }
+            }
+          }
+        ]
+      },
       "AdminInviteListResponse": {
         "type": "object",
         "required": [
@@ -13042,7 +13382,7 @@
           "invites": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/AdminInvite"
+              "$ref": "#/components/schemas/AdminCreatedInvite"
             }
           },
           "count": {
@@ -13219,39 +13559,37 @@
           }
         }
       },
-      "UnauthorizedError": {
-        "description": "401 – missing or invalid bearer token.",
+      "ModerationFlagValidationError": {
+        "description": "Validation response returned by the moderation flag handler.",
         "type": "object",
         "required": [
-          "error"
+          "error",
+          "details"
         ],
         "properties": {
           "error": {
-            "type": "object",
-            "required": [
-              "code",
-              "message"
-            ],
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "UNAUTHORIZED",
-                  "TOKEN_EXPIRED",
-                  "TOKEN_INVALID"
-                ],
-                "example": "UNAUTHORIZED"
-              },
-              "message": {
-                "type": "string",
-                "example": "Authorization token is missing or invalid"
-              },
-              "correlationId": {
-                "type": "string"
-              }
+            "type": "string",
+            "example": "Invalid request data"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }
+      },
+      "UnauthorizedError": {
+        "description": "401 – missing or invalid bearer token.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SimpleError"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorResponse"
+          }
+        ]
       },
       "ForbiddenError": {
         "description": "403 – authenticated caller lacks required role or permission.",
@@ -13432,83 +13770,65 @@
         "description": "GDPR Article 20 data portability export payload.",
         "type": "object",
         "required": [
-          "exportId",
-          "exportedAt",
-          "exportedBy",
-          "userId"
+          "metadata",
+          "userProfile",
+          "content",
+          "interactions",
+          "moderation",
+          "reputation",
+          "privacy"
         ],
         "properties": {
-          "exportId": {
-            "type": "string",
-            "description": "Unique identifier for this export",
-            "example": "exp_1714478400000_abc123"
-          },
-          "exportedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "exportedBy": {
-            "type": "string",
-            "description": "User ID of the exporting account"
-          },
-          "userId": {
-            "type": "string",
-            "description": "User whose data is contained in this export"
-          },
-          "profile": {
+          "metadata": {
             "type": "object",
-            "additionalProperties": true,
-            "description": "User profile data"
-          },
-          "posts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "comments": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "bookmarks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "notifications": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "previousExports": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "exportId": {
-                  "type": "string"
-                },
-                "exportedAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "export",
-                    "deletion"
-                  ]
-                }
+            "required": [
+              "exportId",
+              "exportedAt",
+              "exportedBy",
+              "dataVersion"
+            ],
+            "properties": {
+              "exportId": {
+                "type": "string"
+              },
+              "exportedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "exportedBy": {
+                "type": "string"
+              },
+              "dataVersion": {
+                "type": "string"
+              },
+              "retentionPeriod": {
+                "type": "string"
               }
             }
+          },
+          "userProfile": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "interactions": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "moderation": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reputation": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "privacy": {
+            "type": "object",
+            "additionalProperties": true
           }
         }
       },
@@ -13540,8 +13860,32 @@
           }
         }
       },
+      "FeedPageEnvelope": {
+        "description": "Standard success envelope containing a paginated feed page.",
+        "type": "object",
+        "required": [
+          "success",
+          "data",
+          "timestamp"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/FeedPageResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "FeedPageResponse": {
-        "description": "Paginated feed page with metadata.",
+        "description": "Paginated feed page data and metadata.",
         "type": "object",
         "required": [
           "items",
@@ -13685,9 +14029,8 @@
                 "type": "string",
                 "enum": [
                   "free",
-                  "creator",
                   "premium",
-                  "enterprise"
+                  "black"
                 ]
               },
               "roles": {

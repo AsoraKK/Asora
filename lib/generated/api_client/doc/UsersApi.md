@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -27,8 +27,8 @@ Follow a user
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.usersFollowCreate(id, body);
@@ -42,8 +42,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -70,7 +70,7 @@ Unfollow a user
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.usersFollowDelete(id);
@@ -84,7 +84,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -111,7 +111,7 @@ Get follow status for a user
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.usersFollowGet(id);
@@ -125,7 +125,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -152,7 +152,7 @@ Get a public user profile
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.usersGet(id);
@@ -166,7 +166,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -193,7 +193,7 @@ List posts by a user
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String userId = userId_example; // String | 
+final String userId = userId_example; // String |
 
 try {
     final response = api.usersPostsList(userId);
@@ -207,7 +207,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**|  | 
+ **userId** | **String**|  |
 
 ### Return type
 
@@ -234,7 +234,7 @@ Get trust passport for a user
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getUsersApi();
-final String id = id_example; // String | 
+final String id = id_example; // String |
 
 try {
     final response = api.usersTrustPassport(id);
@@ -248,7 +248,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
+ **id** | **String**|  |
 
 ### Return type
 
@@ -264,4 +264,3 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

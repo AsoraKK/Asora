@@ -7,6 +7,8 @@
  * DO NOT EDIT MANUALLY - Regenerate from OpenAPI spec when schemas change.
  */
 
+import type { PublicAuthorship } from '@shared/authorship';
+
 // ============================================================================
 // Error Response (Standard)
 // ============================================================================
@@ -106,7 +108,7 @@ export interface CreatePostRequest {
   topics?: string[];
   visibility?: 'public' | 'followers' | 'private';
   isNews?: boolean;
-  aiLabel?: 'human' | 'assisted' | 'generated';
+  aiLabel: 'human' | 'assisted' | 'generated';
   proofSignals?: PostProofSignals;
 }
 
@@ -163,6 +165,7 @@ export interface Post {
   isNews: boolean;
   source?: NewsSourceMetadata;
   clusterId?: string;
+  authorship: PublicAuthorship;
   createdAt: string;
   updatedAt: string;
 }
@@ -196,6 +199,12 @@ export interface PostView extends Post {
 export interface CursorPaginatedPostView {
   items: PostView[];
   nextCursor?: string;
+}
+
+export interface NewsBoardFeedResponse extends CursorPaginatedPostView {
+  accessLevel: 'preview' | 'full';
+  locked: boolean;
+  previewLimit?: number;
 }
 
 // ============================================================================

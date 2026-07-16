@@ -13,13 +13,16 @@ part 'subscription_status.g.dart';
 /// SubscriptionStatus
 ///
 /// Properties:
-/// * [userId] 
-/// * [tier] 
-/// * [status] 
-/// * [provider] 
-/// * [currentPeriodEnd] 
-/// * [cancelAtPeriodEnd] 
-/// * [entitlements] 
+/// * [userId]
+/// * [tier]
+/// * [status]
+/// * [provider]
+/// * [currentPeriodEnd]
+/// * [cancelAtPeriodEnd]
+/// * [accessLabel] - Manual Alpha entitlement label; no active payment system is implied.
+/// * [manualGrantExpiresAt]
+/// * [manualGrantReviewAt]
+/// * [entitlements]
 @BuiltValue()
 abstract class SubscriptionStatus implements Built<SubscriptionStatus, SubscriptionStatusBuilder> {
   @BuiltValueField(wireName: r'userId')
@@ -27,7 +30,7 @@ abstract class SubscriptionStatus implements Built<SubscriptionStatus, Subscript
 
   @BuiltValueField(wireName: r'tier')
   SubscriptionStatusTierEnum get tier;
-  // enum tierEnum {  free,  premium,  black,  admin,  };
+  // enum tierEnum {  free,  premium,  black,  };
 
   @BuiltValueField(wireName: r'status')
   SubscriptionStatusStatusEnum get status;
@@ -42,6 +45,17 @@ abstract class SubscriptionStatus implements Built<SubscriptionStatus, Subscript
 
   @BuiltValueField(wireName: r'cancelAtPeriodEnd')
   bool get cancelAtPeriodEnd;
+
+  /// Manual Alpha entitlement label; no active payment system is implied.
+  @BuiltValueField(wireName: r'accessLabel')
+  SubscriptionStatusAccessLabelEnum get accessLabel;
+  // enum accessLabelEnum {  Alpha access,  };
+
+  @BuiltValueField(wireName: r'manualGrantExpiresAt')
+  DateTime? get manualGrantExpiresAt;
+
+  @BuiltValueField(wireName: r'manualGrantReviewAt')
+  DateTime? get manualGrantReviewAt;
 
   @BuiltValueField(wireName: r'entitlements')
   SubscriptionStatusEntitlements get entitlements;
@@ -98,6 +112,21 @@ class _$SubscriptionStatusSerializer implements PrimitiveSerializer<Subscription
     yield serializers.serialize(
       object.cancelAtPeriodEnd,
       specifiedType: const FullType(bool),
+    );
+    yield r'accessLabel';
+    yield serializers.serialize(
+      object.accessLabel,
+      specifiedType: const FullType(SubscriptionStatusAccessLabelEnum),
+    );
+    yield r'manualGrantExpiresAt';
+    yield object.manualGrantExpiresAt == null ? null : serializers.serialize(
+      object.manualGrantExpiresAt,
+      specifiedType: const FullType.nullable(DateTime),
+    );
+    yield r'manualGrantReviewAt';
+    yield object.manualGrantReviewAt == null ? null : serializers.serialize(
+      object.manualGrantReviewAt,
+      specifiedType: const FullType.nullable(DateTime),
     );
     yield r'entitlements';
     yield serializers.serialize(
@@ -171,6 +200,29 @@ class _$SubscriptionStatusSerializer implements PrimitiveSerializer<Subscription
           ) as bool;
           result.cancelAtPeriodEnd = valueDes;
           break;
+        case r'accessLabel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SubscriptionStatusAccessLabelEnum),
+          ) as SubscriptionStatusAccessLabelEnum;
+          result.accessLabel = valueDes;
+          break;
+        case r'manualGrantExpiresAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.manualGrantExpiresAt = valueDes;
+          break;
+        case r'manualGrantReviewAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.manualGrantReviewAt = valueDes;
+          break;
         case r'entitlements':
           final valueDes = serializers.deserialize(
             value,
@@ -215,8 +267,6 @@ class SubscriptionStatusTierEnum extends EnumClass {
   static const SubscriptionStatusTierEnum premium = _$subscriptionStatusTierEnum_premium;
   @BuiltValueEnumConst(wireName: r'black')
   static const SubscriptionStatusTierEnum black = _$subscriptionStatusTierEnum_black;
-  @BuiltValueEnumConst(wireName: r'admin')
-  static const SubscriptionStatusTierEnum admin = _$subscriptionStatusTierEnum_admin;
 
   static Serializer<SubscriptionStatusTierEnum> get serializer => _$subscriptionStatusTierEnumSerializer;
 
@@ -266,3 +316,16 @@ class SubscriptionStatusProviderEnum extends EnumClass {
   static SubscriptionStatusProviderEnum valueOf(String name) => _$subscriptionStatusProviderEnumValueOf(name);
 }
 
+class SubscriptionStatusAccessLabelEnum extends EnumClass {
+
+  /// Manual Alpha entitlement label; no active payment system is implied.
+  @BuiltValueEnumConst(wireName: r'Alpha access')
+  static const SubscriptionStatusAccessLabelEnum alphaAccess = _$subscriptionStatusAccessLabelEnum_alphaAccess;
+
+  static Serializer<SubscriptionStatusAccessLabelEnum> get serializer => _$subscriptionStatusAccessLabelEnumSerializer;
+
+  const SubscriptionStatusAccessLabelEnum._(String name): super(name);
+
+  static BuiltSet<SubscriptionStatusAccessLabelEnum> get values => _$subscriptionStatusAccessLabelEnumValues;
+  static SubscriptionStatusAccessLabelEnum valueOf(String name) => _$subscriptionStatusAccessLabelEnumValueOf(name);
+}

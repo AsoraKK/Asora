@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:asora/core/analytics/analytics_events.dart';
 import 'package:asora/core/analytics/analytics_providers.dart';
 import 'package:asora/core/routing/app_router.dart';
+import 'package:asora/core/routing/url_strategy.dart';
 import 'package:asora/core/config/web_release_guard.dart';
 import 'package:asora/design_system/index.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
@@ -16,6 +17,7 @@ import 'package:asora/core/observability/crash_reporting.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  configureAppUrlStrategy();
   if (isReleaseWebBuild) {
     requirePublicHttpsOrigin(
       'AUTH_URL',

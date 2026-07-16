@@ -111,6 +111,7 @@ class FeedCard extends StatelessWidget {
               runSpacing: spacing.xs,
               children: [
                 TierBadge(label: _contentLabel(item.contentType)),
+                LythChip(label: item.authorshipLabel),
                 ...item.tags.map((tag) => LythChip(label: tag)),
               ],
             ),

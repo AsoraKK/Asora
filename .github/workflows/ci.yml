@@ -302,6 +302,10 @@ jobs:
           name: openapi-spec
           path: api/openapi/dist/openapi.json
 
+      - name: Scan bundled OpenAPI artifact for secrets
+        working-directory: ${{ github.workspace }}
+        run: scripts/secret-scan.sh --artifact api/openapi/dist
+
   control_panel_build:
     name: Build Control Panel
     runs-on: ubuntu-latest
@@ -372,6 +376,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Run gitleaks
         run: scripts/secret-scan.sh
 
@@ -391,24 +397,32 @@ jobs:
             [ -n "$v" ] || { echo "Missing secret: $k"; exit 1; }
           done
 
+  dependency_audit:
+    name: Dependency audit (high/critical)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Audit root and Functions dependencies
+        run: node scripts/check-npm-audit.js
+      - name: Audit Functions probe dependencies
+        run: node scripts/check-npm-audit.js functions/probe
+      - name: Audit Control Panel dependencies
+        run: node scripts/check-npm-audit.js apps/control-panel
+      - name: Audit Marketing Site dependencies
+        run: node scripts/check-npm-audit.js apps/marketing-site
+
   pin_verification:
-    name: Verify TLS certificate pins
+    name: Validate MVP TLS pinning guard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-
-      - name: Install OpenSSL (already available on ubuntu-latest)
-        run: which openssl
-
-      - name: Verify certificate pins
-        env:
-          BASE_URL: 'https://asora-function-dev.azurewebsites.net'
-          EXTRA_PIN_HOSTS: 'asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net'
-        run: python3 scripts/verify_pins.py
+      - name: Reject strict pinning without validated pins
+        run: bash scripts/validate-mvp-tls-pinning.sh
 
   flutter_tests:
     name: Flutter tests + coverage
@@ -444,7 +458,6 @@ jobs:
 
       - name: Enforce coverage gates (P1, P2, Total baseline)
         id: coverage_gates
-        continue-on-error: true
         run: |
           set -euo pipefail
           chmod +x scripts/check_coverage_gates.sh
@@ -489,11 +502,41 @@ jobs:
             echo "Coverage summary unavailable" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Fail if coverage gates failed
-        if: ${{ steps.coverage_gates.outcome == 'failure' }}
+  web_release_build:
+    name: Flutter web release build
+    runs-on: ubuntu-latest
+    needs: [flutter_tests, secret-scan]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+      - name: Validate canonical MVP API URL
+        env:
+          MVP_API_BASE_URL: https://api.lythaus.co/api
         run: |
-          echo "Coverage gates failed; see output above for details."
-          exit 1
+          set -euo pipefail
+          [[ "$MVP_API_BASE_URL" == "https://api.lythaus.co/api" ]] || {
+            echo "MVP_API_BASE_URL must be the canonical Lythaus /api URL" >&2
+            exit 1
+          }
+      - name: Build immutable web release
+        env:
+          MVP_API_BASE_URL: https://api.lythaus.co/api
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --dart-define="ENVIRONMENT=production" \
+            --dart-define="API_BASE_URL=$MVP_API_BASE_URL" \
+            --dart-define="AUTH_URL=$MVP_API_BASE_URL" \
+            --dart-define="ENABLE_CERT_PINNING=false"
+      - name: Scan generated web bundle for secrets
+        run: scripts/secret-scan.sh --artifact build/web
+      - uses: actions/upload-artifact@v6
+        with:
+          name: flutter-web-release
+          path: build/web
+          if-no-files-found: error
 
   android_manifest_contract:
     name: Android merged manifest contract
@@ -591,7 +634,23 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=ENVIRONMENT=production \
+            --dart-define=API_BASE_URL=https://api.lythaus.co/api \
+            --dart-define=AUTH_URL=https://api.lythaus.co/api \
+            --dart-define=ENABLE_CERT_PINNING=false
+
+      - name: Reject legacy origins in iOS release artifact
+        run: |
+          set -euo pipefail
+          artifact="build/ios/iphoneos/Runner.app"
+          test -d "$artifact"
+          if grep -R -a -Eiq 'azurewebsites\.net|asora-function-(dev|prod)|api\.asora\.co\.za|admin-api\.asora\.co\.za' "$artifact"; then
+            echo "iOS release artifact contains a forbidden direct-origin reference." >&2
+            exit 1
+          fi
+          echo "iOS release artifact contains no direct Azure or obsolete public API origin."
 
       - name: Archive iOS app (no codesign)
         run: |
@@ -714,9 +773,6 @@ jobs:
           test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
           cp -R -- "$ROOT/functions/dist/." "$ROOT/deploy/"
 
-          # thin entrypoint for v4 runtime
-          cp -- "$ROOT/functions/runtime-index.js" "$ROOT/deploy/index.js"
-
           # function.json directories
           echo "Copying function.json directories..."
           for d in "$ROOT/functions"/*; do
@@ -739,6 +795,15 @@ jobs:
           (cd "$ROOT/deploy" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db")
 
           echo "Created $ROOT/dist-v4-final.zip"
+
+          ZIP="$ROOT/dist-v4-final.zip" bash "$ROOT/.github/scripts/preflight.sh"
+          node "$ROOT/functions/scripts/verify-dist-structure.cjs" "$ROOT/dist-v4-final.zip"
+
+      - name: Scan Functions package and archive for secrets
+        working-directory: ${{ github.workspace }}
+        run: |
+          scripts/secret-scan.sh --artifact deploy
+          scripts/secret-scan.sh --artifact dist-v4-final.zip
 
       - name: Upload feed workbook artifact
         uses: actions/upload-artifact@v6
@@ -774,7 +839,6 @@ jobs:
 
       - name: Dependency Review (block high/critical CVEs)
         uses: actions/dependency-review-action@v5
-        continue-on-error: true  # Requires Dependency graph to be enabled on the repo
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
@@ -790,6 +854,21 @@ jobs:
 
       - name: Check DSR required keys match deploy workflow
         run: bash scripts/check-dsr-runbook-consistency.sh
+
+      - name: Test DSR storage verifier CLI contract
+        run: node --test scripts/tests/verify-dsr-storage.test.js
+
+      - name: Test Cosmos network verifier CLI contract
+        run: node --test scripts/tests/verify-cosmos-network.test.js
+
+      - name: Test live DSR drill success criteria
+        run: node --test scripts/tests/live-dsr-queue-drill.test.js
+
+      - name: Test release manifest workflow contract
+        run: node --test scripts/tests/release-manifest-workflow.test.js
+
+      - name: Test performance fixture isolation wiring
+        run: node --test scripts/tests/performance-test-mode-wiring.test.js
 
   launch_blockers_summary:
     name: Launch blockers summary
@@ -809,10 +888,10 @@ jobs:
       - openapi_validation
       - secret-scan
       - verify-secrets
+      - dependency_audit
       - pin_verification
       - flutter_tests
-      - android_manifest_contract
-      - ios_archive_validation
+      - web_release_build
       - functions_build
       - azure-retirement-validation
       - dsr_runbook_guard
@@ -833,10 +912,10 @@ jobs:
           OPENAPI_VALIDATION:        ${{ needs.openapi_validation.result }}
           SECRET_SCAN:               ${{ needs.secret-scan.result }}
           VERIFY_SECRETS:            ${{ needs.verify-secrets.result }}
+          DEPENDENCY_AUDIT:           ${{ needs.dependency_audit.result }}
           PIN_VERIFICATION:          ${{ needs.pin_verification.result }}
           FLUTTER_TESTS:             ${{ needs.flutter_tests.result }}
-          ANDROID_MANIFEST:          ${{ needs.android_manifest_contract.result }}
-          IOS_ARCHIVE:               ${{ needs.ios_archive_validation.result }}
+          WEB_RELEASE_BUILD:         ${{ needs.web_release_build.result }}
           FUNCTIONS_BUILD:           ${{ needs.functions_build.result }}
           AZURE_RETIREMENT:          ${{ needs.azure-retirement-validation.result }}
           DSR_RUNBOOK_GUARD:         ${{ needs.dsr_runbook_guard.result }}
@@ -862,10 +941,10 @@ jobs:
               ["OpenAPI validation"]="$OPENAPI_VALIDATION"
               ["Secret scan (gitleaks)"]="$SECRET_SCAN"
               ["Secrets present in repo"]="$VERIFY_SECRETS"
+              ["Dependency audit (high/critical)"]="$DEPENDENCY_AUDIT"
               ["Dependency pin verification"]="$PIN_VERIFICATION"
               ["Flutter tests + coverage"]="$FLUTTER_TESTS"
-              ["Android manifest contract"]="$ANDROID_MANIFEST"
-              ["iOS archive validation"]="$IOS_ARCHIVE"
+              ["Flutter web release build"]="$WEB_RELEASE_BUILD"
               ["Functions build + coverage"]="$FUNCTIONS_BUILD"
               ["Azure retirement hardening"]="$AZURE_RETIREMENT"
               ["DSR runbook consistency"]="$DSR_RUNBOOK_GUARD"
@@ -882,6 +961,5 @@ jobs:
               echo "> :white_check_mark: **All gates passed.** Ready for merge."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          # Do not fail this job itself (it's observational)
-          exit 0
+          [[ $blockers -eq 0 ]]
 

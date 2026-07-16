@@ -131,7 +131,7 @@ void main() {
       expect(find.text('Home Page'), findsOneWidget);
     });
 
-    testWidgets('AuthFailure shows error message and back button', (
+    testWidgets('AuthFailure shows a neutral error and back button', (
       tester,
     ) async {
       final notifier = _MockAuthStateNotifier();
@@ -144,12 +144,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('OAuth2 state mismatch'), findsOneWidget);
+      expect(
+        find.text('Sign-in could not be completed. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('OAuth2 state mismatch'), findsNothing);
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Back to sign in'), findsOneWidget);
     });
 
-    testWidgets('generic error shows sign-in failed message', (tester) async {
+    testWidgets('generic error shows neutral sign-in message', (tester) async {
       final notifier = _MockAuthStateNotifier();
       final service = _FakeWebAuthService(
         errorToThrow: Exception('network down'),
@@ -160,7 +164,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Sign-in failed'), findsOneWidget);
+      expect(
+        find.text('Sign-in could not be completed. Please try again.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('back-to-login button navigates to /login', (tester) async {

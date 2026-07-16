@@ -12,6 +12,8 @@ import {
   serverError,
 } from '@shared/utils/http';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
+import type { AuthorshipLabel } from '@shared/authorship';
+import { finalizeAppealDecision } from '@moderation/service/voteService';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -25,6 +27,7 @@ interface ReviewAppealBody {
   decision: ReviewDecision;
   reason: string;
   notes?: string;
+  finalLabel?: Exclude<AuthorshipLabel, 'Under review'>;
 }
 
 interface AppealDocument {
@@ -43,6 +46,14 @@ interface AppealDocument {
 
 function isValidDecision(value: unknown): value is ReviewDecision {
   return value === 'approved' || value === 'rejected';
+}
+
+function isFinalLabel(value: unknown): value is Exclude<AuthorshipLabel, 'Under review'> {
+  return (
+    value === 'Human-authored' ||
+    value === 'AI-assisted' ||
+    value === 'AI-generated'
+  );
 }
 
 function validateBody(body: unknown): { valid: true; data: ReviewAppealBody } | { valid: false; error: string } {
@@ -70,6 +81,12 @@ function validateBody(body: unknown): { valid: true; data: ReviewAppealBody } | 
       return { valid: false, error: 'notes must be 1000 characters or fewer' };
     }
   }
+  if (b.finalLabel !== undefined && !isFinalLabel(b.finalLabel)) {
+    return {
+      valid: false,
+      error: 'finalLabel must be "Human-authored", "AI-assisted", or "AI-generated"',
+    };
+  }
 
   return {
     valid: true,
@@ -77,6 +94,7 @@ function validateBody(body: unknown): { valid: true; data: ReviewAppealBody } | 
       decision: b.decision,
       reason: b.reason.trim(),
       notes: typeof b.notes === 'string' ? b.notes.trim() : undefined,
+      finalLabel: isFinalLabel(b.finalLabel) ? b.finalLabel : undefined,
     },
   };
 }
@@ -104,7 +122,7 @@ const protectedReviewAppealedContent = requireModerator(
     if (!validation.valid) {
       return badRequest(validation.error);
     }
-    const { decision, reason, notes } = validation.data;
+    const { decision, reason, notes, finalLabel } = validation.data;
 
     const moderatorId = req.principal.sub;
     context.log('moderation.reviewAppealedContent.start', { appealId, decision, moderatorId });
@@ -112,7 +130,6 @@ const protectedReviewAppealedContent = requireModerator(
     try {
       const database = getCosmosDatabase();
       const appealsContainer = database.container('appeals');
-      const decisionsContainer = database.container('moderation_decisions');
 
       // Fetch the appeal document
       let appeal: AppealDocument;
@@ -135,45 +152,36 @@ const protectedReviewAppealedContent = requireModerator(
         return badRequest(`Appeal is already in status "${appeal.status}" and cannot be reviewed`);
       }
 
+      if (appeal.contentType === 'post' && !finalLabel) {
+        return badRequest('finalLabel is required when adjudicating a post appeal');
+      }
+
       const now = new Date().toISOString();
 
-      // Persist the moderation decision
-      const decisionDoc = {
-        id: `decision-${appealId}-${Date.now()}`,
-        appealId,
-        contentId: appeal.contentId,
-        contentType: appeal.contentType,
+      await finalizeAppealDecision({
+        database,
+        appealDoc: appeal,
+        context,
         decision,
-        reason,
-        notes: notes ?? null,
-        moderatorId,
-        createdAt: now,
-      };
-      await decisionsContainer.items.create(decisionDoc);
-
-      // Update the appeal status
-      const updatedAppeal: AppealDocument = {
-        ...appeal,
-        status: decision === 'approved' ? 'resolved_approved' : 'resolved_rejected',
-        resolvedAt: now,
-        resolvedBy: moderatorId,
-        resolution: decision,
-        resolutionReason: reason,
-      };
-      await appealsContainer.items.upsert(updatedAppeal);
+        actorId: moderatorId,
+        reason: notes ? `${reason}: ${notes}` : reason,
+        finalLabel,
+      });
+      await appealsContainer.items.upsert(appeal);
 
       context.log('moderation.reviewAppealedContent.success', {
         appealId,
         decision,
         moderatorId,
-        decisionId: decisionDoc.id,
+        finalLabel: finalLabel ?? null,
       });
 
       return ok({
         appealId,
         decision,
-        decisionId: decisionDoc.id,
         resolvedAt: now,
+        finalLabel: finalLabel ?? null,
+        communityRecommendation: appeal.communityRecommendation ?? null,
       });
     } catch (error) {
       context.log('moderation.reviewAppealedContent.error', {

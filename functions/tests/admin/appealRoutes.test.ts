@@ -84,7 +84,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-123' },
-        body: { reasonCode: 'CONTENT_RESTORED', note: 'Approved' },
+        body: { reasonCode: 'CONTENT_RESTORED', note: 'Approved', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -106,7 +106,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: {},
-        body: { reasonCode: 'CONTENT_RESTORED' },
+        body: { reasonCode: 'CONTENT_RESTORED', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -134,7 +134,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'missing-appeal' },
-        body: { reasonCode: 'CONTENT_RESTORED' },
+        body: { reasonCode: 'CONTENT_RESTORED', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -153,7 +153,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-123' },
-        body: { reasonCode: 'CONTENT_RESTORED' },
+        body: { reasonCode: 'CONTENT_RESTORED', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -207,7 +207,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-123' },
-        body: { reasonCode: 'INVALID_APPEAL' },
+        body: { reasonCode: 'INVALID_APPEAL', finalLabel: 'AI-generated' },
         principal: { sub: 'admin-123' },
       });
 
@@ -232,7 +232,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-200' },
-        body: { reasonCode: 'INVALID_APPEAL' },
+        body: { reasonCode: 'INVALID_APPEAL', finalLabel: 'AI-generated' },
         principal: { sub: 'admin-123' },
       });
 
@@ -299,7 +299,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-123' },
-        body: { decision: 'allow', reasonCode: 'policy_exception', reasonNote: 'Override' },
+        body: { decision: 'allow', reasonCode: 'policy_exception', reasonNote: 'Override', finalLabel: 'Human-authored' },
         headers: { 'Idempotency-Key': 'override-123' },
         principal: { sub: 'admin-123' },
       });
@@ -335,7 +335,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-126' },
-        body: { decision: 'allow', reasonCode: 'false_positive' },
+        body: { decision: 'allow', reasonCode: 'false_positive', finalLabel: 'Human-authored' },
         headers: { 'Idempotency-Key': 'override-126' },
         principal: { sub: 'admin-123' },
       });
@@ -362,7 +362,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-124' },
-        body: { decision: 'block', reasonCode: 'safety_risk' },
+        body: { decision: 'block', reasonCode: 'safety_risk', finalLabel: 'AI-generated' },
         principal: { sub: 'admin-123' },
       });
 
@@ -389,7 +389,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-126' },
-        body: { decision: 'allow', reasonCode: 'false_positive' },
+        body: { decision: 'allow', reasonCode: 'false_positive', finalLabel: 'Human-authored' },
         headers: { 'Idempotency-Key': 'override-999' },
         principal: { sub: 'admin-123' },
       });
@@ -417,7 +417,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-125' },
-        body: { decision: 'allow', reasonCode: 'false_positive' },
+        body: { decision: 'allow', reasonCode: 'false_positive', finalLabel: 'Human-authored' },
         headers: { 'Idempotency-Key': 'override-125' },
         principal: { sub: 'admin-123' },
       });
@@ -444,7 +444,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-127' },
-        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        body: { decision: 'allow', reasonCode: 'policy_exception', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -524,7 +524,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-131' },
-        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        body: { decision: 'allow', reasonCode: 'policy_exception', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 
@@ -559,7 +559,7 @@ describe('Admin Appeal Routes', () => {
       const req = httpReqMock({
         method: 'POST',
         params: { appealId: 'appeal-132' },
-        body: { decision: 'allow', reasonCode: 'policy_exception' },
+        body: { decision: 'allow', reasonCode: 'policy_exception', finalLabel: 'Human-authored' },
         principal: { sub: 'admin-123' },
       });
 

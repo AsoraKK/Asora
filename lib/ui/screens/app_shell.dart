@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/notifications/presentation/notifications_screen.dart';
 import 'package:asora/services/service_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
@@ -66,9 +65,10 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
     ); // trigger rebuild on mirror toggle
     final isGuest = ref.watch(guestModeProvider);
     const tabs = <Widget>[
-      HomeFeedNavigator(),
+      HomeFeedNavigator(section: AlphaFeedSection.discover),
+      HomeFeedNavigator(section: AlphaFeedSection.myFeeds),
       CreateScreen(),
-      NotificationsScreen(),
+      HomeFeedNavigator(section: AlphaFeedSection.newsBoard),
       ProfileScreen(),
     ];
 
@@ -83,9 +83,9 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
       bottomNavigationBar: AsoraBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (isGuest && index == 1) {
+          if (isGuest && (index == 1 || index == 2 || index == 3)) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Sign in to create a post.')),
+              const SnackBar(content: Text('Sign in to use this Alpha feature.')),
             );
             return;
           }

@@ -20,9 +20,10 @@ import {
   extractExtension,
   isMediaStorageConfigured,
   ALLOWED_CONTENT_TYPES,
-  MAX_FILE_SIZE_MB,
 } from '@media/mediaStorageClient';
-import { normalizeTier } from '@shared/services/tierLimits';
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
 
 interface UploadUrlRequest {
   fileName: string;
@@ -47,6 +48,7 @@ export const media_upload_url = httpHandler<UploadUrlRequest, UploadUrlResponse>
   try {
     // Require authentication
     const auth = await extractAuthContext(ctx);
+    await assertAlphaFeature('mediaUpload');
 
     // Validate request body
     if (!ctx.body) {
@@ -81,8 +83,9 @@ export const media_upload_url = httpHandler<UploadUrlRequest, UploadUrlResponse>
     }
 
     // Check file size against tier limits
-    const tier = normalizeTier(auth.tier);
-    const maxSizeMB = MAX_FILE_SIZE_MB[tier] ?? MAX_FILE_SIZE_MB.free ?? 10;
+    const effective = await getEffectiveEntitlements(auth.userId, auth.tier);
+    const tier = effective.tier;
+    const maxSizeMB = effective.limits.maxMediaSizeMB;
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
     if (fileSizeBytes && fileSizeBytes > maxSizeBytes) {
@@ -113,6 +116,18 @@ export const media_upload_url = httpHandler<UploadUrlRequest, UploadUrlResponse>
 
     return ctx.ok(result);
   } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        jsonBody: {
+          error: {
+            code: 'ALPHA_FEATURE_DISABLED',
+            message: error.message,
+            correlationId: ctx.correlationId,
+          },
+        },
+      };
+    }
     ctx.context.error(`[media_upload_url] Error: ${error}`, {
       correlationId: ctx.correlationId,
     });

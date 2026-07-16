@@ -227,6 +227,6 @@ Track these as engineering improvements:
 
 ---
 
-**Owner:** Support Team + Engineering  
-**Last Updated:** 2024-01-15  
+**Owner:** Support Team + Engineering
+**Last Updated:** 2024-01-15
 **Next Review:** Quarterly

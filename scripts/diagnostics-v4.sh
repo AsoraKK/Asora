@@ -28,14 +28,15 @@ az rest --method get --uri "https://management.azure.com/subscriptions/99df7ef7-
 
 # Function host status endpoint
 echo "🔍 Function host status:"
-curl -s https://asora-function-dev.azurewebsites.net/admin/host/status | jq '.'
+az functionapp show \
+  -g asora-psql-flex \
+  -n asora-function-dev \
+  --query "{state:state,httpsOnly:httpsOnly,defaultHostName:defaultHostName}" -o json
 
 # Check function keys (if admin access needed)
 echo "🔑 Function keys:"
-az functionapp keys list \
-  -g asora-psql-flex \
-  -n asora-function-dev \
-  --query "masterKey"
+# Never print Function keys. Retrieve them only inside a secret-safe deployment
+# operation when Azure's host-admin API is genuinely required.
 
 # What to look for in logs:
 echo "🔍 Common error patterns to search for:"

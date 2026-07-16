@@ -12,10 +12,10 @@ part 'post_trust_timeline.g.dart';
 /// PostTrustTimeline
 ///
 /// Properties:
-/// * [created] 
-/// * [mediaChecked] 
-/// * [moderation] 
-/// * [appeal] 
+/// * [created]
+/// * [mediaChecked]
+/// * [moderation]
+/// * [appeal]
 @BuiltValue()
 abstract class PostTrustTimeline implements Built<PostTrustTimeline, PostTrustTimelineBuilder> {
   @BuiltValueField(wireName: r'created')
@@ -220,4 +220,3 @@ class PostTrustTimelineAppealEnum extends EnumClass {
   static BuiltSet<PostTrustTimelineAppealEnum> get values => _$postTrustTimelineAppealEnumValues;
   static PostTrustTimelineAppealEnum valueOf(String name) => _$postTrustTimelineAppealEnumValueOf(name);
 }
-

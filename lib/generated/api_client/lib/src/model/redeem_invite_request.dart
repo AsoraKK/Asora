@@ -104,4 +104,3 @@ class _$RedeemInviteRequestSerializer implements PrimitiveSerializer<RedeemInvit
     return result.build();
   }
 }
-

@@ -20,10 +20,10 @@ class NotificationsApi {
   const NotificationsApi(this._dio, this._serializers);
 
   /// Register a push device token
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +33,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesCreate({ 
+  Future<Response<JsonObject>> notificationsDevicesCreate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -120,7 +120,7 @@ class NotificationsApi {
   }
 
   /// List registered push devices
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -132,7 +132,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesList({ 
+  Future<Response<JsonObject>> notificationsDevicesList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -199,11 +199,11 @@ class NotificationsApi {
   }
 
   /// Revoke a push device registration
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -213,7 +213,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesRevoke({ 
+  Future<Response<JsonObject>> notificationsDevicesRevoke({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -301,11 +301,11 @@ class NotificationsApi {
   }
 
   /// Dismiss a notification
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -315,7 +315,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDismiss({ 
+  Future<Response<JsonObject>> notificationsDismiss({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -403,7 +403,7 @@ class NotificationsApi {
   }
 
   /// List notifications for the current user
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -415,7 +415,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsList({ 
+  Future<Response<JsonObject>> notificationsList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -482,7 +482,7 @@ class NotificationsApi {
   }
 
   /// Get notification preferences
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -494,7 +494,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsPreferencesGet({ 
+  Future<Response<JsonObject>> notificationsPreferencesGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -561,10 +561,10 @@ class NotificationsApi {
   }
 
   /// Update notification preferences
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -574,7 +574,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsPreferencesUpdate({ 
+  Future<Response<JsonObject>> notificationsPreferencesUpdate({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -661,11 +661,11 @@ class NotificationsApi {
   }
 
   /// Mark a notification as read
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -675,7 +675,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsRead({ 
+  Future<Response<JsonObject>> notificationsRead({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -763,10 +763,10 @@ class NotificationsApi {
   }
 
   /// Send an admin-triggered notification
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -776,7 +776,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsSend({ 
+  Future<Response<JsonObject>> notificationsSend({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -863,7 +863,7 @@ class NotificationsApi {
   }
 
   /// Get unread notification count
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -875,7 +875,7 @@ class NotificationsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsUnreadCount({ 
+  Future<Response<JsonObject>> notificationsUnreadCount({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

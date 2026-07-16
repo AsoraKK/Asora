@@ -11,7 +11,6 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent, trackAppMetric } from '@shared/appInsights';
 import { awardPostCreated } from '@shared/services/reputationService';
-import { ModerationAction } from '@shared/clients/hive';
 import { withChaos } from '@shared/middleware/chaos';
 import { withDailyPostLimit } from '@shared/middleware/dailyPostLimit';
 import { validateOwnedMediaUrls } from '@media/mediaStorageClient';
@@ -19,9 +18,18 @@ import {
   moderatePostContent,
   buildModerationMeta,
   hasAiSignal,
+  moderatePostMediaUrls,
 } from '@posts/service/moderationUtil';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import {
+  normalizeDeclaredAuthorship,
+  resolveAuthorship,
+  type AuthorshipDisclosureEvent,
+  type InternalAuthorshipEvidence,
+  type PublicAuthorship,
+} from '@shared/authorship';
 
-import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta, ModerationStatus } from '@feed/types';
+import type { CreatePostBody, PostRecord, CreatePostResult, ModerationMeta } from '@feed/types';
 
 type AuthenticatedRequest = HttpRequest & { principal: Principal };
 
@@ -46,6 +54,11 @@ interface PostDocument {
     replies: number;
   };
   moderation?: ModerationMeta;
+  aiLabel: 'human' | 'assisted' | 'generated';
+  aiDetected: boolean;
+  authorship: PublicAuthorship;
+  authorshipInternal: InternalAuthorshipEvidence;
+  authorshipDisclosureHistory: AuthorshipDisclosureEvent[];
 }
 
 /**
@@ -57,25 +70,6 @@ interface ContentBlockedResponse {
   error?: string;
   categories?: string[];
   details?: Record<string, unknown>;
-}
-
-function normalizeAiLabel(label: unknown): 'human' | 'generated' | undefined {
-  if (label === undefined || label === null) {
-    return undefined;
-  }
-  if (typeof label !== 'string') {
-    return undefined;
-  }
-  const normalized = label.trim().toLowerCase();
-  if (normalized === 'human' || normalized === 'generated') {
-    return normalized;
-  }
-  return undefined;
-}
-
-function sanitizeModerationForResponse(moderationMeta: ModerationMeta): ModerationMeta {
-  const { confidence: _ignored, ...safeMeta } = moderationMeta;
-  return safeMeta;
 }
 
 // Note: moderatePostContent and buildModerationMeta are now imported from @posts/service/moderationUtil
@@ -128,6 +122,7 @@ function isValidMediaUrl(url: string): boolean {
 async function handleCreatePost(req: AuthenticatedRequest, context: InvocationContext): Promise<import('@azure/functions').HttpResponseInit> {
   const principal = req.principal;
   const start = performance.now();
+  const alphaConfig = await assertAlphaFeature('postCreation');
 
   const payload = (await req.json().catch(() => null)) as CreatePostBody | null;
   if (!payload || typeof payload !== 'object') {
@@ -147,21 +142,11 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     }
   }
 
-  const effectiveAiLabel = normalizeAiLabel(payload.aiLabel) ?? 'human';
-  if (payload.aiLabel !== undefined && normalizeAiLabel(payload.aiLabel) === undefined) {
-    return badRequest('aiLabel must be "human" or "generated"');
-  }
-
-  if (effectiveAiLabel === 'generated') {
-    return {
-      status: 422,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: 'ai_content_blocked',
-        message: 'AI-generated content cannot be published. You can appeal this decision.',
-        appealEligible: true,
-      }),
-    };
+  const declaredAuthorship = normalizeDeclaredAuthorship(payload.aiLabel);
+  if (!declaredAuthorship) {
+    return badRequest(
+      'Authorship disclosure is required: aiLabel must be "human", "assisted", or "generated"'
+    );
   }
 
   try {
@@ -174,7 +159,12 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     // Generate a correlation ID for this request
     const correlationId = req.headers.get('x-correlation-id') ?? crypto.randomUUID();
     
-    const { result: moderationResult, error: moderationError } = await moderatePostContent(
+    const {
+      result: moderationResult,
+      error: moderationError,
+      thresholdVersion,
+      classifiedAt,
+    } = await moderatePostContent(
       validation.text,
       principal.sub,
       postId,
@@ -184,7 +174,14 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
 
     // Build moderation metadata
     const moderationMeta = buildModerationMeta(moderationResult, moderationError);
-    const aiDetected = hasAiSignal(moderationMeta.categories ?? []);
+    const mediaModeration = await moderatePostMediaUrls(
+      validation.mediaUrl ? [validation.mediaUrl] : undefined,
+      principal.sub,
+      postId,
+      context
+    );
+    const aiDetected =
+      hasAiSignal(moderationMeta.categories ?? []) || mediaModeration.aiDetected;
 
     // If content is blocked, reject the post immediately
     if (moderationMeta.status === 'blocked') {
@@ -222,7 +219,51 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       };
     }
 
-    const publishedModerationMeta: ModerationMeta = aiDetected
+    if (mediaModeration.status === 'blocked') {
+      return {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: 'content_blocked',
+          message: 'Media violates policy and cannot be posted',
+          appealEligible: true,
+        }),
+      };
+    }
+
+    const classifierAvailable =
+      !alphaConfig.features.aiClassificationEnforcement ||
+      (moderationResult !== null && !moderationError && !mediaModeration.error);
+    if (
+      alphaConfig.features.aiClassificationEnforcement &&
+      !classifierAvailable &&
+      alphaConfig.aiClassificationFailureMode === 'fail_closed'
+    ) {
+      return {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: 'ai_classification_unavailable',
+          message: 'AI classification is temporarily unavailable',
+        }),
+      };
+    }
+
+    const authorship = resolveAuthorship({
+      declaration: declaredAuthorship,
+      actorId: principal.sub,
+      aiDetected,
+      classifierAvailable,
+      classifiedAt,
+      score: Math.max(moderationMeta.confidence ?? 0, mediaModeration.confidence ?? 0) || undefined,
+      thresholdVersion,
+      categories: Array.from(
+        new Set([...(moderationMeta.categories ?? []), ...mediaModeration.categories])
+      ),
+      providerError: moderationError ?? mediaModeration.error,
+    });
+
+    const publishedModerationMeta: ModerationMeta = authorship.public.reviewState === 'pending'
       ? { ...moderationMeta, status: 'warned' }
       : moderationMeta;
 
@@ -236,7 +277,10 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       mediaUrl: validation.mediaUrl,
       authorId: principal.sub,
       visibility: VISIBILITY_PUBLIC,
-      status: STATUS_PUBLISHED,
+      status:
+        authorship.publicationStatus === 'published'
+          ? STATUS_PUBLISHED
+          : authorship.publicationStatus,
       createdAt: now,
       updatedAt: now,
       stats: {
@@ -245,6 +289,11 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
         replies: 0,
       },
       moderation: publishedModerationMeta,
+      aiLabel: declaredAuthorship,
+      aiDetected,
+      authorship: authorship.public,
+      authorshipInternal: authorship.internal,
+      authorshipDisclosureHistory: [authorship.disclosureEvent],
     };
 
     const container = getTargetDatabase().posts;
@@ -264,11 +313,16 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     trackAppEvent({
       name: 'post_created',
       properties: {
-        postId,
-        authorId: principal.sub,
         textLength: validation.text.length,
         hasMedia: Boolean(validation.mediaUrl),
         moderationStatus: publishedModerationMeta.status,
+        declaredAuthorship,
+        authorshipLabel: authorship.public.authorshipLabel,
+        classificationSource: authorship.public.classificationSource,
+        classificationState: authorship.public.classificationState,
+        reviewState: authorship.public.reviewState,
+        publicationStatus: authorship.publicationStatus,
+        isTestMode: false,
         durationMs: duration,
       },
     });
@@ -284,7 +338,11 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
     // ─────────────────────────────────────────────────────────────
     // Award Reputation - Fire and forget (don't block response)
     // ─────────────────────────────────────────────────────────────
-    if (!aiDetected) {
+    if (
+      alphaConfig.features.reputationAwards &&
+      authorship.reputationEligible &&
+      declaredAuthorship === 'human'
+    ) {
       awardPostCreated(principal.sub, postId).catch(err => {
         context.log('posts.create.reputation_error', {
           postId,
@@ -302,7 +360,7 @@ async function handleCreatePost(req: AuthenticatedRequest, context: InvocationCo
       createdAt: new Date(resource?.createdAt ?? now).toISOString(),
       updatedAt: new Date(resource?.updatedAt ?? now).toISOString(),
       stats: resource?.stats ?? { likes: 0, comments: 0, replies: 0 },
-      moderation: sanitizeModerationForResponse(publishedModerationMeta),
+      authorship: resource?.authorship ?? authorship.public,
     };
 
     const result: CreatePostResult = {

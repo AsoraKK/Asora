@@ -12,6 +12,7 @@ function createMockRequest(options: {
   method?: string;
   url?: string;
   body?: unknown;
+  json?: () => Promise<unknown>;
   params?: Record<string, string>;
   query?: Map<string, string>;
   headers?: Record<string, string>;
@@ -28,6 +29,7 @@ function createMockRequest(options: {
       entries: () => headersMap.entries(),
     },
     body: options.body,
+    json: options.json,
     params: options.params || {},
     query: queryMap,
   } as HttpRequest;
@@ -122,6 +124,25 @@ describe('httpHandler', () => {
       await handler(request, context);
     });
 
+    it('should parse Azure ReadableStream bodies with request.json()', async () => {
+      const requestBody = { name: 'streamed', value: 456 };
+      const json = jest.fn().mockResolvedValue(requestBody);
+      const handler = httpHandler<typeof requestBody>(async (ctx) => {
+        expect(ctx.body).toEqual(requestBody);
+        return ctx.ok({ message: 'success' });
+      });
+
+      const request = createMockRequest({
+        method: 'POST',
+        body: { getReader: jest.fn() },
+        json,
+      });
+      const context = createMockContext();
+
+      await handler(request, context);
+      expect(json).toHaveBeenCalledTimes(1);
+    });
+
     it('should handle empty body gracefully', async () => {
       const handler = httpHandler(async (ctx) => {
         expect(ctx.body).toBeUndefined();
@@ -187,19 +208,19 @@ describe('httpHandler', () => {
       });
 
       const request = createMockRequest({
-        headers: { Origin: 'https://lythaus-web.pages.dev' },
+        headers: { Origin: 'https://app.lythaus.co' },
       });
       const context = createMockContext();
 
       const response = await handler(request, context);
-      expect(response.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(response.headers?.['Access-Control-Allow-Origin']).toBeUndefined();
       expect(response.headers?.['Access-Control-Allow-Methods']).toContain('GET');
       expect(response.headers?.['Access-Control-Allow-Headers']).toContain('Authorization');
     });
 
     it('should attach the active request origin to OPTIONS responses', async () => {
       const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
-      process.env.CORS_ALLOWED_ORIGINS = '["https://control.asora.co.za"]';
+      process.env.CORS_ALLOWED_ORIGINS = '["https://app.lythaus.co"]';
 
       try {
         jest.resetModules();
@@ -215,13 +236,13 @@ describe('httpHandler', () => {
 
         const request = createMockRequest({
           method: 'OPTIONS',
-          headers: { Origin: 'https://lythaus-web.pages.dev' },
+          headers: { Origin: 'https://app.lythaus.co' },
         });
         const context = createMockContext();
 
         const response = await handler(request, context);
         expect(response.status).toBe(200);
-        expect(response.headers?.['Access-Control-Allow-Origin']).toBe('https://lythaus-web.pages.dev');
+        expect(response.headers?.['Access-Control-Allow-Origin']).toBe('https://app.lythaus.co');
       } finally {
         if (previousOrigins === undefined) {
           delete process.env.CORS_ALLOWED_ORIGINS;
@@ -425,16 +446,14 @@ describe('httpHandler', () => {
   describe('cors origin parsing', () => {
     it('accepts JSON array allowed origins from env', () => {
       const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
-      process.env.CORS_ALLOWED_ORIGINS = '["https://lythaus-web.pages.dev","https://control.asora.co.za"]';
+      process.env.CORS_ALLOWED_ORIGINS = '["https://app.lythaus.co","https://admin.lythaus.co"]';
 
       try {
         jest.resetModules();
         const { getAllowedOrigin, getCorsHeaders } = require('@shared/utils/http') as typeof import('@shared/utils/http');
 
-        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
-        expect(getAllowedOrigin('https://be18fa23.lythaus-web.pages.dev')).toBe(
-          'https://be18fa23.lythaus-web.pages.dev'
-        );
+        expect(getAllowedOrigin('https://app.lythaus.co')).toBe('https://app.lythaus.co');
+        expect(getAllowedOrigin('https://preview.lythaus-web.pages.dev')).toBeUndefined();
         expect(getAllowedOrigin('https://example.com')).toBeUndefined();
         expect(getCorsHeaders('https://example.com')).not.toHaveProperty('Access-Control-Allow-Origin');
       } finally {
@@ -447,18 +466,16 @@ describe('httpHandler', () => {
       }
     });
 
-    it('falls back to the live Pages origin and approved preview subdomains', () => {
+    it('does not add implicit Pages or legacy-domain fallbacks', () => {
       const previousOrigins = process.env.CORS_ALLOWED_ORIGINS;
-      process.env.CORS_ALLOWED_ORIGINS = '["https://control.asora.co.za"]';
+      process.env.CORS_ALLOWED_ORIGINS = '["https://admin.lythaus.co"]';
 
       try {
         jest.resetModules();
         const { getAllowedOrigin } = require('@shared/utils/http') as typeof import('@shared/utils/http');
 
-        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBe('https://lythaus-web.pages.dev');
-        expect(getAllowedOrigin('https://be18fa23.lythaus-web.pages.dev')).toBe(
-          'https://be18fa23.lythaus-web.pages.dev'
-        );
+        expect(getAllowedOrigin('https://lythaus-web.pages.dev')).toBeUndefined();
+        expect(getAllowedOrigin('https://be18fa23.lythaus-web.pages.dev')).toBeUndefined();
         expect(getAllowedOrigin('https://lythaus-web.pages.dev.evil.com')).toBeUndefined();
       } finally {
         if (previousOrigins === undefined) {
@@ -482,7 +499,7 @@ describe('httpHandler', () => {
 
       const response = await handler(request, context);
       expect(response.headers?.['Cache-Control']).toBe('private, no-store');
-      expect(response.headers?.Vary).toBe('Authorization');
+      expect(response.headers?.Vary).toBe('Origin, Authorization');
     });
 
     it('preserves explicit cache headers from endpoint handlers', async () => {

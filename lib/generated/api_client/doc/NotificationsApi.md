@@ -5,7 +5,7 @@
 import 'package:asora_api_client/api.dart';
 ```
 
-All URIs are relative to *https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net*
+All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
@@ -31,7 +31,7 @@ Register a push device token
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsDevicesCreate(body);
@@ -45,7 +45,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -109,8 +109,8 @@ Revoke a push device registration
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsDevicesRevoke(id, body);
@@ -124,8 +124,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -152,8 +152,8 @@ Dismiss a notification
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsDismiss(id, body);
@@ -167,8 +167,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -269,7 +269,7 @@ Update notification preferences
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsPreferencesUpdate(body);
@@ -283,7 +283,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -310,8 +310,8 @@ Mark a notification as read
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final String id = id_example; // String | 
-final JsonObject body = Object; // JsonObject | 
+final String id = id_example; // String |
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsRead(id, body);
@@ -325,8 +325,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  | 
- **body** | **JsonObject**|  | 
+ **id** | **String**|  |
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -353,7 +353,7 @@ Send an admin-triggered notification
 import 'package:asora_api_client/api.dart';
 
 final api = AsoraApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject | 
+final JsonObject body = Object; // JsonObject |
 
 try {
     final response = api.notificationsSend(body);
@@ -367,7 +367,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  | 
+ **body** | **JsonObject**|  |
 
 ### Return type
 
@@ -420,4 +420,3 @@ This endpoint does not need any parameter.
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-

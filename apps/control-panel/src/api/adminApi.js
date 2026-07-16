@@ -208,9 +208,9 @@ function buildUrl(path, query) {
   const baseUrl = getAbsoluteAdminApiUrl();
   
   // Ensure proper path joining:
-  // - baseUrl: "https://control.asora.co.za/api/admin" 
+  // - baseUrl: "https://admin-api.lythaus.co/api"
   // - path: "/moderation/test/upload"
-  // - result: "https://control.asora.co.za/api/admin/moderation/test/upload"
+  // - result: "https://admin-api.lythaus.co/api/moderation/test/upload"
   
   // Normalize: remove trailing slash from base, ensure path starts with /
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;

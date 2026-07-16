@@ -80,7 +80,7 @@ void main() {
           ),
           strictDeviceIntegrity: false,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.development,
       );
@@ -112,7 +112,7 @@ void main() {
           ),
           strictDeviceIntegrity: false,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.development,
       );
@@ -146,7 +146,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.production,
       );
@@ -181,7 +181,7 @@ void main() {
             ),
             strictDeviceIntegrity: true,
             blockRootedDevices: true,
-            allowRootedInStagingForQa: false,
+            allowRootedInPreviewForQa: false,
           ),
           environment: Environment.production,
         );
@@ -217,7 +217,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.production,
       );
@@ -234,8 +234,8 @@ void main() {
     });
   });
 
-  group('DeviceIntegrityGuard - Staging with QA Override', () {
-    test('should warn-only when allowRootedInStagingForQa is true', () async {
+  group('DeviceIntegrityGuard - Preview with QA Override', () {
+    test('should warn-only when allowRootedInPreviewForQa is true', () async {
       final mockService = MockDeviceSecurityService(() {
         return DeviceSecurityState(
           isRootedOrJailbroken: true,
@@ -255,9 +255,9 @@ void main() {
           ),
           strictDeviceIntegrity: false,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: true, // QA override
+          allowRootedInPreviewForQa: true, // QA override
         ),
-        environment: Environment.staging,
+        environment: Environment.preview,
       );
 
       final decision = await guard.evaluate(IntegrityUseCase.postContent);
@@ -266,7 +266,7 @@ void main() {
       expect(decision.warnOnly, isTrue);
       expect(
         decision.messageKey,
-        equals('security.device_compromised_staging_qa'),
+        equals('security.device_compromised_preview_qa'),
       );
     });
   });
@@ -297,7 +297,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.production,
         overrides: override,
@@ -341,7 +341,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.production,
         overrides: expiredOverride,
@@ -392,7 +392,7 @@ void main() {
           ),
           strictDeviceIntegrity: true,
           blockRootedDevices: true,
-          allowRootedInStagingForQa: false,
+          allowRootedInPreviewForQa: false,
         ),
         environment: Environment.production,
       );
@@ -445,7 +445,7 @@ void main() {
             ),
             strictDeviceIntegrity: true,
             blockRootedDevices: true,
-            allowRootedInStagingForQa: false,
+            allowRootedInPreviewForQa: false,
           ),
           environment: Environment.production,
         );

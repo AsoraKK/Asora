@@ -122,6 +122,8 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
       tags: post.metadata?.tags ?? const [],
       isNews: post.isNews,
       isPinned: post.metadata?.isPinned ?? false,
+      authorshipLabel: post.authorship.label.label,
+      classificationSource: post.authorship.classificationSource,
     );
   }
 }

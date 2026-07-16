@@ -25,7 +25,7 @@ const BASE = __ENV.K6_BASE_URL;
 if (!BASE) throw new Error('K6_BASE_URL is required');
 
 export default function () {
-  const res = http.get(resolveUrl(BASE, '/api/health'), {
+  const res = http.get(resolveUrl(BASE, '/health'), {
     tags: { endpoint: 'health' },
   });
   

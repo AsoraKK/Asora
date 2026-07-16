@@ -4,25 +4,28 @@
 /* jshint esversion: 6 */
 
 /**
- * Minimal E2E integration script for Azure Functions.
+ * Minimal E2E integration script for the public API gateway.
  * - Runs from CI with working-directory set to `functions/`
- * - Invokes health and feed endpoints on the deployed function app
+ * - Invokes public health and discovery endpoints through the deployed gateway
  * - Writes `e2e-report.json` to the current working directory
  */
 
 var fs = require("fs");
 var path = require("path");
 
-const DEFAULT_BASE_URL = "https://asora-function-dev.azurewebsites.net";
-const BASE_URL = process.env.BASE_URL || process.env.FUNCTION_BASE_URL || DEFAULT_BASE_URL;
-const FUNCTION_KEY = process.env.FUNCTION_KEY || process.env.AZURE_FUNCTION_KEY;
+const DEFAULT_API_BASE_URL = "https://api.lythaus.co/api";
+const BASE_URL = (process.env.API_BASE_URL || process.env.BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
 const VERBOSE = process.argv.includes("--verbose");
 const LATENCY_THRESHOLD_SEC = Number(process.env.LATENCY_THRESHOLD_SEC || process.env.THRESHOLD_SEC || 2.0);
 
 const ok = (j) => j?.ok === true || j?.success === true || j?.status === "ok";
 
 if (!BASE_URL) {
-  console.error("BASE_URL is required (set BASE_URL or FUNCTION_BASE_URL)");
+  console.error("API_BASE_URL is required (set API_BASE_URL or BASE_URL)");
+  process.exit(2);
+}
+if (!BASE_URL.startsWith("https://") || /\.azurewebsites\.net(?:\/|$)/i.test(BASE_URL)) {
+  console.error("API_BASE_URL must be an HTTPS API gateway URL; direct Azure origins are not permitted");
   process.exit(2);
 }
 
@@ -69,9 +72,6 @@ async function getJson(url, options = {}) {
     { "Accept": "application/json" },
     options.headers || {}
   );
-  if (FUNCTION_KEY && !headers["x-functions-key"]) {
-    headers["x-functions-key"] = FUNCTION_KEY;
-  }
   const res = await fetch(url, { method: "GET", headers });
   const text = await res.text();
   let json = null;
@@ -94,13 +94,12 @@ async function main() {
       const t0 = Date.now();
       const res = await getJsonWithRetry(url);
       const durationMs = Date.now() - t0;
-      const snippet = (res.text || "").replace(/\s+/g, " ").slice(0, 200);
       let pass = res.status === 200 && res.json && ok(res.json);
       if (durationMs > LATENCY_THRESHOLD_SEC * 1000) {
         pass = false;
       }
 
-      const logLine = `[${name}] status=${res.status} latency=${durationMs}ms body=${snippet}`;
+      const logLine = `[${name}] status=${res.status} latency=${durationMs}ms`;
       if (pass) {
         if (VERBOSE) {
           console.log(`${logLine} (pass)`);
@@ -125,8 +124,6 @@ async function main() {
         status: res.status,
         durationMs,
         pass,
-        body: res.json,
-        snippet,
       });
     } catch (err) {
       failures++;
@@ -135,26 +132,10 @@ async function main() {
     }
   }
 
-  // Determine which endpoints are actually present by querying admin/functions.
-  // If admin API is unavailable, fall back to checking both endpoints (legacy behaviour).
-  let endpointsToCheck = [ { name: 'health', path: '/api/health', required: false },
-                           { name: 'feed', path: '/api/feed', required: true } ];
-  try {
-    const adminUrl = withSlash(BASE_URL, '/admin/functions');
-    const adminRes = await getJsonWithRetry(adminUrl);
-    if (adminRes && Array.isArray(adminRes.json)) {
-      const names = adminRes.json.map(f => f && f.name).filter(Boolean);
-      const hasHealth = names.includes('health');
-      const hasFeed = names.includes('feed');
-      endpointsToCheck = [];
-      if (hasHealth) endpointsToCheck.push({ name: 'health', path: '/api/health', required: false });
-      if (hasFeed) endpointsToCheck.push({ name: 'feed', path: '/api/feed', required: true });
-    } else {
-      console.warn('admin/functions did not return JSON array; falling back to default checks');
-    }
-  } catch (e) {
-    console.warn('Failed to fetch /admin/functions; falling back to default checks:', e && e.message);
-  }
+  const endpointsToCheck = [
+    { name: 'health', path: '/health', required: false },
+    { name: 'discovery', path: '/feed/discover', required: true },
+  ];
 
   for (const ep of endpointsToCheck) {
     await runCheck(ep.name, ep.path, ep.required);

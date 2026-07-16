@@ -35,14 +35,14 @@ Ensure Cloudflare caches only the smallest anonymous-safe feed surface and never
 
 - `.github/workflows/cache-check.yml` keeps push and pull-request checks deterministic by running the Worker unit tests only.
 - The same workflow runs live edge validation on `workflow_dispatch` and after successful `Deploy Feed Cache Worker` or `deploy-asora-function-dev` runs.
-- `.github/workflows/staging-validate.yml` runs the shared shell probe manually or after `deploy-asora-function-staging`.
+- `.github/workflows/mvp-preview-validate.yml` runs the shared shell probe manually against an explicit temporary Worker preview hostname.
 
-## Staging validation commands
+## Preview validation commands
 
-Use your staging host:
+Use the exact temporary Worker preview host; no permanent preview hostname exists:
 
 ```bash
-BASE_URL="https://<staging-host>"
+BASE_URL="https://<exact-preview-worker>.workers.dev"
 
 # Anonymous discover: cacheable
 curl -sS -D - -o /dev/null "$BASE_URL/api/feed/discover?limit=5" | rg -n "HTTP/|Cache-Control|Vary|X-Cache"

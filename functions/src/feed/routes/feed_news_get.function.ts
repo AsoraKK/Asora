@@ -13,13 +13,20 @@ import { httpHandler } from '@shared/http/handler';
 import { handleCorsAndMethod } from '@shared/utils/http';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
-import type { CursorPaginatedPostView } from '@shared/types/openapi';
+import type { NewsBoardFeedResponse } from '@shared/types/openapi';
 import { getFeed } from '@feed/service/feedService';
 import { postsService } from '@posts/service/postsService';
 import { extractAuthContext } from '@shared/http/authContext';
-import { hasNewsBoardAccess } from '@shared/services/tierLimits';
+import { getEffectiveEntitlements } from '@shared/services/entitlementService';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import {
+  extractAuthorizedTestModeContext,
+  TestModeAuthorizationError,
+} from '@shared/testMode/testModeContext';
 
-export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ctx => {
+const FREE_PREVIEW_LIMIT = 3;
+
+export const feed_news_get = httpHandler<void, NewsBoardFeedResponse>(async ctx => {
   const cors = handleCorsAndMethod(ctx.request.method ?? 'GET', ['GET']);
   if (cors.shouldReturn && cors.response) {
     return cors.response;
@@ -36,8 +43,10 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ct
   );
 
   try {
+    await assertAlphaFeature('newsBoard');
     // ─────────────────────────────────────────────────────────────
-    // News Board is available to authenticated Free, Premium, Black, and Admin users.
+    // Free receives a constrained preview; Premium and Black receive full access.
+    // Admin is an authorization role, never a commercial tier.
     // ─────────────────────────────────────────────────────────────
     let auth;
     try {
@@ -46,12 +55,23 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ct
       return ctx.unauthorized('Authentication required for News Board access', 'UNAUTHORIZED');
     }
 
-    if (!hasNewsBoardAccess(auth.tier)) {
-      return ctx.forbidden(
-        'News Board is not available for this account',
-        'NEWS_BOARD_UNAVAILABLE'
+    let testContext;
+    try {
+      testContext = extractAuthorizedTestModeContext(
+        ctx.request,
+        auth.token?.test_session,
+        ctx.context
       );
+    } catch (error) {
+      if (error instanceof TestModeAuthorizationError) {
+        return ctx.forbidden(error.message, error.code);
+      }
+      throw error;
     }
+
+    const effective = await getEffectiveEntitlements(auth.userId, auth.tier);
+    const accessLevel = effective.limits.newsBoardAccessLevel;
+    const previewOnly = accessLevel === 'preview';
 
     const viewerId = auth.userId;
 
@@ -59,9 +79,11 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ct
     const feedResult = await getFeed({
       principal: { sub: auth.userId, roles: auth.roles },
       context: ctx.context,
-      cursor,
-      limit: limit.toString(),
+      cursor: previewOnly ? undefined : cursor,
+      limit: Math.min(limit, previewOnly ? FREE_PREVIEW_LIMIT : 50).toString(),
       authorId: null,
+      includeTestPosts: testContext.isTestMode,
+      testSessionId: testContext.sessionId,
     });
 
     // Filter for news posts (isNews=true)
@@ -85,13 +107,17 @@ export const feed_news_get = httpHandler<void, CursorPaginatedPostView>(async ct
     }
 
     // Enrich posts with author details
-    const enrichedPosts = await Promise.all(
-      items.map((item: any) => postsService.enrichPost(item, viewerId))
-    );
+    const enrichedPosts = await postsService.enrichFeedPosts(items as any[], viewerId);
 
     const response = ctx.ok({
       items: enrichedPosts,
-      nextCursor: items.length > 0 ? feedResult.body.meta.nextCursor || undefined : undefined,
+      nextCursor:
+        !previewOnly && items.length > 0
+          ? feedResult.body.meta.nextCursor || undefined
+          : undefined,
+      accessLevel,
+      locked: previewOnly,
+      ...(previewOnly ? { previewLimit: FREE_PREVIEW_LIMIT } : {}),
     });
     response.headers = {
       ...response.headers,

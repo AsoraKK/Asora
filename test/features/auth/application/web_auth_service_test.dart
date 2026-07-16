@@ -77,10 +77,7 @@ void main() {
         return http.Response(jsonEncode(userBody ?? _userJson()), userStatus);
       });
 
-      return WebAuthService(
-        httpClient: client,
-        storage: storage,
-      );
+      return WebAuthService(httpClient: client, storage: storage);
     }
 
     test('rejects callback with error param', () async {
@@ -123,7 +120,8 @@ void main() {
     test('stores tokens and user data on successful callback', () async {
       final storage = InMemoryTokenStorage()
         ..write('pkce_state', 'expected_state')
-        ..write('pkce_code_verifier', 'verifier-123');
+        ..write('pkce_code_verifier', 'verifier-123')
+        ..write('oidc_nonce', 'nonce-123');
       final svc = buildService(storage: storage);
 
       final user = await svc.handleCallback(
@@ -140,6 +138,7 @@ void main() {
       expect(storage.read('user_data'), contains('"id":"u1"'));
       expect(storage.read('pkce_state'), isNull);
       expect(storage.read('pkce_code_verifier'), isNull);
+      expect(storage.read('oidc_nonce'), isNull);
       expect(storage.read('auth_provider'), isNull);
     });
   });

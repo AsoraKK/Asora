@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-BASE_URL="${DSR_BASE_URL:-https://asora-function-dev.azurewebsites.net}"
+BASE_URL="${DSR_API_BASE_URL:-https://admin-api.lythaus.co/api}"
 BEARER_TOKEN="${BEARER_TOKEN:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INFRA_SCRIPTS="${SCRIPT_DIR}/../../infra/scripts"
@@ -30,10 +30,14 @@ if [[ -z "$BEARER_TOKEN" ]]; then
   echo "ERROR: BEARER_TOKEN not set"
   exit 1
 fi
+if [[ ! "$BASE_URL" =~ ^https:// ]] || [[ "$BASE_URL" =~ \.azurewebsites\.net(/|$) ]]; then
+  echo "ERROR: DSR_API_BASE_URL must be an HTTPS Access-protected admin gateway; direct Azure origins are not permitted" >&2
+  exit 1
+fi
 
 # Step 1: Verify current health
 echo "Step 1: Verify current DSR health"
-HEALTH_RESP=$(curl -s "$BASE_URL/api/health")
+HEALTH_RESP=$(curl -s "$BASE_URL/health")
 HEALTH_STATUS=$(echo "$HEALTH_RESP" | jq -r '.status // "unknown"')
 echo "  Health status: $HEALTH_STATUS"
 
@@ -109,7 +113,7 @@ fi
 # Step 6: Verify health again
 echo ""
 echo "Step 6: Verify post-rotation health"
-HEALTH_RESP=$(curl -s "$BASE_URL/api/health")
+HEALTH_RESP=$(curl -s "$BASE_URL/health")
 POST_HEALTH=$(echo "$HEALTH_RESP" | jq -r '.status // "unknown"')
 echo "  Health status: $POST_HEALTH"
 

@@ -30,6 +30,14 @@ export interface TestModeContext {
   rateLimitBucket: string;
 }
 
+export class TestModeAuthorizationError extends Error {
+  readonly code = 'TEST_MODE_NOT_AUTHORIZED';
+
+  constructor() {
+    super('Test mode requires a matching signed test-session claim');
+  }
+}
+
 /**
  * Rate limits for test mode (per session per hour)
  */
@@ -91,6 +99,31 @@ export function extractTestModeContext(
     sessionStarted: isTestMode && sessionStarted ? parseInt(sessionStarted, 10) : null,
     rateLimitBucket: isTestMode && sessionId ? `test:${sessionId}` : 'production',
   };
+}
+
+export function extractAuthorizedTestModeContext(
+  req: HttpRequest,
+  authorizedSessionId: string | null | undefined,
+  context?: InvocationContext
+): TestModeContext {
+  const testContext = extractTestModeContext(req, context);
+  if (!testContext.isTestMode) {
+    return testContext;
+  }
+
+  if (
+    !testContext.sessionId
+    || !authorizedSessionId
+    || testContext.sessionId !== authorizedSessionId
+  ) {
+    context?.warn?.('[testMode] Rejected unauthorized test session', {
+      hasRequestedSession: Boolean(testContext.sessionId),
+      hasAuthorizedSession: Boolean(authorizedSessionId),
+    });
+    throw new TestModeAuthorizationError();
+  }
+
+  return testContext;
 }
 
 /**

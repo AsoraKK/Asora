@@ -13,3 +13,5 @@ void webRedirectTo(String url) {}
 String getWebLocationHref() => '';
 
 String getWebOrigin() => '';
+
+void clearWebCallbackQuery() {}

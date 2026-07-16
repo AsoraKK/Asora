@@ -4,8 +4,24 @@ on:
   workflow_call:
     inputs:
       target_environment:
-        description: "Deployment environment"
-        required: false
+        description: "Operational classification; only the shared MVP backend is authorised"
+        required: true
+        type: string
+      release_sha:
+        description: "Exact commit SHA already validated by CI"
+        required: true
+        type: string
+      ci_run_id:
+        description: "Successful CI workflow run containing immutable artifacts"
+        required: true
+        type: string
+      approved_alpha_stage:
+        description: "Kyle-approved Alpha stage recorded in release evidence"
+        required: true
+        type: string
+      known_disabled_features_json:
+        description: "JSON array of intentionally disabled Alpha features"
+        required: true
         type: string
       function_app_name:
         description: "Optional Function App override"
@@ -13,18 +29,43 @@ on:
         type: string
       resource_group:
         description: "Optional Azure resource group override"
+        required: false
+        type: string
+      key_vault_name:
+        description: "Optional Key Vault override"
         required: false
         type: string
   workflow_dispatch:
     inputs:
       target_environment:
-        description: "Deployment environment"
+        description: "Operational classification"
         type: choice
         required: true
-        default: dev
+        default: mvp
         options:
-          - dev
-          - staging
+          - mvp
+      release_sha:
+        description: "Exact 40-character commit SHA already validated by CI"
+        required: true
+        type: string
+      ci_run_id:
+        description: "Successful CI workflow run ID for the exact release SHA"
+        required: true
+        type: string
+      approved_alpha_stage:
+        description: "Kyle-approved Alpha stage"
+        required: true
+        type: choice
+        options:
+          - technical_alpha
+          - controlled_alpha
+          - expanded_alpha
+          - paused
+      known_disabled_features_json:
+        description: "JSON array of intentionally disabled Alpha features"
+        required: true
+        default: '[]'
+        type: string
       function_app_name:
         description: "Optional Function App override"
         required: false
@@ -33,13 +74,12 @@ on:
         description: "Optional Azure resource group override"
         required: false
         type: string
-  push:
-    branches: [ "main", "infra/azure-retirement-hardening-node22-tls-kv-pg-ha" ]
-    paths:
-      - "functions/**"
-      - ".github/workflows/deploy-asora-function-dev.yml"
-
+      key_vault_name:
+        description: "Optional Key Vault override"
+        required: false
+        type: string
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -47,18 +87,99 @@ env:
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  TARGET_ENV: ${{ github.event.inputs.target_environment || 'dev' }}
-  RG: ${{ github.event.inputs.resource_group || 'asora-psql-flex' }}
-  FUNC_APP: ${{ github.event.inputs.function_app_name || (github.event.inputs.target_environment == 'staging' && 'asora-function-staging' || 'asora-function-dev') }}
+  TARGET_ENV: ${{ inputs.target_environment }}
+  RG: ${{ inputs.resource_group || 'asora-psql-flex' }}
+  FUNC_APP: ${{ inputs.function_app_name || 'asora-function-dev' }}
+  KEY_VAULT: ${{ inputs.key_vault_name || 'kv-asora-flex-dev' }}
+  MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
+  MVP_PREVIEW_APP_ORIGIN: ${{ vars.MVP_PREVIEW_APP_ORIGIN }}
+  MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+  MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+  RELEASE_SHA: ${{ inputs.release_sha }}
+  CI_RUN_ID: ${{ inputs.ci_run_id }}
+  APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
+  KNOWN_DISABLED_FEATURES_JSON: ${{ inputs.known_disabled_features_json }}
   NODE_VERSION: 22
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.target_environment || 'dev' }}
+    # Keep the existing protected environment/OIDC subject; Azure resource
+    # names stay internal even though the backend is operationally MVP live.
+    environment: dev
+    outputs:
+      functions_artifact_sha256: ${{ steps.release_artifact.outputs.functions_sha256 }}
+      functions_github_digest: ${{ steps.release_artifact.outputs.functions_github_digest }}
+      web_github_digest: ${{ steps.release_artifact.outputs.web_github_digest }}
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install release validation tooling
+        run: npm ci --ignore-scripts
+
+      - name: Verify exact-SHA CI and download immutable Functions artifact
+        id: release_artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release_sha must be a full commit SHA"; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::ci_run_id must be numeric"; exit 1; }
+
+          RUN_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")
+          RUN_SHA=$(jq -r '.head_sha' <<<"$RUN_JSON")
+          RUN_NAME=$(jq -r '.name' <<<"$RUN_JSON")
+          RUN_CONCLUSION=$(jq -r '.conclusion' <<<"$RUN_JSON")
+          if [ "$RUN_SHA" != "$RELEASE_SHA" ] || [ "$RUN_NAME" != "CI" ] || [ "$RUN_CONCLUSION" != "success" ]; then
+            echo "::error::CI run must be the successful CI workflow for release_sha"
+            exit 1
+          fi
+
+          ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
+          FUNCTIONS_GITHUB_DIGEST=$(jq -r '.artifacts[] | select(.name == "functions-v4-artifact") | .digest' <<<"$ARTIFACTS_JSON")
+          WEB_GITHUB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
+          test -n "$FUNCTIONS_GITHUB_DIGEST" && test "$FUNCTIONS_GITHUB_DIGEST" != "null"
+          test -n "$WEB_GITHUB_DIGEST" && test "$WEB_GITHUB_DIGEST" != "null"
+
+          mkdir -p downloaded/functions
+          gh run download "$CI_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name functions-v4-artifact --dir downloaded/functions
+          test -f downloaded/functions/dist-v4-final.zip || {
+            echo "::error::functions-v4-artifact did not contain dist-v4-final.zip"
+            exit 1
+          }
+          cp downloaded/functions/dist-v4-final.zip functions-dist.zip
+          scripts/secret-scan.sh --artifact functions-dist.zip
+          ZIP=functions-dist.zip bash .github/scripts/preflight.sh
+
+          rm -rf /tmp/lythaus-release-artifact
+          mkdir -p /tmp/lythaus-release-artifact
+          unzip -q functions-dist.zip -d /tmp/lythaus-release-artifact
+          test -f /tmp/lythaus-release-artifact/host.json
+          test -f /tmp/lythaus-release-artifact/package.json
+          test -f /tmp/lythaus-release-artifact/index.js
+          test -f /tmp/lythaus-release-artifact/src/index.js
+          test -d /tmp/lythaus-release-artifact/shared
+          test "$(jq -r .main /tmp/lythaus-release-artifact/package.json)" = "index.js"
+
+          ARTIFACT_SHA256=$(sha256sum functions-dist.zip | awk '{print $1}')
+          echo "FUNCTION_ARTIFACT_SHA256=$ARTIFACT_SHA256" >> "$GITHUB_ENV"
+          {
+            echo "functions_sha256=$ARTIFACT_SHA256"
+            echo "functions_github_digest=$FUNCTIONS_GITHUB_DIGEST"
+            echo "web_github_digest=$WEB_GITHUB_DIGEST"
+          } >> "$GITHUB_OUTPUT"
+          echo "Verified CI run $CI_RUN_ID for $RELEASE_SHA"
+          echo "Functions artifact SHA-256: $ARTIFACT_SHA256"
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -67,20 +188,20 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
       - name: Configure CORS allowed origins
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$MVP_CORS_ALLOWED_ORIGINS" || { echo "::error::MVP_CORS_ALLOWED_ORIGINS repository variable is required"; exit 1; }
+          # The immutable preview value, when present, must be one exact
+          # pages.dev origin. Wildcards and retired public domains are rejected.
+          node -e 'const configured = process.env.MVP_CORS_ALLOWED_ORIGINS.split(",").map(v => v.trim()).filter(Boolean); const preview = process.env.MVP_PREVIEW_APP_ORIGIN.trim(); const fixed = new Set(["https://app.lythaus.co", "https://admin.lythaus.co", "https://control.asora.co.za"]); if (preview) { const u = new URL(preview); if (u.protocol !== "https:" || !u.hostname.endsWith(".pages.dev") || u.username || u.password || u.pathname !== "/" || u.search || u.hash) throw new Error("MVP_PREVIEW_APP_ORIGIN must be one exact HTTPS Pages origin"); fixed.add(u.origin); } for (const raw of configured) { const u = new URL(raw); if (u.origin !== raw || !fixed.has(u.origin)) throw new Error(`Unsafe CORS origin: ${u.origin}`); }'
           az functionapp config appsettings set \
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
-            --settings CORS_ALLOWED_ORIGINS='https://control.asora.co.za,https://lythaus-web.pages.dev,https://*.lythaus-web.pages.dev,https://app.lythaus.asora.co.za'
+            --settings CORS_ALLOWED_ORIGINS="$MVP_CORS_ALLOWED_ORIGINS" \
+            --output none
 
       - name: Inspect CORS allowed origins
         run: |
@@ -101,16 +222,14 @@ jobs:
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
           SUBS_CLEAN=$(az account show --query id -o tsv | tr -d '\r')
           CORS_URI="https://management.azure.com/subscriptions/${SUBS_CLEAN}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/web?api-version=2026-03-15"
+          ALLOWED_ORIGINS=$(jq -Rn --arg csv "$MVP_CORS_ALLOWED_ORIGINS" \
+            '$csv | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')
           CORS_BODY=$(jq -n \
-            --arg control "https://control.asora.co.za" \
-            --arg pages "https://lythaus-web.pages.dev" \
-            --arg app "https://app.lythaus.asora.co.za" \
-            --arg localhost8080 "http://localhost:8080" \
-            --arg localhost4200 "http://localhost:4200" \
+            --argjson origins "$ALLOWED_ORIGINS" \
             '{
               properties: {
                 cors: {
-                  allowedOrigins: [$control, $pages, $app, $localhost8080, $localhost4200],
+                  allowedOrigins: $origins,
                   supportCredentials: false
                 }
               }
@@ -124,86 +243,6 @@ jobs:
           echo "Azure platform CORS after configuration:"
           az rest --method get --url "$CORS_URI" -o json | jq -r '.properties.cors.allowedOrigins // [] | .[]' || true
 
-      - name: Build Functions (Flex)
-        working-directory: functions
-        env:
-          HUSKY: 0
-          GIT_SHA: ${{ github.sha }}
-        run: npm ci --no-audit --no-fund && npm run build
-
-      - name: Run Notifications E2E Tests
-        working-directory: functions
-        env:
-          NODE_ENV: test
-          AZURE_FUNCTIONS_UNIT_TEST: '1'
-          AI_TELEMETRY: 'off'
-          LOG_LEVEL: debug
-        run: npm test -- tests/notifications --runInBand --verbose
-
-      - name: Gate artifact structure
-        working-directory: functions/dist
-        run: |
-          set -euo pipefail
-          echo "Validating V4 PROGRAMMATIC MODEL package structure..."
-          
-          # Required files for programmatic model
-          test -f host.json || { echo "::error::Missing host.json"; exit 1; }
-          test -f package.json || { echo "::error::Missing package.json"; exit 1; }
-          test -f index.js || { echo "::error::Missing root index.js entrypoint"; exit 1; }
-          test -f src/index.js || { echo "::error::Missing src/index.js (compiled handlers)"; exit 1; }
-          test -d shared || { echo "::error::Missing shared/ directory"; exit 1; }
-          
-          # Ensure package.json has main=index.js and NO "type":"module"
-          MAIN=$(jq -r .main package.json)
-          echo "package.json main field: $MAIN"
-          if [ "$MAIN" != "index.js" ]; then
-            echo "::error::Expected main=index.js, got: $MAIN"; exit 1
-          fi
-          TYPE=$(jq -r '.type // "commonjs"' package.json)
-          if [ "$TYPE" = "module" ]; then
-            echo "::error::package.json must NOT have type=module (breaks CJS handlers)"; exit 1
-          fi
-          
-          echo "Verifying index.js is PROGRAMMATIC (must require src/index.js)..."
-          # V4 programmatic model: index.js MUST load the compiled handlers
-          if ! grep -q "require.*src/index" index.js; then
-            echo "::error::index.js must require('./src/index.js') for v4 programmatic model"; exit 1
-          fi
-          
-          echo "Smoke-testing programmatic entrypoint..."
-          # This will fail fast if there are missing dependencies
-          node -e "
-            try {
-              require('./index.js');
-              console.log('✅ Programmatic entrypoint loads successfully');
-            } catch (e) {
-              // Expected: may fail due to missing env vars, but should not have syntax errors
-              if (e.code === 'MODULE_NOT_FOUND') {
-                console.error('❌ Missing module:', e.message);
-                process.exit(1);
-              }
-              // Config/env errors are OK at build time
-              console.log('⚠️  Config/env warning (expected at build time):', e.message);
-            }
-          "
-          
-          # Verify NO file-based function.json files exist (programmatic model only)
-          FUNC_JSON_COUNT=$(find . -name "function.json" -type f | wc -l)
-          if [ "$FUNC_JSON_COUNT" -gt 0 ]; then
-            echo "::warning::Found $FUNC_JSON_COUNT function.json files (should be 0 for pure programmatic model)"
-            find . -name "function.json" -type f
-          fi
-          
-          echo "✅ All V4 programmatic model structure gates passed"
-
-      - name: Zip dist root (zip the CONTENTS of dist)
-        working-directory: functions/dist
-        run: zip -r ../../functions-dist.zip .
-
-      - name: Verify packaged artifact structure
-        working-directory: functions
-        run: npm run verify:dist
-
       - name: Publish to Flex via Kudu (recommended)
         run: |
           set -euo pipefail
@@ -212,7 +251,7 @@ jobs:
           SUBS=$(az account show --query id -o tsv | tr -d '\r')
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          SHORT_SHA=$(echo "$RELEASE_SHA" | cut -c1-7)
 
           # Extract storage pointer (as stored in functionApp config) and parse components
           DEPLOY_VALUE=$(az functionapp show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query "properties.functionAppConfig.deployment.storage.value" -o tsv | tr -d '\r')
@@ -294,66 +333,72 @@ jobs:
           echo "Waiting 90s for Flex host warmup..."
           sleep 90
 
-      - name: Provision AUDIT_HMAC_KEY via Key Vault
+      - name: Configure and verify Key Vault references
         continue-on-error: false
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
-          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
-
+          KEY_VAULT=$(echo "$KEY_VAULT" | tr -d '\r')
           if [ -z "$KEY_VAULT" ]; then
-            if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
-              echo "::error::No Key Vault found in RG $RG_CLEAN — AUDIT_HMAC_KEY must use Key Vault in production"
+            mapfile -t KEY_VAULTS < <(az keyvault list -g "$RG_CLEAN" --query "[].name" -o tsv 2>/dev/null)
+            if [ "${#KEY_VAULTS[@]}" -ne 1 ]; then
+              echo "::error::Set key_vault_name explicitly when the resource group has zero or multiple Key Vaults"
               exit 1
             fi
-
-            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
-            echo "ℹ️  Using plain AUDIT_HMAC_KEY app setting fallback for non-production environment: $ENVIRONMENT"
-            HMAC_KEY=$(openssl rand -hex 32)
-            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-              --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
-            echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
-            exit 0
+            KEY_VAULT="${KEY_VAULTS[0]}"
+          fi
+          VAULT_RG=$(az keyvault show --name "$KEY_VAULT" --query resourceGroup -o tsv 2>/dev/null || echo "")
+          if [ "$VAULT_RG" != "$RG_CLEAN" ]; then
+            echo "::error::Key Vault $KEY_VAULT is not in resource group $RG_CLEAN"
+            exit 1
           fi
 
-          # Check if the secret already exists (may fail if SP lacks get permission)
-          if az keyvault secret show --vault-name "$KEY_VAULT" --name "audit-hmac-key" --query "id" -o tsv >/dev/null 2>&1; then
-            echo "✅ audit-hmac-key already exists in Key Vault $KEY_VAULT"
-          else
-            echo "Generating new AUDIT_HMAC_KEY (32 bytes, hex-encoded)..."
-            HMAC_KEY=$(openssl rand -hex 32)
-
-            if az keyvault secret set --vault-name "$KEY_VAULT" --name "audit-hmac-key" \
-              --value "$HMAC_KEY" --output none; then
-              echo "✅ audit-hmac-key created in Key Vault $KEY_VAULT"
-            else
-              if [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; then
-                echo "::error::Failed to create Key Vault secret audit-hmac-key in production"
-                echo "::error::Grant the deployment principal Key Vault Secrets Officer (or setSecret permission) on $KEY_VAULT"
-                exit 1
-              fi
-
-              echo "⚠️  Unable to create Key Vault secret (likely RBAC limitation)"
-              echo "ℹ️  Falling back to plain AUDIT_HMAC_KEY app setting for non-production environment: $ENVIRONMENT"
-              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-                --setting "AUDIT_HMAC_KEY=$HMAC_KEY" --output none
-              echo "✅ AUDIT_HMAC_KEY configured via plain app setting fallback"
-              exit 0
-            fi
-          fi
-
-          # Wire as Key Vault reference in Function App
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
+            --settings \
+              "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
+              "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
+              "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
+              "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
             --output none
-          echo "✅ AUDIT_HMAC_KEY wired as Key Vault reference"
+
+          SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET)
+          for attempt in $(seq 1 12); do
+            REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
+            unresolved=false
+            for setting in "${REQUIRED_REFERENCES[@]}"; do
+              STATUS=$(jq -r --arg setting "$setting" \
+                '[.value[] | select((.id | split("/") | last) == $setting) | .properties.status][0] // "Missing"' \
+                <<<"$REFERENCES_JSON")
+              if [ "$STATUS" != "Resolved" ]; then
+                unresolved=true
+                echo "Key Vault reference $setting status: $STATUS (attempt $attempt/12)"
+              fi
+            done
+            if [ "$unresolved" = false ]; then
+              echo "✅ Required Key Vault references resolved"
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::One or more required Key Vault references did not resolve"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Record immutable deployment metadata
+        run: |
+          set -euo pipefail
+          az functionapp config appsettings set -g "$RG" -n "$FUNC_APP" \
+            --setting DEPLOYMENT_SHA="$RELEASE_SHA" ALPHA_RELEASE_ENVIRONMENT="$TARGET_ENV" \
+            --output none
+          echo "Exact deployment SHA recorded in non-secret app settings"
 
       - name: Validate Flex app settings
         run: |
           set -euo pipefail
-          ENVIRONMENT=$(echo "${TARGET_ENV:-dev}" | tr '[:upper:]' '[:lower:]')
           SETTINGS=$(az functionapp config appsettings list -g "$RG" -n "$FUNC_APP" -o json)
           EXT_VERSION=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="FUNCTIONS_EXTENSION_VERSION") | .value' || echo "")
           if [ "$EXT_VERSION" != "~4" ]; then
@@ -370,29 +415,53 @@ jobs:
             echo "::error::AUDIT_HMAC_KEY is not set — audit log pseudonymisation requires this setting"; exit 1
           fi
 
-          if { [ "$ENVIRONMENT" = "prod" ] || [ "$ENVIRONMENT" = "production" ]; } && [[ "$HMAC_SETTING" != @Microsoft.KeyVault* ]]; then
-            echo "::error::AUDIT_HMAC_KEY must be a Key Vault reference in production"; exit 1
+          if [[ "$HMAC_SETTING" != @Microsoft.KeyVault* ]]; then
+            echo "::error::AUDIT_HMAC_KEY must be a Key Vault reference"; exit 1
           fi
 
-          echo "✅ AUDIT_HMAC_KEY is configured"
+          INVITE_PEPPER_SETTING=$(echo "$SETTINGS" | jq -r '.[] | select(.name=="INVITE_CODE_PEPPER") | .value' || echo "")
+          if [[ "$INVITE_PEPPER_SETTING" != @Microsoft.KeyVault* ]]; then
+            echo "::error::INVITE_CODE_PEPPER must be a Key Vault reference"; exit 1
+          fi
 
-      - name: Post-deploy probe /api/health
+          REQUIRED_KEY_VAULT_SETTINGS=(
+            JWT_SECRET
+            INVITE_CODE_PEPPER
+            HIVE_API_KEY
+            COSMOS_CONNECTION_STRING
+            POSTGRES_CONNECTION_STRING
+            AUDIT_HMAC_KEY
+            FCM_PRIVATE_KEY
+          )
+          for key in "${REQUIRED_KEY_VAULT_SETTINGS[@]}"; do
+            value=$(echo "$SETTINGS" | jq -r --arg key "$key" '.[] | select(.name==$key) | .value' || echo "")
+            if [[ "$value" != @Microsoft.KeyVault* ]]; then
+              echo "::error::$key must be configured as an Azure Key Vault reference"
+              exit 1
+            fi
+          done
+
+          echo "✅ Required Alpha secrets are configured as Key Vault references"
+
+      - name: Post-deploy direct-origin health diagnostic
+        env:
+          ORIGIN_OPERATIONAL_TOKEN: ${{ secrets.ORIGIN_OPERATIONAL_TOKEN }}
         run: |
           set -euo pipefail
+          test -n "$ORIGIN_OPERATIONAL_TOKEN" || { echo "::error::ORIGIN_OPERATIONAL_TOKEN is required for direct-origin health diagnostics"; exit 1; }
           
           # Strip CRLF from variables
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
           
           URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/health"
-          BOGUS_URL="https://${FUNC_APP_CLEAN}.azurewebsites.net/api/__bogus__"
           
           echo "Running V4 PROGRAMMATIC MODEL runtime gates..."
           
           # Gate 1: Health returns 200 (20 probes, 5s intervals)
           GATE1_PASSED=false
           for i in $(seq 1 20); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            code=$(curl -s -o /dev/null -w "%{http_code}" -H "X-Lythaus-Operational-Token: $ORIGIN_OPERATIONAL_TOKEN" "$URL" || true)
             echo "Gate 1 - probe $i/20: /api/health returned HTTP $code"
             if [ "$code" = "200" ]; then
               echo "✅ Gate 1 PASSED: health endpoint returns 200"
@@ -409,17 +478,8 @@ jobs:
             exit 1
           fi
           
-          # Gate 2: Bogus route returns 404 (not 500, validates host routing)
-          bogus_code=$(curl -s -o /dev/null -w "%{http_code}" "$BOGUS_URL" || true)
-          echo "Gate 2 - bogus route returned HTTP $bogus_code"
-          if [ "$bogus_code" = "404" ]; then
-            echo "✅ Gate 2 PASSED: bogus route returns 404 (host routing intact)"
-          else
-            echo "::error::Gate 2 FAILED: Expected 404, got $bogus_code (host may not be routing correctly)"
-            exit 1
-          fi
-          
-          # Gate 3: Admin /functions lists at least 'health' (v4 programmatic model)
+          # Gate 2: Azure host-admin is an infrastructure diagnostic, not an
+          # application traffic path.
           # Note: Programmatic model registers multiple functions
           ADMIN_KEY=$(az functionapp keys list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query masterKey -o tsv | tr -d '\r')
           FUNCTIONS=$(curl -s -H "x-functions-key: $ADMIN_KEY" "https://${FUNC_APP_CLEAN}.azurewebsites.net/admin/functions" || echo "[]")
@@ -453,7 +513,7 @@ jobs:
           set +e  # Continue on error for diagnostics
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          SHORT_SHA=$(echo "$RELEASE_SHA" | cut -c1-7)
           
           echo "=========================================="
           echo "Auto-diagnostics on deployment failure"
@@ -530,9 +590,20 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     needs: deploy
-    environment: ${{ github.event.inputs.target_environment || 'dev' }}
+    environment: dev
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install release validation tooling
+        run: npm ci --ignore-scripts
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -544,11 +615,13 @@ jobs:
       - name: Acceptance checks (Flex)
         run: |
           set -euo pipefail
-          BASE="https://${FUNC_APP}.azurewebsites.net"
+          test -n "$MVP_PUBLIC_API_BASE_URL" || { echo "::error::MVP_PUBLIC_API_BASE_URL must point to the tested public gateway"; exit 1; }
+          node -e 'const value = process.env.MVP_PUBLIC_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api");'
+          BASE="${MVP_PUBLIC_API_BASE_URL%/}"
 
           # 1) Liveness must be 200
-          echo "🔍 Testing health endpoint: $BASE/api/health"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
+          echo "🔍 Testing public gateway health endpoint"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health")
           echo "   Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "❌ Health check failed: expected 200, got $STATUS"
@@ -557,8 +630,8 @@ jobs:
           echo "✅ Health check passed"
 
           # 2) Bogus route must be 404
-          echo "🔍 Testing 404 route: $BASE/api/__bogus__"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/__bogus__")
+          echo "🔍 Testing public gateway 404 route"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/__bogus__")
           echo "   Status: $STATUS"
           if [ "$STATUS" != "404" ]; then
             echo "❌ 404 check failed: expected 404, got $STATUS"
@@ -570,7 +643,7 @@ jobs:
           echo "🔍 Testing unauthenticated notification endpoints"
           
           # Test /api/notifications/devices (GET without auth)
-          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/devices")
+          DEVICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/notifications/devices")
           echo "   /api/notifications/devices (no auth): $DEVICES_STATUS"
           if [ "$DEVICES_STATUS" = "500" ]; then
             echo "❌ Notifications devices returned 500 (should be 401/403)"
@@ -583,7 +656,7 @@ jobs:
           fi
 
           # Test /api/notifications/preferences (GET without auth)
-          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/notifications/preferences")
+          PREFS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/notifications/preferences")
           echo "   /api/notifications/preferences (no auth): $PREFS_STATUS"
           if [ "$PREFS_STATUS" = "500" ]; then
             echo "❌ Notifications preferences returned 500 (should be 401/403)"
@@ -612,8 +685,19 @@ jobs:
           fi
           echo "✅ Function registration passed ($FUNC_COUNT functions including health)"
 
-      - name: Verify DSR export storage configuration (optional)
-        continue-on-error: true
+      - name: Required live OpenAPI contracts
+        env:
+          ALPHA_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
+          STAGING_SMOKE_TOKEN: ${{ secrets.MVP_SMOKE_TOKEN || secrets.STAGING_SMOKE_TOKEN }}
+          REQUIRE_LIVE_CONTRACTS: 'true'
+          CONTRACT_TIMEOUT_MS: '15000'
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_SMOKE_TOKEN" || { echo "::error::MVP_SMOKE_TOKEN is required"; exit 1; }
+          test -n "$ALPHA_API_BASE_URL" || { echo "::error::MVP_PUBLIC_API_BASE_URL is required for public API contracts"; exit 1; }
+          npm run openapi:test:contract
+
+      - name: Verify DSR export storage configuration
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -621,22 +705,29 @@ jobs:
           PRINCIPAL_ID=$(az functionapp identity show -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --query principalId -o tsv)
           SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
           if [ -z "$SA" ]; then
-            echo "⚠️  DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"
-            echo "ℹ️  DSR features will not be available until storage infrastructure is provisioned"
-            exit 0
+            echo "::error::DSR storage account (tag purpose=dsr-storage) not found in RG $RG_CLEAN"
+            exit 1
           fi
-          bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID"
+          DSR_NETWORK_MODE="private"
+          if [[ "$TARGET_ENV" == "mvp" ]]; then
+            DSR_NETWORK_MODE="public-rbac"
+          fi
+          bash infra/scripts/verify-dsr-storage.sh "$SA" "$RG_CLEAN" "$PRINCIPAL_ID" "$DSR_NETWORK_MODE"
 
-      - name: Verify Cosmos DB private networking (optional)
-        continue-on-error: true
+      - name: Verify Cosmos DB network posture
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           COSMOS_ACCOUNT=$(az cosmosdb list -g "$RG_CLEAN" --query "[0].name" -o tsv)
           if [ -n "$COSMOS_ACCOUNT" ]; then
-            bash infra/scripts/verify-cosmos-private-endpoint.sh "$COSMOS_ACCOUNT" "$RG_CLEAN"
+            COSMOS_NETWORK_MODE="private"
+            if [[ "$TARGET_ENV" == "mvp" ]]; then
+              COSMOS_NETWORK_MODE="public-keyvault"
+            fi
+            bash infra/scripts/verify-cosmos-private-endpoint.sh "$COSMOS_ACCOUNT" "$RG_CLEAN" "$COSMOS_NETWORK_MODE"
           else
-            echo "⚠️  No Cosmos DB account found in RG; skipping private endpoint check"
+            echo "::error::No Cosmos DB account found in RG"
+            exit 1
           fi
 
       - name: Configure Cloudflare Access credentials (control-panel proxy)
@@ -645,60 +736,19 @@ jobs:
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
           FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
-          
-          # Extract CF Access credentials from GitHub Actions secrets
-          # Note: Secret names use underscores due to GitHub Actions naming constraints
           CF_CLIENT_ID="${{ secrets.CF_Access_Client_Id }}"
-          CF_CLIENT_SECRET="${{ secrets.CF_Access_Client_Secret }}"
-          
-          if [ -z "$CF_CLIENT_ID" ] || [ -z "$CF_CLIENT_SECRET" ]; then
-            echo "⚠️  Cloudflare Access credentials not configured in GitHub Actions secrets"
-            echo "ℹ️  Add CF_Access_Client_Id and CF_Access_Client_Secret to enable CORS proxy"
-            echo "ℹ️  Control-panel tests will fail without these credentials"
-            exit 0
-          fi
-          
-          echo "Configuring Cloudflare Access credentials in Function App..."
-          
-          # Store client ID directly (non-sensitive)
-          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --setting CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
-          
-          # Store secret via Key Vault reference (secure approach)
-          # Requires: Key Vault must exist with write access via managed identity
-          KEY_VAULT=$(az keyvault list -g "$RG_CLEAN" --query "[0].name" -o tsv 2>/dev/null || echo "")
-          
-          if [ -n "$KEY_VAULT" ]; then
-            echo "Setting CF_ACCESS_CLIENT_SECRET via Key Vault reference..."
-            if az keyvault secret set --vault-name "$KEY_VAULT" --name "cf-access-client-secret" \
-              --value "$CF_CLIENT_SECRET" --output none; then
-              # Reference the Key Vault secret in Function App Settings
-              if az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-                --setting "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
-                --output none; then
-                echo "✅ Key Vault reference configured"
-              else
-                echo "⚠️  Key Vault reference failed; falling back to plain app setting"
-                az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-                  --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
-              fi
-            else
-              echo "⚠️  Key Vault secret write failed; falling back to plain app setting"
-              az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-                --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
-            fi
-          else
-            echo "⚠️  No Key Vault found in RG $RG_CLEAN"
-            echo "ℹ️  Setting CF_ACCESS_CLIENT_SECRET as plain app setting (less secure)"
-            echo "ℹ️  Recommended: Create Azure Key Vault and use Key Vault reference instead"
-            az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-              --setting CF_ACCESS_CLIENT_SECRET="$CF_CLIENT_SECRET" --output none
-          fi
-          
-          echo "✅ Cloudflare Access credentials configured"
 
-      - name: Configure DSR environment variables (optional)
-        continue-on-error: true
+          if [ -z "$CF_CLIENT_ID" ]; then
+            echo "::error::Cloudflare Access client ID is required for the Alpha control panel"
+            exit 1
+          fi
+
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+
+          echo "✅ Cloudflare Access client ID configured; secret remains Key Vault-backed"
+
+      - name: Configure DSR environment variables
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -707,9 +757,8 @@ jobs:
           # Get DSR storage account name
           DSR_SA=$(az storage account list -g "$RG_CLEAN" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
           if [ -z "$DSR_SA" ]; then
-            echo "⚠️  DSR storage account not found, skipping DSR environment variable configuration"
-            echo "ℹ️  Run infra provisioning to create DSR storage account before enabling DSR features"
-            exit 0
+            echo "::error::DSR storage account not found; Alpha deployment cannot continue"
+            exit 1
           fi
           
           echo "Setting DSR environment variables..."
@@ -726,7 +775,6 @@ jobs:
           echo "✅ DSR environment variables configured"
 
       - name: Configure media storage environment variables
-        continue-on-error: true
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -738,9 +786,12 @@ jobs:
             # Try well-known name
             MEDIA_SA="asoramediadev"
             if ! az storage account show -n "$MEDIA_SA" -g "$RG_CLEAN" --query "name" -o tsv 2>/dev/null; then
-              echo "⚠️  Media storage account not found, skipping media environment variable configuration"
-              echo "ℹ️  Run scripts/setup-media-storage.sh to create media storage account"
-              exit 0
+              if jq -e 'index("mediaUpload") != null' <<<"$KNOWN_DISABLED_FEATURES_JSON" >/dev/null; then
+                echo "Media storage is absent and mediaUpload is explicitly recorded as disabled"
+                exit 0
+              fi
+              echo "::error::Media storage is required unless mediaUpload is explicitly disabled"
+              exit 1
             fi
           fi
 
@@ -749,3 +800,116 @@ jobs:
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" --setting MEDIA_CONTAINER="user-media" --output none
 
           echo "✅ Media storage environment variables configured"
+
+      - name: Verify Alpha cohort schema and capacity snapshot
+        env:
+          ALPHA_RELEASE_ADMIN_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$ALPHA_RELEASE_ADMIN_TOKEN" || { echo "::error::ALPHA_RELEASE_ADMIN_TOKEN is required"; exit 1; }
+          test -n "$MVP_ADMIN_API_BASE_URL" || { echo "::error::MVP_ADMIN_API_BASE_URL must point to the Access-protected admin gateway"; exit 1; }
+          node -e 'const value = process.env.MVP_ADMIN_API_BASE_URL; const url = new URL(value); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("MVP_ADMIN_API_BASE_URL must be an HTTPS admin gateway ending in /api");'
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            --header "Authorization: Bearer $ALPHA_RELEASE_ADMIN_TOKEN" \
+            "${MVP_ADMIN_API_BASE_URL%/}/_admin/ops/metrics?window=24h" \
+            > alpha-ops-preflight.json
+          jq --arg stage "$APPROVED_ALPHA_STAGE" -e \
+            '.success == true and .data.partial == false and .data.cohort != null and .data.cohort.stage == $stage' \
+            alpha-ops-preflight.json >/dev/null || {
+              echo "::error::Alpha cohort schema/capacity snapshot is unavailable or does not match the approved stage"
+              exit 1
+            }
+
+      - name: Run live DSR queue regression
+        env:
+          DSR_DRILL_BEARER_TOKEN: ${{ secrets.ALPHA_RELEASE_ADMIN_TOKEN }}
+          DSR_DRILL_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+          DSR_DRILL_REPORT_PATH: release-evidence/dsr-live-drill-report.json
+          DSR_DRILL_EXPORT_USER_ID: ${{ vars.ALPHA_SMOKE_USER_ID }}
+        run: |
+          set -euo pipefail
+          DSR_DRILL_QUEUE_ACCOUNT=$(az storage account list -g "$RG" --query "[?tags.purpose=='dsr-storage'].name | [0]" -o tsv)
+          test -n "$DSR_DRILL_QUEUE_ACCOUNT" || { echo "::error::DSR storage account is required"; exit 1; }
+          export DSR_DRILL_QUEUE_ACCOUNT
+          node scripts/dsr-drills/live-dsr-queue-drill.mjs
+          jq -e '.result == "passed"' release-evidence/dsr-live-drill-report.json >/dev/null
+
+      - name: Write exact-SHA release manifest
+        env:
+          FUNCTIONS_ARTIFACT_SHA256: ${{ needs.deploy.outputs.functions_artifact_sha256 }}
+          FUNCTIONS_GITHUB_DIGEST: ${{ needs.deploy.outputs.functions_github_digest }}
+          WEB_GITHUB_DIGEST: ${{ needs.deploy.outputs.web_github_digest }}
+        run: |
+          set -euo pipefail
+          jq -e 'type == "array" and all(.[]; type == "string")' <<<"$KNOWN_DISABLED_FEATURES_JSON" >/dev/null || {
+            echo "::error::known_disabled_features_json must be a JSON string array"
+            exit 1
+          }
+          case "$APPROVED_ALPHA_STAGE" in
+            technical_alpha) HARD_CAP=50 ;;
+            controlled_alpha) HARD_CAP=100 ;;
+            expanded_alpha) HARD_CAP=250 ;;
+            paused) HARD_CAP=0 ;;
+            *) echo "::error::Unsupported Alpha stage"; exit 1 ;;
+          esac
+          COHORT_CAP=$(jq -r '.data.cohort.capacity' alpha-ops-preflight.json)
+          [[ "$COHORT_CAP" =~ ^[0-9]+$ ]] || { echo "::error::Configured cohort cap is invalid"; exit 1; }
+          [ "$COHORT_CAP" -le "$HARD_CAP" ] || { echo "::error::Configured cohort cap exceeds stage hard cap"; exit 1; }
+          DEPLOYMENT_ID=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query id -o tsv)
+          DEPLOYED_HOST=$(az functionapp show -g "$RG" -n "$FUNC_APP" --query defaultHostName -o tsv)
+          if [[ -z "$DEPLOYED_HOST" || "$DEPLOYED_HOST" == "null" ]]; then
+            DEPLOYED_HOST="${FUNC_APP}.azurewebsites.net"
+          fi
+          [[ "$DEPLOYED_HOST" =~ ^[A-Za-z0-9.-]+\.azurewebsites\.net$ ]] || {
+            echo "::error::Unable to derive a valid deployed Function hostname"
+            exit 1
+          }
+          jq -n \
+            --arg commitSha "$RELEASE_SHA" \
+            --arg functionsArtifactSha256 "$FUNCTIONS_ARTIFACT_SHA256" \
+            --arg functionsGithubDigest "$FUNCTIONS_GITHUB_DIGEST" \
+            --arg webGithubDigest "$WEB_GITHUB_DIGEST" \
+            --arg deploymentId "$DEPLOYMENT_ID" \
+            --arg deployedHost "$DEPLOYED_HOST" \
+            --arg environment "$TARGET_ENV" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg alphaStage "$APPROVED_ALPHA_STAGE" \
+            --argjson cohortCap "$COHORT_CAP" \
+            --argjson disabledFeatures "$KNOWN_DISABLED_FEATURES_JSON" \
+            --arg ciRunId "$CI_RUN_ID" \
+            '{
+              schemaVersion: 1,
+              commitSha: $commitSha,
+              artifactHashes: {
+                functionsZipSha256: $functionsArtifactSha256,
+                functionsGithubArtifactDigest: $functionsGithubDigest,
+                webGithubArtifactDigest: $webGithubDigest
+              },
+              deploymentId: $deploymentId,
+              deployedHost: $deployedHost,
+              environment: $environment,
+              date: $date,
+              approvedAlphaStage: $alphaStage,
+              maximumCohortSize: $cohortCap,
+              knownDisabledFeatures: $disabledFeatures,
+              ciRunId: $ciRunId,
+              validation: {
+                exactShaCi: "passed",
+                health: "passed",
+                liveContracts: "passed",
+                alphaCohortSchema: "passed",
+                dsrQueueRegression: "passed",
+                dsrStorage: "passed",
+                cosmosNetworkPosture: "passed"
+              }
+            }' > release-manifest.json
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v6
+        with:
+          name: alpha-release-manifest-${{ inputs.release_sha }}
+          path: |
+            release-manifest.json
+            release-evidence/dsr-live-drill-report.json
+            alpha-ops-preflight.json
+          if-no-files-found: error

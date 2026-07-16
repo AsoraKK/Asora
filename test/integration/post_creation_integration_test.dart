@@ -36,6 +36,11 @@ User createTestUser() {
   );
 }
 
+Future<void> chooseHumanAuthorship(WidgetTester tester) async {
+  await tester.tap(find.text('Human-authored'));
+  await tester.pump();
+}
+
 /// Mock AuthStateNotifier for testing
 class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     implements AuthStateNotifier {
@@ -153,6 +158,7 @@ void main() {
       final textField = find.byType(TextField);
       await tester.enterText(textField, 'My first post on Asora!');
       await tester.pump();
+      await chooseHumanAuthorship(tester);
 
       // Verify character count updated
       expect(find.textContaining('4977 characters remaining'), findsOneWidget);
@@ -221,6 +227,7 @@ void main() {
       final textField = find.byType(TextField);
       await tester.enterText(textField, 'Some inappropriate content');
       await tester.pump();
+      await chooseHumanAuthorship(tester);
 
       // Submit
       final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -279,6 +286,7 @@ void main() {
       final textField = find.byType(TextField);
       await tester.enterText(textField, 'Another post');
       await tester.pump();
+      await chooseHumanAuthorship(tester);
 
       // Submit
       final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -334,6 +342,7 @@ void main() {
       final textField = find.byType(TextField);
       await tester.enterText(textField, 'My first post on Asora!');
       await tester.pump();
+      await chooseHumanAuthorship(tester);
 
       // First submit - should fail
       final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -385,9 +394,13 @@ void main() {
       await tester.enterText(textField, 'Valid content');
       await tester.pump();
 
-      // Post button should now be enabled
+      // Text alone is insufficient because disclosure is required.
       final enabledButton = tester.widget<FilledButton>(postButton);
-      expect(enabledButton.onPressed, isNotNull);
+      expect(enabledButton.onPressed, isNull);
+
+      await chooseHumanAuthorship(tester);
+      final disclosedButton = tester.widget<FilledButton>(postButton);
+      expect(disclosedButton.onPressed, isNotNull);
 
       // Enter text exceeding max length
       await tester.enterText(textField, 'A' * 5001);
@@ -441,6 +454,7 @@ void main() {
       final textField = find.byType(TextField);
       await tester.enterText(textField, testText);
       await tester.pump();
+      await chooseHumanAuthorship(tester);
 
       // Submit and get blocked
       final postButton = find.widgetWithText(FilledButton, 'Post');

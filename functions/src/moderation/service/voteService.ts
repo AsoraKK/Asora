@@ -19,6 +19,12 @@ import { LedgerEventType } from '../../reputation/types';
 import { enqueueUserNotification } from '@shared/services/notificationEvents';
 import { NotificationEventType } from '../../notifications/types';
 import { appendReceiptEvent } from '@shared/services/receiptEvents';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
+import {
+  applyAppealOutcomeToAuthorship,
+  type AuthorshipLabel,
+} from '@shared/authorship';
 
 // Request validation schema - appealId is optional in body since it comes from route param
 const VoteOnAppealSchema = z.object({
@@ -94,6 +100,7 @@ export async function voteOnAppealHandler({
   context.log('Appeal vote request received');
 
   try {
+    await assertAlphaFeature('communityVoting');
     if (!userId) {
       return {
         status: 401,
@@ -164,13 +171,16 @@ export async function voteOnAppealHandler({
     const appealPartitionKey = String(appealDoc.contentId ?? targetAppealId);
 
     // 6. Check if appeal is still active
-    if (appealDoc.status !== 'pending') {
+    if (appealDoc.status !== 'pending' || appealDoc.votingStatus === 'completed') {
       return {
         status: 409,
         jsonBody: {
-          error: `Appeal has already been ${appealDoc.status}`,
+          error:
+            appealDoc.votingStatus === 'completed'
+              ? 'Community voting has completed and is awaiting human review'
+              : `Appeal has already been ${appealDoc.status}`,
           currentStatus: appealDoc.status,
-          resolvedAt: appealDoc.resolvedAt,
+          communityRecommendation: appealDoc.communityRecommendation ?? null,
         },
       };
     }
@@ -179,7 +189,7 @@ export async function voteOnAppealHandler({
     const now = new Date();
     const expiresAt = new Date(appealDoc.expiresAt);
     if (now > expiresAt) {
-      const finalDecision = await resolveAppealFromVotes({
+      const communityRecommendation = await resolveAppealFromVotes({
         database,
         appealDoc,
         context,
@@ -193,7 +203,7 @@ export async function voteOnAppealHandler({
         jsonBody: {
           error: 'Appeal has expired',
           expiredAt: appealDoc.expiresAt,
-          finalDecision,
+          communityRecommendation,
           status: appealDoc.status,
         },
       };
@@ -343,9 +353,9 @@ export async function voteOnAppealHandler({
     appealDoc.requiredVotes = requiredVotes;
     appealDoc.hasReachedQuorum = hasQuorum;
 
-    let finalDecision: 'approved' | 'rejected' | null = null;
+    let communityRecommendation: 'approved' | 'rejected' | null = null;
     if (hasQuorum) {
-      finalDecision = await resolveAppealFromVotes({
+      communityRecommendation = await resolveAppealFromVotes({
         database,
         appealDoc,
         context,
@@ -372,11 +382,17 @@ export async function voteOnAppealHandler({
           requiredVotes,
           hasReachedQuorum: hasQuorum,
         },
-        finalDecision,
+        communityRecommendation,
         status: appealDoc.status,
       },
     };
   } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        jsonBody: { error: error.message },
+      };
+    }
     context.log('Error voting on appeal:', error);
     return {
       status: 500,
@@ -397,7 +413,7 @@ interface ResolveAppealOptions {
 }
 
 export async function resolveAppealFromVotes({
-  database,
+  database: _database,
   appealDoc,
   context,
   resolvedBy = 'community_vote',
@@ -405,7 +421,7 @@ export async function resolveAppealFromVotes({
 }: ResolveAppealOptions): Promise<'approved' | 'rejected'> {
   const votesFor = Number(appealDoc.votesFor ?? 0);
   const votesAgainst = Number(appealDoc.votesAgainst ?? 0);
-  const finalDecision = votesFor > votesAgainst ? 'approved' : 'rejected';
+  const communityRecommendation = votesFor > votesAgainst ? 'approved' : 'rejected';
   const resolvedAtValue = resolvedAt ?? new Date().toISOString();
   const requiredVotes = normalizeRequiredVotes(appealDoc.requiredVotes);
 
@@ -413,43 +429,84 @@ export async function resolveAppealFromVotes({
   appealDoc.requiredVotes = requiredVotes;
   appealDoc.hasReachedQuorum = true;
   appealDoc.votingStatus = 'completed';
-  appealDoc.resolvedAt = resolvedAtValue;
-  appealDoc.resolvedBy = resolvedBy;
-  appealDoc.finalDecision = finalDecision;
-  appealDoc.status = finalDecision;
+  appealDoc.communityRecommendation = communityRecommendation;
+  appealDoc.communityRecommendationAt = resolvedAtValue;
+  appealDoc.communityRecommendationSource = resolvedBy;
+  appealDoc.reviewState = 'pending_human_review';
+  appealDoc.status = 'pending';
   appealDoc.updatedAt = resolvedAtValue;
+  context.log('moderation.appeal.community_recommendation_recorded', {
+    appealId: String(appealDoc.id ?? ''),
+    recommendation: communityRecommendation,
+    votesFor,
+    votesAgainst,
+  });
+
+  return communityRecommendation;
+}
+
+interface FinalizeAppealOptions {
+  database: ReturnType<typeof getCosmosDatabase>;
+  appealDoc: Record<string, any>;
+  context: InvocationContext;
+  decision: 'approved' | 'rejected';
+  actorId: string;
+  reason: string;
+  finalLabel?: Exclude<AuthorshipLabel, 'Under review'>;
+}
+
+export async function finalizeAppealDecision({
+  database,
+  appealDoc,
+  context,
+  decision,
+  actorId,
+  reason,
+  finalLabel,
+}: FinalizeAppealOptions): Promise<void> {
+  const now = new Date().toISOString();
+  appealDoc.status = decision;
+  appealDoc.finalDecision = decision;
+  appealDoc.finalLabel = finalLabel ?? appealDoc.originalClassification?.authorshipLabel ?? null;
+  appealDoc.finalModerationAction = decision === 'approved' ? 'none' : 'blocked';
+  appealDoc.decisionReason = reason;
+  appealDoc.decisionVersion = Number(appealDoc.decisionVersion ?? 0) + 1;
+  appealDoc.reviewState = 'resolved';
+  appealDoc.resolvedAt = now;
+  appealDoc.resolvedBy = actorId;
+  appealDoc.updatedAt = now;
 
   await updateContentBasedOnDecision(
     database,
-    appealDoc.contentId,
-    appealDoc.contentType,
-    finalDecision,
-    context
+    String(appealDoc.contentId),
+    String(appealDoc.contentType),
+    decision,
+    context,
+    finalLabel
   );
 
   await persistModerationDecision({
     database,
     appealDoc,
-    finalDecision,
+    finalDecision: decision,
     context,
+    source: 'human_review',
   });
 
   void appendReceiptEvent({
     postId: String(appealDoc.contentId ?? ''),
-    actorType: 'system',
+    actorType: 'moderator',
+    actorId,
     type: 'APPEAL_RESOLVED',
     summary: 'Appeal resolved',
-    reason:
-      finalDecision === 'approved'
-        ? 'Community voting resolved the appeal and restored the content.'
-        : 'Community voting resolved the appeal and kept the content actioned.',
+    reason,
     policyLinks: [{ title: 'Appeals policy', url: 'https://lythaus.app/policies/appeals' }],
     actions: [{ key: 'LEARN_MORE', label: 'Learn more', enabled: true }],
     metadata: {
       appealId: String(appealDoc.id ?? ''),
-      moderationAction: finalDecision === 'approved' ? 'none' : 'blocked',
+      moderationAction: decision === 'approved' ? 'none' : 'blocked',
     },
-  }).catch((error) => {
+  }).catch(error => {
     context.log('moderation.appeal.resolve_receipt_append_failed', {
       appealId: String(appealDoc.id ?? ''),
       message: (error as Error).message,
@@ -466,16 +523,14 @@ export async function resolveAppealFromVotes({
         targetId: String(appealDoc.id ?? appealDoc.contentId ?? ''),
         targetType: 'appeal',
         snippet:
-          finalDecision === 'approved'
-            ? 'Your appeal was approved and content was restored.'
-            : 'Your appeal was rejected and content remains blocked.',
-        decision: finalDecision,
+          decision === 'approved'
+            ? 'Your appeal was approved after human review.'
+            : 'Your appeal was rejected after human review.',
+        decision,
       },
-      dedupeKey: `appeal_decision:${String(appealDoc.id ?? appealDoc.contentId ?? '')}:${finalDecision}`,
+      dedupeKey: `appeal_decision:${String(appealDoc.id ?? appealDoc.contentId ?? '')}:${appealDoc.decisionVersion}`,
     });
   }
-
-  return finalDecision;
 }
 
 interface ContentLookup {
@@ -533,7 +588,8 @@ async function updateContentBasedOnDecision(
   contentId: string,
   contentType: string,
   decision: 'approved' | 'rejected',
-  context: InvocationContext
+  context: InvocationContext,
+  finalLabel?: Exclude<AuthorshipLabel, 'Under review'>
 ): Promise<void> {
   try {
     const contentLookup = await fetchContentForDecision(database, contentType, contentId);
@@ -615,6 +671,16 @@ async function updateContentBasedOnDecision(
       content.moderation.checkedAt = Date.now();
     }
 
+    if (contentType === 'post' && finalLabel) {
+      content.authorship = applyAppealOutcomeToAuthorship(
+        content.authorship,
+        content.aiLabel,
+        finalLabel,
+        nowIso
+      );
+      content.authorshipLabelUpdatedAt = nowIso;
+    }
+
     content.updatedAt = updatedAtValue;
     await container.item(contentId, partitionKey).replace(content);
   } catch (error) {
@@ -627,6 +693,7 @@ interface PersistDecisionOptions {
   appealDoc: Record<string, any>;
   finalDecision: 'approved' | 'rejected';
   context: InvocationContext;
+  source?: 'appeal_vote' | 'human_review';
 }
 
 async function persistModerationDecision({
@@ -634,6 +701,7 @@ async function persistModerationDecision({
   appealDoc,
   finalDecision,
   context,
+  source = 'appeal_vote',
 }: PersistDecisionOptions): Promise<void> {
   try {
     const decisionsContainer = database.container('moderation_decisions');
@@ -668,10 +736,10 @@ async function persistModerationDecision({
       votesAgainst: appealDoc.votesAgainst ?? 0,
       totalVotes: appealDoc.totalVotes ?? 0,
       requiredVotes: appealDoc.requiredVotes ?? 0,
-      reason: appealDoc.appealReason ?? appealDoc.reason ?? null,
+      reason: appealDoc.decisionReason ?? appealDoc.appealReason ?? appealDoc.reason ?? null,
       decidedAt,
       createdAt: new Date().toISOString(),
-      source: 'appeal_vote',
+      source,
       metadata: {
         urgencyScore: appealDoc.urgencyScore ?? null,
         flagCount: appealDoc.flagCount ?? null,
@@ -682,5 +750,6 @@ async function persistModerationDecision({
     await decisionsContainer.items.create(record);
   } catch (error) {
     context.log('moderation.decision.record.error', { message: (error as Error).message });
+    throw error;
   }
 }

@@ -97,6 +97,21 @@ jest.mock('@shared/clients/postgres', () => ({
   })),
 }));
 
+jest.mock('@alpha/alphaConfig', () => ({
+  assertAlphaFeature: jest.fn(async () => ({
+    stage: 'technical_alpha',
+    maxRegisteredAccounts: 50,
+    maxActiveInvites: 50,
+    maxRedeemedInvites: 50,
+  })),
+  reserveAlphaCohortMembership: jest.fn(async () => ({
+    inserted: true,
+    count: 1,
+    cap: 50,
+  })),
+  releaseAlphaCohortMembership: jest.fn(async () => undefined),
+}));
+
 import { InvocationContext } from '@azure/functions';
 import { redeemInviteRoute, resetUsersContainerCache } from '@auth/service/redeemInvite';
 import { resetAuthConfigForTesting } from '@auth/config';
@@ -190,7 +205,7 @@ describe('Redeem Invite Endpoint', () => {
       // Verify user was activated
       const user = userStore.get(userId);
       expect(user.isActive).toBe(true);
-      expect(user.activatedByInvite).toBe(inviteCode);
+      expect(user.activatedByInviteId).toBe(inviteCode);
 
       // Verify invite was marked as used
       const invite = inviteStore.get(inviteCode);

@@ -1,3 +1,5 @@
+import type { PublicAuthorship } from '@shared/authorship';
+
 export interface FeedCursor {
   ts: number;
   id: string;
@@ -25,7 +27,7 @@ export interface CreatePostBody {
   text?: string;
   mediaUrl?: string | null;
   authorId?: string | null;
-  aiLabel?: 'human' | 'assisted' | 'generated';
+  aiLabel: 'human' | 'assisted' | 'generated';
 }
 
 export interface PostStats {
@@ -65,6 +67,7 @@ export interface PostRecord {
   createdAt: string;
   updatedAt: string;
   stats: PostStats;
+  authorship: PublicAuthorship;
   /** Moderation metadata (optional for backwards compatibility) */
   moderation?: ModerationMeta;
 }

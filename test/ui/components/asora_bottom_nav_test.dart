@@ -42,13 +42,14 @@ void main() {
     );
 
     expect(find.text('Discover'), findsOneWidget);
+    expect(find.text('My Feeds'), findsOneWidget);
     expect(find.text('Create'), findsOneWidget);
-    expect(find.text('Alerts'), findsOneWidget);
+    expect(find.text('News Board'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
 
-    await tester.tap(find.text('Alerts'));
+    await tester.tap(find.text('News Board'));
     await tester.pump();
-    expect(tappedIndex, 2);
+    expect(tappedIndex, 3);
   });
 
   testWidgets('mirrors order and tap mapping in left-handed mode', (
@@ -68,13 +69,13 @@ void main() {
       find.byType(BottomNavigationBar),
     );
 
-    expect(nav.currentIndex, 3);
+    expect(nav.currentIndex, 4);
     expect(nav.items.first.label, 'Profile');
     expect(nav.items.last.label, 'Discover');
 
     await tester.tap(find.text('Profile'));
     await tester.pump();
-    expect(tappedIndex, 3);
+    expect(tappedIndex, 4);
   });
 }
 

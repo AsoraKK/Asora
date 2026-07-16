@@ -1,3 +1,3 @@
 // Thin entrypoint for Azure Functions v4 runtime (packaged zip)
-// Compiled sources reside at ./dist after `npm run build`
-require('./dist/index.js');
+// CI copies compiled dist/src into ./src inside the deployment ZIP.
+require('./src/index.js');

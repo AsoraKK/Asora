@@ -540,7 +540,7 @@ void main() {
     test('label returns correct strings', () {
       expect(ContentAuthorship.humanAuthored.label, 'Human-authored');
       expect(ContentAuthorship.aiAssisted.label, 'AI-assisted');
-      expect(ContentAuthorship.aiGenerated.label, 'Blocked after review');
+      expect(ContentAuthorship.aiGenerated.label, 'AI-generated');
       expect(ContentAuthorship.underReview.label, 'Under review');
     });
 
@@ -574,10 +574,7 @@ void main() {
     test('displayLabel returns full display strings', () {
       expect(ContentAuthorship.humanAuthored.displayLabel, 'Human-authored');
       expect(ContentAuthorship.aiAssisted.displayLabel, 'AI-assisted');
-      expect(
-        ContentAuthorship.aiGenerated.displayLabel,
-        'Blocked after review',
-      );
+      expect(ContentAuthorship.aiGenerated.displayLabel, 'AI-generated');
       expect(ContentAuthorship.underReview.displayLabel, 'Under review');
     });
   });

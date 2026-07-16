@@ -16,7 +16,7 @@ void main() {
       expect(state.validationError, isNull);
       expect(state.isNews, isFalse);
       expect(state.contentType, 'text');
-      expect(state.aiLabel, 'human');
+      expect(state.aiLabel, isNull);
     });
 
     test('copyWith preserves values', () {
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('isValid returns true when text is not empty and within limit', () {
-      const state = PostCreationState(text: 'hello');
+      const state = PostCreationState(text: 'hello', aiLabel: 'human');
       expect(state.isValid, isTrue);
     });
 

@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/notifications/presentation/notifications_screen.dart';
 import 'package:asora/services/service_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/components/asora_bottom_nav.dart';
@@ -69,9 +68,9 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
 
   void _onTabTapped(int index) {
     final isGuest = ref.read(guestModeProvider);
-    if (isGuest && index == 1) {
+    if (isGuest && (index == 1 || index == 2 || index == 3)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in to create a post.')),
+        const SnackBar(content: Text('Sign in to use this Alpha feature.')),
       );
       return;
     }
@@ -83,9 +82,10 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
     ref.watch(leftHandedModeProvider); // rebuild on mirror toggle
 
     const tabs = <Widget>[
-      HomeFeedNavigator(),
+      HomeFeedNavigator(section: AlphaFeedSection.discover),
+      HomeFeedNavigator(section: AlphaFeedSection.myFeeds),
       CreateScreen(),
-      NotificationsScreen(),
+      HomeFeedNavigator(section: AlphaFeedSection.newsBoard),
       ProfileScreen(),
     ];
 
@@ -114,14 +114,19 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
                 label: Text('Discover'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.dynamic_feed_outlined),
+                selectedIcon: Icon(Icons.dynamic_feed),
+                label: Text('My Feeds'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.add_circle_outline),
                 selectedIcon: Icon(Icons.add_circle),
                 label: Text('Create'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.notifications_outlined),
-                selectedIcon: Icon(Icons.notifications),
-                label: Text('Alerts'),
+                icon: Icon(Icons.newspaper_outlined),
+                selectedIcon: Icon(Icons.newspaper),
+                label: Text('News Board'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.person_outline),

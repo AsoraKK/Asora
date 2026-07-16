@@ -98,6 +98,11 @@ User createTestUser() {
   );
 }
 
+Future<void> chooseHumanAuthorship(WidgetTester tester) async {
+  await tester.tap(find.text('Human-authored'));
+  await tester.pump();
+}
+
 void main() {
   late MockPostRepository mockRepository;
 
@@ -149,6 +154,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'Hello world');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Character count should update
         expect(
@@ -169,7 +175,7 @@ void main() {
         expect(button.onPressed, isNull);
       });
 
-      testWidgets('Post button is enabled when text is entered', (
+      testWidgets('Post button is enabled with text and disclosure', (
         tester,
       ) async {
         await tester.pumpWidget(createTestWidget(user: createTestUser()));
@@ -179,6 +185,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'Hello world');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Find the Post button
         final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -274,6 +281,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField).first, 'Hello world');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         await tester.tap(find.widgetWithText(FilledButton, 'Post'));
         await tester.pumpAndSettle();
@@ -329,6 +337,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'Blocked post');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         await tester.tap(find.widgetWithText(FilledButton, 'Post'));
         await tester.pumpAndSettle();
@@ -368,6 +377,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'Test post content');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Tap Post button
         final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -382,7 +392,6 @@ void main() {
         // Finish the async work
         await tester.pumpAndSettle();
       });
-
     });
 
     group('Error Handling', () {
@@ -408,6 +417,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'Inappropriate content');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Tap Post button
         final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -449,6 +459,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'New post');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Tap Post button
         final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -480,6 +491,7 @@ void main() {
         final textField = find.byType(TextField);
         await tester.enterText(textField, 'New post');
         await tester.pump();
+        await chooseHumanAuthorship(tester);
 
         // Tap Post button
         final postButton = find.widgetWithText(FilledButton, 'Post');
@@ -531,7 +543,6 @@ void main() {
         expect(find.text('Discard post?'), findsNothing);
       });
     });
-
   });
 
   group('PostCreationNotifier Unit Tests', () {
@@ -581,6 +592,7 @@ void main() {
       final notifier = container.read(postCreationProvider.notifier);
 
       notifier.updateText('Valid post content');
+      notifier.setAiLabel('human');
       final error = notifier.validate();
       expect(error, isNull);
     });
@@ -616,7 +628,7 @@ void main() {
     });
 
     test('isValid returns true for valid text', () {
-      const state = PostCreationState(text: 'Hello world');
+      const state = PostCreationState(text: 'Hello world', aiLabel: 'human');
       expect(state.isValid, isTrue);
     });
 

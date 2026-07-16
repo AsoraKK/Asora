@@ -80,10 +80,10 @@ created after the legacy `asora-function-dev` component stopped ingesting teleme
 Add an entry to `alert_targets` in `variables.tf` or supply via `-var`:
 
 ```hcl
-"asora-function-staging" = {
+"asora-function-dev" = {
   severity          = 2
   app_insights_name = null  # uses FA name if null
 }
 ```
 
-Then `terraform apply`.
+The internal Azure name remains unchanged while the target is operationally the Lythaus MVP shared environment. Then `terraform apply` only through a separately approved infrastructure change.

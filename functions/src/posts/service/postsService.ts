@@ -22,6 +22,22 @@ import {
   deriveTrustSummary,
   getReceiptEventsForPost,
 } from '@shared/services/receiptEvents';
+import {
+  legacyPublicAuthorship,
+  normalizeDeclaredAuthorship,
+  type AuthorshipDisclosureEvent,
+  type InternalAuthorshipEvidence,
+  type PublicAuthorship,
+} from '@shared/authorship';
+
+interface PostAuthorshipContext {
+  aiLabel?: 'human' | 'assisted' | 'generated';
+  aiDetected?: boolean;
+  authorship?: PublicAuthorship;
+  authorshipInternal?: InternalAuthorshipEvidence;
+  disclosureEvent?: AuthorshipDisclosureEvent;
+  status?: 'published' | 'pending_review';
+}
 
 interface PostDocument {
   id: string;
@@ -66,6 +82,9 @@ interface PostDocument {
   };
   aiLabel?: 'human' | 'assisted' | 'generated';
   aiDetected?: boolean;
+  authorship?: PublicAuthorship;
+  authorshipInternal?: InternalAuthorshipEvidence;
+  authorshipDisclosureHistory?: AuthorshipDisclosureEvent[];
   proofSignals?: {
     captureMetadataHash?: string;
     editHistoryHash?: string;
@@ -96,7 +115,7 @@ class PostsService {
     postId?: string,
     moderationMeta?: ModerationMeta,
     testContext?: TestModeContext,
-    aiContext?: { aiLabel?: 'human' | 'assisted' | 'generated'; aiDetected?: boolean }
+    aiContext?: PostAuthorshipContext
   ): Promise<Post> {
     const now = Date.now();
     const id = postId || uuidv7();
@@ -112,7 +131,7 @@ class PostsService {
       topics: request.topics,
       visibility: request.visibility || 'public',
       isNews: request.isNews || false,
-      status: 'published',
+      status: aiContext?.status ?? 'published',
       createdAt: now,
       updatedAt: now,
       
@@ -147,6 +166,15 @@ class PostsService {
           },
       aiLabel: aiContext?.aiLabel ?? request.aiLabel ?? 'human',
       aiDetected: aiContext?.aiDetected ?? false,
+      authorship:
+        aiContext?.authorship ??
+        legacyPublicAuthorship(
+          normalizeDeclaredAuthorship(aiContext?.aiLabel ?? request.aiLabel) ?? 'human'
+        ),
+      authorshipInternal: aiContext?.authorshipInternal,
+      authorshipDisclosureHistory: aiContext?.disclosureEvent
+        ? [aiContext.disclosureEvent]
+        : undefined,
       proofSignals: {
         captureMetadataHash: proofSignals.captureMetadataHash,
         editHistoryHash: proofSignals.editHistoryHash,
@@ -173,7 +201,7 @@ class PostsService {
     postId: string,
     updates: UpdatePostRequest,
     moderationMeta?: ModerationMeta,
-    aiContext?: { aiLabel?: 'human' | 'assisted' | 'generated'; aiDetected?: boolean }
+    aiContext?: PostAuthorshipContext
   ): Promise<Post | null> {
     const existing = await this.getPostById(postId);
     if (!existing) {
@@ -214,6 +242,19 @@ class PostsService {
         : existing.moderation,
       aiLabel: aiContext?.aiLabel ?? updates.aiLabel ?? existing.aiLabel ?? 'human',
       aiDetected: aiContext?.aiDetected ?? existing.aiDetected ?? false,
+      authorship:
+        aiContext?.authorship ??
+        existing.authorship ??
+        legacyPublicAuthorship(
+          normalizeDeclaredAuthorship(
+            aiContext?.aiLabel ?? updates.aiLabel ?? existing.aiLabel
+          ) ?? 'human'
+        ),
+      authorshipInternal: aiContext?.authorshipInternal ?? existing.authorshipInternal,
+      authorshipDisclosureHistory: aiContext?.disclosureEvent
+        ? [...(existing.authorshipDisclosureHistory ?? []), aiContext.disclosureEvent]
+        : existing.authorshipDisclosureHistory,
+      status: aiContext?.status ?? existing.status,
       proofSignals: {
         captureMetadataHash: proofSignals.captureMetadataHash,
         editHistoryHash: proofSignals.editHistoryHash,
@@ -491,6 +532,9 @@ class PostsService {
       isNews: post.isNews,
       source: post.source,
       clusterId: post.clusterId,
+      authorship:
+        post.authorship ??
+        legacyPublicAuthorship(normalizeDeclaredAuthorship(post.aiLabel) ?? 'human'),
       createdAt: post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: post.updatedAt ? new Date(post.updatedAt).toISOString() : new Date().toISOString(),
       author,
@@ -514,6 +558,146 @@ class PostsService {
     };
   }
 
+  /** Feed-card enrichment with a bounded query count per page. */
+  async enrichFeedPosts(posts: PostDocument[], viewerId?: string): Promise<PostView[]> {
+    if (posts.length === 0) return [];
+
+    const authorIds = Array.from(new Set(posts.map(post => post.authorId).filter(Boolean)));
+    const postIds = posts.map(post => post.postId || post.id);
+    const db = getTargetDatabase();
+
+    const [pgRows, profileRows, reactionRows, receiptRows] = await Promise.all([
+      withClient(async client => {
+        const result = await client.query({
+          text: `SELECT id, roles, tier, reputation_score
+                 FROM users WHERE id = ANY($1::text[])`,
+          values: [authorIds],
+        });
+        return result.rows as Array<{
+          id: string;
+          roles?: string[];
+          tier?: string;
+          reputation_score?: number;
+        }>;
+      }).catch(() => []),
+      db.profiles.items
+        .query({
+          query:
+            'SELECT c.id, c.displayName, c.username, c.bio, c.avatarUrl, c.settings FROM c WHERE ARRAY_CONTAINS(@authorIds, c.id)',
+          parameters: [{ name: '@authorIds', value: authorIds }],
+        })
+        .fetchAll()
+        .then(result => result.resources as Array<Record<string, any>>)
+        .catch(() => []),
+      viewerId
+        ? db.reactions.items
+            .query({
+              query:
+                'SELECT c.id, c.postId, c.type FROM c WHERE c.userId = @viewerId AND ARRAY_CONTAINS(@postIds, c.postId)',
+              parameters: [
+                { name: '@viewerId', value: viewerId },
+                { name: '@postIds', value: postIds },
+              ],
+            })
+            .fetchAll()
+            .then(result => result.resources as Array<Record<string, any>>)
+            .catch(() => [])
+        : Promise.resolve([] as Array<Record<string, any>>),
+      db.receiptEvents.items
+        .query({
+          query: 'SELECT * FROM c WHERE ARRAY_CONTAINS(@postIds, c.postId)',
+          parameters: [{ name: '@postIds', value: postIds }],
+        })
+        .fetchAll()
+        .then(result => result.resources as Array<Record<string, any>>)
+        .catch(() => []),
+    ]);
+
+    const usersById = new Map(pgRows.map(user => [user.id, user]));
+    const profilesById = new Map(profileRows.map(profile => [String(profile.id), profile]));
+    const reactionsByPost = new Map<string, Set<string>>();
+    for (const reaction of reactionRows) {
+      const postId = String(reaction.postId ?? '');
+      if (!postId) continue;
+      const values = reactionsByPost.get(postId) ?? new Set<string>();
+      values.add(reaction.type === 'bookmark' ? 'bookmark' : 'like');
+      reactionsByPost.set(postId, values);
+    }
+    const receiptsByPost = new Map<string, any[]>();
+    for (const receipt of receiptRows) {
+      const postId = String(receipt.postId ?? '');
+      if (!postId) continue;
+      const values = receiptsByPost.get(postId) ?? [];
+      values.push(receipt);
+      receiptsByPost.set(postId, values);
+    }
+
+    return posts.map(post => {
+      const postId = post.postId || post.id;
+      const user = usersById.get(post.authorId);
+      const profile = profilesById.get(post.authorId);
+      const reactions = reactionsByPost.get(postId) ?? new Set<string>();
+      const trustSummary = deriveTrustSummary(receiptsByPost.get(postId) ?? [], {
+        hasMedia: (post.mediaUrls?.length ?? 0) > 0,
+        isActioned: ['limited', 'blocked', 'removed', 'hidden'].includes(post.status),
+        appealStatus: post.appealStatus,
+        proofSignalsProvided: Boolean(post.proofSignalsProvided),
+        verifiedContextBadgeEligible: Boolean(post.verifiedContextBadgeEligible),
+        featuredEligible: Boolean(post.featuredEligible),
+      });
+      const roles = user?.roles ?? [];
+      const authorRole: PostView['authorRole'] = roles.includes('journalist')
+        ? 'journalist'
+        : roles.includes('contributor')
+          ? 'contributor'
+          : 'user';
+
+      return {
+        id: postId,
+        authorId: post.authorId,
+        content: post.content ?? (post as any).text ?? '',
+        contentType: post.contentType ?? ((post as any).mediaUrl ? 'image' : 'text'),
+        mediaUrls:
+          post.mediaUrls ?? ((post as any).mediaUrl ? [(post as any).mediaUrl] : undefined),
+        topics: post.topics,
+        visibility: post.visibility,
+        isNews: post.isNews,
+        source: post.source,
+        clusterId: post.clusterId,
+        authorship:
+          post.authorship ??
+          legacyPublicAuthorship(normalizeDeclaredAuthorship(post.aiLabel) ?? 'human'),
+        createdAt: new Date(post.createdAt).toISOString(),
+        updatedAt: new Date(post.updatedAt).toISOString(),
+        author: {
+          id: post.authorId,
+          displayName: String(profile?.displayName ?? profile?.username ?? 'Unknown'),
+          username: typeof profile?.username === 'string' ? profile.username : undefined,
+          bio: typeof profile?.bio === 'string' ? profile.bio : undefined,
+          avatarUrl: typeof profile?.avatarUrl === 'string' ? profile.avatarUrl : undefined,
+          tier: user?.tier ?? 'free',
+          reputation: Number(user?.reputation_score ?? 0),
+          badges: [],
+          trustPassportVisibility: resolveTrustPassportVisibility(profile?.settings),
+        },
+        authorRole,
+        likeCount: post.stats?.likes ?? 0,
+        commentCount: post.stats?.comments ?? 0,
+        bookmarkCount: post.stats?.bookmarks ?? 0,
+        viewCount: post.stats?.views ?? 0,
+        viewerHasLiked: reactions.has('like'),
+        viewerHasBookmarked: reactions.has('bookmark'),
+        badges: [],
+        trustStatus: trustSummary.trustStatus,
+        timeline: trustSummary.timeline,
+        hasAppeal: trustSummary.hasAppeal,
+        proofSignalsProvided: trustSummary.proofSignalsProvided,
+        verifiedContextBadgeEligible: trustSummary.verifiedContextBadgeEligible,
+        featuredEligible: trustSummary.featuredEligible,
+      };
+    });
+  }
+
   /**
    * Map PostDocument to Post
    */
@@ -529,6 +713,9 @@ class PostsService {
       isNews: doc.isNews,
       source: doc.source,
       clusterId: doc.clusterId,
+      authorship:
+        doc.authorship ??
+        legacyPublicAuthorship(normalizeDeclaredAuthorship(doc.aiLabel) ?? 'human'),
       createdAt: new Date(doc.createdAt).toISOString(),
       updatedAt: new Date(doc.updatedAt).toISOString(),
     };

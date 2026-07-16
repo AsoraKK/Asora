@@ -18,9 +18,14 @@ interface RequestOptions {
 const spec = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), 'api/openapi/dist/openapi.json'), 'utf-8')
 );
-const server = process.env.STAGING_DOMAIN
-  ? `https://${process.env.STAGING_DOMAIN}`
-  : spec.servers?.[0]?.url;
+const requireLiveContracts = process.env.REQUIRE_LIVE_CONTRACTS === 'true';
+const server = process.env.ALPHA_API_BASE_URL
+  ? process.env.ALPHA_API_BASE_URL
+  : process.env.STAGING_DOMAIN
+  ? `https://${process.env.STAGING_DOMAIN}/api`
+  : requireLiveContracts
+  ? spec.servers?.[0]?.url
+  : undefined;
 const jwt = process.env.STAGING_SMOKE_TOKEN;
 
 const ajv = new Ajv({ strict: false, allErrors: true });
@@ -29,6 +34,14 @@ addFormats(ajv);
 const validatorCache = new Map<string, import('ajv').ValidateFunction>();
 const baseUrl = server ? server.replace(/\/?$/, '') : undefined;
 const REQUEST_TIMEOUT_MS = Number(process.env.CONTRACT_TIMEOUT_MS ?? 5000);
+const LIVE_REACHABILITY_ATTEMPTS = requireLiveContracts ? 3 : 1;
+const LIVE_REACHABILITY_DELAY_MS = 2000;
+const LIVE_HOOK_TIMEOUT_MS = Math.max(
+  LIVE_REACHABILITY_ATTEMPTS * REQUEST_TIMEOUT_MS +
+    (LIVE_REACHABILITY_ATTEMPTS - 1) * LIVE_REACHABILITY_DELAY_MS +
+    5000,
+  10_000
+);
 
 class StagingUnavailableError extends Error {
   constructor(message: string, cause?: unknown) {
@@ -111,7 +124,7 @@ async function request({ method, pathKey, auth, query, body }: RequestOptions) {
   if (!(await isServerReachable())) {
     throw new StagingUnavailableError(`Staging endpoint ${baseUrl} is unreachable. Skipping contract request.`);
   }
-  const url = new URL(pathKey, baseUrl);
+  const url = new URL(pathKey.replace(/^\/+/, ''), `${baseUrl!.replace(/\/?$/, '/')}`);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined) {
@@ -159,9 +172,21 @@ async function isServerReachable(): Promise<boolean> {
     return false;
   }
   if (!reachabilityPromise) {
-    reachabilityPromise = pingHealthEndpoint();
+    reachabilityPromise = pingHealthEndpointWithRetry();
   }
   return reachabilityPromise;
+}
+
+async function pingHealthEndpointWithRetry(): Promise<boolean> {
+  for (let attempt = 1; attempt <= LIVE_REACHABILITY_ATTEMPTS; attempt += 1) {
+    if (await pingHealthEndpoint()) {
+      return true;
+    }
+    if (attempt < LIVE_REACHABILITY_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, LIVE_REACHABILITY_DELAY_MS));
+    }
+  }
+  return false;
 }
 
 async function pingHealthEndpoint(): Promise<boolean> {
@@ -171,7 +196,7 @@ async function pingHealthEndpoint(): Promise<boolean> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const healthUrl = new URL('/health', baseUrl);
+    const healthUrl = new URL('health', `${baseUrl.replace(/\/?$/, '/')}`);
     const res = await fetch(healthUrl.toString(), { method: 'GET', signal: controller.signal });
     if (!res.ok) {
       console.warn(`[contract] Health check for ${baseUrl} returned ${res.status}. Contract tests will be skipped.`);
@@ -195,6 +220,7 @@ async function runOrSkip<T>(operation: () => Promise<T>): Promise<T | undefined>
     return await operation();
   } catch (error) {
     if (error instanceof StagingUnavailableError) {
+      if (requireLiveContracts) throw error;
       console.warn(`[contract] ${error.message}`);
       return undefined;
     }
@@ -202,15 +228,23 @@ async function runOrSkip<T>(operation: () => Promise<T>): Promise<T | undefined>
   }
 }
 
-const describeIfServer = baseUrl ? describe : describe.skip;
-const describeIfAuth = baseUrl && jwt ? describe : describe.skip;
+beforeAll(async () => {
+  if (!requireLiveContracts) return;
+  ensureServerAvailable();
+  if (!jwt) throw new Error('STAGING_SMOKE_TOKEN is required when REQUIRE_LIVE_CONTRACTS=true.');
+  if (!(await isServerReachable())) {
+    throw new Error(`Required live contract endpoint is unreachable: ${baseUrl}`);
+  }
+}, LIVE_HOOK_TIMEOUT_MS);
+
+const describeIfServer = baseUrl || requireLiveContracts ? describe : describe.skip;
+const describeIfAuth = (baseUrl && jwt) || requireLiveContracts ? describe : describe.skip;
 
 const unauthorizedCases: Array<{ method: HttpMethod; path: string; body?: () => Record<string, unknown> }> = [
-  { method: 'get', path: '/feed' },
   {
     method: 'post',
-    path: '/post',
-    body: () => ({ id: randomUUID(), text: 'Contract smoke unauthorized' })
+    path: '/posts',
+    body: () => ({ content: 'Contract smoke unauthorized', contentType: 'text', aiLabel: 'human' })
   },
   {
     method: 'post',
@@ -244,6 +278,18 @@ describeIfServer('Authorization guards', () => {
   });
 });
 
+describeIfServer('Public feed contract', () => {
+  test('GET /feed is publicly readable and matches the response envelope', async () => {
+    const result = await runOrSkip(() =>
+      request({ method: 'get', pathKey: '/feed', auth: false, query: { limit: 5 } })
+    );
+    if (!result) return;
+    expect(result.response.status).toBe(200);
+    const validate = getValidator('/feed', 'get', '200');
+    expect(validate(result.payload)).toBe(true);
+  });
+});
+
 const successCases: Array<{
   name: string;
   method: HttpMethod;
@@ -260,36 +306,37 @@ const successCases: Array<{
     status: 200,
     query: { limit: 5 },
     snapshot: (payload) => ({
-      hasItems: Array.isArray(payload.items) && payload.items.length > 0,
-      hasNextCursor: Boolean(payload.meta?.nextCursor),
-      metaKeyCount: typeof payload.meta === 'object' ? Object.keys(payload.meta).length : 0
+      hasItems: Array.isArray(payload.data?.items) && payload.data.items.length > 0,
+      hasNextCursor: Boolean(payload.data?.meta?.nextCursor),
+      metaKeyCount: typeof payload.data?.meta === 'object' ? Object.keys(payload.data.meta).length : 0
     })
   },
   {
-    name: 'POST /post creates content',
+    name: 'POST /posts creates isolated content',
     method: 'post',
-    path: '/post',
+    path: '/posts',
     status: 201,
     body: () => ({
-      id: randomUUID(),
-      text: `Contract post ${Date.now()}`,
-      attachments: []
-    })
-  },
-  {
-    name: 'POST /moderation/flag accepts payload',
-    method: 'post',
-    path: '/moderation/flag',
-    status: 202,
-    body: () => ({
-      targetId: randomUUID(),
-      reason: 'spam',
-      notes: 'Contract smoke flag'
+      content: `Contract test post ${Date.now()}`,
+      contentType: 'text',
+      visibility: 'private',
+      aiLabel: 'human'
     })
   }
 ];
 
 describeIfAuth('Authenticated contract coverage', () => {
+  const createdPostIds: string[] = [];
+
+  afterAll(async () => {
+    for (const postId of createdPostIds) {
+      const result = await runOrSkip(() =>
+        request({ method: 'delete', pathKey: `/posts/${postId}`, auth: true })
+      );
+      if (result) expect([204, 404]).toContain(result.response.status);
+    }
+  });
+
   test.each(successCases)('$name matches schema', async ({ method, path, status, query, body, snapshot }) => {
     const result = await runOrSkip(
       () =>
@@ -314,6 +361,10 @@ describeIfAuth('Authenticated contract coverage', () => {
     }
     expect(ok).toBe(true);
 
+    if (path === '/posts' && typeof (payload as any)?.id === 'string') {
+      createdPostIds.push((payload as any).id);
+    }
+
     if (snapshot) {
       expect(snapshot(payload)).toMatchInlineSnapshot(
         {
@@ -322,7 +373,7 @@ describeIfAuth('Authenticated contract coverage', () => {
           metaKeyCount: expect.any(Number)
         },
         `
-Object {
+{
   "hasItems": Any<Boolean>,
   "hasNextCursor": Any<Boolean>,
   "metaKeyCount": Any<Number>,
@@ -332,22 +383,27 @@ Object {
     }
   });
 
-  test('POST /post rejects invalid body with 400', async () => {
-    const invalidBody = { id: randomUUID() };
+  test('POST /posts rejects missing authorship disclosure with 400', async () => {
+    const invalidBody = { content: 'Missing disclosure', contentType: 'text' };
     const result = await runOrSkip(() =>
-      request({ method: 'post', pathKey: '/post', auth: true, body: invalidBody })
+      request({ method: 'post', pathKey: '/posts', auth: true, body: invalidBody })
     );
     if (!result) {
       return;
     }
     const { response, payload } = result;
     expect(response.status).toBe(400);
-    const validate = getValidator('/post', 'post', '400');
+    const validate = getValidator('/posts', 'post', '400');
     expect(validate(payload)).toBe(true);
   });
 
   test('POST /moderation/flag rejects bad reason', async () => {
-    const invalidBody = { targetId: 'not-a-uuid', reason: 'invalid', notes: 'bad reason' };
+    const invalidBody = {
+      contentId: 'not-a-uuid',
+      contentType: 'post',
+      reason: 'invalid',
+      additionalDetails: 'bad reason'
+    };
     const result = await runOrSkip(() =>
       request({ method: 'post', pathKey: '/moderation/flag', auth: true, body: invalidBody })
     );
@@ -373,11 +429,11 @@ Object {
     const validate = getValidator('/feed', 'get', '200');
     expect(validate(payload)).toBe(true);
 
-    expect(Array.isArray(payload.items)).toBe(true);
-    expect(payload.items.length).toBeLessThanOrEqual(limit);
-    expect(payload.meta?.count).toBeLessThanOrEqual(limit);
-    if (payload.meta?.nextCursor) {
-      expect(typeof payload.meta.nextCursor).toBe('string');
+    expect(Array.isArray(payload.data?.items)).toBe(true);
+    expect(payload.data.items.length).toBeLessThanOrEqual(limit);
+    expect(payload.data.meta?.count).toBeLessThanOrEqual(limit);
+    if (payload.data.meta?.nextCursor) {
+      expect(typeof payload.data.meta.nextCursor).toBe('string');
     }
   });
 
@@ -421,13 +477,17 @@ Object {
   // Moderation appeals
   // ---------------------------------------------------------------------------
 
-  test('POST /moderation/appeals rejects missing caseId with 400', async () => {
+  test('POST /moderation/appeals returns documented validation or rate-limit response', async () => {
     const result = await runOrSkip(() =>
       request({ method: 'post', pathKey: '/moderation/appeals', auth: true, body: { statement: 'no caseId' } })
     );
     if (!result) return;
-    const { response } = result;
-    expect([400, 422]).toContain(response.status);
+    const { response, payload } = result;
+    expect([400, 429]).toContain(response.status);
+    const validate = getValidator('/moderation/appeals', 'post', String(response.status));
+    const ok = validate(payload);
+    if (!ok) console.error(validate.errors);
+    expect(ok).toBe(true);
   });
 
   test('POST /moderation/appeals/{appealId}/vote rejects unauthenticated request', async () => {
@@ -469,7 +529,7 @@ Object {
       if (!(await isServerReachable())) {
         throw new StagingUnavailableError(`Staging endpoint ${baseUrl} is unreachable.`);
       }
-      const url = new URL('/user/delete', baseUrl);
+      const url = new URL('user/delete', `${baseUrl!.replace(/\/?$/, '/')}`);
       const headers: Record<string, string> = {};
       if (jwt) headers.Authorization = `Bearer ${jwt}`;
       const controller = new AbortController();

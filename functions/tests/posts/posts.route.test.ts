@@ -123,6 +123,8 @@ describe('posts route handlers', () => {
     });
     mockedModeration.moderatePostContent.mockResolvedValue({
       result: { action: 'ALLOW', confidence: 0.9, categories: [], reasons: [] } as any,
+      classifiedAt: Date.now(),
+      thresholdVersion: 'test-v1',
     });
     mockedModeration.buildModerationMeta.mockReturnValue({
       status: 'clean',
@@ -187,6 +189,7 @@ describe('posts route handlers', () => {
       authRequest({
         content: 'hello',
         contentType: 'text',
+        aiLabel: 'human',
         mediaUrls: ['https://example.com/foreign.jpg'],
       }),
       context
@@ -197,27 +200,30 @@ describe('posts route handlers', () => {
     expect(mockedPostsService.createPost).not.toHaveBeenCalled();
   });
 
-  it('blocks AI-detected media at submit', async () => {
+  it('puts a human-declared AI media conflict under review', async () => {
     mockedModeration.moderatePostMediaUrls.mockResolvedValueOnce({
       status: 'clean',
       checkedAt: Date.now(),
       categories: ['ai_generated_image'],
       aiDetected: true,
     });
+    mockedPostsService.createPost.mockResolvedValueOnce({ id: 'post-ai-review' } as any);
 
     const response = await posts_create(
       authRequest({
         content: 'hello',
         contentType: 'image',
+        aiLabel: 'human',
         mediaUrls: ['https://example.com/owned.jpg'],
       }),
       context
     );
 
-    expect(response.status).toBe(400);
-    expect(response.jsonBody?.error.code).toBe('AI_CONTENT_BLOCKED');
-    expect(response.jsonBody?.error.details?.appealEligible).toBe(true);
-    expect(mockedPostsService.createPost).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(mockedPostsService.createPost).toHaveBeenCalled();
+    const authorship = mockedPostsService.createPost.mock.calls[0][5] as any;
+    expect(authorship.status).toBe('pending_review');
+    expect(authorship.authorship.reviewState).toBe('pending');
   });
 
   it('returns 404 when post is missing', async () => {

@@ -5,6 +5,7 @@ export interface TokenPayload {
   role?: string;
   roles: string[];
   tier: string;
+  test_session?: string;
   iat?: number;
   exp?: number;
   iss?: string;

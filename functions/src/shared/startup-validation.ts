@@ -6,6 +6,7 @@
  */
 
 import { trackException } from './appInsights';
+import { originGatewayConfigurationErrors } from './security/originGatewayAuth';
 
 interface EnvVar {
   name: string;
@@ -16,6 +17,7 @@ interface EnvVar {
 const REQUIRED_ENV_VARS: EnvVar[] = [
   { name: 'COSMOS_CONNECTION_STRING', required: true, description: 'Primary Cosmos DB connection' },
   { name: 'JWT_SECRET', required: true, description: 'JWT token signing key' },
+  { name: 'INVITE_CODE_PEPPER', required: true, description: 'Pepper for hashing Alpha invite codes' },
   { name: 'JWT_ISSUER', required: true, description: 'JWT issuer value' },
   { name: 'HIVE_API_KEY', required: true, description: 'Hive moderation API key' },
   { name: 'KV_URL', required: true, description: 'Azure Key Vault URL' },
@@ -31,25 +33,31 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'RATE_LIMITS_ENABLED', required: false, description: 'Enable/disable global rate limiting guard' },
   { name: 'RATE_LIMIT_CONTAINER', required: false, description: 'Cosmos container for rate limit state' },
   { name: 'AUDIT_HMAC_KEY', required: false, description: 'HMAC secret for audit PII pseudonymisation (Key Vault)' },
+  { name: 'ORIGIN_GATEWAY_AUTH_MODE', required: false, description: 'Origin access mode: off, observe, dual, or enforce' },
+  { name: 'ORIGIN_GATEWAY_TOKEN', required: false, description: 'Current Cloudflare-to-Azure origin token' },
+  { name: 'ORIGIN_GATEWAY_TOKEN_NEXT', required: false, description: 'Next Cloudflare-to-Azure origin token' },
+  { name: 'ORIGIN_OPERATIONAL_TOKEN', required: false, description: 'Health-only direct operational token' },
+  { name: 'ORIGIN_GATEWAY_DUAL_UNTIL', required: false, description: 'UTC dual-mode expiry' },
+  { name: 'ORIGIN_GATEWAY_LEGACY_ALLOWLIST', required: false, description: 'Strict JSON temporary legacy route allowlist' },
 ];
 
 export function validateStartupEnvironment(): void {
   const missing: string[] = [];
   const warnings: string[] = [];
 
-  for (const v of REQUIRED_ENV_VARS) {
-    if (!process.env[v.name]) {
-      if (v.required) {
-        missing.push(`${v.name} — ${v.description}`);
-      }
+  for (const variable of REQUIRED_ENV_VARS) {
+    if (!process.env[variable.name] && variable.required) {
+      missing.push(`${variable.name} - ${variable.description}`);
     }
   }
 
-  for (const v of OPTIONAL_ENV_VARS) {
-    if (!process.env[v.name]) {
-      warnings.push(`${v.name} — ${v.description}`);
+  for (const variable of OPTIONAL_ENV_VARS) {
+    if (!process.env[variable.name]) {
+      warnings.push(`${variable.name} - ${variable.description}`);
     }
   }
+
+  missing.push(...originGatewayConfigurationErrors());
 
   if (warnings.length > 0) {
     // eslint-disable-next-line no-console
@@ -57,27 +65,24 @@ export function validateStartupEnvironment(): void {
   }
 
   if (missing.length > 0) {
-    const msg = `[STARTUP] CRITICAL — required env vars missing:\n  - ${missing.join('\n  - ')}`;
+    const message = `[STARTUP] CRITICAL - required env vars missing:\n  - ${missing.join('\n  - ')}`;
     // eslint-disable-next-line no-console
-    console.error(msg);
-    trackException(new Error(msg), { severity: 'critical', component: 'startup' });
+    console.error(message);
+    trackException(new Error(message), { severity: 'critical', component: 'startup' });
     const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
     const appEnv = (process.env.APP_ENV ?? '').toLowerCase();
     const strictStartup =
       process.env.STRICT_STARTUP_VALIDATION === 'true' ||
       nodeEnv === 'production' ||
       appEnv === 'production' ||
-      appEnv === 'prod';
+      appEnv === 'prod' ||
+      appEnv === 'mvp';
 
     if (strictStartup) {
-      throw new Error(msg);
+      throw new Error(message);
     }
   }
 
-  // ── EasyAuth configuration drift detection ────────────────────────
-  // In production, assert that EasyAuth markers are present.
-  // Azure injects WEBSITE_AUTH_ENABLED when Authentication is configured.
-  // Its absence in production means auth delegation is misconfigured.
   validateEasyAuthPresence();
 
   // eslint-disable-next-line no-console
@@ -88,13 +93,7 @@ export function validateStartupEnvironment(): void {
  * Detect EasyAuth misconfiguration in production.
  *
  * Azure injects WEBSITE_AUTH_ENABLED=True when Authentication is configured.
- * If that marker is missing in production/staging, upstream identity delegation
- * is broken — every request would have no principal headers and fail open
- * unless our guards catch it.
- *
- * We log a CRITICAL warning and surface it in App Insights.
- * We do NOT throw — the function app must still start so that the health
- * endpoint can report the problem to monitoring.
+ * Its absence in production means auth delegation is misconfigured.
  */
 export function validateEasyAuthPresence(): void {
   const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
@@ -104,21 +103,22 @@ export function validateEasyAuthPresence(): void {
     nodeEnv === 'staging' ||
     appEnv === 'production' ||
     appEnv === 'prod' ||
-    appEnv === 'staging';
+    appEnv === 'staging' ||
+    appEnv === 'mvp';
 
   if (!isProduction) return;
 
   const easyAuthEnabled = process.env.WEBSITE_AUTH_ENABLED;
   if (easyAuthEnabled?.toLowerCase() === 'true') return;
 
-  const msg =
-    '[STARTUP] WARNING — WEBSITE_AUTH_ENABLED is not set to "True". ' +
+  const message =
+    '[STARTUP] WARNING - WEBSITE_AUTH_ENABLED is not set to "True". ' +
     'EasyAuth may be disabled or misconfigured. Auth header delegation will not work. ' +
     'All authenticated requests will be rejected by header validation guards.';
 
   // eslint-disable-next-line no-console
-  console.error(msg);
-  trackException(new Error(msg), {
+  console.error(message);
+  trackException(new Error(message), {
     severity: 'critical',
     component: 'startup',
     check: 'easyauth_drift',

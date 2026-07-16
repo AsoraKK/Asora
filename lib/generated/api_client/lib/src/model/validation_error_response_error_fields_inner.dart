@@ -11,9 +11,9 @@ part 'validation_error_response_error_fields_inner.g.dart';
 /// ValidationErrorResponseErrorFieldsInner
 ///
 /// Properties:
-/// * [field] 
-/// * [message] 
-/// * [constraint] 
+/// * [field]
+/// * [message]
+/// * [constraint]
 @BuiltValue()
 abstract class ValidationErrorResponseErrorFieldsInner implements Built<ValidationErrorResponseErrorFieldsInner, ValidationErrorResponseErrorFieldsInnerBuilder> {
   @BuiltValueField(wireName: r'field')
@@ -137,4 +137,3 @@ class _$ValidationErrorResponseErrorFieldsInnerSerializer implements PrimitiveSe
     return result.build();
   }
 }
-

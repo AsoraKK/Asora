@@ -457,7 +457,7 @@ describe('Daily Post Limit Service', () => {
       }
     });
 
-    it('admin user has effectively unlimited posts', async () => {
+    it('legacy admin tier falls back to the Free commercial limit', async () => {
       const userId = 'admin-user';
       const date = getUtcDateString();
 
@@ -472,10 +472,9 @@ describe('Daily Post Limit Service', () => {
         ttl: 604800,
       });
 
-      // Should still be allowed (admin limit is 10000)
-      const result = await checkAndIncrementPostCount(userId, 'admin');
-      expect(result.success).toBe(true);
-      expect(result.newCount).toBe(10000);
+      await expect(checkAndIncrementPostCount(userId, 'admin')).rejects.toBeInstanceOf(
+        DailyPostLimitExceededError
+      );
     });
   });
 

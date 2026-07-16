@@ -47,10 +47,18 @@ class _AuthCallbackScreenState extends ConsumerState<AuthCallbackScreen> {
 
       // Navigate to home.
       if (mounted) context.go('/');
-    } on AuthFailure catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Sign-in failed: $e');
+    } on AuthFailure {
+      if (mounted) {
+        setState(
+          () => _error = 'Sign-in could not be completed. Please try again.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'Sign-in could not be completed. Please try again.',
+        );
+      }
     }
   }
 

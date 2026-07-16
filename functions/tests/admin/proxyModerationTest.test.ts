@@ -31,7 +31,7 @@ describe('proxy_moderation_test.function', () => {
     // Set up environment variables
     process.env.CF_ACCESS_CLIENT_ID = 'test-client-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'test-client-secret';
-    process.env.ADMIN_API_URL = 'https://admin-api.asora.co.za';
+    process.env.ADMIN_API_URL = 'https://admin-api.lythaus.co/api';
   });
 
   beforeEach(() => {
@@ -39,7 +39,7 @@ describe('proxy_moderation_test.function', () => {
     // Reset env for each test
     process.env.CF_ACCESS_CLIENT_ID = 'test-client-id';
     process.env.CF_ACCESS_CLIENT_SECRET = 'test-client-secret';
-    process.env.ADMIN_API_URL = 'https://admin-api.asora.co.za';
+    process.env.ADMIN_API_URL = 'https://admin-api.lythaus.co/api';
   });
 
   afterAll(() => {
@@ -49,9 +49,9 @@ describe('proxy_moderation_test.function', () => {
   it('handles OPTIONS before authentication', async () => {
     const req = httpReqMock({
       method: 'OPTIONS',
-      url: 'https://control.asora.co.za/api/admin/moderation/test',
+      url: 'https://admin.lythaus.co/api/admin/moderation/test',
       headers: {
-        origin: 'https://control.asora.co.za',
+        origin: 'https://admin.lythaus.co',
         'cf-connecting-ip': '1.2.3.4',
       },
     });
@@ -114,15 +114,15 @@ describe('proxy_moderation_test.function', () => {
     it('should correctly extract target path from request URL', () => {
       const testCases = [
         {
-          input: 'https://control.asora.co.za/api/admin/moderation/test/upload',
+          input: 'https://admin.lythaus.co/api/admin/moderation/test/upload',
           expected: '/moderation/test/upload',
         },
         {
-          input: 'https://control.asora.co.za/api/admin/moderation/test',
+          input: 'https://admin.lythaus.co/api/admin/moderation/test',
           expected: '/moderation/test',
         },
         {
-          input: 'https://control.asora.co.za/api/admin/moderation/test/deep/path',
+          input: 'https://admin.lythaus.co/api/admin/moderation/test/deep/path',
           expected: '/moderation/test/deep/path',
         },
       ];

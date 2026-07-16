@@ -1,3 +1,5 @@
+# SUPERSEDED SNAPSHOT: the canonical OpenAPI source is api/openapi/openapi.yaml.
+# Do not use this file for Alpha generation, contracts, or entitlement policy.
 openapi: 3.0.3
 info:
   title: Lythaus (formerly Asora) Backend API Contract

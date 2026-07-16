@@ -11,7 +11,7 @@
 
 ### 2. **Staging Validation Scripts Created** ✅
 - **Validation Script**: `scripts/validate_edge_cache.sh` (executable)
-- **CI Workflow**: `.github/workflows/staging-validate.yml`
+- **Historical CI Workflow**: superseded by `.github/workflows/mvp-preview-validate.yml`; no permanent staging environment exists under ADR-005.
 - **Comprehensive Testing**: 5-step validation process
 
 ### 3. **Worker Unit Tests** ✅

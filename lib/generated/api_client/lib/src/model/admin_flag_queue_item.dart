@@ -17,12 +17,12 @@ part 'admin_flag_queue_item.g.dart';
 /// AdminFlagQueueItem
 ///
 /// Properties:
-/// * [content] 
-/// * [author] 
-/// * [flags] 
-/// * [state] 
-/// * [moderation] 
-/// * [status] 
+/// * [content]
+/// * [author]
+/// * [flags]
+/// * [state]
+/// * [moderation]
+/// * [status]
 @BuiltValue()
 abstract class AdminFlagQueueItem implements Built<AdminFlagQueueItem, AdminFlagQueueItemBuilder> {
   @BuiltValueField(wireName: r'content')
@@ -193,4 +193,3 @@ class _$AdminFlagQueueItemSerializer implements PrimitiveSerializer<AdminFlagQue
     return result.build();
   }
 }
-

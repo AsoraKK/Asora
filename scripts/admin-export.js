@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const baseUrl = process.env.FUNCTION_BASE_URL || 'https://asora-function-dev.azurewebsites.net';
+  const baseUrl = (process.env.ADMIN_API_URL || 'https://admin-api.lythaus.co/api').replace(/\/+$/, '');
   const userId = process.argv[2];
   const outDir = process.argv[3] || '.';
   if (!userId) {
@@ -16,10 +16,14 @@ async function main() {
     console.error('Missing ADMIN_BEARER_TOKEN env for admin role');
     process.exit(2);
   }
-  const url = `${baseUrl}/api/admin/export?userId=${encodeURIComponent(userId)}`;
+  if (!/^https:\/\//.test(baseUrl) || /\.azurewebsites\.net(?:\/|$)/i.test(baseUrl)) {
+    console.error('ADMIN_API_URL must be an HTTPS Access-protected admin gateway; direct Azure origins are not permitted.');
+    process.exit(2);
+  }
+  const url = `${baseUrl}/admin/export?userId=${encodeURIComponent(userId)}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
-    console.error('Export failed:', res.status, await res.text());
+    console.error('Export failed with HTTP status', res.status);
     process.exit(3);
   }
   const data = await res.text();

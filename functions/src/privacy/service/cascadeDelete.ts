@@ -295,6 +295,13 @@ async function processPostgres(
         options.userId,
       );
 
+      result.postgres.deleted['alpha_cohort_members'] = await deleteIfColumnExists(
+        client,
+        'alpha_cohort_members',
+        ['user_id'],
+        options.userId,
+      );
+
       result.postgres.deleted['users'] = await deleteIfColumnExists(
         client,
         'users',
@@ -434,6 +441,7 @@ export async function verifyUserDataPurged(userId: string): Promise<{
         { name: 'users', column: 'user_uuid' },
         { name: 'profiles', column: 'user_uuid' },
         { name: 'auth_identities', column: 'user_uuid' },
+        { name: 'alpha_cohort_members', column: 'user_id' },
         { name: 'follows', column: 'follower_uuid' },
       ];
 

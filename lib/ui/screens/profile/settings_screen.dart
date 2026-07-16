@@ -8,6 +8,9 @@ import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/profile/application/profile_providers.dart';
 import 'package:asora/state/providers/settings_providers.dart';
 import 'package:asora/ui/theme/spacing.dart';
+import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:asora/features/privacy/privacy_settings_screen.dart';
+import 'package:asora/ui/screens/profile/account_security_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -37,6 +40,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Spacing.md),
         children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Notification settings'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsSettingsScreen(),
+              ),
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy and your data'),
+            subtitle: const Text('Visibility, data export, and account deletion'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const PrivacySettingsScreen(),
+              ),
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.security_outlined),
+            title: const Text('Account security'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AccountSecurityScreen(),
+              ),
+            ),
+          ),
+          const Divider(height: Spacing.xl),
           SwitchListTile(
             title: const Text('Left-handed mode (mirror nav)'),
             value: settings.leftHandedMode,

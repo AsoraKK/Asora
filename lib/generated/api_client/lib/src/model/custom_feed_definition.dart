@@ -12,18 +12,18 @@ part 'custom_feed_definition.g.dart';
 /// CustomFeedDefinition
 ///
 /// Properties:
-/// * [id] 
-/// * [ownerId] 
-/// * [name] 
-/// * [contentType] 
-/// * [sorting] 
-/// * [includeKeywords] 
-/// * [excludeKeywords] 
-/// * [includeAccounts] 
-/// * [excludeAccounts] 
-/// * [isHome] 
-/// * [createdAt] 
-/// * [updatedAt] 
+/// * [id]
+/// * [ownerId]
+/// * [name]
+/// * [contentType]
+/// * [sorting]
+/// * [includeKeywords]
+/// * [excludeKeywords]
+/// * [includeAccounts]
+/// * [excludeAccounts]
+/// * [isHome]
+/// * [createdAt]
+/// * [updatedAt]
 @BuiltValue()
 abstract class CustomFeedDefinition implements Built<CustomFeedDefinition, CustomFeedDefinitionBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -322,4 +322,3 @@ class CustomFeedDefinitionSortingEnum extends EnumClass {
   static BuiltSet<CustomFeedDefinitionSortingEnum> get values => _$customFeedDefinitionSortingEnumValues;
   static CustomFeedDefinitionSortingEnum valueOf(String name) => _$customFeedDefinitionSortingEnumValueOf(name);
 }
-

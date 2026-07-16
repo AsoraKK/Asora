@@ -24,6 +24,7 @@ describe('startup-validation', () => {
     // Clear all required env vars
     delete process.env.COSMOS_CONNECTION_STRING;
     delete process.env.JWT_SECRET;
+    delete process.env.INVITE_CODE_PEPPER;
     delete process.env.JWT_ISSUER;
     delete process.env.HIVE_API_KEY;
     delete process.env.KV_URL;
@@ -58,6 +59,7 @@ describe('startup-validation', () => {
     // Set all required vars
     process.env.COSMOS_CONNECTION_STRING = 'test';
     process.env.JWT_SECRET = 'test';
+    process.env.INVITE_CODE_PEPPER = 'invite-pepper-0123456789abcdef0123456789';
     process.env.JWT_ISSUER = 'test';
     process.env.HIVE_API_KEY = 'test';
     process.env.KV_URL = 'test';
@@ -99,6 +101,7 @@ describe('startup-validation', () => {
   it('completes without warnings when all vars are set', () => {
     process.env.COSMOS_CONNECTION_STRING = 'test';
     process.env.JWT_SECRET = 'test';
+    process.env.INVITE_CODE_PEPPER = 'invite-pepper-0123456789abcdef0123456789';
     process.env.JWT_ISSUER = 'test';
     process.env.HIVE_API_KEY = 'test';
     process.env.KV_URL = 'test';
@@ -115,6 +118,12 @@ describe('startup-validation', () => {
     process.env.RATE_LIMITS_ENABLED = 'true';
     process.env.RATE_LIMIT_CONTAINER = 'test';
     process.env.AUDIT_HMAC_KEY = 'test-hmac-key';
+    process.env.ORIGIN_GATEWAY_AUTH_MODE = 'observe';
+    process.env.ORIGIN_GATEWAY_TOKEN = 'test-origin-token';
+    process.env.ORIGIN_GATEWAY_TOKEN_NEXT = 'test-origin-token-next';
+    process.env.ORIGIN_OPERATIONAL_TOKEN = 'test-operational-token';
+    process.env.ORIGIN_GATEWAY_DUAL_UNTIL = '2099-01-01T00:00:00Z';
+    process.env.ORIGIN_GATEWAY_LEGACY_ALLOWLIST = '[]';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();

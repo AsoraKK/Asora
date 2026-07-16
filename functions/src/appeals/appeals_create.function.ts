@@ -18,6 +18,7 @@ import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForFunction } from '@rate-limit/policies';
 import { requireAuth } from '@auth/requireAuth';
+import { trackAppEvent } from '@shared/appInsights';
 
 const ANONYMOUS_AUTH_LEVEL = 'anonymous' as const;
 
@@ -47,6 +48,12 @@ export const appeals_create = httpHandler<FileAppealRequest, AppealResponse>(asy
 
   try {
     const appeal = await createAppeal(auth.userId, ctx.body);
+    trackAppEvent({
+      name: 'alpha_appeal_created',
+      properties: {
+        hasEvidence: (ctx.body.evidence?.length ?? 0) > 0,
+      },
+    });
     return ctx.created({ appeal });
   } catch (error) {
     if (error instanceof HttpError) {

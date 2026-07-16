@@ -139,8 +139,22 @@ jobs:
         run: |
           set -euo pipefail
           TS="$(date +%Y%m%d%H%M%S)"
-          flutter build appbundle --release --obfuscate --split-debug-info="build/symbols/android/${TS}"
+          flutter build appbundle --release --obfuscate --split-debug-info="build/symbols/android/${TS}" \
+            --dart-define=ENVIRONMENT=production \
+            --dart-define=API_BASE_URL=https://api.lythaus.co/api \
+            --dart-define=AUTH_URL=https://api.lythaus.co/api \
+            --dart-define=ENABLE_CERT_PINNING=false
           test -s build/app/outputs/bundle/release/app-release.aab
+
+      - name: Reject legacy origins in signed Android artifact
+        run: |
+          set -euo pipefail
+          artifact="build/app/outputs/bundle/release/app-release.aab"
+          if unzip -p "$artifact" | strings | grep -Eiq 'azurewebsites\.net|asora-function-(dev|prod)|api\.asora\.co\.za|admin-api\.asora\.co\.za'; then
+            echo "Release artifact contains a forbidden direct-origin reference." >&2
+            exit 1
+          fi
+          echo "Android release artifact contains no direct Azure or obsolete public API origin."
 
       - name: Clean signing material
         if: always()

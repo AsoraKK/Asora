@@ -1,5 +1,7 @@
 # Lythaus Repository Intelligence Report
 
+> **Historical audit snapshot.** Product decisions in this report are superseded for controlled Alpha by `docs/adr/ADR-004-controlled-web-api-alpha.md` and the canonical entitlement and authorship policies dated 2026-07-10.
+
 Read-only audit completed on `main`. No app files were modified during the audit, and no commits, refactors, or PRs were created.
 
 ## Decision Update - 28 June 2026

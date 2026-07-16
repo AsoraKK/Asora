@@ -13,9 +13,9 @@ part 'admin_appeal_override_response.g.dart';
 /// AdminAppealOverrideResponse
 ///
 /// Properties:
-/// * [appealId] 
-/// * [status] 
-/// * [finalDecision] 
+/// * [appealId]
+/// * [status]
+/// * [finalDecision]
 @BuiltValue()
 abstract class AdminAppealOverrideResponse implements Built<AdminAppealOverrideResponse, AdminAppealOverrideResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -158,4 +158,3 @@ class AdminAppealOverrideResponseStatusEnum extends EnumClass {
   static BuiltSet<AdminAppealOverrideResponseStatusEnum> get values => _$adminAppealOverrideResponseStatusEnumValues;
   static AdminAppealOverrideResponseStatusEnum valueOf(String name) => _$adminAppealOverrideResponseStatusEnumValueOf(name);
 }
-

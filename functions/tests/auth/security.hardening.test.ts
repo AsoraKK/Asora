@@ -74,10 +74,10 @@ describe('JWT_SECRET minimum length enforcement', () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// 2. Audience-missing startup warning
+// 2. Audience configuration
 // ─────────────────────────────────────────────────────────────
 
-describe('Audience-missing startup warning', () => {
+describe('Audience configuration', () => {
   it('logs a console.warn when JWT_AUDIENCE is not configured', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     setEnv(); // No JWT_AUDIENCE
@@ -96,6 +96,19 @@ describe('Audience-missing startup warning', () => {
     getAuthConfig();
 
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when JWT_AUDIENCE is missing in production', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      setEnv();
+      expect(() => getAuthConfig()).toThrow(/JWT_AUDIENCE in production/i);
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+      resetAuthConfigForTesting();
+    }
   });
 });
 

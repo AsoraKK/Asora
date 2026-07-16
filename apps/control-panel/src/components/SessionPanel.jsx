@@ -65,7 +65,7 @@ function SessionPanel() {
             type="text"
             value={apiUrl}
             onChange={(event) => setApiUrl(event.target.value)}
-            placeholder="https://admin-api.asora.co.za"
+            placeholder="https://admin-api.lythaus.co/api"
           />
         </label>
         <label className="field">

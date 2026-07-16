@@ -24,8 +24,9 @@ void main() {
         'submittedAt': '2024-01-01T00:00:00.000Z',
         'expiresAt': '2024-01-02T00:00:00.000Z',
         'flagReason': 'toxicity',
-        'aiScore': 0.12,
-        'aiAnalysis': {'model': 'hive-v2'},
+        'authorshipLabel': 'AI-assisted',
+        'classificationSource': 'automated_classification',
+        'reviewState': 'pending',
         'flagCategories': ['toxicity', 'harassment'],
         'flagCount': 3,
         'votingStatus': 'active',
@@ -91,8 +92,9 @@ void main() {
           submittedAt: DateTime(2025, 8, 1, 10, 30),
           expiresAt: DateTime(2025, 8, 8, 10, 30),
           flagReason: 'inappropriate_content',
-          aiScore: 0.85,
-          aiAnalysis: {'category': 'spam', 'confidence': 0.85},
+          authorshipLabel: 'Under review',
+          classificationSource: 'automated_classification',
+          reviewState: 'pending',
           flagCategories: ['spam', 'hate'],
           flagCount: 3,
           votingStatus: VotingStatus.active,
@@ -141,8 +143,9 @@ void main() {
           'submittedAt': '2025-08-01T10:30:00.000Z',
           'expiresAt': '2025-08-08T10:30:00.000Z',
           'flagReason': 'inappropriate_content',
-          'aiScore': 0.85,
-          'aiAnalysis': {'category': 'spam', 'confidence': 0.85},
+          'authorshipLabel': 'Under review',
+          'classificationSource': 'automated_classification',
+          'reviewState': 'pending',
           'flagCategories': ['spam', 'hate'],
           'flagCount': 3,
           'votingStatus': 'active',
@@ -173,7 +176,8 @@ void main() {
         expect(appeal.urgencyScore, 75);
         expect(appeal.votingStatus, VotingStatus.active);
         expect(appeal.votingProgress?.totalVotes, 10);
-        expect(appeal.aiScore, 0.85);
+        expect(appeal.authorshipLabel, 'Under review');
+        expect(appeal.toJson().containsKey('aiScore'), isFalse);
       });
 
       test('should handle null optional fields correctly', () {
@@ -198,7 +202,7 @@ void main() {
           'estimatedResolution': 'Soon',
           'hasUserVoted': false,
           'canUserVote': true,
-          // contentTitle, aiScore, aiAnalysis, votingProgress are null
+          // contentTitle and votingProgress are null; authorship uses safe defaults.
         };
 
         // Act
@@ -207,8 +211,8 @@ void main() {
         // Assert
         expect(appeal.contentTitle, isNull);
         expect(appeal.votingProgress, isNull);
-        expect(appeal.aiScore, isNull);
-        expect(appeal.aiAnalysis, isNull);
+        expect(appeal.authorshipLabel, 'Under review');
+        expect(appeal.classificationSource, 'automated_classification');
         expect(appeal.appealId, 'appeal_123'); // Required fields still work
       });
 

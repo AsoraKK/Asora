@@ -47,7 +47,7 @@ void main() {
     test('integrityGuard factory creates event correctly', () {
       final event = SecurityEvent.integrityGuard(
         result: 'allowed_with_warning',
-        environment: Environment.staging,
+        environment: Environment.preview,
         useCase: 'post_creation',
         reason: 'dev override',
         strictMode: false,
@@ -57,7 +57,7 @@ void main() {
       expect(event.result, 'allowed_with_warning');
       expect(event.useCase, 'post_creation');
       final json = event.toJson();
-      expect(json['environment'], 'staging');
+      expect(json['environment'], 'preview');
       expect(json['use_case'], 'post_creation');
       expect(json['strict_mode'], false);
       expect(json['reason'], 'dev override');
@@ -97,7 +97,7 @@ void main() {
   group('SecurityTelemetry', () {
     test('logEvent does not throw', () {
       final event = SecurityEvent.tlsPinning(
-        host: 'api.asora.com',
+        host: 'api.lythaus.co',
         environment: 'dev',
         result: 'pin_match',
         strictMode: false,

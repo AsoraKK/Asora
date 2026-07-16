@@ -20,6 +20,7 @@ import 'package:asora_api_client/src/model/flag_content_v1_request.dart';
 import 'package:asora_api_client/src/model/forbidden_error.dart';
 import 'package:asora_api_client/src/model/get_my_appeals200_response.dart';
 import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
+import 'package:asora_api_client/src/model/moderation_flag_validation_error.dart';
 import 'package:asora_api_client/src/model/rate_limit_error.dart';
 import 'package:asora_api_client/src/model/review_appealed_content_request.dart';
 import 'package:asora_api_client/src/model/unauthorized_error.dart';
@@ -39,7 +40,7 @@ class ModerationApi {
   /// Flag content for review.
   ///
   /// Parameters:
-  /// * [flagContentRequest] 
+  /// * [flagContentRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -49,7 +50,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FlagContent202Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FlagContent202Response>> flagContent({ 
+  Future<Response<FlagContent202Response>> flagContent({
     required FlagContentRequest flagContentRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -140,7 +141,7 @@ class ModerationApi {
   /// Alias of &#x60;/moderation/flag&#x60; — legacy v1 route used by the function runtime.
   ///
   /// Parameters:
-  /// * [flagContentV1Request] 
+  /// * [flagContentV1Request]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -150,7 +151,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FlagContentV1202Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FlagContentV1202Response>> flagContentV1({ 
+  Future<Response<FlagContentV1202Response>> flagContentV1({
     required FlagContentV1Request flagContentV1Request,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -252,7 +253,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [GetMyAppeals200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<GetMyAppeals200Response>> getMyAppeals({ 
+  Future<Response<GetMyAppeals200Response>> getMyAppeals({
     String? status,
     String? cursor,
     CancelToken? cancelToken,
@@ -327,11 +328,11 @@ class ModerationApi {
   }
 
   /// Record a decision on a moderation case
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
-  /// * [body] 
+  /// * [id]
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -341,7 +342,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> moderationCasesDecision({ 
+  Future<Response<JsonObject>> moderationCasesDecision({
     required String id,
     required JsonObject body,
     CancelToken? cancelToken,
@@ -429,10 +430,10 @@ class ModerationApi {
   }
 
   /// Get moderation case detail
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [id] 
+  /// * [id]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -442,7 +443,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> moderationCasesGet({ 
+  Future<Response<JsonObject>> moderationCasesGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -513,7 +514,7 @@ class ModerationApi {
   /// Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
   ///
   /// Parameters:
-  /// * [entryId] 
+  /// * [entryId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -523,7 +524,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AcceptedResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AcceptedResponse>> moderationLedgerAppealPost({ 
+  Future<Response<AcceptedResponse>> moderationLedgerAppealPost({
     required String entryId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -591,7 +592,7 @@ class ModerationApi {
   }
 
   /// List moderation queue items
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -603,7 +604,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> moderationQueueList({ 
+  Future<Response<JsonObject>> moderationQueueList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -670,7 +671,7 @@ class ModerationApi {
   }
 
   /// List items in the review queue
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -682,7 +683,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> moderationReviewQueueList({ 
+  Future<Response<JsonObject>> moderationReviewQueueList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -749,10 +750,10 @@ class ModerationApi {
   }
 
   /// Submit content to moderation pipeline for testing
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [body] 
+  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -762,7 +763,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> moderationTest({ 
+  Future<Response<JsonObject>> moderationTest({
     required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -853,7 +854,7 @@ class ModerationApi {
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [reviewAppealedContentRequest] 
+  /// * [reviewAppealedContentRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -863,7 +864,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [JsonObject] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> reviewAppealedContent({ 
+  Future<Response<JsonObject>> reviewAppealedContent({
     required String appealId,
     required ReviewAppealedContentRequest reviewAppealedContentRequest,
     CancelToken? cancelToken,
@@ -955,7 +956,7 @@ class ModerationApi {
   /// Alias of &#x60;/moderation/appeals&#x60; — legacy v1 route used by the function runtime.
   ///
   /// Parameters:
-  /// * [moderationAppealRequest] 
+  /// * [moderationAppealRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -965,7 +966,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AppealCreatedResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AppealCreatedResponse>> submitAppealV1({ 
+  Future<Response<AppealCreatedResponse>> submitAppealV1({
     required ModerationAppealRequest moderationAppealRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1053,10 +1054,10 @@ class ModerationApi {
   }
 
   /// Submit a moderation appeal
-  /// File an appeal against a moderation decision. Authenticated users with active accounts may appeal content removals. Daily appeal limits are tier-gated. 
+  /// File an appeal against a moderation decision. Authenticated users with active accounts may appeal content removals. Daily appeal limits are tier-gated.
   ///
   /// Parameters:
-  /// * [moderationAppealRequest] 
+  /// * [moderationAppealRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1066,7 +1067,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AppealCreatedResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AppealCreatedResponse>> submitModerationAppeal({ 
+  Future<Response<AppealCreatedResponse>> submitModerationAppeal({
     required ModerationAppealRequest moderationAppealRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1157,7 +1158,7 @@ class ModerationApi {
   /// Alias of &#x60;/moderation/appeals/{appealId}/vote&#x60; — accepts appealId in the request body.
   ///
   /// Parameters:
-  /// * [voteOnAppealV1Request] 
+  /// * [voteOnAppealV1Request]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1167,7 +1168,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AppealVoteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AppealVoteResponse>> voteOnAppealV1({ 
+  Future<Response<AppealVoteResponse>> voteOnAppealV1({
     required VoteOnAppealV1Request voteOnAppealV1Request,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1255,11 +1256,11 @@ class ModerationApi {
   }
 
   /// Cast a community vote on an appeal
-  /// Authenticated community members may cast a weighted vote (&#x60;uphold&#x60; or &#x60;deny&#x60;) on an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules are enforced server-side. 
+  /// Authenticated community members may cast a weighted vote (&#x60;uphold&#x60; or &#x60;deny&#x60;) on an open appeal. Duplicate votes are rejected. Vote eligibility and quorum rules are enforced server-side.
   ///
   /// Parameters:
   /// * [appealId] - Appeal identifier
-  /// * [appealVoteRequest] 
+  /// * [appealVoteRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1269,7 +1270,7 @@ class ModerationApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AppealVoteResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AppealVoteResponse>> voteOnModerationAppeal({ 
+  Future<Response<AppealVoteResponse>> voteOnModerationAppeal({
     required String appealId,
     required AppealVoteRequest appealVoteRequest,
     CancelToken? cancelToken,

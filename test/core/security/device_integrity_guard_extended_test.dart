@@ -42,7 +42,7 @@ DeviceSecurityState _emulatorDevice() => DeviceSecurityState(
 
 MobileSecurityConfig _secConfig({
   bool blockRooted = true,
-  bool allowRootedInStaging = false,
+  bool allowRootedInPreview = false,
 }) => MobileSecurityConfig(
   tlsPins: const TlsPinConfig(
     enabled: false,
@@ -51,7 +51,7 @@ MobileSecurityConfig _secConfig({
   ),
   strictDeviceIntegrity: true,
   blockRootedDevices: blockRooted,
-  allowRootedInStagingForQa: allowRootedInStaging,
+  allowRootedInPreviewForQa: allowRootedInPreview,
 );
 
 void main() {
@@ -137,8 +137,8 @@ void main() {
         final svc = _StubDeviceSecurityService(_compromisedDevice());
         final guard = DeviceIntegrityGuard(
           deviceSecurityService: svc,
-          config: _secConfig(allowRootedInStaging: true),
-          environment: Environment.staging,
+          config: _secConfig(allowRootedInPreview: true),
+          environment: Environment.preview,
         );
 
         final decision = await guard.evaluate(IntegrityUseCase.signIn);

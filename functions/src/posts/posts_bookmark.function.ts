@@ -5,6 +5,23 @@ import { getTargetDatabase } from '@shared/clients/cosmos';
 import { trackAppEvent } from '@shared/appInsights';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
+
+async function assertReactionsEnabled(): Promise<import('@azure/functions').HttpResponseInit | null> {
+  try {
+    await assertAlphaFeature('reactions');
+    return null;
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        jsonBody: { error: { code: 'ALPHA_FEATURE_DISABLED', message: error.message } },
+      };
+    }
+    throw error;
+  }
+}
 
 interface BookmarkDocument {
   id: string;
@@ -44,6 +61,8 @@ export const posts_bookmark_create = httpHandler<void, { bookmarked: boolean; bo
     }
 
     const auth = await extractAuthContext(ctx);
+    const alphaResponse = await assertReactionsEnabled();
+    if (alphaResponse) return alphaResponse;
     const db = getTargetDatabase();
     const posts = db.posts;
     const reactions = db.reactions;
@@ -110,6 +129,8 @@ export const posts_bookmark_delete = httpHandler<void, { bookmarked: boolean; bo
     }
 
     const auth = await extractAuthContext(ctx);
+    const alphaResponse = await assertReactionsEnabled();
+    if (alphaResponse) return alphaResponse;
     const db = getTargetDatabase();
     const posts = db.posts;
     const reactions = db.reactions;

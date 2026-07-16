@@ -13,6 +13,8 @@ import { getAzureLogger } from '@shared/utils/logger';
 import { submitReaction } from './reactionService';
 import { STRUCTURED_REACTIONS_ENABLED } from './types';
 import type { SubmitReactionRequest, ReactionType } from './types';
+import { assertAlphaFeature } from '@alpha/alphaConfig';
+import { HttpError } from '@shared/utils/errors';
 
 const logger = getAzureLogger('reactions/post');
 
@@ -54,6 +56,7 @@ if (STRUCTURED_REACTIONS_ENABLED) {
       }
 
       try {
+        await assertAlphaFeature('reactions');
         const result = await submitReaction({
           actorUserId: auth.userId,
           targetUserId,
@@ -69,6 +72,12 @@ if (STRUCTURED_REACTIONS_ENABLED) {
 
         return ctx.created(result);
       } catch (err: unknown) {
+        if (err instanceof HttpError) {
+          return {
+            status: err.status,
+            jsonBody: { error: { code: 'ALPHA_FEATURE_DISABLED', message: err.message } },
+          };
+        }
         const status = (err as { statusCode?: number }).statusCode;
         if (status === 400) {
           return ctx.badRequest((err as Error).message);

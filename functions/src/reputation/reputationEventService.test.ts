@@ -3,6 +3,7 @@ import { LedgerEventType, ReputationLevel } from './types';
 import { adjustReputation } from '@shared/services/reputationService';
 import { getCosmosDatabase } from '@shared/clients/cosmos';
 import { appendLedgerEntry } from './ledgerService';
+import { getAlphaConfig } from '@alpha/alphaConfig';
 
 jest.mock('@shared/services/reputationService', () => ({
   adjustReputation: jest.fn().mockResolvedValue({ newScore: 10, previousScore: 9 }),
@@ -15,6 +16,10 @@ jest.mock('@shared/clients/cosmos', () => ({
 
 jest.mock('./ledgerService', () => ({
   appendLedgerEntry: jest.fn().mockResolvedValue({ id: 'ledger-entry-1' }),
+}));
+
+jest.mock('@alpha/alphaConfig', () => ({
+  getAlphaConfig: jest.fn(),
 }));
 
 const mockUserRead = jest.fn();
@@ -43,6 +48,9 @@ describe('reputationEventService', () => {
       },
     });
     mockUserReplace.mockResolvedValue({});
+    (getAlphaConfig as jest.Mock).mockResolvedValue({
+      features: { reputationAwards: true, readOnlyMode: false },
+    });
   });
 
   // ── REPUTATION_EVENTS config ──────────────────────────────────────────
@@ -89,6 +97,37 @@ describe('reputationEventService', () => {
           delta: REPUTATION_EVENTS[LedgerEventType.HUMAN_TEXT_250_PLUS].rawDelta,
         })
       );
+    });
+
+    it('skips positive awards when the Alpha award flag is disabled', async () => {
+      (getAlphaConfig as jest.Mock).mockResolvedValue({
+        features: { reputationAwards: false, readOnlyMode: false },
+      });
+
+      await recordReputationEvent({
+        userId: 'user-1',
+        ledgerEventType: LedgerEventType.HUMAN_TEXT_250_PLUS,
+        sourceId: 'post-1',
+      });
+
+      expect(adjustReputation).not.toHaveBeenCalled();
+      expect(mockUserReplace).not.toHaveBeenCalled();
+      expect(appendLedgerEntry).not.toHaveBeenCalled();
+    });
+
+    it('retains negative moderation events when awards are disabled', async () => {
+      (getAlphaConfig as jest.Mock).mockResolvedValue({
+        features: { reputationAwards: false, readOnlyMode: false },
+      });
+
+      await recordReputationEvent({
+        userId: 'user-1',
+        ledgerEventType: LedgerEventType.UNDISCLOSED_AI_TEXT,
+        sourceId: 'post-1',
+      });
+
+      expect(adjustReputation).toHaveBeenCalled();
+      expect(appendLedgerEntry).toHaveBeenCalled();
     });
 
     it('does NOT call adjustReputation for neutral zero-delta events', async () => {

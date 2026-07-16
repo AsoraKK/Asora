@@ -3,7 +3,7 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_invite.dart';
+import 'package:asora_api_client/src/model/admin_created_invite.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -13,13 +13,13 @@ part 'admin_invite_list_response.g.dart';
 /// AdminInviteListResponse
 ///
 /// Properties:
-/// * [invites] 
-/// * [count] 
-/// * [nextCursor] 
+/// * [invites]
+/// * [count]
+/// * [nextCursor]
 @BuiltValue()
 abstract class AdminInviteListResponse implements Built<AdminInviteListResponse, AdminInviteListResponseBuilder> {
   @BuiltValueField(wireName: r'invites')
-  BuiltList<AdminInvite> get invites;
+  BuiltList<AdminCreatedInvite> get invites;
 
   @BuiltValueField(wireName: r'count')
   int get count;
@@ -53,7 +53,7 @@ class _$AdminInviteListResponseSerializer implements PrimitiveSerializer<AdminIn
     yield r'invites';
     yield serializers.serialize(
       object.invites,
-      specifiedType: const FullType(BuiltList, [FullType(AdminInvite)]),
+      specifiedType: const FullType(BuiltList, [FullType(AdminCreatedInvite)]),
     );
     yield r'count';
     yield serializers.serialize(
@@ -93,8 +93,8 @@ class _$AdminInviteListResponseSerializer implements PrimitiveSerializer<AdminIn
         case r'invites':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(AdminInvite)]),
-          ) as BuiltList<AdminInvite>;
+            specifiedType: const FullType(BuiltList, [FullType(AdminCreatedInvite)]),
+          ) as BuiltList<AdminCreatedInvite>;
           result.invites.replace(valueDes);
           break;
         case r'count':
@@ -139,4 +139,3 @@ class _$AdminInviteListResponseSerializer implements PrimitiveSerializer<AdminIn
     return result.build();
   }
 }
-

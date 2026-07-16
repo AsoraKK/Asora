@@ -42,13 +42,29 @@ function makeMockDatabase(appeal?: unknown) {
     () =>
       ({
         database: () => ({
-          container: (_name: string) => ({
-            item: jest.fn().mockReturnValue({ read: mockItemRead }),
-            items: {
-              create: mockItemsCreate,
-              upsert: mockItemsUpsert,
-            },
-          }),
+          container: (name: string) => {
+            if (name === 'appeals') {
+              return {
+                item: jest.fn().mockReturnValue({ read: mockItemRead }),
+                items: { upsert: mockItemsUpsert },
+              };
+            }
+            if (name === 'moderation_decisions') {
+              return { items: { create: mockItemsCreate } };
+            }
+            return {
+              item: jest.fn().mockReturnValue({
+                read: jest.fn().mockResolvedValue({ resource: null }),
+                replace: jest.fn().mockResolvedValue({ resource: null }),
+              }),
+              items: {
+                create: jest.fn().mockResolvedValue({ resource: {} }),
+                query: jest.fn(() => ({
+                  fetchAll: jest.fn().mockResolvedValue({ resources: [] }),
+                })),
+              },
+            };
+          },
         }),
       }) as any
   );
@@ -64,7 +80,10 @@ function modReq(body?: unknown) {
     method: 'POST',
     headers: { authorization: 'Bearer valid-mod-token' },
     params: { appealId: 'appeal-1' },
-    body,
+    body:
+      body && typeof body === 'object'
+        ? { finalLabel: 'Human-authored', ...(body as Record<string, unknown>) }
+        : body,
   });
 }
 
@@ -122,7 +141,7 @@ describe('reviewAppealedContent: auth enforcement', () => {
     expect(res.status).toBe(200);
     // Decision doc must record the admin's ID as the moderatorId
     const [decisionDoc] = mockItemsCreate.mock.calls[0];
-    expect(decisionDoc.moderatorId).toBe('admin-user-1');
+    expect(decisionDoc.actorId).toBe('admin-user-1');
   });
 });
 
@@ -186,10 +205,10 @@ describe('reviewAppealedContent: record decision in Cosmos', () => {
     const [decisionDoc] = mockItemsCreate.mock.calls[0];
     expect(decisionDoc).toMatchObject({
       appealId: 'appeal-1',
-      decision: 'approved',
-      reason: 'Content is fine',
-      notes: 'Reviewed carefully',
-      moderatorId: 'mod-user-1',
+      action: 'approved',
+      reason: 'Content is fine: Reviewed carefully',
+      actorId: 'mod-user-1',
+      source: 'human_review',
     });
 
     // Appeal upserted with resolved status
@@ -197,7 +216,8 @@ describe('reviewAppealedContent: record decision in Cosmos', () => {
     const [updatedAppeal] = mockItemsUpsert.mock.calls[0];
     expect(updatedAppeal).toMatchObject({
       id: 'appeal-1',
-      status: 'resolved_approved',
+      status: 'approved',
+      finalDecision: 'approved',
       resolvedBy: 'mod-user-1',
     });
   });
@@ -231,8 +251,8 @@ describe('reviewAppealedContent: record decision in Cosmos', () => {
       contextStub
     );
     const [updatedAppeal] = mockItemsUpsert.mock.calls[0];
-    expect(updatedAppeal.status).toBe('resolved_rejected');
-    expect(updatedAppeal.resolution).toBe('rejected');
+    expect(updatedAppeal.status).toBe('rejected');
+    expect(updatedAppeal.finalDecision).toBe('rejected');
   });
 
   it('returns 500 when Cosmos write fails', async () => {

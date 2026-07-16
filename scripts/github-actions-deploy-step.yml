@@ -24,6 +24,7 @@
             --query "[].name" --output tsv
           
           echo "🏥 Testing health endpoint..."
-          curl -f https://asora-function-dev.azurewebsites.net/api/health || exit 1
+          test -n "${MVP_PUBLIC_API_BASE_URL:-}" || { echo "MVP_PUBLIC_API_BASE_URL is required"; exit 1; }
+          curl -fsS "${MVP_PUBLIC_API_BASE_URL%/}/health" >/dev/null || exit 1
           
           echo "✅ Deployment verification complete!"

@@ -193,8 +193,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Google'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Apple (beta)'), findsOneWidget);
-    expect(find.text('World ID (beta)'), findsOneWidget);
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('World ID'), findsNothing);
 
     await tester.tapAt(const Offset(12, 12));
     await tester.pumpAndSettle();
@@ -210,7 +210,7 @@ void main() {
     );
   });
 
-  testWidgets('alpha-disabled providers are visible but do not start auth', (
+  testWidgets('deferred providers are hidden and cannot start auth', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 800));
@@ -240,13 +240,8 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Apple (beta)'), findsOneWidget);
-    expect(find.text('World ID (beta)'), findsOneWidget);
-
-    await tester.tap(find.text('Apple (beta)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('World ID (beta)'));
-    await tester.pumpAndSettle();
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('World ID'), findsNothing);
 
     verifyNever(() => notifier.signInWithProvider(OAuth2Provider.apple));
     verifyNever(() => notifier.signInWithProvider(OAuth2Provider.world));

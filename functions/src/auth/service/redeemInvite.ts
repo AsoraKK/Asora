@@ -24,6 +24,7 @@ import { getPolicyForFunction } from '@rate-limit/policies';
 import { redeemInvite, validateInvite } from './inviteStore';
 import { storeRefreshToken } from './refreshTokenStore';
 import type { TokenPayload, UserDocument } from '../types';
+import { HttpError } from '@shared/utils/errors';
 
 const logger = getAzureLogger('auth/redeemInvite');
 
@@ -144,20 +145,22 @@ export async function redeemInviteHandler(
     });
 
     if (!redemption.success) {
-      logger.error('Failed to redeem invite', { inviteCode, userId, reason: redemption.reason });
+      logger.error('Failed to redeem invite', { userId, reason: redemption.reason });
       return createErrorResponse(500, 'redemption_failed', 'Failed to redeem invite');
     }
+
+    const inviteId = redemption.invite.inviteId || redemption.invite.id;
 
     // Activate the user
     await usersContainer.item(userId, userId).patch([
       { op: 'replace', path: '/isActive', value: true },
       { op: 'add', path: '/activatedAt', value: new Date().toISOString() },
-      { op: 'add', path: '/activatedByInvite', value: inviteCode },
+      { op: 'add', path: '/activatedByInviteId', value: inviteId },
     ]);
 
     logger.info('User activated via invite', {
       userId,
-      inviteCode,
+      inviteId,
       createdBy: redemption.invite.createdBy,
     });
 
@@ -201,6 +204,10 @@ export async function redeemInviteHandler(
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      const code = error.status === 409 ? 'alpha_capacity_reached' : 'alpha_unavailable';
+      return createErrorResponse(error.status, code, error.message);
+    }
     logger.error('Invite redemption failed', { error });
     return createErrorResponse(500, 'internal_error', 'Failed to redeem invite');
   }

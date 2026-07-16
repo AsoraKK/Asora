@@ -3,81 +3,104 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: verify-cosmos-private-endpoint.sh <cosmos-account> <resource-group>
+Usage: verify-cosmos-private-endpoint.sh <cosmos-account> <resource-group> [private|public-keyvault]
 
-Validates that the Cosmos DB account has private endpoint connections
-and public network access is properly configured.
+Validates the Cosmos DB network posture. Private networking is the default.
+The public-keyvault mode is limited to the shared-cost Technical Alpha and
+requires TLS 1.2; the deployment workflow separately verifies the connection
+string is a resolved Azure Key Vault reference.
 
 Example:
   verify-cosmos-private-endpoint.sh asora-cosmos-prod asora-psql-flex
+  verify-cosmos-private-endpoint.sh asora-cosmos-dev asora-psql-flex public-keyvault
 EOF
   exit 1
 }
 
-if [[ $# -ne 2 ]]; then
+if [[ $# -lt 2 || $# -gt 3 ]]; then
   usage
 fi
 
 COSMOS_ACCOUNT="$1"
 RESOURCE_GROUP="$2"
+NETWORK_MODE="${3:-private}"
 
-echo "Verifying Cosmos DB private endpoint configuration for ${COSMOS_ACCOUNT}..."
+if [[ "$NETWORK_MODE" != "private" && "$NETWORK_MODE" != "public-keyvault" ]]; then
+  echo "Invalid Cosmos network mode: ${NETWORK_MODE}"
+  usage
+fi
 
-# Check public network access setting
+echo "Verifying Cosmos DB network posture for ${COSMOS_ACCOUNT} (${NETWORK_MODE})..."
+
 public_access=$(az cosmosdb show \
   --name "$COSMOS_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "publicNetworkAccess" -o tsv 2>/dev/null || echo "Enabled")
 
-if [[ "$public_access" == "Disabled" ]]; then
-  echo "  ✅ Public network access is Disabled"
-elif [[ "$public_access" == "SecuredByPerimeter" ]]; then
-  echo "  ✅ Public network access is SecuredByPerimeter"
-else
-  echo "  ⚠️  Public network access is ${public_access} (consider Disabled for production)"
+if [[ "$NETWORK_MODE" == "public-keyvault" ]]; then
+  min_tls=$(az cosmosdb show \
+    --name "$COSMOS_ACCOUNT" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "minimalTlsVersion" -o tsv 2>/dev/null || echo "")
+
+  if [[ "$public_access" != "Enabled" ]]; then
+    echo "  ERROR: public-keyvault mode expects the shared Cosmos public endpoint to be Enabled"
+    exit 1
+  fi
+  if [[ "$min_tls" != "Tls12" ]]; then
+    echo "  ERROR: public-keyvault mode requires Cosmos minimum TLS version Tls12"
+    exit 1
+  fi
+
+  echo "  PASS: Cost-constrained public endpoint uses TLS 1.2"
+  echo "  PASS: Connection-secret Key Vault enforcement is verified by the deployment workflow"
+  exit 0
 fi
 
-# Check for private endpoint connections
+if [[ "$public_access" == "Disabled" ]]; then
+  echo "  PASS: Public network access is Disabled"
+elif [[ "$public_access" == "SecuredByPerimeter" ]]; then
+  echo "  PASS: Public network access is SecuredByPerimeter"
+else
+  echo "  ERROR: Private mode requires public network access Disabled or SecuredByPerimeter"
+  exit 1
+fi
+
 pe_count=$(az cosmosdb show \
   --name "$COSMOS_ACCOUNT" \
   --resource-group "$RESOURCE_GROUP" \
   --query "privateEndpointConnections | length(@)" -o tsv 2>/dev/null || echo "0")
 
 if [[ "$pe_count" -ge 1 ]]; then
-  echo "  ✅ Private endpoint connections present: ${pe_count}"
-  
-  # List private endpoint states
+  echo "  PASS: Private endpoint connections present: ${pe_count}"
+
   pe_states=$(az cosmosdb show \
     --name "$COSMOS_ACCOUNT" \
     --resource-group "$RESOURCE_GROUP" \
     --query "privateEndpointConnections[].privateLinkServiceConnectionState.status" -o tsv 2>/dev/null || echo "")
-  
+
   if echo "$pe_states" | grep -q "Approved"; then
-    echo "  ✅ At least one private endpoint is Approved"
+    echo "  PASS: At least one private endpoint is Approved"
   else
-    echo "  ❌ No approved private endpoints found"
+    echo "  ERROR: No approved private endpoints found"
     exit 1
   fi
 else
-  echo "  ⚠️  No private endpoint connections detected"
-  if [[ "$public_access" == "Enabled" ]]; then
-    echo "  ❌ Cosmos DB is publicly accessible without private endpoints"
-    exit 1
-  fi
+  echo "  ERROR: No private endpoint connections detected"
+  exit 1
 fi
 
-# Check network ACL rules if public access is not fully disabled
 if [[ "$public_access" != "Disabled" ]]; then
-  default_action=$(az cosmosdb show \
+  ip_rule_count=$(az cosmosdb show \
     --name "$COSMOS_ACCOUNT" \
     --resource-group "$RESOURCE_GROUP" \
     --query "ipRules | length(@)" -o tsv 2>/dev/null || echo "0")
-  
-  if [[ "$default_action" -gt 0 ]]; then
-    echo "  ✅ IP firewall rules configured: ${default_action} rules"
+
+  if [[ "$ip_rule_count" -gt 0 ]]; then
+    echo "  PASS: IP firewall rules configured: ${ip_rule_count} rules"
   else
-    echo "  ⚠️  No IP firewall rules; relying on private endpoints only"
+    echo "  INFO: No IP firewall rules; relying on private endpoints"
   fi
 fi
 
-echo "✅ Cosmos DB private networking verification complete"
+echo "PASS: Cosmos DB private networking verification complete"

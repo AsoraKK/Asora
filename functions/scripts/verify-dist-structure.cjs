@@ -58,6 +58,35 @@ try {
     exitWith('One or more required files are missing from the artifact.');
   }
 
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.join(tempDir, 'package.json'), 'utf8')
+  );
+  const mainEntrypoint = typeof packageJson.main === 'string'
+    ? packageJson.main.replace(/^\.\//, '')
+    : '';
+  if (!mainEntrypoint) {
+    exitWith('package.json must define a Node runtime main entrypoint.');
+  }
+
+  const mainPath = path.join(tempDir, mainEntrypoint);
+  if (!fs.existsSync(mainPath)) {
+    exitWith(`package.json main entrypoint is missing: ${mainEntrypoint}`);
+  }
+
+  const mainContents = fs.readFileSync(mainPath, 'utf8');
+  const relativeRequirePattern = /require\(\s*["']\.\/([^"']+)["']\s*\)/g;
+  for (const match of mainContents.matchAll(relativeRequirePattern)) {
+    const requiredPath = match[1];
+    const candidates = [
+      requiredPath,
+      `${requiredPath}.js`,
+      path.join(requiredPath, 'index.js'),
+    ];
+    if (!candidates.some((candidate) => fs.existsSync(path.join(tempDir, candidate)))) {
+      exitWith(`Runtime entrypoint ${mainEntrypoint} requires missing path ./${requiredPath}`);
+    }
+  }
+
   const httpFunctions = [];
   const timerFunctions = [];
 

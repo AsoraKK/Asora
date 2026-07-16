@@ -19,7 +19,7 @@ class SubscriptionApi {
   const SubscriptionApi(this._dio, this._serializers);
 
   /// Get current user subscription status
-  /// Return the authenticated user&#39;s subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits. 
+  /// Return the authenticated user&#39;s subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -31,7 +31,7 @@ class SubscriptionApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SubscriptionStatus] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SubscriptionStatus>> subscriptionStatus({ 
+  Future<Response<SubscriptionStatus>> subscriptionStatus({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

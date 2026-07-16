@@ -229,6 +229,15 @@ export async function submitAppealHandler({
       flagReason: contentDoc.flagReason || 'unknown',
       flagCategories: contentDoc.moderation?.hiveResponse?.flaggedCategories || [],
       flagCount,
+      originalDisclosure:
+        contentDoc.authorship?.declaredAuthorship ?? contentDoc.aiLabel ?? 'human',
+      originalClassification: contentDoc.authorship ?? null,
+      internalClassificationEvidence: contentDoc.authorshipInternal ?? {
+        provider: 'hive',
+        detected: Boolean(contentDoc.aiDetected),
+        score: contentDoc.moderation?.confidence ?? null,
+        thresholdVersion: contentDoc.moderation?.thresholdVersion ?? null,
+      },
 
       // Voting status
       status: 'pending',
@@ -239,6 +248,14 @@ export async function submitAppealHandler({
       totalVotes: 0,
       requiredVotes: DEFAULT_REQUIRED_VOTES,
       hasReachedQuorum: false,
+      communityRecommendation: null,
+      communityRecommendationAt: null,
+
+      // Human adjudication is authoritative; community voting is advisory.
+      reviewState: 'pending_human_review',
+      finalLabel: null,
+      finalModerationAction: null,
+      decisionVersion: 0,
 
       // Timestamps
       createdAt: now.toISOString(),
