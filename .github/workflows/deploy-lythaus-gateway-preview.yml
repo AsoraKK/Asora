@@ -75,7 +75,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} versions list --env preview --json > previous-versions.json || echo '[]' > previous-versions.json
+          npx --yes wrangler@${WRANGLER_VERSION} versions list \
+            --config cloudflare/api-gateway/wrangler.toml \
+            --env preview \
+            --json > previous-versions.json || echo '[]' > previous-versions.json
           jq -r 'if length == 0 then "none" else (.[0].id // .[0].version_id // "unknown") end' previous-versions.json > previous-version-id.txt
 
       - name: Install Worker-held origin token
@@ -87,7 +90,9 @@ jobs:
           set -euo pipefail
           set +x
           test -n "${ORIGIN_GATEWAY_TOKEN:-}" || { echo "::error::Protected origin token is unavailable"; exit 1; }
-          printf '%s' "$ORIGIN_GATEWAY_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put ORIGIN_AUTH_TOKEN --env preview
+          printf '%s' "$ORIGIN_GATEWAY_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put ORIGIN_AUTH_TOKEN \
+            --config cloudflare/api-gateway/wrangler.toml \
+            --env preview
 
       - name: Deploy immutable preview Worker
         env:
@@ -96,11 +101,13 @@ jobs:
           CORS_ALLOWED_ORIGIN: ${{ inputs.cors_allowed_origin }}
         run: |
           set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --env preview \
+          npx --yes wrangler@${WRANGLER_VERSION} deploy \
+            --config cloudflare/api-gateway/wrangler.toml \
+            --env preview \
             --var "CORS_ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGIN}" \
             --var "GATEWAY_CLASS:lythaus_gateway" \
             --var "GATEWAY_POLICY:public" | tee wrangler-deploy.txt
-          rg -F "$WORKER_URL" wrangler-deploy.txt
+          grep -F "$WORKER_URL" wrangler-deploy.txt
           deployment_id="$(grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' wrangler-deploy.txt | tail -n 1)"
           test -n "$deployment_id"
           printf '%s' "$deployment_id" > worker-deployment-id.txt
@@ -117,8 +124,8 @@ jobs:
             --output gateway-proof/health-body.json \
             --write-out '%{http_code}' "$WORKER_URL/api/health")"
           test "$health_status" = 200
-          rg -i '^cache-control: private, no-store' gateway-proof/health-headers.txt
-          if rg -i '(azurewebsites\.net|x-ms-request-id|x-azure-ref|asora-function-dev)' gateway-proof; then
+          grep -E -i '^cache-control: private, no-store' gateway-proof/health-headers.txt
+          if grep -E -R -i '(azurewebsites\.net|x-ms-request-id|x-azure-ref|asora-function-dev)' gateway-proof; then
             exit 1
           fi
 
@@ -130,8 +137,8 @@ jobs:
             --output /dev/null \
             --write-out '%{http_code}' "$WORKER_URL/api/auth/token")"
           test "$preflight_status" = 204
-          rg -F -i "access-control-allow-origin: ${CORS_ALLOWED_ORIGIN}" gateway-proof/preflight-headers.txt
-          rg -i '^vary:.*origin' gateway-proof/preflight-headers.txt
+          grep -F -i "access-control-allow-origin: ${CORS_ALLOWED_ORIGIN}" gateway-proof/preflight-headers.txt
+          grep -E -i '^vary:.*origin' gateway-proof/preflight-headers.txt
 
           denied_status="$(curl --silent --show-error --max-time 30 \
             --header 'Origin: https://denied.invalid' \
@@ -145,7 +152,7 @@ jobs:
             --output gateway-proof/spoof-body.json \
             --write-out '%{http_code}' "$WORKER_URL/api/health")"
           test "$spoof_status" = 200
-          if rg -i '(client-spoof|x-lythaus-origin-token|azurewebsites\.net|asora-function-dev)' gateway-proof; then
+          if grep -E -R -i '(client-spoof|x-lythaus-origin-token|azurewebsites\.net|asora-function-dev)' gateway-proof; then
             exit 1
           fi
 
