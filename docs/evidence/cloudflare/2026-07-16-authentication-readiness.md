@@ -1,161 +1,191 @@
-# Lythaus authentication readiness audit — 2026-07-16
+# Lythaus authentication readiness evidence — 2026-07-16
 
 ## Executive result
 
-**NO-GO.** Email/password implementation and its Azure provider foundation are
-now prepared, but Google and email authentication still require immutable-preview
-and gateway proof. No public Lythaus DNS/custom-domain cutover was performed.
+**NO-GO.** Repository-controlled authentication hardening, immutable Flutter and
+gateway previews, exact preview CORS/callback configuration, email provider
+foundation, and an exact backend deployment are complete. Live Google login,
+live email account lifecycle, authenticated contract acceptance, admin/legacy
+token-injecting gateways, and enforcement rollback remain unproven. No public
+Lythaus DNS or custom-domain cutover was performed.
 
-## Scope and evidence method
+## Release identity
 
-- Branch: `codex/lythaus-domain-migration` (stacked draft PR #453).
-- PR #452 is merged. The migration branch was fast-forwarded to the merged main
-  head once; PR #453 remains draft pending this new commit and exact-head CI.
-- GitHub secrets and variables were listed by **name only**. No value was
-  read, printed, or included here.
-- Azure app settings were classified by name and value state only
-  (`empty`, `set-redacted`, or `key-vault-reference`).
-- Public Lythaus host checks used unauthenticated `HEAD` requests only.
+| Item | Value |
+| --- | --- |
+| Branch | `codex/lythaus-domain-migration` |
+| Draft PR | `#453` targeting `main` |
+| Evidence head before this update | `141c6f2deb0ad5c360f1a8b6b0794d02537c8ab0` |
+| Deployed backend artifact SHA | `0c4e3367466eab45b437832a7bc6806e1bd7527b` |
+| Exact artifact CI | GitHub Actions run `29534973990` — passed |
+| Latest exact-head CI | GitHub Actions run `29536159758` — running when captured; no failed job observed |
 
-## Canonical contract
+## Canonical authentication contract
 
-| Item | Required value | State |
+| Item | Required value | Current state |
 | --- | --- | --- |
-| Application origin | `https://app.lythaus.co` | Target only; DNS not published |
-| API base | `https://api.lythaus.co/api` | Target only; DNS not published |
-| Authorization endpoint | `https://api.lythaus.co/api/auth/authorize` | Target only; DNS not published |
-| Token endpoint | `https://api.lythaus.co/api/auth/token` | Target only; DNS not published |
-| UserInfo endpoint | `https://api.lythaus.co/api/auth/userinfo` | Target only; DNS not published |
-| Web callback | `https://app.lythaus.co/auth/callback` | Enforced in source |
-| Logout return | `https://app.lythaus.co/` | Not live-proven |
+| Application origin | `https://app.lythaus.co` | Canonical configuration; public hostname not bound |
+| API base | `https://api.lythaus.co/api` | Canonical production configuration; public hostname not bound |
+| Authorization | `https://api.lythaus.co/api/auth/authorize` | Implemented behind preview gateway |
+| Token | `https://api.lythaus.co/api/auth/token` | Implemented behind preview gateway |
+| UserInfo | `https://api.lythaus.co/api/auth/userinfo` | Implemented behind preview gateway |
+| Web callback | `https://app.lythaus.co/auth/callback` | Canonical production callback configured |
+| Logout return | `https://app.lythaus.co/` | Canonical configuration; live lifecycle not proven |
 
-## Credential-rotation verification
+## Credential storage and rotation verification
 
-| Item | Evidence | Result |
+- The former credential-bearing repository variable `CF_ACCESS_CLIENT_SECRET`
+  is absent. Its replacement exists as a GitHub secret; no value was read.
+- No workflow references a credential-like `vars.*` name.
+- Cloudflare credentials are GitHub secrets, not repository variables.
+- Origin current, next, and operational credentials exist only as protected
+  `dev` environment secrets and Azure Key Vault references.
+- `JWT_SECRET` and `EMAIL_TOKEN_HMAC_SECRET` are Azure Key Vault references.
+- The retired credential was not searched for, reconstructed, printed, or
+  restored.
+- Exact-head Gitleaks passed in run `29536159758` before the long-running build
+  jobs completed; prior full exact-head run `29534973990` passed all scans.
+
+## Provider state
+
+| Provider | State | Evidence |
 | --- | --- | --- |
-| Former credential storage class | Repository variable named `CF_ACCESS_CLIENT_SECRET` | Variable absent |
-| Approved replacement storage | Approved GitHub/Key Vault secret stores | Name-only presence confirmed |
-| Workflow variable use | No `vars.CF_ACCESS_CLIENT_SECRET` reference found | Pass |
-| Retired value | Not searched, printed, or reconstructed | Preserved safety boundary |
-| Cloudflare audit token | Protected GitHub secret | Duplicate credential-like repository variable removed |
+| Google | **Blocked** | No Google client/provider setting or Azure EasyAuth provider is configured; no live issuer, audience, signature, nonce, callback, refresh, or logout proof exists |
+| Email/password | **Prepared, not live-proven** | Six routes deployed; Azure Communication Services endpoint/sender are configured; email-token and JWT secrets use Key Vault references; empty-input routes fail safely through the gateway |
+| Apple | **Disabled for MVP** | Hidden in Flutter; backend returns controlled unavailable result; unit/contract policy tests pass |
+| World ID | **Disabled for MVP** | Hidden in Flutter; backend returns controlled unavailable result; unit/contract policy tests pass |
 
-Credential-rotation storage verification now passes. No retired value was read.
+The dedicated test mailbox was not automated because its password may only be
+entered interactively. No mailbox credential appears in repository files,
+commands, logs, screenshots, artifacts, GitHub variables, or evidence.
 
-## Live Azure MVP configuration inventory
+## Immutable preview evidence
 
-The authorised MVP Function App is running with HTTPS-only transport. Relevant
-setting names and states:
+### API gateway
 
-| Setting | State | Assessment |
-| --- | --- | --- |
-| `JWT_SECRET` | Key Vault reference | Approved storage class |
-| `JWT_AUDIENCE` | Absent | Blocks a production deployment after this pass; source now fails closed |
-| `EMAIL_HASH_SALT` | Key Vault reference | Approved storage class |
-| `OAUTH_REDIRECT_URIS` | Set, redacted | Requires exact-value review before preview registration |
-| `CORS_ALLOWED_ORIGINS` | Set, redacted | Requires exact-value review before preview registration |
-| `ORIGIN_GATEWAY_TOKEN` | Set, redacted | Current token material is present |
-| `ORIGIN_GATEWAY_AUTH_MODE` | Absent | Blocks observe/dual/enforce rehearsal |
-| `ORIGIN_GATEWAY_TOKEN_NEXT` | Absent | Blocks token-rotation rehearsal |
-| `ORIGIN_OPERATIONAL_TOKEN` | Absent | Blocks controlled direct-health proof |
-| `ORIGIN_GATEWAY_DUAL_UNTIL` | Absent | Blocks bounded-dual rehearsal |
-| `ORIGIN_GATEWAY_LEGACY_ALLOWLIST` | Absent | Blocks safe legacy exception review |
-| Google provider configuration | No relevant setting name found | Google live proof blocked |
-| `APP_ORIGIN` | Set public configuration | Canonical `https://app.lythaus.co` |
-| `ACS_EMAIL_ENDPOINT` | Set public configuration | Europe Communication resource endpoint |
-| `AUTH_EMAIL_FROM_ADDRESS` | Set public configuration | `no-reply@mail.lythaus.co` |
-| `AUTH_EMAIL_FROM_NAME` | Set public configuration | `Lythaus` |
-| `EMAIL_TOKEN_HMAC_SECRET` | Key Vault reference | Approved storage class |
-| Email provider resources | Provisioned | Europe Email service, custom domain, and unlinked Communication service |
+- URL: `https://lythaus-api-gateway-preview.asora.workers.dev`
+- Initial deployment: `01310b83-8198-4b1c-8929-1892aa3f1243`
+- Exact-preview-CORS deployment: `48b59e27-29d7-4f1e-b02f-0c3d8894acd0`
+- Previous Worker version captured: `44ae3497-1bc4-4b06-8f09-d9cd265eccca`
+- Worker proof run: `29534553157`
+- Health returns HTTP 200 through Cloudflare.
+- Exact preview CORS and preflight pass; a denied origin is rejected.
+- Client-supplied internal origin headers are replaced by the Worker-held
+  credential.
+- Responses are `private, no-store`; no Azure hostname or Azure response header
+  was observed.
+- No production route, custom domain, or DNS record was changed.
 
-## Implementation inventory
+### Flutter web
 
-| Surface | Observed implementation | Result |
-| --- | --- | --- |
-| `/api/auth/authorize` | OAuth code + S256 PKCE validation; currently resolves an existing upstream EasyAuth principal | Does not initiate or validate a Google OAuth exchange |
-| `/api/auth/token` | Authorization-code and refresh grants; refresh rotation is implemented | Source-only evidence |
-| `/api/auth/userinfo` | Protected endpoint | Source-only evidence |
-| Google | Client sends a Google IdP hint | No configured Google handoff, issuer/JWKS/audience/nonce live proof |
-| Email | Email/password registration, verification/resend, login, forgot/reset, Argon2id, token hashing, throttling and session revocation implemented | Unit/integration proof complete; live delivery pending DNS verification and deployment |
-| Apple / World ID | Hidden in the MVP selector; client and backend reject them as unavailable | Unit-tested source hardening only |
-| Browser callback | State and S256 verifier are cleared; nonce is generated; callback query is removed from browser history; errors are neutral | Not live-proven |
-| Redirect policy | Canonical Lythaus callback accepted; obsolete Asora and Pages defaults removed; only exact configured non-production Pages callback allowed | Unit-tested |
-| Web session | Session storage is used for the current browser token model | Cookie-based session and live refresh/logout/revocation remain unproven |
-| Legacy browser auth service | The legacy B2C client remains reachable through the app service-provider graph | Must be retired or redirected through the approved gateway before gateway-only auth can be claimed |
+- Immutable URL: `https://396f64a3.lythaus-web.pages.dev`
+- Pages project: `lythaus-web`
+- Preview run: `29534316796`
+- Routes `/`, `/login`, `/auth/callback`, `/invite/test`, `/post/test`,
+  `/user/test`, `/privacy`, and `/terms` return HTTP 200 directly without hash
+  routing or redirect loops.
+- The release bundle contains no Azure hostname, obsolete Asora public API
+  hostname, Pages development hostname leak, or credential.
 
-## Repository changes in this pass
+### Exact temporary configuration
 
-- Removed Apple and World ID from the MVP login selector.
-- Added client and server provider gates returning a controlled unavailable
-  result for Apple, World ID, and unknown provider hints.
-- Added browser nonce generation and no-query callback history replacement.
-- Made callback errors neutral; raw provider and HTTP failure text is no longer
-  rendered by the callback screen.
-- Removed obsolete public callback defaults and limited preview callbacks to
-  one exact configured Pages URL outside production.
-- Narrowed deployment CORS validation to fixed Lythaus origins plus one exact
-  `MVP_PREVIEW_APP_ORIGIN` configuration value.
-- Made `JWT_AUDIENCE` mandatory when the Functions process is production-like;
-  missing audience validation can no longer silently deploy.
-- Updated active documents that named Azure, obsolete Asora endpoints, or a
-  Pages development hostname as canonical public endpoints.
-- Added the six email/password API routes, database schema, official generated
-  client, Azure Communication Services sender, and exact provider startup checks.
-- Provisioned the approved Europe Email/Communication resources, disabled local
-  ACS key authentication, stored the email-token HMAC key in Key Vault, and
-  applied the additive empty email-auth database schema.
+- Preview CORS origin: `https://396f64a3.lythaus-web.pages.dev`
+- Preview callback: `https://396f64a3.lythaus-web.pages.dev/auth/callback`
+- No wildcard Pages origin or callback was configured.
+- The backend redirect policy permits only the exact configured Lythaus Pages
+  project callback and rejects aliases, unrelated Pages projects, fragments,
+  credentials, and obsolete public callbacks.
 
-## Validation completed
+## Azure MVP origin state
+
+| Setting | Sanitized state |
+| --- | --- |
+| `ORIGIN_GATEWAY_AUTH_MODE` | Set to observe during this evidence pass |
+| `ORIGIN_GATEWAY_TOKEN` | Key Vault reference |
+| `ORIGIN_GATEWAY_TOKEN_NEXT` | Key Vault reference |
+| `ORIGIN_OPERATIONAL_TOKEN` | Key Vault reference |
+| `ORIGIN_GATEWAY_LEGACY_ALLOWLIST` | Set; value not recorded |
+| `ORIGIN_GATEWAY_DUAL_UNTIL` | Absent because dual mode was not entered |
+| `APP_ORIGIN` | Set public configuration |
+| `ACS_EMAIL_ENDPOINT` | Set public configuration |
+| `AUTH_EMAIL_FROM_ADDRESS` | Set public configuration |
+| `AUTH_EMAIL_FROM_NAME` | Set public configuration |
+| `AUTH_EMAIL_CLIENT_ID` | Set public configuration |
+| `EMAIL_TOKEN_HMAC_SECRET` | Key Vault reference |
+| `JWT_SECRET` | Key Vault reference |
+| Google provider/client settings | Missing |
+| Unsafe test-user override | Missing |
+
+Direct Azure health remains available in observe mode. Enforce mode was not
+entered because public authenticated traffic, the admin gateway, legacy
+compatibility gateways, and rollback restoration have not all passed.
+
+## Deployment and live acceptance
+
+Backend workflow `29536173007` deployed the exact immutable artifact and passed:
+
+- exact-SHA/CI provenance;
+- Azure OIDC login;
+- exact application and platform CORS configuration;
+- immutable Flex package publication;
+- Key Vault reference validation;
+- app-setting validation;
+- direct-origin health diagnostic;
+- public gateway health and 404 checks;
+- unauthenticated protected-route rejection;
+- Function host-admin registration through the Azure platform endpoint.
+
+The subsequent live OpenAPI step passed 31 of 37 tests and failed six
+authenticated cases. The protected fallback smoke credential received HTTP 401
+from the MVP boundary; later repeated traffic also reached rate limiting. No
+auth bypass was added. This proves the gateway and auth rejection path, but not
+an authenticated session.
+
+Safe live email probes confirmed that register and login routes exist and return
+controlled HTTP 400 for empty input with exact CORS and `private, no-store`.
+Repeated invalid verification/reset requests returned HTTP 429. No account was
+created and no password or token was submitted.
+
+## Repository validation
 
 | Check | Result |
 | --- | --- |
-| Functions TypeScript typecheck | Pass |
-| Full Functions test suite | Pass (206 suites; 2,275 passed; 18 skipped) |
-| Production-missing JWT audience regression test | Pass (fails closed) |
-| Redirect/provider policy tests | Pass (12 tests) |
-| Focused Flutter auth selector, callback, web PKCE tests | Pass (56 tests) |
-| Full Flutter test suite | Pass |
-| Flutter analysis | Pass |
-| Flutter web release build with canonical Lythaus values | Pass |
-| Marketing build | Pass (10 generated routes) |
-| OpenAPI lint | Pass |
-| Android signed release candidate | Blocked: approved local release-signing material is unavailable; no artifact was produced |
-| CORS exact-origin validator smoke cases | Pass |
-| Domain contract against fresh Flutter and marketing artifacts | Pass |
-| Repository Git history secret scan | Pass (redacted scan; no leaks) |
-| Fresh Flutter and marketing artifact secret scans | Pass (redacted scan; no leaks) |
-| Public Lythaus host lookup | No DNS records found for application, API, or marketing host |
-| Live Google browser flow | Not run: no immutable preview or provider handoff |
-| Live email registration/delivery | Not run: no email backend/provider configuration |
-| Origin observe/dual/enforce rehearsal | Not run: required Azure setting names absent |
-| Access/admin proof | Not run: target Access applications and domains are not live |
-| Rollback rehearsal | Not run: no reversible preview deployment exists |
+| Functions typecheck/tests | Passed on immutable artifact CI `29534973990` |
+| Flutter full tests and coverage | Passed; 3,644 tests, 5 skipped, 90.04% line coverage |
+| Focused auth tests | Passed; 61 tests |
+| OpenAPI lint/generation/drift | Passed on exact-head workflows |
+| Flutter web artifact scan | Passed |
+| Android/iOS artifact guards | Passed on prior exact-head CI; current exact-head jobs pending when captured |
+| Workflow lint | Passed on exact-head run `29536159758` |
+| Gitleaks | Passed on exact-head run `29536159758` |
+| Immutable route refresh | Passed for eight routes |
+| Live unauthenticated gateway contracts | Passed |
+| Live authenticated contracts | Failed: protected smoke credential rejected |
+| Live Google browser lifecycle | Not run: provider configuration absent |
+| Live email lifecycle | Not run: interactive credential entry required |
+| Access + backend-role proof | Not complete |
+| Observe/dual/enforce/rollback | Observe only; dual/enforce/rollback withheld |
 
-## Required owner/provider actions
+## Mandatory blockers
 
-1. Run the protected ACS DNS workflow and wait for Domain/SPF/DKIM/DKIM2 verification;
-   then link the verified domain and create the `no-reply` sender identity.
-2. Select and configure the actual Google authentication control plane. The
-   current Functions authorisation route expects an upstream principal, but no
-   Google redirect/issuer/JWKS validation path is configured or proven.
-3. Deploy the implemented email lifecycle and prove live delivery, verification,
-   login, reset, refresh, logout, replay resistance, and rate limiting.
-4. Create immutable Pages and Worker previews, register exactly one temporary
-   callback and CORS origin, and perform supervised interactive login.
-5. Populate the origin-auth mode, next-token, operational-token, dual-expiry,
-   and reviewed legacy-allowlist settings from approved secret stores before
-   rehearsing observe, dual, enforce, and rollback.
-6. Configure the approved public JWT audience before deploying this source;
-   the Function now intentionally rejects production startup without it.
-7. Retire or redirect the reachable legacy B2C browser service through the
-   approved gateway before asserting that public authentication has no direct
-   legacy-origin dependency.
-8. Run the canonical-domain Android release build in the approved signing
-   environment, then scan the signed artifact. No local signing file was read
-   or created during this audit.
+1. An administrator must configure an approved Google OAuth client/provider for
+   the exact Lythaus production and immutable preview callbacks, storing any
+   secret in an approved provider/Azure secret store.
+2. A supervised interactive browser session must complete Google and email
+   registration, verification, login, UserInfo, refresh, logout, revocation,
+   reset, replay, state, nonce, and PKCE acceptance using the dedicated mailbox.
+3. Create an MVP-valid protected smoke session/identity; the existing fallback
+   staging credential is correctly rejected by the deployed MVP boundary.
+4. Prove token injection and Access/backend-role isolation for the admin gateway
+   and token injection for every legacy API compatibility gateway.
+5. Rehearse observe, bounded dual, enforce, rollback-first relaxation, Worker and
+   Pages restoration, candidate restoration, and post-restore authentication.
+6. Finish exact-head CI after this evidence commit and require every check to
+   pass.
 
-## Conclusion
+## Decision
 
-Repository safeguards may be committed to draft PR #453, but the MVP domain
-cutover, origin enforcement, and authentication release remain **NO-GO** until
-the provider, preview, live authentication, and rollback gates above are
-evidenced.
+The repository and immutable previews are materially closer to cutover, but the
+mandatory live authentication and safe enforcement gates are not satisfied.
+Keep PR #453 draft. Do not bind production Lythaus domains, enable Azure enforce
+mode, retire Asora routes, or claim the domain migration is complete.
