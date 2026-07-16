@@ -1,11 +1,15 @@
 const BUILT_IN_REDIRECT_URIS = [
   'com.asora.app://oauth/callback',
   'asora://oauth/callback',
-  'http://localhost:8080/oauth/callback',
-  'https://lythaus-web.pages.dev/auth/callback',
-  'https://app.lythaus.asora.co.za/auth/callback',
   'https://app.lythaus.co/auth/callback',
 ];
+
+const CANONICAL_WEB_CALLBACK = 'https://app.lythaus.co/auth/callback';
+
+function isProductionEnvironment(): boolean {
+  const environment = (process.env.NODE_ENV ?? 'production').toLowerCase();
+  return environment === 'production' || environment === 'staging';
+}
 
 function normalizeRedirectUri(value: string): string | undefined {
   try {
@@ -35,14 +39,50 @@ function configuredRedirectUris(): string[] {
   return raw.split(',').map((value) => value.trim()).filter(Boolean);
 }
 
+function isApprovedConfiguredCallback(value: string): boolean {
+  const uri = new URL(value);
+  if (
+    uri.protocol !== 'https:' ||
+    uri.username ||
+    uri.password ||
+    uri.hash ||
+    uri.pathname !== '/auth/callback'
+  ) {
+    return false;
+  }
+
+  if (uri.hostname === 'app.lythaus.co') {
+    return uri.toString() === CANONICAL_WEB_CALLBACK;
+  }
+
+  // Exact immutable Pages previews are temporary and may never be enabled in
+  // the production environment. Wildcards are rejected by URL parsing and
+  // exact-set membership below.
+  return !isProductionEnvironment() && uri.hostname.endsWith('.pages.dev');
+}
+
 export function isRegisteredRedirectUri(value: string): boolean {
   const normalized = normalizeRedirectUri(value);
   if (!normalized) return false;
 
+  if (normalized === CANONICAL_WEB_CALLBACK || BUILT_IN_REDIRECT_URIS.includes(normalized)) {
+    return true;
+  }
+
+  if (!isProductionEnvironment()) {
+    const uri = new URL(normalized);
+    if (uri.protocol === 'http:' && uri.hostname === 'localhost' && uri.pathname === '/oauth/callback') {
+      return true;
+    }
+  }
+
   const allowed = new Set(
-    [...BUILT_IN_REDIRECT_URIS, ...configuredRedirectUris()]
+    configuredRedirectUris()
       .map(normalizeRedirectUri)
-      .filter((uri): uri is string => Boolean(uri))
+      .filter(
+        (uri): uri is string =>
+          typeof uri === 'string' && isApprovedConfiguredCallback(uri)
+      )
   );
   return allowed.has(normalized);
 }

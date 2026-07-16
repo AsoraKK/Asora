@@ -33,6 +33,7 @@ class WebAuthService {
 
   static const _codeVerifierKey = 'pkce_code_verifier';
   static const _stateKey = 'pkce_state';
+  static const _nonceKey = 'oidc_nonce';
   static const _providerKey = 'auth_provider';
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
@@ -45,14 +46,17 @@ class WebAuthService {
   void startSignIn({OAuth2Provider provider = OAuth2Provider.google}) {
     assert(kIsWeb, 'WebAuthService.startSignIn must only be called on web');
     _validateReleaseWebEndpoints();
+    requireMvpAuthProvider(provider);
 
     final codeVerifier = _generateCodeVerifier();
     final codeChallenge = _generateCodeChallenge(codeVerifier);
     final state = _generateState();
+    final nonce = _generateNonce();
 
     // Persist PKCE values in sessionStorage so they survive the redirect.
     _storage.write(_codeVerifierKey, codeVerifier);
     _storage.write(_stateKey, state);
+    _storage.write(_nonceKey, nonce);
     _storage.write(_providerKey, provider.name);
 
     final additionalParams = <String, String>{};
@@ -69,6 +73,7 @@ class WebAuthService {
       'code_challenge': codeChallenge,
       'code_challenge_method': 'S256',
       'state': state,
+      'nonce': nonce,
       ...additionalParams,
     };
 
@@ -84,19 +89,18 @@ class WebAuthService {
   Future<User> handleCallback(Uri callbackUri) async {
     _validateReleaseWebEndpoints();
     final queryParams = callbackUri.queryParameters;
+    clearWebCallbackQuery();
 
     // Check for error response from IdP.
     if (queryParams.containsKey('error')) {
-      final errorDesc =
-          queryParams['error_description'] ?? queryParams['error'] ?? '';
       _clearPkceState();
-      throw AuthFailure.serverError('OAuth2 error: $errorDesc');
+      throw AuthFailure.callbackInvalid();
     }
 
     final code = queryParams['code'];
     if (code == null || code.isEmpty) {
       _clearPkceState();
-      throw AuthFailure.serverError('Missing authorization code');
+      throw AuthFailure.callbackInvalid();
     }
 
     // Validate state to prevent CSRF.
@@ -104,15 +108,13 @@ class WebAuthService {
     final expectedState = _storage.read(_stateKey);
     if (returnedState == null || returnedState != expectedState) {
       _clearPkceState();
-      throw AuthFailure.serverError('OAuth2 state mismatch — possible CSRF');
+      throw AuthFailure.callbackInvalid();
     }
 
     final codeVerifier = _storage.read(_codeVerifierKey);
     if (codeVerifier == null || codeVerifier.isEmpty) {
       _clearPkceState();
-      throw AuthFailure.serverError(
-        'Missing PKCE code_verifier — session may have expired',
-      );
+      throw AuthFailure.callbackInvalid();
     }
 
     // Exchange code for tokens.
@@ -121,7 +123,7 @@ class WebAuthService {
 
     final accessToken = tokenResponse['access_token'] as String?;
     if (accessToken == null || accessToken.isEmpty) {
-      throw AuthFailure.serverError('Token exchange returned no access token');
+      throw AuthFailure.callbackInvalid();
     }
 
     // Persist tokens in sessionStorage.
@@ -215,9 +217,7 @@ class WebAuthService {
     );
 
     if (response.statusCode != 200) {
-      throw AuthFailure.serverError(
-        'Token exchange failed (${response.statusCode}): ${response.body}',
-      );
+      throw AuthFailure.callbackInvalid();
     }
 
     return jsonDecode(response.body) as Map<String, dynamic>;
@@ -252,6 +252,7 @@ class WebAuthService {
   void _clearPkceState() {
     _storage.delete(_codeVerifierKey);
     _storage.delete(_stateKey);
+    _storage.delete(_nonceKey);
     _storage.delete(_providerKey);
   }
 
@@ -276,9 +277,9 @@ class WebAuthService {
       case OAuth2Provider.google:
         return OAuth2Config.googleIdpHint;
       case OAuth2Provider.apple:
-        return OAuth2Config.appleIdpHint;
+        throw AuthFailure.providerUnavailable();
       case OAuth2Provider.world:
-        return OAuth2Config.worldIdpHint;
+        throw AuthFailure.providerUnavailable();
       case OAuth2Provider.email:
         return '';
     }
@@ -299,6 +300,12 @@ class WebAuthService {
   static String _generateState() {
     final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return base64UrlEncode(bytes).replaceAll('=', '');
+  }
+
+  static String _generateNonce() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
     return base64UrlEncode(bytes).replaceAll('=', '');
   }
 }

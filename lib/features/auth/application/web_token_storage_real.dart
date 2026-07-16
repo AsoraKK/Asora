@@ -47,3 +47,14 @@ String getWebLocationHref() {
 String getWebOrigin() {
   return web.window.location.origin;
 }
+
+/// Remove OAuth response parameters from browser history after parsing them.
+/// Authorization codes and state must not remain in a reloadable URL.
+void clearWebCallbackQuery() {
+  final location = web.window.location;
+  web.window.history.replaceState(
+    null,
+    '',
+    '${location.pathname}${location.hash}',
+  );
+}

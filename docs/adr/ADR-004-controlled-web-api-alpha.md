@@ -58,7 +58,7 @@ This amends the earlier manifesto/policy interpretation that all AI-generated co
 
 - To avoid new infrastructure cost before revenue, the protected Alpha staging workflow reuses the existing `asora-psql-flex` resource group, `asora-function-dev` Function App, and `kv-asora-flex-dev` Key Vault.
 - `staging` remains the GitHub protected environment and release-evidence label even though Azure resources retain their existing internal `dev` names.
-- The canonical Alpha API URL is `https://asora-function-dev.azurewebsites.net/api`.
+- Historical note: the Alpha API previously used the Azure default hostname directly. ADR-005 supersedes that public-domain decision; Azure remains an internal origin only.
 - Alpha registrations remain disabled until provider rotations, live contracts, DSR, browser smoke, feed performance, and rollback gates pass.
 - Shared infrastructure increases blast radius. Mitigations are the Technical Alpha cap, explicit stage controls, test-data isolation, audited kill switches, read-only mode, immutable deployment metadata, and short review periods.
 - No workflow may silently select the first Key Vault in a multi-vault resource group. Staging explicitly selects `kv-asora-flex-dev`.

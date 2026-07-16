@@ -47,7 +47,7 @@
 
 | Item | Value | Notes |
 |------|-------|-------|
-| API base URL | `https://api.asora.co.za/v1/` | Not changing for beta |
+| API base URL | `https://api.lythaus.co/api` | Canonical public API; legacy Asora API hosts are compatibility-only |
 | Functions host | `asora-function-{env}.azurewebsites.net` | Internal |
 | JWT issuer | Internal issuer (`asora-auth`) | Unchanged |
 | OAuth redirect URIs | `com.asora.app://...` | Matches package ID |

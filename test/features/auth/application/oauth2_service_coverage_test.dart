@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart' as http_testing;
 
 import 'package:asora/features/auth/application/oauth2_service.dart';
+import 'package:asora/features/auth/domain/auth_failure.dart';
 
 /// In-memory secure storage for testing.
 class _MemoryStorage implements FlutterSecureStorage {
@@ -112,6 +113,21 @@ void main() {
       expect(OAuth2Provider.values, contains(OAuth2Provider.apple));
       expect(OAuth2Provider.values, contains(OAuth2Provider.world));
       expect(OAuth2Provider.values, contains(OAuth2Provider.email));
+    });
+
+    test('enables only Google and email for MVP', () {
+      expect(isMvpAuthProviderEnabled(OAuth2Provider.google), isTrue);
+      expect(isMvpAuthProviderEnabled(OAuth2Provider.email), isTrue);
+      expect(isMvpAuthProviderEnabled(OAuth2Provider.apple), isFalse);
+      expect(isMvpAuthProviderEnabled(OAuth2Provider.world), isFalse);
+      expect(
+        () => requireMvpAuthProvider(OAuth2Provider.apple),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(
+        () => requireMvpAuthProvider(OAuth2Provider.world),
+        throwsA(isA<AuthFailure>()),
+      );
     });
   });
 

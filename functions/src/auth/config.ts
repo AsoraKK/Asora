@@ -4,7 +4,8 @@
 /// (tokenService.ts issues HS256 tokens with JWT_SECRET).
 ///
 /// Required env vars: JWT_SECRET
-/// Optional env vars: JWT_ISSUER, JWT_AUDIENCE, AUTH_MAX_SKEW_SECONDS
+/// Required in production: JWT_ISSUER, JWT_AUDIENCE
+/// Optional: AUTH_MAX_SKEW_SECONDS
 
 import assert from 'node:assert';
 
@@ -37,6 +38,19 @@ function parsePositiveInteger(value: string | undefined, fallback: number): numb
 /** Minimum byte length for JWT_SECRET to ensure sufficient entropy (256-bit key) */
 const MIN_JWT_SECRET_BYTES = 32;
 
+function isProductionEnvironment(): boolean {
+  const nodeEnv = (process.env.NODE_ENV ?? 'production').trim().toLowerCase();
+  const appEnv = (process.env.APP_ENV ?? '').trim().toLowerCase();
+  return (
+    nodeEnv === 'production' ||
+    nodeEnv === 'staging' ||
+    appEnv === 'production' ||
+    appEnv === 'prod' ||
+    appEnv === 'staging' ||
+    appEnv === 'mvp'
+  );
+}
+
 function initialiseConfig(): AuthConfig {
   const secret = process.env.JWT_SECRET?.trim();
   assert(secret, 'Missing required environment variable JWT_SECRET. Configure via Azure Key Vault reference in app settings.');
@@ -55,8 +69,11 @@ function initialiseConfig(): AuthConfig {
     : [];
 
   if (expectedAudiences.length === 0) {
-    // Warn but do not block startup — callers must enforce audience for sensitive endpoints
-    console.warn('[auth/config] JWT_AUDIENCE is not set: audience claim will NOT be validated. Set JWT_AUDIENCE for production deployments.');
+    assert(
+      !isProductionEnvironment(),
+      'Missing required environment variable JWT_AUDIENCE in production. Configure an approved public client audience.'
+    );
+    console.warn('[auth/config] JWT_AUDIENCE is not set: audience claim will NOT be validated outside production.');
   }
 
   const maxClockSkewSeconds = parsePositiveInteger(process.env.AUTH_MAX_SKEW_SECONDS, 60);

@@ -235,18 +235,18 @@ npm test -- --testPathPattern=accessAuth.crypto
 ## Smoke Test Commands
 
 ```bash
-# Test 1: No header -> 401
-curl -s https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+# Test 1: No Access header -> 401 through the reviewed admin gateway
+curl -s https://admin-api.lythaus.co/api/_admin/config | jq .
 # Expected: {"error":{"code":"UNAUTHORIZED","message":"Missing Cf-Access-Jwt-Assertion header",...}}
 
 # Test 2: Bogus token -> 401 (proves signature verification)
 curl -s -H "Cf-Access-Jwt-Assertion: eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJmYWtlIn0.invalid" \
-  https://asora-function-dev.azurewebsites.net/api/_admin/config | jq .
+  https://admin-api.lythaus.co/api/_admin/config | jq .
 # Expected: {"error":{"code":"INVALID_TOKEN",...}}
 
-# Test 3: Firebase auth endpoint still works (invites)
-curl -s -X POST https://asora-function-dev.azurewebsites.net/admin/invites | jq .
-# Expected: {"error":"Authorization header missing"}
+# Test 3: Admin routes require both Access and application authorization.
+curl -s -X POST https://admin-api.lythaus.co/api/admin/invites | jq .
+# Expected: controlled authorization error
 ```
 
 ## Curl Examples (with Access Session)
@@ -305,12 +305,12 @@ az rest --method get \
 curl -sI -X OPTIONS \
   -H "Origin: https://admin.lythaus.co" \
   -H "Access-Control-Request-Method: GET" \
-  "https://asora-function-dev.azurewebsites.net/api/_admin/config"
+  "https://admin-api.lythaus.co/api/_admin/config"
 # Expected: 204 with Access-Control-Allow-Origin header
 
 # Test 2: GET without tokens (should return 401 with CORS headers)
 curl -si -H "Origin: https://admin.lythaus.co" \
-  "https://asora-function-dev.azurewebsites.net/api/_admin/config" | head -10
+  "https://admin-api.lythaus.co/api/_admin/config" | head -10
 # Expected: 401 with Access-Control-Allow-Origin: https://admin.lythaus.co
 
 # Test 3: GET via Cloudflare (302 redirect with CORS)

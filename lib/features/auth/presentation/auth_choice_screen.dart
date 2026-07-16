@@ -29,8 +29,6 @@ class _AuthProviderOption {
   final String label;
   final IconData icon;
   final bool enabled;
-
-  String get displayLabel => enabled ? label : '$label (beta)';
 }
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
@@ -207,17 +205,11 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
           children: [
             Text(title, style: Theme.of(sheetContext).textTheme.titleMedium),
             const SizedBox(height: 12),
-            for (final option in options)
+            for (final option in options.where((option) => option.enabled))
               ListTile(
-                enabled: option.enabled,
                 leading: Icon(option.icon),
-                title: Text(option.displayLabel),
-                subtitle: option.enabled
-                    ? null
-                    : const Text('Available after alpha validation'),
-                onTap: option.enabled
-                    ? () => Navigator.of(sheetContext).pop(option.provider)
-                    : null,
+                title: Text(option.label),
+                onTap: () => Navigator.of(sheetContext).pop(option.provider),
               ),
           ],
         ),

@@ -10,7 +10,10 @@ compatibility_date = "2026-07-01"
 ENVIRONMENT = "mvp"
 EXPECTED_HOSTNAMES = "asora.co.za,www.asora.co.za,dev.asora.co.za"
 ORIGIN_BASE = "https://asora-function-dev.azurewebsites.net"
-CORS_ALLOWED_ORIGINS = "https://lythaus-web.pages.dev,https://app.lythaus.asora.co.za"
+# Legacy API traffic remains method-preserving, but obsolete browser origins
+# are unsupported. A temporary immutable preview, if needed, is supplied only
+# through the deployment configuration after review.
+CORS_ALLOWED_ORIGINS = "https://app.lythaus.co"
 RATE_LIMIT_REQUIRED = "true"
 GATEWAY_CLASS = "legacy_custom"
 GATEWAY_POLICY = "public"

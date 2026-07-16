@@ -133,6 +133,21 @@ class OAuth2Config {
 
 enum OAuth2Provider { google, apple, world, email }
 
+/// MVP provider policy. Apple and World ID remain represented in the type
+/// system for a later rollout, but cannot initiate a client flow.
+bool isMvpAuthProviderEnabled(OAuth2Provider provider) {
+  return switch (provider) {
+    OAuth2Provider.google || OAuth2Provider.email => true,
+    OAuth2Provider.apple || OAuth2Provider.world => false,
+  };
+}
+
+void requireMvpAuthProvider(OAuth2Provider provider) {
+  if (!isMvpAuthProviderEnabled(provider)) {
+    throw AuthFailure.providerUnavailable();
+  }
+}
+
 /// OAuth2 service backed by flutter_appauth.
 typedef LauncherFn = Future<bool> Function(Uri uri, {LaunchMode mode});
 
@@ -179,6 +194,8 @@ class OAuth2Service {
   Future<User> signInWithOAuth2({
     OAuth2Provider provider = OAuth2Provider.google,
   }) async {
+    requireMvpAuthProvider(provider);
+
     if (kIsWeb || debugForceWeb) {
       // Web: redirect the browser to the authorization endpoint.
       // This method will not return — the page navigates away.
@@ -244,11 +261,9 @@ class OAuth2Service {
         if (OAuth2Config.googleIdpHint.isEmpty) return const {};
         return {'idp': OAuth2Config.googleIdpHint};
       case OAuth2Provider.apple:
-        if (OAuth2Config.appleIdpHint.isEmpty) return const {};
-        return {'idp': OAuth2Config.appleIdpHint};
+        throw AuthFailure.providerUnavailable();
       case OAuth2Provider.world:
-        if (OAuth2Config.worldIdpHint.isEmpty) return const {};
-        return {'idp': OAuth2Config.worldIdpHint};
+        throw AuthFailure.providerUnavailable();
       case OAuth2Provider.email:
         return const {};
     }

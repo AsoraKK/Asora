@@ -20,6 +20,7 @@ import * as crypto from 'crypto';
 import { v7 as uuidv7 } from 'uuid';
 import { getCosmosClient } from '@shared/clients/cosmos';
 import { isRegisteredRedirectUri } from './redirectUriPolicy';
+import { isMvpAuthProviderEnabled } from './mvpProviderPolicy';
 
 const logger = getAzureLogger('auth/authorize');
 
@@ -77,6 +78,15 @@ export async function authorizeHandler(
         authRequest.state,
         'invalid_request',
         validationError
+      );
+    }
+
+    if (!isMvpAuthProviderEnabled(authRequest.idp)) {
+      return createAuthError(
+        authRequest.redirect_uri,
+        authRequest.state,
+        'provider_unavailable',
+        'Requested sign-in method is not available'
       );
     }
 
@@ -206,6 +216,7 @@ function parseAuthorizeRequest(params: any): AuthorizeRequest {
     scope: params.scope,
     state: params.state || '',
     nonce: params.nonce,
+    idp: params.idp,
     code_challenge: params.code_challenge || '',
     code_challenge_method: params.code_challenge_method || '',
     user_id: params.user_id, // Test-only path, disabled in production by default
