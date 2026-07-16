@@ -105,7 +105,10 @@ void main() {
         matching: find.byType(Row),
       ),
     );
-    expect(row.children.first, isA<Text>());
+    expect(row.children.first, isA<Flexible>());
+    final label = (row.children.first as Flexible).child;
+    expect(label, isA<Text>());
+    expect((label! as Text).data, 'Next');
   });
 
   testWidgets('LythButton loading replaces label with spinner', (tester) async {
