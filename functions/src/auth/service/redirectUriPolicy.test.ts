@@ -30,11 +30,13 @@ describe('OAuth redirect URI policy', () => {
     expect(isRegisteredRedirectUri('https://app.lythaus.co/auth/callback#token')).toBe(false);
   });
 
-  it('rejects obsolete public callbacks and Pages callbacks in production', () => {
+  it('allows only the exact configured Flutter preview callback in production', () => {
     process.env.NODE_ENV = 'production';
     process.env.OAUTH_REDIRECT_URIS = 'https://preview-commit.lythaus-web.pages.dev/auth/callback';
     expect(isRegisteredRedirectUri('https://lythaus-web.pages.dev/auth/callback')).toBe(false);
     expect(isRegisteredRedirectUri('https://app.lythaus.asora.co.za/auth/callback')).toBe(false);
-    expect(isRegisteredRedirectUri('https://preview-commit.lythaus-web.pages.dev/auth/callback')).toBe(false);
+    expect(isRegisteredRedirectUri('https://other-preview.lythaus-web.pages.dev/auth/callback')).toBe(false);
+    expect(isRegisteredRedirectUri('https://preview-commit.other.pages.dev/auth/callback')).toBe(false);
+    expect(isRegisteredRedirectUri('https://preview-commit.lythaus-web.pages.dev/auth/callback')).toBe(true);
   });
 });
