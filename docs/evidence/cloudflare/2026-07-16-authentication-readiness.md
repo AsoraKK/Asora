@@ -111,6 +111,7 @@ setting names and states:
 | Flutter web release build with canonical Lythaus values | Pass |
 | Marketing build | Pass (10 generated routes) |
 | OpenAPI lint | Pass |
+| Android signed release candidate | Blocked: approved local release-signing material is unavailable; no artifact was produced |
 | CORS exact-origin validator smoke cases | Pass |
 | Domain contract against fresh Flutter and marketing artifacts | Pass |
 | Repository Git history secret scan | Pass (redacted scan; no leaks) |
@@ -141,6 +142,9 @@ setting names and states:
 7. Retire or redirect the reachable legacy B2C browser service through the
    approved gateway before asserting that public authentication has no direct
    legacy-origin dependency.
+8. Run the canonical-domain Android release build in the approved signing
+   environment, then scan the signed artifact. No local signing file was read
+   or created during this audit.
 
 ## Conclusion
 

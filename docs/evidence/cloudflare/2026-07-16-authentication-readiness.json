@@ -54,6 +54,7 @@
     "flutterWebReleaseBuild": "passed",
     "marketingBuild": "passed: 10 generated routes",
     "openapiLint": "passed",
+    "androidSignedRelease": "blocked: local release-signing material unavailable; no artifact produced",
     "corsValidator": "passed",
     "domainContract": "passed",
     "repositorySecretScan": "passed",
@@ -66,6 +67,7 @@
     "immutable_preview_not_deployed",
     "origin_guard_runtime_settings_incomplete",
     "legacy_b2c_browser_service_reachable",
+    "signed_mobile_artifact_not_built",
     "lythaus_target_dns_not_published",
     "access_and_rollback_not_proven"
   ]
