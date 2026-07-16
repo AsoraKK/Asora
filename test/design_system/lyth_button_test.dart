@@ -72,7 +72,7 @@ void main() {
     expect(row.children.first, isA<Flexible>());
     final label = (row.children.first as Flexible).child;
     expect(label, isA<Text>());
-    expect((label! as Text).data, 'Upload');
+    expect((label as Text).data, 'Upload');
     expect(row.children.last, isA<Icon>());
   });
 
