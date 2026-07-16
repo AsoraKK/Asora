@@ -1,7 +1,12 @@
 name: Configure ACS email domain
 
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      change_ticket:
+        description: 'Approved infrastructure change identifier'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,8 +26,18 @@ jobs:
       EMAIL_SERVICE_NAME: lythaus-mvp-email
       EMAIL_DOMAIN: mail.lythaus.co
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CHANGE_TICKET: ${{ inputs.change_ticket }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate approval metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CHANGE_TICKET" =~ ^[A-Za-z0-9._/-]{3,80}$ ]] || {
+            echo '::error::A valid approved infrastructure change identifier is required.'
+            exit 1
+          }
 
       - name: Sign in to Azure with OIDC
         uses: azure/login@v2
