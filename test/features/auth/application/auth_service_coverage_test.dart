@@ -89,7 +89,9 @@ void main() {
       final client = http_testing.MockClient((request) async {
         return http.Response(
           jsonEncode({
-            'token': 'jwt-token',
+            'access_token': 'jwt-token',
+            'refresh_token': 'refresh-token',
+            'expires_in': 900,
             'user': {
               'id': 'u1',
               'email': 'a@b.com',

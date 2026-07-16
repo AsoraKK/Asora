@@ -1,0 +1,156 @@
+name: Deploy Flutter authentication preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA validated by CI
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI workflow run ID for the exact SHA
+        required: true
+        type: string
+      api_preview_base_url:
+        description: Exact temporary Worker preview URL ending in /api
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: lythaus-flutter-auth-preview
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-validate:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 35
+    env:
+      PAGES_PROJECT: lythaus-web
+      PAGES_BRANCH: codex-lythaus-domain-migration
+      WRANGLER_VERSION: 4.110.0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify exact-SHA CI provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release_sha must be a full commit SHA"; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::ci_run_id must be numeric"; exit 1; }
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
+          test "$(jq -r '.name' <<<"$run_json")" = "CI"
+          test "$(jq -r '.conclusion' <<<"$run_json")" = "success"
+
+      - name: Validate exact Worker preview URL
+        env:
+          API_PREVIEW_BASE_URL: ${{ inputs.api_preview_base_url }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const value = process.env.API_PREVIEW_BASE_URL || "";
+            const url = new URL(value);
+            if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) process.exit(1);
+            if (url.hostname !== "lythaus-api-gateway-preview.asora.workers.dev" || url.pathname !== "/api") process.exit(1);
+          '
+
+      - name: Build immutable Flutter preview artifact
+        env:
+          ENVIRONMENT: preview
+          WEB_BASE_URL: https://app.lythaus.co
+          API_BASE_URL: ${{ inputs.api_preview_base_url }}
+          AUTH_URL: ${{ inputs.api_preview_base_url }}
+          ADMIN_API_URL: https://admin-api.lythaus.co/api
+          MARKETING_BASE_URL: https://lythaus.co
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+          bash scripts/cf-pages-build.sh
+          bash scripts/check-web-release-hosts.sh build/web
+          scripts/secret-scan.sh --artifact build/web
+          if rg -i '(azurewebsites\.net|asora-function-dev|asora-function-prod|api\.asora\.co\.za|admin-api\.asora\.co\.za|lythaus-web\.pages\.dev)' build/web; then
+            exit 1
+          fi
+
+      - name: Deploy immutable Pages preview
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy build/web \
+            --project-name "$PAGES_PROJECT" \
+            --branch "$PAGES_BRANCH" \
+            --commit-hash "$RELEASE_SHA" \
+            --commit-dirty=false | tee wrangler-pages.txt
+          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-web\.pages\.dev' wrangler-pages.txt | head -n 1)"
+          test -n "$preview_url"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Validate direct-route behavior
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p route-proof
+          routes=(/ /login /auth/callback /invite/test /post/test /user/test /privacy /terms)
+          for route in "${routes[@]}"; do
+            file="route-proof/$(printf '%s' "$route" | tr '/:' '__').html"
+            response="$(curl --location --silent --show-error --max-time 30 \
+              --output "$file" --write-out '%{http_code}|%{url_effective}' "${PREVIEW_URL}${route}")"
+            status="${response%%|*}"
+            effective_url="${response#*|}"
+            test "$status" = 200
+            [[ "$effective_url" == "${PREVIEW_URL}${route}" && "$effective_url" != *'#'* ]]
+          done
+          curl --silent --show-error --max-time 30 --dump-header route-proof/headers.txt --output /dev/null "$PREVIEW_URL/auth/callback"
+          rg -i '^cache-control:.*no-store' route-proof/headers.txt
+          if rg -i '(azurewebsites\.net|asora-function-dev|api\.asora\.co\.za|lythaus-web\.pages\.dev)' route-proof; then
+            exit 1
+          fi
+
+      - name: Write sanitized Pages evidence
+        if: success()
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          API_PREVIEW_BASE_URL: ${{ inputs.api_preview_base_url }}
+        run: |
+          jq -n \
+            --arg commitSha "$RELEASE_SHA" \
+            --arg ciRunId "$CI_RUN_ID" \
+            --arg project "$PAGES_PROJECT" \
+            --arg branch "$PAGES_BRANCH" \
+            --arg previewUrl "$PREVIEW_URL" \
+            --arg apiPreviewBaseUrl "$API_PREVIEW_BASE_URL" \
+            --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,commitSha:$commitSha,ciRunId:$ciRunId,project:$project,branch:$branch,previewUrl:$previewUrl,apiPreviewBaseUrl:$apiPreviewBaseUrl,routeCount:8,customDomainsChanged:false,createdAt:$createdAt}' \
+            > flutter-auth-preview-evidence.json
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: flutter-auth-preview-evidence-${{ inputs.release_sha }}
+          if-no-files-found: warn
+          path: flutter-auth-preview-evidence.json

@@ -1,0 +1,176 @@
+name: Deploy Lythaus API gateway preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA validated by CI
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI workflow run ID for the exact SHA
+        required: true
+        type: string
+      cors_allowed_origin:
+        description: One exact HTTPS browser origin
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: lythaus-api-gateway-preview
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-validate:
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 20
+    env:
+      WORKER_URL: https://lythaus-api-gateway-preview.asora.workers.dev
+      WRANGLER_VERSION: 4.110.0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify exact-SHA CI provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release_sha must be a full commit SHA"; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::ci_run_id must be numeric"; exit 1; }
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")"
+          test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
+          test "$(jq -r '.name' <<<"$run_json")" = "CI"
+          test "$(jq -r '.conclusion' <<<"$run_json")" = "success"
+
+      - name: Validate exact preview origin
+        env:
+          CORS_ALLOWED_ORIGIN: ${{ inputs.cors_allowed_origin }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const value = process.env.CORS_ALLOWED_ORIGIN || "";
+            const url = new URL(value);
+            if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) process.exit(1);
+            if (value.includes("*")) process.exit(1);
+          '
+
+      - name: Snapshot previous Worker version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} versions list --env preview --json > previous-versions.json || echo '[]' > previous-versions.json
+          jq -r 'if length == 0 then "none" else (.[0].id // .[0].version_id // "unknown") end' previous-versions.json > previous-version-id.txt
+
+      - name: Install Worker-held origin token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ORIGIN_GATEWAY_TOKEN: ${{ secrets.ORIGIN_GATEWAY_TOKEN }}
+        run: |
+          set -euo pipefail
+          set +x
+          test -n "${ORIGIN_GATEWAY_TOKEN:-}" || { echo "::error::Protected origin token is unavailable"; exit 1; }
+          printf '%s' "$ORIGIN_GATEWAY_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put ORIGIN_AUTH_TOKEN --env preview
+
+      - name: Deploy immutable preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CORS_ALLOWED_ORIGIN: ${{ inputs.cors_allowed_origin }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --env preview \
+            --var "CORS_ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGIN}" \
+            --var "GATEWAY_CLASS:lythaus_gateway" \
+            --var "GATEWAY_POLICY:public" | tee wrangler-deploy.txt
+          rg -F "$WORKER_URL" wrangler-deploy.txt
+          deployment_id="$(grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' wrangler-deploy.txt | tail -n 1)"
+          test -n "$deployment_id"
+          printf '%s' "$deployment_id" > worker-deployment-id.txt
+
+      - name: Validate gateway boundary
+        env:
+          CORS_ALLOWED_ORIGIN: ${{ inputs.cors_allowed_origin }}
+        run: |
+          set -euo pipefail
+          mkdir -p gateway-proof
+
+          health_status="$(curl --silent --show-error --max-time 30 \
+            --dump-header gateway-proof/health-headers.txt \
+            --output gateway-proof/health-body.json \
+            --write-out '%{http_code}' "$WORKER_URL/api/health")"
+          test "$health_status" = 200
+          rg -i '^cache-control: private, no-store' gateway-proof/health-headers.txt
+          if rg -i '(azurewebsites\.net|x-ms-request-id|x-azure-ref|asora-function-dev)' gateway-proof; then
+            exit 1
+          fi
+
+          preflight_status="$(curl --silent --show-error --max-time 30 \
+            --request OPTIONS \
+            --header "Origin: ${CORS_ALLOWED_ORIGIN}" \
+            --header 'Access-Control-Request-Method: POST' \
+            --dump-header gateway-proof/preflight-headers.txt \
+            --output /dev/null \
+            --write-out '%{http_code}' "$WORKER_URL/api/auth/token")"
+          test "$preflight_status" = 204
+          rg -F -i "access-control-allow-origin: ${CORS_ALLOWED_ORIGIN}" gateway-proof/preflight-headers.txt
+          rg -i '^vary:.*origin' gateway-proof/preflight-headers.txt
+
+          denied_status="$(curl --silent --show-error --max-time 30 \
+            --header 'Origin: https://denied.invalid' \
+            --output gateway-proof/denied-body.json \
+            --write-out '%{http_code}' "$WORKER_URL/api/health")"
+          test "$denied_status" = 403
+
+          spoof_status="$(curl --silent --show-error --max-time 30 \
+            --header 'X-Lythaus-Origin-Token: client-spoof' \
+            --dump-header gateway-proof/spoof-headers.txt \
+            --output gateway-proof/spoof-body.json \
+            --write-out '%{http_code}' "$WORKER_URL/api/health")"
+          test "$spoof_status" = 200
+          if rg -i '(client-spoof|x-lythaus-origin-token|azurewebsites\.net|asora-function-dev)' gateway-proof; then
+            exit 1
+          fi
+
+      - name: Write sanitized Worker evidence
+        if: success()
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CORS_ALLOWED_ORIGIN: ${{ inputs.cors_allowed_origin }}
+        run: |
+          jq -n \
+            --arg commitSha "$RELEASE_SHA" \
+            --arg ciRunId "$CI_RUN_ID" \
+            --arg workerUrl "$WORKER_URL" \
+            --arg corsAllowedOrigin "$CORS_ALLOWED_ORIGIN" \
+            --arg previousVersion "$(cat previous-version-id.txt)" \
+            --arg deploymentVersion "$(cat worker-deployment-id.txt)" \
+            --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,commitSha:$commitSha,ciRunId:$ciRunId,workerUrl:$workerUrl,corsAllowedOrigin:$corsAllowedOrigin,previousVersion:$previousVersion,deploymentVersion:$deploymentVersion,customDomainsChanged:false,originTokenStoredAsSecret:true,createdAt:$createdAt}' \
+            > gateway-preview-evidence.json
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: gateway-preview-evidence-${{ inputs.release_sha }}
+          if-no-files-found: warn
+          path: gateway-preview-evidence.json
