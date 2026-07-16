@@ -18,6 +18,7 @@ on:
         options:
           - feed-cache
           - lythaus-gateway-preview
+          - flutter-auth-preview
       release_sha:
         description: Exact validated SHA for the gateway preview
         required: false
@@ -28,6 +29,10 @@ on:
         type: string
       cors_allowed_origin:
         description: Exact HTTPS browser origin for the gateway preview
+        required: false
+        type: string
+      api_preview_base_url:
+        description: Exact Worker /api URL for the Flutter preview
         required: false
         type: string
 
@@ -82,4 +87,13 @@ jobs:
       release_sha: ${{ inputs.release_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
       cors_allowed_origin: ${{ inputs.cors_allowed_origin }}
+    secrets: inherit
+
+  deploy-flutter-auth-preview:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deployment_target == 'flutter-auth-preview' }}
+    uses: ./.github/workflows/deploy-flutter-auth-preview.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      api_preview_base_url: ${{ inputs.api_preview_base_url }}
     secrets: inherit
