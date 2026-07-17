@@ -25,14 +25,14 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/users/u1/follow',
+        'users/u1/follow',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
         'following': true,
         'followerCount': 12,
-      }, '/api/users/u1/follow'),
+      }, 'users/u1/follow'),
     );
 
     final service = FollowService(dio);
@@ -49,14 +49,14 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/api/users/u1/follow',
+        'users/u1/follow',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
         'following': true,
         'followerCount': 1,
-      }, '/api/users/u1/follow'),
+      }, 'users/u1/follow'),
     );
 
     final service = FollowService(dio);
@@ -73,14 +73,14 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.delete<Map<String, dynamic>>(
-        '/api/users/u1/follow',
+        'users/u1/follow',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
         'following': false,
         'followerCount': 0,
-      }, '/api/users/u1/follow'),
+      }, 'users/u1/follow'),
     );
 
     final service = FollowService(dio);

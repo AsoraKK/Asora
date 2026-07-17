@@ -19,25 +19,23 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/users/u1',
+        'users/u1',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
         data: {
-          'user': {
-            'id': 'u1',
-            'displayName': 'Tester',
-            'handle': '@tester',
-            'tier': 'gold',
-            'trustPassportVisibility': 'public_expanded',
-            'reputationScore': 42,
-            'journalistVerified': true,
-            'badges': ['Founder'],
-          },
+          'id': 'u1',
+          'displayName': 'Tester',
+          'handle': '@tester',
+          'tier': 'gold',
+          'trustPassportVisibility': 'public_expanded',
+          'reputationScore': 42,
+          'journalistVerified': true,
+          'badges': ['Founder'],
         },
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/users/u1'),
+        requestOptions: RequestOptions(path: 'users/u1'),
       ),
     );
 
@@ -60,16 +58,14 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/users/u1',
+        'users/u1',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
-        data: {
-          'user': {'id': 'u1', 'displayName': 'Guest Visible', 'tier': 'free'},
-        },
+        data: {'id': 'u1', 'displayName': 'Guest Visible', 'tier': 'free'},
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/users/u1'),
+        requestOptions: RequestOptions(path: 'users/u1'),
       ),
     );
 
@@ -89,14 +85,14 @@ void main() {
     final dio = MockDio();
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/users/u1',
+        'users/u1',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => Response<Map<String, dynamic>>(
         data: {'user': 'invalid'},
         statusCode: 200,
-        requestOptions: RequestOptions(path: '/api/users/u1'),
+        requestOptions: RequestOptions(path: 'users/u1'),
       ),
     );
 

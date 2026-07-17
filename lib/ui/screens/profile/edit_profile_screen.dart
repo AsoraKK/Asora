@@ -88,7 +88,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(secureDioProvider).patch<Map<String, dynamic>>(
-        '/api/users/me',
+        'users/me',
         data: {'displayName': name, 'bio': _bio.text.trim()},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

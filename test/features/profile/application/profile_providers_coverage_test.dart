@@ -92,13 +92,11 @@ void main() {
     test('fetches and parses user', () async {
       final adapter = _MockAdapter((path) {
         return {
-          'user': {
-            'id': 'u1',
-            'displayName': 'Alice',
-            'tier': 'free',
-            'reputationScore': 42,
-            'badges': ['verified'],
-          },
+          'id': 'u1',
+          'displayName': 'Alice',
+          'tier': 'free',
+          'reputationScore': 42,
+          'badges': ['verified'],
         };
       });
 
@@ -118,9 +116,7 @@ void main() {
 
     test('allows guest profile fetch when no token', () async {
       final adapter = _MockAdapter((_) {
-        return {
-          'user': {'id': 'u1', 'displayName': 'Guest', 'tier': 'free'},
-        };
+        return {'id': 'u1', 'displayName': 'Guest', 'tier': 'free'};
       });
       final container = ProviderContainer(
         overrides: [
@@ -135,9 +131,7 @@ void main() {
 
     test('allows guest profile fetch when token is empty', () async {
       final adapter = _MockAdapter((_) {
-        return {
-          'user': {'id': 'u1', 'displayName': 'Guest', 'tier': 'free'},
-        };
+        return {'id': 'u1', 'displayName': 'Guest', 'tier': 'free'};
       });
       final container = ProviderContainer(
         overrides: [
@@ -290,7 +284,7 @@ void main() {
       );
 
       expect(adapter.lastRequestOptions?.method, 'PATCH');
-      expect(adapter.lastRequestOptions?.path, '/api/users/me');
+      expect(adapter.lastRequestOptions?.path, 'users/me');
       expect(
         adapter.lastRequestOptions?.headers['Authorization'],
         'Bearer token-1',

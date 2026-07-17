@@ -26,7 +26,7 @@ class FollowService {
     required String accessToken,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '/api/users/$targetUserId/follow',
+      'users/$targetUserId/follow',
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
     return FollowStatus.fromJson(response.data ?? const {});
@@ -37,7 +37,7 @@ class FollowService {
     required String accessToken,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      '/api/users/$targetUserId/follow',
+      'users/$targetUserId/follow',
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
     return FollowStatus.fromJson(response.data ?? const {});
@@ -48,7 +48,7 @@ class FollowService {
     required String accessToken,
   }) async {
     final response = await _dio.delete<Map<String, dynamic>>(
-      '/api/users/$targetUserId/follow',
+      'users/$targetUserId/follow',
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
     return FollowStatus.fromJson(response.data ?? const {});
