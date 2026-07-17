@@ -270,7 +270,15 @@ async function handlePreflight(
     status: 204,
     headers: {
       'Access-Control-Allow-Methods': [...ALLOWED_METHODS].join(', '),
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID',
+      'Access-Control-Allow-Headers': [
+        'Authorization',
+        'Content-Type',
+        'Idempotency-Key',
+        'X-Correlation-ID',
+        'X-Device-Rooted',
+        'X-Device-Emulator',
+        'X-Device-Debug',
+      ].join(', '),
       'Access-Control-Max-Age': '600',
       'Cache-Control': 'private, no-store',
     },

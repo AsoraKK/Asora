@@ -83,6 +83,9 @@ describe('Lythaus API gateway Worker', () => {
     );
     expect(allowed.status).toBe(204);
     expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://preview.example.pages.dev');
+    expect(allowed.headers.get('Access-Control-Allow-Headers')).toContain('X-Device-Rooted');
+    expect(allowed.headers.get('Access-Control-Allow-Headers')).toContain('X-Device-Emulator');
+    expect(allowed.headers.get('Access-Control-Allow-Headers')).toContain('X-Device-Debug');
 
     const denied = await worker.fetch(
       request('/api/health', { headers: { Origin: 'https://attacker.example' } }),
