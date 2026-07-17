@@ -467,10 +467,15 @@ jobs:
           echo "✅ Required Alpha secrets are configured as Key Vault references"
 
       - name: Post-deploy direct-origin health diagnostic
-        env:
-          ORIGIN_OPERATIONAL_TOKEN: ${{ secrets.ORIGIN_OPERATIONAL_TOKEN }}
         run: |
           set -euo pipefail
+          set +x
+          KEY_VAULT_CLEAN=$(echo "$KEY_VAULT" | tr -d '\r')
+          ORIGIN_OPERATIONAL_TOKEN="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT_CLEAN" \
+            --name origin-operational-token \
+            --query value \
+            --output tsv)"
           test -n "$ORIGIN_OPERATIONAL_TOKEN" || { echo "::error::ORIGIN_OPERATIONAL_TOKEN is required for direct-origin health diagnostics"; exit 1; }
           
           # Strip CRLF from variables
@@ -529,6 +534,7 @@ jobs:
           echo "   - Health endpoint: 200 OK"
           echo "   - Host routing: functional (404 for bogus)"
           echo "   - Functions registered: $FUNC_COUNT (including health)"
+          unset ORIGIN_OPERATIONAL_TOKEN
 
       - name: Diagnostic logs on failure
         if: failure()

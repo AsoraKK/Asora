@@ -33,6 +33,7 @@ on:
 permissions:
   actions: read
   contents: read
+  id-token: write
 
 concurrency:
   group: lythaus-api-gateway-preview
@@ -46,6 +47,10 @@ jobs:
     env:
       WORKER_URL: https://lythaus-api-gateway-preview.asora.workers.dev
       WRANGLER_VERSION: 4.110.0
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      KEY_VAULT: kv-asora-flex-dev
     steps:
       - uses: actions/checkout@v5
         with:
@@ -56,6 +61,13 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+
+      - name: Azure login for protected origin-token access
+        uses: azure/login@v3
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Verify exact-SHA CI provenance
         env:
@@ -99,14 +111,19 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          ORIGIN_GATEWAY_TOKEN: ${{ secrets.ORIGIN_GATEWAY_TOKEN }}
         run: |
           set -euo pipefail
           set +x
+          ORIGIN_GATEWAY_TOKEN="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT" \
+            --name origin-gateway-token \
+            --query value \
+            --output tsv)"
           test -n "${ORIGIN_GATEWAY_TOKEN:-}" || { echo "::error::Protected origin token is unavailable"; exit 1; }
           printf '%s' "$ORIGIN_GATEWAY_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put ORIGIN_AUTH_TOKEN \
             --config cloudflare/api-gateway/wrangler.toml \
             --env preview
+          unset ORIGIN_GATEWAY_TOKEN
 
       - name: Deploy immutable preview Worker
         env:
