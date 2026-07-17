@@ -38,6 +38,8 @@ cd "${ROOT_DIR}"
 : "${OAUTH2_AUTHORIZATION_ENDPOINT:?OAUTH2_AUTHORIZATION_ENDPOINT is required}"
 : "${OAUTH2_TOKEN_ENDPOINT:?OAUTH2_TOKEN_ENDPOINT is required}"
 : "${OAUTH2_USERINFO_ENDPOINT:?OAUTH2_USERINFO_ENDPOINT is required}"
+: "${OAUTH2_CLIENT_ID:?OAUTH2_CLIENT_ID is required}"
+: "${OAUTH2_SCOPE:=openid email profile}"
 : "${ENVIRONMENT:=production}"
 
 python3 - <<'PY'
@@ -80,6 +82,10 @@ for name in (
     if is_private_or_local(parsed.hostname):
         raise SystemExit(f"{name} must not target localhost or a private host")
 
+client_id = os.environ.get("OAUTH2_CLIENT_ID", "").strip()
+if not client_id.endswith(".apps.googleusercontent.com"):
+    raise SystemExit("OAUTH2_CLIENT_ID must be the approved Google Web OAuth client ID")
+
 env = os.environ.get("ENVIRONMENT", "").strip().lower()
 if env not in {"production", "preview"}:
     raise SystemExit("ENVIRONMENT must resolve to production or preview for Pages builds")
@@ -112,7 +118,9 @@ flutter build web --release --no-tree-shake-icons \
   --dart-define=AUTH_URL="${AUTH_URL}" \
   --dart-define=OAUTH2_AUTHORIZATION_ENDPOINT="${OAUTH2_AUTHORIZATION_ENDPOINT}" \
   --dart-define=OAUTH2_TOKEN_ENDPOINT="${OAUTH2_TOKEN_ENDPOINT}" \
-  --dart-define=OAUTH2_USERINFO_ENDPOINT="${OAUTH2_USERINFO_ENDPOINT}"
+  --dart-define=OAUTH2_USERINFO_ENDPOINT="${OAUTH2_USERINFO_ENDPOINT}" \
+  --dart-define=OAUTH2_CLIENT_ID="${OAUTH2_CLIENT_ID}" \
+  --dart-define=OAUTH2_SCOPE="${OAUTH2_SCOPE}"
 
 echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects

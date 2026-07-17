@@ -95,6 +95,7 @@ env:
   MVP_PREVIEW_APP_ORIGIN: ${{ vars.MVP_PREVIEW_APP_ORIGIN }}
   MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
   MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
+  GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
   RELEASE_SHA: ${{ inputs.release_sha }}
   CI_RUN_ID: ${{ inputs.ci_run_id }}
   APPROVED_ALPHA_STAGE: ${{ inputs.approved_alpha_stage }}
@@ -335,6 +336,8 @@ jobs:
 
       - name: Configure and verify Key Vault references
         continue-on-error: false
+        env:
+          GOOGLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_WEB }}
         run: |
           set -euo pipefail
           RG_CLEAN=$(echo "$RG" | tr -d '\r')
@@ -354,17 +357,36 @@ jobs:
             exit 1
           fi
 
+          test -n "$GOOGLE_OAUTH_CLIENT_SECRET_WEB" || { echo "::error::GOOGLE_OAUTH_CLIENT_SECRET_WEB repository secret is required"; exit 1; }
+          az keyvault secret set \
+            --vault-name "$KEY_VAULT" \
+            --name google-oauth-client-secret-web \
+            --value "$GOOGLE_OAUTH_CLIENT_SECRET_WEB" \
+            --output none
+
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
             --settings \
               "AUDIT_HMAC_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/audit-hmac-key/)" \
               "INVITE_CODE_PEPPER=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/invite-code-pepper/)" \
               "HIVE_API_KEY=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/HIVE-AI-KEY/)" \
               "CF_ACCESS_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/cf-access-client-secret/)" \
+              "GOOGLE_OAUTH_CLIENT_SECRET_WEB=@Microsoft.KeyVault(SecretUri=https://${KEY_VAULT}.vault.azure.net/secrets/google-oauth-client-secret-web/)" \
+            --output none
+
+          test -n "$GOOGLE_OAUTH_CLIENT_ID" || { echo "::error::GOOGLE_OAUTH_CLIENT_ID repository variable is required"; exit 1; }
+          [[ "$GOOGLE_OAUTH_CLIENT_ID" == *.apps.googleusercontent.com ]] || { echo "::error::GOOGLE_OAUTH_CLIENT_ID is not a Google Web client ID"; exit 1; }
+          EMAIL_CLIENT_ID=$(az functionapp config appsettings list -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --query "[?name=='AUTH_EMAIL_CLIENT_ID'] | [0].value" -o tsv | tr -d '\r')
+          test -n "$EMAIL_CLIENT_ID" || { echo "::error::AUTH_EMAIL_CLIENT_ID must already be configured"; exit 1; }
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings \
+              GOOGLE_OAUTH_CLIENT_ID="$GOOGLE_OAUTH_CLIENT_ID" \
+              JWT_AUDIENCE="${GOOGLE_OAUTH_CLIENT_ID},${EMAIL_CLIENT_ID}" \
             --output none
 
           SUBSCRIPTION_ID=$(az account show --query id -o tsv)
           REFERENCES_URI="https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG_CLEAN}/providers/Microsoft.Web/sites/${FUNC_APP_CLEAN}/config/configreferences/appsettings?api-version=2024-11-01"
-          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET)
+          REQUIRED_REFERENCES=(AUDIT_HMAC_KEY INVITE_CODE_PEPPER HIVE_API_KEY CF_ACCESS_CLIENT_SECRET GOOGLE_OAUTH_CLIENT_SECRET_WEB)
           for attempt in $(seq 1 12); do
             REFERENCES_JSON=$(az rest --method get --uri "$REFERENCES_URI")
             unresolved=false
@@ -432,6 +454,7 @@ jobs:
             POSTGRES_CONNECTION_STRING
             AUDIT_HMAC_KEY
             FCM_PRIVATE_KEY
+            GOOGLE_OAUTH_CLIENT_SECRET_WEB
           )
           for key in "${REQUIRED_KEY_VAULT_SETTINGS[@]}"; do
             value=$(echo "$SETTINGS" | jq -r --arg key "$key" '.[] | select(.name==$key) | .value' || echo "")

@@ -130,7 +130,11 @@ class WebAuthService {
     // browser transaction, so clear the single-use PKCE state before rethrowing.
     late final Map<String, dynamic> tokenResponse;
     try {
-      tokenResponse = await _exchangeCodeForTokens(code, codeVerifier);
+      tokenResponse = await _exchangeCodeForTokens(
+        code,
+        codeVerifier,
+        returnedState,
+      );
     } catch (_) {
       _clearPkceState();
       rethrow;
@@ -226,9 +230,71 @@ class WebAuthService {
     }
   }
 
-  /// Clear all auth state (sign out).
-  void signOut() {
-    _storage.clearAll();
+  /// Revoke the server session and always clear browser authentication state.
+  Future<void> signOut() async {
+    final accessToken = _storage.read(_accessTokenKey);
+    try {
+      if (accessToken != null && accessToken.isNotEmpty) {
+        await _httpClient.post(
+          _sessionRevokeUri(),
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'Content-Type': 'application/json',
+          },
+        );
+      }
+    } catch (_) {
+      // Logout remains best-effort, but browser state is always cleared.
+    } finally {
+      _storage.clearAll();
+    }
+  }
+
+  /// Rotate the stored refresh token through the Lythaus token endpoint.
+  Future<User?> refreshSession() async {
+    final refreshToken = _storage.read(_refreshTokenKey);
+    if (refreshToken == null || refreshToken.isEmpty) return null;
+
+    try {
+      final response = await _httpClient.post(
+        Uri.parse(OAuth2Config.tokenEndpoint),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'grant_type': 'refresh_token',
+          'refresh_token': refreshToken,
+          'client_id': OAuth2Config.clientId,
+        },
+      );
+      if (response.statusCode != 200) return null;
+
+      final tokenResponse = _decodeResponseMap(response.body);
+      final accessToken = tokenResponse['access_token'] as String?;
+      final rotatedRefreshToken = tokenResponse['refresh_token'] as String?;
+      if (accessToken == null ||
+          accessToken.isEmpty ||
+          rotatedRefreshToken == null ||
+          rotatedRefreshToken.isEmpty ||
+          rotatedRefreshToken == refreshToken) {
+        return null;
+      }
+
+      final expiresIn = tokenResponse['expires_in'];
+      final seconds = expiresIn is int ? expiresIn : int.tryParse('$expiresIn');
+      if (seconds == null) return null;
+      _storage.write(_accessTokenKey, accessToken);
+      _storage.write(_refreshTokenKey, rotatedRefreshToken);
+      _storage.write(
+        _tokenExpiryKey,
+        DateTime.now().add(Duration(seconds: seconds)).toIso8601String(),
+      );
+
+      final user = await _fetchUser(accessToken);
+      if (user == null) return null;
+      _storage.write(_userDataKey, jsonEncode(user.toJson()));
+      return user;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Private helpers ──
@@ -236,6 +302,7 @@ class WebAuthService {
   Future<Map<String, dynamic>> _exchangeCodeForTokens(
     String code,
     String codeVerifier,
+    String state,
   ) async {
     final response = await _httpClient.post(
       Uri.parse(OAuth2Config.tokenEndpoint),
@@ -246,6 +313,7 @@ class WebAuthService {
         'redirect_uri': OAuth2Config.redirectUri,
         'client_id': OAuth2Config.clientId,
         'code_verifier': codeVerifier,
+        'state': state,
       },
     );
 
@@ -253,7 +321,7 @@ class WebAuthService {
       throw AuthFailure.callbackInvalid();
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    return _decodeResponseMap(response.body);
   }
 
   Future<User?> _fetchUser(String accessToken) async {
@@ -268,18 +336,39 @@ class WebAuthService {
 
       if (response.statusCode != 200) return null;
 
-      final body = jsonDecode(response.body);
+      final body = _decodeResponseMap(response.body);
       Map<String, dynamic>? data;
-      if (body is Map<String, dynamic>) {
-        data = (body['user'] is Map<String, dynamic>)
-            ? body['user'] as Map<String, dynamic>
-            : body;
-      }
-      if (data == null || data.isEmpty) return null;
+      data = (body['user'] is Map<String, dynamic>)
+          ? body['user'] as Map<String, dynamic>
+          : body;
+      if (data.isEmpty) return null;
       return User.fromJson(data);
     } catch (_) {
       return null;
     }
+  }
+
+  Map<String, dynamic> _decodeResponseMap(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Expected a JSON object');
+    }
+    final data = decoded['data'];
+    return data is Map<String, dynamic> ? data : decoded;
+  }
+
+  Uri _sessionRevokeUri() {
+    final tokenUri = Uri.parse(OAuth2Config.tokenEndpoint);
+    const suffix = '/auth/token';
+    if (!tokenUri.path.endsWith(suffix)) {
+      throw const FormatException('Unexpected token endpoint path');
+    }
+    return tokenUri.replace(
+      path:
+          '${tokenUri.path.substring(0, tokenUri.path.length - suffix.length)}/auth/sessions/revoke',
+      query: null,
+      fragment: null,
+    );
   }
 
   void _clearPkceState() {

@@ -5,7 +5,11 @@ import { decodeProtectedHeader } from 'jose';
 import { signHs256Jwt, verifyHs256Jwt } from '../helpers/hs256Jwt';
 
 // Mutable stub the Cosmos mock can read at call-time
-const dbStub: { sessions: any[]; user: any } = { sessions: [], user: null };
+const dbStub: { sessions: any[]; user: any; upsertedUser: any } = {
+  sessions: [],
+  user: null,
+  upsertedUser: null,
+};
 
 // In-memory refresh token store for mocking
 const refreshTokenStore = new Map<string, { userId: string; expiresAt: Date; createdAt: Date }>();
@@ -27,6 +31,13 @@ jest.mock('@shared/clients/cosmos', () => ({
         }
         if (name === 'users') {
           return {
+            items: {
+              upsert: async (user: any) => {
+                dbStub.upsertedUser = user;
+                dbStub.user = user;
+                return { resource: user };
+              },
+            },
             item: () => ({
               read: async () => ({ resource: dbStub.user }),
               patch: async () => ({}),
@@ -91,6 +102,8 @@ jest.mock('@shared/clients/postgres', () => ({
 import { InvocationContext } from '@azure/functions';
 
 import { tokenHandler } from '@auth/service/tokenService';
+import * as googleOAuthService from '@auth/service/googleOAuthService';
+import { usersService } from '@auth/service/usersService';
 import { resetAuthConfigForTesting } from '@auth/config';
 import { httpReqMock } from '../helpers/http';
 
@@ -112,6 +125,7 @@ describe('auth/token validation and method handling', () => {
   beforeEach(() => {
     dbStub.sessions = [];
     dbStub.user = null;
+    dbStub.upsertedUser = null;
     refreshTokenStore.clear();
     resetAuthConfigForTesting();
     jest.restoreAllMocks();
@@ -160,7 +174,11 @@ describe('auth/token validation and method handling', () => {
       body: { client_id: 'app', grant_type: 'authorization_code' },
     });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
-    expect([500, 400]).toContain(res.status); // token handler throws -> caught as 500 in current code
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body as string)).toEqual({
+      error: 'invalid_grant',
+      error_description: 'Authorization could not be completed',
+    });
   });
 
   it('authorization_code: session missing user info', async () => {
@@ -176,6 +194,7 @@ describe('auth/token validation and method handling', () => {
         expiresAt: new Date(Date.now() + 60000).toISOString(),
         redirectUri: 'http://cb',
         codeChallenge,
+        codeChallengeMethod: 'S256',
         nonce: 'n0',
       },
     ];
@@ -207,6 +226,7 @@ describe('auth/token validation and method handling', () => {
         expiresAt: new Date(Date.now() + 60000).toISOString(),
         redirectUri: 'http://cb',
         codeChallenge,
+        codeChallengeMethod: 'S256',
         nonce: 'n4',
         userId: MISSING_USER_ID,
       },
@@ -237,7 +257,11 @@ describe('auth/token validation and method handling', () => {
     };
     const req = httpReqMock({ method: 'POST', body });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
+    expect(JSON.parse(res.body as string)).toEqual({
+      error: 'invalid_grant',
+      error_description: 'Authorization could not be completed',
+    });
   });
 
   it('authorization_code: expired session', async () => {
@@ -262,7 +286,7 @@ describe('auth/token validation and method handling', () => {
     };
     const req = httpReqMock({ method: 'POST', body });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
   });
 
   it('authorization_code: redirect mismatch', async () => {
@@ -287,7 +311,7 @@ describe('auth/token validation and method handling', () => {
     };
     const req = httpReqMock({ method: 'POST', body });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
   });
 
   it('authorization_code: invalid PKCE', async () => {
@@ -300,6 +324,7 @@ describe('auth/token validation and method handling', () => {
         expiresAt: new Date(Date.now() + 60000).toISOString(),
         redirectUri: 'http://cb',
         codeChallenge: 'does-not-match',
+        codeChallengeMethod: 'S256',
         nonce: 'n',
       },
     ];
@@ -312,7 +337,7 @@ describe('auth/token validation and method handling', () => {
     };
     const req = httpReqMock({ method: 'POST', body });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
   });
 
   it('authorization_code: success flow (active user)', async () => {
@@ -426,6 +451,70 @@ describe('auth/token validation and method handling', () => {
     const req = httpReqMock({ method: 'POST', body });
     const res = await tokenHandler(req as any, ctx as InvocationContext);
     expect(res.status).toBe(200);
+  });
+
+  it('authorization_code: Google sub resolves to a canonical UUID and validates nonce', async () => {
+    const codeVerifier = 'google-verifier-789';
+    const codeChallenge = crypto
+      .createHash('sha256')
+      .update(codeVerifier)
+      .digest('base64url');
+    dbStub.sessions = [
+      {
+        id: 'google-session',
+        partitionKey: 'google-client.apps.googleusercontent.com',
+        provider: 'google',
+        state: 'single-use-state',
+        clientId: 'google-client.apps.googleusercontent.com',
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        redirectUri: 'https://preview.example/auth/callback',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        nonce: 'google-nonce',
+      },
+    ];
+    jest.spyOn(googleOAuthService, 'exchangeAndVerifyGoogleCode').mockResolvedValue({
+      sub: 'google-provider-subject',
+      email: 'google@example.com',
+    });
+    jest.spyOn(usersService, 'getOrCreateUserByProvider').mockResolvedValue([
+      {
+        id: USER_ID,
+        primary_email: 'google@example.com',
+        roles: ['user'],
+        tier: 'free',
+        reputation_score: 0,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+      true,
+    ]);
+
+    const req = httpReqMock({
+      method: 'POST',
+      body: {
+        client_id: 'google-client.apps.googleusercontent.com',
+        grant_type: 'authorization_code',
+        code: 'google-authorization-code',
+        redirect_uri: 'https://preview.example/auth/callback',
+        code_verifier: codeVerifier,
+        state: 'single-use-state',
+      },
+    });
+    const res = await tokenHandler(req as any, ctx as InvocationContext);
+
+    expect(res.status).toBe(200);
+    expect(usersService.getOrCreateUserByProvider).toHaveBeenCalledWith(
+      'google',
+      'google-provider-subject',
+      'google@example.com'
+    );
+    expect(dbStub.upsertedUser.id).toBe(USER_ID);
+    const response = JSON.parse(res.body as string);
+    expect(response.data.user.id).toBe(USER_ID);
+    const claims = await verifyHs256Jwt(response.data.access_token, process.env.JWT_SECRET!);
+    expect(claims.sub).toBe(USER_ID);
+    expect(claims.nonce).toBe('google-nonce');
   });
 
   it('authorization_code: rejects provider subjects as token subjects', async () => {

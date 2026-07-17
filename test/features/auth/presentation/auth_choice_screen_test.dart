@@ -83,43 +83,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
-    expect(find.text('Continue as guest'), findsOneWidget);
+    expect(find.text('Continue as guest'), findsNothing);
     expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('Continue with email'), findsOneWidget);
     expect(find.text('Apple'), findsNothing);
     expect(find.text('World ID'), findsNothing);
     expect(find.text('Security Debug'), findsOneWidget);
-  });
-
-  testWidgets('continue as guest logs analytics and enables guest mode', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    final analytics = _FakeAnalyticsClient();
-    final notifier = _MockAuthStateNotifier();
-    when(() => notifier.continueAsGuest()).thenAnswer((_) async {});
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          analyticsClientProvider.overrideWithValue(analytics),
-          authStateProvider.overrideWith((ref) => notifier),
-        ],
-        child: const MaterialApp(home: AuthChoiceScreen()),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue as guest'));
-    await tester.pump();
-
-    verify(() => notifier.continueAsGuest()).called(1);
-    expect(
-      analytics.loggedEvents,
-      contains(AnalyticsEvents.authChoiceSelected),
-    );
   });
 
   testWidgets('sign in logs analytics and triggers auth notifier', (

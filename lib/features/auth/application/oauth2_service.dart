@@ -66,7 +66,7 @@ class OAuth2Config {
 
   static const String scopeString = String.fromEnvironment(
     'OAUTH2_SCOPE',
-    defaultValue: 'openid email profile offline_access',
+    defaultValue: 'openid email profile',
   );
 
   static const String googleIdpHint = String.fromEnvironment(
@@ -272,10 +272,8 @@ class OAuth2Service {
   /// Refresh access token using the stored refresh token. Returns the refreshed
   /// [User] or `null` when refresh fails.
   ///
-  /// On web, tokens live in sessionStorage and die on tab close. Refresh is
-  /// not supported — users re-authenticate by opening the app again.
   Future<User?> refreshToken() async {
-    if (kIsWeb) return null;
+    if (kIsWeb) return _webAuthServiceFactory().refreshSession();
 
     final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
     if (refreshToken == null || refreshToken.isEmpty) {
@@ -351,6 +349,14 @@ class OAuth2Service {
 
   /// Returns the access token, refreshing when necessary.
   Future<String?> getAccessToken() async {
+    if (kIsWeb) {
+      final webAuth = _webAuthServiceFactory();
+      if (!webAuth.isSignedIn() && await webAuth.refreshSession() == null) {
+        return null;
+      }
+      return webAuth.getAccessToken();
+    }
+
     if (!await _isTokenValid()) {
       final refreshedUser = await refreshToken();
       if (refreshedUser == null) {
@@ -363,6 +369,11 @@ class OAuth2Service {
 
   /// Clears persisted tokens and performs a best-effort end session request.
   Future<void> signOut() async {
+    if (kIsWeb) {
+      await _webAuthServiceFactory().signOut();
+      return;
+    }
+
     // Perform end session request if id token is available
     final idToken = await _secureStorage.read(key: _idTokenKey);
     if (idToken != null && idToken.isNotEmpty) {

@@ -4,6 +4,7 @@ export interface TokenRequest {
   redirect_uri?: string;
   client_id: string;
   code_verifier?: string;
+  state?: string;
   refresh_token?: string;
 }
 
@@ -21,6 +22,7 @@ export interface AuthSession {
   createdAt: string;
   expiresAt: string;
   used?: boolean;
+  provider?: 'google';
 }
 
 export interface UserDocument {

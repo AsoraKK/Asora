@@ -39,33 +39,15 @@ void main() {
 
     expect(find.text('Welcome to Lythaus'), findsOneWidget);
     expect(
-      find.text(
-        'Browse as a guest or use one of the secure MVP sign-in methods.',
-      ),
+      find.text('Choose one of the secure MVP sign-in methods.'),
       findsOneWidget,
     );
-    expect(find.text('Continue as guest'), findsOneWidget);
+    expect(find.text('Continue as guest'), findsNothing);
     expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('Continue with email'), findsOneWidget);
-    expect(find.text('Redeem invite'), findsOneWidget);
+    expect(find.text('Redeem invite'), findsNothing);
     // Debug mode button
     expect(find.text('Security Debug'), findsOneWidget);
-  });
-
-  testWidgets('guest continue calls signOut', (tester) async {
-    tester.view.physicalSize = const Size(1200, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    await tester.pumpWidget(buildScreen());
-    await tester.pump();
-
-    await tester.tap(find.text('Continue as guest'));
-    await tester.pump();
-
-    verify(
-      () => mockAnalytics.logEvent(any(), properties: any(named: 'properties')),
-    ).called(greaterThanOrEqualTo(1));
   });
 
   testWidgets('deferred providers are not rendered', (tester) async {
@@ -93,21 +75,6 @@ void main() {
 
     expect(find.text('Sign in with email'), findsNWidgets(2));
     expect(find.text('Create account'), findsOneWidget);
-  });
-
-  testWidgets('redeem invite navigates', (tester) async {
-    tester.view.physicalSize = const Size(1200, 2400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    await tester.pumpWidget(buildScreen());
-    await tester.pump();
-
-    await tester.tap(find.text('Redeem invite'));
-    await tester.pumpAndSettle();
-
-    // Should have navigated away
-    expect(find.text('Welcome to Lythaus'), findsNothing);
   });
 
   testWidgets('logs screen view on init', (tester) async {

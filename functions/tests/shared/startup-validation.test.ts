@@ -129,6 +129,8 @@ describe('startup-validation', () => {
     process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'test-email-token-hmac-secret-0123456789';
     process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
+    process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client.apps.googleusercontent.com';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB = 'test-google-web-client-secret';
 
     const errorSpy = jest.spyOn(console, 'error').mockImplementation();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();

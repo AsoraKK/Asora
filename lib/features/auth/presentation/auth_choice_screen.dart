@@ -14,7 +14,6 @@ import 'package:asora/screens/security_debug_screen.dart';
 import 'package:asora/features/auth/application/auth_providers.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/presentation/email_auth_screen.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
   const AuthChoiceScreen({super.key});
@@ -73,14 +72,6 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     ).push(MaterialPageRoute<void>(builder: (_) => const EmailAuthScreen()));
   }
 
-  Future<void> _handleGuestContinue() async {
-    await _analyticsClient.logEvent(
-      AnalyticsEvents.authChoiceSelected,
-      properties: {AnalyticsEvents.propMethod: 'guest'},
-    );
-    await ref.read(authStateProvider.notifier).continueAsGuest();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,7 +95,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Browse as a guest or use one of the secure MVP sign-in methods.',
+                    'Choose one of the secure MVP sign-in methods.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -119,22 +110,6 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     label: 'Continue with email',
                     icon: Icons.email_outlined,
                     onPressed: _handleEmail,
-                  ),
-                  const SizedBox(height: 20),
-                  LythButton.tertiary(
-                    label: 'Continue as guest',
-                    onPressed: _handleGuestContinue,
-                  ),
-                  const SizedBox(height: 12),
-                  LythButton.tertiary(
-                    label: 'Redeem invite',
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const InviteRedeemScreen(),
-                        ),
-                      );
-                    },
                   ),
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),

@@ -257,7 +257,6 @@ class AuthService {
       safeRun(() => _secureStorage.delete(key: _jwtKey)),
       safeRun(() => _secureStorage.delete(key: _refreshTokenKey)),
       safeRun(() => _secureStorage.delete(key: _userKey)),
-      if (kIsWeb) safeRun(() async => WebAuthService().signOut()),
       // Social provider sign-out is handled via the OAuth2 end-session flow.
       // No direct google_sign_in SDK call is used.
       safeRun(() => _oauth2Service.signOut()),
@@ -420,15 +419,17 @@ class AuthService {
 
       // Get fresh token from OAuth2Service
       final token = await _oauth2Service.getAccessToken();
-      if (token != null) {
+      if (!kIsWeb && token != null) {
         await _secureStorage.write(key: _jwtKey, value: token);
       }
 
       // Update stored user data
-      await _secureStorage.write(
-        key: _userKey,
-        value: jsonEncode(user.toJson()),
-      );
+      if (!kIsWeb) {
+        await _secureStorage.write(
+          key: _userKey,
+          value: jsonEncode(user.toJson()),
+        );
+      }
 
       dev.log('OAuth2 token refreshed successfully', name: 'auth');
     } catch (e, st) {
@@ -451,7 +452,9 @@ class AuthService {
   /// Check if current OAuth2 token is valid and refresh if needed
   Future<bool> validateAndRefreshToken() async {
     try {
-      final token = await _secureStorage.read(key: _jwtKey);
+      final token = kIsWeb
+          ? WebAuthService().getAccessToken()
+          : await _secureStorage.read(key: _jwtKey);
       if (token == null) return false;
 
       // Check if token is valid by making a request

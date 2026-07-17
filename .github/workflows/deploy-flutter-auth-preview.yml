@@ -2,6 +2,10 @@ name: Deploy Flutter authentication preview
 
 on:
   workflow_call:
+    outputs:
+      preview_url:
+        description: Exact immutable Pages preview origin
+        value: ${{ jobs.deploy-and-validate.outputs.preview_url }}
     inputs:
       release_sha:
         description: Exact 40-character commit SHA validated by CI
@@ -43,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     timeout-minutes: 35
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     env:
       PAGES_PROJECT: lythaus-web
       PAGES_BRANCH: codex-lythaus-domain-migration
@@ -90,10 +96,13 @@ jobs:
           WEB_BASE_URL: https://app.lythaus.co
           API_BASE_URL: ${{ inputs.api_preview_base_url }}
           AUTH_URL: ${{ inputs.api_preview_base_url }}
+          OAUTH2_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          OAUTH2_SCOPE: openid email profile
           ADMIN_API_URL: https://admin-api.lythaus.co/api
           MARKETING_BASE_URL: https://lythaus.co
         run: |
           set -euo pipefail
+          test -n "$OAUTH2_CLIENT_ID" || { echo "::error::GOOGLE_OAUTH_CLIENT_ID repository variable is required"; exit 1; }
           sudo apt-get update
           sudo apt-get install --yes ripgrep
           bash scripts/cf-pages-build.sh
@@ -103,7 +112,7 @@ jobs:
       - name: Deploy immutable Pages preview
         id: deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |

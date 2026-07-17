@@ -45,6 +45,8 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
   { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email verification/reset token HMAC key' },
   { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
+  { name: 'GOOGLE_OAUTH_CLIENT_ID', required: false, description: 'Public Google Web OAuth client ID' },
+  { name: 'GOOGLE_OAUTH_CLIENT_SECRET_WEB', required: false, description: 'Google Web OAuth client secret' },
 ];
 
 function isMvpEnvironment(): boolean {
@@ -95,6 +97,20 @@ export function emailAuthConfigurationErrors(): string[] {
   return errors;
 }
 
+export function googleAuthConfigurationErrors(): string[] {
+  if (!isMvpEnvironment()) return [];
+
+  const errors: string[] = [];
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() || '';
+  if (!clientId.endsWith('.apps.googleusercontent.com')) {
+    errors.push('GOOGLE_OAUTH_CLIENT_ID must be the approved Google Web OAuth client ID');
+  }
+  if ((process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB?.trim().length ?? 0) < 16) {
+    errors.push('GOOGLE_OAUTH_CLIENT_SECRET_WEB must be configured through Azure Key Vault');
+  }
+  return errors;
+}
+
 export function validateStartupEnvironment(): void {
   const missing: string[] = [];
   const warnings: string[] = [];
@@ -113,6 +129,7 @@ export function validateStartupEnvironment(): void {
 
   missing.push(...originGatewayConfigurationErrors());
   missing.push(...emailAuthConfigurationErrors());
+  missing.push(...googleAuthConfigurationErrors());
 
   if (warnings.length > 0) {
     // eslint-disable-next-line no-console
