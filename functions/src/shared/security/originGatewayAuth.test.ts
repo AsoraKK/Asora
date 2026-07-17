@@ -142,6 +142,7 @@ describe('origin gateway authentication', () => {
   it('allows only exact method/path entries while dual mode is active', () => {
     applyEnvironment({ ORIGIN_GATEWAY_AUTH_MODE: 'dual', ORIGIN_GATEWAY_DUAL_UNTIL: '2026-07-15T12:05:00.000Z' });
     expect(authorizeGatewayRequest(request('/api/feed/discover'), fixedNow)).toBeUndefined();
+    expect(authorizeGatewayRequest(request('/api/feed/discover', 'GET', { [ORIGIN_TOKEN_HEADER]: 'fixture-invalid' }), fixedNow)).toMatchObject({ status: 403 });
     expect(authorizeGatewayRequest(request('/api/feed/discover', 'POST'), fixedNow)).toMatchObject({ status: 403 });
     expect(authorizeGatewayRequest(request('/api/feed/discover/extra'), fixedNow)).toMatchObject({ status: 403 });
     expect(trackAppEventMock).toHaveBeenCalledWith({
