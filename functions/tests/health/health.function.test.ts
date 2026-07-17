@@ -46,6 +46,14 @@ beforeEach(() => {
 });
 
 describe('health function', () => {
+  it('registers GET and HEAD for operational health checks', () => {
+    loadHealthHandler();
+    expect(mockAppHttp).toHaveBeenCalledWith(
+      'health',
+      expect.objectContaining({ methods: ['GET', 'HEAD'] })
+    );
+  });
+
   it('returns a minimal healthy readiness envelope', async () => {
     mockGetHealthSummary.mockReturnValue({
       environment: 'local',
