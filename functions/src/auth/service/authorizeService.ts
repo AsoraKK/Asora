@@ -74,6 +74,15 @@ export async function authorizeHandler(
     // Validate the authorization request
     const validationError = validateAuthorizeRequest(authRequest);
     if (validationError) {
+      // OAuth errors may only be redirected to a previously registered URI.
+      // Reflecting an invalid redirect_uri would create an open redirect.
+      if (!isRegisteredRedirectUri(authRequest.redirect_uri)) {
+        return createErrorResponse(
+          400,
+          'Invalid authorization request',
+          'Invalid or unregistered redirect_uri parameter'
+        );
+      }
       return createAuthError(
         authRequest.redirect_uri,
         authRequest.state,
@@ -247,7 +256,11 @@ export async function authorizeHandler(
 
     // Try to return error to redirect URI if possible
     const queryParams = Object.fromEntries(req.query.entries());
-    if (queryParams.redirect_uri && queryParams.state) {
+    if (
+      queryParams.redirect_uri &&
+      queryParams.state &&
+      isRegisteredRedirectUri(queryParams.redirect_uri)
+    ) {
       return createAuthError(
         queryParams.redirect_uri,
         queryParams.state,
