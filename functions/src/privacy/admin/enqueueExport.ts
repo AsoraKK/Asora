@@ -9,7 +9,7 @@ import { createDsrRequest } from '../service/dsrStore';
 import { enqueueDsrMessage } from '../common/storage';
 import { getDsrQueueDiagnostics } from '../common/storage';
 import { createAuditEntry, DsrRequest } from '../common/models';
-import { safeHashIdentifier, trackDsrEvent } from '../common/telemetry';
+import { safeHashIdentifier } from '../common/telemetry';
 import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 
@@ -61,7 +61,6 @@ async function handler(req: Authed, context: InvocationContext): Promise<HttpRes
       exportStorageAccount: queue.exportStorageAccount,
     };
     context.log('dsr.export.enqueued', { ...event, queue });
-    trackDsrEvent('dsr.export.enqueued', event);
     return createSuccessResponse({ id, status: request.status });
   } catch (error: unknown) {
     context.log('dsr.export.enqueue.error', { message: getErrorMessage(error) });

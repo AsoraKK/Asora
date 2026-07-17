@@ -1,7 +1,6 @@
 jest.mock('../../src/privacy/common/telemetry', () => ({
   emitSpan: jest.fn(),
   safeHashIdentifier: jest.fn((value?: string) => (value ? 'hashed-user' : undefined)),
-  trackDsrEvent: jest.fn(),
 }));
 jest.mock('../../src/privacy/service/dsrStore', () => ({ getDsrRequest: jest.fn() }));
 jest.mock('../../src/privacy/worker/exportJob', () => ({ runExportJob: jest.fn() }));
@@ -23,7 +22,6 @@ describe('handleDsrQueue idempotency', () => {
       getDsrRequest: require('../../src/privacy/service/dsrStore').getDsrRequest as jest.Mock,
       runExportJob: require('../../src/privacy/worker/exportJob').runExportJob as jest.Mock,
       runDeleteJob: require('../../src/privacy/worker/deleteJob').runDeleteJob as jest.Mock,
-      trackDsrEvent: require('../../src/privacy/common/telemetry').trackDsrEvent as jest.Mock,
     };
   }
 
@@ -52,8 +50,8 @@ describe('handleDsrQueue idempotency', () => {
   });
 
   it('logs sanitized receive and resolution evidence before dispatch', async () => {
-    const context = { invocationId: 'inv-queue', log: jest.fn() };
-    const { handleDsrQueue, getDsrRequest, runDeleteJob, trackDsrEvent } = getModule();
+    const context = { invocationId: 'inv-queue', log: jest.fn(), error: jest.fn() };
+    const { handleDsrQueue, getDsrRequest, runDeleteJob } = getModule();
     getDsrRequest.mockResolvedValue({
       id: 'req-delete',
       type: 'delete',
@@ -89,19 +87,13 @@ describe('handleDsrQueue idempotency', () => {
       type: 'delete',
       previousAttempt: 0,
     }));
-    expect(trackDsrEvent).toHaveBeenCalledWith('dsr.queue.completed', expect.objectContaining({
-      requestId: 'req-delete',
-      type: 'delete',
-      previousAttempt: 0,
-    }));
-
     const serializedLogs = JSON.stringify(context.log.mock.calls);
     expect(serializedLogs).not.toContain('019f1004-3063-7159-828a-3f0a4ebcec3c');
   });
 
   it('logs and rethrows worker failures for host retry/dead-letter handling', async () => {
-    const context = { invocationId: 'inv-fail', log: jest.fn() };
-    const { handleDsrQueue, getDsrRequest, runExportJob, trackDsrEvent } = getModule();
+    const context = { invocationId: 'inv-fail', log: jest.fn(), error: jest.fn() };
+    const { handleDsrQueue, getDsrRequest, runExportJob } = getModule();
     getDsrRequest.mockResolvedValue({
       id: 'req-fail',
       type: 'export',
@@ -117,14 +109,7 @@ describe('handleDsrQueue idempotency', () => {
       submittedAt: '2026-06-29T00:00:00.000Z',
     }), context)).rejects.toThrow('export failed');
 
-    expect(context.log).toHaveBeenCalledWith('dsr.queue.failed', expect.objectContaining({
-      invocationId: 'inv-fail',
-      requestId: 'req-fail',
-      type: 'export',
-      previousAttempt: 2,
-      message: 'export failed',
-    }));
-    expect(trackDsrEvent).toHaveBeenCalledWith('dsr.queue.failed', expect.objectContaining({
+    expect(context.error).toHaveBeenCalledWith('dsr.queue.failed', expect.objectContaining({
       invocationId: 'inv-fail',
       requestId: 'req-fail',
       type: 'export',

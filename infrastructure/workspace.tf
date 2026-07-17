@@ -1,7 +1,7 @@
 variable "environment" {
-  description = "Deployment environment; defaults to terraform.workspace"
+  description = "Legacy validation environment. The shared MVP uses dev; workspace selection does not implicitly change this value."
   type        = string
-  default     = terraform.workspace
+  default     = "dev"
 
   validation {
     condition     = var.environment != "default" && contains(["dev", "stage", "prod"], var.environment)

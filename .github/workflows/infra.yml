@@ -1,23 +1,15 @@
-# ASORA TERRAFORM INFRASTRUCTURE WORKFLOW
-# Provisions Azure resources with Terraform using OIDC authentication
-
-name: Provision Infrastructure
+name: Reviewed Infrastructure Change
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
+      apply:
+        description: 'Apply the reviewed Terraform plan'
         required: true
-        default: 'development'
-        type: choice
-        options:
-          - development
-          - staging
-          - production
-  workflow_call:
-    inputs:
-      environment:
+        default: false
+        type: boolean
+      change_ticket:
+        description: 'Approved infrastructure change identifier'
         required: true
         type: string
 
@@ -25,23 +17,37 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: shared-mvp-infrastructure-change
+  cancel-in-progress: false
+
 env:
   TF_WORKING_DIR: infra
 
 jobs:
   terraform:
-    name: Terraform init/plan/apply
+    name: Plan reviewed shared-MVP infrastructure
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: infrastructure-change
     env:
       ARM_USE_OIDC: true
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_environment: ${{ inputs.environment }}
+      TF_VAR_environment: development
+      INFRASTRUCTURE_CHANGE_PATH: ${{ inputs.apply && 'approved' || 'plan-only' }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Validate approval metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${{ inputs.change_ticket }}" =~ ^[A-Za-z0-9._/-]{3,80}$ ]]; then
+            echo '::error::A valid approved infrastructure change identifier is required.'
+            exit 1
+          fi
 
       - name: Azure login (OIDC)
         uses: azure/login@v3
@@ -52,12 +58,30 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
 
-      - name: Terraform init
-        run: terraform -chdir=$TF_WORKING_DIR init
+      - name: Terraform init and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir="$TF_WORKING_DIR" init -input=false
+          terraform -chdir="$TF_WORKING_DIR" validate
 
       - name: Terraform plan
-        run: terraform -chdir=$TF_WORKING_DIR plan -input=false
+        run: terraform -chdir="$TF_WORKING_DIR" plan -input=false -out=tfplan
 
-      - name: Terraform apply
-        run: terraform -chdir=$TF_WORKING_DIR apply -auto-approve -input=false
+      - name: Enforce protected-resource safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir="$TF_WORKING_DIR" show -json tfplan > "$RUNNER_TEMP/tfplan.json"
+          if [[ "${{ inputs.apply }}" == 'true' ]]; then
+            node scripts/validate-terraform-plan-safety.mjs "$RUNNER_TEMP/tfplan.json" --allow-protected-changes
+          else
+            node scripts/validate-terraform-plan-safety.mjs "$RUNNER_TEMP/tfplan.json"
+          fi
+
+      - name: Terraform apply reviewed plan
+        if: ${{ inputs.apply }}
+        run: terraform -chdir="$TF_WORKING_DIR" apply -input=false tfplan

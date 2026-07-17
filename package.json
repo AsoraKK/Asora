@@ -29,6 +29,7 @@
     "test:cosmos-contract": "node --test scripts/tests/validate-cosmos-contract.test.js",
     "routes:guard": "node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json",
     "test:route-guards": "node --test scripts/tests/validate-functions-route-guards.test.js",
+    "test:terraform-safety": "node --test scripts/tests/validate-terraform-plan-safety.test.mjs",
     "todo:triage": "node scripts/generate-todo-triage.js",
     "k6:smoke": "node scripts/run-shared-mvp-k6.mjs load/k6/smoke.js",
     "k6:feed": "node scripts/run-shared-mvp-k6.mjs load/k6/feed-read.js",

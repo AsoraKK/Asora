@@ -1,6 +1,6 @@
 import { app, InvocationContext } from '@azure/functions';
 
-import { emitSpan, safeHashIdentifier, trackDsrEvent } from '../common/telemetry';
+import { emitSpan, safeHashIdentifier } from '../common/telemetry';
 import type { DsrQueueMessage } from '../common/models';
 import { getDsrRequest } from '../service/dsrStore';
 import { runExportJob } from './exportJob';
@@ -98,7 +98,6 @@ export async function handleDsrQueue(payload: unknown, context: InvocationContex
       previousAttempt: request.attempt,
     };
     context.log('dsr.queue.completed', event);
-    trackDsrEvent('dsr.queue.completed', event);
   } catch (error) {
     const event = {
       invocationId: context.invocationId,
@@ -107,8 +106,7 @@ export async function handleDsrQueue(payload: unknown, context: InvocationContex
       previousAttempt: request.attempt,
       message: error instanceof Error ? error.message : String(error),
     };
-    context.log('dsr.queue.failed', event);
-    trackDsrEvent('dsr.queue.failed', event);
+    context.error('dsr.queue.failed', event);
     throw error;
   }
 }

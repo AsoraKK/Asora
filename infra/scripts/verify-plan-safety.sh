@@ -23,6 +23,10 @@ PLAN_JSON=$(mktemp)
 trap "rm -f $PLAN_JSON" EXIT
 terraform show -json "$PLAN_FILE" > "$PLAN_JSON"
 
+# Ordinary application delivery must not create, replace, or delete shared MVP
+# databases, Function Apps/plans, vaults, storage, or observability resources.
+node ../scripts/validate-terraform-plan-safety.mjs "$PLAN_JSON"
+
 # Check for throughput/autoscale in serverless mode
 if [[ "$MODE" == "serverless" ]]; then
   echo "🔍 Checking for throughput configuration in serverless mode..."

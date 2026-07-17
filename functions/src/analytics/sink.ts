@@ -35,15 +35,13 @@ export class AppInsightsSink implements AnalyticsSink {
 			properties: {
 				// Event properties
 				...event.properties,
-				// Metadata
-				userId: event.userId ?? 'guest',
-				sessionId: event.sessionId,
+				// Privacy-safe operational metadata only. User, session, and IP
+				// identifiers are intentionally excluded from permanent telemetry.
 				appVersion: event.appVersion,
 				platform: event.platform,
 				env: event.metadata.env,
 				region: event.metadata.region,
 				userType: event.metadata.userType,
-				ipHash: event.metadata.ipHash,
 				ingestedAt: event.metadata.ingestedAt.toISOString(),
 			},
 			measurements: {
@@ -51,9 +49,6 @@ export class AppInsightsSink implements AnalyticsSink {
 				timestamp: event.eventTimestamp.getTime(),
 			},
 		});
-
-		// Flush to ensure event is sent
-		this.client.flush();
 	}
 
 	async sendBatch(events: SanitizedAnalyticsEvent[]): Promise<void> {

@@ -28,12 +28,15 @@ function ensureClient(): TelemetryClient | null {
     if (!appInsights.defaultClient) {
       appInsights
         .setup(INSTRUMENTATION_CONNECTION_STRING!)
-        .setAutoCollectConsole(true)
-        .setAutoCollectDependencies(true)
-        .setAutoCollectPerformance(true, true)
-        .setAutoCollectRequests(true)
-        .setAutoCollectExceptions(true)
-        .setSendLiveMetrics(true)
+        // Azure Functions host instrumentation remains authoritative. Enabling
+        // the Node SDK auto-collectors here duplicates host requests, traces,
+        // dependencies, exceptions, and live metrics.
+        .setAutoCollectConsole(false)
+        .setAutoCollectDependencies(false)
+        .setAutoCollectPerformance(false, false)
+        .setAutoCollectRequests(false)
+        .setAutoCollectExceptions(false)
+        .setSendLiveMetrics(false)
         .start();
     }
 

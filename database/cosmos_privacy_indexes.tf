@@ -20,13 +20,13 @@ locals {
         ]
       }
     ],
-    
+
     spatial_indexes = [],
-    
+
     included_paths = [
-      { path = "/*" }  // Include all paths for privacy export
+      { path = "/*" } // Include all paths for privacy export
     ],
-    
+
     excluded_paths = []
   }
 
@@ -49,9 +49,9 @@ locals {
         ]
       }
     ],
-    
+
     included_paths = [
-      { path = "/*" }  // Include all paths for export
+      { path = "/*" } // Include all paths for export
     ]
   }
 

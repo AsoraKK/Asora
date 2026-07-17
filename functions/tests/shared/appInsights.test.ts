@@ -6,20 +6,23 @@ jest.mock('applicationinsights', () => {
     trackMetric: jest.fn(),
     trackEvent: jest.fn(),
   };
-  
+  const sdk: any = {
+    setup: jest.fn().mockReturnThis(),
+    setAutoCollectConsole: jest.fn().mockReturnThis(),
+    setAutoCollectDependencies: jest.fn().mockReturnThis(),
+    setAutoCollectPerformance: jest.fn().mockReturnThis(),
+    setAutoCollectRequests: jest.fn().mockReturnThis(),
+    setAutoCollectExceptions: jest.fn().mockReturnThis(),
+    setSendLiveMetrics: jest.fn().mockReturnThis(),
+    start: jest.fn(() => {
+      sdk.defaultClient = mockClient;
+    }),
+    defaultClient: null,
+  };
+
   return {
     __esModule: true,
-    default: {
-      setup: jest.fn().mockReturnThis(),
-      setAutoCollectConsole: jest.fn().mockReturnThis(),
-      setAutoCollectDependencies: jest.fn().mockReturnThis(),
-      setAutoCollectPerformance: jest.fn().mockReturnThis(),
-      setAutoCollectRequests: jest.fn().mockReturnThis(),
-      setAutoCollectExceptions: jest.fn().mockReturnThis(),
-      setSendLiveMetrics: jest.fn().mockReturnThis(),
-      start: jest.fn(),
-      defaultClient: mockClient,
-    },
+    default: sdk,
     mockClient, // Export for test access
   };
 });
@@ -49,6 +52,7 @@ describe('appInsights telemetry tracking', () => {
     
     const ai = require('applicationinsights');
     mockClient = (ai as any).mockClient;
+    (ai as any).default.defaultClient = null;
     mockClient.trackMetric.mockClear();
     mockClient.trackEvent.mockClear();
   });
@@ -118,6 +122,14 @@ describe('appInsights telemetry tracking', () => {
         value: 5.2,
         properties: { operation: 'feed_query', status: 'success' },
       });
+
+      const sdk = require('applicationinsights').default;
+      expect(sdk.setAutoCollectConsole).toHaveBeenCalledWith(false);
+      expect(sdk.setAutoCollectDependencies).toHaveBeenCalledWith(false);
+      expect(sdk.setAutoCollectPerformance).toHaveBeenCalledWith(false, false);
+      expect(sdk.setAutoCollectRequests).toHaveBeenCalledWith(false);
+      expect(sdk.setAutoCollectExceptions).toHaveBeenCalledWith(false);
+      expect(sdk.setSendLiveMetrics).toHaveBeenCalledWith(false);
     });
 
     it('tracks metrics without properties', async () => {

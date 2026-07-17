@@ -182,16 +182,3 @@ module "export_storage_full" {
   vnet_subnet_id        = var.storage_vnet_subnet_id
   tags                  = var.storage_tags
 }
-
-module "observability" {
-  count  = var.observability_enabled ? 1 : 0
-  source = "../../modules/observability"
-
-  resource_group_name      = var.observability_resource_group
-  location                 = var.observability_location
-  name_prefix              = var.observability_name_prefix
-  environment              = "staging"
-  alert_email_addresses    = var.observability_alert_email_addresses
-  function_app_resource_id = local.effective_function_app_resource_id
-  tags                     = var.observability_tags
-}

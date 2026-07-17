@@ -1,8 +1,5 @@
 import type { InvocationContext } from '@azure/functions';
-import { getTelemetryClient, trackAppEvent } from '@shared/appInsights';
 import { createHash } from 'node:crypto';
-
-type DsrTelemetryProperties = Record<string, string | number | boolean | null | undefined>;
 
 export function emitSpan(
   context: InvocationContext,
@@ -13,19 +10,6 @@ export function emitSpan(
     invocationId: context.invocationId,
     ...meta,
   });
-}
-
-export function trackDsrEvent(name: string, properties: DsrTelemetryProperties = {}): void {
-  const normalizedProperties: Record<string, string | number | boolean | undefined> = {};
-  for (const [key, value] of Object.entries(properties)) {
-    normalizedProperties[key] = value === null ? undefined : value;
-  }
-
-  trackAppEvent({
-    name,
-    properties: normalizedProperties,
-  });
-  getTelemetryClient()?.flush();
 }
 
 export function auditLog(context: InvocationContext, message: string, meta: Record<string, unknown> = {}): void {

@@ -11,6 +11,7 @@ This checklist helps verify the environment configuration for DSR processing acr
 - DSR_MAX_CONCURRENCY (exports)
 - DSR_EXPORT_SIGNED_URL_TTL_HOURS (e.g., 12)
 - DSR_EXPORT_RETENTION_DAYS (default: 30)
+- `DSR_MONITOR_SCHEDULE` (shared-MVP fallback `0 0 */8 * * *`; Azure timer expressions are UTC)
 - DSR_BLOB_UPLOAD_BUFFER_SIZE (optional, default 4MiB)
 - DSR_BLOB_UPLOAD_CONCURRENCY (optional, default 5)
 
@@ -59,7 +60,7 @@ Verify:
 3. Legal hold test: place hold on user, enqueue delete; confirm job fails with hold reason.
 
 ## Monitoring Coverage
-- `privacyDsrQueueMonitor` emits a `dsr.queue.monitor` App Insights trace every 5 minutes with DSR queue depth, poison queue state, stuck queued request count, and failed request count.
+- `privacyDsrQueueMonitor` emits one structured `dsr.queue.monitor` trace on the configured UTC schedule with DSR queue depth, poison queue state, stuck queued request count, and failed request count. The shared-MVP fallback runs at 00:00, 08:00, and 16:00 UTC; a future production environment must configure at least hourly monitoring independently.
 - Dev DSR alerts currently target `appi-asora-function-dev-dsr`; the legacy `asora-function-dev` App Insights component did not ingest telemetry during the DSR repair.
 - Terraform alert coverage in `infrastructure/alerts` includes:
   - `alert-<app>-dsr-stuck-queued`: `privacy_requests` queued for more than 5 minutes
@@ -68,6 +69,7 @@ Verify:
   - `alert-<app>-dsr-poison-queue`: poison queue exists or has messages
   - `alert-<app>-dsr-missing-completion`: DSR enqueue lacks `dsr.queue.completed` after 5 minutes
 - `function:privacyDsrProcessor=1` always-ready is intentional for alpha and must remain documented until a separate scale-from-zero regression proves it can be removed.
+- Follow `docs/runbooks/dsr-scale-from-zero-and-always-ready.md` before changing the always-ready allocation.
 
 ## Troubleshooting
 - SAS URL generation fails: verify MI has permissions and clock skew is reasonable; re-issue delegation key.

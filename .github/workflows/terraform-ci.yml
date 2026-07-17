@@ -33,6 +33,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Test protected-resource plan guard
+        working-directory: .
+        run: node --test scripts/tests/validate-terraform-plan-safety.test.mjs
+
       - name: Azure Login (OIDC)
         if: env.PLAN == 'true'
         uses: azure/login@v3
