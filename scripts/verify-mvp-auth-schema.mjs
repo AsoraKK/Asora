@@ -13,15 +13,22 @@ const expectedTables = [
   'email_auth_credentials',
   'email_auth_tokens',
   'provider_links',
+  'refresh_tokens',
 ];
 
-const expectedProviderLinkColumns = [
-  'id',
-  'user_id',
-  'provider',
-  'provider_sub',
-  'created_at',
-];
+const requiredColumns = {
+  users: [
+    'id',
+    'primary_email',
+    'roles',
+    'tier',
+    'reputation_score',
+    'created_at',
+    'updated_at',
+  ],
+  provider_links: ['id', 'user_id', 'provider', 'provider_sub', 'created_at'],
+  refresh_tokens: ['jti', 'user_uuid', 'expires_at', 'created_at'],
+};
 
 const pool = new pg.Pool({ connectionString });
 
@@ -37,18 +44,18 @@ try {
     throw new Error('MVP authentication schema is incomplete');
   }
 
-  const columns = await pool.query(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_schema = 'public' AND table_name = 'provider_links'
-     ORDER BY ordinal_position`,
-  );
-  const actual = columns.rows.map((row) => row.column_name);
-  if (
-    actual.length !== expectedProviderLinkColumns.length ||
-    actual.some((column, index) => column !== expectedProviderLinkColumns[index])
-  ) {
-    throw new Error('provider_links schema is incompatible');
+  for (const [tableName, expectedColumns] of Object.entries(requiredColumns)) {
+    const columns = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = $1
+         AND column_name = ANY($2::text[])`,
+      [tableName, expectedColumns],
+    );
+    if (columns.rowCount !== expectedColumns.length) {
+      throw new Error(`${tableName} schema is incompatible`);
+    }
   }
 
   console.log('MVP_AUTH_SCHEMA=ready');

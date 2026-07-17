@@ -205,6 +205,7 @@ jobs:
           export POSTGRES_CONN
           node tools/apply_sql_to_pg.js database/migrations/004_email_password_auth.sql
           node tools/apply_sql_to_pg.js database/migrations/005_google_provider_links.sql
+          node tools/apply_sql_to_pg.js database/migrations/006_refresh_token_families.sql
           node scripts/verify-mvp-auth-schema.mjs
 
       - name: Configure CORS allowed origins
