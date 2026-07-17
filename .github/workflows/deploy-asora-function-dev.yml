@@ -189,6 +189,24 @@ jobs:
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Apply MVP authentication schema
+        run: |
+          set -euo pipefail
+          set +x
+          POSTGRES_CONN="$(az keyvault secret show \
+            --vault-name "$KEY_VAULT" \
+            --name postgres-connection-string \
+            --query value \
+            --output tsv)"
+          test -n "$POSTGRES_CONN" || {
+            echo "::error::postgres-connection-string is required for MVP authentication schema";
+            exit 1;
+          }
+          export POSTGRES_CONN
+          node tools/apply_sql_to_pg.js database/migrations/004_email_password_auth.sql
+          node tools/apply_sql_to_pg.js database/migrations/005_google_provider_links.sql
+          node scripts/verify-mvp-auth-schema.mjs
+
       - name: Configure CORS allowed origins
         run: |
           set -euo pipefail

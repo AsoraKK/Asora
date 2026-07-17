@@ -83,12 +83,14 @@ const mockClient = {
       if (failProviderLinkInsert) {
         throw new Error('provider link insert failed');
       }
-      const [provider, providerSub, userId, createdAt] = params as [
+      const [linkId, provider, providerSub, userId, createdAt] = params as [
+        string,
         string,
         string,
         string,
         string,
       ];
+      expect(linkId).toMatch(UUID_V7_REGEX);
       const link = {
         provider,
         provider_sub: providerSub,

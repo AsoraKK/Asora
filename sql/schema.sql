@@ -32,7 +32,7 @@ COMMENT ON COLUMN users.reputation_score IS 'Rolling reputation metric; used for
 
 -- Provider links derive an OAuth/sub identity to the canonical user ID.
 CREATE TABLE IF NOT EXISTS provider_links (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+  id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
   provider_sub TEXT NOT NULL,

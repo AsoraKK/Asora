@@ -149,14 +149,15 @@ class UsersService {
   ): Promise<ProviderLink> {
     const normalizedProvider = normalizeProvider(provider);
     assertInternalUserId(userId, 'Provider link user_id');
+    const linkId = uuidv7();
     const now = new Date().toISOString();
 
     return withClient(async (client) => {
       const result = await client.query(
-        `INSERT INTO provider_links (provider, provider_sub, user_id, created_at)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO provider_links (id, provider, provider_sub, user_id, created_at)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING provider, provider_sub, user_id, created_at`,
-        [normalizedProvider, providerSub, userId, now]
+        [linkId, normalizedProvider, providerSub, userId, now]
       );
       return result.rows[0];
     });
@@ -225,11 +226,12 @@ class UsersService {
           [userId, normalizedEmail, ['user'], 'free', 0, now, now]
         );
         const user = userResult.rows[0] as PGUser;
+        const linkId = uuidv7();
 
         await client.query(
-          `INSERT INTO provider_links (provider, provider_sub, user_id, created_at)
-           VALUES ($1, $2, $3, $4)`,
-          [normalizedProvider, providerSub, user.id, now]
+          `INSERT INTO provider_links (id, provider, provider_sub, user_id, created_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [linkId, normalizedProvider, providerSub, user.id, now]
         );
         await client.query('COMMIT');
         return [user, true];
