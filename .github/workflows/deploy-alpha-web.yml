@@ -52,6 +52,7 @@ on:
 permissions:
   actions: read
   contents: read
+  id-token: write
 
 jobs:
   deploy-and-smoke:
