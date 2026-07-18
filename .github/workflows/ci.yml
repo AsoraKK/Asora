@@ -430,6 +430,8 @@ jobs:
     needs: [workflow_lint]
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/cache@v5
         with:
@@ -442,10 +444,15 @@ jobs:
         with:
           flutter-version-file: .fvmrc
 
+      - name: Install ripgrep for design-system gate
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+
       - name: Pub get
         run: flutter pub get
 
       - name: Enforce design system gate
+        env:
+          DESIGN_SYSTEM_GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: bash scripts/design_system_gate.sh
 
       - name: Regenerate golden files for CI environment

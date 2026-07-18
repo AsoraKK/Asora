@@ -36,7 +36,7 @@ jobs:
           ALPHA_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
           AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
           AZURE_FUNCTIONAPP_NAME: ${{ vars.ALPHA_FUNCTIONAPP_NAME || 'asora-function-dev' }}
-          AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+          AZURE_APPINSIGHTS_NAME: ${{ vars.ALPHA_APPINSIGHTS_NAME || 'appi-asora-function-dev-dsr' }}
           ALPHA_REPORT_ADMIN_TOKEN: ${{ secrets.ALPHA_REPORT_ADMIN_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
@@ -52,16 +52,25 @@ jobs:
         shell: bash
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.ALPHA_RESOURCE_GROUP || 'asora-psql-flex' }}
-          AZURE_APPINSIGHTS_NAME: ${{ vars.AZURE_APPINSIGHTS_NAME }}
+          AZURE_APPINSIGHTS_NAME: ${{ vars.ALPHA_APPINSIGHTS_NAME || 'appi-asora-function-dev-dsr' }}
         run: |
           set -euo pipefail
-          QUERY="$(<scripts/queries/alpha-daily-operations.kql)"
-          az monitor app-insights query \
-            --app "$AZURE_APPINSIGHTS_NAME" \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --analytics-query "$QUERY" \
-            --offset 24h \
-            --output json > alpha-telemetry.json
+          mapfile -t query_files < <(find scripts/queries/alpha-daily-operations -maxdepth 1 -type f -name '*.kql' -print | sort)
+          ((${#query_files[@]} > 0)) || { echo "::error::No aggregate telemetry queries found"; exit 1; }
+          mkdir -p alpha-telemetry-parts
+          outputs=()
+          for query_file in "${query_files[@]}"; do
+            output="alpha-telemetry-parts/$(basename "${query_file%.kql}").json"
+            az monitor app-insights query \
+              --app "$AZURE_APPINSIGHTS_NAME" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --analytics-query "$(tr '\n' ' ' < "$query_file")" \
+              --offset 24h \
+              --output json > "$output"
+            jq -e '.tables[0].rows | length == 1' "$output" >/dev/null
+            outputs+=("$output")
+          done
+          node scripts/merge-app-insights-aggregates.mjs --output alpha-telemetry.json "${outputs[@]}"
           jq -e '.tables[0].rows | length == 1' alpha-telemetry.json >/dev/null
 
       - name: Read administrative snapshots
