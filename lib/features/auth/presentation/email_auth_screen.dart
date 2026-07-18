@@ -127,7 +127,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _message!,
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
@@ -136,7 +136,7 @@ class _EmailAuthScreenState extends ConsumerState<EmailAuthScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _error!,
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.error,
                         ),
                       ),
