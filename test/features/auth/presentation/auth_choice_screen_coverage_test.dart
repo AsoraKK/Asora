@@ -80,10 +80,9 @@ void main() {
     // Bottom sheet should show provider options
     expect(find.text('Sign in with'), findsOneWidget);
     expect(find.text('Google'), findsOneWidget);
-    expect(find.text('Apple (beta)'), findsOneWidget);
-    expect(find.text('World ID (beta)'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Available after alpha validation'), findsNWidgets(2));
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('World ID'), findsNothing);
   });
 
   testWidgets('create account shows provider picker', (tester) async {

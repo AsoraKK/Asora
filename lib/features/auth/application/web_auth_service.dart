@@ -1,12 +1,11 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:convert';
-import 'dart:math';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
+import 'package:asora/core/auth/pkce_helper.dart';
 import 'package:asora/features/auth/application/oauth2_service.dart';
 import 'package:asora/features/auth/application/web_token_storage.dart';
 import 'package:asora/features/auth/domain/auth_failure.dart';
@@ -43,15 +42,17 @@ class WebAuthService {
 
   /// Initiate the OAuth2 sign-in by redirecting the browser.
   /// This method does not return — the page navigates away.
+  // VM coverage cannot invoke this browser redirect. Browser E2E covers it.
+  // coverage:ignore-start browser-only redirect
   void startSignIn({OAuth2Provider provider = OAuth2Provider.google}) {
     assert(kIsWeb, 'WebAuthService.startSignIn must only be called on web');
     _validateReleaseWebEndpoints();
     requireMvpAuthProvider(provider);
 
-    final codeVerifier = _generateCodeVerifier();
-    final codeChallenge = _generateCodeChallenge(codeVerifier);
-    final state = _generateState();
-    final nonce = _generateNonce();
+    final codeVerifier = PkceHelper.generateCodeVerifier();
+    final codeChallenge = PkceHelper.generateCodeChallenge(codeVerifier);
+    final state = PkceHelper.generateState();
+    final nonce = PkceHelper.generateCodeVerifier();
 
     // Persist PKCE values in sessionStorage so they survive the redirect.
     _storage.write(_codeVerifierKey, codeVerifier);
@@ -83,6 +84,7 @@ class WebAuthService {
 
     webRedirectTo(authUrl.toString());
   }
+  // coverage:ignore-end browser-only redirect
 
   /// Handle the OAuth2 callback after the browser redirect.
   /// Exchanges the authorization code for tokens and returns the [User].
@@ -117,8 +119,15 @@ class WebAuthService {
       throw AuthFailure.callbackInvalid();
     }
 
-    // Exchange code for tokens.
-    final tokenResponse = await _exchangeCodeForTokens(code, codeVerifier);
+    // Exchange code for tokens. A failed exchange is terminal for this
+    // browser transaction, so clear the single-use PKCE state before rethrowing.
+    late final Map<String, dynamic> tokenResponse;
+    try {
+      tokenResponse = await _exchangeCodeForTokens(code, codeVerifier);
+    } catch (_) {
+      _clearPkceState();
+      rethrow;
+    }
     _clearPkceState();
 
     final accessToken = tokenResponse['access_token'] as String?;
@@ -272,6 +281,8 @@ class WebAuthService {
     );
   }
 
+  // Called exclusively by the browser redirect flow above.
+  // coverage:ignore-start browser-only provider hint
   String _idpHintForProvider(OAuth2Provider provider) {
     switch (provider) {
       case OAuth2Provider.google:
@@ -285,27 +296,5 @@ class WebAuthService {
     }
   }
 
-  static String _generateCodeVerifier() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
-    return base64UrlEncode(bytes).replaceAll('=', '');
-  }
-
-  static String _generateCodeChallenge(String verifier) {
-    final bytes = utf8.encode(verifier);
-    final digest = sha256.convert(bytes);
-    return base64UrlEncode(digest.bytes).replaceAll('=', '');
-  }
-
-  static String _generateState() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    return base64UrlEncode(bytes).replaceAll('=', '');
-  }
-
-  static String _generateNonce() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
-    return base64UrlEncode(bytes).replaceAll('=', '');
-  }
+  // coverage:ignore-end browser-only provider hint
 }

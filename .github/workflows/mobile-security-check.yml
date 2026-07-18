@@ -148,8 +148,20 @@ jobs:
           # and only fail if a live lifecycle state is marked empty.
           preview_state="$(get_state '_previewMobileSecurity' '_previewConfig')"
           prod_state="$(get_state '_prodMobileSecurity' '_prodConfig')"
-          preview_state="${preview_state:-live}"
-          prod_state="${prod_state:-live}"
+          for state_name in preview_state prod_state; do
+            state="${!state_name:-}"
+            case "$state" in
+              live|planned|deprecated|disabled) ;;
+              '')
+                echo "::error::Missing $state_name lifecycle state in $ENV_FILE."
+                exit 1
+                ;;
+              *)
+                echo "::error::Invalid $state_name lifecycle state '$state' in $ENV_FILE."
+                exit 1
+                ;;
+            esac
+          done
 
           preview_empty=false
           prod_empty=false

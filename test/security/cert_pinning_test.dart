@@ -6,6 +6,16 @@ void main() {
     test('no placeholders and valid format', () {
       const pinsMap = cp.kPinnedDomains;
 
+      if (!cp.kEnableCertPinning) {
+        expect(
+          pinsMap,
+          isEmpty,
+          reason:
+              'The MVP pinning deviation must not ship dormant or placeholder pins.',
+        );
+        return;
+      }
+
       // Must have at least one host configured
       expect(
         pinsMap.isNotEmpty,

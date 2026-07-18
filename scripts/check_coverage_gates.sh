@@ -196,6 +196,68 @@ classify_path() {
   echo "unknown|"
 }
 
+declare -A coverage_ignore_ranges=()
+declare -A coverage_ignore_loaded=()
+
+load_coverage_ignore_ranges() {
+  local source_file=$1
+  local line_number=0
+  local range_start=""
+  local source_line
+  local ranges=()
+
+  if [[ -n "${coverage_ignore_loaded[$source_file]+x}" ]]; then
+    return 0
+  fi
+  coverage_ignore_loaded[$source_file]=1
+
+  # LCOV can contain external package sources. They are not repository files
+  # and therefore cannot declare repository coverage exclusions.
+  if [[ ! -f "$source_file" ]]; then
+    coverage_ignore_ranges[$source_file]=""
+    return 0
+  fi
+
+  while IFS= read -r source_line || [[ -n "$source_line" ]]; do
+    line_number=$((line_number + 1))
+    if [[ "$source_line" == *"coverage:ignore-start"* ]]; then
+      if [[ -n "$range_start" ]]; then
+        fail "Nested coverage:ignore-start in $source_file:$line_number"
+      fi
+      range_start=$line_number
+    elif [[ "$source_line" == *"coverage:ignore-end"* ]]; then
+      if [[ -z "$range_start" ]]; then
+        fail "Unmatched coverage:ignore-end in $source_file:$line_number"
+      fi
+      ranges+=("$range_start:$line_number")
+      range_start=""
+    fi
+  done < "$source_file"
+
+  if [[ -n "$range_start" ]]; then
+    fail "Unmatched coverage:ignore-start in $source_file:$range_start"
+  fi
+
+  coverage_ignore_ranges[$source_file]="${ranges[*]}"
+}
+
+is_coverage_ignored_line() {
+  local source_file=$1
+  local source_line=$2
+  local range
+  local range_start
+  local range_end
+
+  for range in ${coverage_ignore_ranges[$source_file]:-}; do
+    range_start=${range%%:*}
+    range_end=${range##*:}
+    if [[ $source_line -ge $range_start && $source_line -le $range_end ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 parse_coverage() {
   if [[ ! -f "$LCOV_FILE" ]]; then
     fail "Coverage file not found: $LCOV_FILE. Run 'flutter test --coverage' first."
@@ -213,8 +275,10 @@ parse_coverage() {
   shared_hit=0
   unknown_lines=0
   unknown_hit=0
+  ignored_lines=0
 
   current_scope="unknown"
+  current_file=""
 
   declare -A unknown_seen=()
   unknown_files=()
@@ -223,6 +287,8 @@ parse_coverage() {
     if [[ "$line" == SF:* ]]; then
       path=${line#SF:}
       norm_path=${path//\\//}
+      current_file=$norm_path
+      load_coverage_ignore_ranges "$current_file"
       classification=$(classify_path "$norm_path")
       current_scope=${classification%%|*}
       if [[ "$current_scope" == "unknown" ]]; then
@@ -232,9 +298,15 @@ parse_coverage() {
         fi
       fi
     elif [[ "$line" == DA:* ]]; then
-      count=${line#DA:*}
-      count=${count#*,}
+      line_data=${line#DA:*}
+      source_line=${line_data%%,*}
+      count=${line_data#*,}
       count=${count%%,*}
+
+      if is_coverage_ignored_line "$current_file" "$source_line"; then
+        ignored_lines=$((ignored_lines + 1))
+        continue
+      fi
 
       total_lines=$((total_lines + 1))
       if [[ "$count" != "0" ]]; then
@@ -317,6 +389,10 @@ main() {
   echo ""
 
   parse_coverage
+
+  if [[ $ignored_lines -gt 0 ]]; then
+    echo "INFO: Ignored $ignored_lines instrumented line(s) using balanced source coverage directives."
+  fi
 
   total_min=$(read_baseline_value "total_min_percent")
   p1_min=$(read_baseline_value "p1_min_percent")

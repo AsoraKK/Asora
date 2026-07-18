@@ -117,6 +117,24 @@ void main() {
       );
     });
 
+    test(
+      'rejects callback missing a verifier after state validation',
+      () async {
+        final storage = InMemoryTokenStorage()..write('pkce_state', 'expected');
+        final svc = buildService(storage: storage);
+
+        await expectLater(
+          svc.handleCallback(
+            Uri.parse(
+              'https://app.lythaus.com/auth/callback?code=abc&state=expected',
+            ),
+          ),
+          throwsA(isA<AuthFailure>()),
+        );
+        expect(storage.snapshot, isEmpty);
+      },
+    );
+
     test('stores tokens and user data on successful callback', () async {
       final storage = InMemoryTokenStorage()
         ..write('pkce_state', 'expected_state')
@@ -215,19 +233,25 @@ void main() {
     });
   });
 
-  group('WebAuthService PKCE generation', () {
+  group('WebAuthService callback exchanges', () {
     test('handles token exchange failure gracefully', () async {
       final client = http_testing.MockClient((request) async {
         return http.Response('{"error":"invalid_grant"}', 400);
       });
-      final svc = WebAuthService(httpClient: client);
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected')
+        ..write('pkce_code_verifier', 'verifier');
+      final svc = WebAuthService(httpClient: client, storage: storage);
 
-      expect(
-        () => svc.handleCallback(
-          Uri.parse('https://app.lythaus.com/auth/callback?code=abc'),
+      await expectLater(
+        svc.handleCallback(
+          Uri.parse(
+            'https://app.lythaus.com/auth/callback?code=abc&state=expected',
+          ),
         ),
         throwsA(isA<AuthFailure>()),
       );
+      expect(storage.snapshot, isEmpty);
     });
 
     test('handles user fetch failure gracefully', () async {
@@ -239,14 +263,66 @@ void main() {
         }
         return http.Response('Not found', 404);
       });
-      final svc = WebAuthService(httpClient: client);
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected')
+        ..write('pkce_code_verifier', 'verifier');
+      final svc = WebAuthService(httpClient: client, storage: storage);
 
-      expect(
-        () => svc.handleCallback(
-          Uri.parse('https://app.lythaus.com/auth/callback?code=abc'),
+      await expectLater(
+        svc.handleCallback(
+          Uri.parse(
+            'https://app.lythaus.com/auth/callback?code=abc&state=expected',
+          ),
         ),
         throwsA(isA<AuthFailure>()),
       );
+      expect(storage.read('access_token'), 'at_123');
+    });
+
+    test('rejects token responses without an access token', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected')
+        ..write('pkce_code_verifier', 'verifier');
+      final client = http_testing.MockClient(
+        (_) async => http.Response('{}', 200),
+      );
+      final svc = WebAuthService(httpClient: client, storage: storage);
+
+      await expectLater(
+        svc.handleCallback(
+          Uri.parse(
+            'https://app.lythaus.com/auth/callback?code=abc&state=expected',
+          ),
+        ),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(storage.snapshot, isEmpty);
+    });
+
+    test('accepts a userinfo response wrapped in a user envelope', () async {
+      final storage = InMemoryTokenStorage()
+        ..write('pkce_state', 'expected')
+        ..write('pkce_code_verifier', 'verifier');
+      var callCount = 0;
+      final client = http_testing.MockClient((_) async {
+        callCount++;
+        if (callCount == 1) {
+          return http.Response(jsonEncode(_tokenResponseJson()), 200);
+        }
+        return http.Response(
+          jsonEncode({'user': _userJson(id: 'wrapped-user')}),
+          200,
+        );
+      });
+      final svc = WebAuthService(httpClient: client, storage: storage);
+
+      final user = await svc.handleCallback(
+        Uri.parse(
+          'https://app.lythaus.com/auth/callback?code=abc&state=expected',
+        ),
+      );
+
+      expect(user.id, 'wrapped-user');
     });
   });
 
