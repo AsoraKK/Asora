@@ -145,7 +145,13 @@ export class EmailAuthService {
         `SELECT user_id FROM email_auth_credentials WHERE email_normalized = $1 FOR UPDATE`,
         [normalizedEmail]
       );
-      if (existing.rowCount === 0) {
+      const existingUser = existing.rowCount === 0
+        ? await client.query(
+            `SELECT id FROM users WHERE primary_email = $1 FOR UPDATE`,
+            [normalizedEmail]
+          )
+        : null;
+      if (existing.rowCount === 0 && existingUser?.rowCount === 0) {
         await client.query(
           `INSERT INTO users (id, primary_email, roles, tier, reputation_score, created_at, updated_at)
            VALUES ($1, $2, $3, 'free', 0, $4, $4)`,

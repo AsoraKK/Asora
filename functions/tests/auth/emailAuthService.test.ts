@@ -91,7 +91,8 @@ describe('EmailAuthService', () => {
   it('registers with Argon2id, hashed verification token, and neutral response', async () => {
     const db = clientWith();
     db.query.mockImplementation(async (sql) =>
-      String(sql).includes('SELECT user_id FROM email_auth_credentials')
+      String(sql).includes('SELECT user_id FROM email_auth_credentials') ||
+      String(sql).includes('SELECT id FROM users WHERE primary_email')
         ? { rows: [], rowCount: 0 }
         : { rows: [], rowCount: 1 }
     );
@@ -127,6 +128,30 @@ describe('EmailAuthService', () => {
       .register('person@example.com', 'ValidPassword-2026');
     expect(result.message).toContain('If the address');
     expect(mail.sendVerification).not.toHaveBeenCalled();
+  });
+
+  it('keeps an existing non-email identity neutral without creating or merging an account', async () => {
+    const db = clientWith();
+    db.query.mockImplementation(async (sql) => {
+      const text = String(sql);
+      if (text.includes('SELECT user_id FROM email_auth_credentials')) {
+        return { rows: [], rowCount: 0 };
+      }
+      if (text.includes('SELECT id FROM users WHERE primary_email')) {
+        return { rows: [{ id: USER_ID }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    connect.mockResolvedValue(db);
+    const mail = sender();
+
+    const result = await new EmailAuthService({ sender: mail, now: () => NOW })
+      .register('person@example.com', 'ValidPassword-2026');
+
+    expect(result.message).toContain('If the address');
+    expect(mail.sendVerification).not.toHaveBeenCalled();
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO users'))).toBe(false);
+    expect(db.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO email_auth_credentials'))).toBe(false);
   });
 
   it('verifies only an unexpired single-use digest and activates the user', async () => {
