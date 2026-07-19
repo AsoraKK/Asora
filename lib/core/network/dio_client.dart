@@ -26,7 +26,12 @@ import 'package:asora/core/network/dio_client_adapter_stub.dart'
 /// Secure Dio client provider with certificate pinning and integrity checks
 final secureDioProvider = Provider<Dio>((ref) {
   final envConfig = EnvironmentConfig.fromEnvironment();
-  final baseUrl = envConfig.apiBaseUrl;
+  // Dio concatenates a relative request path directly onto `baseUrl`. The
+  // approved API base ends in `/api`, so preserve that path boundary for
+  // routes such as `users/me` instead of producing `/apiusers/me`.
+  final baseUrl = envConfig.apiBaseUrl.endsWith('/')
+      ? envConfig.apiBaseUrl
+      : '${envConfig.apiBaseUrl}/';
 
   // Create Dio instance
   final dio = Dio(BaseOptions(baseUrl: baseUrl));
