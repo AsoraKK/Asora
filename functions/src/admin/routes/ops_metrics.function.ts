@@ -3,6 +3,7 @@ import { withRateLimit } from '@http/withRateLimit';
 import { getPolicyForRoute } from '@rate-limit/policies';
 import { createErrorResponse, createSuccessResponse, handleCorsAndMethod } from '@shared/utils/http';
 import { requireActiveModerator } from '../adminAuthUtils';
+import { requireCloudflareAccess } from '../accessAuth';
 import { buildOpsMetrics, isValidOpsWindow, OpsMetricsWindow } from '../service/opsMetricsService';
 
 async function getOpsMetrics(
@@ -38,7 +39,32 @@ app.http('admin_ops_metrics', {
   methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: '_admin/ops/metrics',
-  handler: withRateLimit(requireActiveModerator(getOpsMetrics), (req) => getPolicyForRoute(req)),
+  handler: withRateLimit(opsMetricsRouteHandler, (req) => getPolicyForRoute(req)),
 });
 
-export { getOpsMetrics };
+const guardedHumanOpsMetrics = requireActiveModerator(getOpsMetrics);
+
+async function opsMetricsRouteHandler(
+  req: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
+  const cors = handleCorsAndMethod(req.method ?? 'GET', ['GET']);
+  if (cors.shouldReturn && cors.response) {
+    return cors.response;
+  }
+
+  const access = await requireCloudflareAccess(req.headers, { allowOperationsReader: true });
+  if ('error' in access) {
+    return createErrorResponse(access.status, 'access_denied', 'Administrative access is required', {
+      'Cache-Control': 'private, no-store',
+    });
+  }
+
+  if (access.role === 'operations_reader') {
+    return getOpsMetrics(req, context);
+  }
+
+  return guardedHumanOpsMetrics(req, context);
+}
+
+export { getOpsMetrics, opsMetricsRouteHandler };

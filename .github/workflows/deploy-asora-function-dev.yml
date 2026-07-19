@@ -816,7 +816,10 @@ jobs:
           fi
 
           az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
-            --settings CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" --output none
+            --settings \
+              CF_ACCESS_CLIENT_ID="$CF_CLIENT_ID" \
+              CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID="$CF_CLIENT_ID" \
+            --output none
 
           echo "✅ Cloudflare Access client ID configured; secret remains Key Vault-backed"
 

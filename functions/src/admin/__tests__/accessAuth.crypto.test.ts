@@ -27,6 +27,7 @@ const TEST_ISSUER = 'https://test-team.cloudflareaccess.com';
 const TEST_AUDIENCE = 'test-aud-12345';
 const TEST_OWNER_EMAIL = 'owner@asora.co.za';
 const TEST_OTHER_EMAIL = 'other@example.com';
+const TEST_OPERATIONS_SERVICE_CLIENT_ID = 'operations-reader.access';
 
 // RSA key pair (generated once per test suite)
 let privateKey: jose.KeyLike;
@@ -114,6 +115,23 @@ async function generateNoEmailToken(): Promise<string> {
     iat: now,
     exp: now + 3600,
     // No email claim
+  })
+    .setProtectedHeader({ alg: 'RS256', kid: KID })
+    .sign(privateKey);
+}
+
+async function generateOperationsServiceToken(
+  clientId = TEST_OPERATIONS_SERVICE_CLIENT_ID
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  return new jose.SignJWT({
+    iss: TEST_ISSUER,
+    aud: TEST_AUDIENCE,
+    sub: '',
+    common_name: clientId,
+    service_token_status: true,
+    iat: now,
+    exp: now + 3600,
   })
     .setProtectedHeader({ alg: 'RS256', kid: KID })
     .sign(privateKey);
@@ -227,6 +245,7 @@ describe('Cloudflare Access JWT Cryptographic Verification', () => {
     delete process.env.CF_ACCESS_AUDIENCE;
     delete process.env.CF_ACCESS_JWKS_URL;
     delete process.env.CF_ACCESS_OWNER_EMAIL;
+    delete process.env.CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID;
   });
 
   beforeEach(() => {
@@ -403,7 +422,50 @@ describe('Cloudflare Access JWT Cryptographic Verification', () => {
     });
   });
 
-  describe('Configuration errors', () => {
+  describe('H) Operations service identity', () => {
+    it('rejects a valid service token until its backend reader role is configured', async () => {
+      const result = await verifyCloudflareAccess(
+        createHeaders(await generateOperationsServiceToken()),
+        { requireOwner: true, allowOperationsReader: true }
+      );
+
+      expect(result.authenticated).toBe(false);
+      if (!result.authenticated) {
+        expect(result.code).toBe('FORBIDDEN');
+      }
+    });
+
+    it('accepts only the configured service token as the operations reader', async () => {
+      process.env.CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID = TEST_OPERATIONS_SERVICE_CLIENT_ID;
+
+      const result = await verifyCloudflareAccess(
+        createHeaders(await generateOperationsServiceToken()),
+        { requireOwner: true, allowOperationsReader: true }
+      );
+
+      expect(result).toMatchObject({
+        authenticated: true,
+        actor: TEST_OPERATIONS_SERVICE_CLIENT_ID,
+        role: 'operations_reader',
+      });
+    });
+
+    it('rejects a different service token even when operations reads are enabled', async () => {
+      process.env.CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID = TEST_OPERATIONS_SERVICE_CLIENT_ID;
+
+      const result = await verifyCloudflareAccess(
+        createHeaders(await generateOperationsServiceToken('other-service.access')),
+        { allowOperationsReader: true }
+      );
+
+      expect(result.authenticated).toBe(false);
+      if (!result.authenticated) {
+        expect(result.code).toBe('FORBIDDEN');
+      }
+    });
+  });
+
+  describe('I) Configuration errors', () => {
     it('returns CONFIG_ERROR when issuer not set', async () => {
       const originalIssuer = process.env.CF_ACCESS_ISSUER;
       const originalTeamDomain = process.env.CF_ACCESS_TEAM_DOMAIN;
