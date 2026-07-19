@@ -93,6 +93,7 @@ env:
   KEY_VAULT: ${{ inputs.key_vault_name || 'kv-asora-flex-dev' }}
   MVP_CORS_ALLOWED_ORIGINS: ${{ vars.MVP_CORS_ALLOWED_ORIGINS }}
   MVP_PREVIEW_APP_ORIGIN: ${{ vars.MVP_PREVIEW_APP_ORIGIN }}
+  GOOGLE_OAUTH_PREVIEW_REDIRECT_URI: ${{ vars.GOOGLE_OAUTH_PREVIEW_REDIRECT_URI }}
   MVP_PUBLIC_API_BASE_URL: ${{ vars.MVP_PUBLIC_API_BASE_URL }}
   MVP_ADMIN_API_BASE_URL: ${{ vars.MVP_ADMIN_API_BASE_URL }}
   GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
@@ -221,6 +222,22 @@ jobs:
             -g "$RG_CLEAN" \
             -n "$FUNC_APP_CLEAN" \
             --settings CORS_ALLOWED_ORIGINS="$MVP_CORS_ALLOWED_ORIGINS" \
+            --output none
+
+      - name: Configure exact OAuth preview callback
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" || {
+            echo "::error::GOOGLE_OAUTH_PREVIEW_REDIRECT_URI repository variable is required"
+            exit 1
+          }
+          node -e 'const value = process.env.GOOGLE_OAUTH_PREVIEW_REDIRECT_URI; const uri = new URL(value); if (uri.protocol !== "https:" || !uri.hostname.endsWith(".lythaus-web.pages.dev") || uri.username || uri.password || uri.pathname !== "/auth/callback" || uri.search || uri.hash || uri.toString() !== value) throw new Error("GOOGLE_OAUTH_PREVIEW_REDIRECT_URI must be one exact immutable HTTPS Pages callback");'
+          az functionapp config appsettings set \
+            -g "$RG_CLEAN" \
+            -n "$FUNC_APP_CLEAN" \
+            --settings OAUTH_REDIRECT_URIS="$GOOGLE_OAUTH_PREVIEW_REDIRECT_URI" \
             --output none
 
       - name: Inspect CORS allowed origins
