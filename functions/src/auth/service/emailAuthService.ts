@@ -7,7 +7,9 @@ import { getPool } from '@shared/clients/postgres';
 import { issueTokenPairForUser, type IssuedTokenPair } from './tokenService';
 import { getAuthEmailSender, type AuthEmailSender } from './authEmailClient';
 
-const VERIFY_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_VERIFY_TTL_MINUTES = 120;
+const MIN_VERIFY_TTL_MINUTES = 30;
+const MAX_VERIFY_TTL_MINUTES = 240;
 const RESET_TTL_MS = 20 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_FAILED_LOGINS = 8;
@@ -46,6 +48,22 @@ export function validatePassword(value: string): void {
   if (classes < 3) {
     throw new EmailAuthError('INVALID_REQUEST', 'Password must use at least three character classes');
   }
+}
+
+export function verificationTokenTtlMs(): number {
+  const configured = process.env.EMAIL_VERIFICATION_TTL_MINUTES?.trim();
+  if (!configured) return DEFAULT_VERIFY_TTL_MINUTES * 60 * 1000;
+
+  if (!/^\d+$/.test(configured)) {
+    throw new Error('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
+  }
+
+  const minutes = Number(configured);
+  if (minutes < MIN_VERIFY_TTL_MINUTES || minutes > MAX_VERIFY_TTL_MINUTES) {
+    throw new Error('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
+  }
+
+  return minutes * 60 * 1000;
 }
 
 function tokenHmacKey(): string {
@@ -126,6 +144,7 @@ export class EmailAuthService {
   async register(email: string, password: string): Promise<EmailAuthAccepted> {
     const normalizedEmail = normalizeEmailAddress(email);
     validatePassword(password);
+    const verificationTtlMs = verificationTokenTtlMs();
     const passwordHash = await argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 19456,
@@ -166,7 +185,7 @@ export class EmailAuthService {
         await client.query(
           `INSERT INTO email_auth_tokens (id, user_id, purpose, token_digest, expires_at, created_at)
            VALUES ($1, $2, 'verify_email', $3, $4, $5)`,
-          [crypto.randomUUID(), userId, tokenDigest, new Date(now.getTime() + VERIFY_TTL_MS), now]
+          [crypto.randomUUID(), userId, tokenDigest, new Date(now.getTime() + verificationTtlMs), now]
         );
         created = true;
       }
@@ -184,6 +203,7 @@ export class EmailAuthService {
 
   async resendVerification(email: string): Promise<EmailAuthAccepted> {
     const normalizedEmail = normalizeEmailAddress(email);
+    const verificationTtlMs = verificationTokenTtlMs();
     const pool = getPool();
     const result = await pool.query(
       `SELECT c.user_id, c.email_verified_at, t.created_at AS last_sent_at
@@ -218,7 +238,7 @@ export class EmailAuthService {
       await client.query(
         `INSERT INTO email_auth_tokens (id, user_id, purpose, token_digest, expires_at, created_at)
          VALUES ($1, $2, 'verify_email', $3, $4, $5)`,
-        [crypto.randomUUID(), row.user_id, digestToken(token), new Date(now.getTime() + VERIFY_TTL_MS), now]
+        [crypto.randomUUID(), row.user_id, digestToken(token), new Date(now.getTime() + verificationTtlMs), now]
       );
       await client.query('COMMIT');
     } catch (error) {

@@ -128,6 +128,7 @@ describe('startup-validation', () => {
     process.env.ACS_EMAIL_ENDPOINT = 'https://test.europe.communication.azure.com/';
     process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
     process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '120';
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'test-email-token-hmac-secret-0123456789';
     process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
     process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client.apps.googleusercontent.com';

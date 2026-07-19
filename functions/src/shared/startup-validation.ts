@@ -44,6 +44,7 @@ const OPTIONAL_ENV_VARS: EnvVar[] = [
   { name: 'ACS_EMAIL_ENDPOINT', required: false, description: 'Azure Communication Services endpoint' },
   { name: 'AUTH_EMAIL_FROM_ADDRESS', required: false, description: 'Verified Lythaus email sender' },
   { name: 'AUTH_EMAIL_FROM_NAME', required: false, description: 'Email sender display name' },
+  { name: 'EMAIL_VERIFICATION_TTL_MINUTES', required: false, description: 'Bounded email verification-token lifetime in minutes' },
   { name: 'EMAIL_TOKEN_HMAC_SECRET', required: false, description: 'Email verification/reset token HMAC key' },
   { name: 'AUTH_EMAIL_CLIENT_ID', required: false, description: 'Email authentication OAuth client audience' },
   { name: 'GOOGLE_OAUTH_CLIENT_ID', required: false, description: 'Public Google Web OAuth client ID' },
@@ -109,6 +110,15 @@ export function emailAuthConfigurationErrors(): string[] {
   }
   if ((process.env.AUTH_EMAIL_FROM_NAME?.trim() || 'Lythaus') !== 'Lythaus') {
     errors.push('AUTH_EMAIL_FROM_NAME must be Lythaus');
+  }
+  const verificationTtlMinutes = process.env.EMAIL_VERIFICATION_TTL_MINUTES?.trim();
+  if (
+    verificationTtlMinutes &&
+    (!/^\d+$/.test(verificationTtlMinutes) ||
+      Number(verificationTtlMinutes) < 30 ||
+      Number(verificationTtlMinutes) > 240)
+  ) {
+    errors.push('EMAIL_VERIFICATION_TTL_MINUTES must be a whole number between 30 and 240');
   }
   if ((process.env.EMAIL_TOKEN_HMAC_SECRET?.trim().length ?? 0) < 32) {
     errors.push('EMAIL_TOKEN_HMAC_SECRET must contain at least 32 characters');

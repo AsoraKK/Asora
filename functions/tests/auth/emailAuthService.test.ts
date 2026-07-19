@@ -37,6 +37,7 @@ import {
   EmailAuthService,
   normalizeEmailAddress,
   validatePassword,
+  verificationTokenTtlMs,
 } from '../../src/auth/service/emailAuthService';
 import type { AuthEmailSender } from '../../src/auth/service/authEmailClient';
 
@@ -63,6 +64,7 @@ describe('EmailAuthService', () => {
     jest.clearAllMocks();
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'test-only-hmac-secret-with-sufficient-length';
     process.env.AUTH_EMAIL_CLIENT_ID = 'lythaus-test-client';
+    delete process.env.EMAIL_VERIFICATION_TTL_MINUTES;
     argonHash.mockResolvedValue('$argon2id$test-hash');
     argonVerify.mockResolvedValue(true);
     cosmosUpsert.mockResolvedValue({});
@@ -86,6 +88,19 @@ describe('EmailAuthService', () => {
     expect(() => validatePassword('short')).toThrow('between 12 and 128');
     expect(() => validatePassword('alllowercasebutlong')).toThrow('three character classes');
     expect(() => validatePassword('ValidPassword-2026')).not.toThrow();
+  });
+
+  it('uses a bounded verification-token lifetime', () => {
+    expect(verificationTokenTtlMs()).toBe(120 * 60 * 1000);
+
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '90';
+    expect(verificationTokenTtlMs()).toBe(90 * 60 * 1000);
+
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '29';
+    expect(() => verificationTokenTtlMs()).toThrow(/between 30 and 240/);
+
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '120.5';
+    expect(() => verificationTokenTtlMs()).toThrow(/whole number/);
   });
 
   it('registers with Argon2id, hashed verification token, and neutral response', async () => {
@@ -112,7 +127,25 @@ describe('EmailAuthService', () => {
     const insertTokenCall = db.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO email_auth_tokens'));
     expect(insertTokenCall?.[1]?.[2]).toMatch(/^[a-f0-9]{64}$/);
     expect(insertTokenCall?.[1]?.[2]).not.toBe(mail.sendVerification.mock.calls[0]?.[1]);
+    expect(insertTokenCall?.[1]?.[3]).toEqual(new Date('2026-07-16T14:00:00.000Z'));
     expect(cosmosUpsert).not.toHaveBeenCalled();
+  });
+
+  it('applies the configured lifetime to a resent verification token', async () => {
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '90';
+    query.mockResolvedValue({
+      rows: [{ user_id: USER_ID, email_verified_at: null, last_sent_at: new Date(NOW.getTime() - 60_001) }],
+      rowCount: 1,
+    });
+    const db = clientWith();
+    connect.mockResolvedValue(db);
+    const mail = sender();
+
+    await new EmailAuthService({ sender: mail, now: () => NOW }).resendVerification('person@example.com');
+
+    const insertTokenCall = db.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO email_auth_tokens'));
+    expect(insertTokenCall?.[1]?.[3]).toEqual(new Date('2026-07-16T13:30:00.000Z'));
+    expect(mail.sendVerification).toHaveBeenCalledTimes(1);
   });
 
   it('keeps duplicate registration neutral and does not send another email', async () => {

@@ -41,6 +41,7 @@ function applyBaseEnv(): void {
   delete process.env.ACS_EMAIL_ENDPOINT;
   delete process.env.AUTH_EMAIL_FROM_ADDRESS;
   delete process.env.AUTH_EMAIL_FROM_NAME;
+  delete process.env.EMAIL_VERIFICATION_TTL_MINUTES;
   delete process.env.EMAIL_TOKEN_HMAC_SECRET;
   delete process.env.AUTH_EMAIL_CLIENT_ID;
   delete process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -66,6 +67,7 @@ describe('validateStartupEnvironment', () => {
     delete process.env.ACS_EMAIL_ENDPOINT;
     delete process.env.AUTH_EMAIL_FROM_ADDRESS;
     delete process.env.AUTH_EMAIL_FROM_NAME;
+    delete process.env.EMAIL_VERIFICATION_TTL_MINUTES;
     delete process.env.EMAIL_TOKEN_HMAC_SECRET;
     delete process.env.AUTH_EMAIL_CLIENT_ID;
     delete process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -109,6 +111,7 @@ describe('validateStartupEnvironment', () => {
     process.env.ACS_EMAIL_ENDPOINT = 'https://lythaus-mvp.communication.azure.com/';
     process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
     process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '120';
     process.env.EMAIL_TOKEN_HMAC_SECRET = 'email-token-hmac-secret-with-32-chars';
     process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
     process.env.GOOGLE_OAUTH_CLIENT_ID = 'public-client.apps.googleusercontent.com';
@@ -127,5 +130,20 @@ describe('validateStartupEnvironment', () => {
     process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
 
     expect(() => validateStartupEnvironment()).toThrow(/GOOGLE_OAUTH_CLIENT_ID/);
+  });
+
+  it('fails closed when the MVP verification-token lifetime is outside the approved bounds', () => {
+    process.env.APP_ENV = 'mvp';
+    process.env.APP_ORIGIN = 'https://app.lythaus.co';
+    process.env.ACS_EMAIL_ENDPOINT = 'https://lythaus-mvp.communication.azure.com/';
+    process.env.AUTH_EMAIL_FROM_ADDRESS = 'no-reply@mail.lythaus.co';
+    process.env.AUTH_EMAIL_FROM_NAME = 'Lythaus';
+    process.env.EMAIL_VERIFICATION_TTL_MINUTES = '241';
+    process.env.EMAIL_TOKEN_HMAC_SECRET = 'email-token-hmac-secret-with-32-chars';
+    process.env.AUTH_EMAIL_CLIENT_ID = 'asora-mobile-app';
+    process.env.GOOGLE_OAUTH_CLIENT_ID = 'public-client.apps.googleusercontent.com';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET_WEB = 'google-client-secret-for-test';
+
+    expect(() => validateStartupEnvironment()).toThrow(/EMAIL_VERIFICATION_TTL_MINUTES/);
   });
 });
