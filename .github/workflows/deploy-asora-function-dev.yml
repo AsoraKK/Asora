@@ -446,6 +446,22 @@ jobs:
             sleep 10
           done
 
+      - name: Map approved Access service identity for operations reads
+        env:
+          CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
+        run: |
+          set -euo pipefail
+          RG_CLEAN=$(echo "$RG" | tr -d '\r')
+          FUNC_APP_CLEAN=$(echo "$FUNC_APP" | tr -d '\r')
+          test -n "$CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID" || {
+            echo "::error::Approved Cloudflare Access operations service identity is required"
+            exit 1
+          }
+          az functionapp config appsettings set -g "$RG_CLEAN" -n "$FUNC_APP_CLEAN" \
+            --settings "CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID=$CF_ACCESS_OPERATIONS_SERVICE_TOKEN_CLIENT_ID" \
+            --output none
+          echo "Approved operations service identity mapped for backend authorization"
+
       - name: Record immutable deployment metadata
         run: |
           set -euo pipefail
