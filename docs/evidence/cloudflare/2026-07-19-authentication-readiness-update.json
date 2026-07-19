@@ -1,0 +1,60 @@
+{
+  "date": "2026-07-19",
+  "result": "NO-GO",
+  "branch": "codex/lythaus-domain-migration",
+  "pullRequest": 453,
+  "pullRequestDraft": true,
+  "candidateHead": "39c93ce02b1c426517c0c17f43ffae8502b6a10c",
+  "exactHeadCi": {
+    "run": 29679554490,
+    "result": "passed"
+  },
+  "backendDeployment": {
+    "run": 29679888162,
+    "deploymentJob": "passed",
+    "deployedSha": "39c93ce02b1c426517c0c17f43ffae8502b6a10c",
+    "authenticatedContracts": "pending_legitimate_session"
+  },
+  "google": {
+    "project": "lythaus",
+    "webClientCount": 1,
+    "webClientName": "Lythaus Web",
+    "productionOrigin": "https://app.lythaus.co",
+    "productionCallback": "https://app.lythaus.co/auth/callback",
+    "temporaryPreviewOrigin": "https://eecdcf58.lythaus-web.pages.dev",
+    "temporaryPreviewCallback": "https://eecdcf58.lythaus-web.pages.dev/auth/callback",
+    "publicClientIdStorage": "repository_variable",
+    "confidentialSecretStorage": "protected_github_secret_and_backend_key_vault_path",
+    "controlPlane": "complete",
+    "liveLifecycle": "pending_supervised_sign_in"
+  },
+  "providers": {
+    "google": "enabled_control_plane_complete_live_lifecycle_pending",
+    "emailPassword": "enabled_live_mailbox_lifecycle_pending",
+    "apple": "disabled_mvp",
+    "worldId": "disabled_mvp"
+  },
+  "adminAccess": {
+    "noServiceToken": "cloudflare_access_challenge_302",
+    "invalidServiceToken": "cloudflare_access_challenge_302",
+    "audienceAndPolicyAlignment": "verified_without_identifier_output",
+    "backendRole": "operations_reader_read_only",
+    "operationsReportRun": 29680039530,
+    "operationsReport": "passed",
+    "accessPolicyBroadened": false,
+    "directAzureBypassAdded": false
+  },
+  "cloudflareAudit": {
+    "run": 29679318096,
+    "accessRead": "passed",
+    "publicCutoverRulesetAndBulkRedirectRead": "incomplete"
+  },
+  "originGuard": {
+    "mode": "observe",
+    "dualProven": false,
+    "enforceProven": false,
+    "rollbackProven": false
+  },
+  "productionDomainCutoverPerformed": false,
+  "secretsRecorded": false
+}
